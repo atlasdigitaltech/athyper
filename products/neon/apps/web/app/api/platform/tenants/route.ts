@@ -35,7 +35,8 @@ export async function GET() {
   }
 
   // Try runtime API first; fallback for development when runtime is down
-  const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
+  const runtimeApiUrl =
+    process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
 
   try {
     const res = await fetch(`${runtimeApiUrl}/api/platform/tenants`, {

@@ -378,8 +378,7 @@ async function main(): Promise<void> {
 
   const LOCAL_DEFAULT =
     "postgresql://athyperadmin:athyperadmin@localhost:5432/athyper_dev1";
-  const connectionString =
-    process.env.DATABASE_ADMIN_URL ?? LOCAL_DEFAULT;
+  const connectionString = process.env.DATABASE_ADMIN_URL ?? LOCAL_DEFAULT;
   if (connectionString === LOCAL_DEFAULT && !process.env.DATABASE_ADMIN_URL) {
     console.error(
       `\n  DATABASE_ADMIN_URL not set — using local default: ${LOCAL_DEFAULT}\n`,

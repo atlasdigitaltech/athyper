@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
   }
 
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-  const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
+  const runtimeApiUrl =
+    process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
   const env = process.env.ENVIRONMENT ?? "local";
   const redis = await getRedisClient();
 

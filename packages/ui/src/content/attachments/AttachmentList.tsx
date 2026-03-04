@@ -51,7 +51,9 @@ export function AttachmentList({
 
       setAttachments(result);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load attachments");
+      setError(
+        err instanceof Error ? err.message : "Failed to load attachments",
+      );
     } finally {
       setIsLoading(false);
     }

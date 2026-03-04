@@ -213,11 +213,7 @@ export class MessageService {
           input.conversationId,
           errName,
         );
-        this.metrics.trackError(
-          errName,
-          "sendMessage",
-          input.tenantId,
-        );
+        this.metrics.trackError(errName, "sendMessage", input.tenantId);
       }
       throw err;
     }
@@ -726,11 +722,7 @@ export class MessageService {
           errName,
           options?.conversationId,
         );
-        this.metrics.trackError(
-          errName,
-          "searchMessages",
-          tenantId,
-        );
+        this.metrics.trackError(errName, "searchMessages", tenantId);
       }
       throw err;
     }

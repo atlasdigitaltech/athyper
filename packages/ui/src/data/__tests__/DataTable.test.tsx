@@ -26,7 +26,11 @@ const mockColumns: ColumnDef<TestItem>[] = [
 describe("DataTable", () => {
   it("renders column headers", () => {
     render(
-      <DataTable items={mockItems} columns={mockColumns} getKey={(i) => i.id} />,
+      <DataTable
+        items={mockItems}
+        columns={mockColumns}
+        getKey={(i) => i.id}
+      />,
     );
     expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Email")).toBeInTheDocument();
@@ -34,7 +38,11 @@ describe("DataTable", () => {
 
   it("renders all row data", () => {
     render(
-      <DataTable items={mockItems} columns={mockColumns} getKey={(i) => i.id} />,
+      <DataTable
+        items={mockItems}
+        columns={mockColumns}
+        getKey={(i) => i.id}
+      />,
     );
     expect(screen.getByText("Alice Chen")).toBeInTheDocument();
     expect(screen.getByText("Bob Wilson")).toBeInTheDocument();
@@ -42,9 +50,7 @@ describe("DataTable", () => {
   });
 
   it("shows empty state when items array is empty", () => {
-    render(
-      <DataTable items={[]} columns={mockColumns} getKey={(i) => i.id} />,
-    );
+    render(<DataTable items={[]} columns={mockColumns} getKey={(i) => i.id} />);
     expect(screen.getByText("No items found")).toBeInTheDocument();
   });
 
@@ -66,7 +72,12 @@ describe("DataTable", () => {
   it("hides columns marked as hidden", () => {
     const columnsWithHidden: ColumnDef<TestItem>[] = [
       ...mockColumns,
-      { id: "secret", header: "Secret", accessor: () => "hidden", hidden: true },
+      {
+        id: "secret",
+        header: "Secret",
+        accessor: () => "hidden",
+        hidden: true,
+      },
     ];
     render(
       <DataTable

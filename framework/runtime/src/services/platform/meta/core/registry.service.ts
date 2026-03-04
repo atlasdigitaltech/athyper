@@ -483,8 +483,7 @@ export class MetaRegistryService implements MetaRegistry {
       id: dbVersion.id,
       entityName: dbVersion.entity_name ?? dbVersion.entity_id,
       version: dbVersion.label ?? dbVersion.version,
-      schema:
-        typeof rawSchema === "string" ? JSON.parse(rawSchema) : rawSchema,
+      schema: typeof rawSchema === "string" ? JSON.parse(rawSchema) : rawSchema,
       isActive: dbVersion.is_active ?? dbVersion.status === "active",
       createdAt: new Date(dbVersion.created_at),
       createdBy: dbVersion.created_by,

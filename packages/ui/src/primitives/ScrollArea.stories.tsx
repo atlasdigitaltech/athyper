@@ -13,9 +13,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
-    <ScrollArea style={{ height: 200, width: 350, borderRadius: 8, border: "1px solid var(--border)" }}>
+    <ScrollArea
+      style={{
+        height: 200,
+        width: 350,
+        borderRadius: 8,
+        border: "1px solid var(--border)",
+      }}
+    >
       <div style={{ padding: 16 }}>
-        <h4 style={{ marginBottom: 16, fontWeight: 500, lineHeight: 1 }}>Tags</h4>
+        <h4 style={{ marginBottom: 16, fontWeight: 500, lineHeight: 1 }}>
+          Tags
+        </h4>
         {Array.from({ length: 50 }, (_, i) => (
           <div
             key={i}

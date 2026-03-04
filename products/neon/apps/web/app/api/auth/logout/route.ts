@@ -57,7 +57,8 @@ async function getRedisClient() {
 export async function POST() {
   const sid = await getSessionId();
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const publicBaseUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.PUBLIC_BASE_URL ??

@@ -38,7 +38,10 @@ export type ValidationResult = {
 /**
  * Validate request data against rules
  */
-export function validate(data: Record<string, unknown>, rules: ValidationRule[]): ValidationResult {
+export function validate(
+  data: Record<string, unknown>,
+  rules: ValidationRule[],
+): ValidationResult {
   const errors: ValidationError[] = [];
 
   for (const rule of rules) {

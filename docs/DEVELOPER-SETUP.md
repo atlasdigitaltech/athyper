@@ -4,13 +4,13 @@ This guide gets you from a fresh clone to a running local development environmen
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Node.js | >= 20 (LTS) | |
-| pnpm | >= 9 | |
-| Docker Desktop | Compose v2 | Ensure Docker is running before Step 3 |
-| Git | any | |
-| mkcert | any | Required for local TLS certificates ([install](https://github.com/FiloSottile/mkcert)) |
+| Tool           | Version     | Notes                                                                                  |
+| -------------- | ----------- | -------------------------------------------------------------------------------------- |
+| Node.js        | >= 20 (LTS) |                                                                                        |
+| pnpm           | >= 9        |                                                                                        |
+| Docker Desktop | Compose v2  | Ensure Docker is running before Step 3                                                 |
+| Git            | any         |                                                                                        |
+| mkcert         | any         | Required for local TLS certificates ([install](https://github.com/FiloSottile/mkcert)) |
 
 ## 1. Clone and Install
 
@@ -129,6 +129,7 @@ All services should show `(healthy)`. Keycloak (IAM) takes the longest — allow
 ## 7. Seed the Application Database
 
 The PostgreSQL init script creates two databases automatically on first start:
+
 - `athyper_dev1` — application database
 - `athyperauth_dev1` — Keycloak database
 
@@ -145,6 +146,7 @@ cd mesh/scripts
 ```
 
 Options:
+
 - `--no-demo` — production-like seed (DDL + reference data, no demo data)
 - `--demo-only` — demo data only (requires standard data already seeded)
 - `--reset` — drop all schemas and re-seed from scratch
@@ -177,15 +179,15 @@ The `.env.example` is pre-configured for local development with the Docker mesh.
 
 ### Key Variables
 
-| Variable | Value | Purpose |
-|----------|-------|---------|
-| `REDIS_URL` | `redis://:athyperadmin@localhost:6379/0` | Session storage (mesh Redis with password) |
-| `DATABASE_URL` | `postgresql://athyperadmin:athyperadmin@localhost:6432/athyper_dev1` | Tenant resolution via PgBouncer |
-| `KEYCLOAK_BASE_URL` | `https://iam.mesh.athyper.local` | Keycloak via Traefik gateway |
-| `KEYCLOAK_REALM` | `athyper` | Keycloak realm name |
-| `KEYCLOAK_CLIENT_ID` | `neon-web` | Web app client registered in Keycloak |
-| `RUNTIME_API_URL` | `https://api.athyper.local` | Runtime API via Traefik gateway |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | `0` | Accept self-signed certs (local only!) |
+| Variable                       | Value                                                                | Purpose                                    |
+| ------------------------------ | -------------------------------------------------------------------- | ------------------------------------------ |
+| `REDIS_URL`                    | `redis://:athyperadmin@localhost:6379/0`                             | Session storage (mesh Redis with password) |
+| `DATABASE_URL`                 | `postgresql://athyperadmin:athyperadmin@localhost:6432/athyper_dev1` | Tenant resolution via PgBouncer            |
+| `KEYCLOAK_BASE_URL`            | `https://iam.mesh.athyper.local`                                     | Keycloak via Traefik gateway               |
+| `KEYCLOAK_REALM`               | `athyper`                                                            | Keycloak realm name                        |
+| `KEYCLOAK_CLIENT_ID`           | `neon-web`                                                           | Web app client registered in Keycloak      |
+| `RUNTIME_API_URL`              | `https://api.athyper.local`                                          | Runtime API via Traefik gateway            |
+| `NODE_TLS_REJECT_UNAUTHORIZED` | `0`                                                                  | Accept self-signed certs (local only!)     |
 
 ## 10. Start Development Server
 
@@ -200,18 +202,18 @@ The app runs at `http://localhost:3001`.
 
 All scripts are in `mesh/scripts/`. Use `.bat` on Windows, `.sh` on macOS/Linux.
 
-| Script | Purpose | When to Run |
-|--------|---------|-------------|
-| `setup-env` | Create `mesh/env/.env` from template | Once (first setup) |
-| `setup-config` | Create kernel config from template | Once (first setup) |
-| `generate-mesh-certs` | Generate TLS certificates via mkcert | Once (first setup) |
-| `init-data` | Create/reset data directories | Once, or to reset all data |
-| `up` | Start the Docker mesh stack | Every time you need infrastructure |
-| `down` | Stop the Docker mesh stack | When done developing |
-| `seed-db` | Seed application database | Once (first setup), or `--reset` to re-seed |
-| `initdb-iam` | Import Keycloak realm configuration | Once (first setup), or after realm changes |
-| `export-iam` | Export current Keycloak realm | When saving realm changes |
-| `logs` | Tail Docker mesh logs | As needed for debugging |
+| Script                | Purpose                              | When to Run                                 |
+| --------------------- | ------------------------------------ | ------------------------------------------- |
+| `setup-env`           | Create `mesh/env/.env` from template | Once (first setup)                          |
+| `setup-config`        | Create kernel config from template   | Once (first setup)                          |
+| `generate-mesh-certs` | Generate TLS certificates via mkcert | Once (first setup)                          |
+| `init-data`           | Create/reset data directories        | Once, or to reset all data                  |
+| `up`                  | Start the Docker mesh stack          | Every time you need infrastructure          |
+| `down`                | Stop the Docker mesh stack           | When done developing                        |
+| `seed-db`             | Seed application database            | Once (first setup), or `--reset` to re-seed |
+| `initdb-iam`          | Import Keycloak realm configuration  | Once (first setup), or after realm changes  |
+| `export-iam`          | Export current Keycloak realm        | When saving realm changes                   |
+| `logs`                | Tail Docker mesh logs                | As needed for debugging                     |
 
 ## Troubleshooting
 
@@ -220,9 +222,11 @@ All scripts are in `mesh/scripts/`. Use `.bat` on Windows, `.sh` on macOS/Linux.
 **Cause**: Running `docker compose` without `--env-file`.
 
 **Fix**: Always specify the env file:
+
 ```bash
 docker compose --env-file ../env/.env ps
 ```
+
 Or run `setup-env.bat local` to create the `.env` file, then use the `up`/`down` scripts which handle this automatically.
 
 ### "ECONNREFUSED" or "Connection refused" on login
@@ -230,6 +234,7 @@ Or run `setup-env.bat local` to create the `.env` file, then use the `up`/`down`
 **Cause**: Keycloak is not reachable at `https://iam.mesh.athyper.local`.
 
 **Fix**:
+
 1. Verify hosts file entries are present
 2. Verify Docker mesh is running: `docker compose --env-file ../env/.env ps`
 3. Verify Keycloak container is healthy: `docker logs athyper-mesh-iam-1`
@@ -239,11 +244,13 @@ Or run `setup-env.bat local` to create the `.env` file, then use the `up`/`down`
 **Cause**: The `init-databases.sh` entrypoint didn't execute (can happen if the data directory was initialized before configs were correctly mounted).
 
 **Fix**:
+
 ```bash
 # Connect to the running db container and create the databases manually
 docker exec athyper-mesh-db-1 psql -U athyperadmin -d postgres -c "CREATE DATABASE athyper_dev1;"
 docker exec athyper-mesh-db-1 psql -U athyperadmin -d postgres -c "CREATE DATABASE athyperauth_dev1;"
 ```
+
 Or reset everything: stop the mesh, run `init-data` to wipe data, then start the mesh again.
 
 ### "Cannot determine database password"
@@ -257,6 +264,7 @@ Or reset everything: stop the mesh, run `init-data` to wipe data, then start the
 **Cause**: Redis session expired or is unreachable.
 
 **Fix**:
+
 1. Check Redis is running: `docker compose --env-file ../env/.env ps | grep memorycache`
 2. Check `REDIS_URL` in `.env.local` includes the password: `redis://:athyperadmin@localhost:6379/0`
 3. The old default `redis://localhost:6379/0` (no password) does NOT work with the Docker mesh Redis
@@ -266,6 +274,7 @@ Or reset everything: stop the mesh, run `init-data` to wipe data, then start the
 **Cause**: `KEYCLOAK_REALM` doesn't match the imported realm.
 
 **Fix**:
+
 1. Verify `KEYCLOAK_REALM=athyper` in `.env.local` (not `neon-dev`)
 2. Re-run the realm import: `cd mesh/scripts && ./initdb-iam.sh`
 
@@ -292,6 +301,7 @@ Or reset everything: stop the mesh, run `init-data` to wipe data, then start the
 **Cause**: On Docker Desktop for Windows, if a config file doesn't exist at the mount source path when a container starts, Docker creates an empty directory instead of failing. The container then can't read the "file" because it's actually a directory.
 
 **Fix**:
+
 1. Stop the mesh: `cd mesh/scripts && ./down.bat`
 2. Delete any auto-created directories under `mesh/data/` that look like files (e.g., `config.yml` as a directory)
 3. Verify the actual config files exist under `mesh/config/`
@@ -322,27 +332,27 @@ Or reset everything: stop the mesh, run `init-data` to wipe data, then start the
 
 ### File Map
 
-| File | Purpose | Used By |
-|------|---------|---------|
-| `mesh/env/.env.example` | Docker Compose env template (local) | `setup-env` script |
-| `mesh/env/.env` | Active Docker Compose env (created from template) | `docker compose --env-file` |
-| `mesh/env/staging.env.example` | Docker Compose env template (staging) | CI/CD |
-| `mesh/env/production.env.example` | Docker Compose env template (production) | CI/CD |
-| `mesh/config/` | Infrastructure config files (DB, gateway, telemetry, IAM) | Docker volume mounts |
-| `mesh/data/` | Persistent data directories (DB, Redis, MinIO, telemetry) | Docker volume mounts |
-| `mesh/config/apps/athyper/kernel.config.local.parameter.json` | Runtime kernel config (local) | athyper-runtime container |
-| `mesh/config/apps/athyper/kernel.config.schema.json` | JSON Schema for kernel config | IDE validation |
-| `products/neon/apps/web/.env.example` | Neon web app env template | `cp` to `.env.local` |
+| File                                                          | Purpose                                                   | Used By                     |
+| ------------------------------------------------------------- | --------------------------------------------------------- | --------------------------- |
+| `mesh/env/.env.example`                                       | Docker Compose env template (local)                       | `setup-env` script          |
+| `mesh/env/.env`                                               | Active Docker Compose env (created from template)         | `docker compose --env-file` |
+| `mesh/env/staging.env.example`                                | Docker Compose env template (staging)                     | CI/CD                       |
+| `mesh/env/production.env.example`                             | Docker Compose env template (production)                  | CI/CD                       |
+| `mesh/config/`                                                | Infrastructure config files (DB, gateway, telemetry, IAM) | Docker volume mounts        |
+| `mesh/data/`                                                  | Persistent data directories (DB, Redis, MinIO, telemetry) | Docker volume mounts        |
+| `mesh/config/apps/athyper/kernel.config.local.parameter.json` | Runtime kernel config (local)                             | athyper-runtime container   |
+| `mesh/config/apps/athyper/kernel.config.schema.json`          | JSON Schema for kernel config                             | IDE validation              |
+| `products/neon/apps/web/.env.example`                         | Neon web app env template                                 | `cp` to `.env.local`        |
 
 ### Variable Name Differences
 
 The mesh (Docker) and web app (localhost) use **different variable names** for the same infrastructure:
 
-| Concept | Mesh Env Var | Web App Env Var | Why Different |
-|---------|-------------|-----------------|---------------|
-| Keycloak URL | `IAM_ISSUER_URL` | `KEYCLOAK_BASE_URL` | Mesh needs full issuer URL; web needs base only |
-| Realm | `IAM_DEFAULT_REALM` | `KEYCLOAK_REALM` | Different config loaders |
-| API Client | `IAM_CLIENT_ID=athyper-api` | `KEYCLOAK_CLIENT_ID=neon-web` | Different Keycloak clients |
-| Redis | `redis://:pw@memorycache:6379` | `redis://:pw@localhost:6379` | Docker hostname vs localhost |
-| Database | `postgresql://…@dbpool-apps:6432` | `postgresql://…@localhost:6432` | Docker hostname vs localhost |
-| API URL | `PUBLIC_BASE_URL` | `RUNTIME_API_URL` | Mesh is the API; web calls the API |
+| Concept      | Mesh Env Var                      | Web App Env Var                 | Why Different                                   |
+| ------------ | --------------------------------- | ------------------------------- | ----------------------------------------------- |
+| Keycloak URL | `IAM_ISSUER_URL`                  | `KEYCLOAK_BASE_URL`             | Mesh needs full issuer URL; web needs base only |
+| Realm        | `IAM_DEFAULT_REALM`               | `KEYCLOAK_REALM`                | Different config loaders                        |
+| API Client   | `IAM_CLIENT_ID=athyper-api`       | `KEYCLOAK_CLIENT_ID=neon-web`   | Different Keycloak clients                      |
+| Redis        | `redis://:pw@memorycache:6379`    | `redis://:pw@localhost:6379`    | Docker hostname vs localhost                    |
+| Database     | `postgresql://…@dbpool-apps:6432` | `postgresql://…@localhost:6432` | Docker hostname vs localhost                    |
+| API URL      | `PUBLIC_BASE_URL`                 | `RUNTIME_API_URL`               | Mesh is the API; web calls the API              |

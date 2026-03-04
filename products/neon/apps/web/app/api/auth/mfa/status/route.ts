@@ -25,7 +25,8 @@ export async function GET() {
   }
 
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-  const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
+  const runtimeApiUrl =
+    process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
   const redis = await getRedisClient();
 
   try {

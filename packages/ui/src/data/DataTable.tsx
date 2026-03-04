@@ -58,7 +58,9 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("overflow-auto rounded-lg border border-border", className)}>
+    <div
+      className={cn("overflow-auto rounded-lg border border-border", className)}
+    >
       <table className="w-full text-sm" role="grid">
         <thead>
           <tr className="border-b border-border bg-muted/50">

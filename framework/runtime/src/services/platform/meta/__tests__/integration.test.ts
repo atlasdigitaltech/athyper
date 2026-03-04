@@ -36,9 +36,7 @@ const createMockDb = (): Kysely<DB> => {
         if (operator === "=") return record[column] === value;
         if (operator === "!=") return record[column] !== value;
         if (operator === "in")
-          return Array.isArray(value)
-            ? value.includes(record[column])
-            : false;
+          return Array.isArray(value) ? value.includes(record[column]) : false;
         if (operator === ">=") return record[column] >= value;
         if (operator === "<=") return record[column] <= value;
         if (operator === ">") return record[column] > value;
@@ -49,7 +47,10 @@ const createMockDb = (): Kysely<DB> => {
   };
 
   // Create chainable query builder
-  const createSelectQuery = (table: string, initialColumns: string[] | "all") => {
+  const createSelectQuery = (
+    table: string,
+    initialColumns: string[] | "all",
+  ) => {
     let columns: string[] | "all" = initialColumns;
     const whereConditions: Array<[string, string, any]> = [];
     let orderByColumn: string | undefined;
@@ -204,9 +205,9 @@ const createMockDb = (): Kysely<DB> => {
             } else if (table === "meta.entity_version") {
               const key = `${data.entity_id}:${data.label}`;
               // Look up entity name from entities map
-              const entityEntry = Array.from(
-                mockData.entities.values(),
-              ).find((e) => e.id === data.entity_id);
+              const entityEntry = Array.from(mockData.entities.values()).find(
+                (e) => e.id === data.entity_id,
+              );
               record.entity_name = entityEntry?.name ?? data.entity_id;
               // Add camelCase mappings for version
               record.entityName = record.entity_name;

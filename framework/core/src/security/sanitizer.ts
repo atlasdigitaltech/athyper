@@ -135,7 +135,10 @@ export function sanitizeObject<T extends Record<string, unknown>>(
     if (typeof value === "string") {
       sanitized[key] = sanitizer(value);
     } else if (typeof value === "object" && value !== null) {
-      sanitized[key] = sanitizeObject(value as Record<string, unknown>, sanitizer);
+      sanitized[key] = sanitizeObject(
+        value as Record<string, unknown>,
+        sanitizer,
+      );
     } else {
       sanitized[key] = value;
     }
@@ -219,7 +222,10 @@ export function sanitizePhone(input: string): string {
  * Sanitize integer input
  * Converts to integer, returns 0 if invalid
  */
-export function sanitizeInteger(input: unknown, defaultValue: number = 0): number {
+export function sanitizeInteger(
+  input: unknown,
+  defaultValue: number = 0,
+): number {
   const num = parseInt(String(input), 10);
   return isNaN(num) ? defaultValue : num;
 }
@@ -228,7 +234,10 @@ export function sanitizeInteger(input: unknown, defaultValue: number = 0): numbe
  * Sanitize float input
  * Converts to float, returns 0 if invalid
  */
-export function sanitizeFloat(input: unknown, defaultValue: number = 0): number {
+export function sanitizeFloat(
+  input: unknown,
+  defaultValue: number = 0,
+): number {
   const num = parseFloat(String(input));
   return isNaN(num) ? defaultValue : num;
 }

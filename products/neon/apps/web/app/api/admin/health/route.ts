@@ -34,7 +34,8 @@ export async function GET() {
   }
 
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const realm = process.env.KEYCLOAK_REALM ?? "athyper";
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
 

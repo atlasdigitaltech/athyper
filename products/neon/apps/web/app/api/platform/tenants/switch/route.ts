@@ -73,7 +73,8 @@ export async function POST(req: Request) {
   }
 
   // Validate target tenant exists via runtime API
-  const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
+  const runtimeApiUrl =
+    process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
   try {
     const validationRes = await fetch(`${runtimeApiUrl}/api/platform/tenants`, {
       headers: {

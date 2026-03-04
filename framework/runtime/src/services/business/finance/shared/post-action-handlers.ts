@@ -46,7 +46,8 @@ export class InventoryReceiptHandler implements PostActionHandler {
         processed = true;
       } catch (err: unknown) {
         // If idempotency duplicate, skip silently
-        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE") continue;
+        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+          continue;
         throw err;
       }
     }
@@ -90,7 +91,8 @@ export class AssetWIPHandler implements PostActionHandler {
         });
         processed = true;
       } catch (err: unknown) {
-        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE") continue;
+        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+          continue;
         throw err;
       }
     }
@@ -129,7 +131,8 @@ export class CommissionCalcHandler implements PostActionHandler {
       });
       return true;
     } catch (err: unknown) {
-      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE") return false;
+      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+        return false;
       throw err;
     }
   }
@@ -166,7 +169,8 @@ export class FederationICHandler implements PostActionHandler {
       });
       return true;
     } catch (err: unknown) {
-      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE") return false;
+      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+        return false;
       throw err;
     }
   }

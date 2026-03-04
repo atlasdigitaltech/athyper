@@ -254,8 +254,7 @@ describe("callRetentionDelete()", () => {
 
     // When tenantId is undefined, validation is skipped entirely
     expect(() => {
-      if (tenantId && !/^[0-9a-f-]+$/i.test(tenantId))
-        throw new Error("fail");
+      if (tenantId && !/^[0-9a-f-]+$/i.test(tenantId)) throw new Error("fail");
     }).not.toThrow();
   });
 });

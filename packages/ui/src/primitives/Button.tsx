@@ -31,8 +31,7 @@ export function Button({
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         variant === "outline" &&
           "border border-border bg-transparent text-foreground hover:bg-accent",
-        variant === "ghost" &&
-          "bg-transparent text-foreground hover:bg-accent",
+        variant === "ghost" && "bg-transparent text-foreground hover:bg-accent",
         size === "default" && "px-4 py-2",
         size === "sm" && "px-3 py-1.5 text-xs",
         size === "lg" && "px-6 py-3",

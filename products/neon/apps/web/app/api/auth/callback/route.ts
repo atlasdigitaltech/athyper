@@ -73,7 +73,8 @@ export async function GET(req: Request) {
     return new NextResponse("Missing code or state parameter", { status: 400 });
   }
 
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
   const env = process.env.ENVIRONMENT ?? "local";

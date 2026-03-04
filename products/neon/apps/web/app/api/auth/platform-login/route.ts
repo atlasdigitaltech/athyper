@@ -38,7 +38,8 @@ export async function GET(req: Request) {
   const workbench = url.searchParams.get("workbench") ?? "admin";
   const returnUrl = url.searchParams.get("returnUrl") ?? "/platform";
 
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";

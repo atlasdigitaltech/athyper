@@ -38,7 +38,9 @@ export const Vertical: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ display: "flex", alignItems: "center", height: 40, gap: 8 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", height: 40, gap: 8 }}
+      >
         <span>Left</span>
         <Story />
         <span>Right</span>

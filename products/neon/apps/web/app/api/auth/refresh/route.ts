@@ -63,7 +63,8 @@ export async function POST() {
     return NextResponse.json({ redirect: "/api/auth/login" }, { status: 401 });
   }
 
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const env = process.env.ENVIRONMENT ?? "local";
 
   // Determine session namespace from neon_realm cookie

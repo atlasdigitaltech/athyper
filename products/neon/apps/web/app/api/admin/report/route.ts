@@ -66,7 +66,8 @@ export async function GET() {
   }
 
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
   const realm = process.env.KEYCLOAK_REALM ?? "athyper";
   const clientId = process.env.KEYCLOAK_CLIENT_ID ?? "neon-web";
   const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379/0";

@@ -9,5 +9,12 @@
     "verbatimModuleSyntax": true
   },
   "include": ["src"],
-  "exclude": ["dist", "node_modules", ".turbo", "src/**/*.stories.tsx", "src/**/*.test.tsx", "src/**/__tests__/**"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".turbo",
+    "src/**/*.stories.tsx",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**"
+  ]
 }

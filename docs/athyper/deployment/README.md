@@ -14,7 +14,7 @@ Athyper deployment procedures for local development (Windows) and server deploym
 | **pnpm**           | 10.28+  | `npm install -g pnpm`                                        |
 | **Docker Desktop** | Latest  | [docker.com](https://www.docker.com/products/docker-desktop) |
 | **Git**            | Latest  | [git-scm.com](https://git-scm.com)                           |
-| **mkcert**         | Latest  | `winget install FiloSottile.mkcert`                           |
+| **mkcert**         | Latest  | `winget install FiloSottile.mkcert`                          |
 
 ### Setup Steps
 
@@ -77,17 +77,17 @@ pnpm dev
 
 All services are accessed via the Traefik gateway on HTTPS (port 443), using the local TLS certificates.
 
-| Service                 | URL                                              |
-| ----------------------- | ------------------------------------------------ |
-| **Neon Web App**        | `http://localhost:3001`                           |
-| **Runtime API**         | `https://api.athyper.local`                       |
-| **Keycloak Admin**      | `https://iam.mesh.athyper.local`                  |
-| **Grafana (Telemetry)** | `https://telemetry.mesh.athyper.local`            |
-| **Prometheus**          | `https://metrics.mesh.athyper.local`              |
-| **Tempo (Traces)**      | `https://traces.mesh.athyper.local`               |
-| **Loki (Logs)**         | `https://logs.mesh.athyper.local`                 |
-| **MinIO Console**       | `https://objectstorage.console.mesh.athyper.local`|
-| **MinIO S3 API**        | `https://objectstorage.mesh.athyper.local`        |
+| Service                 | URL                                                |
+| ----------------------- | -------------------------------------------------- |
+| **Neon Web App**        | `http://localhost:3001`                            |
+| **Runtime API**         | `https://api.athyper.local`                        |
+| **Keycloak Admin**      | `https://iam.mesh.athyper.local`                   |
+| **Grafana (Telemetry)** | `https://telemetry.mesh.athyper.local`             |
+| **Prometheus**          | `https://metrics.mesh.athyper.local`               |
+| **Tempo (Traces)**      | `https://traces.mesh.athyper.local`                |
+| **Loki (Logs)**         | `https://logs.mesh.athyper.local`                  |
+| **MinIO Console**       | `https://objectstorage.console.mesh.athyper.local` |
+| **MinIO S3 API**        | `https://objectstorage.mesh.athyper.local`         |
 
 ### Windows-Specific Notes
 
@@ -142,19 +142,19 @@ pnpm clean:reset                       # Full clean + reinstall + rebuild
 
 ### Troubleshooting (Windows)
 
-| Issue                         | Solution                                                                    |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| Port conflicts                | Check `netstat -an \| findstr :5432` and stop conflicting services          |
-| Docker not starting           | Ensure WSL2 is enabled and Hyper-V is active                                |
-| pnpm install fails            | Delete `node_modules` and `pnpm-lock.yaml`, run `pnpm install`              |
-| DB provision fails            | Check PostgreSQL is healthy: `docker logs athyper-mesh-db-1`                |
-| "variable is not set" warns   | Always use `--env-file` or run `copy mesh\env\local.env.example mesh\env\.env` |
-| "database does not exist"     | Run `.\mesh\scripts\init-data.bat`, then `pnpm mesh:down` + `pnpm mesh:up` |
-| TLS certificate errors        | Regenerate certs: `.\mesh\scripts\generate-mesh-certs.bat`                  |
-| mkcert not found              | Restart terminal after install, or `winget install FiloSottile.mkcert`      |
-| Out of disk space             | `docker system prune -a` to clean Docker cache                              |
-| Keycloak won't start          | Check dbpool-auth is healthy: `pnpm mesh:ps`                                |
-| Container "is a directory"    | Stop mesh, delete `mesh/data/`, run `init-data.bat`, restart mesh           |
+| Issue                       | Solution                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| Port conflicts              | Check `netstat -an \| findstr :5432` and stop conflicting services             |
+| Docker not starting         | Ensure WSL2 is enabled and Hyper-V is active                                   |
+| pnpm install fails          | Delete `node_modules` and `pnpm-lock.yaml`, run `pnpm install`                 |
+| DB provision fails          | Check PostgreSQL is healthy: `docker logs athyper-mesh-db-1`                   |
+| "variable is not set" warns | Always use `--env-file` or run `copy mesh\env\local.env.example mesh\env\.env` |
+| "database does not exist"   | Run `.\mesh\scripts\init-data.bat`, then `pnpm mesh:down` + `pnpm mesh:up`     |
+| TLS certificate errors      | Regenerate certs: `.\mesh\scripts\generate-mesh-certs.bat`                     |
+| mkcert not found            | Restart terminal after install, or `winget install FiloSottile.mkcert`         |
+| Out of disk space           | `docker system prune -a` to clean Docker cache                                 |
+| Keycloak won't start        | Check dbpool-auth is healthy: `pnpm mesh:ps`                                   |
+| Container "is a directory"  | Stop mesh, delete `mesh/data/`, run `init-data.bat`, restart mesh              |
 
 ---
 

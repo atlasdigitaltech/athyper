@@ -4,7 +4,15 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@athyper/core", "@athyper/runtime", "@athyper/adapter-auth", "@athyper/adapter-db", "@athyper/adapter-memorycache", "@athyper/adapter-objectstorage", "@athyper/adapter-telemetry"]
+    [
+      "@athyper/core",
+      "@athyper/runtime",
+      "@athyper/adapter-auth",
+      "@athyper/adapter-db",
+      "@athyper/adapter-memorycache",
+      "@athyper/adapter-objectstorage",
+      "@athyper/adapter-telemetry"
+    ]
   ],
   "access": "restricted",
   "baseBranch": "main",
