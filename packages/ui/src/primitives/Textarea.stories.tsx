@@ -1,6 +1,7 @@
+import { Textarea } from "./Textarea";
+
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { Textarea } from "./Textarea";
 
 const meta = {
   title: "Primitives/Textarea",

@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from "@storybook/react";
 
 import { Button } from "./Button";
 import {
@@ -10,6 +9,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./Dialog";
+
+import type { Meta, StoryObj } from "@storybook/react";
 
 const meta = {
   title: "Primitives/Dialog",

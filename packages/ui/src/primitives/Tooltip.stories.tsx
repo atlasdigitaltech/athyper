@@ -1,7 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
 
 import { Button } from "./Button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
+
+import type { Meta, StoryObj } from "@storybook/react";
 
 const meta = {
   title: "Primitives/Tooltip",

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { DataTable } from "../DataTable";
+
 import type { ColumnDef } from "../types";
 
 interface TestItem {

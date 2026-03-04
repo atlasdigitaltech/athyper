@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from "@storybook/react";
 
 import { Button } from "./Button";
 import {
@@ -11,6 +10,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "./DropdownMenu";
+
+import type { Meta, StoryObj } from "@storybook/react";
 
 const meta = {
   title: "Primitives/DropdownMenu",
