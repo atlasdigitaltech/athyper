@@ -16,7 +16,7 @@ export class ReactionService {
   constructor(
     private readonly repo: ReactionRepository,
     private readonly auditWriter: AuditWriter,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -30,7 +30,7 @@ export class ReactionService {
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
     userId: string,
-    reactionType: ReactionType
+    reactionType: ReactionType,
   ): Promise<{ action: "added" | "removed" }> {
     const result = await this.repo.toggle({
       tenantId,
@@ -61,7 +61,7 @@ export class ReactionService {
         userId,
         reactionType,
       },
-      "[collab] Reaction toggled"
+      "[collab] Reaction toggled",
     );
 
     return result;
@@ -74,9 +74,14 @@ export class ReactionService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    currentUserId?: string
+    currentUserId?: string,
   ): Promise<ReactionSummary[]> {
-    return this.repo.getSummary(tenantId, commentType, commentId, currentUserId);
+    return this.repo.getSummary(
+      tenantId,
+      commentType,
+      commentId,
+      currentUserId,
+    );
   }
 
   /**
@@ -86,9 +91,14 @@ export class ReactionService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    currentUserId?: string
+    currentUserId?: string,
   ): Promise<Map<string, ReactionSummary[]>> {
-    return this.repo.getSummariesForComments(tenantId, commentType, commentIds, currentUserId);
+    return this.repo.getSummariesForComments(
+      tenantId,
+      commentType,
+      commentIds,
+      currentUserId,
+    );
   }
 
   /**
@@ -99,7 +109,7 @@ export class ReactionService {
   async deleteReactionsForComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await this.repo.deleteForComment(tenantId, commentType, commentId);
 
@@ -108,7 +118,7 @@ export class ReactionService {
         commentType,
         commentId,
       },
-      "[collab] Reactions deleted for comment"
+      "[collab] Reactions deleted for comment",
     );
   }
 }

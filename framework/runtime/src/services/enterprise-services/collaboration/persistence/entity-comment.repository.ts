@@ -5,7 +5,12 @@
  * Handles CRUD operations for record-level comments.
  */
 
-import type { EntityComment, CreateCommentRequest, UpdateCommentRequest, Attachment } from "../types.js";
+import type {
+  EntityComment,
+  CreateCommentRequest,
+  UpdateCommentRequest,
+  Attachment,
+} from "../types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -51,7 +56,10 @@ export class EntityCommentRepository {
   /**
    * Get comment by ID
    */
-  async getById(tenantId: string, commentId: string): Promise<EntityComment | undefined> {
+  async getById(
+    tenantId: string,
+    commentId: string,
+  ): Promise<EntityComment | undefined> {
     const row = await this.db
       .selectFrom("collab.entity_comment")
       .selectAll()
@@ -65,7 +73,10 @@ export class EntityCommentRepository {
     const comment = this.mapRow(row as EntityCommentRow);
 
     // Fetch attachments
-    const attachments = await this.fetchAttachmentsForComment(tenantId, commentId);
+    const attachments = await this.fetchAttachmentsForComment(
+      tenantId,
+      commentId,
+    );
     comment.attachments = attachments;
 
     return comment;
@@ -78,7 +89,7 @@ export class EntityCommentRepository {
     tenantId: string,
     entityType: string,
     entityId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     const {
       limit = 50,
@@ -86,7 +97,7 @@ export class EntityCommentRepository {
       includeDeleted = false,
       currentUserId,
       isInternalUser = false,
-      isAdmin = false
+      isAdmin = false,
     } = options ?? {};
 
     let query = this.db
@@ -112,9 +123,9 @@ export class EntityCommentRepository {
           eb("visibility", "in", allowedVisibilities),
           eb.and([
             eb("visibility", "=", "private"),
-            eb("commenter_id", "=", currentUserId)
-          ])
-        ])
+            eb("commenter_id", "=", currentUserId),
+          ]),
+        ]),
       );
     }
 
@@ -129,7 +140,10 @@ export class EntityCommentRepository {
     // Fetch attachments for all comments
     if (comments.length > 0) {
       const commentIds = comments.map((c) => c.id);
-      const attachmentsMap = await this.fetchAttachmentsForComments(tenantId, commentIds);
+      const attachmentsMap = await this.fetchAttachmentsForComments(
+        tenantId,
+        commentIds,
+      );
       comments.forEach((comment) => {
         comment.attachments = attachmentsMap.get(comment.id) || [];
       });
@@ -144,7 +158,7 @@ export class EntityCommentRepository {
   async countByEntity(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<number> {
     const result = await this.db
       .selectFrom("collab.entity_comment")
@@ -177,7 +191,7 @@ export class EntityCommentRepository {
         comment_text: req.commentText,
         parent_comment_id: req.parentCommentId ?? null,
         thread_depth: 0, // Phase 2: always 0 (no threading yet)
-        visibility: req.visibility ?? 'public',
+        visibility: req.visibility ?? "public",
         created_at: now,
         created_by: req.createdBy,
       })
@@ -197,7 +211,7 @@ export class EntityCommentRepository {
   async update(
     tenantId: string,
     commentId: string,
-    req: UpdateCommentRequest
+    req: UpdateCommentRequest,
   ): Promise<void> {
     const now = new Date();
 
@@ -217,7 +231,11 @@ export class EntityCommentRepository {
   /**
    * Soft delete a comment
    */
-  async softDelete(tenantId: string, commentId: string, deletedBy: string): Promise<void> {
+  async softDelete(
+    tenantId: string,
+    commentId: string,
+    deletedBy: string,
+  ): Promise<void> {
     const now = new Date();
 
     await this.db
@@ -237,7 +255,7 @@ export class EntityCommentRepository {
   async listByCommenter(
     tenantId: string,
     commenterId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     const { limit = 50, offset = 0 } = options ?? {};
 
@@ -257,7 +275,10 @@ export class EntityCommentRepository {
     // Fetch attachments for all comments
     if (comments.length > 0) {
       const commentIds = comments.map((c) => c.id);
-      const attachmentsMap = await this.fetchAttachmentsForComments(tenantId, commentIds);
+      const attachmentsMap = await this.fetchAttachmentsForComments(
+        tenantId,
+        commentIds,
+      );
       comments.forEach((comment) => {
         comment.attachments = attachmentsMap.get(comment.id) || [];
       });
@@ -273,7 +294,7 @@ export class EntityCommentRepository {
    */
   async createReply(
     req: CreateCommentRequest & { parentCommentId: string },
-    maxDepth: number = 5
+    maxDepth: number = 5,
   ): Promise<EntityComment> {
     // Get parent comment to determine thread depth
     const parent = await this.getById(req.tenantId, req.parentCommentId);
@@ -301,7 +322,7 @@ export class EntityCommentRepository {
         comment_text: req.commentText,
         parent_comment_id: req.parentCommentId,
         thread_depth: newDepth,
-        visibility: req.visibility ?? 'public',
+        visibility: req.visibility ?? "public",
         created_at: now,
         created_by: req.createdBy,
       })
@@ -321,7 +342,7 @@ export class EntityCommentRepository {
   async listReplies(
     tenantId: string,
     parentCommentId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     const {
       limit = 50,
@@ -329,7 +350,7 @@ export class EntityCommentRepository {
       includeDeleted = false,
       currentUserId,
       isInternalUser = false,
-      isAdmin = false
+      isAdmin = false,
     } = options ?? {};
 
     let query = this.db
@@ -352,9 +373,9 @@ export class EntityCommentRepository {
           eb("visibility", "in", allowedVisibilities),
           eb.and([
             eb("visibility", "=", "private"),
-            eb("commenter_id", "=", currentUserId)
-          ])
-        ])
+            eb("commenter_id", "=", currentUserId),
+          ]),
+        ]),
       );
     }
 
@@ -369,7 +390,10 @@ export class EntityCommentRepository {
     // Fetch attachments for all comments
     if (comments.length > 0) {
       const commentIds = comments.map((c) => c.id);
-      const attachmentsMap = await this.fetchAttachmentsForComments(tenantId, commentIds);
+      const attachmentsMap = await this.fetchAttachmentsForComments(
+        tenantId,
+        commentIds,
+      );
       comments.forEach((comment) => {
         comment.attachments = attachmentsMap.get(comment.id) || [];
       });
@@ -381,7 +405,10 @@ export class EntityCommentRepository {
   /**
    * Count replies for a comment (Phase 6)
    */
-  async countReplies(tenantId: string, parentCommentId: string): Promise<number> {
+  async countReplies(
+    tenantId: string,
+    parentCommentId: string,
+  ): Promise<number> {
     const result = await this.db
       .selectFrom("collab.entity_comment")
       .select(({ fn }) => fn.count<number>("id").as("count"))
@@ -398,7 +425,7 @@ export class EntityCommentRepository {
    */
   private async fetchAttachmentsForComment(
     tenantId: string,
-    commentId: string
+    commentId: string,
   ): Promise<Attachment[]> {
     const rows = await this.db
       .selectFrom("doc.attachment")
@@ -433,7 +460,7 @@ export class EntityCommentRepository {
    */
   private async fetchAttachmentsForComments(
     tenantId: string,
-    commentIds: string[]
+    commentIds: string[],
   ): Promise<Map<string, Attachment[]>> {
     if (commentIds.length === 0) {
       return new Map();
@@ -493,7 +520,7 @@ export class EntityCommentRepository {
       commentText: row.comment_text,
       parentCommentId: row.parent_comment_id ?? undefined,
       threadDepth: row.thread_depth,
-      visibility: row.visibility as 'public' | 'internal' | 'private',
+      visibility: row.visibility as "public" | "internal" | "private",
       deletedAt: row.deleted_at ?? undefined,
       deletedBy: row.deleted_by ?? undefined,
       createdAt: row.created_at,

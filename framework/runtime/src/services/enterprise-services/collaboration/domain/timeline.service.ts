@@ -26,7 +26,9 @@ export interface IActivityTimelineService {
 }
 
 export class CollabTimelineService {
-  constructor(private readonly activityTimelineService: IActivityTimelineService) {}
+  constructor(
+    private readonly activityTimelineService: IActivityTimelineService,
+  ) {}
 
   async getTimeline(params: TimelineQuery): Promise<ActivityTimelineEntry[]> {
     return this.activityTimelineService.query({

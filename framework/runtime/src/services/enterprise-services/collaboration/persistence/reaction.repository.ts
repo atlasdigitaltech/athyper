@@ -4,7 +4,12 @@
  * Manages emoji reactions on comments.
  */
 
-import type { CommentReaction, CreateReactionRequest, ReactionSummary, ReactionType } from "../types.js";
+import type {
+  CommentReaction,
+  CreateReactionRequest,
+  ReactionSummary,
+  ReactionType,
+} from "../types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -30,7 +35,9 @@ export class ReactionRepository {
   /**
    * Toggle a reaction (add if not exists, remove if exists)
    */
-  async toggle(req: CreateReactionRequest): Promise<{ action: "added" | "removed" }> {
+  async toggle(
+    req: CreateReactionRequest,
+  ): Promise<{ action: "added" | "removed" }> {
     // Check if reaction exists
     const existing = await this.db
       .selectFrom("collab.comment_reaction")
@@ -77,7 +84,7 @@ export class ReactionRepository {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    currentUserId?: string
+    currentUserId?: string,
   ): Promise<ReactionSummary[]> {
     const rows = await this.db
       .selectFrom("collab.comment_reaction")
@@ -102,7 +109,9 @@ export class ReactionRepository {
       reactionType,
       count: userIds.length,
       userIds,
-      currentUserReacted: currentUserId ? userIds.includes(currentUserId) : false,
+      currentUserReacted: currentUserId
+        ? userIds.includes(currentUserId)
+        : false,
     }));
   }
 
@@ -113,7 +122,7 @@ export class ReactionRepository {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    currentUserId?: string
+    currentUserId?: string,
   ): Promise<Map<string, ReactionSummary[]>> {
     if (commentIds.length === 0) {
       return new Map();
@@ -146,12 +155,16 @@ export class ReactionRepository {
     // Convert to summary format
     const summaries = new Map<string, ReactionSummary[]>();
     for (const [commentId, reactions] of grouped.entries()) {
-      const summary = Array.from(reactions.entries()).map(([reactionType, userIds]) => ({
-        reactionType,
-        count: userIds.length,
-        userIds,
-        currentUserReacted: currentUserId ? userIds.includes(currentUserId) : false,
-      }));
+      const summary = Array.from(reactions.entries()).map(
+        ([reactionType, userIds]) => ({
+          reactionType,
+          count: userIds.length,
+          userIds,
+          currentUserReacted: currentUserId
+            ? userIds.includes(currentUserId)
+            : false,
+        }),
+      );
       summaries.set(commentId, summary);
     }
 
@@ -164,7 +177,7 @@ export class ReactionRepository {
   async listByUser(
     tenantId: string,
     userId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<CommentReaction[]> {
     const { limit = 50, offset = 0 } = options ?? {};
 
@@ -187,7 +200,7 @@ export class ReactionRepository {
   async deleteForComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await this.db
       .deleteFrom("collab.comment_reaction")

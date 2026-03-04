@@ -1,11 +1,7 @@
 ﻿{
-    "code":  "REG",
-    "name":  "Regulatory Compliance",
-    "dependsOn":  [
-                      "CORE",
-                      "POLICY",
-                      "AUDIT"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Enterprise"
+  "code": "REG",
+  "name": "Regulatory Compliance",
+  "dependsOn": ["CORE", "POLICY", "AUDIT"],
+  "tenantScoped": true,
+  "subscription": "Enterprise"
 }

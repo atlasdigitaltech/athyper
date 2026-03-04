@@ -41,7 +41,7 @@ export interface SLAConfig {
 export class CommentSLAService {
   constructor(
     private readonly db: Kysely<DB>,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -55,7 +55,7 @@ export class CommentSLAService {
     entityId: string,
     commentId: string,
     commenterId: string,
-    parentCommentId?: string
+    parentCommentId?: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -92,14 +92,22 @@ export class CommentSLAService {
         .execute();
 
       // Log first comment (no response time)
-      await this.logResponseHistory(tenantId, entityType, entityId, commentId, commenterId, null, null);
+      await this.logResponseHistory(
+        tenantId,
+        entityType,
+        entityId,
+        commentId,
+        commenterId,
+        null,
+        null,
+      );
     } else {
       // Subsequent comment
       const isResponse = existing.first_comment_by !== commenterId;
 
       // Calculate response time (time since first comment or previous comment)
       const responseTimeSeconds = Math.floor(
-        (now.getTime() - new Date(existing.first_comment_at).getTime()) / 1000
+        (now.getTime() - new Date(existing.first_comment_at).getTime()) / 1000,
       );
 
       // Update metrics
@@ -108,7 +116,7 @@ export class CommentSLAService {
       };
 
       // Increment total_comments via raw SQL expression
-      updateSet.total_comments = (eb: any) => eb.raw('total_comments + 1');
+      updateSet.total_comments = (eb: any) => eb.raw("total_comments + 1");
 
       if (isResponse && !existing.first_response_at) {
         updateSet.first_response_at = now;
@@ -135,7 +143,7 @@ export class CommentSLAService {
         commentId,
         commenterId,
         parentCommentId ?? null,
-        responseTimeSeconds
+        responseTimeSeconds,
       );
     }
   }
@@ -146,7 +154,7 @@ export class CommentSLAService {
   async getSLAMetrics(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<SLAMetrics | undefined> {
     const row = await this.db
       .selectFrom("collab.comment_sla_metrics")
@@ -179,7 +187,7 @@ export class CommentSLAService {
   async getSLABreaches(
     tenantId: string,
     entityType?: string,
-    limit: number = 50
+    limit: number = 50,
   ): Promise<SLAMetrics[]> {
     let query = this.db
       .selectFrom("collab.comment_sla_metrics")
@@ -191,7 +199,10 @@ export class CommentSLAService {
       query = query.where("entity_type", "=", entityType);
     }
 
-    const rows = await query.orderBy("first_comment_at", "desc").limit(limit).execute();
+    const rows = await query
+      .orderBy("first_comment_at", "desc")
+      .limit(limit)
+      .execute();
 
     return rows.map((row) => ({
       entityType: row.entity_type,
@@ -214,7 +225,7 @@ export class CommentSLAService {
   async getPendingResponses(
     tenantId: string,
     entityType?: string,
-    limit: number = 50
+    limit: number = 50,
   ): Promise<SLAMetrics[]> {
     let query = this.db
       .selectFrom("collab.comment_sla_metrics")
@@ -226,7 +237,10 @@ export class CommentSLAService {
       query = query.where("entity_type", "=", entityType);
     }
 
-    const rows = await query.orderBy("first_comment_at", "asc").limit(limit).execute();
+    const rows = await query
+      .orderBy("first_comment_at", "asc")
+      .limit(limit)
+      .execute();
 
     return rows.map((row) => ({
       entityType: row.entity_type,
@@ -246,7 +260,10 @@ export class CommentSLAService {
   /**
    * Get or create SLA config
    */
-  async getSLAConfig(tenantId: string, entityType: string): Promise<SLAConfig | undefined> {
+  async getSLAConfig(
+    tenantId: string,
+    entityType: string,
+  ): Promise<SLAConfig | undefined> {
     const row = await this.db
       .selectFrom("collab.comment_sla_config")
       .selectAll()
@@ -273,7 +290,7 @@ export class CommentSLAService {
     slaTargetSeconds: number,
     options?: {
       businessHoursOnly?: boolean;
-    }
+    },
   ): Promise<void> {
     const now = new Date();
 
@@ -282,7 +299,7 @@ export class CommentSLAService {
       .values({
         id: crypto.randomUUID(),
         tenant_id: tenantId,
-        created_by: 'system',
+        created_by: "system",
         entity_type: entityType,
         sla_target_seconds: slaTargetSeconds,
         enabled: true,
@@ -291,11 +308,11 @@ export class CommentSLAService {
         updated_at: now,
       })
       .onConflict((oc) =>
-        oc.columns(['tenant_id', 'entity_type']).doUpdateSet({
+        oc.columns(["tenant_id", "entity_type"]).doUpdateSet({
           sla_target_seconds: slaTargetSeconds,
           business_hours_only: options?.businessHoursOnly ?? false,
           updated_at: now,
-        })
+        }),
       )
       .execute();
   }
@@ -310,7 +327,7 @@ export class CommentSLAService {
     commentId: string,
     commenterId: string,
     parentCommentId: string | null,
-    responseTimeSeconds: number | null
+    responseTimeSeconds: number | null,
   ): Promise<void> {
     await this.db
       .insertInto("collab.comment_response")
@@ -325,7 +342,7 @@ export class CommentSLAService {
         response_time_seconds: responseTimeSeconds,
         created_at: new Date(),
       })
-      .onConflict((oc) => oc.columns(['tenant_id', 'comment_id']).doNothing())
+      .onConflict((oc) => oc.columns(["tenant_id", "comment_id"]).doNothing())
       .execute();
   }
 }

@@ -36,7 +36,7 @@ interface CommentReadStatusRow {
 export class ReadTrackingRepository {
   constructor(
     private readonly db: Kysely<DB>,
-    private readonly cache?: ReadTrackingCache
+    private readonly cache?: ReadTrackingCache,
   ) {}
 
   /**
@@ -61,7 +61,7 @@ export class ReadTrackingRepository {
       .onConflict((oc) =>
         oc
           .columns(["tenant_id", "comment_type", "comment_id", "user_id"])
-          .doUpdateSet({ read_at: now })
+          .doUpdateSet({ read_at: now }),
       )
       .execute();
 
@@ -79,7 +79,7 @@ export class ReadTrackingRepository {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    userId: string
+    userId: string,
   ): Promise<void> {
     if (commentIds.length === 0) return;
 
@@ -101,7 +101,7 @@ export class ReadTrackingRepository {
       .onConflict((oc) =>
         oc
           .columns(["tenant_id", "comment_type", "comment_id", "user_id"])
-          .doUpdateSet({ read_at: now })
+          .doUpdateSet({ read_at: now }),
       )
       .execute();
 
@@ -110,7 +110,9 @@ export class ReadTrackingRepository {
       const pipeline = [];
       for (const commentId of commentIds) {
         const key = `comment_read:${userId}:${commentId}`;
-        pipeline.push(this.cache.set(key, now.toISOString(), { ttl: 90 * 24 * 60 * 60 }));
+        pipeline.push(
+          this.cache.set(key, now.toISOString(), { ttl: 90 * 24 * 60 * 60 }),
+        );
       }
       await Promise.all(pipeline);
     }
@@ -125,7 +127,7 @@ export class ReadTrackingRepository {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    userId: string
+    userId: string,
   ): Promise<boolean> {
     // Fast path: Check Redis
     if (this.cache) {
@@ -158,7 +160,7 @@ export class ReadTrackingRepository {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    userId: string
+    userId: string,
   ): Promise<Set<string>> {
     if (commentIds.length === 0) {
       return new Set();
@@ -195,7 +197,7 @@ export class ReadTrackingRepository {
     commentType: "entity_comment" | "approval_comment",
     userId: string,
     entityType?: string,
-    entityId?: string
+    entityId?: string,
   ): Promise<number> {
     // This requires joining with comment tables to get total count
     // For entity_comment:
@@ -206,7 +208,11 @@ export class ReadTrackingRepository {
       .where("deleted_at", "is", null);
 
     if (entityType) {
-      totalCommentsQuery = totalCommentsQuery.where("entity_type", "=", entityType);
+      totalCommentsQuery = totalCommentsQuery.where(
+        "entity_type",
+        "=",
+        entityType,
+      );
     }
     if (entityId) {
       totalCommentsQuery = totalCommentsQuery.where("entity_id", "=", entityId);
@@ -221,7 +227,7 @@ export class ReadTrackingRepository {
       .innerJoin("collab.entity_comment as ec", (join) =>
         join
           .onRef("crs.comment_id", "=", "ec.id")
-          .on("crs.comment_type", "=", commentType)
+          .on("crs.comment_type", "=", commentType),
       )
       .select(({ fn }) => fn.count<number>("crs.id").as("count"))
       .where("crs.tenant_id", "=", tenantId)
@@ -229,10 +235,18 @@ export class ReadTrackingRepository {
       .where("ec.deleted_at", "is", null);
 
     if (entityType) {
-      readCommentsQuery = readCommentsQuery.where("ec.entity_type", "=", entityType);
+      readCommentsQuery = readCommentsQuery.where(
+        "ec.entity_type",
+        "=",
+        entityType,
+      );
     }
     if (entityId) {
-      readCommentsQuery = readCommentsQuery.where("ec.entity_id", "=", entityId);
+      readCommentsQuery = readCommentsQuery.where(
+        "ec.entity_id",
+        "=",
+        entityId,
+      );
     }
 
     const readResult = await readCommentsQuery.executeTakeFirst();
@@ -247,7 +261,7 @@ export class ReadTrackingRepository {
   async deleteForComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await this.db
       .deleteFrom("collab.comment_read")

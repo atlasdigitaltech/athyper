@@ -33,7 +33,7 @@ export class CommentModerationService {
     private readonly repo: CommentFlagRepository,
     private readonly auditWriter: AuditWriter,
     private readonly logger: Logger,
-    config?: ModerationConfig
+    config?: ModerationConfig,
   ) {
     this.autoHideThreshold = config?.autoHideThreshold ?? 3;
     this.enableAutoHide = config?.enableAutoHide ?? true;
@@ -67,7 +67,7 @@ export class CommentModerationService {
         commentId: req.commentId,
         reason: req.flagReason,
       },
-      "[collab] Comment flagged"
+      "[collab] Comment flagged",
     );
 
     // Check if auto-hide threshold is reached
@@ -84,7 +84,7 @@ export class CommentModerationService {
   async getFlagsForComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<CommentFlag[]> {
     return this.repo.getFlagsForComment(tenantId, commentType, commentId);
   }
@@ -95,7 +95,7 @@ export class CommentModerationService {
   async getPendingFlags(
     tenantId: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<{ flags: CommentFlag[]; total: number }> {
     const [flags, total] = await Promise.all([
       this.repo.getPendingFlags(tenantId, limit, offset),
@@ -111,7 +111,7 @@ export class CommentModerationService {
   async reviewFlag(
     tenantId: string,
     flagId: string,
-    req: ReviewFlagRequest
+    req: ReviewFlagRequest,
   ): Promise<void> {
     // Get flag to know which comment it belongs to
     const flag = await this.repo.getPendingFlags(tenantId);
@@ -125,25 +125,29 @@ export class CommentModerationService {
     await this.repo.reviewFlag(tenantId, flagId, req);
 
     // Take action on comment
-    if (req.action === 'hide_comment') {
+    if (req.action === "hide_comment") {
       await this.repo.hideComment(
         tenantId,
         targetFlag.commentType,
         targetFlag.commentId,
         req.reviewedBy,
-        req.resolution
+        req.resolution,
       );
-    } else if (req.action === 'dismiss') {
+    } else if (req.action === "dismiss") {
       // If dismissing, check if we should unhide the comment
       const status = await this.repo.getModerationStatus(
         tenantId,
         targetFlag.commentType,
-        targetFlag.commentId
+        targetFlag.commentId,
       );
 
       // If auto-hidden and all flags are dismissed, unhide
       if (status?.isHidden && status.flagCount <= this.autoHideThreshold) {
-        await this.repo.unhideComment(tenantId, targetFlag.commentType, targetFlag.commentId);
+        await this.repo.unhideComment(
+          tenantId,
+          targetFlag.commentType,
+          targetFlag.commentId,
+        );
       }
     }
 
@@ -168,7 +172,7 @@ export class CommentModerationService {
         action: req.action,
         reviewedBy: req.reviewedBy,
       },
-      "[collab] Flag reviewed"
+      "[collab] Flag reviewed",
     );
   }
 
@@ -178,7 +182,7 @@ export class CommentModerationService {
   async getModerationStatus(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<CommentModerationStatus | undefined> {
     return this.repo.getModerationStatus(tenantId, commentType, commentId);
   }
@@ -191,9 +195,15 @@ export class CommentModerationService {
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
     moderatorId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
-    await this.repo.hideComment(tenantId, commentType, commentId, moderatorId, reason);
+    await this.repo.hideComment(
+      tenantId,
+      commentType,
+      commentId,
+      moderatorId,
+      reason,
+    );
 
     await this.auditWriter.write({
       ts: new Date().toISOString(),
@@ -214,7 +224,7 @@ export class CommentModerationService {
         moderatorId,
         reason,
       },
-      "[collab] Comment manually hidden"
+      "[collab] Comment manually hidden",
     );
   }
 
@@ -225,7 +235,7 @@ export class CommentModerationService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    moderatorId: string
+    moderatorId: string,
   ): Promise<void> {
     await this.repo.unhideComment(tenantId, commentType, commentId);
 
@@ -246,7 +256,7 @@ export class CommentModerationService {
         commentId,
         moderatorId,
       },
-      "[collab] Comment manually unhidden"
+      "[collab] Comment manually unhidden",
     );
   }
 
@@ -256,9 +266,13 @@ export class CommentModerationService {
   private async checkAutoHide(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
-    const status = await this.repo.getModerationStatus(tenantId, commentType, commentId);
+    const status = await this.repo.getModerationStatus(
+      tenantId,
+      commentType,
+      commentId,
+    );
 
     if (!status) return;
 
@@ -269,7 +283,7 @@ export class CommentModerationService {
         commentType,
         commentId,
         "system",
-        `Auto-hidden after ${this.autoHideThreshold} flags`
+        `Auto-hidden after ${this.autoHideThreshold} flags`,
       );
 
       await this.auditWriter.write({
@@ -292,7 +306,7 @@ export class CommentModerationService {
           flagCount: status.flagCount,
           threshold: this.autoHideThreshold,
         },
-        "[collab] Comment auto-hidden"
+        "[collab] Comment auto-hidden",
       );
     }
   }

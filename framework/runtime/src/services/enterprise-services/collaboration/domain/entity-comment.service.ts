@@ -12,8 +12,15 @@ import type { CommentEventsService } from "./comment-events.service.js";
 import type { MentionService } from "./mention.service.js";
 import type { AuditWriter } from "../../../../kernel/audit.js";
 import type { Logger } from "../../../../kernel/logger.js";
-import type { EntityCommentRepository, ListCommentOptions } from "../persistence/entity-comment.repository.js";
-import type { EntityComment, CreateCommentRequest, UpdateCommentRequest } from "../types.js";
+import type {
+  EntityCommentRepository,
+  ListCommentOptions,
+} from "../persistence/entity-comment.repository.js";
+import type {
+  EntityComment,
+  CreateCommentRequest,
+  UpdateCommentRequest,
+} from "../types.js";
 
 /**
  * Entity Comment Service
@@ -27,7 +34,7 @@ export class EntityCommentService {
       maxCommentLength?: number;
     },
     private readonly mentionService?: MentionService,
-    private readonly eventsService?: CommentEventsService
+    private readonly eventsService?: CommentEventsService,
   ) {}
 
   /**
@@ -38,7 +45,9 @@ export class EntityCommentService {
 
     // Validate comment length
     if (req.commentText.length > maxLength) {
-      throw new Error(`Comment text exceeds maximum length of ${maxLength} characters`);
+      throw new Error(
+        `Comment text exceeds maximum length of ${maxLength} characters`,
+      );
     }
 
     if (req.commentText.trim().length === 0) {
@@ -55,7 +64,7 @@ export class EntityCommentService {
           req.tenantId,
           "entity_comment",
           comment.id,
-          req.commentText
+          req.commentText,
         );
 
         if (mentionResult.mentionsCreated > 0) {
@@ -65,7 +74,7 @@ export class EntityCommentService {
               mentionsCreated: mentionResult.mentionsCreated,
               mentionedUsers: mentionResult.mentionedUserIds,
             },
-            "[collab] Processed mentions for comment"
+            "[collab] Processed mentions for comment",
           );
         }
       } catch (err) {
@@ -74,7 +83,7 @@ export class EntityCommentService {
             commentId: comment.id,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[collab] Failed to process mentions (non-fatal)"
+          "[collab] Failed to process mentions (non-fatal)",
         );
       }
     }
@@ -102,7 +111,7 @@ export class EntityCommentService {
         entityId: req.entityId,
         commenterId: req.commenterId,
       },
-      "[collab] Comment created"
+      "[collab] Comment created",
     );
 
     // Broadcast real-time event
@@ -132,14 +141,16 @@ export class EntityCommentService {
    * Create a reply to a comment (Phase 6)
    */
   async createReply(
-    req: CreateCommentRequest & { parentCommentId: string }
+    req: CreateCommentRequest & { parentCommentId: string },
   ): Promise<EntityComment> {
     const maxLength = this.config?.maxCommentLength ?? 5000;
     const maxDepth = 5; // Hard limit
 
     // Validate comment length
     if (req.commentText.length > maxLength) {
-      throw new Error(`Comment text exceeds maximum length of ${maxLength} characters`);
+      throw new Error(
+        `Comment text exceeds maximum length of ${maxLength} characters`,
+      );
     }
 
     if (req.commentText.trim().length === 0) {
@@ -156,7 +167,7 @@ export class EntityCommentService {
           req.tenantId,
           "entity_comment",
           reply.id,
-          req.commentText
+          req.commentText,
         );
 
         if (mentionResult.mentionsCreated > 0) {
@@ -166,7 +177,7 @@ export class EntityCommentService {
               parentId: req.parentCommentId,
               mentionsCreated: mentionResult.mentionsCreated,
             },
-            "[collab] Processed mentions for reply"
+            "[collab] Processed mentions for reply",
           );
         }
       } catch (err) {
@@ -175,7 +186,7 @@ export class EntityCommentService {
             replyId: reply.id,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[collab] Failed to process mentions in reply (non-fatal)"
+          "[collab] Failed to process mentions in reply (non-fatal)",
         );
       }
     }
@@ -202,7 +213,7 @@ export class EntityCommentService {
         parentId: req.parentCommentId,
         depth: reply.threadDepth,
       },
-      "[collab] Reply created"
+      "[collab] Reply created",
     );
 
     // Broadcast real-time event
@@ -236,7 +247,7 @@ export class EntityCommentService {
   async listReplies(
     tenantId: string,
     parentCommentId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     return this.repo.listReplies(tenantId, parentCommentId, options);
   }
@@ -244,14 +255,20 @@ export class EntityCommentService {
   /**
    * Count replies for a comment (Phase 6)
    */
-  async countReplies(tenantId: string, parentCommentId: string): Promise<number> {
+  async countReplies(
+    tenantId: string,
+    parentCommentId: string,
+  ): Promise<number> {
     return this.repo.countReplies(tenantId, parentCommentId);
   }
 
   /**
    * Get comment by ID
    */
-  async getById(tenantId: string, commentId: string): Promise<EntityComment | undefined> {
+  async getById(
+    tenantId: string,
+    commentId: string,
+  ): Promise<EntityComment | undefined> {
     return this.repo.getById(tenantId, commentId);
   }
 
@@ -262,7 +279,7 @@ export class EntityCommentService {
     tenantId: string,
     entityType: string,
     entityId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     return this.repo.listByEntity(tenantId, entityType, entityId, options);
   }
@@ -273,7 +290,7 @@ export class EntityCommentService {
   async countByEntity(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<number> {
     return this.repo.countByEntity(tenantId, entityType, entityId);
   }
@@ -289,13 +306,15 @@ export class EntityCommentService {
     commentId: string,
     commenterId: string,
     req: UpdateCommentRequest,
-    isModerator: boolean = false
+    isModerator: boolean = false,
   ): Promise<EntityComment> {
     const maxLength = this.config?.maxCommentLength ?? 5000;
 
     // Validate comment length
     if (req.commentText.length > maxLength) {
-      throw new Error(`Comment text exceeds maximum length of ${maxLength} characters`);
+      throw new Error(
+        `Comment text exceeds maximum length of ${maxLength} characters`,
+      );
     }
 
     if (req.commentText.trim().length === 0) {
@@ -340,7 +359,7 @@ export class EntityCommentService {
         commenterId,
         isModerator,
       },
-      "[collab] Comment updated"
+      "[collab] Comment updated",
     );
 
     // Fetch updated comment
@@ -379,7 +398,7 @@ export class EntityCommentService {
     tenantId: string,
     commentId: string,
     requesterId: string,
-    isModerator: boolean = false
+    isModerator: boolean = false,
   ): Promise<void> {
     // Get existing comment
     const existing = await this.repo.getById(tenantId, commentId);
@@ -418,7 +437,7 @@ export class EntityCommentService {
         requesterId,
         isModerator,
       },
-      "[collab] Comment deleted"
+      "[collab] Comment deleted",
     );
 
     // Broadcast real-time event
@@ -440,7 +459,7 @@ export class EntityCommentService {
   async listByCommenter(
     tenantId: string,
     commenterId: string,
-    options?: ListCommentOptions
+    options?: ListCommentOptions,
   ): Promise<EntityComment[]> {
     return this.repo.listByCommenter(tenantId, commenterId, options);
   }

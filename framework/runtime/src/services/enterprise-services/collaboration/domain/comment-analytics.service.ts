@@ -72,7 +72,7 @@ export interface AnalyticsSummary {
 export class CommentAnalyticsService {
   constructor(
     private readonly db: Kysely<DB>,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -82,7 +82,7 @@ export class CommentAnalyticsService {
     tenantId: string,
     startDate: Date,
     endDate: Date,
-    entityType?: string
+    entityType?: string,
   ): Promise<DailyAnalytics[]> {
     let query = this.db
       .selectFrom("collab.comment_analytics_daily")
@@ -98,14 +98,17 @@ export class CommentAnalyticsService {
     const rows = await query.orderBy("date", "asc").execute();
 
     return rows.map((row) => ({
-      date: row.date.toISOString().split('T')[0],
+      date: row.date.toISOString().split("T")[0],
       entityType: row.entity_type ?? undefined,
       totalComments: row.total_comments,
       totalReplies: row.total_replies,
       uniqueCommenters: row.unique_commenters,
       totalReactions: row.total_reactions,
       totalFlags: row.total_flags,
-      avgCommentLength: row.avg_comment_length != null ? Number(row.avg_comment_length) : undefined,
+      avgCommentLength:
+        row.avg_comment_length != null
+          ? Number(row.avg_comment_length)
+          : undefined,
     }));
   }
 
@@ -116,7 +119,7 @@ export class CommentAnalyticsService {
     tenantId: string,
     periodStart: Date,
     periodEnd: Date,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<UserEngagement[]> {
     const rows = await this.db
       .selectFrom("collab.comment_user_analytics")
@@ -130,8 +133,8 @@ export class CommentAnalyticsService {
 
     return rows.map((row) => ({
       userId: row.user_id,
-      periodStart: row.period_start.toISOString().split('T')[0],
-      periodEnd: row.period_end.toISOString().split('T')[0],
+      periodStart: row.period_start.toISOString().split("T")[0],
+      periodEnd: row.period_end.toISOString().split("T")[0],
       totalComments: row.total_comments,
       totalReplies: row.total_replies,
       totalReactionsGiven: row.total_reactions_given,
@@ -149,7 +152,7 @@ export class CommentAnalyticsService {
     tenantId: string,
     entityType?: string,
     limit: number = 10,
-    activeOnly: boolean = true
+    activeOnly: boolean = true,
   ): Promise<ThreadAnalytics[]> {
     let query = this.db
       .selectFrom("collab.comment_thread_analytics")
@@ -164,7 +167,10 @@ export class CommentAnalyticsService {
       query = query.where("is_active", "=", true);
     }
 
-    const rows = await query.orderBy("total_comments", "desc").limit(limit).execute();
+    const rows = await query
+      .orderBy("total_comments", "desc")
+      .limit(limit)
+      .execute();
 
     return rows.map((row) => ({
       entityType: row.entity_type,
@@ -185,7 +191,7 @@ export class CommentAnalyticsService {
   async getAnalyticsSummary(
     tenantId: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<AnalyticsSummary> {
     // Total comments in period
     const commentStats = await this.db
@@ -249,7 +255,7 @@ export class CommentAnalyticsService {
    * Aggregates comment data into daily metrics.
    */
   async updateDailyAnalytics(tenantId: string, date: Date): Promise<void> {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = date.toISOString().split("T")[0];
     const nextDate = new Date(date);
     nextDate.setDate(nextDate.getDate() + 1);
 
@@ -289,20 +295,22 @@ export class CommentAnalyticsService {
           updated_at: new Date(),
         })
         .onConflict((oc) =>
-          oc.columns(['tenant_id', 'date', 'entity_type']).doUpdateSet({
+          oc.columns(["tenant_id", "date", "entity_type"]).doUpdateSet({
             total_comments: Number(stat.total_comments),
             total_replies: Number(stat.total_replies ?? 0),
             unique_commenters: Number(stat.unique_commenters),
-            avg_comment_length: String(Math.floor(Number(stat.avg_length ?? 0))),
+            avg_comment_length: String(
+              Math.floor(Number(stat.avg_length ?? 0)),
+            ),
             updated_at: new Date(),
-          })
+          }),
         )
         .execute();
     }
 
     this.logger.info(
       { tenantId, date: dateStr, statsCount: stats.length },
-      "[collab] Daily analytics updated"
+      "[collab] Daily analytics updated",
     );
   }
 }

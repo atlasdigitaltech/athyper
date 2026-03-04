@@ -17,7 +17,6 @@ import type { Container } from "../../../../kernel/container.js";
 import type { Logger } from "../../../../kernel/logger.js";
 import type { CommentRetentionService } from "../domain/comment-retention.service.js";
 
-
 /**
  * Retention execution job payload
  */
@@ -49,9 +48,11 @@ export async function registerRetentionExecutionWorker(container: Container) {
 
   try {
     // Check if job queue is available
-    const jobQueue = await container.resolve(TOKENS.jobQueue) as any;
+    const jobQueue = (await container.resolve(TOKENS.jobQueue)) as any;
     if (!jobQueue) {
-      logger.warn("[collab] Job queue not available, retention policies will not be executed automatically");
+      logger.warn(
+        "[collab] Job queue not available, retention policies will not be executed automatically",
+      );
       return;
     }
 
@@ -67,7 +68,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
           policyId: policyId || "all",
           dryRun,
         },
-        "[collab] Starting retention execution"
+        "[collab] Starting retention execution",
       );
 
       const result: RetentionExecutionResult = {
@@ -79,10 +80,13 @@ export async function registerRetentionExecutionWorker(container: Container) {
       };
 
       try {
-        const retentionService = await container.resolve<CommentRetentionService>(
-          TOKENS.collabRetentionService
+        const retentionService =
+          await container.resolve<CommentRetentionService>(
+            TOKENS.collabRetentionService,
+          );
+        const auditWriter = await container.resolve<AuditWriter>(
+          TOKENS.auditWriter,
         );
-        const auditWriter = await container.resolve<AuditWriter>(TOKENS.auditWriter);
 
         // Get enabled retention policies
         const allPolicies = await retentionService.listPolicies(tenantId);
@@ -96,21 +100,23 @@ export async function registerRetentionExecutionWorker(container: Container) {
         if (policies.length === 0) {
           logger.info(
             { tenantId, policyId },
-            "[collab] No enabled policies found"
+            "[collab] No enabled policies found",
           );
           return result;
         }
 
         logger.info(
           { tenantId, policyCount: policies.length },
-          `[collab] Found ${policies.length} policies to execute`
+          `[collab] Found ${policies.length} policies to execute`,
         );
 
         // Execute each policy
         for (const policy of policies) {
           try {
             await job.updateProgress(
-              Math.round(((result.policiesExecuted + 1) / policies.length) * 100)
+              Math.round(
+                ((result.policiesExecuted + 1) / policies.length) * 100,
+              ),
             );
 
             const policyResult = await executePolicy(
@@ -118,7 +124,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
               logger,
               tenantId,
               policy,
-              dryRun
+              dryRun,
             );
 
             result.policiesExecuted++;
@@ -134,7 +140,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
                 deleted: policyResult.commentsDeleted,
                 dryRun,
               },
-              "[collab] Policy executed"
+              "[collab] Policy executed",
             );
           } catch (err) {
             result.errors++;
@@ -145,7 +151,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
                 policyName: policy.policyName,
                 error: err instanceof Error ? err.message : String(err),
               },
-              "[collab] Policy execution failed"
+              "[collab] Policy execution failed",
             );
           }
         }
@@ -158,7 +164,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
             durationMs: duration,
             ...result,
           },
-          "[collab] Retention execution completed"
+          "[collab] Retention execution completed",
         );
 
         // Emit audit event for retention execution
@@ -183,7 +189,7 @@ export async function registerRetentionExecutionWorker(container: Container) {
             error: err instanceof Error ? err.message : String(err),
             tenantId,
           },
-          "[collab] Fatal error during retention execution"
+          "[collab] Fatal error during retention execution",
         );
         throw err; // Rethrow to trigger job retry
       }
@@ -196,16 +202,18 @@ export async function registerRetentionExecutionWorker(container: Container) {
       {
         cron: "0 3 * * *", // Daily at 3:00 AM UTC
         jobId: "retention-daily-execution",
-      }
+      },
     );
 
-    logger.info("[collab] Retention execution worker registered with daily schedule");
+    logger.info(
+      "[collab] Retention execution worker registered with daily schedule",
+    );
   } catch (err) {
     logger.warn(
       {
         error: err instanceof Error ? err.message : String(err),
       },
-      "[collab] Retention execution worker registration failed (non-fatal)"
+      "[collab] Retention execution worker registration failed (non-fatal)",
     );
   }
 }
@@ -224,7 +232,7 @@ async function executePolicy(
     retentionDays: number;
     action: string;
   },
-  dryRun: boolean
+  dryRun: boolean,
 ): Promise<{ commentsArchived: number; commentsDeleted: number }> {
   const result = { commentsArchived: 0, commentsDeleted: 0 };
 
@@ -247,20 +255,20 @@ async function executePolicy(
       action: policy.action,
       dryRun,
     },
-    "[collab] Executing policy"
+    "[collab] Executing policy",
   );
 
   // Find comments matching retention criteria
   const affectedComments = await retentionService.findCommentsForRetention(
     tenantId,
     policy.entityType || "*",
-    cutoffDate
+    cutoffDate,
   );
 
   if (affectedComments.length === 0) {
     logger.debug(
       { tenantId, policyId: policy.id },
-      "[collab] No comments to process"
+      "[collab] No comments to process",
     );
     return result;
   }
@@ -272,7 +280,7 @@ async function executePolicy(
       action: policy.action,
       commentCount: affectedComments.length,
     },
-    `[collab] Found ${affectedComments.length} comments to process`
+    `[collab] Found ${affectedComments.length} comments to process`,
   );
 
   if (dryRun) {
@@ -290,7 +298,11 @@ async function executePolicy(
     // Archive (soft delete) comments
     for (const comment of affectedComments) {
       try {
-        await retentionService.archiveComment(tenantId, comment.id, "retention_policy");
+        await retentionService.archiveComment(
+          tenantId,
+          comment.id,
+          "retention_policy",
+        );
         result.commentsArchived++;
       } catch (err) {
         logger.error(
@@ -300,7 +312,7 @@ async function executePolicy(
             policyId: policy.id,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[collab] Failed to archive comment"
+          "[collab] Failed to archive comment",
         );
       }
     }
@@ -318,7 +330,7 @@ async function executePolicy(
             policyId: policy.id,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[collab] Failed to delete comment"
+          "[collab] Failed to delete comment",
         );
       }
     }

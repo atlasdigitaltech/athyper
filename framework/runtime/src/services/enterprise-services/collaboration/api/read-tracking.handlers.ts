@@ -16,7 +16,9 @@ import type { ReadTrackingService } from "../domain/read-tracking.service.js";
  */
 export class MarkCommentAsReadHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReadTrackingService>(TOKENS.collabReadTrackingService);
+    const service = await ctx.container.resolve<ReadTrackingService>(
+      TOKENS.collabReadTrackingService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const commentId = ctx.request.params.id;
@@ -39,7 +41,9 @@ export class MarkCommentAsReadHandler {
  */
 export class MarkAllCommentsAsReadHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReadTrackingService>(TOKENS.collabReadTrackingService);
+    const service = await ctx.container.resolve<ReadTrackingService>(
+      TOKENS.collabReadTrackingService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const { commentIds } = ctx.request.body;
@@ -52,7 +56,12 @@ export class MarkAllCommentsAsReadHandler {
       };
     }
 
-    await service.markMultipleAsRead(tenantId, "entity_comment", commentIds, userId);
+    await service.markMultipleAsRead(
+      tenantId,
+      "entity_comment",
+      commentIds,
+      userId,
+    );
 
     return {
       ok: true,
@@ -73,7 +82,9 @@ export class MarkAllCommentsAsReadHandler {
  */
 export class GetUnreadCountHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReadTrackingService>(TOKENS.collabReadTrackingService);
+    const service = await ctx.container.resolve<ReadTrackingService>(
+      TOKENS.collabReadTrackingService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const { entityType, entityId } = ctx.request.query;
@@ -83,7 +94,7 @@ export class GetUnreadCountHandler {
       "entity_comment",
       userId,
       entityType as string | undefined,
-      entityId as string | undefined
+      entityId as string | undefined,
     );
 
     return {

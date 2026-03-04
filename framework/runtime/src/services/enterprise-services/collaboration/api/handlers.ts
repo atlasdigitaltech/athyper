@@ -36,8 +36,18 @@ export interface HttpHandlerContext {
  */
 export class GetTimelineHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CollabTimelineService>(TOKENS.collabTimelineService);
-    const { entityType, entityId, actorUserId, startDate, endDate, limit, offset } = ctx.request.query;
+    const service = await ctx.container.resolve<CollabTimelineService>(
+      TOKENS.collabTimelineService,
+    );
+    const {
+      entityType,
+      entityId,
+      actorUserId,
+      startDate,
+      endDate,
+      limit,
+      offset,
+    } = ctx.request.query;
 
     const entries = await service.getTimeline({
       tenantId: ctx.tenant.tenantId,
@@ -61,7 +71,9 @@ export class GetTimelineHandler {
  */
 export class ListCommentsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
     const { entityType, entityId, limit, offset } = ctx.request.query;
 
     if (!entityType || !entityId) {
@@ -79,13 +91,13 @@ export class ListCommentsHandler {
       {
         limit: limit ? Number(limit) : 50,
         offset: offset ? Number(offset) : 0,
-      }
+      },
     );
 
     const count = await service.countByEntity(
       ctx.tenant.tenantId,
       entityType as string,
-      entityId as string
+      entityId as string,
     );
 
     ctx.response.status(200).json({
@@ -107,16 +119,24 @@ export class ListCommentsHandler {
  */
 export class CreateCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
-    const attachmentService = await ctx.container.resolve<AttachmentLinkService>(TOKENS.collabAttachmentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
+    const attachmentService =
+      await ctx.container.resolve<AttachmentLinkService>(
+        TOKENS.collabAttachmentService,
+      );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
-    const { entityType, entityId, commentText, attachmentIds } = ctx.request.body;
+    const { entityType, entityId, commentText, attachmentIds } =
+      ctx.request.body;
 
     if (!entityType || !entityId || !commentText) {
       ctx.response.status(400).json({
@@ -138,13 +158,17 @@ export class CreateCommentHandler {
       });
 
       // Link attachments if provided
-      if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+      if (
+        attachmentIds &&
+        Array.isArray(attachmentIds) &&
+        attachmentIds.length > 0
+      ) {
         for (const attachmentId of attachmentIds) {
           await attachmentService.linkToComment(
             ctx.tenant.tenantId,
             attachmentId,
             "entity_comment",
-            comment.id
+            comment.id,
           );
         }
       }
@@ -166,11 +190,15 @@ export class CreateCommentHandler {
  */
 export class UpdateCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
@@ -187,19 +215,23 @@ export class UpdateCommentHandler {
 
     try {
       // Check if user has COMMENT_MODERATE permission (future: integrate with PolicyGate)
-      const isModerator = ctx.auth.persona === "admin" || ctx.auth.persona === "super_admin";
+      const isModerator =
+        ctx.auth.persona === "admin" || ctx.auth.persona === "super_admin";
 
       const comment = await service.update(
         ctx.tenant.tenantId,
         commentId,
         userId,
         { commentText, updatedBy: userId },
-        isModerator
+        isModerator,
       );
 
       ctx.response.status(200).json({ ok: true, data: comment });
     } catch (err) {
-      const statusCode = err instanceof Error && err.message.includes("only edit your own") ? 403 : 400;
+      const statusCode =
+        err instanceof Error && err.message.includes("only edit your own")
+          ? 403
+          : 400;
       ctx.response.status(statusCode).json({
         ok: false,
         error: err instanceof Error ? err.message : "Failed to update comment",
@@ -215,11 +247,15 @@ export class UpdateCommentHandler {
  */
 export class DeleteCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
@@ -227,13 +263,17 @@ export class DeleteCommentHandler {
 
     try {
       // Check if user has COMMENT_MODERATE permission (future: integrate with PolicyGate)
-      const isModerator = ctx.auth.persona === "admin" || ctx.auth.persona === "super_admin";
+      const isModerator =
+        ctx.auth.persona === "admin" || ctx.auth.persona === "super_admin";
 
       await service.delete(ctx.tenant.tenantId, commentId, userId, isModerator);
 
       ctx.response.status(200).json({ ok: true });
     } catch (err) {
-      const statusCode = err instanceof Error && err.message.includes("only delete your own") ? 403 : 400;
+      const statusCode =
+        err instanceof Error && err.message.includes("only delete your own")
+          ? 403
+          : 400;
       ctx.response.status(statusCode).json({
         ok: false,
         error: err instanceof Error ? err.message : "Failed to delete comment",
@@ -249,7 +289,9 @@ export class DeleteCommentHandler {
  */
 export class ListApprovalCommentsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ApprovalCommentService>(TOKENS.collabApprovalCommentService);
+    const service = await ctx.container.resolve<ApprovalCommentService>(
+      TOKENS.collabApprovalCommentService,
+    );
     const approvalInstanceId = ctx.request.params.instanceId;
     const { limit, offset, taskId } = ctx.request.query;
 
@@ -268,12 +310,12 @@ export class ListApprovalCommentsHandler {
         limit: limit ? Number(limit) : 100,
         offset: offset ? Number(offset) : 0,
         taskId: taskId as string | undefined,
-      }
+      },
     );
 
     const count = await service.countByInstance(
       ctx.tenant.tenantId,
-      approvalInstanceId
+      approvalInstanceId,
     );
 
     ctx.response.status(200).json({
@@ -295,16 +337,24 @@ export class ListApprovalCommentsHandler {
  */
 export class CreateApprovalCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ApprovalCommentService>(TOKENS.collabApprovalCommentService);
-    const attachmentService = await ctx.container.resolve<AttachmentLinkService>(TOKENS.collabAttachmentService);
+    const service = await ctx.container.resolve<ApprovalCommentService>(
+      TOKENS.collabApprovalCommentService,
+    );
+    const attachmentService =
+      await ctx.container.resolve<AttachmentLinkService>(
+        TOKENS.collabAttachmentService,
+      );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
-    const { approvalInstanceId, approvalTaskId, commentText, attachmentIds } = ctx.request.body;
+    const { approvalInstanceId, approvalTaskId, commentText, attachmentIds } =
+      ctx.request.body;
 
     if (!approvalInstanceId || !commentText) {
       ctx.response.status(400).json({
@@ -326,13 +376,17 @@ export class CreateApprovalCommentHandler {
       });
 
       // Link attachments if provided
-      if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+      if (
+        attachmentIds &&
+        Array.isArray(attachmentIds) &&
+        attachmentIds.length > 0
+      ) {
         for (const attachmentId of attachmentIds) {
           await attachmentService.linkToComment(
             ctx.tenant.tenantId,
             attachmentId,
             "approval_comment",
-            comment.id
+            comment.id,
           );
         }
       }
@@ -341,7 +395,10 @@ export class CreateApprovalCommentHandler {
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to create approval comment",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to create approval comment",
       });
     }
   }
@@ -354,17 +411,25 @@ export class CreateApprovalCommentHandler {
  */
 export class CreateReplyHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
-    const attachmentService = await ctx.container.resolve<AttachmentLinkService>(TOKENS.collabAttachmentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
+    const attachmentService =
+      await ctx.container.resolve<AttachmentLinkService>(
+        TOKENS.collabAttachmentService,
+      );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
     const parentCommentId = ctx.request.params.id;
-    const { entityType, entityId, commentText, attachmentIds } = ctx.request.body;
+    const { entityType, entityId, commentText, attachmentIds } =
+      ctx.request.body;
 
     if (!entityType || !entityId || !commentText) {
       ctx.response.status(400).json({
@@ -387,20 +452,25 @@ export class CreateReplyHandler {
       });
 
       // Link attachments if provided
-      if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+      if (
+        attachmentIds &&
+        Array.isArray(attachmentIds) &&
+        attachmentIds.length > 0
+      ) {
         for (const attachmentId of attachmentIds) {
           await attachmentService.linkToComment(
             ctx.tenant.tenantId,
             attachmentId,
             "entity_comment",
-            reply.id
+            reply.id,
           );
         }
       }
 
       ctx.response.status(201).json({ ok: true, data: reply });
     } catch (err) {
-      const statusCode = err instanceof Error && err.message.includes("depth") ? 400 : 400;
+      const statusCode =
+        err instanceof Error && err.message.includes("depth") ? 400 : 400;
       ctx.response.status(statusCode).json({
         ok: false,
         error: err instanceof Error ? err.message : "Failed to create reply",
@@ -416,7 +486,9 @@ export class CreateReplyHandler {
  */
 export class ListRepliesHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<EntityCommentService>(TOKENS.collabCommentService);
+    const service = await ctx.container.resolve<EntityCommentService>(
+      TOKENS.collabCommentService,
+    );
     const parentCommentId = ctx.request.params.id;
     const { limit, offset } = ctx.request.query;
 
@@ -427,10 +499,13 @@ export class ListRepliesHandler {
         {
           limit: limit ? Number(limit) : 50,
           offset: offset ? Number(offset) : 0,
-        }
+        },
       );
 
-      const count = await service.countReplies(ctx.tenant.tenantId, parentCommentId);
+      const count = await service.countReplies(
+        ctx.tenant.tenantId,
+        parentCommentId,
+      );
 
       ctx.response.status(200).json({
         ok: true,
@@ -457,8 +532,11 @@ export class ListRepliesHandler {
  */
 export class SearchCommentsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentSearchService>(TOKENS.collabSearchService);
-    const { q, entityType, entityId, commenterId, limit, offset } = ctx.request.query;
+    const service = await ctx.container.resolve<CommentSearchService>(
+      TOKENS.collabSearchService,
+    );
+    const { q, entityType, entityId, commenterId, limit, offset } =
+      ctx.request.query;
 
     if (!q || typeof q !== "string") {
       ctx.response.status(400).json({
@@ -507,11 +585,15 @@ export class SearchCommentsHandler {
  */
 export class FlagCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentModerationService>(TOKENS.collabModerationService);
+    const service = await ctx.container.resolve<CommentModerationService>(
+      TOKENS.collabModerationService,
+    );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
@@ -552,7 +634,9 @@ export class FlagCommentHandler {
  */
 export class ListFlagsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentModerationService>(TOKENS.collabModerationService);
+    const service = await ctx.container.resolve<CommentModerationService>(
+      TOKENS.collabModerationService,
+    );
     const { limit, offset } = ctx.request.query;
 
     try {
@@ -579,35 +663,39 @@ export class ListFlagsHandler {
  */
 export class ReviewFlagHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentModerationService>(TOKENS.collabModerationService);
+    const service = await ctx.container.resolve<CommentModerationService>(
+      TOKENS.collabModerationService,
+    );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
     const flagId = ctx.request.params.id;
     const { action } = ctx.request.body;
 
-    if (!action || !["dismiss", "hide_comment", "delete_comment"].includes(action)) {
+    if (
+      !action ||
+      !["dismiss", "hide_comment", "delete_comment"].includes(action)
+    ) {
       ctx.response.status(400).json({
         ok: false,
-        error: "Invalid action. Must be: dismiss, hide_comment, or delete_comment",
+        error:
+          "Invalid action. Must be: dismiss, hide_comment, or delete_comment",
       });
       return;
     }
 
     try {
-      await service.reviewFlag(
-        ctx.tenant.tenantId,
-        flagId,
-        {
-          action: action as "dismiss" | "hide_comment" | "delete_comment",
-          reviewedBy: userId,
-          resolution: action,
-        }
-      );
+      await service.reviewFlag(ctx.tenant.tenantId, flagId, {
+        action: action as "dismiss" | "hide_comment" | "delete_comment",
+        reviewedBy: userId,
+        resolution: action,
+      });
 
       ctx.response.status(200).json({ ok: true });
     } catch (err) {
@@ -630,7 +718,9 @@ export class ReviewFlagHandler {
  */
 export class GetSLAMetricsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentSLAService>(TOKENS.collabSLAService);
+    const service = await ctx.container.resolve<CommentSLAService>(
+      TOKENS.collabSLAService,
+    );
     const { entityType, entityId } = ctx.request.query;
 
     if (!entityType || !entityId) {
@@ -645,14 +735,15 @@ export class GetSLAMetricsHandler {
       const metrics = await service.getSLAMetrics(
         ctx.tenant.tenantId,
         entityType as string,
-        entityId as string
+        entityId as string,
       );
 
       ctx.response.status(200).json({ ok: true, data: metrics });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch SLA metrics",
+        error:
+          err instanceof Error ? err.message : "Failed to fetch SLA metrics",
       });
     }
   }
@@ -665,21 +756,24 @@ export class GetSLAMetricsHandler {
  */
 export class GetSLABreachesHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentSLAService>(TOKENS.collabSLAService);
+    const service = await ctx.container.resolve<CommentSLAService>(
+      TOKENS.collabSLAService,
+    );
     const { entityType, limit } = ctx.request.query;
 
     try {
       const breaches = await service.getSLABreaches(
         ctx.tenant.tenantId,
         entityType as string | undefined,
-        limit ? Number(limit) : 50
+        limit ? Number(limit) : 50,
       );
 
       ctx.response.status(200).json({ ok: true, data: breaches });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch SLA breaches",
+        error:
+          err instanceof Error ? err.message : "Failed to fetch SLA breaches",
       });
     }
   }
@@ -692,8 +786,11 @@ export class GetSLABreachesHandler {
  */
 export class SetSLAConfigHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentSLAService>(TOKENS.collabSLAService);
-    const { entityType, slaTargetSeconds, businessHoursOnly } = ctx.request.body;
+    const service = await ctx.container.resolve<CommentSLAService>(
+      TOKENS.collabSLAService,
+    );
+    const { entityType, slaTargetSeconds, businessHoursOnly } =
+      ctx.request.body;
 
     if (!entityType || !slaTargetSeconds) {
       ctx.response.status(400).json({
@@ -708,7 +805,7 @@ export class SetSLAConfigHandler {
         ctx.tenant.tenantId,
         entityType,
         slaTargetSeconds,
-        { businessHoursOnly }
+        { businessHoursOnly },
       );
 
       ctx.response.status(200).json({ ok: true });
@@ -732,7 +829,9 @@ export class SetSLAConfigHandler {
  */
 export class GetAnalyticsSummaryHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentAnalyticsService>(TOKENS.collabAnalyticsService);
+    const service = await ctx.container.resolve<CommentAnalyticsService>(
+      TOKENS.collabAnalyticsService,
+    );
     const { startDate, endDate } = ctx.request.query;
 
     if (!startDate || !endDate) {
@@ -747,14 +846,17 @@ export class GetAnalyticsSummaryHandler {
       const summary = await service.getAnalyticsSummary(
         ctx.tenant.tenantId,
         new Date(startDate as string),
-        new Date(endDate as string)
+        new Date(endDate as string),
       );
 
       ctx.response.status(200).json({ ok: true, data: summary });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch analytics summary",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch analytics summary",
       });
     }
   }
@@ -767,7 +869,9 @@ export class GetAnalyticsSummaryHandler {
  */
 export class GetDailyAnalyticsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentAnalyticsService>(TOKENS.collabAnalyticsService);
+    const service = await ctx.container.resolve<CommentAnalyticsService>(
+      TOKENS.collabAnalyticsService,
+    );
     const { startDate, endDate, entityType } = ctx.request.query;
 
     if (!startDate || !endDate) {
@@ -783,14 +887,17 @@ export class GetDailyAnalyticsHandler {
         ctx.tenant.tenantId,
         new Date(startDate as string),
         new Date(endDate as string),
-        entityType as string | undefined
+        entityType as string | undefined,
       );
 
       ctx.response.status(200).json({ ok: true, data: analytics });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch daily analytics",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch daily analytics",
       });
     }
   }
@@ -803,7 +910,9 @@ export class GetDailyAnalyticsHandler {
  */
 export class GetEngagementLeaderboardHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentAnalyticsService>(TOKENS.collabAnalyticsService);
+    const service = await ctx.container.resolve<CommentAnalyticsService>(
+      TOKENS.collabAnalyticsService,
+    );
     const { startDate, endDate, limit } = ctx.request.query;
 
     if (!startDate || !endDate) {
@@ -819,14 +928,15 @@ export class GetEngagementLeaderboardHandler {
         ctx.tenant.tenantId,
         new Date(startDate as string),
         new Date(endDate as string),
-        limit ? Number(limit) : 10
+        limit ? Number(limit) : 10,
       );
 
       ctx.response.status(200).json({ ok: true, data: leaderboard });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch leaderboard",
+        error:
+          err instanceof Error ? err.message : "Failed to fetch leaderboard",
       });
     }
   }
@@ -839,7 +949,9 @@ export class GetEngagementLeaderboardHandler {
  */
 export class GetActiveThreadsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentAnalyticsService>(TOKENS.collabAnalyticsService);
+    const service = await ctx.container.resolve<CommentAnalyticsService>(
+      TOKENS.collabAnalyticsService,
+    );
     const { entityType, limit, activeOnly } = ctx.request.query;
 
     try {
@@ -847,14 +959,15 @@ export class GetActiveThreadsHandler {
         ctx.tenant.tenantId,
         entityType as string | undefined,
         limit ? Number(limit) : 10,
-        activeOnly !== "false"
+        activeOnly !== "false",
       );
 
       ctx.response.status(200).json({ ok: true, data: threads });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch active threads",
+        error:
+          err instanceof Error ? err.message : "Failed to fetch active threads",
       });
     }
   }
@@ -871,7 +984,9 @@ export class GetActiveThreadsHandler {
  */
 export class ListRetentionPoliciesHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
 
     try {
       const policies = await service.listPolicies(ctx.tenant.tenantId);
@@ -880,7 +995,10 @@ export class ListRetentionPoliciesHandler {
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch retention policies",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch retention policies",
       });
     }
   }
@@ -893,7 +1011,9 @@ export class ListRetentionPoliciesHandler {
  */
 export class CreateRetentionPolicyHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
     const { policyName, entityType, retentionDays, action } = ctx.request.body;
 
     if (!policyName || !retentionDays || !action) {
@@ -910,14 +1030,17 @@ export class CreateRetentionPolicyHandler {
         policyName,
         retentionDays,
         action,
-        entityType
+        entityType,
       );
 
       ctx.response.status(201).json({ ok: true, data: policy });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to create retention policy",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to create retention policy",
       });
     }
   }
@@ -930,7 +1053,9 @@ export class CreateRetentionPolicyHandler {
  */
 export class UpdateRetentionPolicyHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
     const policyId = ctx.request.params.id;
     const { enabled } = ctx.request.body;
 
@@ -949,7 +1074,10 @@ export class UpdateRetentionPolicyHandler {
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to update retention policy",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to update retention policy",
       });
     }
   }
@@ -962,7 +1090,9 @@ export class UpdateRetentionPolicyHandler {
  */
 export class DeleteRetentionPolicyHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
     const policyId = ctx.request.params.id;
 
     try {
@@ -972,7 +1102,10 @@ export class DeleteRetentionPolicyHandler {
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to delete retention policy",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete retention policy",
       });
     }
   }
@@ -985,23 +1118,25 @@ export class DeleteRetentionPolicyHandler {
  */
 export class ListArchivedCommentsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
     const { limit, offset } = ctx.request.query;
 
     try {
-      const comments = await service.listArchivedComments(
-        ctx.tenant.tenantId,
-        {
-          limit: limit ? Number(limit) : 50,
-          offset: offset ? Number(offset) : 0,
-        }
-      );
+      const comments = await service.listArchivedComments(ctx.tenant.tenantId, {
+        limit: limit ? Number(limit) : 50,
+        offset: offset ? Number(offset) : 0,
+      });
 
       ctx.response.status(200).json({ ok: true, data: comments });
     } catch (err) {
       ctx.response.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : "Failed to fetch archived comments",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch archived comments",
       });
     }
   }
@@ -1014,11 +1149,15 @@ export class ListArchivedCommentsHandler {
  */
 export class RestoreArchivedCommentHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<CommentRetentionService>(TOKENS.collabRetentionService);
+    const service = await ctx.container.resolve<CommentRetentionService>(
+      TOKENS.collabRetentionService,
+    );
     const userId = ctx.auth.userId || ctx.auth.subject;
 
     if (!userId) {
-      ctx.response.status(401).json({ ok: false, error: "Authentication required" });
+      ctx.response
+        .status(401)
+        .json({ ok: false, error: "Authentication required" });
       return;
     }
 
@@ -1028,7 +1167,7 @@ export class RestoreArchivedCommentHandler {
       await service.restoreArchivedComment(
         ctx.tenant.tenantId,
         commentId,
-        userId
+        userId,
       );
 
       ctx.response.status(200).json({ ok: true });

@@ -82,215 +82,431 @@ export const module: RuntimeModule = {
     logger.info("[collab] Registering collaboration module");
 
     // Phase 1: Timeline Service
-    c.register(TOKENS.collabTimelineService, async () => {
-      const activityTimeline = await c.resolve(TOKENS.auditTimeline) as any;
-      return new CollabTimelineService(activityTimeline);
-    }, "singleton");
+    c.register(
+      TOKENS.collabTimelineService,
+      async () => {
+        const activityTimeline = (await c.resolve(TOKENS.auditTimeline)) as any;
+        return new CollabTimelineService(activityTimeline);
+      },
+      "singleton",
+    );
 
     // Phase 5: Mention Repository
-    c.register(TOKENS.collabMentionRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      return new MentionRepository(db);
-    }, "singleton");
+    c.register(
+      TOKENS.collabMentionRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        return new MentionRepository(db);
+      },
+      "singleton",
+    );
 
     // Phase 5: Mention Service
-    c.register(TOKENS.collabMentionService, async () => {
-      const repo = await c.resolve(TOKENS.collabMentionRepo) as any;
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+    c.register(
+      TOKENS.collabMentionService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabMentionRepo)) as any;
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
 
-      return new MentionService(repo, db, logger, {
-        maxMentionsPerComment: config.collab.rateLimits.mentionsPerComment,
-      });
-    }, "singleton");
+        return new MentionService(repo, db, logger, {
+          maxMentionsPerComment: config.collab.rateLimits.mentionsPerComment,
+        });
+      },
+      "singleton",
+    );
 
     // Phase 2: Entity Comment Repository
-    c.register(TOKENS.collabCommentRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      return new EntityCommentRepository(db);
-    }, "singleton");
+    c.register(
+      TOKENS.collabCommentRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        return new EntityCommentRepository(db);
+      },
+      "singleton",
+    );
 
     // Phase 2: Entity Comment Service
-    c.register(TOKENS.collabCommentService, async () => {
-      const repo = await c.resolve(TOKENS.collabCommentRepo) as any;
-      const auditWriter = await c.resolve(TOKENS.auditWriter);
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      const mentionService = config.collab.mentionsEnabled
-        ? await c.resolve(TOKENS.collabMentionService) as any
-        : undefined;
+    c.register(
+      TOKENS.collabCommentService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabCommentRepo)) as any;
+        const auditWriter = await c.resolve(TOKENS.auditWriter);
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        const mentionService = config.collab.mentionsEnabled
+          ? ((await c.resolve(TOKENS.collabMentionService)) as any)
+          : undefined;
 
-      return new EntityCommentService(repo, auditWriter, logger, {
-        maxCommentLength: config.collab.maxCommentLength,
-      }, mentionService);
-    }, "singleton");
+        return new EntityCommentService(
+          repo,
+          auditWriter,
+          logger,
+          {
+            maxCommentLength: config.collab.maxCommentLength,
+          },
+          mentionService,
+        );
+      },
+      "singleton",
+    );
 
     // Phase 3: Approval Comment Repository
-    c.register(TOKENS.collabApprovalCommentRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      return new ApprovalCommentRepository(db);
-    }, "singleton");
+    c.register(
+      TOKENS.collabApprovalCommentRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        return new ApprovalCommentRepository(db);
+      },
+      "singleton",
+    );
 
     // Phase 3: Approval Comment Service
-    c.register(TOKENS.collabApprovalCommentService, async () => {
-      const repo = await c.resolve(TOKENS.collabApprovalCommentRepo) as any;
-      const auditWriter = await c.resolve(TOKENS.auditWriter);
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      const mentionService = config.collab.mentionsEnabled
-        ? await c.resolve(TOKENS.collabMentionService) as any
-        : undefined;
+    c.register(
+      TOKENS.collabApprovalCommentService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabApprovalCommentRepo)) as any;
+        const auditWriter = await c.resolve(TOKENS.auditWriter);
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        const mentionService = config.collab.mentionsEnabled
+          ? ((await c.resolve(TOKENS.collabMentionService)) as any)
+          : undefined;
 
-      return new ApprovalCommentService(repo, auditWriter, logger, {
-        maxCommentLength: config.collab.maxCommentLength,
-      }, mentionService);
-    }, "singleton");
+        return new ApprovalCommentService(
+          repo,
+          auditWriter,
+          logger,
+          {
+            maxCommentLength: config.collab.maxCommentLength,
+          },
+          mentionService,
+        );
+      },
+      "singleton",
+    );
 
     // Phase 4: Attachment Link Service
-    c.register(TOKENS.collabAttachmentService, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new AttachmentLinkService(db, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabAttachmentService,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new AttachmentLinkService(db, logger);
+      },
+      "singleton",
+    );
 
     // Phase 7: Rate Limiter
-    c.register(TOKENS.collabRateLimiter, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      return new CommentRateLimiter(db, logger, {
-        commentsPerMinute: config.collab.rateLimits.commentsPerMinute,
-      });
-    }, "singleton");
+    c.register(
+      TOKENS.collabRateLimiter,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        return new CommentRateLimiter(db, logger, {
+          commentsPerMinute: config.collab.rateLimits.commentsPerMinute,
+        });
+      },
+      "singleton",
+    );
 
     // Phase 7: Search Service
-    c.register(TOKENS.collabSearchService, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new CommentSearchService(db, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabSearchService,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new CommentSearchService(db, logger);
+      },
+      "singleton",
+    );
 
     // Enhancement 1: Reaction Repository & Service
-    c.register(TOKENS.collabReactionRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      return new ReactionRepository(db);
-    }, "singleton");
+    c.register(
+      TOKENS.collabReactionRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        return new ReactionRepository(db);
+      },
+      "singleton",
+    );
 
-    c.register(TOKENS.collabReactionService, async () => {
-      const repo = await c.resolve(TOKENS.collabReactionRepo) as any;
-      const auditWriter = await c.resolve(TOKENS.auditWriter);
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new ReactionService(repo, auditWriter, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabReactionService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabReactionRepo)) as any;
+        const auditWriter = await c.resolve(TOKENS.auditWriter);
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new ReactionService(repo, auditWriter, logger);
+      },
+      "singleton",
+    );
 
     // Enhancement 2: Read Tracking Repository & Service
-    c.register(TOKENS.collabReadTrackingRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      // Optionally inject memory cache for Redis
-      try {
-        const cache = await c.resolve(TOKENS.cache) as any;
-        return new ReadTrackingRepository(db, cache);
-      } catch {
-        return new ReadTrackingRepository(db);
-      }
-    }, "singleton");
+    c.register(
+      TOKENS.collabReadTrackingRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        // Optionally inject memory cache for Redis
+        try {
+          const cache = (await c.resolve(TOKENS.cache)) as any;
+          return new ReadTrackingRepository(db, cache);
+        } catch {
+          return new ReadTrackingRepository(db);
+        }
+      },
+      "singleton",
+    );
 
-    c.register(TOKENS.collabReadTrackingService, async () => {
-      const repo = await c.resolve(TOKENS.collabReadTrackingRepo) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new ReadTrackingService(repo, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabReadTrackingService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabReadTrackingRepo)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new ReadTrackingService(repo, logger);
+      },
+      "singleton",
+    );
 
     // Phase 3 Enhancement: Moderation Repository
-    c.register(TOKENS.collabModerationRepo, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      return new CommentFlagRepository(db);
-    }, "singleton");
+    c.register(
+      TOKENS.collabModerationRepo,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        return new CommentFlagRepository(db);
+      },
+      "singleton",
+    );
 
     // Phase 3 Enhancement: Moderation Service
-    c.register(TOKENS.collabModerationService, async () => {
-      const repo = await c.resolve(TOKENS.collabModerationRepo) as any;
-      const auditWriter = await c.resolve(TOKENS.auditWriter);
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new CommentModerationService(repo, auditWriter, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabModerationService,
+      async () => {
+        const repo = (await c.resolve(TOKENS.collabModerationRepo)) as any;
+        const auditWriter = await c.resolve(TOKENS.auditWriter);
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new CommentModerationService(repo, auditWriter, logger);
+      },
+      "singleton",
+    );
 
     // Phase 3 Enhancement: SLA Tracking Service
-    c.register(TOKENS.collabSLAService, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new CommentSLAService(db, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabSLAService,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new CommentSLAService(db, logger);
+      },
+      "singleton",
+    );
 
     // Phase 3 Enhancement: Analytics Service
-    c.register(TOKENS.collabAnalyticsService, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new CommentAnalyticsService(db, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabAnalyticsService,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new CommentAnalyticsService(db, logger);
+      },
+      "singleton",
+    );
 
     // Phase 3 Enhancement: Retention Service
-    c.register(TOKENS.collabRetentionService, async () => {
-      const db = await c.resolve(TOKENS.db) as any;
-      const auditWriter = await c.resolve(TOKENS.auditWriter);
-      const logger = await c.resolve<Logger>(TOKENS.logger);
-      return new CommentRetentionService(db, auditWriter, logger);
-    }, "singleton");
+    c.register(
+      TOKENS.collabRetentionService,
+      async () => {
+        const db = (await c.resolve(TOKENS.db)) as any;
+        const auditWriter = await c.resolve(TOKENS.auditWriter);
+        const logger = await c.resolve<Logger>(TOKENS.logger);
+        return new CommentRetentionService(db, auditWriter, logger);
+      },
+      "singleton",
+    );
 
     // Phase 1: Timeline Handler
-    c.register("collab.handler.timeline", async () => new GetTimelineHandler(), "singleton");
+    c.register(
+      "collab.handler.timeline",
+      async () => new GetTimelineHandler(),
+      "singleton",
+    );
 
     // Phase 2: Comment Handlers
-    c.register("collab.handler.comments.list", async () => new ListCommentsHandler(), "singleton");
-    c.register("collab.handler.comments.create", async () => new CreateCommentHandler(), "singleton");
-    c.register("collab.handler.comments.update", async () => new UpdateCommentHandler(), "singleton");
-    c.register("collab.handler.comments.delete", async () => new DeleteCommentHandler(), "singleton");
+    c.register(
+      "collab.handler.comments.list",
+      async () => new ListCommentsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.comments.create",
+      async () => new CreateCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.comments.update",
+      async () => new UpdateCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.comments.delete",
+      async () => new DeleteCommentHandler(),
+      "singleton",
+    );
 
     // Phase 3: Approval Comment Handlers
-    c.register("collab.handler.approvalComments.list", async () => new ListApprovalCommentsHandler(), "singleton");
-    c.register("collab.handler.approvalComments.create", async () => new CreateApprovalCommentHandler(), "singleton");
+    c.register(
+      "collab.handler.approvalComments.list",
+      async () => new ListApprovalCommentsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.approvalComments.create",
+      async () => new CreateApprovalCommentHandler(),
+      "singleton",
+    );
 
     // Phase 6: Reply Handlers (Threading)
-    c.register("collab.handler.replies.create", async () => new CreateReplyHandler(), "singleton");
-    c.register("collab.handler.replies.list", async () => new ListRepliesHandler(), "singleton");
+    c.register(
+      "collab.handler.replies.create",
+      async () => new CreateReplyHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.replies.list",
+      async () => new ListRepliesHandler(),
+      "singleton",
+    );
 
     // Phase 7: Search Handler
-    c.register("collab.handler.search", async () => new SearchCommentsHandler(), "singleton");
+    c.register(
+      "collab.handler.search",
+      async () => new SearchCommentsHandler(),
+      "singleton",
+    );
 
     // Enhancement 1: Reaction Handlers
-    c.register("collab.handler.reactions.toggle", async () => new ToggleReactionHandler(), "singleton");
-    c.register("collab.handler.reactions.get", async () => new GetReactionsHandler(), "singleton");
-    c.register("collab.handler.approvalReactions.toggle", async () => new ToggleApprovalReactionHandler(), "singleton");
+    c.register(
+      "collab.handler.reactions.toggle",
+      async () => new ToggleReactionHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.reactions.get",
+      async () => new GetReactionsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.approvalReactions.toggle",
+      async () => new ToggleApprovalReactionHandler(),
+      "singleton",
+    );
 
     // Enhancement 2: Read Tracking Handlers
-    c.register("collab.handler.read.mark", async () => new MarkCommentAsReadHandler(), "singleton");
-    c.register("collab.handler.read.markAll", async () => new MarkAllCommentsAsReadHandler(), "singleton");
-    c.register("collab.handler.read.count", async () => new GetUnreadCountHandler(), "singleton");
+    c.register(
+      "collab.handler.read.mark",
+      async () => new MarkCommentAsReadHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.read.markAll",
+      async () => new MarkAllCommentsAsReadHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.read.count",
+      async () => new GetUnreadCountHandler(),
+      "singleton",
+    );
 
     // Phase 3: Moderation Handlers
-    c.register("collab.handler.flags.create", async () => new FlagCommentHandler(), "singleton");
-    c.register("collab.handler.flags.list", async () => new ListFlagsHandler(), "singleton");
-    c.register("collab.handler.flags.review", async () => new ReviewFlagHandler(), "singleton");
+    c.register(
+      "collab.handler.flags.create",
+      async () => new FlagCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.flags.list",
+      async () => new ListFlagsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.flags.review",
+      async () => new ReviewFlagHandler(),
+      "singleton",
+    );
 
     // Phase 3: SLA Handlers
-    c.register("collab.handler.sla.metrics", async () => new GetSLAMetricsHandler(), "singleton");
-    c.register("collab.handler.sla.breaches", async () => new GetSLABreachesHandler(), "singleton");
-    c.register("collab.handler.sla.config", async () => new SetSLAConfigHandler(), "singleton");
+    c.register(
+      "collab.handler.sla.metrics",
+      async () => new GetSLAMetricsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.sla.breaches",
+      async () => new GetSLABreachesHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.sla.config",
+      async () => new SetSLAConfigHandler(),
+      "singleton",
+    );
 
     // Phase 3: Analytics Handlers
-    c.register("collab.handler.analytics.summary", async () => new GetAnalyticsSummaryHandler(), "singleton");
-    c.register("collab.handler.analytics.daily", async () => new GetDailyAnalyticsHandler(), "singleton");
-    c.register("collab.handler.analytics.leaderboard", async () => new GetEngagementLeaderboardHandler(), "singleton");
-    c.register("collab.handler.analytics.threads", async () => new GetActiveThreadsHandler(), "singleton");
+    c.register(
+      "collab.handler.analytics.summary",
+      async () => new GetAnalyticsSummaryHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.analytics.daily",
+      async () => new GetDailyAnalyticsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.analytics.leaderboard",
+      async () => new GetEngagementLeaderboardHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.analytics.threads",
+      async () => new GetActiveThreadsHandler(),
+      "singleton",
+    );
 
     // Phase 3: Retention Handlers
-    c.register("collab.handler.retention.policies.list", async () => new ListRetentionPoliciesHandler(), "singleton");
-    c.register("collab.handler.retention.policies.create", async () => new CreateRetentionPolicyHandler(), "singleton");
-    c.register("collab.handler.retention.policies.update", async () => new UpdateRetentionPolicyHandler(), "singleton");
-    c.register("collab.handler.retention.policies.delete", async () => new DeleteRetentionPolicyHandler(), "singleton");
-    c.register("collab.handler.retention.archived.list", async () => new ListArchivedCommentsHandler(), "singleton");
-    c.register("collab.handler.retention.archived.restore", async () => new RestoreArchivedCommentHandler(), "singleton");
+    c.register(
+      "collab.handler.retention.policies.list",
+      async () => new ListRetentionPoliciesHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.retention.policies.create",
+      async () => new CreateRetentionPolicyHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.retention.policies.update",
+      async () => new UpdateRetentionPolicyHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.retention.policies.delete",
+      async () => new DeleteRetentionPolicyHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.retention.archived.list",
+      async () => new ListArchivedCommentsHandler(),
+      "singleton",
+    );
+    c.register(
+      "collab.handler.retention.archived.restore",
+      async () => new RestoreArchivedCommentHandler(),
+      "singleton",
+    );
 
     logger.info("[collab] Collaboration module registered");
   },
@@ -563,7 +779,9 @@ export const module: RuntimeModule = {
     // Enhancement 2: Register mention notification worker
     try {
       const jobQueue = await c.resolve(TOKENS.jobQueue);
-      const mentionService = await c.resolve<MentionService>(TOKENS.collabMentionService);
+      const mentionService = await c.resolve<MentionService>(
+        TOKENS.collabMentionService,
+      );
 
       // Inject job queue into mention service
       mentionService.setJobQueue(jobQueue);
@@ -575,7 +793,7 @@ export const module: RuntimeModule = {
     } catch (err) {
       logger.warn(
         { error: String(err) },
-        "[collab] Job queue not available, mention notifications will be disabled"
+        "[collab] Job queue not available, mention notifications will be disabled",
       );
     }
 
@@ -586,7 +804,7 @@ export const module: RuntimeModule = {
     } catch (err) {
       logger.warn(
         { error: String(err) },
-        "[collab] Analytics aggregation worker registration failed (non-fatal)"
+        "[collab] Analytics aggregation worker registration failed (non-fatal)",
       );
     }
 
@@ -597,7 +815,7 @@ export const module: RuntimeModule = {
     } catch (err) {
       logger.warn(
         { error: String(err) },
-        "[collab] Retention execution worker registration failed (non-fatal)"
+        "[collab] Retention execution worker registration failed (non-fatal)",
       );
     }
 
