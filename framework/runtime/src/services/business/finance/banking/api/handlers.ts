@@ -10,40 +10,43 @@
  * (MC-4 compliant).
  */
 
-import type { Request, Response } from "express";
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
-import type { BankReconciliationService } from "../services/bank-reconciliation-service.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { OperationContext } from "../../../engines/shared/engine-base.js";
 import type { StatementStatus } from "../domain/types.js";
+import type { BankReconciliationService } from "../services/bank-reconciliation-service.js";
+import type { Request, Response } from "express";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
 function buildOpCtx(ctx: HttpHandlerContext, req: Request): OperationContext {
-    return {
-        tenantId: ctx.tenant.realmKey,
-        actorId: ctx.auth.userId ?? "system",
-        actorType: "USER" as const,
-        correlationId: ctx.request.requestId,
-        entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey ?? "",
-    };
+  return {
+    tenantId: ctx.tenant.realmKey,
+    actorId: ctx.auth.userId ?? "system",
+    actorType: "USER" as const,
+    correlationId: ctx.request.requestId,
+    entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey ?? "",
+  };
 }
 
 function mapErrorStatus(code: string): number {
-    switch (code) {
-        case "NOT_FOUND":
-            return 404;
-        case "ALREADY_COMPLETED":
-        case "ALREADY_MATCHED":
-            return 409;
-        case "SESSION_CLOSED":
-        case "NOT_MATCHED":
-        case "CONFIRMED":
-            return 400;
-        default:
-            return 500;
-    }
+  switch (code) {
+    case "NOT_FOUND":
+      return 404;
+    case "ALREADY_COMPLETED":
+    case "ALREADY_MATCHED":
+      return 409;
+    case "SESSION_CLOSED":
+    case "NOT_MATCHED":
+    case "CONFIRMED":
+      return 400;
+    default:
+      return 500;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -63,27 +66,34 @@ const RECON_TOKEN = "fin.banking.bankReconciliationService";
  * in IMPORTED status and bulk-inserts all lines as UNMATCHED.
  */
 export class ImportStatementHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const result = await service.importStatement(opCtx, {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                ...req.body,
-            });
+      const result = await service.importStatement(opCtx, {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        ...req.body,
+      });
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(201).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(201).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -93,31 +103,40 @@ export class ImportStatementHandler implements RouteHandler {
  * Supports pagination via limit/offset query params.
  */
 export class ListStatementsHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const tenantId = ctx.tenant.realmKey;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const tenantId = ctx.tenant.realmKey;
 
-            const repo = await ctx.container.resolve<{
-                list(tenantId: string, filters: any, pagination: any): Promise<any>;
-            }>("fin.banking.bankStatementRepo");
+      const repo = await ctx.container.resolve<{
+        list(tenantId: string, filters: any, pagination: any): Promise<any>;
+      }>("fin.banking.bankStatementRepo");
 
-            const filters: Record<string, unknown> = {
-                entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey,
-                bankAccountId: req.query.bankAccountId as string | undefined,
-                status: req.query.status as StatementStatus | undefined,
-            };
+      const filters: Record<string, unknown> = {
+        entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey,
+        bankAccountId: req.query.bankAccountId as string | undefined,
+        status: req.query.status as StatementStatus | undefined,
+      };
 
-            const limit = Math.min(Number(req.query.limit) || 50, 200);
-            const offset = Number(req.query.offset) || 0;
-            const sort = (req.query.sort as string) || "created_at";
-            const dir = (req.query.dir as "asc" | "desc") || "desc";
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+      const sort = (req.query.sort as string) || "created_at";
+      const dir = (req.query.dir as "asc" | "desc") || "desc";
 
-            const result = await repo.list(tenantId, filters, { limit, offset, sort, dir });
-            res.status(200).json(result);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const result = await repo.list(tenantId, filters, {
+        limit,
+        offset,
+        sort,
+        dir,
+      });
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -126,29 +145,36 @@ export class ListStatementsHandler implements RouteHandler {
  * Retrieves a single bank statement by ID with all lines embedded.
  */
 export class GetStatementHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const tenantId = ctx.tenant.realmKey;
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const tenantId = ctx.tenant.realmKey;
+      const { id } = req.params;
 
-            const statement = await service.getStatement(tenantId, id);
-            if (!statement) {
-                res.status(404).json({ error: { code: "NOT_FOUND", message: `Statement ${id} not found` } });
-                return;
-            }
+      const statement = await service.getStatement(tenantId, id);
+      if (!statement) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: `Statement ${id} not found` },
+        });
+        return;
+      }
 
-            // Embed lines in the response
-            const lineRepo = await ctx.container.resolve<{
-                getByStatementId(tenantId: string, statementId: string): Promise<any[]>;
-            }>("fin.banking.bankStatementLineRepo");
+      // Embed lines in the response
+      const lineRepo = await ctx.container.resolve<{
+        getByStatementId(tenantId: string, statementId: string): Promise<any[]>;
+      }>("fin.banking.bankStatementLineRepo");
 
-            const lines = await lineRepo.getByStatementId(tenantId, id);
-            res.status(200).json({ ...statement, lines });
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const lines = await lineRepo.getByStatementId(tenantId, id);
+      res.status(200).json({ ...statement, lines });
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -162,24 +188,31 @@ export class GetStatementHandler implements RouteHandler {
  * Transitions the statement to IN_PROGRESS and creates a session in OPEN status.
  */
 export class StartReconciliationHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.startReconciliation(opCtx, id);
+      const result = await service.startReconciliation(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(201).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(201).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -189,24 +222,31 @@ export class StartReconciliationHandler implements RouteHandler {
  * Returns the list of matches found (above and below threshold).
  */
 export class AutoMatchHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.runAutoMatch(opCtx, id);
+      const result = await service.runAutoMatch(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -216,30 +256,42 @@ export class AutoMatchHandler implements RouteHandler {
  * Expects `{ lineId, paymentId }` in the body.
  */
 export class ManualMatchHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const { lineId, paymentId } = req.body;
-            if (!lineId || !paymentId) {
-                res.status(400).json({ error: { code: "INVALID_INPUT", message: "lineId and paymentId are required" } });
-                return;
-            }
+      const { lineId, paymentId } = req.body;
+      if (!lineId || !paymentId) {
+        res.status(400).json({
+          error: {
+            code: "INVALID_INPUT",
+            message: "lineId and paymentId are required",
+          },
+        });
+        return;
+      }
 
-            const result = await service.manualMatch(opCtx, lineId, paymentId);
+      const result = await service.manualMatch(opCtx, lineId, paymentId);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -249,30 +301,39 @@ export class ManualMatchHandler implements RouteHandler {
  * Expects `{ lineId }` in the body.
  */
 export class UnmatchHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const { lineId } = req.body;
-            if (!lineId) {
-                res.status(400).json({ error: { code: "INVALID_INPUT", message: "lineId is required" } });
-                return;
-            }
+      const { lineId } = req.body;
+      if (!lineId) {
+        res.status(400).json({
+          error: { code: "INVALID_INPUT", message: "lineId is required" },
+        });
+        return;
+      }
 
-            const result = await service.unmatch(opCtx, lineId);
+      const result = await service.unmatch(opCtx, lineId);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -283,24 +344,31 @@ export class UnmatchHandler implements RouteHandler {
  * status to COMPLETED.
  */
 export class CompleteReconciliationHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<BankReconciliationService>(RECON_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.completeReconciliation(opCtx, id);
+      const result = await service.completeReconciliation(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -310,24 +378,33 @@ export class CompleteReconciliationHandler implements RouteHandler {
  * discrepancy, and current status.
  */
 export class ReconciliationReportHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const tenantId = ctx.tenant.realmKey;
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const tenantId = ctx.tenant.realmKey;
+      const { id } = req.params;
 
-            const reconRepo = await ctx.container.resolve<{
-                getById(tenantId: string, id: string): Promise<any>;
-            }>("fin.banking.reconciliationSessionRepo");
+      const reconRepo = await ctx.container.resolve<{
+        getById(tenantId: string, id: string): Promise<any>;
+      }>("fin.banking.reconciliationSessionRepo");
 
-            const session = await reconRepo.getById(tenantId, id);
-            if (!session) {
-                res.status(404).json({ error: { code: "NOT_FOUND", message: `Reconciliation session ${id} not found` } });
-                return;
-            }
+      const session = await reconRepo.getById(tenantId, id);
+      if (!session) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: `Reconciliation session ${id} not found`,
+          },
+        });
+        return;
+      }
 
-            res.status(200).json(session);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(session);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }

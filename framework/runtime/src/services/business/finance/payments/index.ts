@@ -7,13 +7,13 @@
 
 // Domain types
 export type {
-    PaymentEntry,
-    PaymentAllocation,
-    PaymentStatus,
-    PaymentMethod,
-    CreatePaymentEntryInput,
-    UpdatePaymentEntryInput,
-    CreateAllocationInput,
+  PaymentEntry,
+  PaymentAllocation,
+  PaymentStatus,
+  PaymentMethod,
+  CreatePaymentEntryInput,
+  UpdatePaymentEntryInput,
+  CreateAllocationInput,
 } from "./domain/types.js";
 export { PAYMENT_TRANSITIONS } from "./domain/types.js";
 

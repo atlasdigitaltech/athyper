@@ -11,60 +11,63 @@
  * (MC-4 compliant).
  */
 
-import type { Request, Response } from "express";
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
-import type { PurchaseInvoiceService } from "../services/purchase-invoice-service.js";
-import type { ManualJEService } from "../services/manual-je-service.js";
-import type { GLInquiryService } from "../services/gl-inquiry-service.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
+import type { JEStatus } from "../../../engines/posting-engine/domain/types.js";
 import type { PostingService } from "../../../engines/posting-engine/services/posting-service.js";
 import type { OperationContext } from "../../../engines/shared/engine-base.js";
 import type { InvoiceStatus } from "../domain/types.js";
-import type { JEStatus } from "../../../engines/posting-engine/domain/types.js";
+import type { GLInquiryService } from "../services/gl-inquiry-service.js";
+import type { ManualJEService } from "../services/manual-je-service.js";
+import type { PurchaseInvoiceService } from "../services/purchase-invoice-service.js";
+import type { Request, Response } from "express";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
 function buildOpCtx(ctx: HttpHandlerContext, req: Request): OperationContext {
-    return {
-        tenantId: ctx.tenant.realmKey,
-        actorId: ctx.auth.userId ?? "system",
-        actorType: "USER" as const,
-        correlationId: ctx.request.requestId,
-        entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey ?? "",
-    };
+  return {
+    tenantId: ctx.tenant.realmKey,
+    actorId: ctx.auth.userId ?? "system",
+    actorType: "USER" as const,
+    correlationId: ctx.request.requestId,
+    entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey ?? "",
+  };
 }
 
 function mapErrorStatus(code: string): number {
-    switch (code) {
-        case "NOT_FOUND":
-        case "JE_NOT_FOUND":
-            return 404;
-        case "VERSION_CONFLICT":
-        case "ALREADY_POSTED":
-            return 409;
-        case "INVALID_STATUS":
-        case "INVALID_TRANSITION":
-        case "UNBALANCED":
-        case "INVALID_LINES":
-        case "NO_LINES":
-        case "ZERO_AMOUNT":
-        case "MISSING_ACCOUNTS":
-            return 400;
-        case "CROSS_SUPPLIER":
-        case "INVALID_ALLOCATION":
-        case "NO_ALLOCATIONS":
-        case "INVALID_DEDUCTIONS":
-        case "OVERPAYMENT":
-            return 400;
-        case "BLOCKED_BY_POLICY":
-        case "SUBMISSION_BLOCKED":
-            return 403;
-        case "PERIOD_CLOSED":
-            return 422;
-        default:
-            return 500;
-    }
+  switch (code) {
+    case "NOT_FOUND":
+    case "JE_NOT_FOUND":
+      return 404;
+    case "VERSION_CONFLICT":
+    case "ALREADY_POSTED":
+      return 409;
+    case "INVALID_STATUS":
+    case "INVALID_TRANSITION":
+    case "UNBALANCED":
+    case "INVALID_LINES":
+    case "NO_LINES":
+    case "ZERO_AMOUNT":
+    case "MISSING_ACCOUNTS":
+      return 400;
+    case "CROSS_SUPPLIER":
+    case "INVALID_ALLOCATION":
+    case "NO_ALLOCATIONS":
+    case "INVALID_DEDUCTIONS":
+    case "OVERPAYMENT":
+      return 400;
+    case "BLOCKED_BY_POLICY":
+    case "SUBMISSION_BLOCKED":
+      return 403;
+    case "PERIOD_CLOSED":
+      return 422;
+    default:
+      return 500;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -79,27 +82,34 @@ const PI_TOKEN = "fin.accounting.purchaseInvoiceService";
  * Creates a new purchase invoice in DRAFT status.
  */
 export class CreatePurchaseInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const result = await service.create(opCtx, {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                ...req.body,
-            });
+      const result = await service.create(opCtx, {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        ...req.body,
+      });
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(201).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(201).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -109,35 +119,45 @@ export class CreatePurchaseInvoiceHandler implements RouteHandler {
  * Supports pagination via limit/offset query params.
  */
 export class ListPurchaseInvoicesHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const tenantId = ctx.tenant.realmKey;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const tenantId = ctx.tenant.realmKey;
 
-            const filters: Record<string, unknown> = {
-                entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey,
-                status: req.query.status as InvoiceStatus | undefined,
-                supplierId: req.query.supplierId as string | undefined,
-                search: req.query.search as string | undefined,
-                dateFrom: req.query.dateFrom as string | undefined,
-                dateTo: req.query.dateTo as string | undefined,
-            };
+      const filters: Record<string, unknown> = {
+        entityCode: (req.query.entityCode as string) ?? ctx.tenant.orgKey,
+        status: req.query.status as InvoiceStatus | undefined,
+        supplierId: req.query.supplierId as string | undefined,
+        search: req.query.search as string | undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+      };
 
-            const limit = Math.min(Number(req.query.limit) || 50, 200);
-            const offset = Number(req.query.offset) || 0;
-            const sort = (req.query.sort as string) || "created_at";
-            const dir = (req.query.dir as "asc" | "desc") || "desc";
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+      const sort = (req.query.sort as string) || "created_at";
+      const dir = (req.query.dir as "asc" | "desc") || "desc";
 
-            const repo = await ctx.container.resolve<{
-                list(tenantId: string, filters: any, pagination: any): Promise<any>;
-            }>("fin.accounting.purchaseInvoiceRepo");
+      const repo = await ctx.container.resolve<{
+        list(tenantId: string, filters: any, pagination: any): Promise<any>;
+      }>("fin.accounting.purchaseInvoiceRepo");
 
-            const result = await repo.list(tenantId, filters, { limit, offset, sort, dir });
-            res.status(200).json(result);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const result = await repo.list(tenantId, filters, {
+        limit,
+        offset,
+        sort,
+        dir,
+      });
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -146,23 +166,30 @@ export class ListPurchaseInvoicesHandler implements RouteHandler {
  * Retrieves a single purchase invoice by ID.
  */
 export class GetPurchaseInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const tenantId = ctx.tenant.realmKey;
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const tenantId = ctx.tenant.realmKey;
+      const { id } = req.params;
 
-            const invoice = await service.getById(tenantId, id);
-            if (!invoice) {
-                res.status(404).json({ error: { code: "NOT_FOUND", message: `Invoice ${id} not found` } });
-                return;
-            }
+      const invoice = await service.getById(tenantId, id);
+      if (!invoice) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: `Invoice ${id} not found` },
+        });
+        return;
+      }
 
-            res.status(200).json(invoice);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(invoice);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -172,24 +199,31 @@ export class GetPurchaseInvoiceHandler implements RouteHandler {
  * optimistic concurrency control.
  */
 export class UpdatePurchaseInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.update(opCtx, id, req.body);
+      const result = await service.update(opCtx, id, req.body);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -199,31 +233,44 @@ export class UpdatePurchaseInvoiceHandler implements RouteHandler {
  * Expects `{ lines: CreateInvoiceLineInput[] }` in the body.
  */
 export class SetInvoiceLinesHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const lines = req.body.lines ?? req.body;
-            if (!Array.isArray(lines)) {
-                res.status(400).json({ error: { code: "INVALID_LINES", message: "Request body must contain a lines array" } });
-                return;
-            }
+      const lines = req.body.lines ?? req.body;
+      if (!Array.isArray(lines)) {
+        res.status(400).json({
+          error: {
+            code: "INVALID_LINES",
+            message: "Request body must contain a lines array",
+          },
+        });
+        return;
+      }
 
-            const version = typeof req.body.version === "number" ? req.body.version : undefined;
-            const result = await service.setLines(opCtx, id, lines, version);
+      const version =
+        typeof req.body.version === "number" ? req.body.version : undefined;
+      const result = await service.setLines(opCtx, id, lines, version);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -233,24 +280,31 @@ export class SetInvoiceLinesHandler implements RouteHandler {
  * Called by the UI to pre-populate account, cost centre, etc.
  */
 export class GetInvoiceLineDefaultsHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.resolveLineDefaults(opCtx, id);
+      const result = await service.resolveLineDefaults(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -261,24 +315,31 @@ export class GetInvoiceLineDefaultsHandler implements RouteHandler {
  * for ZERO_APPROVAL route).
  */
 export class SubmitInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.submit(opCtx, id);
+      const result = await service.submit(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -289,24 +350,31 @@ export class SubmitInvoiceHandler implements RouteHandler {
  * commission, and federation.
  */
 export class PostInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.post(opCtx, id);
+      const result = await service.post(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -316,24 +384,31 @@ export class PostInvoiceHandler implements RouteHandler {
  * If SUBMITTED, cancels the approval workflow and releases reserved budget.
  */
 export class CancelInvoiceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service =
+        await ctx.container.resolve<PurchaseInvoiceService>(PI_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.cancel(opCtx, id);
+      const result = await service.cancel(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -350,27 +425,33 @@ const POSTING_TOKEN = "fin.posting.service";
  * Body must include balanced lines (total debit === total credit).
  */
 export class CreateManualJEHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const result = await service.create(opCtx, {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                ...req.body,
-            });
+      const result = await service.create(opCtx, {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        ...req.body,
+      });
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(201).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(201).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -380,37 +461,49 @@ export class CreateManualJEHandler implements RouteHandler {
  * periodNumber, status, docId, txnId. Supports pagination.
  */
 export class ListJournalEntriesHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const tenantId = ctx.tenant.realmKey;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const tenantId = ctx.tenant.realmKey;
 
-            // Resolve the JE repo through the posting service's backing repo
-            const jeRepo = await ctx.container.resolve<{
-                list(tenantId: string, filters: any, pagination: any): Promise<any>;
-            }>("fin.posting.jeRepo");
+      // Resolve the JE repo through the posting service's backing repo
+      const jeRepo = await ctx.container.resolve<{
+        list(tenantId: string, filters: any, pagination: any): Promise<any>;
+      }>("fin.posting.jeRepo");
 
-            const filters: Record<string, unknown> = {};
-            if (req.query.entityCode) filters.entityCode = req.query.entityCode as string;
-            if (req.query.fiscalYear) filters.fiscalYear = Number(req.query.fiscalYear);
-            if (req.query.periodNumber) filters.periodNumber = Number(req.query.periodNumber);
-            if (req.query.status) filters.status = req.query.status as JEStatus;
-            if (req.query.txnId) filters.txnId = req.query.txnId as string;
-            if (req.query.docId) filters.docId = req.query.docId as string;
-            if (req.query.search) filters.search = req.query.search as string;
-            if (req.query.dateFrom) filters.dateFrom = req.query.dateFrom as string;
-            if (req.query.dateTo) filters.dateTo = req.query.dateTo as string;
+      const filters: Record<string, unknown> = {};
+      if (req.query.entityCode)
+        filters.entityCode = req.query.entityCode as string;
+      if (req.query.fiscalYear)
+        filters.fiscalYear = Number(req.query.fiscalYear);
+      if (req.query.periodNumber)
+        filters.periodNumber = Number(req.query.periodNumber);
+      if (req.query.status) filters.status = req.query.status as JEStatus;
+      if (req.query.txnId) filters.txnId = req.query.txnId as string;
+      if (req.query.docId) filters.docId = req.query.docId as string;
+      if (req.query.search) filters.search = req.query.search as string;
+      if (req.query.dateFrom) filters.dateFrom = req.query.dateFrom as string;
+      if (req.query.dateTo) filters.dateTo = req.query.dateTo as string;
 
-            const limit = Math.min(Number(req.query.limit) || 50, 200);
-            const offset = Number(req.query.offset) || 0;
-            const sort = (req.query.sort as string) || "created_at";
-            const dir = (req.query.dir as "asc" | "desc") || "desc";
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+      const sort = (req.query.sort as string) || "created_at";
+      const dir = (req.query.dir as "asc" | "desc") || "desc";
 
-            const result = await jeRepo.list(tenantId, filters, { limit, offset, sort, dir });
-            res.status(200).json(result);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const result = await jeRepo.list(tenantId, filters, {
+        limit,
+        offset,
+        sort,
+        dir,
+      });
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -419,23 +512,33 @@ export class ListJournalEntriesHandler implements RouteHandler {
  * Retrieves a single journal entry by ID (with lines).
  */
 export class GetJournalEntryHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const postingService = await ctx.container.resolve<PostingService>(POSTING_TOKEN);
-            const tenantId = ctx.tenant.realmKey;
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const postingService =
+        await ctx.container.resolve<PostingService>(POSTING_TOKEN);
+      const tenantId = ctx.tenant.realmKey;
+      const { id } = req.params;
 
-            const je = await postingService.getById(tenantId, id);
-            if (!je) {
-                res.status(404).json({ error: { code: "JE_NOT_FOUND", message: `Journal entry ${id} not found` } });
-                return;
-            }
+      const je = await postingService.getById(tenantId, id);
+      if (!je) {
+        res.status(404).json({
+          error: {
+            code: "JE_NOT_FOUND",
+            message: `Journal entry ${id} not found`,
+          },
+        });
+        return;
+      }
 
-            res.status(200).json(je);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(je);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -445,25 +548,32 @@ export class GetJournalEntryHandler implements RouteHandler {
  * If zero-approval and `directPost` is true, auto-posts immediately.
  */
 export class SubmitManualJEHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const options = req.body?.directPost === true ? { directPost: true } : undefined;
-            const result = await service.submit(opCtx, id, options);
+      const options =
+        req.body?.directPost === true ? { directPost: true } : undefined;
+      const result = await service.submit(opCtx, id, options);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -473,24 +583,30 @@ export class SubmitManualJEHandler implements RouteHandler {
  * double-entry balance, account status, and fiscal period at post time.
  */
 export class PostManualJEHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.post(opCtx, id);
+      const result = await service.post(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -500,24 +616,30 @@ export class PostManualJEHandler implements RouteHandler {
  * debit/credit lines and updates GL balances accordingly.
  */
 export class ReverseManualJEHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
-            const { id } = req.params;
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<ManualJEService>(MJE_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
+      const { id } = req.params;
 
-            const result = await service.reverse(opCtx, id);
+      const result = await service.reverse(opCtx, id);
 
-            if (!result.ok) {
-                res.status(mapErrorStatus(result.error.code)).json({ error: result.error });
-                return;
-            }
+      if (!result.ok) {
+        res
+          .status(mapErrorStatus(result.error.code))
+          .json({ error: result.error });
+        return;
+      }
 
-            res.status(200).json(result.value);
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      res.status(200).json(result.value);
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -534,33 +656,44 @@ const GL_TOKEN = "fin.accounting.glInquiryService";
  * Optional: periodNumber, accountId, costCenterId, accountType.
  */
 export class GLSummaryHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const fiscalYear = Number(req.query.fiscalYear);
-            if (!fiscalYear || isNaN(fiscalYear)) {
-                res.status(400).json({ error: { code: "MISSING_FISCAL_YEAR", message: "fiscalYear query parameter is required" } });
-                return;
-            }
+      const fiscalYear = Number(req.query.fiscalYear);
+      if (!fiscalYear || isNaN(fiscalYear)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_FISCAL_YEAR",
+            message: "fiscalYear query parameter is required",
+          },
+        });
+        return;
+      }
 
-            const filters = {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                fiscalYear,
-                periodNumber: req.query.periodNumber ? Number(req.query.periodNumber) : undefined,
-                accountId: req.query.accountId as string | undefined,
-                costCenterId: req.query.costCenterId as string | undefined,
-                accountType: req.query.accountType as string | undefined,
-            };
+      const filters = {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        fiscalYear,
+        periodNumber: req.query.periodNumber
+          ? Number(req.query.periodNumber)
+          : undefined,
+        accountId: req.query.accountId as string | undefined,
+        costCenterId: req.query.costCenterId as string | undefined,
+        accountType: req.query.accountType as string | undefined,
+      };
 
-            const rows = await service.getGLSummary(opCtx, filters);
-            res.status(200).json({ data: rows });
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const rows = await service.getGLSummary(opCtx, filters);
+      res.status(200).json({ data: rows });
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -571,38 +704,56 @@ export class GLSummaryHandler implements RouteHandler {
  * Optional: periodNumber, reversalMode (NETTED | SEPARATE | EXCLUDED).
  */
 export class GLDetailHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const fiscalYear = Number(req.query.fiscalYear);
-            const accountId = req.query.accountId as string | undefined;
+      const fiscalYear = Number(req.query.fiscalYear);
+      const accountId = req.query.accountId as string | undefined;
 
-            if (!fiscalYear || isNaN(fiscalYear)) {
-                res.status(400).json({ error: { code: "MISSING_FISCAL_YEAR", message: "fiscalYear query parameter is required" } });
-                return;
-            }
-            if (!accountId) {
-                res.status(400).json({ error: { code: "MISSING_ACCOUNT_ID", message: "accountId query parameter is required" } });
-                return;
-            }
+      if (!fiscalYear || isNaN(fiscalYear)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_FISCAL_YEAR",
+            message: "fiscalYear query parameter is required",
+          },
+        });
+        return;
+      }
+      if (!accountId) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_ACCOUNT_ID",
+            message: "accountId query parameter is required",
+          },
+        });
+        return;
+      }
 
-            const filters = {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                accountId,
-                fiscalYear,
-                periodNumber: req.query.periodNumber ? Number(req.query.periodNumber) : undefined,
-                reversalMode: (req.query.reversalMode as "NETTED" | "SEPARATE" | "EXCLUDED") ?? undefined,
-            };
+      const filters = {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        accountId,
+        fiscalYear,
+        periodNumber: req.query.periodNumber
+          ? Number(req.query.periodNumber)
+          : undefined,
+        reversalMode:
+          (req.query.reversalMode as "NETTED" | "SEPARATE" | "EXCLUDED") ??
+          undefined,
+      };
 
-            const rows = await service.getGLDetail(opCtx, filters);
-            res.status(200).json({ data: rows });
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const rows = await service.getGLDetail(opCtx, filters);
+      res.status(200).json({ data: rows });
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }
 
 /**
@@ -613,35 +764,51 @@ export class GLDetailHandler implements RouteHandler {
  * Optional: reversalMode (NETTED | SEPARATE | EXCLUDED).
  */
 export class TrialBalanceHandler implements RouteHandler {
-    async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
-            const opCtx = buildOpCtx(ctx, req);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    try {
+      const service = await ctx.container.resolve<GLInquiryService>(GL_TOKEN);
+      const opCtx = buildOpCtx(ctx, req);
 
-            const fiscalYear = Number(req.query.fiscalYear);
-            const periodNumber = Number(req.query.periodNumber);
+      const fiscalYear = Number(req.query.fiscalYear);
+      const periodNumber = Number(req.query.periodNumber);
 
-            if (!fiscalYear || isNaN(fiscalYear)) {
-                res.status(400).json({ error: { code: "MISSING_FISCAL_YEAR", message: "fiscalYear query parameter is required" } });
-                return;
-            }
-            if (!periodNumber || isNaN(periodNumber)) {
-                res.status(400).json({ error: { code: "MISSING_PERIOD", message: "periodNumber query parameter is required" } });
-                return;
-            }
+      if (!fiscalYear || isNaN(fiscalYear)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_FISCAL_YEAR",
+            message: "fiscalYear query parameter is required",
+          },
+        });
+        return;
+      }
+      if (!periodNumber || isNaN(periodNumber)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_PERIOD",
+            message: "periodNumber query parameter is required",
+          },
+        });
+        return;
+      }
 
-            const filters = {
-                tenantId: opCtx.tenantId,
-                entityCode: opCtx.entityCode ?? "",
-                fiscalYear,
-                periodNumber,
-                reversalMode: (req.query.reversalMode as "NETTED" | "SEPARATE" | "EXCLUDED") ?? undefined,
-            };
+      const filters = {
+        tenantId: opCtx.tenantId,
+        entityCode: opCtx.entityCode ?? "",
+        fiscalYear,
+        periodNumber,
+        reversalMode:
+          (req.query.reversalMode as "NETTED" | "SEPARATE" | "EXCLUDED") ??
+          undefined,
+      };
 
-            const rows = await service.getTrialBalance(opCtx, filters);
-            res.status(200).json({ data: rows });
-        } catch (err) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+      const rows = await service.getTrialBalance(opCtx, filters);
+      res.status(200).json({ data: rows });
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
     }
+  }
 }

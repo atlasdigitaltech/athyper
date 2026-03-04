@@ -21,26 +21,26 @@ import type { Container } from "../../../../kernel/container.js";
  * Written to evt.event within the same TX as the JE posting.
  */
 export interface PostActionEvent {
-    type: "finance.document.posted";
-    docId: string;
-    docType: "PURCHASE_INVOICE" | "PAYMENT_ENTRY";
-    tenantId: string;
-    entityCode: string;
-    jeId: string;
-    supplierId: string;
-    lines: PostActionEventLine[];
+  type: "finance.document.posted";
+  docId: string;
+  docType: "PURCHASE_INVOICE" | "PAYMENT_ENTRY";
+  tenantId: string;
+  entityCode: string;
+  jeId: string;
+  supplierId: string;
+  lines: PostActionEventLine[];
 }
 
 export interface PostActionEventLine {
-    lineId: string;
-    /** "CAPEX" triggers asset WIP creation */
-    intentDomain: string | null;
-    /** Non-null triggers inventory receipt */
-    itemId: string | null;
-    warehouseId: string | null;
-    /** Accounting fields for commission/commitment */
-    accountId: string | null;
-    amount: string;
+  lineId: string;
+  /** "CAPEX" triggers asset WIP creation */
+  intentDomain: string | null;
+  /** Non-null triggers inventory receipt */
+  itemId: string | null;
+  warehouseId: string | null;
+  /** Accounting fields for commission/commitment */
+  accountId: string | null;
+  amount: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -55,14 +55,14 @@ export interface PostActionEventLine {
  * If already processed, skip silently.
  */
 export interface PostActionHandler {
-    /** Handler name for logging/registration */
-    readonly name: string;
+  /** Handler name for logging/registration */
+  readonly name: string;
 
-    /**
-     * Process the event. Must be idempotent.
-     * @returns true if processing occurred, false if skipped (already processed)
-     */
-    handle(event: PostActionEvent, tx?: unknown): Promise<boolean>;
+  /**
+   * Process the event. Must be idempotent.
+   * @returns true if processing occurred, false if skipped (already processed)
+   */
+  handle(event: PostActionEvent, tx?: unknown): Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,35 +80,35 @@ export interface PostActionHandler {
  * ```
  */
 export class OutboxEmitter {
-    constructor(private readonly container: Container) {}
+  constructor(private readonly container: Container) {}
 
-    /**
-     * Write a post-action event to the outbox table within the given transaction.
-     * The event will be picked up by the background consumer for processing.
-     */
-    async emit(event: PostActionEvent, tx?: unknown): Promise<string> {
-        const db = tx ?? (await this.container.resolve<any>("db"));
+  /**
+   * Write a post-action event to the outbox table within the given transaction.
+   * The event will be picked up by the background consumer for processing.
+   */
+  async emit(event: PostActionEvent, tx?: unknown): Promise<string> {
+    const db = tx ?? (await this.container.resolve<any>("db"));
 
-        const eventId = crypto.randomUUID();
-        const idempotencyKey = `outbox:${event.docType}:${event.docId}:posted`;
+    const eventId = crypto.randomUUID();
+    const idempotencyKey = `outbox:${event.docType}:${event.docId}:posted`;
 
-        await db.query(
-            `INSERT INTO evt.event (id, tenant_id, event_type, aggregate_id, aggregate_type, payload, idempotency_key, status, created_at)
+    await db.query(
+      `INSERT INTO evt.event (id, tenant_id, event_type, aggregate_id, aggregate_type, payload, idempotency_key, status, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', now())
              ON CONFLICT (idempotency_key) DO NOTHING`,
-            [
-                eventId,
-                event.tenantId,
-                event.type,
-                event.docId,
-                event.docType,
-                JSON.stringify(event),
-                idempotencyKey,
-            ],
-        );
+      [
+        eventId,
+        event.tenantId,
+        event.type,
+        event.docId,
+        event.docType,
+        JSON.stringify(event),
+        idempotencyKey,
+      ],
+    );
 
-        return eventId;
-    }
+    return eventId;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -123,31 +123,31 @@ export class OutboxEmitter {
  * on the next poll cycle. After max retries, events move to DEAD_LETTER.
  */
 export class OutboxConsumer {
-    private handlers: PostActionHandler[] = [];
-    private readonly maxRetries: number;
+  private handlers: PostActionHandler[] = [];
+  private readonly maxRetries: number;
 
-    constructor(
-        private readonly container: Container,
-        options?: { maxRetries?: number },
-    ) {
-        this.maxRetries = options?.maxRetries ?? 5;
-    }
+  constructor(
+    private readonly container: Container,
+    options?: { maxRetries?: number },
+  ) {
+    this.maxRetries = options?.maxRetries ?? 5;
+  }
 
-    /** Register a post-action handler */
-    registerHandler(handler: PostActionHandler): void {
-        this.handlers.push(handler);
-    }
+  /** Register a post-action handler */
+  registerHandler(handler: PostActionHandler): void {
+    this.handlers.push(handler);
+  }
 
-    /**
-     * Process pending outbox events.
-     * Called by a background job/scheduler.
-     */
-    async processPending(batchSize = 10): Promise<number> {
-        const db = await this.container.resolve<any>("db");
+  /**
+   * Process pending outbox events.
+   * Called by a background job/scheduler.
+   */
+  async processPending(batchSize = 10): Promise<number> {
+    const db = await this.container.resolve<any>("db");
 
-        // Claim a batch of pending events (advisory lock prevents double-processing)
-        const events = await db.query(
-            `UPDATE evt.event
+    // Claim a batch of pending events (advisory lock prevents double-processing)
+    const events = await db.query(
+      `UPDATE evt.event
              SET status = 'PROCESSING', updated_at = now()
              WHERE id IN (
                  SELECT id FROM evt.event
@@ -159,40 +159,39 @@ export class OutboxConsumer {
                  FOR UPDATE SKIP LOCKED
              )
              RETURNING *`,
-            [this.maxRetries, batchSize],
+      [this.maxRetries, batchSize],
+    );
+
+    let processed = 0;
+    for (const row of events.rows ?? events) {
+      const event: PostActionEvent =
+        typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload;
+
+      try {
+        for (const handler of this.handlers) {
+          await handler.handle(event);
+        }
+
+        // Mark as completed
+        await db.query(
+          `UPDATE evt.event SET status = 'COMPLETED', updated_at = now() WHERE id = $1`,
+          [row.id],
         );
-
-        let processed = 0;
-        for (const row of events.rows ?? events) {
-            const event: PostActionEvent = typeof row.payload === "string"
-                ? JSON.parse(row.payload)
-                : row.payload;
-
-            try {
-                for (const handler of this.handlers) {
-                    await handler.handle(event);
-                }
-
-                // Mark as completed
-                await db.query(
-                    `UPDATE evt.event SET status = 'COMPLETED', updated_at = now() WHERE id = $1`,
-                    [row.id],
-                );
-                processed++;
-            } catch (err) {
-                // Increment retry count, revert to PENDING for next cycle
-                await db.query(
-                    `UPDATE evt.event
+        processed++;
+      } catch (err) {
+        // Increment retry count, revert to PENDING for next cycle
+        await db.query(
+          `UPDATE evt.event
                      SET status = CASE WHEN retry_count + 1 >= $2 THEN 'DEAD_LETTER' ELSE 'PENDING' END,
                          retry_count = retry_count + 1,
                          last_error = $3,
                          updated_at = now()
                      WHERE id = $1`,
-                    [row.id, this.maxRetries, (err as Error).message],
-                );
-            }
-        }
-
-        return processed;
+          [row.id, this.maxRetries, (err as Error).message],
+        );
+      }
     }
+
+    return processed;
+  }
 }

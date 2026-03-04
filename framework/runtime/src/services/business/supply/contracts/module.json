@@ -1,12 +1,7 @@
 ﻿{
-    "code":  "CONTRACT",
-    "name":  "Contract Management",
-    "dependsOn":  [
-                      "REL",
-                      "WF",
-                      "DOC",
-                      "NOTIFY"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "CONTRACT",
+  "name": "Contract Management",
+  "dependsOn": ["REL", "WF", "DOC", "NOTIFY"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

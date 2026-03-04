@@ -1,8 +1,8 @@
 ﻿/**
  *  ()
- * Depends on: 
- * Tenant scoped: 
- * Subscription: 
+ * Depends on:
+ * Tenant scoped:
+ * Subscription:
  *
  * This is the module composition root. Export public wiring only:
  * - routers (REST/GraphQL), service factories, DI bindings, etc.

@@ -1,10 +1,7 @@
 ﻿{
-    "code":  "MFG",
-    "name":  "Manufacturing",
-    "dependsOn":  [
-                      "INVENTORY",
-                      "MDG"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "MFG",
+  "name": "Manufacturing",
+  "dependsOn": ["INVENTORY", "MDG"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }
