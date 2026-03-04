@@ -95,7 +95,7 @@
     },
 
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
 
