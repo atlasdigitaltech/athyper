@@ -53,7 +53,11 @@ interface CliOptions {
   output?: string;
 }
 
-function parseCliArgs(): { command: string; packName?: string; options: CliOptions } {
+function parseCliArgs(): {
+  command: string;
+  packName?: string;
+  options: CliOptions;
+} {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
@@ -166,13 +170,26 @@ function createMockPolicyStore() {
 /**
  * Create a mock evaluator for CLI testing
  */
-function createMockEvaluator(policyStore: ReturnType<typeof createMockPolicyStore>) {
+function createMockEvaluator(
+  policyStore: ReturnType<typeof createMockPolicyStore>,
+) {
   return {
-    async evaluate(input: { subject: any; resource: any; action: any; tenantId: string }) {
+    async evaluate(input: {
+      subject: any;
+      resource: any;
+      action: any;
+      tenantId: string;
+    }) {
       const startTime = performance.now();
-      const policies = await policyStore.getActivePoliciesForTenant(input.tenantId);
+      const policies = await policyStore.getActivePoliciesForTenant(
+        input.tenantId,
+      );
 
-      const matchedRules: Array<{ policyId: string; ruleId: string; effect: string }> = [];
+      const matchedRules: Array<{
+        policyId: string;
+        ruleId: string;
+        effect: string;
+      }> = [];
       let decision: "allow" | "deny" = "deny";
 
       for (const policy of policies) {
@@ -181,12 +198,16 @@ function createMockEvaluator(policyStore: ReturnType<typeof createMockPolicyStor
           const roleMatch =
             rule.subjects[0].roles &&
             (rule.subjects[0].roles.includes("*") ||
-              rule.subjects[0].roles.some((r: string) => input.subject.roles?.includes(r)));
+              rule.subjects[0].roles.some((r: string) =>
+                input.subject.roles?.includes(r),
+              ));
 
           const actionMatch =
-            rule.actions.includes("*") || rule.actions.includes(input.action.name);
+            rule.actions.includes("*") ||
+            rule.actions.includes(input.action.name);
           const resourceMatch =
-            rule.resources.includes("*") || rule.resources.includes(input.resource.type);
+            rule.resources.includes("*") ||
+            rule.resources.includes(input.resource.type);
 
           if (roleMatch && actionMatch && resourceMatch) {
             matchedRules.push({
@@ -229,7 +250,7 @@ async function main(): Promise<void> {
   const simulator = new PolicySimulatorService(
     undefined as any,
     evaluator as any,
-    {} as any
+    {} as any,
   );
 
   const runnerConfig: Partial<TestRunnerConfig> = {
@@ -244,7 +265,9 @@ async function main(): Promise<void> {
   let report: TestRunReport;
 
   if (options.verbose) {
-    console.log(`Running policy tests: ${command}${packName ? ` (${packName})` : ""}\n`);
+    console.log(
+      `Running policy tests: ${command}${packName ? ` (${packName})` : ""}\n`,
+    );
   }
 
   switch (command) {
@@ -280,14 +303,20 @@ async function main(): Promise<void> {
           skipped: packResult.skippedTests,
           passRate: (packResult.passedTests / packResult.totalTests) * 100,
           categoriesCovered: [packName],
-          scenariosCovered: packResult.testResults.map((r: any) => r.testCaseName),
+          scenariosCovered: packResult.testResults.map(
+            (r: any) => r.testCaseName,
+          ),
         },
         performance: {
           totalEvaluations: packResult.totalTests,
           totalTimeMs: packResult.durationMs,
           averageTimeMs: packResult.durationMs / packResult.totalTests,
-          minTimeMs: Math.min(...packResult.testResults.map((r: any) => r.durationMs)),
-          maxTimeMs: Math.max(...packResult.testResults.map((r: any) => r.durationMs)),
+          minTimeMs: Math.min(
+            ...packResult.testResults.map((r: any) => r.durationMs),
+          ),
+          maxTimeMs: Math.max(
+            ...packResult.testResults.map((r: any) => r.durationMs),
+          ),
           p50TimeMs: 0,
           p95TimeMs: 0,
           p99TimeMs: 0,
@@ -299,7 +328,10 @@ async function main(): Promise<void> {
           .map((r) => ({
             packName,
             testName: r.testCaseName,
-            expected: r.assertionResults?.[0]?.expected != null ? String(r.assertionResults[0].expected) : "unknown",
+            expected:
+              r.assertionResults?.[0]?.expected != null
+                ? String(r.assertionResults[0].expected)
+                : "unknown",
             actual: String(r.simulatorResult.decision),
             reason: r.failureReason,
           })),
@@ -337,7 +369,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  if (options.failOnBudget && report.budgetViolations.some((v) => v.severity === "error")) {
+  if (
+    options.failOnBudget &&
+    report.budgetViolations.some((v) => v.severity === "error")
+  ) {
     console.error("\nFailed due to performance budget violations");
     process.exit(2);
   }

@@ -17,7 +17,7 @@ import type { Kysely } from "kysely";
  */
 export async function registerMetaServices(
   container: Container,
-  _config: RuntimeConfig
+  _config: RuntimeConfig,
 ) {
   // Get health registry to register health checks
   const healthRegistry = await container.resolve<any>(TOKENS.healthRegistry);
@@ -41,11 +41,7 @@ export async function registerMetaServices(
   };
 
   // Register META Engine config
-  container.register(
-    META_TOKENS.config,
-    async () => metaConfig,
-    "singleton"
-  );
+  container.register(META_TOKENS.config, async () => metaConfig, "singleton");
 
   // Resolve optional field-level security filter (registered by IAM module if available)
   let fieldSecurityFilter: any;
@@ -56,7 +52,8 @@ export async function registerMetaServices(
   }
 
   // Create all META services using factory
-  const { createMetaServices } = await import("../services/platform/meta/factory.js");
+  const { createMetaServices } =
+    await import("../services/platform/meta/factory.js");
 
   const metaServices = createMetaServices({
     db,
@@ -70,7 +67,7 @@ export async function registerMetaServices(
   container.register(
     META_TOKENS.registry,
     async () => metaServices.registry,
-    "singleton"
+    "singleton",
   );
 
   // Register MetaCompiler with health check
@@ -91,12 +88,12 @@ export async function registerMetaServices(
             timestamp: new Date(),
           };
         },
-        { type: "meta", required: true }
+        { type: "meta", required: true },
       );
 
       return compiler;
     },
-    "singleton"
+    "singleton",
   );
 
   // Register PolicyGate with health check
@@ -117,12 +114,12 @@ export async function registerMetaServices(
             timestamp: new Date(),
           };
         },
-        { type: "meta", required: true }
+        { type: "meta", required: true },
       );
 
       return policyGate;
     },
-    "singleton"
+    "singleton",
   );
 
   // Register AuditLogger with health check
@@ -143,12 +140,12 @@ export async function registerMetaServices(
             timestamp: new Date(),
           };
         },
-        { type: "meta", required: true }
+        { type: "meta", required: true },
       );
 
       return auditLogger;
     },
-    "singleton"
+    "singleton",
   );
 
   // Register GenericDataAPI with health check
@@ -169,12 +166,12 @@ export async function registerMetaServices(
             timestamp: new Date(),
           };
         },
-        { type: "meta", required: true }
+        { type: "meta", required: true },
       );
 
       return dataAPI;
     },
-    "singleton"
+    "singleton",
   );
 
   // Register MetaStore with health check
@@ -195,19 +192,19 @@ export async function registerMetaServices(
             timestamp: new Date(),
           };
         },
-        { type: "meta", required: false } // MetaStore is a convenience wrapper, not required
+        { type: "meta", required: false }, // MetaStore is a convenience wrapper, not required
       );
 
       return metaStore;
     },
-    "singleton"
+    "singleton",
   );
 
   // Register ApprovalService (needed by SLA timer workers in contribute phase)
   container.register(
     META_TOKENS.approvalService,
     async () => metaServices.approvalService,
-    "singleton"
+    "singleton",
   );
 
   // Register ApprovalService health check
@@ -222,21 +219,21 @@ export async function registerMetaServices(
         timestamp: new Date(),
       };
     },
-    { type: "meta", required: false }
+    { type: "meta", required: false },
   );
 
   // Register ApprovalTemplateService (needed by template authoring handlers)
   container.register(
     META_TOKENS.approvalTemplateService,
     async () => metaServices.approvalTemplateService,
-    "singleton"
+    "singleton",
   );
 
   // Register LifecycleManager (needed by lifecycle transition handlers)
   container.register(
     META_TOKENS.lifecycleManager,
     async () => metaServices.lifecycleManager,
-    "singleton"
+    "singleton",
   );
 
   // Register LifecycleManager health check
@@ -251,21 +248,21 @@ export async function registerMetaServices(
         timestamp: new Date(),
       };
     },
-    { type: "meta", required: false }
+    { type: "meta", required: false },
   );
 
   // Register OverlayRepository (EPIC I - overlay system)
   container.register(
     META_TOKENS.overlayRepository,
     async () => metaServices.overlayRepository,
-    "singleton"
+    "singleton",
   );
 
   // Register SchemaComposerService (EPIC I - overlay composition)
   container.register(
     META_TOKENS.schemaComposer,
     async () => metaServices.schemaComposer,
-    "singleton"
+    "singleton",
   );
 
   // Register overlay system health check
@@ -287,7 +284,7 @@ export async function registerMetaServices(
         };
       }
     },
-    { type: "meta", required: false }
+    { type: "meta", required: false },
   );
 
   // Optional: Precompile all active versions on startup
@@ -297,19 +294,19 @@ export async function registerMetaServices(
 
     logger.info(
       { component: "meta" },
-      "Precompiling all active entity versions..."
+      "Precompiling all active entity versions...",
     );
 
     try {
       const compiled = await compiler.precompileAll();
       logger.info(
         { component: "meta", count: compiled.length },
-        `Precompiled ${compiled.length} entity versions`
+        `Precompiled ${compiled.length} entity versions`,
       );
     } catch (error) {
       logger.error(
         { component: "meta", error: String(error) },
-        "Failed to precompile entity versions"
+        "Failed to precompile entity versions",
       );
     }
   }
