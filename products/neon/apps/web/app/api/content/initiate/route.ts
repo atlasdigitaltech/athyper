@@ -3,7 +3,6 @@ import * as contentService from "@neon/content/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-
 /**
  * Validation schema for upload initiation request
  */
@@ -74,7 +73,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { entityType, entityId, kind, fileName, contentType, sizeBytes } = parsed.data;
+    const { entityType, entityId, kind, fileName, contentType, sizeBytes } =
+      parsed.data;
 
     // TODO: Check permissions via PolicyGateService
     // const canUpload = await checkPermission(sid, tenantId, "document.upload", { entityType, entityId, kind });
@@ -97,14 +97,16 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Upload initiation error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

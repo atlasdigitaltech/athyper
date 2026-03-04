@@ -11,16 +11,20 @@ import { toast } from "sonner";
 import type { ActionExecutionResult } from "./types";
 import type { SessionBootstrap } from "@/lib/session-bootstrap";
 
-
 export interface UseEntityActionResult {
-  execute: (actionCode: string, payload?: Record<string, unknown>) => Promise<ActionExecutionResult | null>;
+  execute: (
+    actionCode: string,
+    payload?: Record<string, unknown>,
+  ) => Promise<ActionExecutionResult | null>;
   loading: boolean;
   lastResult: ActionExecutionResult | null;
 }
 
 function getCsrfToken(): string {
   if (typeof window === "undefined") return "";
-  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as SessionBootstrap | undefined;
+  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as
+    | SessionBootstrap
+    | undefined;
   return bootstrap?.csrfToken ?? "";
 }
 
@@ -30,7 +34,9 @@ export function useEntityAction(
   onSuccess?: () => void,
 ): UseEntityActionResult {
   const [loading, setLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<ActionExecutionResult | null>(null);
+  const [lastResult, setLastResult] = useState<ActionExecutionResult | null>(
+    null,
+  );
 
   const execute = useCallback(
     async (
@@ -55,7 +61,11 @@ export function useEntityAction(
           },
         );
 
-        const body = (await res.json()) as { success: boolean; data?: ActionExecutionResult; error?: { message?: string } };
+        const body = (await res.json()) as {
+          success: boolean;
+          data?: ActionExecutionResult;
+          error?: { message?: string };
+        };
 
         if (body.data) {
           setLastResult(body.data);
@@ -64,7 +74,8 @@ export function useEntityAction(
             toast.success(`Action completed: ${actionCode}`);
             onSuccess?.();
           } else {
-            const errorMsg = body.data.error?.details?.[0]?.message ?? "Action failed";
+            const errorMsg =
+              body.data.error?.details?.[0]?.message ?? "Action failed";
             toast.error(errorMsg);
           }
 
@@ -78,7 +89,12 @@ export function useEntityAction(
           error: {
             reasonCode: "validation_failed",
             blockedBy: "client",
-            details: [{ message: body.error?.message ?? `Request failed (${res.status})` }],
+            details: [
+              {
+                message:
+                  body.error?.message ?? `Request failed (${res.status})`,
+              },
+            ],
           },
         };
         setLastResult(errorResult);
@@ -91,7 +107,9 @@ export function useEntityAction(
           error: {
             reasonCode: "validation_failed",
             blockedBy: "client",
-            details: [{ message: err instanceof Error ? err.message : "Network error" }],
+            details: [
+              { message: err instanceof Error ? err.message : "Network error" },
+            ],
           },
         };
         setLastResult(errorResult);

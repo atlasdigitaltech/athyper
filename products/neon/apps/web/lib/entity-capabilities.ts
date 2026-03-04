@@ -16,8 +16,18 @@ import { useState, useEffect } from "react";
 // Client-Side Capability Types (mirrors server-side types)
 // ============================================================================
 
-export type OperationSurface = "LIST" | "DETAIL" | "BOTH" | "PALETTE_ONLY" | "HIDDEN";
-export type OperationPlacement = "PRIMARY" | "TOOLBAR" | "OVERFLOW" | "CONTEXT" | "COMMAND";
+export type OperationSurface =
+  | "LIST"
+  | "DETAIL"
+  | "BOTH"
+  | "PALETTE_ONLY"
+  | "HIDDEN";
+export type OperationPlacement =
+  | "PRIMARY"
+  | "TOOLBAR"
+  | "OVERFLOW"
+  | "CONTEXT"
+  | "COMMAND";
 export type HandlerType = "NAVIGATE" | "API" | "MODAL" | "INLINE";
 
 export interface EntityCapabilities {
@@ -82,7 +92,9 @@ async function fetchEntityCapabilities(
 
   const promise = (async () => {
     try {
-      const res = await fetch(`/api/entity-capabilities/${encodeURIComponent(entityKey)}`);
+      const res = await fetch(
+        `/api/entity-capabilities/${encodeURIComponent(entityKey)}`,
+      );
       if (!res.ok) return null;
 
       const json = (await res.json()) as { data?: EntityCapabilities };

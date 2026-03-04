@@ -62,7 +62,7 @@ export function MentionAutocomplete({
     try {
       const res = await fetch(
         `/api/iam/principals?search=${encodeURIComponent(term)}&limit=10`,
-        { credentials: "same-origin" }
+        { credentials: "same-origin" },
       );
 
       if (!res.ok) {
@@ -154,7 +154,9 @@ export function MentionAutocomplete({
         break;
       case "ArrowUp":
         e.preventDefault();
-        setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+        setSelectedIndex(
+          (prev) => (prev - 1 + suggestions.length) % suggestions.length,
+        );
         break;
       case "Enter":
         if (suggestions[selectedIndex]) {
@@ -208,7 +210,9 @@ export function MentionAutocomplete({
           className="absolute z-50 w-64 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
         >
           {loading ? (
-            <div className="p-3 text-sm text-gray-500 text-center">Loading...</div>
+            <div className="p-3 text-sm text-gray-500 text-center">
+              Loading...
+            </div>
           ) : suggestions.length === 0 ? (
             <div className="p-3 text-sm text-gray-500 text-center">
               {searchTerm ? "No users found" : "Start typing to search"}
@@ -226,7 +230,9 @@ export function MentionAutocomplete({
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-medium text-gray-600">
-                      {(user.displayName || user.username).charAt(0).toUpperCase()}
+                      {(user.displayName || user.username)
+                        .charAt(0)
+                        .toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -234,7 +240,9 @@ export function MentionAutocomplete({
                       {user.displayName || user.username}
                     </div>
                     {user.displayName && (
-                      <div className="text-xs text-gray-500 truncate">@{user.username}</div>
+                      <div className="text-xs text-gray-500 truncate">
+                        @{user.username}
+                      </div>
                     )}
                   </div>
                 </div>

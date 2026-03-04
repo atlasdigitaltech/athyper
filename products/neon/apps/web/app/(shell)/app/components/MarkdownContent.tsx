@@ -17,7 +17,10 @@ interface MarkdownContentProps {
  * Renders markdown content with GitHub Flavored Markdown support.
  * Sanitized to prevent XSS attacks.
  */
-export function MarkdownContent({ content, className = "" }: MarkdownContentProps) {
+export function MarkdownContent({
+  content,
+  className = "",
+}: MarkdownContentProps) {
   return (
     <div className={`prose prose-sm max-w-none ${className}`}>
       <ReactMarkdown
@@ -25,16 +28,30 @@ export function MarkdownContent({ content, className = "" }: MarkdownContentProp
         components={{
           // Customize rendering to ensure security
           a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />
+            <a
+              {...props}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            />
           ),
           code: ({ node, inline, ...props }) =>
             inline ? (
-              <code {...props} className="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono" />
+              <code
+                {...props}
+                className="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono"
+              />
             ) : (
-              <code {...props} className="block p-2 bg-gray-100 rounded text-sm font-mono overflow-x-auto" />
+              <code
+                {...props}
+                className="block p-2 bg-gray-100 rounded text-sm font-mono overflow-x-auto"
+              />
             ),
           blockquote: ({ node, ...props }) => (
-            <blockquote {...props} className="border-l-4 border-gray-300 pl-4 italic text-gray-700" />
+            <blockquote
+              {...props}
+              className="border-l-4 border-gray-300 pl-4 italic text-gray-700"
+            />
           ),
           ul: ({ node, ...props }) => (
             <ul {...props} className="list-disc list-inside space-y-1" />

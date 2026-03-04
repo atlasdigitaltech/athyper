@@ -8,7 +8,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * GET /api/collab/comments
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     if (!entityType || !entityId) {
       return NextResponse.json(
         { error: "Missing required parameters: entityType and entityId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -50,19 +50,22 @@ export async function GET(req: NextRequest) {
 
     // Call backend service
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
-    const response = await fetch(`${backendUrl}/api/collab/comments?${params}`, {
-      headers: {
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/comments?${params}`,
+      {
+        headers: {
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const error = await response.text();
       console.error("Comments API error:", error);
       return NextResponse.json(
         { error: "Failed to fetch comments", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -72,7 +75,7 @@ export async function GET(req: NextRequest) {
     console.error("Comments route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -99,7 +102,7 @@ export async function POST(req: NextRequest) {
     if (!entityType || !entityId || !commentText) {
       return NextResponse.json(
         { error: "Missing required fields: entityType, entityId, commentText" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
       console.error("Create comment error:", error);
       return NextResponse.json(
         { error: "Failed to create comment", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
     console.error("Create comment route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -43,24 +43,27 @@ const CSRF_COOKIE = "__csrf";
  *   callback redirect because the cookie wouldn't be sent on Keycloak → our app.
  * maxAge: 28800 (8h) — absolute maximum; Redis TTL may expire sooner.
  */
-export async function setSessionCookie(sid: string, env: string = "local"): Promise<void> {
-    const isProduction = env === "production" || env === "staging";
-    const cookieStore = await cookies();
-    cookieStore.set(SID_COOKIE, sid, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 28800, // 8 hours (must match Redis EX in callback/route.ts)
-    });
+export async function setSessionCookie(
+  sid: string,
+  env: string = "local",
+): Promise<void> {
+  const isProduction = env === "production" || env === "staging";
+  const cookieStore = await cookies();
+  cookieStore.set(SID_COOKIE, sid, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 28800, // 8 hours (must match Redis EX in callback/route.ts)
+  });
 }
 
 /**
  * Clear the session ID cookie. Called during logout.
  */
 export async function clearSessionCookie(): Promise<void> {
-    const cookieStore = await cookies();
-    cookieStore.delete(SID_COOKIE);
+  const cookieStore = await cookies();
+  cookieStore.delete(SID_COOKIE);
 }
 
 /**
@@ -68,8 +71,8 @@ export async function clearSessionCookie(): Promise<void> {
  * Used by all BFF route handlers to identify the current session.
  */
 export async function getSessionId(): Promise<string | null> {
-    const cookieStore = await cookies();
-    return cookieStore.get(SID_COOKIE)?.value ?? null;
+  const cookieStore = await cookies();
+  return cookieStore.get(SID_COOKIE)?.value ?? null;
 }
 
 /**
@@ -81,24 +84,27 @@ export async function getSessionId(): Promise<string | null> {
  *   cookie is never needed during cross-site navigations (Keycloak redirects
  *   use GET which doesn't need CSRF, and the callback creates a new CSRF token).
  */
-export async function setCsrfCookie(token: string, env: string = "local"): Promise<void> {
-    const isProduction = env === "production" || env === "staging";
-    const cookieStore = await cookies();
-    cookieStore.set(CSRF_COOKIE, token, {
-        httpOnly: false,
-        secure: isProduction,
-        sameSite: "strict",
-        path: "/",
-        maxAge: 28800, // 8 hours (matches session cookie lifetime)
-    });
+export async function setCsrfCookie(
+  token: string,
+  env: string = "local",
+): Promise<void> {
+  const isProduction = env === "production" || env === "staging";
+  const cookieStore = await cookies();
+  cookieStore.set(CSRF_COOKIE, token, {
+    httpOnly: false,
+    secure: isProduction,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 28800, // 8 hours (matches session cookie lifetime)
+  });
 }
 
 /**
  * Clear the CSRF cookie. Called during logout alongside clearSessionCookie.
  */
 export async function clearCsrfCookie(): Promise<void> {
-    const cookieStore = await cookies();
-    cookieStore.delete(CSRF_COOKIE);
+  const cookieStore = await cookies();
+  cookieStore.delete(CSRF_COOKIE);
 }
 
 /**
@@ -106,6 +112,6 @@ export async function clearCsrfCookie(): Promise<void> {
  * Used by route handlers that need to validate or rotate the CSRF token.
  */
 export async function getCsrfCookie(): Promise<string | null> {
-    const cookieStore = await cookies();
-    return cookieStore.get(CSRF_COOKIE)?.value ?? null;
+  const cookieStore = await cookies();
+  return cookieStore.get(CSRF_COOKIE)?.value ?? null;
 }

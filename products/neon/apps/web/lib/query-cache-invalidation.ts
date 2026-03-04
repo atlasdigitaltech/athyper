@@ -41,17 +41,17 @@ const GEN_TTL_SECONDS = 86400;
  * Uses cacheGet/cacheSet which go through the singleton redis-cache client.
  */
 export async function invalidateEntityQueryCache(
-    tenantId: string,
-    entity: string,
+  tenantId: string,
+  entity: string,
 ): Promise<void> {
-    try {
-        const key = `${ENTITY_GEN_PREFIX}${tenantId}:${entity}`;
-        const current = await cacheGet<number>(key);
-        const next = (current ?? 0) + 1;
-        await cacheSet(key, next, GEN_TTL_SECONDS);
-    } catch {
-        // fail-open: worst case, stale cache serves for TTL duration (2 min)
-    }
+  try {
+    const key = `${ENTITY_GEN_PREFIX}${tenantId}:${entity}`;
+    const current = await cacheGet<number>(key);
+    const next = (current ?? 0) + 1;
+    await cacheSet(key, next, GEN_TTL_SECONDS);
+  } catch {
+    // fail-open: worst case, stale cache serves for TTL duration (2 min)
+  }
 }
 
 /**
@@ -59,14 +59,14 @@ export async function invalidateEntityQueryCache(
  * Used when building cache keys for query results.
  */
 export async function getEntityGeneration(
-    tenantId: string,
-    entity: string,
+  tenantId: string,
+  entity: string,
 ): Promise<number> {
-    try {
-        const key = `${ENTITY_GEN_PREFIX}${tenantId}:${entity}`;
-        const val = await cacheGet<number>(key);
-        return val ?? 0;
-    } catch {
-        return 0;
-    }
+  try {
+    const key = `${ENTITY_GEN_PREFIX}${tenantId}:${entity}`;
+    const val = await cacheGet<number>(key);
+    return val ?? 0;
+  } catch {
+    return 0;
+  }
 }

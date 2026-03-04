@@ -2,13 +2,12 @@
 
 import { Input, Label, Separator } from "@neon/ui";
 
-import { Card } from "@/components/ui/card";
-
 import { FieldRenderer as TypeAwareField } from "./fields/FieldRenderer";
 
 import type { SectionDescriptor, ViewMode } from "@/lib/entity-page/types";
 import type { FieldMeta } from "@/lib/use-entity-fields";
 
+import { Card } from "@/components/ui/card";
 import { groupFieldsIntoSections } from "@/lib/entity-page/section-grouping";
 
 interface DetailsTabProps {
@@ -22,14 +21,28 @@ interface DetailsTabProps {
   onFieldChange?: (fieldName: string, value: unknown) => void;
 }
 
-export function DetailsTab({ sections, record, viewMode, fieldMeta, resolvedRefs, featureFlags, onFieldChange }: DetailsTabProps) {
+export function DetailsTab({
+  sections,
+  record,
+  viewMode,
+  fieldMeta,
+  resolvedRefs,
+  featureFlags,
+  onFieldChange,
+}: DetailsTabProps) {
   // Auto-generate sections when none are provided but field metadata exists
   let resolvedSections = sections;
   if (sections.length === 0 && fieldMeta && fieldMeta.length > 0) {
-    const uiFlags = (featureFlags as any)?.ui as Record<string, unknown> | undefined;
+    const uiFlags = (featureFlags as any)?.ui as
+      | Record<string, unknown>
+      | undefined;
     resolvedSections = groupFieldsIntoSections(fieldMeta, {
-      sectionOverrides: uiFlags?.sectionOverrides as Record<string, string> | undefined,
-      sectionLabels: uiFlags?.sectionLabels as Record<string, string> | undefined,
+      sectionOverrides: uiFlags?.sectionOverrides as
+        | Record<string, string>
+        | undefined,
+      sectionLabels: uiFlags?.sectionLabels as
+        | Record<string, string>
+        | undefined,
     });
   }
 
@@ -42,9 +55,7 @@ export function DetailsTab({ sections, record, viewMode, fieldMeta, resolvedRefs
   }
 
   // Index field metadata by name for O(1) lookup
-  const fieldMetaMap = new Map(
-    (fieldMeta ?? []).map((f) => [f.columnName, f]),
-  );
+  const fieldMetaMap = new Map((fieldMeta ?? []).map((f) => [f.columnName, f]));
 
   return (
     <div className="space-y-6 py-4">
@@ -74,7 +85,14 @@ interface SectionRendererProps {
   onFieldChange?: (fieldName: string, value: unknown) => void;
 }
 
-function SectionRenderer({ section, record, viewMode, fieldMetaMap, resolvedRefs, onFieldChange }: SectionRendererProps) {
+function SectionRenderer({
+  section,
+  record,
+  viewMode,
+  fieldMetaMap,
+  resolvedRefs,
+  onFieldChange,
+}: SectionRendererProps) {
   const gridCols = section.columns === 2 ? "grid-cols-2" : "grid-cols-1";
 
   return (
@@ -121,7 +139,11 @@ interface BasicFieldRendererProps {
   viewMode: ViewMode;
 }
 
-function BasicFieldRenderer({ fieldName, value, viewMode }: BasicFieldRendererProps) {
+function BasicFieldRenderer({
+  fieldName,
+  value,
+  viewMode,
+}: BasicFieldRendererProps) {
   const displayLabel = fieldName
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -141,11 +163,7 @@ function BasicFieldRenderer({ fieldName, value, viewMode }: BasicFieldRendererPr
   return (
     <div className="space-y-1">
       <Label htmlFor={fieldName}>{displayLabel}</Label>
-      <Input
-        id={fieldName}
-        name={fieldName}
-        defaultValue={displayValue}
-      />
+      <Input id={fieldName} name={fieldName} defaultValue={displayValue} />
     </div>
   );
 }

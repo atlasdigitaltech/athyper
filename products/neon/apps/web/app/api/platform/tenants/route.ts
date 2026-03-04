@@ -21,71 +21,83 @@ import { hasPlatformPermission, requirePlatformSession } from "../helpers";
  *   - Proxies the request to the runtime API with the platform admin's access token
  */
 export async function GET() {
-    const auth = await requirePlatformSession();
-    if (!auth.ok) return auth.response;
+  const auth = await requirePlatformSession();
+  if (!auth.ok) return auth.response;
 
-    if (!hasPlatformPermission(auth.platformRoles, "tenant:list")) {
-        return NextResponse.json(
-            { error: "FORBIDDEN", message: "Insufficient platform role for tenant:list" },
-            { status: 403 },
-        );
-    }
+  if (!hasPlatformPermission(auth.platformRoles, "tenant:list")) {
+    return NextResponse.json(
+      {
+        error: "FORBIDDEN",
+        message: "Insufficient platform role for tenant:list",
+      },
+      { status: 403 },
+    );
+  }
 
-    // Try runtime API first; fallback for development when runtime is down
-    const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
+  // Try runtime API first; fallback for development when runtime is down
+  const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
 
-    try {
-        const res = await fetch(`${runtimeApiUrl}/api/platform/tenants`, {
-            headers: {
-                Authorization: `Bearer ${auth.accessToken}`,
-                "X-Realm": auth.realmKey,
-            },
-            signal: AbortSignal.timeout(5_000),
-        });
-
-        if (res.ok) {
-            const data = (await res.json()) as { tenants?: unknown[] };
-            return NextResponse.json({ tenants: data.tenants ?? [] });
-        }
-    } catch {
-        // Runtime unreachable — fall through to fallback
-    }
-
-    // Fallback: query core.tenant table directly (dev-only, runtime unavailable)
-    const databaseUrl = process.env.DATABASE_URL;
-    if (databaseUrl) {
-        try {
-            const { Client } = await import("pg");
-            const db = new Client(databaseUrl);
-            await db.connect();
-            try {
-                const result = await db.query(
-                    "SELECT id, code, name, status FROM core.tenant ORDER BY name",
-                );
-                const tenants = result.rows.map((row: { id: string; code: string; name: string; status: string }) => ({
-                    id: row.id,
-                    code: row.code,
-                    name: row.name,
-                    status: row.status,
-                    region: "local",
-                }));
-                return NextResponse.json({ tenants });
-            } finally {
-                await db.end();
-            }
-        } catch {
-            // DB also unavailable — use env fallback
-        }
-    }
-
-    // Final fallback: return the default tenant from env config
-    const defaultTenantId = process.env.DEFAULT_TENANT_ID ?? "default";
-    return NextResponse.json({
-        tenants: [{
-            id: defaultTenantId,
-            code: defaultTenantId,
-            name: defaultTenantId,
-            status: "active",
-        }],
+  try {
+    const res = await fetch(`${runtimeApiUrl}/api/platform/tenants`, {
+      headers: {
+        Authorization: `Bearer ${auth.accessToken}`,
+        "X-Realm": auth.realmKey,
+      },
+      signal: AbortSignal.timeout(5_000),
     });
+
+    if (res.ok) {
+      const data = (await res.json()) as { tenants?: unknown[] };
+      return NextResponse.json({ tenants: data.tenants ?? [] });
+    }
+  } catch {
+    // Runtime unreachable — fall through to fallback
+  }
+
+  // Fallback: query core.tenant table directly (dev-only, runtime unavailable)
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl) {
+    try {
+      const { Client } = await import("pg");
+      const db = new Client(databaseUrl);
+      await db.connect();
+      try {
+        const result = await db.query(
+          "SELECT id, code, name, status FROM core.tenant ORDER BY name",
+        );
+        const tenants = result.rows.map(
+          (row: {
+            id: string;
+            code: string;
+            name: string;
+            status: string;
+          }) => ({
+            id: row.id,
+            code: row.code,
+            name: row.name,
+            status: row.status,
+            region: "local",
+          }),
+        );
+        return NextResponse.json({ tenants });
+      } finally {
+        await db.end();
+      }
+    } catch {
+      // DB also unavailable — use env fallback
+    }
+  }
+
+  // Final fallback: return the default tenant from env config
+  const defaultTenantId = process.env.DEFAULT_TENANT_ID ?? "default";
+  return NextResponse.json({
+    tenants: [
+      {
+        id: defaultTenantId,
+        code: defaultTenantId,
+        name: defaultTenantId,
+        status: "active",
+      },
+    ],
+  });
 }

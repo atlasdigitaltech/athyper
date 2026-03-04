@@ -8,7 +8,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/collab/comments/:id/replies
@@ -23,7 +23,7 @@ import type { NextRequest} from "next/server";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Authenticate
   const sid = await getSessionId();
@@ -41,7 +41,7 @@ export async function POST(
         {
           error: "Missing required fields: entityType, entityId, commentText",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,8 +56,13 @@ export async function POST(
           Cookie: req.headers.get("cookie") || "",
           "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
         },
-        body: JSON.stringify({ entityType, entityId, commentText, attachmentIds }),
-      }
+        body: JSON.stringify({
+          entityType,
+          entityId,
+          commentText,
+          attachmentIds,
+        }),
+      },
     );
 
     if (!response.ok) {
@@ -65,7 +70,7 @@ export async function POST(
       console.error("Create reply error:", error);
       return NextResponse.json(
         { error: "Failed to create reply", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -75,7 +80,7 @@ export async function POST(
     console.error("Create reply route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -91,7 +96,7 @@ export async function POST(
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Authenticate
   const sid = await getSessionId();
@@ -121,7 +126,7 @@ export async function GET(
           Cookie: req.headers.get("cookie") || "",
           "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -129,7 +134,7 @@ export async function GET(
       console.error("List replies error:", error);
       return NextResponse.json(
         { error: "Failed to fetch replies", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -139,7 +144,7 @@ export async function GET(
     console.error("List replies route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

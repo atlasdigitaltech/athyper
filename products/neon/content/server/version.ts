@@ -5,7 +5,6 @@
  * viewing version history, and restoring previous versions.
  */
 
-
 export interface CreateNewVersionParams {
   documentId: string;
   file: File;
@@ -47,7 +46,9 @@ export interface RestoreVersionParams {
  * @returns New version metadata
  * @throws Error if document not found or upload fails
  */
-export async function createNewVersion(params: CreateNewVersionParams): Promise<VersionMetadata> {
+export async function createNewVersion(
+  params: CreateNewVersionParams,
+): Promise<VersionMetadata> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");
@@ -95,7 +96,9 @@ export async function getVersionHistory(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Get version history failed: ${res.status}`);
+    throw new Error(
+      error.message || `Get version history failed: ${res.status}`,
+    );
   }
 
   return res.json();
@@ -110,7 +113,9 @@ export async function getVersionHistory(
  * @returns New current version metadata
  * @throws Error if version not found
  */
-export async function restoreVersion(params: RestoreVersionParams): Promise<VersionMetadata> {
+export async function restoreVersion(
+  params: RestoreVersionParams,
+): Promise<VersionMetadata> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");

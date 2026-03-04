@@ -1,10 +1,12 @@
 "use client";
 
-
 import { setClientCookie } from "../cookie.client";
 import { setLocalStorageValue } from "../local-storage.client";
 
-import { type PreferenceKey, PREFERENCE_PERSISTENCE } from "./preferences-config";
+import {
+  type PreferenceKey,
+  PREFERENCE_PERSISTENCE,
+} from "./preferences-config";
 
 import { setValueToCookie } from "@/app/actions/preferences";
 

@@ -30,7 +30,9 @@ export function MarkdownEditor({
   const [showPreview, setShowPreview] = useState(false);
 
   const insertMarkdown = (before: string, after: string = "") => {
-    const textarea = document.querySelector('textarea[data-markdown-editor]') as HTMLTextAreaElement;
+    const textarea = document.querySelector(
+      "textarea[data-markdown-editor]",
+    ) as HTMLTextAreaElement;
     if (!textarea) return;
 
     const start = textarea.selectionStart;

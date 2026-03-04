@@ -7,7 +7,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/collab/approval-comments
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         {
           error: "Missing required fields: approvalInstanceId, commentText",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       console.error("Create approval comment error:", error);
       return NextResponse.json(
         { error: "Failed to create approval comment", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     console.error("Create approval comment route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -116,7 +116,10 @@ interface DecisionTreeViewerProps {
 // Component
 // ============================================================================
 
-export function DecisionTreeViewer({ result, className = "" }: DecisionTreeViewerProps) {
+export function DecisionTreeViewer({
+  result,
+  className = "",
+}: DecisionTreeViewerProps) {
   const { explain, decision } = result;
 
   return (
@@ -127,7 +130,7 @@ export function DecisionTreeViewer({ result, className = "" }: DecisionTreeViewe
           "flex items-center gap-3 rounded-lg border-2 p-4",
           decision.allowed
             ? "border-success bg-success/10"
-            : "border-destructive bg-destructive/10"
+            : "border-destructive bg-destructive/10",
         )}
       >
         {decision.allowed ? (
@@ -179,7 +182,10 @@ export function DecisionTreeViewer({ result, className = "" }: DecisionTreeViewe
       >
         <div className="space-y-1 text-sm">
           <div>
-            Method: <span className="font-mono">{explain.subjectResolution.method}</span>
+            Method:{" "}
+            <span className="font-mono">
+              {explain.subjectResolution.method}
+            </span>
           </div>
           <div>Subject Keys:</div>
           <div className="ml-4 space-y-1">
@@ -215,7 +221,9 @@ export function DecisionTreeViewer({ result, className = "" }: DecisionTreeViewe
       >
         <div className="space-y-1 text-sm">
           <div>Strategy: {explain.conflictResolution.strategy}</div>
-          <div>Rules considered: {explain.conflictResolution.rulesConsidered}</div>
+          <div>
+            Rules considered: {explain.conflictResolution.rulesConsidered}
+          </div>
           {explain.conflictResolution.winningRule && (
             <div className="mt-2 rounded border p-2">
               <div className="font-semibold">Winning Rule</div>
@@ -224,7 +232,9 @@ export function DecisionTreeViewer({ result, className = "" }: DecisionTreeViewe
               </div>
               <div className="font-mono text-xs">
                 Effect:{" "}
-                <EffectBadge effect={explain.conflictResolution.winningRule.effect} />
+                <EffectBadge
+                  effect={explain.conflictResolution.winningRule.effect}
+                />
               </div>
               <div className="font-mono text-xs">
                 Priority: {explain.conflictResolution.winningRule.priority}
@@ -349,7 +359,7 @@ function RuleNode({ rule }: { rule: RuleEvalResult }) {
     <div
       className={cn(
         "rounded border text-xs",
-        rule.isDecidingRule && "border-info bg-info/10"
+        rule.isDecidingRule && "border-info bg-info/10",
       )}
     >
       <button
@@ -370,7 +380,9 @@ function RuleNode({ rule }: { rule: RuleEvalResult }) {
           </span>
         )}
         {!rule.matched && rule.nonMatchReason && (
-          <span className="ml-auto text-muted-foreground">{rule.nonMatchReason}</span>
+          <span className="ml-auto text-muted-foreground">
+            {rule.nonMatchReason}
+          </span>
         )}
       </button>
       {open && rule.conditionResults && rule.conditionResults.length > 0 && (
@@ -403,7 +415,7 @@ function EffectBadge({ effect }: { effect: "allow" | "deny" }) {
         "inline-flex rounded border px-1.5 py-0.5 text-xs font-medium",
         effect === "allow"
           ? "bg-success/10 " + EFFECT_BADGE.allow
-          : "bg-destructive/10 " + EFFECT_BADGE.deny
+          : "bg-destructive/10 " + EFFECT_BADGE.deny,
       )}
     >
       {effect}
@@ -445,7 +457,11 @@ function JsonBlock({ label, data }: { label: string; data: unknown }) {
         className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
         onClick={() => setOpen(!open)}
       >
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {open ? (
+          <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronRight className="h-3 w-3" />
+        )}
         {label}
       </button>
       {open && (

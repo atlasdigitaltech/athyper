@@ -12,11 +12,11 @@ import { fetchNavTree } from "./nav-api";
 import type { NavTree } from "./nav-types";
 
 interface UseNavTreeResult {
-    tree: NavTree | null;
-    loading: boolean;
-    error: Error | null;
-    isFallback: boolean;
-    refresh: () => void;
+  tree: NavTree | null;
+  loading: boolean;
+  error: Error | null;
+  isFallback: boolean;
+  refresh: () => void;
 }
 
 /**
@@ -25,29 +25,32 @@ interface UseNavTreeResult {
  * @param workbench - The active workbench ID
  * @param csrfToken - Optional CSRF token for API requests
  */
-export function useNavTree(workbench: string, csrfToken?: string): UseNavTreeResult {
-    const [tree, setTree] = useState<NavTree | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-    const [isFallback, setIsFallback] = useState(false);
+export function useNavTree(
+  workbench: string,
+  csrfToken?: string,
+): UseNavTreeResult {
+  const [tree, setTree] = useState<NavTree | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetchNavTree(workbench, csrfToken);
-            setTree(response.tree);
-            setIsFallback(response.isFallback);
-        } catch (err) {
-            setError(err instanceof Error ? err : new Error(String(err)));
-        } finally {
-            setLoading(false);
-        }
-    }, [workbench, csrfToken]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetchNavTree(workbench, csrfToken);
+      setTree(response.tree);
+      setIsFallback(response.isFallback);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }, [workbench, csrfToken]);
 
-    useEffect(() => {
-        load();
-    }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-    return { tree, loading, error, isFallback, refresh: load };
+  return { tree, loading, error, isFallback, refresh: load };
 }

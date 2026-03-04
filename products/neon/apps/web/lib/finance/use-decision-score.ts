@@ -13,8 +13,10 @@
 // pattern established in use-entity-data.ts.
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { finGet } from "./fetcher";
+
 import { FinanceHttpError } from "./errors";
+import { finGet } from "./fetcher";
+
 import type { DecisionEvaluationDTO } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -22,7 +24,7 @@ import type { DecisionEvaluationDTO } from "./types";
 // ---------------------------------------------------------------------------
 
 interface EntityDetailWithDecision {
-    decisionEvaluation?: DecisionEvaluationDTO | null;
+  decisionEvaluation?: DecisionEvaluationDTO | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -30,9 +32,9 @@ interface EntityDetailWithDecision {
 // ---------------------------------------------------------------------------
 
 const DOC_TYPE_PATH: Record<string, string> = {
-    "purchase-invoice": "purchase-invoices",
-    "payment-entry": "payments",
-    "journal-entry": "journal-entries",
+  "purchase-invoice": "purchase-invoices",
+  "payment-entry": "payments",
+  "journal-entry": "journal-entries",
 };
 
 // ---------------------------------------------------------------------------
@@ -40,10 +42,10 @@ const DOC_TYPE_PATH: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export interface UseDecisionScoreResult {
-    evaluation: DecisionEvaluationDTO | null;
-    loading: boolean;
-    error: string | null;
-    refresh: () => void;
+  evaluation: DecisionEvaluationDTO | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,70 +53,75 @@ export interface UseDecisionScoreResult {
 // ---------------------------------------------------------------------------
 
 export function useDecisionScore(
-    docType: string | undefined,
-    docId: string | undefined,
+  docType: string | undefined,
+  docId: string | undefined,
 ): UseDecisionScoreResult {
-    const [evaluation, setEvaluation] = useState<DecisionEvaluationDTO | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<DecisionEvaluationDTO | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const abortRef = useRef<AbortController | null>(null);
-    const refreshCounter = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const refreshCounter = useRef(0);
 
-    const fetchData = useCallback(async () => {
-        if (!docType || !docId) {
-            setEvaluation(null);
-            setLoading(false);
-            return;
-        }
+  const fetchData = useCallback(async () => {
+    if (!docType || !docId) {
+      setEvaluation(null);
+      setLoading(false);
+      return;
+    }
 
-        // Cancel any in-flight request
-        abortRef.current?.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-        setLoading(true);
-        setError(null);
+    setLoading(true);
+    setError(null);
 
-        try {
-            const pathSegment = DOC_TYPE_PATH[docType] ?? docType;
-            const url = `/api/fin/${encodeURIComponent(pathSegment)}/${encodeURIComponent(docId)}`;
-            const data = await finGet<EntityDetailWithDecision>(url, controller.signal);
+    try {
+      const pathSegment = DOC_TYPE_PATH[docType] ?? docType;
+      const url = `/api/fin/${encodeURIComponent(pathSegment)}/${encodeURIComponent(docId)}`;
+      const data = await finGet<EntityDetailWithDecision>(
+        url,
+        controller.signal,
+      );
 
-            if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
 
-            setEvaluation(data.decisionEvaluation ?? null);
-        } catch (err) {
-            if (err instanceof DOMException && err.name === "AbortError") return;
-            if (controller.signal.aborted) return;
+      setEvaluation(data.decisionEvaluation ?? null);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (controller.signal.aborted) return;
 
-            const message =
-                err instanceof FinanceHttpError
-                    ? err.message
-                    : err instanceof Error
-                        ? err.message
-                        : "Failed to load decision score";
-            setError(message);
-            setEvaluation(null);
-        } finally {
-            if (!controller.signal.aborted) {
-                setLoading(false);
-            }
-        }
-    }, [docType, docId]);
+      const message =
+        err instanceof FinanceHttpError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to load decision score";
+      setError(message);
+      setEvaluation(null);
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [docType, docId]);
 
-    useEffect(() => {
-        fetchData();
-        return () => {
-            abortRef.current?.abort();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetchData, refreshCounter.current]);
+  useEffect(() => {
+    fetchData();
+    return () => {
+      abortRef.current?.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchData, refreshCounter.current]);
 
-    const refresh = useCallback(() => {
-        refreshCounter.current += 1;
-        fetchData();
-    }, [fetchData]);
+  const refresh = useCallback(() => {
+    refreshCounter.current += 1;
+    fetchData();
+  }, [fetchData]);
 
-    return { evaluation, loading, error, refresh };
+  return { evaluation, loading, error, refresh };
 }

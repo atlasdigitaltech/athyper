@@ -3,7 +3,6 @@ import * as linkService from "@neon/content/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-
 /**
  * Validation schema for link creation
  */
@@ -11,7 +10,9 @@ const LinkSchema = z.object({
   attachmentId: z.string().uuid(),
   entityType: z.string().min(1),
   entityId: z.string().uuid(),
-  linkKind: z.enum(["primary", "related", "supporting", "compliance", "audit"]).default("related"),
+  linkKind: z
+    .enum(["primary", "related", "supporting", "compliance", "audit"])
+    .default("related"),
   displayOrder: z.number().int().nonnegative().optional(),
 });
 
@@ -70,14 +71,16 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Link creation error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

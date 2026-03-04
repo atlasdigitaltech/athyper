@@ -39,100 +39,102 @@ const TRANSITION_LOCK_MS = 300;
  * @returns `true` when the header children should be collapsed
  */
 export function useSmartHeader(
-    scrollRef: React.RefObject<HTMLElement | null>,
-    headerRef: React.RefObject<HTMLElement | null>,
+  scrollRef: React.RefObject<HTMLElement | null>,
+  headerRef: React.RefObject<HTMLElement | null>,
 ): boolean {
-    const [collapsed, setCollapsed] = useState(false);
-    const collapsedRef = useRef(false);
-    const lastScrollY = useRef(0);
-    const accumulatedDelta = useRef(0);
-    const hasFocusWithin = useRef(false);
-    const lockUntilRef = useRef(0);
+  const [collapsed, setCollapsed] = useState(false);
+  const collapsedRef = useRef(false);
+  const lastScrollY = useRef(0);
+  const accumulatedDelta = useRef(0);
+  const hasFocusWithin = useRef(false);
+  const lockUntilRef = useRef(0);
 
-    // State setter that only fires when the value actually changes,
-    // and applies a transition lock to prevent feedback loops.
-    const setCollapsedWithLock = useCallback((value: boolean) => {
-        if (collapsedRef.current === value) return;
-        collapsedRef.current = value;
-        lockUntilRef.current = performance.now() + TRANSITION_LOCK_MS;
-        setCollapsed(value);
-    }, []);
+  // State setter that only fires when the value actually changes,
+  // and applies a transition lock to prevent feedback loops.
+  const setCollapsedWithLock = useCallback((value: boolean) => {
+    if (collapsedRef.current === value) return;
+    collapsedRef.current = value;
+    lockUntilRef.current = performance.now() + TRANSITION_LOCK_MS;
+    setCollapsed(value);
+  }, []);
 
-    // Focus tracking: don't auto-collapse while user interacts with header controls
-    useEffect(() => {
-        const el = headerRef.current;
-        if (!el) return;
+  // Focus tracking: don't auto-collapse while user interacts with header controls
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
 
-        const onFocusIn = () => {
-            hasFocusWithin.current = true;
-        };
-        const onFocusOut = (e: FocusEvent) => {
-            if (!el.contains(e.relatedTarget as Node)) {
-                hasFocusWithin.current = false;
-            }
-        };
+    const onFocusIn = () => {
+      hasFocusWithin.current = true;
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      if (!el.contains(e.relatedTarget as Node)) {
+        hasFocusWithin.current = false;
+      }
+    };
 
-        el.addEventListener("focusin", onFocusIn);
-        el.addEventListener("focusout", onFocusOut);
-        return () => {
-            el.removeEventListener("focusin", onFocusIn);
-            el.removeEventListener("focusout", onFocusOut);
-        };
-    }, [headerRef]);
+    el.addEventListener("focusin", onFocusIn);
+    el.addEventListener("focusout", onFocusOut);
+    return () => {
+      el.removeEventListener("focusin", onFocusIn);
+      el.removeEventListener("focusout", onFocusOut);
+    };
+  }, [headerRef]);
 
-    // Scroll direction detection with dead zone + transition lock
-    useEffect(() => {
-        const container = scrollRef.current;
-        if (!container) return;
+  // Scroll direction detection with dead zone + transition lock
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
 
-        const handleScroll = () => {
-            const scrollY = container.scrollTop;
-            const delta = scrollY - lastScrollY.current;
-            lastScrollY.current = scrollY;
+    const handleScroll = () => {
+      const scrollY = container.scrollTop;
+      const delta = scrollY - lastScrollY.current;
+      lastScrollY.current = scrollY;
 
-            // During transition lock: track position but don't toggle
-            if (performance.now() < lockUntilRef.current) {
-                accumulatedDelta.current = 0;
-                return;
-            }
+      // During transition lock: track position but don't toggle
+      if (performance.now() < lockUntilRef.current) {
+        accumulatedDelta.current = 0;
+        return;
+      }
 
-            // At top → always expanded
-            if (scrollY <= TOP_THRESHOLD) {
-                accumulatedDelta.current = 0;
-                setCollapsedWithLock(false);
-                return;
-            }
+      // At top → always expanded
+      if (scrollY <= TOP_THRESHOLD) {
+        accumulatedDelta.current = 0;
+        setCollapsedWithLock(false);
+        return;
+      }
 
-            // Focus exception: don't collapse while interacting with header
-            if (hasFocusWithin.current && delta > 0) return;
+      // Focus exception: don't collapse while interacting with header
+      if (hasFocusWithin.current && delta > 0) return;
 
-            // Reset accumulator when direction changes
-            if ((delta > 0 && accumulatedDelta.current < 0) ||
-                (delta < 0 && accumulatedDelta.current > 0)) {
-                accumulatedDelta.current = 0;
-            }
-            accumulatedDelta.current += delta;
+      // Reset accumulator when direction changes
+      if (
+        (delta > 0 && accumulatedDelta.current < 0) ||
+        (delta < 0 && accumulatedDelta.current > 0)
+      ) {
+        accumulatedDelta.current = 0;
+      }
+      accumulatedDelta.current += delta;
 
-            // Fast scroll up → immediate expand
-            if (delta < -FAST_UP_THRESHOLD) {
-                accumulatedDelta.current = 0;
-                setCollapsedWithLock(false);
-                return;
-            }
+      // Fast scroll up → immediate expand
+      if (delta < -FAST_UP_THRESHOLD) {
+        accumulatedDelta.current = 0;
+        setCollapsedWithLock(false);
+        return;
+      }
 
-            // Dead zone check: only toggle after accumulating enough delta
-            if (accumulatedDelta.current > DEAD_ZONE) {
-                accumulatedDelta.current = 0;
-                setCollapsedWithLock(true);
-            } else if (accumulatedDelta.current < -DEAD_ZONE) {
-                accumulatedDelta.current = 0;
-                setCollapsedWithLock(false);
-            }
-        };
+      // Dead zone check: only toggle after accumulating enough delta
+      if (accumulatedDelta.current > DEAD_ZONE) {
+        accumulatedDelta.current = 0;
+        setCollapsedWithLock(true);
+      } else if (accumulatedDelta.current < -DEAD_ZONE) {
+        accumulatedDelta.current = 0;
+        setCollapsedWithLock(false);
+      }
+    };
 
-        container.addEventListener("scroll", handleScroll, { passive: true });
-        return () => container.removeEventListener("scroll", handleScroll);
-    }, [scrollRef, setCollapsedWithLock]);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [scrollRef, setCollapsedWithLock]);
 
-    return collapsed;
+  return collapsed;
 }

@@ -71,7 +71,7 @@ export function ActivityTimeline({
         setError(null);
 
         const url = `/api/collab/timeline?entityType=${encodeURIComponent(
-          entityType
+          entityType,
         )}&entityId=${encodeURIComponent(entityId)}&limit=${limit}`;
 
         const res = await fetch(url, {
@@ -86,7 +86,9 @@ export function ActivityTimeline({
         setEntries(data.data || []);
       } catch (err) {
         console.error("Timeline fetch error:", err);
-        setError(err instanceof Error ? err.message : "Failed to load timeline");
+        setError(
+          err instanceof Error ? err.message : "Failed to load timeline",
+        );
       } finally {
         setLoading(false);
       }

@@ -1,14 +1,18 @@
-import { AuthAuditEvent, emitBffAudit, hashSidForAudit } from "@neon/auth/audit";
+import {
+  AuthAuditEvent,
+  emitBffAudit,
+  hashSidForAudit,
+} from "@neon/auth/audit";
 import { getSessionId } from "@neon/auth/session";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 async function getRedisClient() {
-    const { createClient } = await import("redis");
-    const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-    const client = createClient({ url });
-    if (!client.isOpen) await client.connect();
-    return client;
+  const { createClient } = await import("redis");
+  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
+  const client = createClient({ url });
+  if (!client.isOpen) await client.connect();
+  return client;
 }
 
 /**
@@ -45,51 +49,56 @@ const IDLE_TIMEOUT_SEC = 900;
  *   - "Stay signed in" button in the idle warning banner
  */
 export async function POST() {
-    const sid = await getSessionId();
-    if (!sid) {
-        return NextResponse.json({ ok: false }, { status: 401 });
+  const sid = await getSessionId();
+  if (!sid) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
+
+  // Determine session namespace from neon_realm cookie
+  const cookieStore = await cookies();
+  const realmCookie = cookieStore.get("neon_realm")?.value;
+  const sessionNamespace =
+    realmCookie === "platform"
+      ? "platform"
+      : (process.env.DEFAULT_TENANT_ID ?? "default");
+  const redis = await getRedisClient();
+
+  try {
+    const key = `sess:${sessionNamespace}:${sid}`;
+    const raw = await redis.get(key);
+    if (!raw) {
+      return NextResponse.json({ ok: false }, { status: 401 });
     }
 
-    // Determine session namespace from neon_realm cookie
-    const cookieStore = await cookies();
-    const realmCookie = cookieStore.get("neon_realm")?.value;
-    const sessionNamespace = realmCookie === "platform"
-        ? "platform"
-        : (process.env.DEFAULT_TENANT_ID ?? "default");
-    const redis = await getRedisClient();
+    const session = JSON.parse(raw);
+    const now = Math.floor(Date.now() / 1000);
 
-    try {
-        const key = `sess:${sessionNamespace}:${sid}`;
-        const raw = await redis.get(key);
-        if (!raw) {
-            return NextResponse.json({ ok: false }, { status: 401 });
-        }
+    // Enforce idle timeout: if session has been idle beyond limit, reject.
+    // This is a security control — not just a UX feature.
+    const lastSeenAt =
+      typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
+    if (lastSeenAt > 0 && now - lastSeenAt >= IDLE_TIMEOUT_SEC) {
+      // Audit — touch rejected due to idle expiry
+      await emitBffAudit(redis, AuthAuditEvent.IDLE_TOUCH_REJECTED, {
+        tenantId: sessionNamespace,
+        userId: session.userId,
+        sidHash: hashSidForAudit(sid),
+        reason: "idle_expired",
+        meta: { lastSeenAt, idleSeconds: now - lastSeenAt },
+      });
 
-        const session = JSON.parse(raw);
-        const now = Math.floor(Date.now() / 1000);
-
-        // Enforce idle timeout: if session has been idle beyond limit, reject.
-        // This is a security control — not just a UX feature.
-        const lastSeenAt = typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
-        if (lastSeenAt > 0 && (now - lastSeenAt) >= IDLE_TIMEOUT_SEC) {
-            // Audit — touch rejected due to idle expiry
-            await emitBffAudit(redis, AuthAuditEvent.IDLE_TOUCH_REJECTED, {
-                tenantId: sessionNamespace,
-                userId: session.userId,
-                sidHash: hashSidForAudit(sid),
-                reason: "idle_expired",
-                meta: { lastSeenAt, idleSeconds: now - lastSeenAt },
-            });
-
-            return NextResponse.json({ ok: false, reason: "idle_expired" }, { status: 401 });
-        }
-
-        // Update lastSeenAt — this resets the idle timeout clock
-        session.lastSeenAt = now;
-        await redis.set(key, JSON.stringify(session), { EX: 28800 });
-
-        return NextResponse.json({ ok: true });
-    } finally {
-        await redis.quit();
+      return NextResponse.json(
+        { ok: false, reason: "idle_expired" },
+        { status: 401 },
+      );
     }
+
+    // Update lastSeenAt — this resets the idle timeout clock
+    session.lastSeenAt = now;
+    await redis.set(key, JSON.stringify(session), { EX: 28800 });
+
+    return NextResponse.json({ ok: true });
+  } finally {
+    await redis.quit();
+  }
 }

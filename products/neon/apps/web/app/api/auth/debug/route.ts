@@ -35,21 +35,32 @@ function decodeJwtHeader(token: string): Record<string, unknown> | null {
 
 /** PII claim keys — always scrubbed, even when EXPOSE_TOKENS=true. */
 const PII_CLAIMS = new Set([
-  "email", "email_verified",
-  "name", "given_name", "family_name",
+  "email",
+  "email_verified",
+  "name",
+  "given_name",
+  "family_name",
   "preferred_username",
-  "phone_number", "phone_number_verified",
+  "phone_number",
+  "phone_number_verified",
   "address",
   "birthdate",
   "picture",
   "locale",
   // Custom org / OU / group claims that may leak internal structure
-  "org", "organization", "ou", "department", "company",
-  "groups", "group_membership",
+  "org",
+  "organization",
+  "ou",
+  "department",
+  "company",
+  "groups",
+  "group_membership",
 ]);
 
 /** Extract only safe metadata fields from a JWT payload (full redaction). */
-function redactJwtPayload(payload: Record<string, unknown> | null): Record<string, unknown> | null {
+function redactJwtPayload(
+  payload: Record<string, unknown> | null,
+): Record<string, unknown> | null {
   if (!payload) return null;
   return {
     iss: payload.iss,
@@ -65,7 +76,9 @@ function redactJwtPayload(payload: Record<string, unknown> | null): Record<strin
 }
 
 /** Scrub PII from a full JWT payload (used when EXPOSE_TOKENS=true). */
-function scrubPii(payload: Record<string, unknown> | null): Record<string, unknown> | null {
+function scrubPii(
+  payload: Record<string, unknown> | null,
+): Record<string, unknown> | null {
   if (!payload) return null;
   const scrubbed: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
@@ -78,14 +91,16 @@ function scrubPii(payload: Record<string, unknown> | null): Record<string, unkno
   return scrubbed;
 }
 
-
 /**
  * Resolve tenant ID from request context.
  * Returns the resolved ID and the source it was derived from.
  * Future: add header / cookie / host / path resolution.
  */
 type TenantSource = "header" | "cookie" | "host" | "path" | "env" | "default";
-function resolveTenantId(req: Request): { tenantId: string; tenantSource: TenantSource } {
+function resolveTenantId(req: Request): {
+  tenantId: string;
+  tenantSource: TenantSource;
+} {
   // Priority 1: X-Tenant-ID header (API gateway / reverse proxy)
   const headerTenant = req.headers.get("x-tenant-id");
   if (headerTenant) return { tenantId: headerTenant, tenantSource: "header" };
@@ -93,7 +108,12 @@ function resolveTenantId(req: Request): { tenantId: string; tenantSource: Tenant
   // Priority 2: Host-based (subdomain extraction, e.g., acme.athyper.local)
   const host = req.headers.get("host") ?? "";
   const subdomain = host.split(".")[0];
-  if (subdomain && subdomain !== "neon" && subdomain !== "localhost" && subdomain !== "127") {
+  if (
+    subdomain &&
+    subdomain !== "neon" &&
+    subdomain !== "localhost" &&
+    subdomain !== "127"
+  ) {
     // Only activate when multi-tenant routing is wired up
     // return { tenantId: subdomain, tenantSource: "host" };
   }
@@ -111,7 +131,10 @@ export async function GET(req: Request) {
   const cookieStore = await cookies();
   const sid = cookieStore.get("neon_sid")?.value;
   if (!sid) {
-    return NextResponse.json({ authenticated: false, reason: "no neon_sid cookie" }, { status: 401 });
+    return NextResponse.json(
+      { authenticated: false, reason: "no neon_sid cookie" },
+      { status: 401 },
+    );
   }
 
   const { tenantId, tenantSource } = resolveTenantId(req);
@@ -125,7 +148,11 @@ export async function GET(req: Request) {
     const raw = await redis.get(`sess:${tenantId}:${sid}`);
     if (!raw) {
       return NextResponse.json(
-        { authenticated: false, reason: "session not found in Redis", sid: sid.slice(0, 8) + "..." },
+        {
+          authenticated: false,
+          reason: "session not found in Redis",
+          sid: sid.slice(0, 8) + "...",
+        },
         { status: 401 },
       );
     }
@@ -149,32 +176,51 @@ export async function GET(req: Request) {
     // A direct API call bypasses the layout entirely.
     if (verdict === "reauth_required") {
       return NextResponse.json(
-        { error: "SESSION_EXPIRED", authenticated: false, verdict, sessionState, tokenState },
+        {
+          error: "SESSION_EXPIRED",
+          authenticated: false,
+          verdict,
+          sessionState,
+          tokenState,
+        },
         { status: 401 },
       );
     }
 
     // ─── Decode JWTs ────────────────────────────────────────────
-    const rawAccessPayload = session.accessToken ? decodeJwtPayload(session.accessToken) : null;
-    const rawAccessHeader = session.accessToken ? decodeJwtHeader(session.accessToken) : null;
-    const rawRefreshPayload = session.refreshToken ? decodeJwtPayload(session.refreshToken) : null;
+    const rawAccessPayload = session.accessToken
+      ? decodeJwtPayload(session.accessToken)
+      : null;
+    const rawAccessHeader = session.accessToken
+      ? decodeJwtHeader(session.accessToken)
+      : null;
+    const rawRefreshPayload = session.refreshToken
+      ? decodeJwtPayload(session.refreshToken)
+      : null;
 
     // ─── Apply redaction unless feature flag is on ──────────────
     // Full redaction: only safe metadata. PII scrub: full payload minus PII claims.
-    const accessPayload = EXPOSE_TOKENS ? scrubPii(rawAccessPayload) : redactJwtPayload(rawAccessPayload);
+    const accessPayload = EXPOSE_TOKENS
+      ? scrubPii(rawAccessPayload)
+      : redactJwtPayload(rawAccessPayload);
     const accessHeader = rawAccessHeader; // header is always safe (alg, kid, typ)
 
     // Refresh token: NEVER expose full payload, only safe metadata
     const refreshMeta = rawRefreshPayload
       ? {
           type: rawRefreshPayload.typ ?? "Refresh",
-          expiresAt: typeof rawRefreshPayload.exp === "number"
-            ? new Date(rawRefreshPayload.exp * 1000).toISOString()
-            : null,
-          isExpired: typeof rawRefreshPayload.exp === "number" ? now > rawRefreshPayload.exp : null,
-          remainingSeconds: typeof rawRefreshPayload.exp === "number"
-            ? Math.max(0, (rawRefreshPayload.exp as number) - now)
-            : null,
+          expiresAt:
+            typeof rawRefreshPayload.exp === "number"
+              ? new Date(rawRefreshPayload.exp * 1000).toISOString()
+              : null,
+          isExpired:
+            typeof rawRefreshPayload.exp === "number"
+              ? now > rawRefreshPayload.exp
+              : null,
+          remainingSeconds:
+            typeof rawRefreshPayload.exp === "number"
+              ? Math.max(0, (rawRefreshPayload.exp as number) - now)
+              : null,
           issuer: rawRefreshPayload.iss,
           keycloakSid: rawRefreshPayload.sid,
         }
@@ -191,11 +237,18 @@ export async function GET(req: Request) {
     };
 
     // ─── Session info (all derived from Redis, not JWT) ─────────
-    const accessExpiresAt = typeof session.accessExpiresAt === "number" ? session.accessExpiresAt : null;
-    const createdAt = typeof session.createdAt === "number" ? session.createdAt : null;
-    const expiresIn = accessExpiresAt ? Math.max(0, accessExpiresAt - now) : null;
+    const accessExpiresAt =
+      typeof session.accessExpiresAt === "number"
+        ? session.accessExpiresAt
+        : null;
+    const createdAt =
+      typeof session.createdAt === "number" ? session.createdAt : null;
+    const expiresIn = accessExpiresAt
+      ? Math.max(0, accessExpiresAt - now)
+      : null;
 
-    const lastSeenAt = typeof session.lastSeenAt === "number" ? session.lastSeenAt : null;
+    const lastSeenAt =
+      typeof session.lastSeenAt === "number" ? session.lastSeenAt : null;
 
     const sessionInfo = {
       userId: session.userId,
@@ -215,7 +268,9 @@ export async function GET(req: Request) {
       refreshValid,
       keycloakSessionId: session.keycloakSessionId ?? null,
       issuedAt: createdAt ? new Date(createdAt * 1000).toISOString() : null,
-      expiresAt: accessExpiresAt ? new Date(accessExpiresAt * 1000).toISOString() : null,
+      expiresAt: accessExpiresAt
+        ? new Date(accessExpiresAt * 1000).toISOString()
+        : null,
       expiresIn: expiresIn != null ? `${expiresIn}s` : null,
       // Dual countdowns
       tokenRemaining,
@@ -233,24 +288,29 @@ export async function GET(req: Request) {
 
     // Required scopes per workbench — extend as API scopes are added in Keycloak
     const WORKBENCH_SCOPES: Record<string, string[]> = {
-      admin:   ["openid", "profile", "email"],
-      user:    ["openid", "profile", "email"],
+      admin: ["openid", "profile", "email"],
+      user: ["openid", "profile", "email"],
       partner: ["openid", "profile", "email"],
     };
-    const workbench = typeof session.workbench === "string" ? session.workbench : "user";
+    const workbench =
+      typeof session.workbench === "string" ? session.workbench : "user";
     const requiredScopes = WORKBENCH_SCOPES[workbench] ?? WORKBENCH_SCOPES.user;
-    const grantedScopes = typeof session.scope === "string"
-      ? session.scope.split(" ").filter(Boolean)
-      : [];
-    const missingScopes = requiredScopes.filter((s) => !grantedScopes.includes(s));
+    const grantedScopes =
+      typeof session.scope === "string"
+        ? session.scope.split(" ").filter(Boolean)
+        : [];
+    const missingScopes = requiredScopes.filter(
+      (s) => !grantedScopes.includes(s),
+    );
 
     const audiencePolicy = {
       aud,
       azp,
       enforcement: "azp + scope",
-      note: typeof aud === "string" && aud === "account"
-        ? "UI token (aud=account is Keycloak default). API boundary enforces azp + scope, not aud."
-        : "Custom audience configured.",
+      note:
+        typeof aud === "string" && aud === "account"
+          ? "UI token (aud=account is Keycloak default). API boundary enforces azp + scope, not aud."
+          : "Custom audience configured.",
       grantedScopes,
       requiredScopes,
       missingScopes,
@@ -264,15 +324,18 @@ export async function GET(req: Request) {
       sessionTenantId,
       tenantSource,
       validated: sessionTenantId === tenantId,
-      note: sessionTenantId === tenantId
-        ? "Tenant isolation enforced — session tenant matches request context."
-        : "MISMATCH — cross-tenant anomaly detected. Session would be rejected in production.",
+      note:
+        sessionTenantId === tenantId
+          ? "Tenant isolation enforced — session tenant matches request context."
+          : "MISMATCH — cross-tenant anomaly detected. Session would be rejected in production.",
     };
 
     // ─── Refresh strategy status ─────────────────────────────────
     const REFRESH_THRESHOLD_SEC = 120;
-    const lastRefreshAt = typeof session.lastRefreshAt === "number" ? session.lastRefreshAt : null;
-    const refreshAttempts = typeof session.refreshAttempts === "number" ? session.refreshAttempts : 0;
+    const lastRefreshAt =
+      typeof session.lastRefreshAt === "number" ? session.lastRefreshAt : null;
+    const refreshAttempts =
+      typeof session.refreshAttempts === "number" ? session.refreshAttempts : 0;
     const refreshLocked = session.refreshLocked === true;
 
     // Idle-expired blocks refresh (security: stolen sid cannot keep session alive)
@@ -292,22 +355,30 @@ export async function GET(req: Request) {
 
     // Blocked reason (null when refresh is allowed)
     const refreshBlockedReason: string | null =
-      sessionState === "revoked" ? "session_revoked"
-        : idleExpired ? "idle_expired"
-          : !refreshValid ? "refresh_token_invalid"
-            : refreshLocked ? "too_many_failures"
+      sessionState === "revoked"
+        ? "session_revoked"
+        : idleExpired
+          ? "idle_expired"
+          : !refreshValid
+            ? "refresh_token_invalid"
+            : refreshLocked
+              ? "too_many_failures"
               : null;
 
     // Derive contextual note
     let refreshNote: string;
     if (idleExpired) {
-      refreshNote = "Idle timeout reached. Refresh blocked — reauthentication required even though refresh token may still be valid.";
+      refreshNote =
+        "Idle timeout reached. Refresh blocked — reauthentication required even though refresh token may still be valid.";
     } else if (refreshLocked) {
-      refreshNote = "Refresh locked — too many failures. Manual re-login required.";
+      refreshNote =
+        "Refresh locked — too many failures. Manual re-login required.";
     } else if (!refreshValid) {
-      refreshNote = "Refresh token expired or missing — session cannot be recovered. Re-login required.";
+      refreshNote =
+        "Refresh token expired or missing — session cannot be recovered. Re-login required.";
     } else if (tokenRemaining !== null && tokenRemaining <= 0) {
-      refreshNote = "Access token expired — proactive refresh should fire immediately.";
+      refreshNote =
+        "Access token expired — proactive refresh should fire immediately.";
     } else if (shouldRefreshNow) {
       refreshNote = `Token expires in ${tokenRemaining}s — proactive refresh should fire.`;
     } else {
@@ -320,10 +391,14 @@ export async function GET(req: Request) {
     //   blocked    — idle_expired or revoked (security hard stop)
     //   disabled   — locked or no valid refresh token
     const refreshTrigger: "auto" | "immediate" | "blocked" | "disabled" =
-      idleExpired || sessionState === "revoked" ? "blocked"
-        : !refreshValid ? "disabled"
-          : refreshLocked ? "disabled"
-            : shouldRefreshNow ? "immediate"
+      idleExpired || sessionState === "revoked"
+        ? "blocked"
+        : !refreshValid
+          ? "disabled"
+          : refreshLocked
+            ? "disabled"
+            : shouldRefreshNow
+              ? "immediate"
               : "auto";
 
     // Execution status: what's happening right now
@@ -332,11 +407,20 @@ export async function GET(req: Request) {
     //   blocked          — security policy prevents refresh (idle/revoked)
     //   locked           — refresh locked due to repeated failures
     //   unavailable      — no valid refresh token
-    const refreshExecutionStatus: "scheduled" | "awaiting_client" | "blocked" | "locked" | "unavailable" =
-      idleExpired || sessionState === "revoked" ? "blocked"
-        : !refreshValid ? "unavailable"
-          : refreshLocked ? "locked"
-            : shouldRefreshNow ? "awaiting_client"
+    const refreshExecutionStatus:
+      | "scheduled"
+      | "awaiting_client"
+      | "blocked"
+      | "locked"
+      | "unavailable" =
+      idleExpired || sessionState === "revoked"
+        ? "blocked"
+        : !refreshValid
+          ? "unavailable"
+          : refreshLocked
+            ? "locked"
+            : shouldRefreshNow
+              ? "awaiting_client"
               : "scheduled";
 
     const refreshStrategy = {
@@ -346,7 +430,9 @@ export async function GET(req: Request) {
       refreshMode: "proactive" as const,
       refreshThresholdSec: REFRESH_THRESHOLD_SEC,
       shouldRefreshNow,
-      lastRefreshAt: lastRefreshAt ? new Date(lastRefreshAt * 1000).toISOString() : null,
+      lastRefreshAt: lastRefreshAt
+        ? new Date(lastRefreshAt * 1000).toISOString()
+        : null,
       refreshAttempts,
       refreshLocked,
       refreshValid,
@@ -361,7 +447,9 @@ export async function GET(req: Request) {
     let jwksStatus: Record<string, unknown>;
     try {
       const jwksFetchStart = Date.now();
-      const jwksRes = await fetch(jwksUri, { signal: AbortSignal.timeout(3000) });
+      const jwksRes = await fetch(jwksUri, {
+        signal: AbortSignal.timeout(3000),
+      });
       const jwksFetchMs = Date.now() - jwksFetchStart;
       if (jwksRes.ok) {
         const jwksData = (await jwksRes.json()) as { keys?: unknown[] };

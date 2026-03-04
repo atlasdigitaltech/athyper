@@ -17,7 +17,11 @@ import type { TabPlugin, TabPluginProps } from "../plugin-registry";
 function DocumentsTab({ entityName, entityId }: TabPluginProps) {
   return (
     <div className="p-6">
-      <EntityDocumentsPanel entityType={entityName} entityId={entityId} title="Documents" />
+      <EntityDocumentsPanel
+        entityType={entityName}
+        entityId={entityId}
+        title="Documents"
+      />
     </div>
   );
 }

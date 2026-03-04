@@ -16,7 +16,10 @@ import { NextResponse } from "next/server";
  *
  * CSRF-protected via middleware.
  */
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const sid = await getSessionId();
   if (!sid) {
@@ -45,11 +48,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await contentService.deleteFile(attachmentId, tenantId, sid);
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("File deletion error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
 
     // Map common errors to appropriate status codes
-    if (err.message.includes("not found")) {
+    if (message.includes("not found")) {
       return NextResponse.json(
         {
           success: false,
@@ -63,8 +68,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

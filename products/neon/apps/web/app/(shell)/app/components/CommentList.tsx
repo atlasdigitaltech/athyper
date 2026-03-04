@@ -23,7 +23,7 @@ interface Attachment {
 /**
  * Reaction Type
  */
-type ReactionType = '👍' | '❤️' | '🎉' | '👀' | '👎' | '🚀' | '💡' | '🤔';
+type ReactionType = "👍" | "❤️" | "🎉" | "👀" | "👎" | "🚀" | "💡" | "🤔";
 
 /**
  * Reaction Summary
@@ -38,7 +38,7 @@ interface ReactionSummary {
 /**
  * Comment Visibility
  */
-type CommentVisibility = 'public' | 'internal' | 'private';
+type CommentVisibility = "public" | "internal" | "private";
 
 /**
  * Comment Type
@@ -116,9 +116,9 @@ function CommentItem({
     <div
       id={`comment-${comment.id}`}
       className={`p-4 border rounded-lg hover:shadow-sm transition-all ${
-        comment.isHidden ? 'bg-gray-100 opacity-60' : 'bg-white'
-      } ${comment.isUnread ? 'border-blue-400 border-l-4' : 'border-gray-200'} ${
-        highlighted ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+        comment.isHidden ? "bg-gray-100 opacity-60" : "bg-white"
+      } ${comment.isUnread ? "border-blue-400 border-l-4" : "border-gray-200"} ${
+        highlighted ? "ring-2 ring-blue-400 bg-blue-50" : ""
       }`}
     >
       {/* Header */}
@@ -130,7 +130,9 @@ function CommentItem({
           )}
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-sm font-medium text-gray-600">
-              {(comment.commenterDisplayName || comment.commenterId).charAt(0).toUpperCase()}
+              {(comment.commenterDisplayName || comment.commenterId)
+                .charAt(0)
+                .toUpperCase()}
             </span>
           </div>
           <span className="text-sm font-medium text-gray-900">
@@ -141,18 +143,26 @@ function CommentItem({
             {isEdited && " (edited)"}
           </span>
           {/* Visibility Badge */}
-          {comment.visibility === 'internal' && (
+          {comment.visibility === "internal" && (
             <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full flex items-center gap-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                  clipRule="evenodd"
+                />
               </svg>
               Internal
             </span>
           )}
-          {comment.visibility === 'private' && (
+          {comment.visibility === "private" && (
             <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full flex items-center gap-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clipRule="evenodd"
+                />
               </svg>
               Private
             </span>
@@ -161,7 +171,11 @@ function CommentItem({
           {comment.isHidden && (
             <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded-full flex items-center gap-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
+                  clipRule="evenodd"
+                />
                 <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
               </svg>
               Hidden by moderator
@@ -170,7 +184,7 @@ function CommentItem({
           {/* Flag Count Badge (for moderators) */}
           {comment.flagCount && comment.flagCount > 0 && (
             <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full">
-              {comment.flagCount} flag{comment.flagCount > 1 ? 's' : ''}
+              {comment.flagCount} flag{comment.flagCount > 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -186,8 +200,18 @@ function CommentItem({
             {linkCopied ? (
               <span className="text-green-600">✓ Copied!</span>
             ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
               </svg>
             )}
           </button>
@@ -199,8 +223,18 @@ function CommentItem({
               className="text-xs text-gray-600 hover:text-red-600"
               title="Flag comment"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"
+                />
               </svg>
             </button>
           )}
@@ -277,10 +311,8 @@ export function CommentList({
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
 
   // Real-time updates via SSE
-  const { hasNewComments, newCommentCount, clearNewComments } = useCommentEvents(
-    entityType,
-    entityId
-  );
+  const { hasNewComments, newCommentCount, clearNewComments } =
+    useCommentEvents(entityType, entityId);
 
   const fetchComments = async () => {
     try {
@@ -288,7 +320,7 @@ export function CommentList({
       setError(null);
 
       const url = `/api/collab/comments?entityType=${encodeURIComponent(
-        entityType
+        entityType,
       )}&entityId=${encodeURIComponent(entityId)}`;
 
       const res = await fetch(url, { credentials: "same-origin" });

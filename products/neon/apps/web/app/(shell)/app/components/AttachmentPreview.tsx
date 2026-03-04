@@ -85,7 +85,9 @@ export function AttachmentPreview({ attachment }: AttachmentPreviewProps) {
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <span className="truncate">{attachment.fileName}</span>
             {attachment.sizeBytes && (
-              <span className="text-gray-400">({formatFileSize(attachment.sizeBytes)})</span>
+              <span className="text-gray-400">
+                ({formatFileSize(attachment.sizeBytes)})
+              </span>
             )}
           </div>
         </div>
@@ -107,8 +109,18 @@ export function AttachmentPreview({ attachment }: AttachmentPreviewProps) {
                 onClick={() => setShowModal(false)}
                 className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -135,7 +147,9 @@ export function AttachmentPreview({ attachment }: AttachmentPreviewProps) {
         <div className="flex items-center gap-2 text-xs text-gray-600">
           <span className="truncate">{attachment.fileName}</span>
           {attachment.sizeBytes && (
-            <span className="text-gray-400">({formatFileSize(attachment.sizeBytes)})</span>
+            <span className="text-gray-400">
+              ({formatFileSize(attachment.sizeBytes)})
+            </span>
           )}
         </div>
       </div>
@@ -148,13 +162,25 @@ export function AttachmentPreview({ attachment }: AttachmentPreviewProps) {
   if (isPDF) {
     return (
       <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-sm">
-        <svg className="w-8 h-8 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+        <svg
+          className="w-8 h-8 text-red-600 flex-shrink-0"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+            clipRule="evenodd"
+          />
         </svg>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900 truncate">{attachment.fileName}</div>
+          <div className="font-medium text-gray-900 truncate">
+            {attachment.fileName}
+          </div>
           {attachment.sizeBytes && (
-            <div className="text-xs text-gray-500">{formatFileSize(attachment.sizeBytes)}</div>
+            <div className="text-xs text-gray-500">
+              {formatFileSize(attachment.sizeBytes)}
+            </div>
           )}
         </div>
         <a

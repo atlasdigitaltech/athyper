@@ -44,7 +44,9 @@ export interface CheckAclParams {
  * @returns Created ACL entry
  * @throws Error if invalid (must specify principalId OR roleId, not both)
  */
-export async function grantPermission(params: GrantPermissionParams): Promise<DocumentAcl> {
+export async function grantPermission(
+  params: GrantPermissionParams,
+): Promise<DocumentAcl> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");
@@ -103,7 +105,9 @@ export async function revokePermissions(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Revoke permissions failed: ${res.status}`);
+    throw new Error(
+      error.message || `Revoke permissions failed: ${res.status}`,
+    );
   }
 }
 
@@ -115,7 +119,9 @@ export async function revokePermissions(
  * @param params - Check parameters
  * @returns True if permission granted via ACL
  */
-export async function checkDocumentPermission(params: CheckAclParams): Promise<boolean> {
+export async function checkDocumentPermission(
+  params: CheckAclParams,
+): Promise<boolean> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");

@@ -7,12 +7,17 @@ import { MarkdownContent } from "./MarkdownContent";
 /**
  * Flag Reason Type
  */
-type FlagReason = 'spam' | 'offensive' | 'harassment' | 'misinformation' | 'other';
+type FlagReason =
+  | "spam"
+  | "offensive"
+  | "harassment"
+  | "misinformation"
+  | "other";
 
 /**
  * Flag Status Type
  */
-type FlagStatus = 'pending' | 'dismissed' | 'action_taken';
+type FlagStatus = "pending" | "dismissed" | "action_taken";
 
 /**
  * Flagged Comment Type
@@ -51,15 +56,17 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
   const [flags, setFlags] = useState<FlaggedComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'dismissed'>('pending');
+  const [filter, setFilter] = useState<"all" | "pending" | "dismissed">(
+    "pending",
+  );
   const [processingFlagId, setProcessingFlagId] = useState<string | null>(null);
 
   const flagReasonLabels: Record<FlagReason, string> = {
-    spam: 'Spam',
-    offensive: 'Offensive',
-    harassment: 'Harassment',
-    misinformation: 'Misinformation',
-    other: 'Other',
+    spam: "Spam",
+    offensive: "Offensive",
+    harassment: "Harassment",
+    misinformation: "Misinformation",
+    other: "Other",
   };
 
   const fetchFlags = async () => {
@@ -68,23 +75,26 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
       setError(null);
 
       const params = new URLSearchParams();
-      if (filter !== 'all') {
-        params.set('status', filter);
+      if (filter !== "all") {
+        params.set("status", filter);
       }
 
-      const res = await fetch(`/api/collab/moderation/flags?${params.toString()}`, {
-        credentials: 'same-origin',
-      });
+      const res = await fetch(
+        `/api/collab/moderation/flags?${params.toString()}`,
+        {
+          credentials: "same-origin",
+        },
+      );
 
       if (!res.ok) {
-        throw new Error('Failed to fetch flags');
+        throw new Error("Failed to fetch flags");
       }
 
       const data = await res.json();
       setFlags(data.data || []);
     } catch (err) {
-      console.error('Error fetching flags:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load flags');
+      console.error("Error fetching flags:", err);
+      setError(err instanceof Error ? err.message : "Failed to load flags");
     } finally {
       setLoading(false);
     }
@@ -96,9 +106,14 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
 
   const handleReviewFlag = async (
     flagId: string,
-    action: 'dismiss' | 'hide_comment' | 'delete_comment'
+    action: "dismiss" | "hide_comment" | "delete_comment",
   ) => {
-    if (action === 'delete_comment' && !confirm('Are you sure you want to permanently delete this comment? This cannot be undone.')) {
+    if (
+      action === "delete_comment" &&
+      !confirm(
+        "Are you sure you want to permanently delete this comment? This cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -106,21 +121,21 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
 
     try {
       const res = await fetch(`/api/collab/moderation/flags/${flagId}/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ action }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to review flag');
+        throw new Error("Failed to review flag");
       }
 
       // Refresh flags
       await fetchFlags();
     } catch (err) {
-      console.error('Error reviewing flag:', err);
-      alert('Failed to process flag review');
+      console.error("Error reviewing flag:", err);
+      alert("Failed to process flag review");
     } finally {
       setProcessingFlagId(null);
     }
@@ -129,7 +144,9 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
   if (loading) {
     return (
       <div className="p-8 text-center">
-        <div className="animate-pulse text-gray-500">Loading moderation queue...</div>
+        <div className="animate-pulse text-gray-500">
+          Loading moderation queue...
+        </div>
       </div>
     );
   }
@@ -146,7 +163,9 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Moderation Queue</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Moderation Queue
+        </h1>
         <p className="text-sm text-gray-600">
           Review flagged comments and take appropriate action
         </p>
@@ -156,33 +175,33 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
       <div className="flex gap-2 mb-6 border-b border-gray-200">
         <button
           type="button"
-          onClick={() => setFilter('pending')}
+          onClick={() => setFilter("pending")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            filter === 'pending'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            filter === "pending"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
-          Pending ({flags.filter(f => f.flagStatus === 'pending').length})
+          Pending ({flags.filter((f) => f.flagStatus === "pending").length})
         </button>
         <button
           type="button"
-          onClick={() => setFilter('dismissed')}
+          onClick={() => setFilter("dismissed")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            filter === 'dismissed'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            filter === "dismissed"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
           Dismissed
         </button>
         <button
           type="button"
-          onClick={() => setFilter('all')}
+          onClick={() => setFilter("all")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            filter === 'all'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            filter === "all"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
           All ({flags.length})
@@ -192,10 +211,22 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
       {/* Flags List */}
       {flags.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-16 h-16 mx-auto text-gray-400 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
-          <p className="text-gray-600">No {filter !== 'all' ? filter : ''} flags to review</p>
+          <p className="text-gray-600">
+            No {filter !== "all" ? filter : ""} flags to review
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -203,24 +234,33 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
             <div
               key={flag.flagId}
               className={`bg-white border rounded-lg shadow-sm overflow-hidden ${
-                flag.isHidden ? 'border-red-300' : 'border-gray-200'
+                flag.isHidden ? "border-red-300" : "border-gray-200"
               }`}
             >
               {/* Flag Header */}
               <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                      flag.flagReason === 'spam' ? 'bg-yellow-100 text-yellow-800' :
-                      flag.flagReason === 'offensive' ? 'bg-red-100 text-red-800' :
-                      flag.flagReason === 'harassment' ? 'bg-purple-100 text-purple-800' :
-                      flag.flagReason === 'misinformation' ? 'bg-orange-100 text-orange-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                        flag.flagReason === "spam"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : flag.flagReason === "offensive"
+                            ? "bg-red-100 text-red-800"
+                            : flag.flagReason === "harassment"
+                              ? "bg-purple-100 text-purple-800"
+                              : flag.flagReason === "misinformation"
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
                       {flagReasonLabels[flag.flagReason]}
                     </span>
                     <span className="text-sm text-gray-600">
-                      Flagged by <span className="font-medium">{flag.flaggedByDisplayName || flag.flaggedBy}</span>
+                      Flagged by{" "}
+                      <span className="font-medium">
+                        {flag.flaggedByDisplayName || flag.flaggedBy}
+                      </span>
                     </span>
                     <span className="text-xs text-gray-500">
                       {new Date(flag.flaggedAt).toLocaleString()}
@@ -236,19 +276,24 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
                       </span>
                     )}
                   </div>
-                  <span className={`text-xs font-medium ${
-                    flag.flagStatus === 'pending' ? 'text-yellow-600' :
-                    flag.flagStatus === 'dismissed' ? 'text-gray-600' :
-                    'text-green-600'
-                  }`}>
-                    {flag.flagStatus.replace('_', ' ').toUpperCase()}
+                  <span
+                    className={`text-xs font-medium ${
+                      flag.flagStatus === "pending"
+                        ? "text-yellow-600"
+                        : flag.flagStatus === "dismissed"
+                          ? "text-gray-600"
+                          : "text-green-600"
+                    }`}
+                  >
+                    {flag.flagStatus.replace("_", " ").toUpperCase()}
                   </span>
                 </div>
 
                 {/* Flag Details */}
                 {flag.flagDetails && (
                   <div className="mt-2 text-sm text-gray-700">
-                    <span className="font-medium">Details:</span> {flag.flagDetails}
+                    <span className="font-medium">Details:</span>{" "}
+                    {flag.flagDetails}
                   </div>
                 )}
               </div>
@@ -258,7 +303,9 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-medium text-gray-600">
-                      {(flag.commenterDisplayName || flag.commenterId).charAt(0).toUpperCase()}
+                      {(flag.commenterDisplayName || flag.commenterId)
+                        .charAt(0)
+                        .toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1">
@@ -270,27 +317,33 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
                         on {flag.entityType}
                       </span>
                     </div>
-                    <div className={`prose prose-sm max-w-none ${flag.isHidden ? 'opacity-50' : ''}`}>
+                    <div
+                      className={`prose prose-sm max-w-none ${flag.isHidden ? "opacity-50" : ""}`}
+                    >
                       <MarkdownContent content={flag.commentText} />
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                {flag.flagStatus === 'pending' && (
+                {flag.flagStatus === "pending" && (
                   <div className="flex gap-3 pt-3 border-t border-gray-200">
                     <button
                       type="button"
-                      onClick={() => handleReviewFlag(flag.flagId, 'dismiss')}
+                      onClick={() => handleReviewFlag(flag.flagId, "dismiss")}
                       disabled={processingFlagId === flag.flagId}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {processingFlagId === flag.flagId ? 'Processing...' : 'Dismiss Flag'}
+                      {processingFlagId === flag.flagId
+                        ? "Processing..."
+                        : "Dismiss Flag"}
                     </button>
                     {!flag.isHidden && (
                       <button
                         type="button"
-                        onClick={() => handleReviewFlag(flag.flagId, 'hide_comment')}
+                        onClick={() =>
+                          handleReviewFlag(flag.flagId, "hide_comment")
+                        }
                         disabled={processingFlagId === flag.flagId}
                         className="px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-300 rounded-lg hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -299,7 +352,9 @@ export function ModerationQueue({ tenantId }: ModerationQueueProps) {
                     )}
                     <button
                       type="button"
-                      onClick={() => handleReviewFlag(flag.flagId, 'delete_comment')}
+                      onClick={() =>
+                        handleReviewFlag(flag.flagId, "delete_comment")
+                      }
                       disabled={processingFlagId === flag.flagId}
                       className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >

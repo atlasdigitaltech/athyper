@@ -1,7 +1,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/collab/flags
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     console.error("Error flagging comment:", error);
     return NextResponse.json(
       { error: "Failed to flag comment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

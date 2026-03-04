@@ -1,7 +1,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * PATCH /api/collab/retention/policies/:id
@@ -10,7 +10,7 @@ import type { NextRequest} from "next/server";
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const sid = await getSessionId();
@@ -25,21 +25,24 @@ export async function PATCH(
     if (typeof body.enabled !== "boolean") {
       return NextResponse.json(
         { error: "Missing required field: enabled (boolean)" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
 
-    const response = await fetch(`${backendUrl}/api/collab/retention/policies/${policyId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/retention/policies/${policyId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
@@ -47,7 +50,7 @@ export async function PATCH(
     console.error("Error updating retention policy:", error);
     return NextResponse.json(
       { error: "Failed to update retention policy" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -59,7 +62,7 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const sid = await getSessionId();
@@ -71,13 +74,16 @@ export async function DELETE(
     const policyId = id;
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
 
-    const response = await fetch(`${backendUrl}/api/collab/retention/policies/${policyId}`, {
-      method: "DELETE",
-      headers: {
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/retention/policies/${policyId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
       },
-    });
+    );
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
@@ -85,7 +91,7 @@ export async function DELETE(
     console.error("Error deleting retention policy:", error);
     return NextResponse.json(
       { error: "Failed to delete retention policy" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

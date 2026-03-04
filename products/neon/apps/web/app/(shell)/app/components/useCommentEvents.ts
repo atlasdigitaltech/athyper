@@ -3,7 +3,11 @@ import { useEffect, useState, useRef } from "react";
 /**
  * Comment Event Type
  */
-type CommentEventType = "comment_created" | "comment_updated" | "comment_deleted" | "reply_created";
+type CommentEventType =
+  | "comment_created"
+  | "comment_updated"
+  | "comment_deleted"
+  | "reply_created";
 
 /**
  * Comment Event
@@ -24,7 +28,11 @@ interface CommentEvent {
  *
  * Subscribes to Server-Sent Events (SSE) for real-time comment updates.
  */
-export function useCommentEvents(entityType: string, entityId: string, onEvent?: (event: CommentEvent) => void) {
+export function useCommentEvents(
+  entityType: string,
+  entityId: string,
+  onEvent?: (event: CommentEvent) => void,
+) {
   const [hasNewComments, setHasNewComments] = useState(false);
   const [newCommentCount, setNewCommentCount] = useState(0);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -32,7 +40,7 @@ export function useCommentEvents(entityType: string, entityId: string, onEvent?:
   useEffect(() => {
     // Construct SSE URL
     const url = `/api/collab/events/stream?entityType=${encodeURIComponent(
-      entityType
+      entityType,
     )}&entityId=${encodeURIComponent(entityId)}`;
 
     // Create EventSource connection

@@ -18,7 +18,10 @@ import { NextResponse } from "next/server";
  * - Version comparisons
  * - Audit trails
  */
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const sid = await getSessionId();
   if (!sid) {
@@ -41,10 +44,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const result = await contentService.getMetadata(attachmentId, tenantId);
 
     return NextResponse.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Get metadata error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
 
-    if (err.message.includes("not found")) {
+    if (message.includes("not found")) {
       return NextResponse.json(
         {
           success: false,
@@ -58,8 +63,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

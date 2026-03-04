@@ -38,22 +38,32 @@ value: cosmic-night
   --sidebar-ring: oklch(0.55 0.18 275);
   --shadow-2xs: 0px 1px 2px 0px oklch(0.25 0.04 275 / 0.06);
   --shadow-xs: 0px 1px 2px 0px oklch(0.25 0.04 275 / 0.06);
-  --shadow-sm: 0px 1px 3px 0px oklch(0.25 0.04 275 / 0.08), 0px 1px 2px -1px oklch(0.25 0.04 275 / 0.08);
-  --shadow: 0px 1px 3px 0px oklch(0.25 0.04 275 / 0.08), 0px 1px 2px -1px oklch(0.25 0.04 275 / 0.08);
-  --shadow-md: 0px 2px 6px 0px oklch(0.25 0.04 275 / 0.08), 0px 2px 4px -1px oklch(0.25 0.04 275 / 0.08);
-  --shadow-lg: 0px 4px 8px 0px oklch(0.25 0.04 275 / 0.08), 0px 4px 6px -1px oklch(0.25 0.04 275 / 0.08);
-  --shadow-xl: 0px 8px 16px 0px oklch(0.25 0.04 275 / 0.1), 0px 8px 10px -1px oklch(0.25 0.04 275 / 0.1);
+  --shadow-sm:
+    0px 1px 3px 0px oklch(0.25 0.04 275 / 0.08),
+    0px 1px 2px -1px oklch(0.25 0.04 275 / 0.08);
+  --shadow:
+    0px 1px 3px 0px oklch(0.25 0.04 275 / 0.08),
+    0px 1px 2px -1px oklch(0.25 0.04 275 / 0.08);
+  --shadow-md:
+    0px 2px 6px 0px oklch(0.25 0.04 275 / 0.08),
+    0px 2px 4px -1px oklch(0.25 0.04 275 / 0.08);
+  --shadow-lg:
+    0px 4px 8px 0px oklch(0.25 0.04 275 / 0.08),
+    0px 4px 6px -1px oklch(0.25 0.04 275 / 0.08);
+  --shadow-xl:
+    0px 8px 16px 0px oklch(0.25 0.04 275 / 0.1),
+    0px 8px 10px -1px oklch(0.25 0.04 275 / 0.1);
   --shadow-2xl: 0px 16px 32px 0px oklch(0.25 0.04 275 / 0.2);
-  --categorical-1: oklch(0.50 0.16 260);
+  --categorical-1: oklch(0.5 0.16 260);
   --categorical-2: oklch(0.48 0.14 280);
   --categorical-3: oklch(0.55 0.14 235);
-  --categorical-4: oklch(0.50 0.16 310);
+  --categorical-4: oklch(0.5 0.16 310);
   --categorical-5: oklch(0.55 0.12 210);
   --success: oklch(0.55 0.12 210);
   --success-foreground: oklch(0.98 0 0);
   --warning: oklch(0.65 0.14 280);
   --warning-foreground: oklch(0.15 0.02 280);
-  --info: oklch(0.50 0.16 260);
+  --info: oklch(0.5 0.16 260);
   --info-foreground: oklch(0.98 0 0);
 }
 
@@ -91,20 +101,30 @@ value: cosmic-night
   --sidebar-ring: oklch(0.65 0.2 280);
   --shadow-2xs: 0px 1px 2px 0px oklch(0.1 0.04 285 / 0.2);
   --shadow-xs: 0px 1px 2px 0px oklch(0.1 0.04 285 / 0.2);
-  --shadow-sm: 0px 1px 3px 0px oklch(0.1 0.04 285 / 0.3), 0px 1px 2px -1px oklch(0.1 0.04 285 / 0.3);
-  --shadow: 0px 1px 3px 0px oklch(0.1 0.04 285 / 0.3), 0px 1px 2px -1px oklch(0.1 0.04 285 / 0.3);
-  --shadow-md: 0px 2px 6px 0px oklch(0.1 0.04 285 / 0.3), 0px 2px 4px -1px oklch(0.1 0.04 285 / 0.3);
-  --shadow-lg: 0px 4px 8px 0px oklch(0.1 0.04 285 / 0.35), 0px 4px 6px -1px oklch(0.1 0.04 285 / 0.35);
-  --shadow-xl: 0px 8px 16px 0px oklch(0.1 0.04 285 / 0.4), 0px 8px 10px -1px oklch(0.1 0.04 285 / 0.4);
+  --shadow-sm:
+    0px 1px 3px 0px oklch(0.1 0.04 285 / 0.3),
+    0px 1px 2px -1px oklch(0.1 0.04 285 / 0.3);
+  --shadow:
+    0px 1px 3px 0px oklch(0.1 0.04 285 / 0.3),
+    0px 1px 2px -1px oklch(0.1 0.04 285 / 0.3);
+  --shadow-md:
+    0px 2px 6px 0px oklch(0.1 0.04 285 / 0.3),
+    0px 2px 4px -1px oklch(0.1 0.04 285 / 0.3);
+  --shadow-lg:
+    0px 4px 8px 0px oklch(0.1 0.04 285 / 0.35),
+    0px 4px 6px -1px oklch(0.1 0.04 285 / 0.35);
+  --shadow-xl:
+    0px 8px 16px 0px oklch(0.1 0.04 285 / 0.4),
+    0px 8px 10px -1px oklch(0.1 0.04 285 / 0.4);
   --shadow-2xl: 0px 16px 32px 0px oklch(0.1 0.04 285 / 0.5);
   --categorical-1: oklch(0.68 0.12 260);
-  --categorical-2: oklch(0.66 0.10 280);
-  --categorical-3: oklch(0.72 0.10 235);
+  --categorical-2: oklch(0.66 0.1 280);
+  --categorical-3: oklch(0.72 0.1 235);
   --categorical-4: oklch(0.68 0.12 310);
-  --categorical-5: oklch(0.72 0.10 210);
-  --success: oklch(0.72 0.10 210);
+  --categorical-5: oklch(0.72 0.1 210);
+  --success: oklch(0.72 0.1 210);
   --success-foreground: oklch(0.12 0.02 210);
-  --warning: oklch(0.78 0.10 280);
+  --warning: oklch(0.78 0.1 280);
   --warning-foreground: oklch(0.15 0.02 280);
   --info: oklch(0.68 0.12 260);
   --info-foreground: oklch(0.12 0.02 260);

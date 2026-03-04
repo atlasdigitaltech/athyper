@@ -1,7 +1,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/collab/sla/config
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!body.entityType || !body.slaTargetSeconds) {
       return NextResponse.json(
         { error: "Missing required fields: entityType, slaTargetSeconds" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     console.error("Error setting SLA config:", error);
     return NextResponse.json(
       { error: "Failed to set SLA config" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

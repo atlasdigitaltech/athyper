@@ -1,7 +1,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/collab/retention/archived/:id/restore
@@ -10,7 +10,7 @@ import type { NextRequest} from "next/server";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const sid = await getSessionId();
@@ -22,14 +22,17 @@ export async function POST(
     const commentId = id;
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
 
-    const response = await fetch(`${backendUrl}/api/collab/retention/archived/${commentId}/restore`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/retention/archived/${commentId}/restore`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
       },
-    });
+    );
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
@@ -37,7 +40,7 @@ export async function POST(
     console.error("Error restoring comment:", error);
     return NextResponse.json(
       { error: "Failed to restore comment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
