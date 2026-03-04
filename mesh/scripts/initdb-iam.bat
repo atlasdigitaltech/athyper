@@ -53,8 +53,14 @@ if "%IAM_DB_USERNAME%"=="" set "IAM_DB_USERNAME=athyperadmin"
 
 if "%IAM_DB_PASSWORD%"=="" (
     echo Reading database password from environment file...
+    set "ENV_FILE="
     if exist "%MESH_DIR%\env\.env" (
-        for /f "tokens=2 delims==" %%a in ('findstr "IAM_DB_PASSWORD" "%MESH_DIR%\env\.env"') do set "IAM_DB_PASSWORD=%%a"
+        set "ENV_FILE=%MESH_DIR%\env\.env"
+    ) else if exist "%MESH_DIR%\env\.env.example" (
+        set "ENV_FILE=%MESH_DIR%\env\.env.example"
+    )
+    if defined ENV_FILE (
+        for /f "tokens=2 delims==" %%a in ('findstr "IAM_DB_PASSWORD" "!ENV_FILE!"') do set "IAM_DB_PASSWORD=%%a"
         set "IAM_DB_PASSWORD=!IAM_DB_PASSWORD:"=!"
     )
 )

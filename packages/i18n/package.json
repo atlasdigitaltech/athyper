@@ -15,7 +15,11 @@
     "./lang/*": "./lang/*",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "src", "lang"],
+  "files": [
+    "dist",
+    "src",
+    "lang"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist",

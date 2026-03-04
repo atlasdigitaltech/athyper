@@ -6,26 +6,26 @@
  */
 
 import type {
-    ListNotificationsQuery,
-    ListNotificationsResult,
-    UnreadCountResult,
+  ListNotificationsQuery,
+  ListNotificationsResult,
+  UnreadCountResult,
 } from "./types";
 
 type ApiResponse<T = unknown> = {
-    success: boolean;
-    data?: T;
-    error?: { code: string; message: string };
+  success: boolean;
+  data?: T;
+  error?: { code: string; message: string };
 };
 
 export class NotificationApiError extends Error {
-    constructor(
-        public code: string,
-        message: string,
-        public status?: number
-    ) {
-        super(message);
-        this.name = "NotificationApiError";
-    }
+  constructor(
+    public code: string,
+    message: string,
+    public status?: number,
+  ) {
+    super(message);
+    this.name = "NotificationApiError";
+  }
 }
 
 /**
@@ -36,31 +36,31 @@ export class NotificationApiError extends Error {
  * @throws NotificationApiError on failure
  */
 export async function listNotifications(
-    query?: ListNotificationsQuery
+  query?: ListNotificationsQuery,
 ): Promise<ListNotificationsResult> {
-    const params = new URLSearchParams();
+  const params = new URLSearchParams();
 
-    if (query?.limit) params.append("limit", query.limit.toString());
-    if (query?.offset) params.append("offset", query.offset.toString());
-    if (query?.unreadOnly) params.append("unreadOnly", "true");
-    if (query?.category) params.append("category", query.category);
+  if (query?.limit) params.append("limit", query.limit.toString());
+  if (query?.offset) params.append("offset", query.offset.toString());
+  if (query?.unreadOnly) params.append("unreadOnly", "true");
+  if (query?.category) params.append("category", query.category);
 
-    const res = await fetch(`/api/notifications?${params}`, {
-        method: "GET",
-        credentials: "include",
-    });
+  const res = await fetch(`/api/notifications?${params}`, {
+    method: "GET",
+    credentials: "include",
+  });
 
-    const data = (await res.json()) as ApiResponse<ListNotificationsResult>;
+  const data = (await res.json()) as ApiResponse<ListNotificationsResult>;
 
-    if (!res.ok || !data.success) {
-        throw new NotificationApiError(
-            data.error?.code ?? "UNKNOWN",
-            data.error?.message ?? "Failed to fetch notifications",
-            res.status
-        );
-    }
+  if (!res.ok || !data.success) {
+    throw new NotificationApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? "Failed to fetch notifications",
+      res.status,
+    );
+  }
 
-    return data.data as ListNotificationsResult;
+  return data.data as ListNotificationsResult;
 }
 
 /**
@@ -70,22 +70,22 @@ export async function listNotifications(
  * @throws NotificationApiError on failure
  */
 export async function getUnreadCount(): Promise<UnreadCountResult> {
-    const res = await fetch("/api/notifications/unread-count", {
-        method: "GET",
-        credentials: "include",
-    });
+  const res = await fetch("/api/notifications/unread-count", {
+    method: "GET",
+    credentials: "include",
+  });
 
-    const data = (await res.json()) as ApiResponse<UnreadCountResult>;
+  const data = (await res.json()) as ApiResponse<UnreadCountResult>;
 
-    if (!res.ok || !data.success) {
-        throw new NotificationApiError(
-            data.error?.code ?? "UNKNOWN",
-            data.error?.message ?? "Failed to fetch unread count",
-            res.status
-        );
-    }
+  if (!res.ok || !data.success) {
+    throw new NotificationApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? "Failed to fetch unread count",
+      res.status,
+    );
+  }
 
-    return data.data as UnreadCountResult;
+  return data.data as UnreadCountResult;
 }
 
 /**
@@ -95,20 +95,20 @@ export async function getUnreadCount(): Promise<UnreadCountResult> {
  * @throws NotificationApiError on failure
  */
 export async function markAsRead(notificationId: string): Promise<void> {
-    const res = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: "POST",
-        credentials: "include",
-    });
+  const res = await fetch(`/api/notifications/${notificationId}/read`, {
+    method: "POST",
+    credentials: "include",
+  });
 
-    const data = (await res.json()) as ApiResponse;
+  const data = (await res.json()) as ApiResponse;
 
-    if (!res.ok || !data.success) {
-        throw new NotificationApiError(
-            data.error?.code ?? "UNKNOWN",
-            data.error?.message ?? "Failed to mark notification as read",
-            res.status
-        );
-    }
+  if (!res.ok || !data.success) {
+    throw new NotificationApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? "Failed to mark notification as read",
+      res.status,
+    );
+  }
 }
 
 /**
@@ -117,20 +117,20 @@ export async function markAsRead(notificationId: string): Promise<void> {
  * @throws NotificationApiError on failure
  */
 export async function markAllAsRead(): Promise<void> {
-    const res = await fetch("/api/notifications/read-all", {
-        method: "POST",
-        credentials: "include",
-    });
+  const res = await fetch("/api/notifications/read-all", {
+    method: "POST",
+    credentials: "include",
+  });
 
-    const data = (await res.json()) as ApiResponse;
+  const data = (await res.json()) as ApiResponse;
 
-    if (!res.ok || !data.success) {
-        throw new NotificationApiError(
-            data.error?.code ?? "UNKNOWN",
-            data.error?.message ?? "Failed to mark all notifications as read",
-            res.status
-        );
-    }
+  if (!res.ok || !data.success) {
+    throw new NotificationApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? "Failed to mark all notifications as read",
+      res.status,
+    );
+  }
 }
 
 /**
@@ -139,19 +139,21 @@ export async function markAllAsRead(): Promise<void> {
  * @param notificationId - Notification ID
  * @throws NotificationApiError on failure
  */
-export async function dismissNotification(notificationId: string): Promise<void> {
-    const res = await fetch(`/api/notifications/${notificationId}/dismiss`, {
-        method: "POST",
-        credentials: "include",
-    });
+export async function dismissNotification(
+  notificationId: string,
+): Promise<void> {
+  const res = await fetch(`/api/notifications/${notificationId}/dismiss`, {
+    method: "POST",
+    credentials: "include",
+  });
 
-    const data = (await res.json()) as ApiResponse;
+  const data = (await res.json()) as ApiResponse;
 
-    if (!res.ok || !data.success) {
-        throw new NotificationApiError(
-            data.error?.code ?? "UNKNOWN",
-            data.error?.message ?? "Failed to dismiss notification",
-            res.status
-        );
-    }
+  if (!res.ok || !data.success) {
+    throw new NotificationApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? "Failed to dismiss notification",
+      res.status,
+    );
+  }
 }

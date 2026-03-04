@@ -5,7 +5,9 @@ This directory contains Keycloak realm configurations for the athyper platform.
 ## Files
 
 ### `realm-demosetup.json`
+
 Keycloak realm export containing:
+
 - **Realm**: athyper
 - **Clients**: neon-web, admin-console, etc.
 - **Users**: Demo users and credentials
@@ -20,12 +22,14 @@ Keycloak realm export containing:
 ### Export Current Configuration
 
 **Linux/macOS:**
+
 ```bash
 cd mesh/scripts
 ./export-iam.sh
 ```
 
 **Windows:**
+
 ```cmd
 cd mesh\scripts
 export-iam.bat
@@ -36,12 +40,14 @@ This will export the current `athyper` realm to `realm-demosetup.json`.
 ### Import Configuration
 
 **Linux/macOS:**
+
 ```bash
 cd mesh/scripts
 ./initdb-iam.sh
 ```
 
 **Windows:**
+
 ```cmd
 cd mesh\scripts
 initdb-iam.bat
@@ -52,6 +58,7 @@ This will import `realm-demosetup.json` into Keycloak, overriding existing data.
 ## Workflow
 
 ### 1. Initial Setup (New Environment)
+
 ```bash
 # Start mesh infrastructure
 cd mesh
@@ -66,6 +73,7 @@ cd scripts
 ```
 
 ### 2. Making Changes
+
 ```bash
 # 1. Make changes via Keycloak Admin Console
 # 2. Export updated configuration
@@ -77,6 +85,7 @@ git commit -m "IAM: Updated client redirect URIs for staging"
 ```
 
 ### 3. Environment Promotion
+
 ```bash
 # Development → Staging
 git checkout staging
@@ -92,6 +101,7 @@ cd mesh/scripts
 ⚠️ **Important Security Notes:**
 
 ### What's Safe to Commit
+
 - ✅ Realm configuration (settings, flows, policies)
 - ✅ Client configurations (redirect URIs, settings)
 - ✅ Role definitions
@@ -99,6 +109,7 @@ cd mesh/scripts
 - ✅ Demo/test user accounts with placeholder credentials
 
 ### What NOT to Commit
+
 - ❌ Real user credentials
 - ❌ Production secrets (client secrets, signing keys)
 - ❌ Real email addresses
@@ -108,6 +119,7 @@ cd mesh/scripts
 ### Best Practices
 
 1. **Sanitize before committing:**
+
    ```bash
    # Review the export before committing
    cat realm-demosetup.json | jq '.users[] | {username, email}'
@@ -132,6 +144,7 @@ cd mesh/scripts
 The exported JSON follows [Keycloak's realm export format](https://www.keycloak.org/docs/latest/server_admin/#_export_import).
 
 Key sections:
+
 ```json
 {
   "realm": "athyper",
@@ -152,6 +165,7 @@ Key sections:
 ## Troubleshooting
 
 ### Export fails: "Container not running"
+
 ```bash
 # Check if IAM is running
 docker ps | grep iam
@@ -161,6 +175,7 @@ cd mesh && ./up.sh --profile mesh
 ```
 
 ### Import fails: "Cannot connect to database"
+
 ```bash
 # Check database connection
 docker exec athyper-mesh-dbpool-auth-1 \
@@ -171,6 +186,7 @@ grep IAM_DB_PASSWORD mesh/env/.env
 ```
 
 ### Import succeeds but changes not visible
+
 ```bash
 # Keycloak caches realm data - restart required
 docker restart athyper-mesh-iam-1
@@ -180,6 +196,7 @@ docker logs -f athyper-mesh-iam-1
 ```
 
 ### "Invalid JSON" error
+
 ```bash
 # Validate JSON syntax
 jq empty mesh/config/iam/realm-demosetup.json

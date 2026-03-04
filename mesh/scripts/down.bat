@@ -187,7 +187,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo ✅ Mesh is DOWN (profile=!RUN_PROFILE!, env=!ENVIRONMENT!)
+echo Mesh is DOWN (profile=!RUN_PROFILE!, env=!ENVIRONMENT!)
 
 echo.
 pause

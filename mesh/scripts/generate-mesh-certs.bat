@@ -19,8 +19,9 @@ set CERT_DIR=%MESH_DIR%\config\gateway\certs
 REM Ensure mkcert.exe exists (NOT this script)
 where mkcert.exe >nul 2>&1
 if errorlevel 1 (
-  echo ❌ mkcert.exe not found in PATH
-  echo 👉 Install from https://github.com/FiloSottile/mkcert
+  echo ERROR: mkcert.exe not found in PATH
+  echo Install from https://github.com/FiloSottile/mkcert
+  echo   winget install FiloSottile.mkcert
   exit /b 1
 )
 
@@ -46,12 +47,12 @@ mkcert.exe ^
   "neon.athyper.local" "gateway.mesh.athyper.local" 
 
 if errorlevel 1 (
-  echo ❌ Certificate generation failed
+  echo ERROR: Certificate generation failed
   exit /b 1
 )
 
 echo.
-echo ✅ Certificates generated successfully
-echo 📂 %CERT_DIR%
+echo Certificates generated successfully
+echo Location: %CERT_DIR%
 echo.
 endlocal

@@ -26,7 +26,11 @@ pushd "%MESH_DIR%\..\framework\adapters\db" >nul
 set "SEED_DIR=%CD%"
 popd >nul
 
-set "ENV_FILE=%MESH_DIR%\env\.env"
+if exist "%MESH_DIR%\env\.env" (
+    set "ENV_FILE=%MESH_DIR%\env\.env"
+) else (
+    set "ENV_FILE=%MESH_DIR%\env\.env.example"
+)
 
 echo.
 echo === Athyper Database Seed ===

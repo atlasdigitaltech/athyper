@@ -10,8 +10,19 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**", "**/build/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
-      exclude: ["**/node_modules/**", "**/dist/**", "**/generated/**"],
+      reporter: ["text", "json", "html", "lcov"],
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/generated/**",
+        "**/*.stories.tsx",
+      ],
+      thresholds: {
+        statements: 60,
+        branches: 55,
+        functions: 55,
+        lines: 60,
+      },
     },
   },
 });

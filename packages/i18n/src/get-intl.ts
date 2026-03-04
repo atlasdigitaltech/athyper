@@ -22,52 +22,83 @@ const messageCache = new Map<Locale, Record<string, string>>();
  * Load all messages for a locale by merging common + dashboard modules.
  */
 async function loadMessages(locale: Locale): Promise<Record<string, string>> {
-    // In development, skip the cache so new/changed keys are picked up immediately
-    if (process.env.NODE_ENV !== "development" && messageCache.has(locale)) {
-        return messageCache.get(locale)!;
-    }
+  // In development, skip the cache so new/changed keys are picked up immediately
+  if (process.env.NODE_ENV !== "development" && messageCache.has(locale)) {
+    return messageCache.get(locale)!;
+  }
 
-    const messages: Record<string, string> = {};
+  const messages: Record<string, string> = {};
 
-    // Load common translations
+  // Load common translations
+  try {
+    const common = (
+      await import(`../lang/${locale}/common.json`, { with: { type: "json" } })
+    ).default;
+    Object.assign(messages, common);
+  } catch {
+    // Common file may not exist for all locales yet
+  }
+
+  // Load widget translations
+  try {
+    const widgets = (
+      await import(`../lang/${locale}/dashboard/_widgets.json`, {
+        with: { type: "json" },
+      })
+    ).default;
+    Object.assign(messages, widgets);
+  } catch {
+    // Widgets file may not exist yet
+  }
+
+  // Load all module dashboard translations
+  const moduleCodes = [
+    "ACC",
+    "PAY",
+    "TREASURY",
+    "BUDGET",
+    "PAYG",
+    "CRM",
+    "SRM",
+    "SOURCE",
+    "CONTRACT",
+    "BUY",
+    "SALE",
+    "INV",
+    "QMS",
+    "SUBCON",
+    "DEMAND",
+    "WMS",
+    "LOGISTICS",
+    "MAINT",
+    "MFG",
+    "ASSET",
+    "ASSETREMS",
+    "ASSETFM",
+    "HRM",
+    "PRL",
+    "PRJ",
+    "SVC",
+    "REF",
+    "REL",
+    "MDG",
+  ];
+
+  for (const code of moduleCodes) {
     try {
-        const common = (await import(`../lang/${locale}/common.json`, { with: { type: "json" } })).default;
-        Object.assign(messages, common);
+      const mod = (
+        await import(`../lang/${locale}/dashboard/${code}.json`, {
+          with: { type: "json" },
+        })
+      ).default;
+      Object.assign(messages, mod);
     } catch {
-        // Common file may not exist for all locales yet
+      // Module translation may not exist yet — skip silently
     }
+  }
 
-    // Load widget translations
-    try {
-        const widgets = (await import(`../lang/${locale}/dashboard/_widgets.json`, { with: { type: "json" } })).default;
-        Object.assign(messages, widgets);
-    } catch {
-        // Widgets file may not exist yet
-    }
-
-    // Load all module dashboard translations
-    const moduleCodes = [
-        "ACC", "PAY", "TREASURY", "BUDGET", "PAYG",
-        "CRM", "SRM", "SOURCE", "CONTRACT", "BUY", "SALE",
-        "INV", "QMS", "SUBCON", "DEMAND", "WMS", "LOGISTICS",
-        "MAINT", "MFG",
-        "ASSET", "ASSETREMS", "ASSETFM",
-        "HRM", "PRL",
-        "PRJ", "SVC",
-        "REF", "REL", "MDG",
-    ];
-
-    for (const code of moduleCodes) {
-        try {
-            const mod = (await import(`../lang/${locale}/dashboard/${code}.json`, { with: { type: "json" } })).default;
-            Object.assign(messages, mod);
-        } catch {
-            // Module translation may not exist yet — skip silently
-        }
-    }
-
-    messageCache.set(locale, messages);
-    return messages;
+  messageCache.set(locale, messages);
+  return messages;
 }
 
 /**
@@ -75,13 +106,13 @@ async function loadMessages(locale: Locale): Promise<Record<string, string>> {
  * Messages are loaded and cached on first call.
  */
 export async function getIntl(locale: Locale) {
-    const messages = await loadMessages(locale);
-    return createIntl({ locale, messages }, cache);
+  const messages = await loadMessages(locale);
+  return createIntl({ locale, messages }, cache);
 }
 
 /**
  * Clear the message cache (useful for hot reload in development).
  */
 export function clearIntlCache(): void {
-    messageCache.clear();
+  messageCache.clear();
 }

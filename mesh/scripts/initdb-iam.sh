@@ -69,8 +69,10 @@ DB_PASS="${DB_PASS:-${IAM_DB_PASSWORD}}"
 
 if [ -z "$DB_PASS" ]; then
   echo -e "${YELLOW}Reading database password from environment file...${NC}"
-  if [ -f "${MESH_DIR}/env/.env" ]; then
-    DB_PASS=$(grep IAM_DB_PASSWORD "${MESH_DIR}/env/.env" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+  local env_file="${MESH_DIR}/env/.env"
+  [ ! -f "$env_file" ] && env_file="${MESH_DIR}/env/.env.example"
+  if [ -f "$env_file" ]; then
+    DB_PASS=$(grep IAM_DB_PASSWORD "$env_file" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
   fi
 fi
 

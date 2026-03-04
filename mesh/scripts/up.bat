@@ -82,7 +82,7 @@ if not exist "%ENV_FILE%" (
     exit /b 1
   )
 
-  echo ✅ Created: "%ENV_FILE%"
+  echo Created: "%ENV_FILE%"
   echo.
 )
 
@@ -210,7 +210,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo ✅ Mesh is UP (profile=!RUN_PROFILE!, env=!ENVIRONMENT!)
+echo Mesh is UP (profile=!RUN_PROFILE!, env=!ENVIRONMENT!)
 
 REM Show status (same profile rules)
 if "!USE_PROFILE!"=="1" (

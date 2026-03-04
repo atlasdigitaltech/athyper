@@ -10,7 +10,10 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REALM_PATH = resolve(__dirname, "../../../mesh/config/iam/realm-demosetup.json");
+const REALM_PATH = resolve(
+  __dirname,
+  "../../../mesh/config/iam/realm-demosetup.json",
+);
 
 const KC_URL = "https://iam.mesh.athyper.local";
 const REALM = "athyper";
@@ -20,18 +23,22 @@ const ADMIN_PASS = "athyperadmin";
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 async function getToken() {
-  const res = await fetch(`${KC_URL}/realms/master/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: "admin-cli",
-      username: ADMIN_USER,
-      password: ADMIN_PASS,
-      grant_type: "password",
-    }),
-  });
+  const res = await fetch(
+    `${KC_URL}/realms/master/protocol/openid-connect/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: "admin-cli",
+        username: ADMIN_USER,
+        password: ADMIN_PASS,
+        grant_type: "password",
+      }),
+    },
+  );
   const data = await res.json();
-  if (!data.access_token) throw new Error("Failed to get token: " + JSON.stringify(data));
+  if (!data.access_token)
+    throw new Error("Failed to get token: " + JSON.stringify(data));
   return data.access_token;
 }
 
@@ -43,17 +50,23 @@ async function getExistingUsers(token) {
 }
 
 async function getClientId(token, clientName) {
-  const res = await fetch(`${KC_URL}/admin/realms/${REALM}/clients?clientId=${clientName}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetch(
+    `${KC_URL}/admin/realms/${REALM}/clients?clientId=${clientName}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   const clients = await res.json();
   return clients[0]?.id;
 }
 
 async function getClientRoles(token, clientUuid) {
-  const res = await fetch(`${KC_URL}/admin/realms/${REALM}/clients/${clientUuid}/roles`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetch(
+    `${KC_URL}/admin/realms/${REALM}/clients/${clientUuid}/roles`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   return res.json();
 }
 
@@ -99,11 +112,19 @@ async function createUser(token, user) {
     return null; // already exists
   } else {
     const body = await res.text();
-    throw new Error(`Create user ${user.username} failed (${res.status}): ${body}`);
+    throw new Error(
+      `Create user ${user.username} failed (${res.status}): ${body}`,
+    );
   }
 }
 
-async function assignClientRoles(token, userId, clientUuid, roleNames, allRoles) {
+async function assignClientRoles(
+  token,
+  userId,
+  clientUuid,
+  roleNames,
+  allRoles,
+) {
   const rolesToAssign = allRoles.filter((r) => roleNames.includes(r.name));
   if (rolesToAssign.length === 0) return;
 
@@ -116,7 +137,7 @@ async function assignClientRoles(token, userId, clientUuid, roleNames, allRoles)
         "Content-Type": "application/json",
       },
       body: JSON.stringify(rolesToAssign),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -135,7 +156,7 @@ async function addUserToOrg(token, orgId, userId) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(userId),
-    }
+    },
   );
 
   if (!res.ok && res.status !== 409) {
@@ -147,7 +168,9 @@ async function addUserToOrg(token, orgId, userId) {
 async function main() {
   console.log("Reading realm JSON...");
   const realm = JSON.parse(readFileSync(REALM_PATH, "utf8"));
-  const realmUsers = realm.users.filter((u) => !u.username?.startsWith("service-account-"));
+  const realmUsers = realm.users.filter(
+    (u) => !u.username?.startsWith("service-account-"),
+  );
 
   console.log(`Realm JSON has ${realmUsers.length} human users`);
 
@@ -156,7 +179,9 @@ async function main() {
   // Get existing users
   const existingUsers = await getExistingUsers(token);
   const existingUsernames = new Set(existingUsers.map((u) => u.username));
-  console.log(`Keycloak has ${existingUsers.length} users (${existingUsernames.size} unique usernames)`);
+  console.log(
+    `Keycloak has ${existingUsers.length} users (${existingUsernames.size} unique usernames)`,
+  );
 
   // Get neon-web client UUID and roles
   const neonWebClientUuid = await getClientId(token, "neon-web");
@@ -164,7 +189,9 @@ async function main() {
     throw new Error("Could not find neon-web client in Keycloak");
   }
   const allClientRoles = await getClientRoles(token, neonWebClientUuid);
-  console.log(`neon-web client roles: ${allClientRoles.map((r) => r.name).join(", ")}`);
+  console.log(
+    `neon-web client roles: ${allClientRoles.map((r) => r.name).join(", ")}`,
+  );
 
   // Get organizations
   const orgs = await getOrganizations(token);
@@ -179,7 +206,9 @@ async function main() {
   for (const user of realmUsers) {
     if (existingUsernames.has(user.username)) {
       // User exists - ensure role assignments and org membership are correct
-      const existingUser = existingUsers.find((u) => u.username === user.username);
+      const existingUser = existingUsers.find(
+        (u) => u.username === user.username,
+      );
 
       // Assign client roles
       if (user.clientRoles?.["neon-web"]) {
@@ -188,7 +217,7 @@ async function main() {
           existingUser.id,
           neonWebClientUuid,
           user.clientRoles["neon-web"],
-          allClientRoles
+          allClientRoles,
         );
       }
 
@@ -216,7 +245,7 @@ async function main() {
           userId,
           neonWebClientUuid,
           user.clientRoles["neon-web"],
-          allClientRoles
+          allClientRoles,
         );
       }
 

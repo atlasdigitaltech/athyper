@@ -38,7 +38,9 @@ export class ContentApiError extends Error {
  * @returns Upload ID and presigned URL
  * @throws ContentApiError on failure
  */
-export async function initiateUpload(input: InitiateUploadInput): Promise<InitiateUploadResult> {
+export async function initiateUpload(
+  input: InitiateUploadInput,
+): Promise<InitiateUploadResult> {
   const res = await fetch("/api/content/initiate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -65,7 +67,9 @@ export async function initiateUpload(input: InitiateUploadInput): Promise<Initia
  * @param input - Upload ID and checksum
  * @throws ContentApiError on failure
  */
-export async function completeUpload(input: CompleteUploadInput): Promise<void> {
+export async function completeUpload(
+  input: CompleteUploadInput,
+): Promise<void> {
   const res = await fetch("/api/content/complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -91,7 +95,9 @@ export async function completeUpload(input: CompleteUploadInput): Promise<void> 
  * @returns Presigned URL and metadata
  * @throws ContentApiError on failure
  */
-export async function getDownloadUrl(attachmentId: string): Promise<DownloadUrlResult> {
+export async function getDownloadUrl(
+  attachmentId: string,
+): Promise<DownloadUrlResult> {
   const res = await fetch(`/api/content/download/${attachmentId}`, {
     method: "GET",
     credentials: "include",
@@ -140,7 +146,9 @@ export async function deleteAttachment(attachmentId: string): Promise<void> {
  * @returns Array of attachments
  * @throws ContentApiError on failure
  */
-export async function listByEntity(query: ListAttachmentsQuery): Promise<Attachment[]> {
+export async function listByEntity(
+  query: ListAttachmentsQuery,
+): Promise<Attachment[]> {
   const params = new URLSearchParams({
     entity: query.entityType,
     id: query.entityId,

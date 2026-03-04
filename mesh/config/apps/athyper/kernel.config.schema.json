@@ -542,10 +542,23 @@
                 "twilio": {
                   "type": "object",
                   "properties": {
-                    "accountSidRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for Twilio account SID" },
-                    "authTokenRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for Twilio auth token" },
-                    "fromNumber": { "type": "string", "description": "Twilio SMS sender number" },
-                    "enabled": { "type": "boolean", "default": false, "description": "Enable Twilio SMS provider" }
+                    "accountSidRef": {
+                      "type": "string",
+                      "description": "LOCKED — SUPERSTAR env reference for Twilio account SID"
+                    },
+                    "authTokenRef": {
+                      "type": "string",
+                      "description": "LOCKED — SUPERSTAR env reference for Twilio auth token"
+                    },
+                    "fromNumber": {
+                      "type": "string",
+                      "description": "Twilio SMS sender number"
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable Twilio SMS provider"
+                    }
                   },
                   "additionalProperties": false,
                   "default": {}
@@ -556,10 +569,23 @@
             "push": {
               "type": "object",
               "properties": {
-                "vapidPublicKey": { "type": "string", "description": "VAPID public key for web push" },
-                "vapidPrivateKeyRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for VAPID private key" },
-                "vapidSubject": { "type": "string", "description": "VAPID subject (mailto: or URL)" },
-                "enabled": { "type": "boolean", "default": false, "description": "Enable web push notifications" }
+                "vapidPublicKey": {
+                  "type": "string",
+                  "description": "VAPID public key for web push"
+                },
+                "vapidPrivateKeyRef": {
+                  "type": "string",
+                  "description": "LOCKED — SUPERSTAR env reference for VAPID private key"
+                },
+                "vapidSubject": {
+                  "type": "string",
+                  "description": "VAPID subject (mailto: or URL)"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable web push notifications"
+                }
               },
               "additionalProperties": false
             }
@@ -683,7 +709,10 @@
             "productAdmin": { "type": "string", "default": "PRODUCT_ADMIN" },
             "tenantManager": { "type": "string", "default": "TENANT_MANAGER" },
             "supportAdmin": { "type": "string", "default": "SUPPORT_ADMIN" },
-            "readOnlySupport": { "type": "string", "default": "READ_ONLY_SUPPORT" }
+            "readOnlySupport": {
+              "type": "string",
+              "default": "READ_ONLY_SUPPORT"
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -710,16 +739,34 @@
       "description": "Collaboration services configuration.",
       "properties": {
         "enabled": { "type": "boolean", "default": true },
-        "maxCommentLength": { "type": "integer", "minimum": 100, "maximum": 10000, "default": 5000 },
-        "maxThreadDepth": { "type": "integer", "minimum": 0, "maximum": 10, "default": 5 },
+        "maxCommentLength": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 10000,
+          "default": 5000
+        },
+        "maxThreadDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 5
+        },
         "mentionsEnabled": { "type": "boolean", "default": true },
         "attachmentsEnabled": { "type": "boolean", "default": true },
         "timelineEnabled": { "type": "boolean", "default": true },
         "rateLimits": {
           "type": "object",
           "properties": {
-            "commentsPerMinute": { "type": "integer", "minimum": 1, "default": 10 },
-            "mentionsPerComment": { "type": "integer", "minimum": 1, "default": 20 }
+            "commentsPerMinute": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            },
+            "mentionsPerComment": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 20
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -732,10 +779,22 @@
       "description": "Event sourcing store configuration.",
       "properties": {
         "hotRetentionDays": { "type": "integer", "minimum": 1, "default": 90 },
-        "warmRetentionDays": { "type": "integer", "minimum": 1, "default": 730 },
+        "warmRetentionDays": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 730
+        },
         "coldRetentionYears": { "type": "integer", "minimum": 1, "default": 7 },
-        "snapshotInterval": { "type": "integer", "minimum": 1, "default": 1000 },
-        "crossPartitionStalenessMs": { "type": "integer", "minimum": 1, "default": 5000 },
+        "snapshotInterval": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1000
+        },
+        "crossPartitionStalenessMs": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5000
+        },
         "enableHashChain": { "type": "boolean", "default": true },
         "enablePiiEncryption": { "type": "boolean", "default": true }
       },
@@ -750,15 +809,43 @@
           "type": "object",
           "properties": {
             "zeroApprovalEnabled": { "type": "boolean", "default": false },
-            "maxPipelineSteps": { "type": "integer", "minimum": 1, "default": 12 },
-            "pipelineTimeoutMs": { "type": "integer", "minimum": 1, "default": 60000 },
+            "maxPipelineSteps": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 12
+            },
+            "pipelineTimeoutMs": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 60000
+            },
             "compositeScoring": {
               "type": "object",
               "properties": {
-                "zeroApprovalThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.90 },
-                "standardThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.75 },
-                "enhancedThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.50 },
-                "executiveThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.25 }
+                "zeroApprovalThreshold": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.9
+                },
+                "standardThreshold": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.75
+                },
+                "enhancedThreshold": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5
+                },
+                "executiveThreshold": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.25
+                }
               },
               "additionalProperties": false,
               "default": {}
@@ -770,13 +857,32 @@
         "budget": {
           "type": "object",
           "properties": {
-            "reserveExpiryMinutes": { "type": "integer", "minimum": 1, "default": 1440 },
+            "reserveExpiryMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1440
+            },
             "healthThresholds": {
               "type": "object",
               "properties": {
-                "yellowPct": { "type": "number", "minimum": 0, "maximum": 100, "default": 75 },
-                "redPct": { "type": "number", "minimum": 0, "maximum": 100, "default": 90 },
-                "blackPct": { "type": "number", "minimum": 0, "maximum": 100, "default": 100 }
+                "yellowPct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 75
+                },
+                "redPct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 90
+                },
+                "blackPct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 100
+                }
               },
               "additionalProperties": false,
               "default": {}
@@ -790,8 +896,16 @@
           "type": "object",
           "properties": {
             "autoRenewalEnabled": { "type": "boolean", "default": true },
-            "renewalNoticeBeforeDays": { "type": "integer", "minimum": 1, "default": 30 },
-            "maxScheduleEntries": { "type": "integer", "minimum": 1, "default": 120 }
+            "renewalNoticeBeforeDays": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 30
+            },
+            "maxScheduleEntries": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 120
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -800,7 +914,10 @@
           "type": "object",
           "properties": {
             "autoAccrualEnabled": { "type": "boolean", "default": false },
-            "reconciliationSchedule": { "type": "string", "default": "0 2 * * *" }
+            "reconciliationSchedule": {
+              "type": "string",
+              "default": "0 2 * * *"
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -817,7 +934,10 @@
         "asset": {
           "type": "object",
           "properties": {
-            "depreciationSchedule": { "type": "string", "default": "0 1 1 * *" },
+            "depreciationSchedule": {
+              "type": "string",
+              "default": "0 1 1 * *"
+            },
             "revaluationEnabled": { "type": "boolean", "default": false }
           },
           "additionalProperties": false,
@@ -826,8 +946,14 @@
         "inventory": {
           "type": "object",
           "properties": {
-            "reorderCheckSchedule": { "type": "string", "default": "0 6 * * *" },
-            "valuationRecalcSchedule": { "type": "string", "default": "0 3 1 * *" }
+            "reorderCheckSchedule": {
+              "type": "string",
+              "default": "0 6 * * *"
+            },
+            "valuationRecalcSchedule": {
+              "type": "string",
+              "default": "0 3 1 * *"
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -837,7 +963,11 @@
           "properties": {
             "accrualSchedule": { "type": "string", "default": "0 2 1 * *" },
             "settlementSchedule": { "type": "string", "default": "0 4 15 * *" },
-            "clawbackCheckDays": { "type": "integer", "minimum": 0, "default": 90 }
+            "clawbackCheckDays": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 90
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -845,7 +975,10 @@
         "federation": {
           "type": "object",
           "properties": {
-            "fxRevaluationSchedule": { "type": "string", "default": "0 1 1 * *" },
+            "fxRevaluationSchedule": {
+              "type": "string",
+              "default": "0 1 1 * *"
+            },
             "nettingEnabled": { "type": "boolean", "default": true },
             "nettingSchedule": { "type": "string", "default": "0 3 * * 5" }
           },
@@ -855,7 +988,10 @@
         "production": {
           "type": "object",
           "properties": {
-            "overheadAbsorptionSchedule": { "type": "string", "default": "0 2 1 * *" },
+            "overheadAbsorptionSchedule": {
+              "type": "string",
+              "default": "0 2 1 * *"
+            },
             "varianceAnalysisOnClose": { "type": "boolean", "default": true }
           },
           "additionalProperties": false,
@@ -865,9 +1001,21 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean", "default": false },
-            "autonomousConfidenceThreshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.95 },
-            "defaultReversalWindowMinutes": { "type": "integer", "minimum": 1, "default": 60 },
-            "driftMonitoringSchedule": { "type": "string", "default": "0 4 * * *" }
+            "autonomousConfidenceThreshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.95
+            },
+            "defaultReversalWindowMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 60
+            },
+            "driftMonitoringSchedule": {
+              "type": "string",
+              "default": "0 4 * * *"
+            }
           },
           "additionalProperties": false,
           "default": {}
@@ -886,10 +1034,22 @@
             "twilio": {
               "type": "object",
               "properties": {
-                "accountSidRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for Twilio account SID" },
-                "authTokenRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for Twilio auth token" },
-                "fromNumber": { "type": "string", "description": "Twilio phone number" },
-                "webhookSigningSecretRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for webhook signing secret" },
+                "accountSidRef": {
+                  "type": "string",
+                  "description": "LOCKED — SUPERSTAR env reference for Twilio account SID"
+                },
+                "authTokenRef": {
+                  "type": "string",
+                  "description": "LOCKED — SUPERSTAR env reference for Twilio auth token"
+                },
+                "fromNumber": {
+                  "type": "string",
+                  "description": "Twilio phone number"
+                },
+                "webhookSigningSecretRef": {
+                  "type": "string",
+                  "description": "LOCKED — SUPERSTAR env reference for webhook signing secret"
+                },
                 "enabled": { "type": "boolean", "default": false }
               },
               "additionalProperties": false,
@@ -899,9 +1059,16 @@
               "type": "object",
               "properties": {
                 "enabled": { "type": "boolean", "default": false },
-                "stunServers": { "type": "array", "items": { "type": "string" }, "default": [] },
+                "stunServers": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "default": []
+                },
                 "turnServerUrl": { "type": "string" },
-                "turnCredentialRef": { "type": "string", "description": "LOCKED — SUPERSTAR env reference for TURN credentials" }
+                "turnCredentialRef": {
+                  "type": "string",
+                  "description": "LOCKED — SUPERSTAR env reference for TURN credentials"
+                }
               },
               "additionalProperties": false,
               "default": {}

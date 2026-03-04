@@ -13,47 +13,47 @@ export type AclPrincipalType = "role" | "group" | "user" | "persona";
 export type AclPermission = "view" | "edit";
 
 export interface Dashboard {
-    id: string;
-    tenantId: string | null;
-    code: string;
-    titleKey: string;
-    descriptionKey?: string;
-    moduleCode: string;
-    workbench: Workbench;
-    visibility: DashboardVisibility;
-    icon?: string;
-    sortOrder: number;
-    isHidden: boolean;
-    forkedFromId?: string;
-    ownerId?: string;
-    createdAt: string;
-    createdBy: string;
-    updatedAt?: string;
-    updatedBy?: string;
+  id: string;
+  tenantId: string | null;
+  code: string;
+  titleKey: string;
+  descriptionKey?: string;
+  moduleCode: string;
+  workbench: Workbench;
+  visibility: DashboardVisibility;
+  icon?: string;
+  sortOrder: number;
+  isHidden: boolean;
+  forkedFromId?: string;
+  ownerId?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface DashboardVersion {
-    id: string;
-    tenantId: string | null;
-    dashboardId: string;
-    versionNo: number;
-    status: DashboardVersionStatus;
-    layout: DashboardLayout;
-    publishedAt?: string;
-    publishedBy?: string;
-    createdAt: string;
-    createdBy: string;
+  id: string;
+  tenantId: string | null;
+  dashboardId: string;
+  versionNo: number;
+  status: DashboardVersionStatus;
+  layout: DashboardLayout;
+  publishedAt?: string;
+  publishedBy?: string;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface DashboardAcl {
-    id: string;
-    tenantId: string | null;
-    dashboardId: string;
-    principalType: AclPrincipalType;
-    principalKey: string;
-    permission: AclPermission;
-    createdAt: string;
-    createdBy: string;
+  id: string;
+  tenantId: string | null;
+  dashboardId: string;
+  principalType: AclPrincipalType;
+  principalKey: string;
+  permission: AclPermission;
+  createdAt: string;
+  createdBy: string;
 }
 
 // ─────────────────────────────────────────────
@@ -61,32 +61,32 @@ export interface DashboardAcl {
 // ─────────────────────────────────────────────
 
 export interface DashboardLayout {
-    schema_version: 1;
-    columns: 12;
-    row_height: number;
-    items: LayoutItem[];
+  schema_version: 1;
+  columns: 12;
+  row_height: number;
+  items: LayoutItem[];
 }
 
 export interface LayoutItem {
-    /** Unique widget instance id within this layout */
-    id: string;
-    /** Registered widget type key (e.g. "kpi", "chart", "list") */
-    widget_type: string;
-    /** Widget-specific parameters (validated by WidgetRegistry) */
-    params: Record<string, unknown>;
-    /** Grid placement */
-    grid: GridPosition;
+  /** Unique widget instance id within this layout */
+  id: string;
+  /** Registered widget type key (e.g. "kpi", "chart", "list") */
+  widget_type: string;
+  /** Widget-specific parameters (validated by WidgetRegistry) */
+  params: Record<string, unknown>;
+  /** Grid placement */
+  grid: GridPosition;
 }
 
 export interface GridPosition {
-    /** Column start (0-based, 0–11) */
-    x: number;
-    /** Row start (0-based) */
-    y: number;
-    /** Width in columns (1–12) */
-    w: number;
-    /** Height in row units */
-    h: number;
+  /** Column start (0-based, 0–11) */
+  x: number;
+  /** Row start (0-based) */
+  y: number;
+  /** Width in columns (1–12) */
+  w: number;
+  /** Height in row units */
+  h: number;
 }
 
 // ─────────────────────────────────────────────
@@ -94,25 +94,25 @@ export interface GridPosition {
 // ─────────────────────────────────────────────
 
 export interface DashboardListItem {
-    id: string;
-    code: string;
-    titleKey: string;
-    descriptionKey?: string;
-    moduleCode: string;
-    workbench: Workbench;
-    visibility: DashboardVisibility;
-    icon?: string;
-    sortOrder: number;
-    isHidden: boolean;
-    forkedFromId?: string;
-    permission: AclPermission;
+  id: string;
+  code: string;
+  titleKey: string;
+  descriptionKey?: string;
+  moduleCode: string;
+  workbench: Workbench;
+  visibility: DashboardVisibility;
+  icon?: string;
+  sortOrder: number;
+  isHidden: boolean;
+  forkedFromId?: string;
+  permission: AclPermission;
 }
 
 /** Dashboards grouped by module for sidebar rendering */
 export interface DashboardGroup {
-    moduleCode: string;
-    moduleName: string;
-    dashboards: DashboardListItem[];
+  moduleCode: string;
+  moduleName: string;
+  dashboards: DashboardListItem[];
 }
 
 // ─────────────────────────────────────────────
@@ -120,16 +120,16 @@ export interface DashboardGroup {
 // ─────────────────────────────────────────────
 
 export interface DashboardExport {
-    $schema: "athyper-dashboard-export-v1";
-    exportedAt: string;
-    dashboard: {
-        code: string;
-        titleKey: string;
-        descriptionKey?: string;
-        moduleCode: string;
-        icon?: string;
-    };
-    layout: DashboardLayout;
+  $schema: "athyper-dashboard-export-v1";
+  exportedAt: string;
+  dashboard: {
+    code: string;
+    titleKey: string;
+    descriptionKey?: string;
+    moduleCode: string;
+    icon?: string;
+  };
+  layout: DashboardLayout;
 }
 
 // ─────────────────────────────────────────────
@@ -137,13 +137,13 @@ export interface DashboardExport {
 // ─────────────────────────────────────────────
 
 export interface TemplateItem {
-    id: string;
-    code: string;
-    titleKey: string;
-    descriptionKey?: string;
-    moduleCode: string;
-    icon?: string;
-    widgetCount: number;
+  id: string;
+  code: string;
+  titleKey: string;
+  descriptionKey?: string;
+  moduleCode: string;
+  icon?: string;
+  widgetCount: number;
 }
 
 // ─────────────────────────────────────────────
@@ -151,12 +151,12 @@ export interface TemplateItem {
 // ─────────────────────────────────────────────
 
 export interface DashboardVersionSummary {
-    id: string;
-    versionNo: number;
-    status: DashboardVersionStatus;
-    publishedAt?: string;
-    publishedBy?: string;
-    createdAt: string;
-    createdBy: string;
-    widgetCount: number;
+  id: string;
+  versionNo: number;
+  status: DashboardVersionStatus;
+  publishedAt?: string;
+  publishedBy?: string;
+  createdAt: string;
+  createdBy: string;
+  widgetCount: number;
 }
