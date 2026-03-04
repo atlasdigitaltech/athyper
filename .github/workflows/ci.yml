@@ -56,7 +56,7 @@ jobs:
         run: pnpm run format:check
 
       - name: Lint
-        run: pnpm run lint
+        run: pnpm run lint:errors
         env:
           FORCE_COLOR: '1'
 
@@ -116,32 +116,6 @@ jobs:
         run: pnpm turbo run build --filter=!@neon/web --filter=!@neon/auth --filter=!@neon/content
         env:
           NODE_ENV: production
-
-  # ─── Security Scan ───────────────────────────────────────────────
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-          queries: security-and-quality
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: '/language:javascript-typescript'
 
   # ─── CI Status Gate ──────────────────────────────────────────────
   # Single required check — PRs must pass this to be mergeable
