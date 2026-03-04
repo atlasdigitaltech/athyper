@@ -3,12 +3,14 @@
 // Athyper v2.1 Business Operating Platform
 // =============================================================================
 
-
 import { ok, fail } from "../../shared/engine-base.js";
 import { MovementType, ValuationMethod } from "../domain/types.js";
 import { getValuationCalculator } from "../domain/valuation.js";
 
-import type { ServiceResult, OperationContext } from "../../shared/engine-base.js";
+import type {
+  ServiceResult,
+  OperationContext,
+} from "../../shared/engine-base.js";
 import type {
   InventoryMovement,
   InventoryBalance,
@@ -129,7 +131,11 @@ export class DefaultInventoryService implements InventoryService {
     }
 
     // Validate lot/serial tracking requirements
-    const trackingError = this.validateTracking(item, input.lotNumber, input.serialNumber);
+    const trackingError = this.validateTracking(
+      item,
+      input.lotNumber,
+      input.serialNumber,
+    );
     if (trackingError) {
       return trackingError;
     }
@@ -234,7 +240,11 @@ export class DefaultInventoryService implements InventoryService {
     }
 
     // Validate tracking
-    const trackingError = this.validateTracking(item, input.lotNumber, input.serialNumber);
+    const trackingError = this.validateTracking(
+      item,
+      input.lotNumber,
+      input.serialNumber,
+    );
     if (trackingError) {
       return trackingError;
     }
@@ -336,13 +346,22 @@ export class DefaultInventoryService implements InventoryService {
     ]);
 
     if (!sourceWh || !sourceWh.isActive) {
-      return fail("SOURCE_WAREHOUSE_NOT_FOUND", "Source warehouse not found or inactive");
+      return fail(
+        "SOURCE_WAREHOUSE_NOT_FOUND",
+        "Source warehouse not found or inactive",
+      );
     }
     if (!destWh || !destWh.isActive) {
-      return fail("DEST_WAREHOUSE_NOT_FOUND", "Destination warehouse not found or inactive");
+      return fail(
+        "DEST_WAREHOUSE_NOT_FOUND",
+        "Destination warehouse not found or inactive",
+      );
     }
     if (input.sourceWarehouseId === input.destWarehouseId) {
-      return fail("SAME_WAREHOUSE", "Source and destination warehouse must differ");
+      return fail(
+        "SAME_WAREHOUSE",
+        "Source and destination warehouse must differ",
+      );
     }
 
     // Validate item master
@@ -623,10 +642,16 @@ export class DefaultInventoryService implements InventoryService {
     serialNumber?: string | null,
   ): ServiceResult<never> | null {
     if (item.lotTracking && !lotNumber) {
-      return fail("LOT_REQUIRED", "Item requires lot tracking but no lot number provided");
+      return fail(
+        "LOT_REQUIRED",
+        "Item requires lot tracking but no lot number provided",
+      );
     }
     if (item.serialTracking && !serialNumber) {
-      return fail("SERIAL_REQUIRED", "Item requires serial tracking but no serial number provided");
+      return fail(
+        "SERIAL_REQUIRED",
+        "Item requires serial tracking but no serial number provided",
+      );
     }
     return null;
   }
@@ -647,8 +672,12 @@ export class DefaultInventoryService implements InventoryService {
       return item.standardCost ?? receiptUnitCost;
     }
 
-    if (item.valuationMethod === ValuationMethod.WEIGHTED_AVG && currentBalance) {
-      const existingValue = currentBalance.quantityOnHand * currentBalance.unitCost;
+    if (
+      item.valuationMethod === ValuationMethod.WEIGHTED_AVG &&
+      currentBalance
+    ) {
+      const existingValue =
+        currentBalance.quantityOnHand * currentBalance.unitCost;
       const incomingValue = receiptQty * receiptUnitCost;
       const totalQty = currentBalance.quantityOnHand + receiptQty;
       if (totalQty === 0) return 0;

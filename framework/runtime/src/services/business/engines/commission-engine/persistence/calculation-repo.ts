@@ -26,10 +26,19 @@ export interface CommissionCalculationRepo {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<CommissionCalculation[]>;
-  findByTransaction(tenantId: string, txnId: string): Promise<CommissionCalculation[]>;
-  findByDocument(tenantId: string, docId: string): Promise<CommissionCalculation[]>;
+  findByTransaction(
+    tenantId: string,
+    txnId: string,
+  ): Promise<CommissionCalculation[]>;
+  findByDocument(
+    tenantId: string,
+    docId: string,
+  ): Promise<CommissionCalculation[]>;
   create(input: CreateCalculationRow): Promise<CommissionCalculation>;
-  updateStatus(id: string, update: UpdateCalculationStatus): Promise<CommissionCalculation>;
+  updateStatus(
+    id: string,
+    update: UpdateCalculationStatus,
+  ): Promise<CommissionCalculation>;
 }
 
 export interface CreateCalculationRow {

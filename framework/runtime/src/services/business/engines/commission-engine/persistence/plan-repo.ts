@@ -17,8 +17,15 @@ import type {
 
 export interface CommissionPlanRepo {
   findById(id: string): Promise<CommissionPlan | null>;
-  findByCode(tenantId: string, entityCode: string, code: string): Promise<CommissionPlan | null>;
-  findActivePlans(tenantId: string, entityCode: string): Promise<CommissionPlan[]>;
+  findByCode(
+    tenantId: string,
+    entityCode: string,
+    code: string,
+  ): Promise<CommissionPlan | null>;
+  findActivePlans(
+    tenantId: string,
+    entityCode: string,
+  ): Promise<CommissionPlan[]>;
   findEffectivePlan(
     tenantId: string,
     entityCode: string,

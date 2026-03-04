@@ -4,29 +4,29 @@ import type { Container } from "../../../../kernel/container.js";
 import type { RuntimeModule } from "../../../types.js";
 
 export const taxEngineModule: RuntimeModule = {
-    name: "engine.tax",
+  name: "engine.tax",
 
-    register(c: Container) {
-        // Register tax repositories and services
-    },
+  register(c: Container) {
+    // Register tax repositories and services
+  },
 
-    contribute(c: Container) {
-        // Register health checks
-    },
+  contribute(c: Container) {
+    // Register health checks
+  },
 };
 
 // Re-export domain types
 export type {
-    TaxJurisdiction,
-    CreateTaxJurisdictionInput,
-    JurisdictionType,
-    TaxType,
-    TaxRate,
-    CreateTaxRateInput,
-    TaxCalculation,
-    CalculateTaxInput,
-    TaxCalculationResult,
-    TaxCreditLedger,
+  TaxJurisdiction,
+  CreateTaxJurisdictionInput,
+  JurisdictionType,
+  TaxType,
+  TaxRate,
+  CreateTaxRateInput,
+  TaxCalculation,
+  CalculateTaxInput,
+  TaxCalculationResult,
+  TaxCreditLedger,
 } from "./domain/types.js";
 
 // Re-export services

@@ -5,8 +5,7 @@
  */
 
 import type { Container } from "../../../../../kernel/container.js";
-import type { StatementStatus , CommissionStatement } from "../domain/types.js";
-
+import type { StatementStatus, CommissionStatement } from "../domain/types.js";
 
 // ---------------------------------------------------------------------------
 // Interface
@@ -29,8 +28,14 @@ export interface CommissionStatementRepo {
     status: StatementStatus,
   ): Promise<CommissionStatement[]>;
   create(input: CreateStatementRow): Promise<CommissionStatement>;
-  updateStatus(id: string, status: StatementStatus): Promise<CommissionStatement>;
-  updateTotals(id: string, totals: UpdateStatementTotals): Promise<CommissionStatement>;
+  updateStatus(
+    id: string,
+    status: StatementStatus,
+  ): Promise<CommissionStatement>;
+  updateTotals(
+    id: string,
+    totals: UpdateStatementTotals,
+  ): Promise<CommissionStatement>;
 }
 
 export interface CreateStatementRow {

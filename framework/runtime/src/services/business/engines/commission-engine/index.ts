@@ -5,7 +5,6 @@
  * and re-exports public types.
  */
 
-
 import { DefaultCommissionAssignmentRepo } from "./persistence/assignment-repo.js";
 import { DefaultCommissionCalculationRepo } from "./persistence/calculation-repo.js";
 import { DefaultCommissionPlanRepo } from "./persistence/plan-repo.js";
@@ -63,10 +62,17 @@ export const commissionEngineModule: RuntimeModule = {
       "commissionService",
       async () =>
         new DefaultCommissionService(container, {
-          planRepo: await container.resolve<CommissionPlanRepo>("commissionPlanRepo"),
-          assignmentRepo: await container.resolve<CommissionAssignmentRepo>("commissionAssignmentRepo"),
-          calculationRepo: await container.resolve<CommissionCalculationRepo>("commissionCalculationRepo"),
-          statementRepo: await container.resolve<CommissionStatementRepo>("commissionStatementRepo"),
+          planRepo:
+            await container.resolve<CommissionPlanRepo>("commissionPlanRepo"),
+          assignmentRepo: await container.resolve<CommissionAssignmentRepo>(
+            "commissionAssignmentRepo",
+          ),
+          calculationRepo: await container.resolve<CommissionCalculationRepo>(
+            "commissionCalculationRepo",
+          ),
+          statementRepo: await container.resolve<CommissionStatementRepo>(
+            "commissionStatementRepo",
+          ),
         }),
     );
   },

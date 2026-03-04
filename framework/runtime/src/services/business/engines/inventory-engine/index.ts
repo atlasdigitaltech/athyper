@@ -87,7 +87,6 @@ export const inventoryEngineModule: RuntimeModule = {
     // Concrete repository implementations (backed by the DB adapter) are
     // provided by the platform wiring layer; this module declares the
     // contracts and default service implementation.
-
     // Example registration (uncomment when concrete repos are available):
     // container.register("inventoryService", () => {
     //   const warehouseRepo = container.resolve<WarehouseRepository>("warehouseRepository");

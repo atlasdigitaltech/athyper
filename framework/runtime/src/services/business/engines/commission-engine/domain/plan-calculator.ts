@@ -8,10 +8,7 @@
 
 import { PlanType } from "./types.js";
 
-import type {
-  CommissionPlan,
-  CalculationResult,
-} from "./types.js";
+import type { CommissionPlan, CalculationResult } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Public entry point

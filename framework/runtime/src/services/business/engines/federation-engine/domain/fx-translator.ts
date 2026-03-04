@@ -3,42 +3,38 @@
 // MC-4 compliance: All arithmetic uses BigInt via shared/money.
 // No parseFloat / toFixed anywhere in this module.
 
-import type { FxRate, FxRateType } from "./types.js";
 import {
-    multiplyAmounts,
-    subtractAmounts,
-    toScaledBigInt,
-    fromScaledBigInt,
-    compareAmounts,
+  multiplyAmounts,
+  subtractAmounts,
+  toScaledBigInt,
+  fromScaledBigInt,
+  compareAmounts,
 } from "../../shared/money.js";
+
+import type { FxRate, FxRateType } from "./types.js";
 
 /**
  * Translate an amount from one currency to another using an FX rate.
  * MC-4 compliant: uses multiplyAmounts instead of parseFloat multiplication.
  */
-export function translateAmount(
-    amount: string,
-    rate: string,
-): string {
-    return multiplyAmounts(amount, rate);
+export function translateAmount(amount: string, rate: string): string {
+  return multiplyAmounts(amount, rate);
 }
 
 /**
  * Translate amount using inverse rate (for reverse direction).
  * MC-4 compliant: uses BigInt division instead of parseFloat division.
  */
-export function translateAmountInverse(
-    amount: string,
-    rate: string,
-): string {
-    if (compareAmounts(rate, "0") === 0) throw new Error("FX rate cannot be zero");
-    const precision = 4;
-    const amtScaled = toScaledBigInt(amount, precision);
-    const rateScaled = toScaledBigInt(rate, precision);
-    const factor = 10n ** BigInt(precision);
-    // (amount / rate) at precision: (amtScaled * factor) / rateScaled
-    const rawResult = (amtScaled * factor) / rateScaled;
-    return fromScaledBigInt(rawResult, precision);
+export function translateAmountInverse(amount: string, rate: string): string {
+  if (compareAmounts(rate, "0") === 0)
+    throw new Error("FX rate cannot be zero");
+  const precision = 4;
+  const amtScaled = toScaledBigInt(amount, precision);
+  const rateScaled = toScaledBigInt(rate, precision);
+  const factor = 10n ** BigInt(precision);
+  // (amount / rate) at precision: (amtScaled * factor) / rateScaled
+  const rawResult = (amtScaled * factor) / rateScaled;
+  return fromScaledBigInt(rawResult, precision);
 }
 
 /**
@@ -46,10 +42,10 @@ export function translateAmountInverse(
  * MC-4 compliant: uses subtractAmounts instead of parseFloat subtraction.
  */
 export function calculateUnrealizedGainLoss(
-    originalFunctionalAmount: string,
-    revaluedFunctionalAmount: string,
+  originalFunctionalAmount: string,
+  revaluedFunctionalAmount: string,
 ): string {
-    return subtractAmounts(revaluedFunctionalAmount, originalFunctionalAmount);
+  return subtractAmounts(revaluedFunctionalAmount, originalFunctionalAmount);
 }
 
 /**
@@ -57,16 +53,16 @@ export function calculateUnrealizedGainLoss(
  * Priority: exact date match > most recent before date.
  */
 export function selectRate(
-    rates: FxRate[],
-    rateType: FxRateType,
-    asOfDate: Date,
+  rates: FxRate[],
+  rateType: FxRateType,
+  asOfDate: Date,
 ): FxRate | null {
-    const matching = rates
-        .filter((r) => r.rateType === rateType)
-        .filter((r) => r.effectiveDate <= asOfDate)
-        .sort((a, b) => b.effectiveDate.getTime() - a.effectiveDate.getTime());
+  const matching = rates
+    .filter((r) => r.rateType === rateType)
+    .filter((r) => r.effectiveDate <= asOfDate)
+    .sort((a, b) => b.effectiveDate.getTime() - a.effectiveDate.getTime());
 
-    return matching[0] ?? null;
+  return matching[0] ?? null;
 }
 
 /**
@@ -74,8 +70,8 @@ export function selectRate(
  * MC-4 compliant: uses multiplyAmounts with higher precision for rate chaining.
  */
 export function triangulateRate(
-    rateAtoUsd: string,
-    rateUsdToB: string,
+  rateAtoUsd: string,
+  rateUsdToB: string,
 ): string {
-    return multiplyAmounts(rateAtoUsd, rateUsdToB, 10);
+  return multiplyAmounts(rateAtoUsd, rateUsdToB, 10);
 }

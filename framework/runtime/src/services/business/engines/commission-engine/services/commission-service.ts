@@ -95,11 +95,17 @@ export class DefaultCommissionService implements CommissionService {
     // 1. Load the plan
     const plan = await this.planRepo.findById(input.planId);
     if (!plan) {
-      return fail("COMMISSION_PLAN_NOT_FOUND", `Plan ${input.planId} not found`);
+      return fail(
+        "COMMISSION_PLAN_NOT_FOUND",
+        `Plan ${input.planId} not found`,
+      );
     }
 
     if (!plan.isActive) {
-      return fail("COMMISSION_PLAN_INACTIVE", `Plan ${plan.code} is not active`);
+      return fail(
+        "COMMISSION_PLAN_INACTIVE",
+        `Plan ${plan.code} is not active`,
+      );
     }
 
     // 2. Verify plan is effective as of today
@@ -139,7 +145,8 @@ export class DefaultCommissionService implements CommissionService {
 
     // 5. Apply split percentage
     const adjustedAmount =
-      Math.round(result.commissionAmount * (splitPctNum / 100) * 10_000) / 10_000;
+      Math.round(result.commissionAmount * (splitPctNum / 100) * 10_000) /
+      10_000;
 
     // 6. Persist the calculation record
     const calculation = await this.calculationRepo.create({
