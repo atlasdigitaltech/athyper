@@ -56,7 +56,7 @@ export class MetaCompilerService implements MetaCompiler {
 
   constructor(
     private readonly registry: MetaRegistry,
-    private readonly config: CompilerConfig
+    private readonly config: CompilerConfig,
   ) {
     this.cacheTTL = config.cacheTTL ?? 3600; // 1 hour default
     this.enableCache = config.enableCache ?? true;
@@ -71,10 +71,7 @@ export class MetaCompilerService implements MetaCompiler {
   // Compilation
   // =========================================================================
 
-  async compile(
-    entityName: string,
-    version: string
-  ): Promise<CompiledModel> {
+  async compile(entityName: string, version: string): Promise<CompiledModel> {
     return withSpan(
       META_SPANS.COMPILE,
       { "meta.entity": entityName, "meta.version": version },
@@ -87,7 +84,9 @@ export class MetaCompilerService implements MetaCompiler {
           if (cached) {
             span.setAttribute("meta.cache_hit", true);
             this.metrics?.cacheHit({ entity: entityName });
-            this.metrics?.compilationLatency(Date.now() - start, { entity: entityName });
+            this.metrics?.compilationLatency(Date.now() - start, {
+              entity: entityName,
+            });
             return cached;
           }
           span.setAttribute("meta.cache_hit", false);
@@ -96,16 +95,15 @@ export class MetaCompilerService implements MetaCompiler {
 
         // Not in cache, compile and cache
         const result = await this.compileAndCache(entityName, version);
-        this.metrics?.compilationLatency(Date.now() - start, { entity: entityName });
+        this.metrics?.compilationLatency(Date.now() - start, {
+          entity: entityName,
+        });
         return result;
       },
     );
   }
 
-  async recompile(
-    entityName: string,
-    version: string
-  ): Promise<CompiledModel> {
+  async recompile(entityName: string, version: string): Promise<CompiledModel> {
     // Invalidate cache first
     await this.invalidateCache(entityName, version);
 
@@ -274,17 +272,14 @@ export class MetaCompilerService implements MetaCompiler {
     };
   }
 
-  async invalidateCache(
-    entityName: string,
-    version: string
-  ): Promise<void> {
+  async invalidateCache(entityName: string, version: string): Promise<void> {
     const cacheKey = this.getCacheKey(entityName, version);
     await this.config.cache.del(cacheKey);
   }
 
   async getCached(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<CompiledModel | undefined> {
     if (!this.enableCache) {
       return undefined;
@@ -313,7 +308,9 @@ export class MetaCompilerService implements MetaCompiler {
         policy.compiledAt = new Date(policy.compiledAt);
 
         // Find original policy definition to get conditions
-        const policyDef = policyDefinitions.find((p: any) => p.name === policy.name);
+        const policyDef = policyDefinitions.find(
+          (p: any) => p.name === policy.name,
+        );
 
         // Restore evaluate function with condition support
         policy.evaluate = (ctx: any, record?: any) => {
@@ -330,9 +327,13 @@ export class MetaCompilerService implements MetaCompiler {
           }
 
           // Evaluate conditions (AND logic - all must pass)
-          if (policyDef && policyDef.conditions && policyDef.conditions.length > 0) {
+          if (
+            policyDef &&
+            policyDef.conditions &&
+            policyDef.conditions.length > 0
+          ) {
             return policyDef.conditions.every((condition: PolicyCondition) =>
-              this.evaluateCondition(condition, ctx, record)
+              this.evaluateCondition(condition, ctx, record),
             );
           }
 
@@ -360,15 +361,12 @@ export class MetaCompilerService implements MetaCompiler {
     for (const entity of entities) {
       if (entity.activeVersion) {
         try {
-          const model = await this.compile(
-            entity.name,
-            entity.activeVersion
-          );
+          const model = await this.compile(entity.name, entity.activeVersion);
           compiled.push(model);
         } catch (error) {
           console.error(
             `Failed to precompile ${entity.name}@${entity.activeVersion}:`,
-            error
+            error,
           );
         }
       }
@@ -427,7 +425,7 @@ export class MetaCompilerService implements MetaCompiler {
    */
   private validateSystemFields(
     schema: EntitySchema,
-    errors: ValidationError[]
+    errors: ValidationError[],
   ): void {
     const requiredFields = [
       { name: "id", type: "uuid", primaryKey: true },
@@ -488,29 +486,24 @@ export class MetaCompilerService implements MetaCompiler {
 
   private async compileAndCache(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<CompiledModel> {
     // Phase 9.3: Start performance measurement
     const startTime = performance.now();
 
     try {
       // Get version from registry
-      const entityVersion = await this.registry.getVersion(
-        entityName,
-        version
-      );
+      const entityVersion = await this.registry.getVersion(entityName, version);
 
       if (!entityVersion) {
-        throw new Error(
-          `Entity version not found: ${entityName}@${version}`
-        );
+        throw new Error(`Entity version not found: ${entityName}@${version}`);
       }
 
       // Validate schema
       const validation = await this.validate(entityVersion.schema);
       if (!validation.valid) {
         throw new Error(
-          `Schema validation failed: ${JSON.stringify(validation.errors)}`
+          `Schema validation failed: ${JSON.stringify(validation.errors)}`,
         );
       }
 
@@ -520,7 +513,7 @@ export class MetaCompilerService implements MetaCompiler {
         entityName,
         version,
         entityVersion.schema,
-        entityVersion.createdBy
+        entityVersion.createdBy,
       );
       const compileDuration = performance.now() - compileStart;
 
@@ -538,11 +531,11 @@ export class MetaCompilerService implements MetaCompiler {
             version,
             errors,
             duration_ms: compileDuration,
-          })
+          }),
         );
 
         throw new Error(
-          `Compilation failed with ${errors.length} error(s): ${errors.join("; ")}`
+          `Compilation failed with ${errors.length} error(s): ${errors.join("; ")}`,
         );
       }
 
@@ -557,7 +550,7 @@ export class MetaCompilerService implements MetaCompiler {
         await this.config.cache.setex(
           cacheKey,
           this.cacheTTL,
-          JSON.stringify(cacheData)
+          JSON.stringify(cacheData),
         );
         const cacheSetDuration = performance.now() - cacheSetStart;
 
@@ -568,14 +561,16 @@ export class MetaCompilerService implements MetaCompiler {
             entity: entityName,
             version,
             cache_duration_ms: cacheSetDuration,
-          })
+          }),
         );
       }
 
       // Phase 9.3: Log compilation success metrics
       const totalDuration = performance.now() - startTime;
-      const warnCount = compiled.diagnostics?.filter((d) => d.severity === "WARN").length || 0;
-      const infoCount = compiled.diagnostics?.filter((d) => d.severity === "INFO").length || 0;
+      const warnCount =
+        compiled.diagnostics?.filter((d) => d.severity === "WARN").length || 0;
+      const infoCount =
+        compiled.diagnostics?.filter((d) => d.severity === "INFO").length || 0;
 
       console.log(
         JSON.stringify({
@@ -591,7 +586,7 @@ export class MetaCompilerService implements MetaCompiler {
             warnings: warnCount,
             info: infoCount,
           },
-        })
+        }),
       );
 
       return compiled;
@@ -605,7 +600,7 @@ export class MetaCompilerService implements MetaCompiler {
           version,
           duration_ms: totalDuration,
           error: String(error),
-        })
+        }),
       );
 
       throw error;
@@ -616,29 +611,27 @@ export class MetaCompilerService implements MetaCompiler {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    compiledBy: string
+    compiledBy: string,
   ): CompiledModel {
     // Phase 9.1: Compute input hash (stable hash of all inputs)
     const inputHash = this.computeInputHash(entityName, version, schema);
 
     // Compile fields
     const compiledFields = schema.fields.map((field) =>
-      this.compileField(field)
+      this.compileField(field),
     );
 
     // Compile policies
     const compiledPolicies = (schema.policies ?? []).map((policy) =>
-      this.compilePolicy(policy)
+      this.compilePolicy(policy),
     );
 
     // Build query fragments
     const tableName = this.getTableName(entityName);
-    const selectFragment = compiledFields
-      .map((f) => f.selectAs)
-      .join(", ");
+    const selectFragment = compiledFields.map((f) => f.selectAs).join(", ");
     const fromFragment = `"${tableName}"`;
     const tenantFilterFragment =
-      'tenant_id = $tenant_id AND realm_id = $realm_id';
+      "tenant_id = $tenant_id AND realm_id = $realm_id";
 
     // Calculate schema hash (legacy, kept for backward compatibility)
     const hash = this.calculateHash(schema);
@@ -650,9 +643,7 @@ export class MetaCompilerService implements MetaCompiler {
         indexes.push(`idx_${tableName}_${this.toSnakeCase(field.name)}`);
       }
       if (field.unique) {
-        indexes.push(
-          `uniq_${tableName}_${this.toSnakeCase(field.name)}`
-        );
+        indexes.push(`uniq_${tableName}_${this.toSnakeCase(field.name)}`);
       }
     }
 
@@ -740,7 +731,7 @@ export class MetaCompilerService implements MetaCompiler {
         // Evaluate conditions (AND logic - all must pass)
         if (policy.conditions && policy.conditions.length > 0) {
           return policy.conditions.every((condition) =>
-            this.evaluateCondition(condition, ctx, record)
+            this.evaluateCondition(condition, ctx, record),
           );
         }
 
@@ -760,7 +751,7 @@ export class MetaCompilerService implements MetaCompiler {
   private evaluateCondition(
     condition: PolicyCondition,
     ctx: any,
-    record?: any
+    record?: any,
   ): boolean {
     // Extract the actual value from the field path
     const actualValue = this.extractValue(condition.field, ctx, record);
@@ -803,7 +794,10 @@ export class MetaCompilerService implements MetaCompiler {
         return actualValue <= conditionValue;
 
       case "contains":
-        if (typeof actualValue === "string" && typeof conditionValue === "string") {
+        if (
+          typeof actualValue === "string" &&
+          typeof conditionValue === "string"
+        ) {
           return actualValue.includes(conditionValue);
         }
         if (Array.isArray(actualValue)) {
@@ -812,13 +806,19 @@ export class MetaCompilerService implements MetaCompiler {
         return false;
 
       case "starts_with":
-        if (typeof actualValue === "string" && typeof conditionValue === "string") {
+        if (
+          typeof actualValue === "string" &&
+          typeof conditionValue === "string"
+        ) {
           return actualValue.startsWith(conditionValue);
         }
         return false;
 
       case "ends_with":
-        if (typeof actualValue === "string" && typeof conditionValue === "string") {
+        if (
+          typeof actualValue === "string" &&
+          typeof conditionValue === "string"
+        ) {
           return actualValue.endsWith(conditionValue);
         }
         return false;
@@ -832,11 +832,7 @@ export class MetaCompilerService implements MetaCompiler {
   /**
    * Extract value from a field path like "ctx.roles" or "record.status"
    */
-  private extractValue(
-    field: string,
-    ctx: any,
-    record?: any
-  ): any {
+  private extractValue(field: string, ctx: any, record?: any): any {
     // Split field path by dots
     const parts = field.split(".");
 
@@ -897,7 +893,7 @@ export class MetaCompilerService implements MetaCompiler {
   private computeInputHash(
     entityName: string,
     version: string,
-    schema: EntitySchema
+    schema: EntitySchema,
   ): string {
     const inputs = {
       entityName,
@@ -965,38 +961,71 @@ export class MetaCompilerService implements MetaCompiler {
    */
   private collectDiagnostics(
     schema: EntitySchema,
-    _compiledFields: CompiledField[]
+    _compiledFields: CompiledField[],
   ): CompileDiagnostic[] {
     const diagnostics: CompileDiagnostic[] = [];
 
     // Check fields
     for (const field of schema.fields || []) {
       // ERROR: Unknown data type
-      const validTypes = ["string", "number", "boolean", "date", "datetime", "reference", "enum", "json", "uuid"];
+      const validTypes = [
+        "string",
+        "number",
+        "boolean",
+        "date",
+        "datetime",
+        "reference",
+        "enum",
+        "json",
+        "uuid",
+      ];
       if (!validTypes.includes(field.type)) {
         diagnostics.push(
-          this.createDiagnostic("ERROR", "unknown_data_type", `Unknown data type '${field.type}' for field '${field.name}'`, field.name)
+          this.createDiagnostic(
+            "ERROR",
+            "unknown_data_type",
+            `Unknown data type '${field.type}' for field '${field.name}'`,
+            field.name,
+          ),
         );
       }
 
       // ERROR: Enum without values
-      if (field.type === "enum" && (!field.enumValues || field.enumValues.length === 0)) {
+      if (
+        field.type === "enum" &&
+        (!field.enumValues || field.enumValues.length === 0)
+      ) {
         diagnostics.push(
-          this.createDiagnostic("ERROR", "enum_no_values", `Enum field '${field.name}' has no enum values defined`, field.name)
+          this.createDiagnostic(
+            "ERROR",
+            "enum_no_values",
+            `Enum field '${field.name}' has no enum values defined`,
+            field.name,
+          ),
         );
       }
 
       // ERROR: Reference without referenceTo
       if (field.type === "reference" && !field.referenceTo) {
         diagnostics.push(
-          this.createDiagnostic("ERROR", "reference_no_target", `Reference field '${field.name}' missing referenceTo`, field.name)
+          this.createDiagnostic(
+            "ERROR",
+            "reference_no_target",
+            `Reference field '${field.name}' missing referenceTo`,
+            field.name,
+          ),
         );
       }
 
       // WARN: Required field without default value (informational)
       if (field.required && !field.defaultValue) {
         diagnostics.push(
-          this.createDiagnostic("INFO", "required_no_default", `Required field '${field.name}' has no default value`, field.name)
+          this.createDiagnostic(
+            "INFO",
+            "required_no_default",
+            `Required field '${field.name}' has no default value`,
+            field.name,
+          ),
         );
       }
 
@@ -1005,7 +1034,12 @@ export class MetaCompilerService implements MetaCompiler {
       // For now, just log intent
       if (field.indexed) {
         diagnostics.push(
-          this.createDiagnostic("INFO", "field_indexed", `Field '${field.name}' will be indexed`, field.name)
+          this.createDiagnostic(
+            "INFO",
+            "field_indexed",
+            `Field '${field.name}' will be indexed`,
+            field.name,
+          ),
         );
       }
     }
@@ -1015,17 +1049,33 @@ export class MetaCompilerService implements MetaCompiler {
       // WARN: Policy with no conditions (always applies)
       if (!policy.conditions || policy.conditions.length === 0) {
         diagnostics.push(
-          this.createDiagnostic("INFO", "policy_no_conditions", `Policy '${policy.name}' has no conditions (always applies)`, undefined, { policy: policy.name })
+          this.createDiagnostic(
+            "INFO",
+            "policy_no_conditions",
+            `Policy '${policy.name}' has no conditions (always applies)`,
+            undefined,
+            { policy: policy.name },
+          ),
         );
       }
 
       // ERROR: Field-level policy references non-existent field
-      if (policy.fields && policy.fields.length > 0 && !policy.fields.includes("*")) {
+      if (
+        policy.fields &&
+        policy.fields.length > 0 &&
+        !policy.fields.includes("*")
+      ) {
         for (const fieldName of policy.fields) {
           const fieldExists = schema.fields.some((f) => f.name === fieldName);
           if (!fieldExists) {
             diagnostics.push(
-              this.createDiagnostic("ERROR", "policy_unknown_field", `Policy '${policy.name}' references unknown field '${fieldName}'`, undefined, { policy: policy.name, field: fieldName })
+              this.createDiagnostic(
+                "ERROR",
+                "policy_unknown_field",
+                `Policy '${policy.name}' references unknown field '${fieldName}'`,
+                undefined,
+                { policy: policy.name, field: fieldName },
+              ),
             );
           }
         }
@@ -1043,7 +1093,7 @@ export class MetaCompilerService implements MetaCompiler {
     code: string,
     message: string,
     field?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): CompileDiagnostic {
     return {
       severity,
@@ -1077,7 +1127,7 @@ export class MetaCompilerService implements MetaCompiler {
   async compileWithOverlays(
     entityName: string,
     version: string,
-    overlaySet: OverlaySet
+    overlaySet: OverlaySet,
   ): Promise<CompiledModelWithOverlays> {
     // 1. Get base entity version
     const entityVersion = await this.registry.getVersion(entityName, version);
@@ -1106,11 +1156,14 @@ export class MetaCompilerService implements MetaCompiler {
       entityName,
       version,
       modifiedSchema,
-      entityVersion.createdBy
+      entityVersion.createdBy,
     );
 
     // 5. Compute unique hash for this overlay combination
-    const overlaySetHash = this.computeOverlaySetHash(overlaySet, compiled.outputHash || "");
+    const overlaySetHash = this.computeOverlaySetHash(
+      overlaySet,
+      compiled.outputHash || "",
+    );
 
     return {
       model: compiled,
@@ -1131,7 +1184,7 @@ export class MetaCompilerService implements MetaCompiler {
    */
   private applyOverlays(
     baseSchema: EntitySchema,
-    changes: OverlayChange[]
+    changes: OverlayChange[],
   ): EntitySchema {
     // Deep clone base schema to avoid mutations
     const modifiedSchema: EntitySchema = {
@@ -1161,7 +1214,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "unsupported_overlay_change",
               change_kind: change.changeKind,
               overlay_id: change.overlayId,
-            })
+            }),
           );
       }
     }
@@ -1175,14 +1228,16 @@ export class MetaCompilerService implements MetaCompiler {
    */
   private applyAddField(schema: EntitySchema, change: OverlayChange): void {
     const fieldDef = change.changeJson as FieldDefinition;
-    const existingIndex = schema.fields.findIndex((f) => f.name === fieldDef.name);
+    const existingIndex = schema.fields.findIndex(
+      (f) => f.name === fieldDef.name,
+    );
 
     if (existingIndex !== -1) {
       // Field already exists - handle conflict
       switch (change.conflictMode) {
         case "fail":
           throw new Error(
-            `Overlay conflict: Field '${fieldDef.name}' already exists (overlay: ${change.overlayId}, mode: fail)`
+            `Overlay conflict: Field '${fieldDef.name}' already exists (overlay: ${change.overlayId}, mode: fail)`,
           );
         case "overwrite":
           schema.fields[existingIndex] = fieldDef;
@@ -1191,7 +1246,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "overlay_field_overwritten",
               field: fieldDef.name,
               overlay_id: change.overlayId,
-            })
+            }),
           );
           break;
         case "merge":
@@ -1205,7 +1260,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "overlay_field_merged",
               field: fieldDef.name,
               overlay_id: change.overlayId,
-            })
+            }),
           );
           break;
       }
@@ -1217,7 +1272,7 @@ export class MetaCompilerService implements MetaCompiler {
           msg: "overlay_field_added",
           field: fieldDef.name,
           overlay_id: change.overlayId,
-        })
+        }),
       );
     }
   }
@@ -1236,7 +1291,7 @@ export class MetaCompilerService implements MetaCompiler {
       switch (change.conflictMode) {
         case "fail":
           throw new Error(
-            `Overlay conflict: Field '${fieldName}' does not exist (overlay: ${change.overlayId}, mode: fail)`
+            `Overlay conflict: Field '${fieldName}' does not exist (overlay: ${change.overlayId}, mode: fail)`,
           );
         case "overwrite":
         case "merge":
@@ -1247,7 +1302,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "overlay_field_created_from_modify",
               field: fieldName,
               overlay_id: change.overlayId,
-            })
+            }),
           );
           break;
       }
@@ -1262,7 +1317,7 @@ export class MetaCompilerService implements MetaCompiler {
           msg: "overlay_field_modified",
           field: fieldName,
           overlay_id: change.overlayId,
-        })
+        }),
       );
     }
   }
@@ -1279,7 +1334,7 @@ export class MetaCompilerService implements MetaCompiler {
       // Field doesn't exist
       if (change.conflictMode === "fail") {
         throw new Error(
-          `Overlay conflict: Cannot remove non-existent field '${fieldName}' (overlay: ${change.overlayId}, mode: fail)`
+          `Overlay conflict: Cannot remove non-existent field '${fieldName}' (overlay: ${change.overlayId}, mode: fail)`,
         );
       }
       // For overwrite and merge modes, silently skip if field doesn't exist
@@ -1289,7 +1344,7 @@ export class MetaCompilerService implements MetaCompiler {
           field: fieldName,
           overlay_id: change.overlayId,
           reason: "field_not_found",
-        })
+        }),
       );
     } else {
       // Remove field
@@ -1299,7 +1354,7 @@ export class MetaCompilerService implements MetaCompiler {
           msg: "overlay_field_removed",
           field: fieldName,
           overlay_id: change.overlayId,
-        })
+        }),
       );
     }
   }
@@ -1314,14 +1369,16 @@ export class MetaCompilerService implements MetaCompiler {
       schema.policies = [];
     }
 
-    const existingIndex = schema.policies.findIndex((p) => p.name === policyDef.name);
+    const existingIndex = schema.policies.findIndex(
+      (p) => p.name === policyDef.name,
+    );
 
     if (existingIndex !== -1) {
       // Policy exists - handle conflict
       switch (change.conflictMode) {
         case "fail":
           throw new Error(
-            `Overlay conflict: Policy '${policyDef.name}' already exists (overlay: ${change.overlayId}, mode: fail)`
+            `Overlay conflict: Policy '${policyDef.name}' already exists (overlay: ${change.overlayId}, mode: fail)`,
           );
         case "overwrite":
           schema.policies[existingIndex] = policyDef;
@@ -1330,7 +1387,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "overlay_policy_overwritten",
               policy: policyDef.name,
               overlay_id: change.overlayId,
-            })
+            }),
           );
           break;
         case "merge":
@@ -1344,7 +1401,7 @@ export class MetaCompilerService implements MetaCompiler {
               msg: "overlay_policy_merged",
               policy: policyDef.name,
               overlay_id: change.overlayId,
-            })
+            }),
           );
           break;
       }
@@ -1356,7 +1413,7 @@ export class MetaCompilerService implements MetaCompiler {
           msg: "overlay_policy_added",
           policy: policyDef.name,
           overlay_id: change.overlayId,
-        })
+        }),
       );
     }
   }
@@ -1365,7 +1422,10 @@ export class MetaCompilerService implements MetaCompiler {
    * Compute hash for overlay set + compiled output
    * Used for caching compiled models with specific overlay combinations
    */
-  private computeOverlaySetHash(overlaySet: OverlaySet, baseOutputHash: string): string {
+  private computeOverlaySetHash(
+    overlaySet: OverlaySet,
+    baseOutputHash: string,
+  ): string {
     const combined = {
       overlaySet,
       baseOutputHash,

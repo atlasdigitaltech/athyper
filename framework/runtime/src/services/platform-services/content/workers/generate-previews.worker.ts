@@ -19,28 +19,33 @@ export interface GeneratePreviewsJobData {
 export function createGeneratePreviewsHandler(container: Container) {
   return async (job: any) => {
     const logger = await container.resolve<Logger>(TOKENS.logger);
-    const previewService = await container.resolve<PreviewService>(TOKENS.previewService);
+    const previewService = await container.resolve<PreviewService>(
+      TOKENS.previewService,
+    );
 
     const { tenantId, batchSize = 10 } = job.data as GeneratePreviewsJobData;
 
     logger.info(
       { tenantId, batchSize },
-      "[worker:generate-previews] Starting preview generation job"
+      "[worker:generate-previews] Starting preview generation job",
     );
 
     try {
-      const count = await previewService.generateMissingPreviews(tenantId, batchSize);
+      const count = await previewService.generateMissingPreviews(
+        tenantId,
+        batchSize,
+      );
 
       logger.info(
         { tenantId, generated: count },
-        "[worker:generate-previews] Preview generation complete"
+        "[worker:generate-previews] Preview generation complete",
       );
 
       return { success: true, generated: count };
     } catch (error: any) {
       logger.error(
         { tenantId, error: error.message },
-        "[worker:generate-previews] Preview generation failed"
+        "[worker:generate-previews] Preview generation failed",
       );
 
       throw error;

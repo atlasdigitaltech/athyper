@@ -108,10 +108,21 @@ services:
       # Node.js
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
       NODE_ENV: development
+    extra_hosts:
+      - "iam.mesh.athyper.local:host-gateway"
+      - "gateway.mesh.athyper.local:host-gateway"
+      - "neon.athyper.local:host-gateway"
+      - "api.athyper.local:host-gateway"
+      - "objectstorage.mesh.athyper.local:host-gateway"
+      - "objectstorage.console.mesh.athyper.local:host-gateway"
     volumes:
       - "${MESH_CONFIG}:/config:ro"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-check-certificate -qO- http://localhost:3000/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- http://localhost:3000/health || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 10

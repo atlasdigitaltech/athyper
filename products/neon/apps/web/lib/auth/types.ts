@@ -15,7 +15,7 @@ export type Workbench = (typeof WORKBENCHES)[number];
 
 /** Type guard for validating workbench strings at runtime. */
 export function isWorkbench(value: string): value is Workbench {
-    return (WORKBENCHES as readonly string[]).includes(value);
+  return (WORKBENCHES as readonly string[]).includes(value);
 }
 
 // ─── Role Domains ───────────────────────────────────────────────
@@ -30,24 +30,24 @@ export type NeonRole = WorkbenchRole | ModuleRole | PersonaRole;
 
 /** Build a workbench role string. */
 export function workbenchRole(wb: Workbench): WorkbenchRole {
-    return `neon:WORKBENCH:${wb}`;
+  return `neon:WORKBENCH:${wb}`;
 }
 
 /** Build a module role string. */
 export function moduleRole(mod: string): ModuleRole {
-    return `neon:MODULE:${mod}`;
+  return `neon:MODULE:${mod}`;
 }
 
 /** Build a persona role string. */
 export function personaRole(persona: string): PersonaRole {
-    return `neon:PERSONA:${persona}`;
+  return `neon:PERSONA:${persona}`;
 }
 
 /** Parsed result of a neon:* role string. */
 export type ParsedNeonRole =
-    | { domain: "WORKBENCH"; value: Workbench }
-    | { domain: "MODULE"; value: string }
-    | { domain: "PERSONA"; value: string };
+  | { domain: "WORKBENCH"; value: Workbench }
+  | { domain: "MODULE"; value: string }
+  | { domain: "PERSONA"; value: string };
 
 /**
  * Parse a role string into its domain and value, or null if not a neon:* role.
@@ -61,28 +61,33 @@ export type ParsedNeonRole =
  *   "some-other-role"            → null
  */
 export function parseNeonRole(role: string): ParsedNeonRole | null {
-    if (!role.startsWith("neon:")) return null;
-    const parts = role.split(":");
-    if (parts.length !== 3) return null;
+  if (!role.startsWith("neon:")) return null;
+  const parts = role.split(":");
+  if (parts.length !== 3) return null;
 
-    const domain = parts[1];
-    const value = parts[2];
+  const domain = parts[1];
+  const value = parts[2];
 
-    if (domain === "WORKBENCH") {
-        const lower = value.toLowerCase();
-        if (isWorkbench(lower)) return { domain: "WORKBENCH", value: lower };
-        return null;
-    }
-    if (domain === "MODULE") {
-        return { domain: "MODULE", value };
-    }
-    if (domain === "PERSONA") {
-        return { domain: "PERSONA", value };
-    }
-
+  if (domain === "WORKBENCH") {
+    const lower = value.toLowerCase();
+    if (isWorkbench(lower)) return { domain: "WORKBENCH", value: lower };
     return null;
+  }
+  if (domain === "MODULE") {
+    return { domain: "MODULE", value };
+  }
+  if (domain === "PERSONA") {
+    return { domain: "PERSONA", value };
+  }
+
+  return null;
 }
 
 // ─── Workbench priority for default resolution ──────────────────
 /** Priority order for resolving default workbench (lower index = higher priority). */
-export const WORKBENCH_PRIORITY: readonly Workbench[] = ["user", "partner", "ops", "admin"];
+export const WORKBENCH_PRIORITY: readonly Workbench[] = [
+  "user",
+  "partner",
+  "ops",
+  "admin",
+];

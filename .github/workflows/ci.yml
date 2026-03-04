@@ -14,142 +14,141 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: '20.20.0'
+  PNPM_VERSION: '10.28.2'
+
 jobs:
-  # ─── Lint & Validate ─────────────────────────────────────────────
-  validate:
-    name: Validate
+  # ─── Quality Gate ────────────────────────────────────────────────
+  # Runs: format check → lint → typecheck → test → depcheck
+  # Uses pnpm + Turbo with GitHub Actions cache for speed
+  # ─────────────────────────────────────────────────────────────────
+  quality:
+    name: Quality Gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check required files exist
-        run: |
-          required_files=(
-            "README.md"
-            "CHANGELOG.md"
-            "LICENSE"
-            ".gitignore"
-          )
-          missing=()
-          for f in "${required_files[@]}"; do
-            if [ ! -f "$f" ]; then
-              missing+=("$f")
-            fi
-          done
-          if [ ${#missing[@]} -ne 0 ]; then
-            echo "Missing required files: ${missing[*]}"
-            exit 1
-          fi
-          echo "All required files present."
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Validate CHANGELOG has Unreleased section
-        run: |
-          if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
-            echo "CHANGELOG.md must have an [Unreleased] section"
-            exit 1
-          fi
-          echo "CHANGELOG.md is valid."
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint:errors
+        env:
+          FORCE_COLOR: '1'
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test -- --coverage
+        env:
+          CI: 'true'
+          FORCE_COLOR: '1'
+
+      - name: Fetch base branch for changeset
+        if: github.event_name == 'pull_request'
+        run: git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+
+      - name: Check changeset
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
+
+      - name: Dependency graph check
+        run: pnpm run depcheck
 
   # ─── Build ───────────────────────────────────────────────────────
+  # Builds all workspace packages excluding @neon/web (Next.js app)
+  # which requires runtime secrets not available in CI.
+  # ─────────────────────────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: validate
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        # node-version: [18, 20, 22]   # Uncomment when runtime is defined
+    needs: quality
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Uncomment and configure for your runtime:
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: ${{ matrix.node-version }}
-      #     cache: 'npm'
-
-      # - name: Install dependencies
-      #   run: npm ci
-
-      # - name: Build
-      #   run: npm run build
-
-      - name: Build placeholder
-        run: echo "Build step — configure for your runtime"
-
-  # ─── Test ────────────────────────────────────────────────────────
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Uncomment and configure for your runtime:
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 20
-      #     cache: 'npm'
-
-      # - name: Install dependencies
-      #   run: npm ci
-
-      # - name: Run tests
-      #   run: npm test
-
-      # - name: Upload coverage
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Test placeholder
-        run: echo "Test step — configure for your runtime"
-
-  # ─── Security Scan ───────────────────────────────────────────────
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: validate
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run CodeQL Analysis
-        uses: github/codeql-action/init@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          languages: javascript  # Change to match your stack
-        continue-on-error: true
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-        continue-on-error: true
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        continue-on-error: true
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
-  # ─── Status Gate ─────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        # Builds framework, shared packages, tooling — excludes Next.js app
+        # @neon/web requires runtime secrets (DB, Keycloak, Redis) for production build
+        run: pnpm turbo run build --filter=!@neon/web --filter=!@neon/auth --filter=!@neon/content
+        env:
+          NODE_ENV: production
+
+  # ─── CI Status Gate ──────────────────────────────────────────────
+  # Single required check — PRs must pass this to be mergeable
+  # ─────────────────────────────────────────────────────────────────
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [validate, build, test]
+    needs: [quality, build]
     if: always()
     steps:
-      - name: Check all jobs passed
+      - name: Evaluate results
         run: |
-          if [[ "${{ needs.validate.result }}" != "success" || \
-                "${{ needs.build.result }}" != "success" || \
-                "${{ needs.test.result }}" != "success" ]]; then
-            echo "One or more CI jobs failed"
+          quality="${{ needs.quality.result }}"
+          build="${{ needs.build.result }}"
+
+          echo "quality : $quality"
+          echo "build   : $build"
+
+          if [[ "$quality" != "success" ]]; then
+            echo "Quality gate failed — lint, typecheck, test, or format check did not pass."
             exit 1
           fi
+
+          if [[ "$build" != "success" ]]; then
+            echo "Build failed — package compilation did not succeed."
+            exit 1
+          fi
+
           echo "All CI checks passed."

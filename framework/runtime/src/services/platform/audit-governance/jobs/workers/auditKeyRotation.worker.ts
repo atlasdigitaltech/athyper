@@ -16,8 +16,6 @@ import type { AuditColumnEncryptionService } from "../../domain/column-encryptio
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -46,7 +44,11 @@ export function createAuditKeyRotationHandler(
   const DEFAULT_BATCH_SIZE = 100;
 
   return async (payload: KeyRotationPayload): Promise<KeyRotationResult> => {
-    const { tenantId, fromKeyVersion, batchSize = DEFAULT_BATCH_SIZE } = payload;
+    const {
+      tenantId,
+      fromKeyVersion,
+      batchSize = DEFAULT_BATCH_SIZE,
+    } = payload;
 
     logger.info(
       { tenantId, fromKeyVersion, batchSize },
@@ -60,21 +62,29 @@ export function createAuditKeyRotationHandler(
     while (hasMore) {
       // Fetch a batch of rows with the old key version
       // Note: event_timestamp is needed for the partitioned PK
-      const rows = await db
+      const rows = (await db
         .selectFrom(TABLE as any)
-        .select(["id", "event_timestamp", "ip_address", "user_agent", "comment", "attachments", "key_version"])
+        .select([
+          "id",
+          "event_timestamp",
+          "ip_address",
+          "user_agent",
+          "comment",
+          "attachments",
+          "key_version",
+        ])
         .where("tenant_id", "=", tenantId)
         .where("key_version", "=", fromKeyVersion)
         .limit(batchSize)
-        .execute() as Array<{
-          id: string;
-          event_timestamp: Date;
-          ip_address: string | null;
-          user_agent: string | null;
-          comment: string | null;
-          attachments: string | null;
-          key_version: number;
-        }>;
+        .execute()) as Array<{
+        id: string;
+        event_timestamp: Date;
+        ip_address: string | null;
+        user_agent: string | null;
+        comment: string | null;
+        attachments: string | null;
+        key_version: number;
+      }>;
 
       if (rows.length === 0) {
         hasMore = false;
@@ -94,9 +104,10 @@ export function createAuditKeyRotationHandler(
           await callKeyRotationUpdate(db, {
             tenantId,
             rowId: row.id,
-            eventTimestamp: row.event_timestamp instanceof Date
-              ? row.event_timestamp
-              : new Date(row.event_timestamp),
+            eventTimestamp:
+              row.event_timestamp instanceof Date
+                ? row.event_timestamp
+                : new Date(row.event_timestamp),
             ip_address: reEncrypted.ip_address,
             user_agent: reEncrypted.user_agent,
             comment: reEncrypted.comment,
@@ -108,14 +119,23 @@ export function createAuditKeyRotationHandler(
         } catch (err) {
           errors++;
           logger.error(
-            { tenantId, rowId: row.id, error: err instanceof Error ? err.message : String(err) },
+            {
+              tenantId,
+              rowId: row.id,
+              error: err instanceof Error ? err.message : String(err),
+            },
             "[audit:key-rotation] Failed to re-encrypt row",
           );
         }
       }
 
       logger.info(
-        { tenantId, processed: rowsProcessed, errors, batchRemaining: rows.length },
+        {
+          tenantId,
+          processed: rowsProcessed,
+          errors,
+          batchRemaining: rows.length,
+        },
         "[audit:key-rotation] Batch progress",
       );
     }

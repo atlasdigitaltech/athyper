@@ -58,7 +58,10 @@ export interface MetaRelationSchema {
  */
 export interface IMetaSchemaLoader {
   /** Load entity schema by key */
-  loadEntity(entityKey: string, tenantId: string): Promise<MetaEntitySchema | null>;
+  loadEntity(
+    entityKey: string,
+    tenantId: string,
+  ): Promise<MetaEntitySchema | null>;
 
   /** Load all entity schemas for tenant */
   loadAllEntities(tenantId: string): Promise<MetaEntitySchema[]>;
@@ -82,7 +85,7 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
     private schemaLoader: IMetaSchemaLoader,
     private tenantId: string,
     private logger: Logger,
-    options?: { cacheTtlMs?: number }
+    options?: { cacheTtlMs?: number },
   ) {
     this.cacheTtlMs = options?.cacheTtlMs ?? 60000; // 1 minute default
   }
@@ -96,7 +99,10 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
     if (cached) return cached;
 
     // Load from meta schema
-    const metaEntity = await this.schemaLoader.loadEntity(entityName, this.tenantId);
+    const metaEntity = await this.schemaLoader.loadEntity(
+      entityName,
+      this.tenantId,
+    );
     if (!metaEntity) return undefined;
 
     // Convert to EntityMetadata
@@ -129,7 +135,7 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
    */
   async getRelationship(
     sourceEntity: string,
-    targetEntity: string
+    targetEntity: string,
   ): Promise<EntityRelationship | undefined> {
     const relationships = await this.getEntityRelationships(sourceEntity);
     return relationships.find((r) => r.targetEntity === targetEntity);
@@ -138,7 +144,9 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
   /**
    * Get all relationships for an entity
    */
-  async getEntityRelationships(entityName: string): Promise<EntityRelationship[]> {
+  async getEntityRelationships(
+    entityName: string,
+  ): Promise<EntityRelationship[]> {
     // Check cache
     const cachedRels = this.getCachedRelationships(entityName);
     if (cachedRels) return cachedRels;
@@ -159,7 +167,10 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
   /**
    * Check if a join path is valid
    */
-  async isJoinAllowed(sourceEntity: string, targetEntity: string): Promise<boolean> {
+  async isJoinAllowed(
+    sourceEntity: string,
+    targetEntity: string,
+  ): Promise<boolean> {
     const relationship = await this.getRelationship(sourceEntity, targetEntity);
     return relationship !== undefined;
   }
@@ -196,7 +207,9 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
   /**
    * Convert meta schema to EntityMetadata
    */
-  private convertToEntityMetadata(metaEntity: MetaEntitySchema): EntityMetadata {
+  private convertToEntityMetadata(
+    metaEntity: MetaEntitySchema,
+  ): EntityMetadata {
     // Extract field names
     const fields = metaEntity.fields.map((f) => f.fieldKey);
 
@@ -215,20 +228,23 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
       }));
 
     // Convert relations to EntityRelationship
-    const relationships: EntityRelationship[] = metaEntity.relations.map((r) => ({
-      sourceEntity: metaEntity.entityKey,
-      sourceField: r.sourceField,
-      targetEntity: r.targetEntity,
-      targetField: r.targetField,
-      cardinality: r.cardinality,
-      name: r.relationKey,
-      isVirtual: r.isVirtual,
-    }));
+    const relationships: EntityRelationship[] = metaEntity.relations.map(
+      (r) => ({
+        sourceEntity: metaEntity.entityKey,
+        sourceField: r.sourceField,
+        targetEntity: r.targetEntity,
+        targetField: r.targetField,
+        cardinality: r.cardinality,
+        name: r.relationKey,
+        isVirtual: r.isVirtual,
+      }),
+    );
 
     // Also create implicit relationships from foreign keys
     for (const fk of foreignKeys) {
       const existingRel = relationships.find(
-        (r) => r.targetEntity === fk.referencesEntity && r.sourceField === fk.field
+        (r) =>
+          r.targetEntity === fk.referencesEntity && r.sourceField === fk.field,
       );
 
       if (!existingRel) {
@@ -275,7 +291,9 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
   /**
    * Get cached relationships if valid
    */
-  private getCachedRelationships(entityName: string): EntityRelationship[] | undefined {
+  private getCachedRelationships(
+    entityName: string,
+  ): EntityRelationship[] | undefined {
     const expiry = this.cacheExpiry.get(`rels:${entityName}`);
     if (!expiry || Date.now() > expiry) {
       return undefined;
@@ -286,7 +304,10 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
   /**
    * Cache relationships
    */
-  private cacheRelationships(entityName: string, relationships: EntityRelationship[]): void {
+  private cacheRelationships(
+    entityName: string,
+    relationships: EntityRelationship[],
+  ): void {
     this.relationshipCache.set(entityName, relationships);
     this.cacheExpiry.set(`rels:${entityName}`, Date.now() + this.cacheTtlMs);
   }
@@ -313,7 +334,7 @@ export class MetaSchemaRelationshipRegistry implements IRelationshipRegistry {
 export class DatabaseMetaSchemaLoader implements IMetaSchemaLoader {
   constructor(
     private db: any, // Kysely<DB>
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   /**
@@ -321,25 +342,27 @@ export class DatabaseMetaSchemaLoader implements IMetaSchemaLoader {
    */
   private mapRelationKindToCardinality(relationKind: string): Cardinality {
     switch (relationKind) {
-      case "belongs_to": return "many-to-one";
-      case "has_many": return "one-to-many";
-      case "m2m": return "many-to-many";
-      default: return "many-to-one";
+      case "belongs_to":
+        return "many-to-one";
+      case "has_many":
+        return "one-to-many";
+      case "m2m":
+        return "many-to-many";
+      default:
+        return "many-to-one";
     }
   }
 
-  async loadEntity(entityKey: string, tenantId: string): Promise<MetaEntitySchema | null> {
+  async loadEntity(
+    entityKey: string,
+    tenantId: string,
+  ): Promise<MetaEntitySchema | null> {
     try {
       // Load entity + latest published version
       const entity = await this.db
         .selectFrom("meta.entity as e")
         .innerJoin("meta.entity_version as v", "v.entity_id", "e.id")
-        .select([
-          "e.id",
-          "e.name",
-          "e.table_name",
-          "v.id as version_id",
-        ])
+        .select(["e.id", "e.name", "e.table_name", "v.id as version_id"])
         .where("e.name", "=", entityKey)
         .where("e.tenant_id", "=", tenantId)
         .where("v.status", "=", "published")
@@ -352,11 +375,7 @@ export class DatabaseMetaSchemaLoader implements IMetaSchemaLoader {
       // Load fields from meta.field
       const fields = await this.db
         .selectFrom("meta.field")
-        .select([
-          "name",
-          "column_name",
-          "data_type",
-        ])
+        .select(["name", "column_name", "data_type"])
         .where("entity_version_id", "=", entity.version_id)
         .where("is_active", "=", true)
         .execute();
@@ -397,7 +416,11 @@ export class DatabaseMetaSchemaLoader implements IMetaSchemaLoader {
         })),
       };
     } catch (error) {
-      this.logger.error("Failed to load entity schema", { entityKey, tenantId, error });
+      this.logger.error("Failed to load entity schema", {
+        entityKey,
+        tenantId,
+        error,
+      });
       return null;
     }
   }
@@ -423,7 +446,10 @@ export class DatabaseMetaSchemaLoader implements IMetaSchemaLoader {
 
       return schemas;
     } catch (error) {
-      this.logger.error("Failed to load all entity schemas", { tenantId, error });
+      this.logger.error("Failed to load all entity schemas", {
+        tenantId,
+        error,
+      });
       return [];
     }
   }
@@ -456,7 +482,10 @@ export class StaticMetaSchemaLoader implements IMetaSchemaLoader {
     }
   }
 
-  async loadEntity(entityKey: string, _tenantId: string): Promise<MetaEntitySchema | null> {
+  async loadEntity(
+    entityKey: string,
+    _tenantId: string,
+  ): Promise<MetaEntitySchema | null> {
     return this.schemas.get(entityKey) ?? null;
   }
 

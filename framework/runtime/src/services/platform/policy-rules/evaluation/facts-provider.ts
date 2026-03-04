@@ -85,7 +85,7 @@ export interface IFactsProvider {
     resourceType: string,
     resourceId?: string,
     actionCode?: string,
-    context?: Partial<PolicyContext>
+    context?: Partial<PolicyContext>,
   ): Promise<ResolvedFacts>;
 
   /**
@@ -99,7 +99,7 @@ export interface IFactsProvider {
   resolveResource(
     tenantId: string,
     resourceType: string,
-    resourceId?: string
+    resourceId?: string,
   ): Promise<PolicyResource>;
 
   /**
@@ -110,7 +110,11 @@ export interface IFactsProvider {
   /**
    * Invalidate cache for a resource
    */
-  invalidateResourceCache(tenantId: string, resourceType: string, resourceId?: string): void;
+  invalidateResourceCache(
+    tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ): void;
 
   /**
    * Clear all caches
@@ -146,7 +150,7 @@ export type FactsProviderConfig = {
   /** Business hours config */
   businessHours: {
     start: number; // Hour (0-23)
-    end: number;   // Hour (0-23)
+    end: number; // Hour (0-23)
     timezone: string;
   };
 };
@@ -175,7 +179,7 @@ export class FactsProviderService implements IFactsProvider {
 
   constructor(
     private readonly db: Kysely<DB>,
-    config?: Partial<FactsProviderConfig>
+    config?: Partial<FactsProviderConfig>,
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -189,7 +193,7 @@ export class FactsProviderService implements IFactsProvider {
     resourceType: string,
     resourceId?: string,
     _actionCode?: string,
-    context?: Partial<PolicyContext>
+    context?: Partial<PolicyContext>,
   ): Promise<ResolvedFacts> {
     const startTime = Date.now();
     const cacheHits = { subject: false, resource: false, entity: false };
@@ -201,7 +205,12 @@ export class FactsProviderService implements IFactsProvider {
       cacheHits.subject = true;
     } else {
       subject = await this.resolveSubject(principalId, tenantId);
-      this.setCache(this.subjectCache, subjectCacheKey, subject, this.config.subjectCacheTtlMs);
+      this.setCache(
+        this.subjectCache,
+        subjectCacheKey,
+        subject,
+        this.config.subjectCacheTtlMs,
+      );
     }
 
     // Resolve resource
@@ -211,7 +220,12 @@ export class FactsProviderService implements IFactsProvider {
       cacheHits.resource = true;
     } else {
       resource = await this.resolveResource(tenantId, resourceType, resourceId);
-      this.setCache(this.resourceCache, resourceCacheKey, resource, this.config.resourceCacheTtlMs);
+      this.setCache(
+        this.resourceCache,
+        resourceCacheKey,
+        resource,
+        this.config.resourceCacheTtlMs,
+      );
     }
 
     // Build context
@@ -243,7 +257,10 @@ export class FactsProviderService implements IFactsProvider {
   /**
    * Resolve subject facts
    */
-  async resolveSubject(principalId: string, tenantId: string): Promise<PolicySubject> {
+  async resolveSubject(
+    principalId: string,
+    tenantId: string,
+  ): Promise<PolicySubject> {
     // Get principal info
     const principal = await this.db
       .selectFrom("core.principal")
@@ -277,7 +294,10 @@ export class FactsProviderService implements IFactsProvider {
 
     return {
       principalId,
-      principalType: principal.principal_type as "user" | "service" | "external",
+      principalType: principal.principal_type as
+        | "user"
+        | "service"
+        | "external",
       roles,
       groups,
       ouMembership,
@@ -295,7 +315,7 @@ export class FactsProviderService implements IFactsProvider {
   async resolveResource(
     tenantId: string,
     resourceType: string,
-    resourceId?: string
+    resourceId?: string,
   ): Promise<PolicyResource> {
     // Get entity metadata
     const entityMeta = await this.getEntityMetadata(resourceType);
@@ -313,7 +333,7 @@ export class FactsProviderService implements IFactsProvider {
         tenantId,
         resourceType,
         resourceId,
-        entityMeta
+        entityMeta,
       );
       resource.attributes = recordAttrs.attributes;
       resource.ownerId = recordAttrs.ownerId;
@@ -326,7 +346,10 @@ export class FactsProviderService implements IFactsProvider {
   /**
    * Get principal roles via principal_role join
    */
-  private async getPrincipalRoles(principalId: string, tenantId: string): Promise<string[]> {
+  private async getPrincipalRoles(
+    principalId: string,
+    tenantId: string,
+  ): Promise<string[]> {
     const now = new Date();
 
     const directRoles = await this.db
@@ -336,7 +359,7 @@ export class FactsProviderService implements IFactsProvider {
       .where("pr.tenant_id", "=", tenantId)
       .where("pr.principal_id", "=", principalId)
       .where((eb) =>
-        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)])
+        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)]),
       )
       .execute();
 
@@ -346,7 +369,10 @@ export class FactsProviderService implements IFactsProvider {
   /**
    * Get principal groups via group_member join
    */
-  private async getPrincipalGroups(principalId: string, tenantId: string): Promise<string[]> {
+  private async getPrincipalGroups(
+    principalId: string,
+    tenantId: string,
+  ): Promise<string[]> {
     const groups = await this.db
       .selectFrom("core.group_member as gm")
       .innerJoin("core.principal_group as g", "g.id", "gm.group_id")
@@ -363,7 +389,7 @@ export class FactsProviderService implements IFactsProvider {
    */
   private async getPrincipalOU(
     principalId: string,
-    _tenantId: string
+    _tenantId: string,
   ): Promise<PolicySubject["ouMembership"]> {
     const result = await this.db
       .selectFrom("core.principal_ou as po")
@@ -386,14 +412,18 @@ export class FactsProviderService implements IFactsProvider {
    * Get principal attributes
    * Note: principal_attribute table was removed; attributes are resolved via services
    */
-  private async getPrincipalAttributes(_principalId: string): Promise<Record<string, unknown>> {
+  private async getPrincipalAttributes(
+    _principalId: string,
+  ): Promise<Record<string, unknown>> {
     return {};
   }
 
   /**
    * Get entity metadata
    */
-  private async getEntityMetadata(entityType: string): Promise<EntityMetadata | undefined> {
+  private async getEntityMetadata(
+    entityType: string,
+  ): Promise<EntityMetadata | undefined> {
     // Check cache
     const cached = this.getCached(this.entityMetaCache, entityType);
     if (cached) return cached;
@@ -424,7 +454,12 @@ export class FactsProviderService implements IFactsProvider {
       module: this.extractModule(version?.behaviors),
     };
 
-    this.setCache(this.entityMetaCache, entityType, metadata, this.config.entityCacheTtlMs);
+    this.setCache(
+      this.entityMetaCache,
+      entityType,
+      metadata,
+      this.config.entityCacheTtlMs,
+    );
 
     return metadata;
   }
@@ -447,7 +482,7 @@ export class FactsProviderService implements IFactsProvider {
     _tenantId: string,
     _entityType: string,
     _recordId: string,
-    _entityMeta: EntityMetadata
+    _entityMeta: EntityMetadata,
   ): Promise<{
     attributes: Record<string, unknown>;
     ownerId?: string;
@@ -473,7 +508,7 @@ export class FactsProviderService implements IFactsProvider {
   private computeDerivedFacts(
     subject: PolicySubject,
     resource: PolicyResource,
-    timestamp: Date
+    timestamp: Date,
   ): ResolvedFacts["computed"] {
     const hour = timestamp.getUTCHours();
     const dayOfWeek = timestamp.getUTCDay();
@@ -485,7 +520,8 @@ export class FactsProviderService implements IFactsProvider {
         hour,
         dayOfWeek,
         isBusinessHours:
-          hour >= this.config.businessHours.start && hour < this.config.businessHours.end,
+          hour >= this.config.businessHours.start &&
+          hour < this.config.businessHours.end,
         isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
       },
     };
@@ -496,7 +532,7 @@ export class FactsProviderService implements IFactsProvider {
    */
   private checkSameOU(
     ouMembership: PolicySubject["ouMembership"],
-    resource: PolicyResource
+    resource: PolicyResource,
   ): boolean {
     if (!ouMembership || !resource.attributes?.ou_node_id) {
       return false;
@@ -515,7 +551,10 @@ export class FactsProviderService implements IFactsProvider {
   // Cache Management
   // ============================================================================
 
-  private getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  private getCached<T>(
+    cache: Map<string, CacheEntry<T>>,
+    key: string,
+  ): T | undefined {
     const entry = cache.get(key);
     if (!entry) return undefined;
     if (Date.now() > entry.expiresAt) {
@@ -525,7 +564,12 @@ export class FactsProviderService implements IFactsProvider {
     return entry.value;
   }
 
-  private setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number): void {
+  private setCache<T>(
+    cache: Map<string, CacheEntry<T>>,
+    key: string,
+    value: T,
+    ttlMs: number,
+  ): void {
     cache.set(key, {
       value,
       expiresAt: Date.now() + ttlMs,
@@ -537,7 +581,11 @@ export class FactsProviderService implements IFactsProvider {
     this.subjectCache.delete(key);
   }
 
-  invalidateResourceCache(tenantId: string, resourceType: string, resourceId?: string): void {
+  invalidateResourceCache(
+    tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ): void {
     const key = `${tenantId}:${resourceType}:${resourceId ?? "*"}`;
     this.resourceCache.delete(key);
   }

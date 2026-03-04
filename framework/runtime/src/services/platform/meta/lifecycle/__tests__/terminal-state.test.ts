@@ -11,7 +11,7 @@
  * - Audit trail is maintained
  */
 
-import { describe, it, beforeEach, afterEach } from "@jest/globals";
+import { describe, it, beforeEach, afterEach } from "vitest";
 
 import type {
   GenericDataAPI,
@@ -54,7 +54,6 @@ describe("Terminal State Enforcement", () => {
       //   operationCode: "ARCHIVE",
       //   ctx: testCtx,
       // });
-
       // Act & Assert: Verify enforceTerminalState throws
       // await expect(
       //   lifecycleManager.enforceTerminalState(
@@ -68,7 +67,6 @@ describe("Terminal State Enforcement", () => {
 
     it("should allow operations when entity is not terminal", async () => {
       // Arrange: Entity in non-terminal state "DRAFT"
-
       // Act & Assert: Verify enforceTerminalState does not throw
       // await expect(
       //   lifecycleManager.enforceTerminalState(
@@ -91,10 +89,8 @@ describe("Terminal State Enforcement", () => {
       for (const state of terminalStates) {
         // Create new record for each test
         // const recordId = await createTestRecord();
-
         // Transition to terminal state
         // await transitionToState(recordId, state.operation);
-
         // Verify enforcement
         // await expect(
         //   lifecycleManager.enforceTerminalState(
@@ -103,7 +99,6 @@ describe("Terminal State Enforcement", () => {
         //     testCtx.tenantId
         //   )
         // ).rejects.toThrow();
-
         // Clean up
         // await deleteTestRecord(recordId);
       }
@@ -112,7 +107,6 @@ describe("Terminal State Enforcement", () => {
     it("should include entity name and ID in error message", async () => {
       // Transition to terminal
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Verify error message contains details
       // try {
       //   await lifecycleManager.enforceTerminalState(
@@ -174,7 +168,6 @@ describe("Terminal State Enforcement", () => {
     it("should block transitions from terminal state", async () => {
       // Arrange: Move to terminal state
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Act: Attempt another transition
       // const result = await lifecycleManager.transition({
       //   entityName: testEntity,
@@ -182,7 +175,6 @@ describe("Terminal State Enforcement", () => {
       //   operationCode: "SUBMIT",
       //   ctx: testCtx,
       // });
-
       // Assert: Transition blocked
       // expect(result.success).toBe(false);
       // expect(result.reason).toContain("terminal");
@@ -196,7 +188,6 @@ describe("Terminal State Enforcement", () => {
       //   operationCode: "APPROVE",
       //   ctx: testCtx,
       // });
-
       // expect(result.error).toBeDefined();
       // expect(result.error).toMatch(/terminal/i);
     });
@@ -205,14 +196,12 @@ describe("Terminal State Enforcement", () => {
       // Use console spy to verify logging
       // const consoleLogSpy = jest.spyOn(console, "log");
       // await transitionToState(testRecordId, "PUBLISHED");
-
       // await lifecycleManager.transition({
       //   entityName: testEntity,
       //   entityId: testRecordId,
       //   operationCode: "EDIT",
       //   ctx: testCtx,
       // });
-
       // expect(consoleLogSpy).toHaveBeenCalledWith(
       //   expect.stringContaining("lifecycle_transition_failed")
       // );
@@ -224,7 +213,6 @@ describe("Terminal State Enforcement", () => {
     it("should block update on terminal record", async () => {
       // Arrange: Move to terminal state
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Act & Assert: Update should throw
       // await expect(
       //   dataAPI.update(testEntity, testRecordId, { name: "Updated" }, testCtx)
@@ -233,7 +221,6 @@ describe("Terminal State Enforcement", () => {
 
     it("should throw error with clear message", async () => {
       // await transitionToState(testRecordId, "CLOSED");
-
       // try {
       //   await dataAPI.update(
       //     testEntity,
@@ -251,7 +238,6 @@ describe("Terminal State Enforcement", () => {
 
     it("should allow read operations on terminal records", async () => {
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Read should work
       // const record = await dataAPI.get(testEntity, testRecordId, testCtx);
       // expect(record).toBeDefined();
@@ -260,7 +246,6 @@ describe("Terminal State Enforcement", () => {
 
     it("should allow list operations including terminal records", async () => {
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // List should include archived records
       // const records = await dataAPI.list(testEntity, testCtx);
       // expect(records.data).toContainEqual(
@@ -270,7 +255,6 @@ describe("Terminal State Enforcement", () => {
 
     it("should allow delete operations on terminal records", async () => {
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Soft delete should work (if allowed by policy)
       // const result = await dataAPI.delete(testEntity, testRecordId, testCtx);
       // expect(result).toBeDefined();
@@ -310,13 +294,11 @@ describe("Terminal State Enforcement", () => {
   describe("audit trail", () => {
     it("should log terminal state violation attempts", async () => {
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // try {
       //   await dataAPI.update(testEntity, testRecordId, {}, testCtx);
       // } catch (error) {
       //   // Expected
       // }
-
       // Verify audit log entry
       // const auditEvents = await queryAuditLog({
       //   entityName: testEntity,
@@ -324,14 +306,12 @@ describe("Terminal State Enforcement", () => {
       //   eventType: "data.update",
       //   result: "failure",
       // });
-
       // expect(auditEvents.length).toBeGreaterThan(0);
       // expect(auditEvents[0].errorMessage).toContain("terminal");
     });
 
     it("should record attempted operation in audit log", async () => {
       // await transitionToState(testRecordId, "PUBLISHED");
-
       // try {
       //   await dataAPI.update(
       //     testEntity,
@@ -342,12 +322,10 @@ describe("Terminal State Enforcement", () => {
       // } catch (error) {
       //   // Expected
       // }
-
       // const auditEvents = await queryAuditLog({
       //   entityName: testEntity,
       //   entityId: testRecordId,
       // });
-
       // const violationEvent = auditEvents.find(
       //   (e) => e.action === "update" && e.result === "failure"
       // );
@@ -381,17 +359,14 @@ describe("Terminal State Enforcement", () => {
 
     it("should handle concurrent update attempts on terminal record", async () => {
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // All concurrent updates should be blocked
       // const updatePromises = Array(5)
       //   .fill(null)
       //   .map(() =>
       //     dataAPI.update(testEntity, testRecordId, { counter: 1 }, testCtx)
       //   );
-
       // const results = await Promise.allSettled(updatePromises);
       // const rejections = results.filter((r) => r.status === "rejected");
-
       // expect(rejections.length).toBe(5);
       // rejections.forEach((r) => {
       //   expect((r as PromiseRejectedResult).reason.message).toMatch(
@@ -403,7 +378,6 @@ describe("Terminal State Enforcement", () => {
     it("should handle state transition to terminal twice", async () => {
       // First transition to terminal
       // await transitionToState(testRecordId, "ARCHIVED");
-
       // Second transition attempt should fail
       // const result = await lifecycleManager.transition({
       //   entityName: testEntity,
@@ -411,7 +385,6 @@ describe("Terminal State Enforcement", () => {
       //   operationCode: "ARCHIVE",
       //   ctx: testCtx,
       // });
-
       // expect(result.success).toBe(false);
     });
   });
@@ -424,7 +397,6 @@ describe("Terminal State Enforcement", () => {
       //   .selectAll()
       //   .where("code", "=", "ARCHIVED")
       //   .executeTakeFirst();
-
       // expect(state?.is_terminal).toBe(true);
     });
 
@@ -434,7 +406,6 @@ describe("Terminal State Enforcement", () => {
       //   .selectAll()
       //   .where("code", "=", "DRAFT")
       //   .executeTakeFirst();
-
       // expect(state?.is_terminal).toBe(false);
     });
   });
@@ -456,7 +427,7 @@ async function deleteTestRecord(recordId: string): Promise<void> {
 
 async function transitionToState(
   recordId: string,
-  operationCode: string
+  operationCode: string,
 ): Promise<void> {
   // Transition record to specified state
 }

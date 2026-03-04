@@ -149,7 +149,11 @@ export class AuditDsarService {
     tenantId: string,
     userId: string,
     timestampColumn: string,
-  ): Promise<{ eventCount: number; oldestEvent: Date | null; newestEvent: Date | null }> {
+  ): Promise<{
+    eventCount: number;
+    oldestEvent: Date | null;
+    newestEvent: Date | null;
+  }> {
     try {
       const result = await sql<any>`
         SELECT COUNT(*) as count,

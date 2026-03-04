@@ -5,7 +5,7 @@ import { useState } from "react";
 /**
  * Reaction Type
  */
-type ReactionType = '👍' | '❤️' | '🎉' | '👀' | '👎' | '🚀' | '💡' | '🤔';
+type ReactionType = "👍" | "❤️" | "🎉" | "👀" | "👎" | "🚀" | "💡" | "🤔";
 
 /**
  * Reaction Summary
@@ -29,7 +29,16 @@ interface CommentReactionsProps {
 /**
  * Available reaction options
  */
-const REACTION_OPTIONS: ReactionType[] = ['👍', '❤️', '🎉', '👀', '👎', '🚀', '💡', '🤔'];
+const REACTION_OPTIONS: ReactionType[] = [
+  "👍",
+  "❤️",
+  "🎉",
+  "👀",
+  "👎",
+  "🚀",
+  "💡",
+  "🤔",
+];
 
 /**
  * Comment Reactions Component
@@ -41,7 +50,8 @@ export function CommentReactions({
   initialReactions = [],
   onReactionChange,
 }: CommentReactionsProps) {
-  const [reactions, setReactions] = useState<ReactionSummary[]>(initialReactions);
+  const [reactions, setReactions] =
+    useState<ReactionSummary[]>(initialReactions);
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState<ReactionType | null>(null);
 
@@ -74,7 +84,7 @@ export function CommentReactions({
             return prev.map((r) =>
               r.reactionType === reactionType
                 ? { ...r, count: r.count + 1, currentUserReacted: true }
-                : r
+                : r,
             );
           } else {
             // Add new reaction
@@ -94,7 +104,7 @@ export function CommentReactions({
             .map((r) =>
               r.reactionType === reactionType
                 ? { ...r, count: r.count - 1, currentUserReacted: false }
-                : r
+                : r,
             )
             .filter((r) => r.count > 0);
         }

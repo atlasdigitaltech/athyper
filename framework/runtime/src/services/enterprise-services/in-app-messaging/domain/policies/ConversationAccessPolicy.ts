@@ -7,11 +7,7 @@
 
 import { AccessDeniedError } from "../types";
 
-import type {
-    Conversation,
-    ConversationParticipant,
-    Message,
-} from "../types";
+import type { Conversation, ConversationParticipant, Message } from "../types";
 
 /**
  * Verifies tenant isolation
@@ -19,16 +15,16 @@ import type {
  * Invariant: All operations must be within the same tenant
  */
 export function enforceTenantIsolation(
-    tenantId: string,
-    resourceTenantId: string,
-    resourceType: string
+  tenantId: string,
+  resourceTenantId: string,
+  resourceType: string,
 ): void {
-    if (tenantId !== resourceTenantId) {
-        throw new AccessDeniedError(
-            `Cross-tenant access denied for ${resourceType}`,
-            { requestTenantId: tenantId, resourceTenantId }
-        );
-    }
+  if (tenantId !== resourceTenantId) {
+    throw new AccessDeniedError(
+      `Cross-tenant access denied for ${resourceType}`,
+      { requestTenantId: tenantId, resourceTenantId },
+    );
+  }
 }
 
 /**
@@ -37,12 +33,10 @@ export function enforceTenantIsolation(
  * A participant is active if they have joined and not left
  */
 export function isActiveParticipant(
-    participants: ConversationParticipant[],
-    userId: string
+  participants: ConversationParticipant[],
+  userId: string,
 ): boolean {
-    return participants.some(
-        p => p.userId === userId && p.leftAt === null
-    );
+  return participants.some((p) => p.userId === userId && p.leftAt === null);
 }
 
 /**
@@ -51,12 +45,12 @@ export function isActiveParticipant(
  * Only applies to group conversations
  */
 export function isConversationAdmin(
-    participants: ConversationParticipant[],
-    userId: string
+  participants: ConversationParticipant[],
+  userId: string,
 ): boolean {
-    return participants.some(
-        p => p.userId === userId && p.role === "admin" && p.leftAt === null
-    );
+  return participants.some(
+    (p) => p.userId === userId && p.role === "admin" && p.leftAt === null,
+  );
 }
 
 /**
@@ -65,21 +59,21 @@ export function isConversationAdmin(
  * Invariant: Only active participants can access a conversation
  */
 export function enforceParticipantAccess(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    userId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  userId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
 
-    // Participant check
-    if (!isActiveParticipant(participants, userId)) {
-        throw new AccessDeniedError(
-            "Only conversation participants can access this conversation",
-            { conversationId: conversation.id, userId }
-        );
-    }
+  // Participant check
+  if (!isActiveParticipant(participants, userId)) {
+    throw new AccessDeniedError(
+      "Only conversation participants can access this conversation",
+      { conversationId: conversation.id, userId },
+    );
+  }
 }
 
 /**
@@ -88,12 +82,12 @@ export function enforceParticipantAccess(
  * Invariant: Only active participants can send messages
  */
 export function enforceSendMessagePermission(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    userId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  userId: string,
 ): void {
-    enforceParticipantAccess(tenantId, conversation, participants, userId);
+  enforceParticipantAccess(tenantId, conversation, participants, userId);
 }
 
 /**
@@ -102,12 +96,12 @@ export function enforceSendMessagePermission(
  * Invariant: Only active participants can read messages
  */
 export function enforceReadMessagePermission(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    userId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  userId: string,
 ): void {
-    enforceParticipantAccess(tenantId, conversation, participants, userId);
+  enforceParticipantAccess(tenantId, conversation, participants, userId);
 }
 
 /**
@@ -116,20 +110,20 @@ export function enforceReadMessagePermission(
  * Invariant: Only the sender can edit their own message
  */
 export function enforceEditMessagePermission(
-    tenantId: string,
-    message: Message,
-    userId: string
+  tenantId: string,
+  message: Message,
+  userId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, message.tenantId, "message");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, message.tenantId, "message");
 
-    // Sender check
-    if (message.senderId !== userId) {
-        throw new AccessDeniedError(
-            "Only the message sender can edit this message",
-            { messageId: message.id, senderId: message.senderId, userId }
-        );
-    }
+  // Sender check
+  if (message.senderId !== userId) {
+    throw new AccessDeniedError(
+      "Only the message sender can edit this message",
+      { messageId: message.id, senderId: message.senderId, userId },
+    );
+  }
 }
 
 /**
@@ -138,20 +132,20 @@ export function enforceEditMessagePermission(
  * Invariant: Only the sender can delete their own message
  */
 export function enforceDeleteMessagePermission(
-    tenantId: string,
-    message: Message,
-    userId: string
+  tenantId: string,
+  message: Message,
+  userId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, message.tenantId, "message");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, message.tenantId, "message");
 
-    // Sender check
-    if (message.senderId !== userId) {
-        throw new AccessDeniedError(
-            "Only the message sender can delete this message",
-            { messageId: message.id, senderId: message.senderId, userId }
-        );
-    }
+  // Sender check
+  if (message.senderId !== userId) {
+    throw new AccessDeniedError(
+      "Only the message sender can delete this message",
+      { messageId: message.id, senderId: message.senderId, userId },
+    );
+  }
 }
 
 /**
@@ -161,29 +155,29 @@ export function enforceDeleteMessagePermission(
  * Direct conversations cannot have participants added
  */
 export function enforceAddParticipantsPermission(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    requesterId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  requesterId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
 
-    // Direct conversations cannot have participants added
-    if (conversation.type === "direct") {
-        throw new AccessDeniedError(
-            "Cannot add participants to direct conversations",
-            { conversationId: conversation.id }
-        );
-    }
+  // Direct conversations cannot have participants added
+  if (conversation.type === "direct") {
+    throw new AccessDeniedError(
+      "Cannot add participants to direct conversations",
+      { conversationId: conversation.id },
+    );
+  }
 
-    // Requester must be an active admin
-    if (!isConversationAdmin(participants, requesterId)) {
-        throw new AccessDeniedError(
-            "Only conversation admins can add participants",
-            { conversationId: conversation.id, requesterId }
-        );
-    }
+  // Requester must be an active admin
+  if (!isConversationAdmin(participants, requesterId)) {
+    throw new AccessDeniedError(
+      "Only conversation admins can add participants",
+      { conversationId: conversation.id, requesterId },
+    );
+  }
 }
 
 /**
@@ -193,35 +187,35 @@ export function enforceAddParticipantsPermission(
  * Direct conversations cannot have participants removed
  */
 export function enforceRemoveParticipantPermission(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    requesterId: string,
-    targetUserId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  requesterId: string,
+  targetUserId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
 
-    // Direct conversations cannot have participants removed
-    if (conversation.type === "direct") {
-        throw new AccessDeniedError(
-            "Cannot remove participants from direct conversations",
-            { conversationId: conversation.id }
-        );
-    }
+  // Direct conversations cannot have participants removed
+  if (conversation.type === "direct") {
+    throw new AccessDeniedError(
+      "Cannot remove participants from direct conversations",
+      { conversationId: conversation.id },
+    );
+  }
 
-    // Users can always remove themselves
-    if (requesterId === targetUserId) {
-        return;
-    }
+  // Users can always remove themselves
+  if (requesterId === targetUserId) {
+    return;
+  }
 
-    // Otherwise, requester must be an admin
-    if (!isConversationAdmin(participants, requesterId)) {
-        throw new AccessDeniedError(
-            "Only conversation admins can remove other participants",
-            { conversationId: conversation.id, requesterId, targetUserId }
-        );
-    }
+  // Otherwise, requester must be an admin
+  if (!isConversationAdmin(participants, requesterId)) {
+    throw new AccessDeniedError(
+      "Only conversation admins can remove other participants",
+      { conversationId: conversation.id, requesterId, targetUserId },
+    );
+  }
 }
 
 /**
@@ -231,29 +225,29 @@ export function enforceRemoveParticipantPermission(
  * Direct conversations cannot have titles updated
  */
 export function enforceUpdateTitlePermission(
-    tenantId: string,
-    conversation: Conversation,
-    participants: ConversationParticipant[],
-    requesterId: string
+  tenantId: string,
+  conversation: Conversation,
+  participants: ConversationParticipant[],
+  requesterId: string,
 ): void {
-    // Tenant isolation
-    enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
+  // Tenant isolation
+  enforceTenantIsolation(tenantId, conversation.tenantId, "conversation");
 
-    // Direct conversations cannot have titles
-    if (conversation.type === "direct") {
-        throw new AccessDeniedError(
-            "Cannot update title for direct conversations",
-            { conversationId: conversation.id }
-        );
-    }
+  // Direct conversations cannot have titles
+  if (conversation.type === "direct") {
+    throw new AccessDeniedError(
+      "Cannot update title for direct conversations",
+      { conversationId: conversation.id },
+    );
+  }
 
-    // Requester must be an admin
-    if (!isConversationAdmin(participants, requesterId)) {
-        throw new AccessDeniedError(
-            "Only conversation admins can update the title",
-            { conversationId: conversation.id, requesterId }
-        );
-    }
+  // Requester must be an admin
+  if (!isConversationAdmin(participants, requesterId)) {
+    throw new AccessDeniedError(
+      "Only conversation admins can update the title",
+      { conversationId: conversation.id, requesterId },
+    );
+  }
 }
 
 /**
@@ -262,47 +256,41 @@ export function enforceUpdateTitlePermission(
  * Invariant: Cannot add existing active participants
  */
 export function validateNewParticipants(
-    participants: ConversationParticipant[],
-    newParticipantIds: string[]
+  participants: ConversationParticipant[],
+  newParticipantIds: string[],
 ): void {
-    const activeParticipantIds = new Set(
-        participants
-            .filter(p => p.leftAt === null)
-            .map(p => p.userId)
-    );
+  const activeParticipantIds = new Set(
+    participants.filter((p) => p.leftAt === null).map((p) => p.userId),
+  );
 
-    const alreadyParticipants = newParticipantIds.filter(id =>
-        activeParticipantIds.has(id)
-    );
+  const alreadyParticipants = newParticipantIds.filter((id) =>
+    activeParticipantIds.has(id),
+  );
 
-    if (alreadyParticipants.length > 0) {
-        throw new AccessDeniedError(
-            "Cannot add users who are already active participants",
-            { alreadyParticipants }
-        );
-    }
+  if (alreadyParticipants.length > 0) {
+    throw new AccessDeniedError(
+      "Cannot add users who are already active participants",
+      { alreadyParticipants },
+    );
+  }
 }
 
 /**
  * Gets all active participant IDs for a conversation
  */
 export function getActiveParticipantIds(
-    participants: ConversationParticipant[]
+  participants: ConversationParticipant[],
 ): string[] {
-    return participants
-        .filter(p => p.leftAt === null)
-        .map(p => p.userId);
+  return participants.filter((p) => p.leftAt === null).map((p) => p.userId);
 }
 
 /**
  * Gets all admin IDs for a conversation
  */
-export function getAdminIds(
-    participants: ConversationParticipant[]
-): string[] {
-    return participants
-        .filter(p => p.role === "admin" && p.leftAt === null)
-        .map(p => p.userId);
+export function getAdminIds(participants: ConversationParticipant[]): string[] {
+  return participants
+    .filter((p) => p.role === "admin" && p.leftAt === null)
+    .map((p) => p.userId);
 }
 
 /**
@@ -311,9 +299,9 @@ export function getAdminIds(
  * Used to ensure group conversations always have at least one admin
  */
 export function hasAtLeastOneAdmin(
-    participants: ConversationParticipant[]
+  participants: ConversationParticipant[],
 ): boolean {
-    return participants.some(p => p.role === "admin" && p.leftAt === null);
+  return participants.some((p) => p.role === "admin" && p.leftAt === null);
 }
 
 /**
@@ -322,27 +310,27 @@ export function hasAtLeastOneAdmin(
  * Invariant: Cannot remove the last admin from a group conversation
  */
 export function validateAdminRemoval(
-    participants: ConversationParticipant[],
-    targetUserId: string
+  participants: ConversationParticipant[],
+  targetUserId: string,
 ): void {
-    const targetParticipant = participants.find(
-        p => p.userId === targetUserId && p.leftAt === null
+  const targetParticipant = participants.find(
+    (p) => p.userId === targetUserId && p.leftAt === null,
+  );
+
+  // If target is not an admin, no validation needed
+  if (!targetParticipant || targetParticipant.role !== "admin") {
+    return;
+  }
+
+  // Count remaining admins (excluding the one being removed)
+  const remainingAdminCount = participants.filter(
+    (p) => p.role === "admin" && p.leftAt === null && p.userId !== targetUserId,
+  ).length;
+
+  if (remainingAdminCount === 0) {
+    throw new AccessDeniedError(
+      "Cannot remove the last admin from a group conversation",
+      { targetUserId },
     );
-
-    // If target is not an admin, no validation needed
-    if (!targetParticipant || targetParticipant.role !== "admin") {
-        return;
-    }
-
-    // Count remaining admins (excluding the one being removed)
-    const remainingAdminCount = participants.filter(
-        p => p.role === "admin" && p.leftAt === null && p.userId !== targetUserId
-    ).length;
-
-    if (remainingAdminCount === 0) {
-        throw new AccessDeniedError(
-            "Cannot remove the last admin from a group conversation",
-            { targetUserId }
-        );
-    }
+  }
 }

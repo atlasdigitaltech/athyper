@@ -65,7 +65,10 @@ function createMockCache() {
   };
 }
 
-function createMockRegistry(versionData?: { schema: EntitySchema; createdBy: string }) {
+function createMockRegistry(versionData?: {
+  schema: EntitySchema;
+  createdBy: string;
+}) {
   return {
     getVersion: vi.fn(async () => versionData ?? null),
     listEntities: vi.fn(async () => ({ data: [] })),
@@ -288,7 +291,14 @@ describe("MetaCompilerService", () => {
   describe("compile()", () => {
     const validSchema = makeSchema(
       [{ name: "title", type: "string" }],
-      [{ name: "readAll", effect: "allow", action: "read", resource: "test_entity" }],
+      [
+        {
+          name: "readAll",
+          effect: "allow",
+          action: "read",
+          resource: "test_entity",
+        },
+      ],
     );
 
     it("should compile and cache on cache miss", async () => {
@@ -488,9 +498,7 @@ describe("MetaCompilerService", () => {
       const { compiler, registry } = buildCompiler();
 
       registry.listEntities.mockResolvedValue({
-        data: [
-          { name: "broken", activeVersion: "v1" },
-        ],
+        data: [{ name: "broken", activeVersion: "v1" }],
       });
       // getVersion returns null → throws "not found"
 
@@ -566,7 +574,14 @@ describe("MetaCompilerService", () => {
     it("should compile policies with evaluate function", async () => {
       const schema = makeSchema(
         [{ name: "title", type: "string" }],
-        [{ name: "readAll", effect: "allow", action: "read", resource: "test" }],
+        [
+          {
+            name: "readAll",
+            effect: "allow",
+            action: "read",
+            resource: "test",
+          },
+        ],
       );
       const { compiler } = buildCompiler({
         versionData: { schema, createdBy: "admin" },

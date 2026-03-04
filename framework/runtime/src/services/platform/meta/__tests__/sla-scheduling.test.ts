@@ -223,7 +223,12 @@ describe("SLA Scheduling", () => {
 
     it("skips scheduling when fireAt is in the past", async () => {
       const fireAt = new Date(Date.now() - 5_000);
-      await service.scheduleEscalation("task-1", fireAt, { kind: "breach" }, "t1");
+      await service.scheduleEscalation(
+        "task-1",
+        fireAt,
+        { kind: "breach" },
+        "t1",
+      );
       expect(jobQueue.add).not.toHaveBeenCalled();
     });
   });
@@ -250,7 +255,9 @@ describe("SLA Scheduling", () => {
       // Should have logged an event (insertInto "wf.approval_event")
       expect(db.insertInto).toHaveBeenCalled();
       const insertCalls = (db.insertInto as any).mock.calls;
-      const eventInsert = insertCalls.find((c: any[]) => c[0] === "wf.approval_event");
+      const eventInsert = insertCalls.find(
+        (c: any[]) => c[0] === "wf.approval_event",
+      );
       expect(eventInsert).toBeDefined();
     });
 
@@ -269,7 +276,9 @@ describe("SLA Scheduling", () => {
 
       // Should NOT have logged an event
       const insertCalls = (db.insertInto as any).mock.calls;
-      const eventInsert = insertCalls.find((c: any[]) => c[0] === "wf.approval_event");
+      const eventInsert = insertCalls.find(
+        (c: any[]) => c[0] === "wf.approval_event",
+      );
       expect(eventInsert).toBeUndefined();
     });
 
@@ -304,8 +313,12 @@ describe("SLA Scheduling", () => {
 
       // Should have inserted into wf.approval_escalation AND wf.approval_event
       const insertCalls = (db.insertInto as any).mock.calls;
-      const escalationInsert = insertCalls.find((c: any[]) => c[0] === "wf.approval_escalation");
-      const eventInsert = insertCalls.find((c: any[]) => c[0] === "wf.approval_event");
+      const escalationInsert = insertCalls.find(
+        (c: any[]) => c[0] === "wf.approval_escalation",
+      );
+      const eventInsert = insertCalls.find(
+        (c: any[]) => c[0] === "wf.approval_event",
+      );
       expect(escalationInsert).toBeDefined();
       expect(eventInsert).toBeDefined();
     });
@@ -347,7 +360,9 @@ describe("SLA Scheduling", () => {
       await service.cancelTimers("task-1", "t1");
 
       const insertCalls = (db.insertInto as any).mock.calls;
-      const eventInsert = insertCalls.find((c: any[]) => c[0] === "wf.approval_event");
+      const eventInsert = insertCalls.find(
+        (c: any[]) => c[0] === "wf.approval_event",
+      );
       expect(eventInsert).toBeDefined();
     });
   });
@@ -365,25 +380,40 @@ describe("SLA Scheduling", () => {
 
       const handler = createSlaReminderHandler(mockApprovalService as any);
       const job = makeJob(
-        { taskId: "task-1", tenantId: "t1", instanceId: "inst-1", stageId: "stage-1" },
+        {
+          taskId: "task-1",
+          tenantId: "t1",
+          instanceId: "inst-1",
+          stageId: "stage-1",
+        },
         SLA_JOB_TYPES.REMINDER,
       );
 
       await handler(job);
 
       expect(mockApprovalService.getTask).toHaveBeenCalledWith("task-1", "t1");
-      expect(mockApprovalService.processReminder).toHaveBeenCalledWith("task-1", "t1");
+      expect(mockApprovalService.processReminder).toHaveBeenCalledWith(
+        "task-1",
+        "t1",
+      );
     });
 
     it("reminder handler skips resolved task", async () => {
       const mockApprovalService = {
-        getTask: vi.fn().mockResolvedValue({ ...makePendingTask(), status: "approved" }),
+        getTask: vi
+          .fn()
+          .mockResolvedValue({ ...makePendingTask(), status: "approved" }),
         processReminder: vi.fn(),
       };
 
       const handler = createSlaReminderHandler(mockApprovalService as any);
       const job = makeJob(
-        { taskId: "task-1", tenantId: "t1", instanceId: "inst-1", stageId: "stage-1" },
+        {
+          taskId: "task-1",
+          tenantId: "t1",
+          instanceId: "inst-1",
+          stageId: "stage-1",
+        },
         SLA_JOB_TYPES.REMINDER,
       );
 
@@ -400,7 +430,12 @@ describe("SLA Scheduling", () => {
 
       const handler = createSlaReminderHandler(mockApprovalService as any);
       const job = makeJob(
-        { taskId: "missing", tenantId: "t1", instanceId: "inst-1", stageId: "stage-1" },
+        {
+          taskId: "missing",
+          tenantId: "t1",
+          instanceId: "inst-1",
+          stageId: "stage-1",
+        },
         SLA_JOB_TYPES.REMINDER,
       );
 
@@ -439,7 +474,9 @@ describe("SLA Scheduling", () => {
 
     it("escalation handler skips resolved task", async () => {
       const mockApprovalService = {
-        getTask: vi.fn().mockResolvedValue({ ...makePendingTask(), status: "rejected" }),
+        getTask: vi
+          .fn()
+          .mockResolvedValue({ ...makePendingTask(), status: "rejected" }),
         processEscalation: vi.fn(),
       };
 

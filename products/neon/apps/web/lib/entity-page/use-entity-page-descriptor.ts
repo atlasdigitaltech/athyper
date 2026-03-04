@@ -16,7 +16,6 @@ import type {
 } from "./types";
 import type { SessionBootstrap } from "@/lib/session-bootstrap";
 
-
 export interface UseEntityPageDescriptorResult {
   staticDescriptor: EntityPageStaticDescriptor | null;
   dynamicDescriptor: EntityPageDynamicDescriptor | null;
@@ -27,7 +26,9 @@ export interface UseEntityPageDescriptorResult {
 
 function getCsrfToken(): string {
   if (typeof window === "undefined") return "";
-  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as SessionBootstrap | undefined;
+  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as
+    | SessionBootstrap
+    | undefined;
   return bootstrap?.csrfToken ?? "";
 }
 
@@ -36,8 +37,10 @@ export function useEntityPageDescriptor(
   entityId: string,
   viewMode?: ViewMode,
 ): UseEntityPageDescriptorResult {
-  const [staticDescriptor, setStaticDescriptor] = useState<EntityPageStaticDescriptor | null>(null);
-  const [dynamicDescriptor, setDynamicDescriptor] = useState<EntityPageDynamicDescriptor | null>(null);
+  const [staticDescriptor, setStaticDescriptor] =
+    useState<EntityPageStaticDescriptor | null>(null);
+  const [dynamicDescriptor, setDynamicDescriptor] =
+    useState<EntityPageDynamicDescriptor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,10 +99,17 @@ export function useEntityPageDescriptor(
       if (needsStatic) {
         const staticRes = responses[staticIdx];
         if (!staticRes.ok) {
-          const body = (await staticRes.json()) as { error?: { message?: string } };
-          throw new Error(body.error?.message ?? `Static descriptor failed (${staticRes.status})`);
+          const body = (await staticRes.json()) as {
+            error?: { message?: string };
+          };
+          throw new Error(
+            body.error?.message ??
+              `Static descriptor failed (${staticRes.status})`,
+          );
         }
-        const staticBody = (await staticRes.json()) as { data: EntityPageStaticDescriptor };
+        const staticBody = (await staticRes.json()) as {
+          data: EntityPageStaticDescriptor;
+        };
         setStaticDescriptor(staticBody.data);
         lastStaticEntity.current = entityName;
       }
@@ -107,14 +117,23 @@ export function useEntityPageDescriptor(
       // Process dynamic
       const dynamicRes = responses[dynamicIdx];
       if (!dynamicRes.ok) {
-        const body = (await dynamicRes.json()) as { error?: { message?: string } };
-        throw new Error(body.error?.message ?? `Dynamic descriptor failed (${dynamicRes.status})`);
+        const body = (await dynamicRes.json()) as {
+          error?: { message?: string };
+        };
+        throw new Error(
+          body.error?.message ??
+            `Dynamic descriptor failed (${dynamicRes.status})`,
+        );
       }
-      const dynamicBody = (await dynamicRes.json()) as { data: EntityPageDynamicDescriptor };
+      const dynamicBody = (await dynamicRes.json()) as {
+        data: EntityPageDynamicDescriptor;
+      };
       setDynamicDescriptor(dynamicBody.data);
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Failed to load entity page");
+      setError(
+        err instanceof Error ? err.message : "Failed to load entity page",
+      );
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);

@@ -19,7 +19,6 @@ import type {
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
 /**
  * Decision log entry
  */
@@ -86,7 +85,7 @@ export class DecisionLoggerService {
 
   constructor(
     private readonly db: Kysely<DB>,
-    config?: Partial<DecisionLoggerConfig>
+    config?: Partial<DecisionLoggerConfig>,
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
 
@@ -102,7 +101,7 @@ export class DecisionLoggerService {
   async log(
     request: AuthorizationRequest,
     decision: AuthorizationDecision,
-    subject: SubjectSnapshot | null
+    subject: SubjectSnapshot | null,
   ): Promise<void> {
     if (!this.config.enabled) return;
 
@@ -124,7 +123,7 @@ export class DecisionLoggerService {
   async logImmediate(
     request: AuthorizationRequest,
     decision: AuthorizationDecision,
-    subject: SubjectSnapshot | null
+    subject: SubjectSnapshot | null,
   ): Promise<void> {
     if (!this.config.enabled) return;
 
@@ -150,7 +149,7 @@ export class DecisionLoggerService {
     try {
       // Batch insert decision logs
       const decisionLogs = entries.map(({ request, decision, subject }) =>
-        this.buildDecisionLogEntry(request, decision, subject)
+        this.buildDecisionLogEntry(request, decision, subject),
       );
 
       await this.db
@@ -161,20 +160,17 @@ export class DecisionLoggerService {
       // Batch insert audit logs if enabled
       if (this.config.auditEnabled) {
         const auditLogs = entries.map(({ request, decision }) =>
-          this.buildAuditLogEntry(request, decision)
+          this.buildAuditLogEntry(request, decision),
         );
 
-        await this.db
-          .insertInto("audit.audit_log")
-          .values(auditLogs)
-          .execute();
+        await this.db.insertInto("audit.audit_log").values(auditLogs).execute();
       }
 
       console.log(
         JSON.stringify({
           msg: "decision_logs_flushed",
           count: entries.length,
-        })
+        }),
       );
     } catch (error) {
       console.error(
@@ -182,7 +178,7 @@ export class DecisionLoggerService {
           msg: "decision_log_flush_error",
           error: String(error),
           count: entries.length,
-        })
+        }),
       );
 
       // Put entries back in buffer for retry
@@ -196,7 +192,7 @@ export class DecisionLoggerService {
   private async writeDecisionLog(
     request: AuthorizationRequest,
     decision: AuthorizationDecision,
-    subject: SubjectSnapshot | null
+    subject: SubjectSnapshot | null,
   ): Promise<void> {
     const entry = this.buildDecisionLogEntry(request, decision, subject);
 
@@ -211,14 +207,11 @@ export class DecisionLoggerService {
    */
   private async writeAuditLog(
     request: AuthorizationRequest,
-    decision: AuthorizationDecision
+    decision: AuthorizationDecision,
   ): Promise<void> {
     const entry = this.buildAuditLogEntry(request, decision);
 
-    await this.db
-      .insertInto("audit.audit_log")
-      .values(entry)
-      .execute();
+    await this.db.insertInto("audit.audit_log").values(entry).execute();
   }
 
   /**
@@ -227,7 +220,7 @@ export class DecisionLoggerService {
   private buildDecisionLogEntry(
     request: AuthorizationRequest,
     decision: AuthorizationDecision,
-    subject: SubjectSnapshot | null
+    subject: SubjectSnapshot | null,
   ): {
     id: string;
     tenant_id: string;
@@ -247,9 +240,10 @@ export class DecisionLoggerService {
       id: crypto.randomUUID(),
       tenant_id: request.tenantId,
       actor_principal_id: request.principalId,
-      subject_snapshot: this.config.includeSubjectSnapshot && subject
-        ? JSON.stringify(subject)
-        : null,
+      subject_snapshot:
+        this.config.includeSubjectSnapshot && subject
+          ? JSON.stringify(subject)
+          : null,
       entity_name: request.resource.entityCode,
       entity_id: request.resource.recordId ?? null,
       entity_version_id: request.resource.entityVersionId ?? null,
@@ -258,7 +252,7 @@ export class DecisionLoggerService {
       matched_rule_id: decision.matchedRuleId ?? null,
       matched_policy_version_id: decision.matchedPolicyVersionId ?? null,
       reason: decision.reason,
-      correlation_id: request.context?.correlationId as string ?? null,
+      correlation_id: (request.context?.correlationId as string) ?? null,
     };
   }
 
@@ -267,7 +261,7 @@ export class DecisionLoggerService {
    */
   private buildAuditLogEntry(
     request: AuthorizationRequest,
-    decision: AuthorizationDecision
+    decision: AuthorizationDecision,
   ): {
     id: string;
     tenant_id: string;
@@ -291,7 +285,7 @@ export class DecisionLoggerService {
       entity_name: request.resource.entityCode ?? null,
       entity_id: request.resource.recordId ?? null,
       entity_version_id: request.resource.entityVersionId ?? null,
-      correlation_id: request.context?.correlationId as string ?? null,
+      correlation_id: (request.context?.correlationId as string) ?? null,
       ip_address: null,
       user_agent: null,
       payload: {
@@ -317,7 +311,7 @@ export class DecisionLoggerService {
           JSON.stringify({
             msg: "decision_log_timer_flush_error",
             error: String(error),
-          })
+          }),
         );
       });
     }, this.config.flushIntervalMs);
@@ -347,7 +341,7 @@ export class DecisionLoggerService {
   async getRecentLogs(
     tenantId: string,
     principalId: string,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<DecisionLogEntry[]> {
     const results = await this.db
       .selectFrom("audit.permission_decision_log")
@@ -395,7 +389,7 @@ export class DecisionLoggerService {
    * Get decision logs by correlation ID
    */
   async getLogsByCorrelation(
-    correlationId: string
+    correlationId: string,
   ): Promise<DecisionLogEntry[]> {
     const results = await this.db
       .selectFrom("audit.permission_decision_log")
@@ -442,7 +436,7 @@ export class DecisionLoggerService {
    */
   async getStats(
     tenantId: string,
-    since: Date
+    since: Date,
   ): Promise<{
     total: number;
     allowed: number;

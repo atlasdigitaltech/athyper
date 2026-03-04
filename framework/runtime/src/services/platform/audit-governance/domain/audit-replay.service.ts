@@ -73,8 +73,16 @@ export class AuditReplayService {
    * Each event is inserted idempotently (ON CONFLICT DO NOTHING).
    * After replay, the hash chain is rebuilt for the tenant.
    */
-  async replayFromNdjson(options: ReplayFromNdjsonOptions): Promise<ReplayResult> {
-    const { tenantId, ndjsonKey, replayedBy, batchSize = 100, onProgress } = options;
+  async replayFromNdjson(
+    options: ReplayFromNdjsonOptions,
+  ): Promise<ReplayResult> {
+    const {
+      tenantId,
+      ndjsonKey,
+      replayedBy,
+      batchSize = 100,
+      onProgress,
+    } = options;
 
     if (!this.objectStorage) {
       throw new Error("Object storage not available for NDJSON replay");
@@ -86,12 +94,16 @@ export class AuditReplayService {
       throw new Error(`NDJSON file not found: ${ndjsonKey}`);
     }
 
-    const content = typeof result.body === "string"
-      ? result.body
-      : result.body.toString("utf-8");
+    const content =
+      typeof result.body === "string"
+        ? result.body
+        : result.body.toString("utf-8");
 
     // 2. Parse lines
-    const lines = content.trim().split("\n").filter((l) => l.trim());
+    const lines = content
+      .trim()
+      .split("\n")
+      .filter((l) => l.trim());
     const events = lines.map((line) => JSON.parse(line));
 
     // 3. Insert in batches
@@ -163,9 +175,10 @@ export class AuditReplayService {
 
       for (const entry of batch) {
         try {
-          const event = typeof entry.payload === "string"
-            ? JSON.parse(entry.payload as any)
-            : entry.payload;
+          const event =
+            typeof entry.payload === "string"
+              ? JSON.parse(entry.payload as any)
+              : entry.payload;
 
           const outcome = await this.insertIdempotent(tenantId, event);
           if (outcome === "inserted") {
@@ -208,7 +221,11 @@ export class AuditReplayService {
   ): Promise<"inserted" | "duplicate" | "error"> {
     try {
       // Ensure correlation_id is set (required for dedup index)
-      const correlationId = event.correlation_id ?? event.correlationId ?? event.id ?? crypto.randomUUID();
+      const correlationId =
+        event.correlation_id ??
+        event.correlationId ??
+        event.id ??
+        crypto.randomUUID();
 
       const result = await sql`
         INSERT INTO core.workflow_event_log (
@@ -221,7 +238,7 @@ export class AuditReplayService {
           ${event.instance_id ?? event.instanceId ?? null},
           ${event.step_id ?? event.stepId ?? null},
           ${event.event_type ?? event.eventType},
-          ${(event.event_timestamp ?? event.timestamp ?? new Date().toISOString())}::timestamptz,
+          ${event.event_timestamp ?? event.timestamp ?? new Date().toISOString()}::timestamptz,
           ${event.actor_user_id ?? event.actor?.userId ?? null},
           ${event.severity ?? "info"},
           ${event.entity_type ?? event.entity?.type ?? null},
@@ -236,7 +253,8 @@ export class AuditReplayService {
       `.execute(this.db);
 
       // Check if row was actually inserted
-      const numAffected = (result as any).numAffectedRows ?? (result as any).rowCount ?? 1;
+      const numAffected =
+        (result as any).numAffectedRows ?? (result as any).rowCount ?? 1;
       return Number(numAffected) > 0 ? "inserted" : "duplicate";
     } catch {
       return "error";

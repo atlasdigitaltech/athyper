@@ -66,7 +66,7 @@ export class EntitlementSnapshotService {
     private readonly db: Kysely<DB>,
     private readonly roleBindingService: RoleBindingService,
     private readonly groupSyncService: GroupSyncService,
-    private readonly ouMembershipService: OUMembershipService
+    private readonly ouMembershipService: OUMembershipService,
   ) {}
 
   /**
@@ -82,12 +82,12 @@ export class EntitlementSnapshotService {
   async generateSnapshot(
     principalId: string,
     tenantId: string,
-    ttlSeconds: number = DEFAULT_TTL_SECONDS
+    ttlSeconds: number = DEFAULT_TTL_SECONDS,
   ): Promise<EntitlementSnapshot> {
     // 1. Get roles (direct + inherited from groups)
     const rolesWithBindings = await this.roleBindingService.getPrincipalRoles(
       principalId,
-      tenantId
+      tenantId,
     );
 
     // 2. Get groups
@@ -132,7 +132,7 @@ export class EntitlementSnapshotService {
         principalId,
         tenantId,
         expiresAt: expiresAt.toISOString(),
-      })
+      }),
     );
 
     return snapshot;
@@ -144,7 +144,7 @@ export class EntitlementSnapshotService {
   async getOrGenerateSnapshot(
     principalId: string,
     tenantId: string,
-    ttlSeconds: number = DEFAULT_TTL_SECONDS
+    ttlSeconds: number = DEFAULT_TTL_SECONDS,
   ): Promise<EntitlementSnapshot> {
     const now = new Date();
     const key = this.cacheKey(principalId, tenantId);
@@ -157,7 +157,7 @@ export class EntitlementSnapshotService {
           msg: "entitlement_snapshot_cache_hit",
           principalId,
           tenantId,
-        })
+        }),
       );
       return cached.snapshot;
     }
@@ -168,7 +168,7 @@ export class EntitlementSnapshotService {
         msg: "entitlement_snapshot_cache_miss",
         principalId,
         tenantId,
-      })
+      }),
     );
 
     return this.generateSnapshot(principalId, tenantId, ttlSeconds);
@@ -179,7 +179,7 @@ export class EntitlementSnapshotService {
    */
   async getCachedSnapshot(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntitlementSnapshot | undefined> {
     const now = new Date();
     const key = this.cacheKey(principalId, tenantId);
@@ -195,7 +195,10 @@ export class EntitlementSnapshotService {
   /**
    * Invalidate snapshot (force regeneration on next access)
    */
-  async invalidateSnapshot(principalId: string, tenantId: string): Promise<void> {
+  async invalidateSnapshot(
+    principalId: string,
+    tenantId: string,
+  ): Promise<void> {
     this.cache.delete(this.cacheKey(principalId, tenantId));
 
     console.log(
@@ -203,7 +206,7 @@ export class EntitlementSnapshotService {
         msg: "entitlement_snapshot_invalidated",
         principalId,
         tenantId,
-      })
+      }),
     );
   }
 
@@ -213,7 +216,7 @@ export class EntitlementSnapshotService {
   async hasRole(
     principalId: string,
     tenantId: string,
-    roleCode: string
+    roleCode: string,
   ): Promise<boolean> {
     const snapshot = await this.getOrGenerateSnapshot(principalId, tenantId);
     return snapshot.roles.some((r) => r.code === roleCode);
@@ -225,7 +228,7 @@ export class EntitlementSnapshotService {
   async isInGroup(
     principalId: string,
     tenantId: string,
-    groupCode: string
+    groupCode: string,
   ): Promise<boolean> {
     const snapshot = await this.getOrGenerateSnapshot(principalId, tenantId);
     return snapshot.groups.some((g) => g.code === groupCode);
@@ -237,7 +240,7 @@ export class EntitlementSnapshotService {
   async isInOU(
     principalId: string,
     tenantId: string,
-    ouNodeId: string
+    ouNodeId: string,
   ): Promise<boolean> {
     const snapshot = await this.getOrGenerateSnapshot(principalId, tenantId);
     if (!snapshot.ouMembership) return false;
@@ -262,7 +265,7 @@ export class EntitlementSnapshotService {
       JSON.stringify({
         msg: "expired_snapshots_cleaned",
         count,
-      })
+      }),
     );
 
     return count;

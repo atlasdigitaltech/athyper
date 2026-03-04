@@ -5,7 +5,10 @@ import { describe, it, expect, vi } from "vitest";
 
 import { createDrainAuditOutboxHandler } from "../jobs/workers/drainAuditOutbox.worker.js";
 
-import type { AuditOutboxRepo, AuditOutboxEntry } from "../persistence/AuditOutboxRepo.js";
+import type {
+  AuditOutboxRepo,
+  AuditOutboxEntry,
+} from "../persistence/AuditOutboxRepo.js";
 import type { WorkflowAuditRepository } from "../persistence/WorkflowAuditRepository.js";
 import type { Job } from "@athyper/core";
 
@@ -39,7 +42,9 @@ function createMockLogger() {
   } as any;
 }
 
-function makeOutboxEntry(overrides: Partial<AuditOutboxEntry> = {}): AuditOutboxEntry {
+function makeOutboxEntry(
+  overrides: Partial<AuditOutboxEntry> = {},
+): AuditOutboxEntry {
   return {
     id: "outbox-1",
     tenantId: "t-1",
@@ -47,7 +52,12 @@ function makeOutboxEntry(overrides: Partial<AuditOutboxEntry> = {}): AuditOutbox
     payload: {
       instanceId: "inst-1",
       entity: { type: "PO", id: "po-1" },
-      workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+      workflow: {
+        templateId: "t1",
+        templateCode: "WF1",
+        templateVersion: 1,
+        templateName: "Test",
+      },
       actor: { userId: "u-1" },
       timestamp: new Date().toISOString(),
     },
@@ -85,7 +95,11 @@ describe("drainAuditOutbox worker", () => {
     const auditRepo = createMockAuditRepo();
     const logger = createMockLogger();
 
-    const handler = createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger);
+    const handler = createDrainAuditOutboxHandler(
+      outboxRepo,
+      auditRepo,
+      logger,
+    );
     await handler(makeJob());
 
     expect(outboxRepo.pick).toHaveBeenCalledTimes(1);
@@ -98,7 +112,11 @@ describe("drainAuditOutbox worker", () => {
     const auditRepo = createMockAuditRepo();
     const logger = createMockLogger();
 
-    const handler = createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger);
+    const handler = createDrainAuditOutboxHandler(
+      outboxRepo,
+      auditRepo,
+      logger,
+    );
     await handler(makeJob());
 
     expect(auditRepo.recordEvent).not.toHaveBeenCalled();
@@ -124,12 +142,19 @@ describe("drainAuditOutbox worker", () => {
     } as unknown as WorkflowAuditRepository;
     const logger = createMockLogger();
 
-    const handler = createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger);
+    const handler = createDrainAuditOutboxHandler(
+      outboxRepo,
+      auditRepo,
+      logger,
+    );
     await handler(makeJob());
 
     // 2 succeeded, 1 failed
     expect(outboxRepo.markPersisted).toHaveBeenCalledWith(["o-1", "o-3"]);
-    expect(outboxRepo.markFailed).toHaveBeenCalledWith("o-2", "DB write failed");
+    expect(outboxRepo.markFailed).toHaveBeenCalledWith(
+      "o-2",
+      "DB write failed",
+    );
   });
 
   it("should throw when all items fail", async () => {
@@ -138,8 +163,14 @@ describe("drainAuditOutbox worker", () => {
     const auditRepo = createMockAuditRepo(true); // All fail
     const logger = createMockLogger();
 
-    const handler = createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger);
-    await expect(handler(makeJob())).rejects.toThrow("All 1 outbox items failed");
+    const handler = createDrainAuditOutboxHandler(
+      outboxRepo,
+      auditRepo,
+      logger,
+    );
+    await expect(handler(makeJob())).rejects.toThrow(
+      "All 1 outbox items failed",
+    );
   });
 
   it("should respect custom batch size", async () => {
@@ -147,7 +178,11 @@ describe("drainAuditOutbox worker", () => {
     const auditRepo = createMockAuditRepo();
     const logger = createMockLogger();
 
-    const handler = createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger);
+    const handler = createDrainAuditOutboxHandler(
+      outboxRepo,
+      auditRepo,
+      logger,
+    );
     await handler(makeJob({ batchSize: 100 }));
 
     expect(outboxRepo.pick).toHaveBeenCalledWith(100, expect.any(String));

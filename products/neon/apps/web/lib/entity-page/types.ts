@@ -20,7 +20,13 @@ export type ViewMode = "view" | "edit" | "create";
 export interface BadgeDescriptor {
   code: string;
   label: string;
-  variant: "default" | "secondary" | "destructive" | "outline" | "warning" | "success";
+  variant:
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "warning"
+    | "success";
 }
 
 export type ActionGroup = "lifecycle" | "approval" | "entity" | "posting";

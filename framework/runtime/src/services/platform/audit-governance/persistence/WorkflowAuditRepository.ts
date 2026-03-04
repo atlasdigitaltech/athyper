@@ -5,7 +5,6 @@
  * Follows the NotificationDeliveryRepo pattern for Kysely usage.
  */
 
-
 import { getDefaultSeverity } from "../domain/event-taxonomy.js";
 
 import type {
@@ -21,7 +20,10 @@ import type {
 import type { ApprovalActionType } from "../../workflow-engine/types.js";
 import type { AuditColumnEncryptionService } from "../domain/column-encryption.service.js";
 import type { AuditHashChainService } from "../domain/hash-chain.service.js";
-import type { AuditRedactionPipeline, RedactionResult } from "../domain/redaction-pipeline.js";
+import type {
+  AuditRedactionPipeline,
+  RedactionResult,
+} from "../domain/redaction-pipeline.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -64,7 +66,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Write
   // --------------------------------------------------------------------------
 
-  async recordEvent(tenantId: string, event: Omit<AuditEvent, "id">): Promise<AuditEvent> {
+  async recordEvent(
+    tenantId: string,
+    event: Omit<AuditEvent, "id">,
+  ): Promise<AuditEvent> {
     const id = crypto.randomUUID();
 
     // Run redaction pipeline if available
@@ -101,7 +106,9 @@ export class WorkflowAuditRepository implements IAuditRepository {
     let ipAddress: string | null = processedEvent.ipAddress ?? null;
     let userAgent: string | null = processedEvent.userAgent ?? null;
     let comment: string | null = processedEvent.comment ?? null;
-    let attachmentsStr: string | null = processedEvent.attachments ? JSON.stringify(processedEvent.attachments) : null;
+    let attachmentsStr: string | null = processedEvent.attachments
+      ? JSON.stringify(processedEvent.attachments)
+      : null;
     let keyVersion: number | null = null;
 
     if (this.encryption) {
@@ -124,7 +131,9 @@ export class WorkflowAuditRepository implements IAuditRepository {
         id,
         tenant_id: tenantId,
         event_type: processedEvent.eventType,
-        severity: processedEvent.severity ?? getDefaultSeverity(processedEvent.eventType),
+        severity:
+          processedEvent.severity ??
+          getDefaultSeverity(processedEvent.eventType),
         schema_version: CURRENT_SCHEMA_VERSION,
         instance_id: processedEvent.instanceId,
         step_instance_id: processedEvent.stepInstanceId ?? null,
@@ -139,17 +148,23 @@ export class WorkflowAuditRepository implements IAuditRepository {
         actor_is_admin: actorIsAdmin,
         module_code: "WF",
         action: processedEvent.action ?? null,
-        previous_state: processedEvent.previousState ? JSON.stringify(processedEvent.previousState) : null,
-        new_state: processedEvent.newState ? JSON.stringify(processedEvent.newState) : null,
+        previous_state: processedEvent.previousState
+          ? JSON.stringify(processedEvent.previousState)
+          : null,
+        new_state: processedEvent.newState
+          ? JSON.stringify(processedEvent.newState)
+          : null,
         comment,
         attachments: attachmentsStr,
-        details: processedEvent.details ? JSON.stringify(processedEvent.details) : null,
+        details: processedEvent.details
+          ? JSON.stringify(processedEvent.details)
+          : null,
         ip_address: ipAddress,
         user_agent: userAgent,
         correlation_id: processedEvent.correlationId ?? null,
         session_id: processedEvent.sessionId ?? null,
         trace_id: processedEvent.correlationId
-          ? null  // already correlated via correlation_id
+          ? null // already correlated via correlation_id
           : (this.traceContextResolver?.()?.traceId ?? null),
         hash_prev: hashPrev ?? null,
         hash_curr: hashCurr ?? null,
@@ -168,7 +183,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — getEventById (single event lookup with tenant isolation)
   // --------------------------------------------------------------------------
 
-  async getEventById(tenantId: string, eventId: string): Promise<AuditEvent | undefined> {
+  async getEventById(
+    tenantId: string,
+    eventId: string,
+  ): Promise<AuditEvent | undefined> {
     const row = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -188,7 +206,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — getEvents with full filter support
   // --------------------------------------------------------------------------
 
-  async getEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<AuditEvent[]> {
+  async getEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<AuditEvent[]> {
     let query = this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -250,7 +271,9 @@ export class WorkflowAuditRepository implements IAuditRepository {
 
     // Use decryption-aware mapping when encryption is enabled
     if (this.encryption) {
-      return Promise.all(rows.map((r: any) => this.mapRowDecrypted(r, tenantId)));
+      return Promise.all(
+        rows.map((r: any) => this.mapRowDecrypted(r, tenantId)),
+      );
     }
     return rows.map((r: any) => this.mapRow(r));
   }
@@ -259,7 +282,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — Instance audit trail (ported from InMemoryAuditRepository)
   // --------------------------------------------------------------------------
 
-  async getInstanceAuditTrail(tenantId: string, instanceId: string): Promise<InstanceAuditTrail> {
+  async getInstanceAuditTrail(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<InstanceAuditTrail> {
     const events = await this.getEvents(tenantId, {
       instanceId,
       sortBy: "timestamp",
@@ -287,8 +313,12 @@ export class WorkflowAuditRepository implements IAuditRepository {
     // Build step summaries
     const steps: StepAuditSummary[] = [];
     for (const [stepId, stepEvts] of stepEvents) {
-      const activatedEvent = stepEvts.find((e) => e.eventType === "step.activated");
-      const completedEvent = stepEvts.find((e) => e.eventType === "step.completed");
+      const activatedEvent = stepEvts.find(
+        (e) => e.eventType === "step.activated",
+      );
+      const completedEvent = stepEvts.find(
+        (e) => e.eventType === "step.completed",
+      );
       const skippedEvent = stepEvts.find((e) => e.eventType === "step.skipped");
 
       const approverActions = stepEvts
@@ -318,17 +348,22 @@ export class WorkflowAuditRepository implements IAuditRepository {
         completedAt: completedEvent?.timestamp || skippedEvent?.timestamp,
         durationMs:
           activatedEvent && (completedEvent || skippedEvent)
-            ? (completedEvent?.timestamp || skippedEvent?.timestamp)!.getTime() -
+            ? (completedEvent?.timestamp ||
+                skippedEvent?.timestamp)!.getTime() -
               activatedEvent.timestamp.getTime()
             : undefined,
         approverActions,
-        escalationCount: stepEvts.filter((e) => e.eventType === "step.escalated").length,
+        escalationCount: stepEvts.filter(
+          (e) => e.eventType === "step.escalated",
+        ).length,
         slaStatus: stepEvts.some((e) => e.eventType === "sla.breach")
           ? "breached"
           : stepEvts.some((e) => e.eventType === "sla.warning")
             ? "warning"
             : "on_track",
-        autoApproved: stepEvts.some((e) => e.eventType === "step.auto_approved"),
+        autoApproved: stepEvts.some(
+          (e) => e.eventType === "step.auto_approved",
+        ),
         skipped: !!skippedEvent,
         skipReason: skippedEvent?.details?.reason as string | undefined,
       });
@@ -337,13 +372,22 @@ export class WorkflowAuditRepository implements IAuditRepository {
     // Calculate statistics
     const statistics = {
       totalSteps: steps.length,
-      completedSteps: steps.filter((s) => s.status === "completed" || s.status === "approved").length,
+      completedSteps: steps.filter(
+        (s) => s.status === "completed" || s.status === "approved",
+      ).length,
       skippedSteps: steps.filter((s) => s.skipped).length,
-      totalApprovers: steps.reduce((sum, s) => sum + s.approverActions.length, 0),
-      approvedCount: events.filter((e) => e.eventType === "action.approve").length,
-      rejectedCount: events.filter((e) => e.eventType === "action.reject").length,
-      delegatedCount: events.filter((e) => e.eventType === "action.delegate").length,
-      escalationCount: events.filter((e) => e.eventType === "step.escalated").length,
+      totalApprovers: steps.reduce(
+        (sum, s) => sum + s.approverActions.length,
+        0,
+      ),
+      approvedCount: events.filter((e) => e.eventType === "action.approve")
+        .length,
+      rejectedCount: events.filter((e) => e.eventType === "action.reject")
+        .length,
+      delegatedCount: events.filter((e) => e.eventType === "action.delegate")
+        .length,
+      escalationCount: events.filter((e) => e.eventType === "step.escalated")
+        .length,
       slaBreachCount: events.filter((e) => e.eventType === "sla.breach").length,
     };
 
@@ -360,12 +404,15 @@ export class WorkflowAuditRepository implements IAuditRepository {
       entity: firstEvent.entity,
       workflow: firstEvent.workflow,
       requester: firstEvent.actor,
-      currentStatus: (lastEvent.newState?.instanceStatus as any) || "in_progress",
-      currentEntityState: (lastEvent.newState?.entityState as any) || "pending_approval",
+      currentStatus:
+        (lastEvent.newState?.instanceStatus as any) || "in_progress",
+      currentEntityState:
+        (lastEvent.newState?.entityState as any) || "pending_approval",
       createdAt: firstEvent.timestamp,
       completedAt: finalDecisionEvent?.timestamp,
       totalDurationMs: finalDecisionEvent
-        ? finalDecisionEvent.timestamp.getTime() - firstEvent.timestamp.getTime()
+        ? finalDecisionEvent.timestamp.getTime() -
+          firstEvent.timestamp.getTime()
         : undefined,
       finalDecision: finalDecisionEvent
         ? {
@@ -385,7 +432,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — Step audit summary (ported from InMemoryAuditRepository)
   // --------------------------------------------------------------------------
 
-  async getStepAuditSummary(tenantId: string, stepInstanceId: string): Promise<StepAuditSummary> {
+  async getStepAuditSummary(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<StepAuditSummary> {
     const events = await this.getEvents(tenantId, {
       stepInstanceId,
       sortBy: "timestamp",
@@ -431,7 +481,8 @@ export class WorkflowAuditRepository implements IAuditRepository {
             activatedEvent.timestamp.getTime()
           : undefined,
       approverActions,
-      escalationCount: events.filter((e) => e.eventType === "step.escalated").length,
+      escalationCount: events.filter((e) => e.eventType === "step.escalated")
+        .length,
       slaStatus: events.some((e) => e.eventType === "sla.breach")
         ? "breached"
         : events.some((e) => e.eventType === "sla.warning")
@@ -447,25 +498,41 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — Count
   // --------------------------------------------------------------------------
 
-  async countEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<number> {
+  async countEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<number> {
     let query = this.db
       .selectFrom(TABLE as any)
       .select(this.db.fn.countAll().as("count"))
       .where("tenant_id", "=", tenantId);
 
-    if (options?.instanceId) query = query.where("instance_id", "=", options.instanceId);
-    if (options?.stepInstanceId) query = query.where("step_instance_id", "=", options.stepInstanceId);
-    if (options?.entityType) query = query.where("entity_type", "=", options.entityType);
-    if (options?.entityId) query = query.where("entity_id", "=", options.entityId);
-    if (options?.templateCode) query = query.where("workflow_template_code", "=", options.templateCode);
-    if (options?.eventTypes && options.eventTypes.length > 0) query = query.where("event_type", "in", options.eventTypes);
-    if (options?.severity && options.severity.length > 0) query = query.where("severity", "in", options.severity);
-    if (options?.actorUserId) query = query.where("actor_user_id", "=", options.actorUserId);
-    if (options?.adminActionsOnly) query = query.where("actor_is_admin", "=", true);
-    if (options?.startDate) query = query.where("event_timestamp", ">=", options.startDate);
-    if (options?.endDate) query = query.where("event_timestamp", "<=", options.endDate);
+    if (options?.instanceId)
+      query = query.where("instance_id", "=", options.instanceId);
+    if (options?.stepInstanceId)
+      query = query.where("step_instance_id", "=", options.stepInstanceId);
+    if (options?.entityType)
+      query = query.where("entity_type", "=", options.entityType);
+    if (options?.entityId)
+      query = query.where("entity_id", "=", options.entityId);
+    if (options?.templateCode)
+      query = query.where("workflow_template_code", "=", options.templateCode);
+    if (options?.eventTypes && options.eventTypes.length > 0)
+      query = query.where("event_type", "in", options.eventTypes);
+    if (options?.severity && options.severity.length > 0)
+      query = query.where("severity", "in", options.severity);
+    if (options?.actorUserId)
+      query = query.where("actor_user_id", "=", options.actorUserId);
+    if (options?.adminActionsOnly)
+      query = query.where("actor_is_admin", "=", true);
+    if (options?.startDate)
+      query = query.where("event_timestamp", ">=", options.startDate);
+    if (options?.endDate)
+      query = query.where("event_timestamp", "<=", options.endDate);
 
-    const result = await query.executeTakeFirst() as { count: string | number } | undefined;
+    const result = (await query.executeTakeFirst()) as
+      | { count: string | number }
+      | undefined;
     return Number(result?.count ?? 0);
   }
 
@@ -473,7 +540,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
   // Read — Correlation
   // --------------------------------------------------------------------------
 
-  async getEventsByCorrelationId(tenantId: string, correlationId: string): Promise<AuditEvent[]> {
+  async getEventsByCorrelationId(
+    tenantId: string,
+    correlationId: string,
+  ): Promise<AuditEvent[]> {
     const rows = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -483,7 +553,9 @@ export class WorkflowAuditRepository implements IAuditRepository {
       .execute();
 
     if (this.encryption) {
-      return Promise.all(rows.map((r: any) => this.mapRowDecrypted(r, tenantId)));
+      return Promise.all(
+        rows.map((r: any) => this.mapRowDecrypted(r, tenantId)),
+      );
     }
     return rows.map((r: any) => this.mapRow(r));
   }
@@ -540,9 +612,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
       comment: row.comment ?? undefined,
       attachments: this.parseJson(row.attachments) ?? undefined,
       details: this.parseJson(row.details) ?? undefined,
-      timestamp: row.event_timestamp instanceof Date
-        ? row.event_timestamp
-        : new Date(row.event_timestamp),
+      timestamp:
+        row.event_timestamp instanceof Date
+          ? row.event_timestamp
+          : new Date(row.event_timestamp),
       ipAddress: row.ip_address ?? undefined,
       userAgent: row.user_agent ?? undefined,
       correlationId: row.correlation_id ?? undefined,
@@ -554,7 +627,10 @@ export class WorkflowAuditRepository implements IAuditRepository {
    * Map a row with decryption of encrypted columns.
    * Used when encryption is enabled to transparently decrypt on read.
    */
-  private async mapRowDecrypted(row: any, tenantId: string): Promise<AuditEvent> {
+  private async mapRowDecrypted(
+    row: any,
+    tenantId: string,
+  ): Promise<AuditEvent> {
     // Only decrypt if row has a key_version (was encrypted)
     if (this.encryption && row.key_version != null) {
       const decrypted = await this.encryption.decryptColumns(tenantId, {
@@ -603,7 +679,12 @@ export function createWorkflowAuditRepository(
   traceContextResolver?: TraceContextResolver,
   encryption?: AuditColumnEncryptionService,
 ): WorkflowAuditRepository {
-  const repo = new WorkflowAuditRepository(db, hashChain, redaction, traceContextResolver);
+  const repo = new WorkflowAuditRepository(
+    db,
+    hashChain,
+    redaction,
+    traceContextResolver,
+  );
   if (encryption) {
     repo.setEncryption(encryption);
   }

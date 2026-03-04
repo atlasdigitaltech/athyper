@@ -11,7 +11,7 @@ import type { ObjectStorageAdapter, ObjectStorageConfig } from "./types.js";
  * Factory function to create S3 object storage adapter
  */
 export function createS3ObjectStorageAdapter(
-  config: ObjectStorageConfig
+  config: ObjectStorageConfig,
 ): ObjectStorageAdapter {
   const client = createS3Client(config);
   return new S3ObjectStorageAdapter(client, config);

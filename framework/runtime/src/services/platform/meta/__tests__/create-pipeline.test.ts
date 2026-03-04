@@ -53,7 +53,12 @@ function createMockDependencies(options: {
       tableName: "ent.test_entity",
       fields: [
         { name: "name", type: "string", required: true, columnName: "name" },
-        { name: "description", type: "string", required: false, columnName: "description" },
+        {
+          name: "description",
+          type: "string",
+          required: false,
+          columnName: "description",
+        },
       ],
       entityClass: options.entityClass ?? "DOCUMENT",
       featureFlags: {
@@ -186,22 +191,21 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         mocks.lifecycleManager,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       const result = await service.create("test_entity", inputData, ctx);
 
       // Verify classification service was called
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
 
       // Verify numbering engine was called
       expect(mocks.numberingEngine!.generateNumber).toHaveBeenCalledWith(
         "test_entity",
         ctx.tenantId,
-        expect.any(Date)
+        expect.any(Date),
       );
 
       // Verify the result has all expected fields
@@ -249,7 +253,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("customer", inputData, ctx);
@@ -298,7 +302,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("workflow_task", inputData, ctx);
@@ -344,7 +348,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       const result = await service.create("invoice", inputData, ctx);
@@ -353,7 +357,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
       expect(mocks.numberingEngine!.generateNumber).toHaveBeenCalledWith(
         "invoice",
         ctx.tenantId,
-        expect.any(Date)
+        expect.any(Date),
       );
 
       // Verify document_number was set
@@ -390,7 +394,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       await service.create("invoice", inputData, ctx);
@@ -429,7 +433,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       await service.create("customer", inputData, ctx);
@@ -473,7 +477,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       // Should not throw, create should succeed without document_number
@@ -520,7 +524,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("test_entity", inputData, ctx);
@@ -560,7 +564,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("test_entity", inputData, ctx);
@@ -602,7 +606,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("customer", inputData, ctx);
@@ -640,7 +644,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         undefined, // No classification service
-        undefined
+        undefined,
       );
 
       const result = await service.create("test_entity", inputData, ctx);
@@ -666,7 +670,10 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         hasLifecycleManager: false,
       });
 
-      const inputData = { name: "Simple Record", description: "Test description" };
+      const inputData = {
+        name: "Simple Record",
+        description: "Test description",
+      };
       const createdRecord = {
         id: "uuid-123",
         name: "Simple Record",
@@ -689,7 +696,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined, // No lifecycle manager
         undefined, // No classification service
-        undefined // No numbering engine
+        undefined, // No numbering engine
       );
 
       const result = await service.create("test_entity", inputData, ctx);
@@ -720,7 +727,10 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         numberingEnabled: true,
       });
 
-      const inputData = { name: "Manual Invoice", document_number: "MANUAL-001" };
+      const inputData = {
+        name: "Manual Invoice",
+        document_number: "MANUAL-001",
+      };
       const createdRecord = {
         id: "uuid-123",
         name: "Manual Invoice",
@@ -748,7 +758,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       const result = await service.create("invoice", inputData, ctx);
@@ -791,7 +801,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        mocks.numberingEngine
+        mocks.numberingEngine,
       );
 
       const result = await service.create("invoice", inputData, ctx);
@@ -837,7 +847,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("invoice", inputData, ctx);
@@ -878,7 +888,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("invoice", inputData, ctx);
@@ -915,7 +925,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("customer", inputData, ctx);
@@ -954,7 +964,7 @@ describe("GenericDataAPIService - Create Pipeline", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.create("invoice", inputData, ctx);

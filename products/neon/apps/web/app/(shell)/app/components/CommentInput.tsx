@@ -44,18 +44,20 @@ export function CommentInput({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [visibility, setVisibility] = useState<'public' | 'internal' | 'private'>('public');
+  const [visibility, setVisibility] = useState<
+    "public" | "internal" | "private"
+  >("public");
 
   // Set text when editing
   useEffect(() => {
     if (editingComment) {
       setCommentText(editingComment.commentText);
       setSelectedFiles([]); // Clear files when editing
-      setVisibility('public'); // Reset visibility when editing
+      setVisibility("public"); // Reset visibility when editing
     } else {
       setCommentText("");
       setSelectedFiles([]);
-      setVisibility('public');
+      setVisibility("public");
     }
   }, [editingComment]);
 
@@ -147,7 +149,7 @@ export function CommentInput({
 
       setCommentText("");
       setSelectedFiles([]);
-      setVisibility('public');
+      setVisibility("public");
       onCommentCreated();
     } catch (err) {
       console.error("Comment submit error:", err);
@@ -160,7 +162,7 @@ export function CommentInput({
   const handleCancel = () => {
     setCommentText("");
     setSelectedFiles([]);
-    setVisibility('public');
+    setVisibility("public");
     setError(null);
     onCancelEdit?.();
   };
@@ -183,13 +185,19 @@ export function CommentInput({
         <MarkdownEditor
           value={commentText}
           onChange={setCommentText}
-          placeholder={editingComment ? "Edit your comment..." : "Write your comment in markdown..."}
+          placeholder={
+            editingComment
+              ? "Edit your comment..."
+              : "Write your comment in markdown..."
+          }
           maxLength={maxLength}
           disabled={submitting}
         />
 
         {/* Character Counter */}
-        <div className={`text-xs text-right mt-1 ${isNearLimit ? "text-red-600" : "text-gray-500"}`}>
+        <div
+          className={`text-xs text-right mt-1 ${isNearLimit ? "text-red-600" : "text-gray-500"}`}
+        >
           {remainingChars.toLocaleString()} characters remaining
         </div>
       </div>
@@ -202,18 +210,24 @@ export function CommentInput({
           </label>
           <select
             value={visibility}
-            onChange={(e) => setVisibility(e.target.value as 'public' | 'internal' | 'private')}
+            onChange={(e) =>
+              setVisibility(e.target.value as "public" | "internal" | "private")
+            }
             disabled={submitting}
             className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
           >
             <option value="public">Public - Visible to all users</option>
-            <option value="internal">Internal - Visible to internal users only</option>
+            <option value="internal">
+              Internal - Visible to internal users only
+            </option>
             <option value="private">Private - Visible only to you</option>
           </select>
           <div className="mt-1 text-xs text-gray-500">
-            {visibility === 'public' && '🌐 Anyone with access to this record can see this comment'}
-            {visibility === 'internal' && '🔒 Only internal team members can see this comment'}
-            {visibility === 'private' && '👤 Only you can see this comment'}
+            {visibility === "public" &&
+              "🌐 Anyone with access to this record can see this comment"}
+            {visibility === "internal" &&
+              "🔒 Only internal team members can see this comment"}
+            {visibility === "private" && "👤 Only you can see this comment"}
           </div>
         </div>
       )}
@@ -263,7 +277,12 @@ export function CommentInput({
                     disabled={submitting}
                     className="ml-2 text-red-600 hover:text-red-800 disabled:opacity-50"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"

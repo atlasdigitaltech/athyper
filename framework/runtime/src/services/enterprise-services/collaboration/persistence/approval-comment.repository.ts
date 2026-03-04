@@ -5,7 +5,11 @@
  * Handles comments specific to approval workflow instances.
  */
 
-import type { ApprovalComment, CreateApprovalCommentRequest, Attachment } from "../types.js";
+import type {
+  ApprovalComment,
+  CreateApprovalCommentRequest,
+  Attachment,
+} from "../types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -42,7 +46,10 @@ export class ApprovalCommentRepository {
   /**
    * Get comment by ID
    */
-  async getById(tenantId: string, commentId: string): Promise<ApprovalComment | undefined> {
+  async getById(
+    tenantId: string,
+    commentId: string,
+  ): Promise<ApprovalComment | undefined> {
     const row = await this.db
       .selectFrom("wf.approval_comment")
       .selectAll()
@@ -55,7 +62,10 @@ export class ApprovalCommentRepository {
     const comment = this.mapRow(row as ApprovalCommentRow);
 
     // Fetch attachments
-    const attachments = await this.fetchAttachmentsForComment(tenantId, commentId);
+    const attachments = await this.fetchAttachmentsForComment(
+      tenantId,
+      commentId,
+    );
     comment.attachments = attachments;
 
     return comment;
@@ -67,7 +77,7 @@ export class ApprovalCommentRepository {
   async listByInstance(
     tenantId: string,
     approvalInstanceId: string,
-    options?: ListApprovalCommentOptions
+    options?: ListApprovalCommentOptions,
   ): Promise<ApprovalComment[]> {
     const { limit = 100, offset = 0, taskId } = options ?? {};
 
@@ -93,7 +103,10 @@ export class ApprovalCommentRepository {
     // Fetch attachments for all comments
     if (comments.length > 0) {
       const commentIds = comments.map((c) => c.id);
-      const attachmentsMap = await this.fetchAttachmentsForComments(tenantId, commentIds);
+      const attachmentsMap = await this.fetchAttachmentsForComments(
+        tenantId,
+        commentIds,
+      );
       comments.forEach((comment) => {
         comment.attachments = attachmentsMap.get(comment.id) || [];
       });
@@ -107,7 +120,7 @@ export class ApprovalCommentRepository {
    */
   async countByInstance(
     tenantId: string,
-    approvalInstanceId: string
+    approvalInstanceId: string,
   ): Promise<number> {
     const result = await this.db
       .selectFrom("wf.approval_comment")
@@ -135,7 +148,7 @@ export class ApprovalCommentRepository {
         approval_task_id: req.approvalTaskId ?? null,
         commenter_id: req.commenterId,
         comment_text: req.commentText,
-        visibility: req.visibility ?? 'public',
+        visibility: req.visibility ?? "public",
         created_at: now,
         created_by: req.createdBy,
       })
@@ -155,7 +168,7 @@ export class ApprovalCommentRepository {
   async listByCommenter(
     tenantId: string,
     commenterId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<ApprovalComment[]> {
     const { limit = 50, offset = 0 } = options ?? {};
 
@@ -174,7 +187,10 @@ export class ApprovalCommentRepository {
     // Fetch attachments for all comments
     if (comments.length > 0) {
       const commentIds = comments.map((c) => c.id);
-      const attachmentsMap = await this.fetchAttachmentsForComments(tenantId, commentIds);
+      const attachmentsMap = await this.fetchAttachmentsForComments(
+        tenantId,
+        commentIds,
+      );
       comments.forEach((comment) => {
         comment.attachments = attachmentsMap.get(comment.id) || [];
       });
@@ -188,7 +204,7 @@ export class ApprovalCommentRepository {
    */
   private async fetchAttachmentsForComment(
     tenantId: string,
-    commentId: string
+    commentId: string,
   ): Promise<Attachment[]> {
     const rows = await this.db
       .selectFrom("doc.attachment")
@@ -223,7 +239,7 @@ export class ApprovalCommentRepository {
    */
   private async fetchAttachmentsForComments(
     tenantId: string,
-    commentIds: string[]
+    commentIds: string[],
   ): Promise<Map<string, Attachment[]>> {
     if (commentIds.length === 0) {
       return new Map();
@@ -281,7 +297,7 @@ export class ApprovalCommentRepository {
       approvalTaskId: row.approval_task_id ?? undefined,
       commenterId: row.commenter_id,
       commentText: row.comment_text,
-      visibility: row.visibility as 'public' | 'internal' | 'private',
+      visibility: row.visibility as "public" | "internal" | "private",
       createdAt: row.created_at,
       createdBy: row.created_by,
     };

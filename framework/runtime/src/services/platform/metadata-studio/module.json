@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "META",
-    "name":  "Metadata Studio",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "META",
+  "name": "Metadata Studio",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

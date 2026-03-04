@@ -36,10 +36,12 @@ export interface IPersonaCapabilityRepository {
 
   // Capabilities
   getCapabilities(): Promise<PersonaCapability[]>;
-  getCapabilitiesForPersona(personaCode: PersonaCode): Promise<PersonaCapability[]>;
+  getCapabilitiesForPersona(
+    personaCode: PersonaCode,
+  ): Promise<PersonaCapability[]>;
   getCapabilityForOperation(
     personaCode: PersonaCode,
-    operationCode: string
+    operationCode: string,
   ): Promise<PersonaCapability | null>;
   getCapabilityMatrix(): Promise<CapabilityMatrix>;
 
@@ -48,7 +50,9 @@ export interface IPersonaCapabilityRepository {
   getModuleByCode(code: string): Promise<Module | null>;
   getTenantSubscriptions(tenantId: string): Promise<TenantModuleSubscription[]>;
   hasModuleSubscription(tenantId: string, moduleCode: string): Promise<boolean>;
-  getEntityModuleMapping(entityKey: string): Promise<EntityModuleMapping | null>;
+  getEntityModuleMapping(
+    entityKey: string,
+  ): Promise<EntityModuleMapping | null>;
 }
 
 // ============================================================================
@@ -168,7 +172,9 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
     }));
   }
 
-  async getOperationsByCategory(category: OperationCategory): Promise<Operation[]> {
+  async getOperationsByCategory(
+    category: OperationCategory,
+  ): Promise<Operation[]> {
     const rows = await this.db
       .selectFrom("core.operation as o")
       .innerJoin("core.operation_category as c", "c.id", "o.category_id")
@@ -264,7 +270,9 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
     }));
   }
 
-  async getCapabilitiesForPersona(personaCode: PersonaCode): Promise<PersonaCapability[]> {
+  async getCapabilitiesForPersona(
+    personaCode: PersonaCode,
+  ): Promise<PersonaCapability[]> {
     const rows = await this.db
       .selectFrom("core.persona_capability as pc")
       .innerJoin("core.persona as p", "p.id", "pc.persona_id")
@@ -295,7 +303,7 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
 
   async getCapabilityForOperation(
     personaCode: PersonaCode,
-    operationCode: string
+    operationCode: string,
   ): Promise<PersonaCapability | null> {
     const row = await this.db
       .selectFrom("core.persona_capability as pc")
@@ -377,7 +385,9 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
     };
   }
 
-  async getTenantSubscriptions(tenantId: string): Promise<TenantModuleSubscription[]> {
+  async getTenantSubscriptions(
+    tenantId: string,
+  ): Promise<TenantModuleSubscription[]> {
     const rows = await this.db
       .selectFrom("core.tenant_module_subscription as tms")
       .innerJoin("core.module as m", "m.id", "tms.module_id")
@@ -405,7 +415,10 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
     }));
   }
 
-  async hasModuleSubscription(tenantId: string, moduleCode: string): Promise<boolean> {
+  async hasModuleSubscription(
+    tenantId: string,
+    moduleCode: string,
+  ): Promise<boolean> {
     const now = new Date();
 
     const row = await this.db
@@ -417,14 +430,19 @@ export class DatabasePersonaCapabilityRepository implements IPersonaCapabilityRe
       .where("tms.is_active", "=", true)
       .where("tms.valid_from", "<=", now)
       .where((eb) =>
-        eb.or([eb("tms.valid_until", "is", null), eb("tms.valid_until", ">", now)])
+        eb.or([
+          eb("tms.valid_until", "is", null),
+          eb("tms.valid_until", ">", now),
+        ]),
       )
       .executeTakeFirst();
 
     return row !== undefined;
   }
 
-  async getEntityModuleMapping(entityKey: string): Promise<EntityModuleMapping | null> {
+  async getEntityModuleMapping(
+    entityKey: string,
+  ): Promise<EntityModuleMapping | null> {
     const row = await this.db
       .selectFrom("core.entity_module as em")
       .innerJoin("core.module as m", "m.id", "em.module_id")
@@ -507,7 +525,9 @@ export class InMemoryPersonaCapabilityRepository implements IPersonaCapabilityRe
     return [...this.operations].sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
-  async getOperationsByCategory(category: OperationCategory): Promise<Operation[]> {
+  async getOperationsByCategory(
+    category: OperationCategory,
+  ): Promise<Operation[]> {
     return this.operations
       .filter((o) => o.categoryCode === category)
       .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -521,19 +541,22 @@ export class InMemoryPersonaCapabilityRepository implements IPersonaCapabilityRe
     return [...this.capabilities];
   }
 
-  async getCapabilitiesForPersona(personaCode: PersonaCode): Promise<PersonaCapability[]> {
+  async getCapabilitiesForPersona(
+    personaCode: PersonaCode,
+  ): Promise<PersonaCapability[]> {
     return this.capabilities.filter(
-      (c) => c.personaCode === personaCode && c.isGranted
+      (c) => c.personaCode === personaCode && c.isGranted,
     );
   }
 
   async getCapabilityForOperation(
     personaCode: PersonaCode,
-    operationCode: string
+    operationCode: string,
   ): Promise<PersonaCapability | null> {
     return (
       this.capabilities.find(
-        (c) => c.personaCode === personaCode && c.operationCode === operationCode
+        (c) =>
+          c.personaCode === personaCode && c.operationCode === operationCode,
       ) ?? null
     );
   }
@@ -555,23 +578,30 @@ export class InMemoryPersonaCapabilityRepository implements IPersonaCapabilityRe
     return this.modules.find((m) => m.code === code) ?? null;
   }
 
-  async getTenantSubscriptions(tenantId: string): Promise<TenantModuleSubscription[]> {
+  async getTenantSubscriptions(
+    tenantId: string,
+  ): Promise<TenantModuleSubscription[]> {
     const now = new Date();
     return this.subscriptions.filter(
       (s) =>
         s.tenantId === tenantId &&
         s.isActive &&
         s.validFrom <= now &&
-        (!s.validUntil || s.validUntil > now)
+        (!s.validUntil || s.validUntil > now),
     );
   }
 
-  async hasModuleSubscription(tenantId: string, moduleCode: string): Promise<boolean> {
+  async hasModuleSubscription(
+    tenantId: string,
+    moduleCode: string,
+  ): Promise<boolean> {
     const subs = await this.getTenantSubscriptions(tenantId);
     return subs.some((s) => s.moduleCode === moduleCode);
   }
 
-  async getEntityModuleMapping(entityKey: string): Promise<EntityModuleMapping | null> {
+  async getEntityModuleMapping(
+    entityKey: string,
+  ): Promise<EntityModuleMapping | null> {
     return this.entityMappings.find((m) => m.entityKey === entityKey) ?? null;
   }
 }

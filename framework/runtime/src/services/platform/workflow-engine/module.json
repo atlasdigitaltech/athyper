@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "WF",
-    "name":  "Workflow Engine",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "WF",
+  "name": "Workflow Engine",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

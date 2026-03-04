@@ -21,18 +21,22 @@ import type { IApprovalInstanceRepository } from "../instance/types.js";
  * Compliance Reporting Service Implementation
  */
 export class ComplianceReportingService implements IComplianceReportingService {
-  private scheduledReports: Map<string, { schedule: string; options: ReportOptions; recipients: string[] }> =
-    new Map();
+  private scheduledReports: Map<
+    string,
+    { schedule: string; options: ReportOptions; recipients: string[] }
+  > = new Map();
 
   constructor(
     private readonly auditRepository: IAuditRepository,
-    private readonly instanceRepository: IApprovalInstanceRepository
+    private readonly instanceRepository: IApprovalInstanceRepository,
   ) {}
 
   /**
    * Generate cycle duration report
    */
-  async generateCycleDurationReport(options: ReportOptions): Promise<CycleDurationReport> {
+  async generateCycleDurationReport(
+    options: ReportOptions,
+  ): Promise<CycleDurationReport> {
     const { period, tenantId, templateCodes, entityTypes } = options;
 
     // Get instances completed within the period
@@ -46,11 +50,13 @@ export class ComplianceReportingService implements IComplianceReportingService {
     let filteredInstances = instances;
     if (templateCodes && templateCodes.length > 0) {
       filteredInstances = filteredInstances.filter((i) =>
-        templateCodes.includes(i.workflowSnapshot.templateCode)
+        templateCodes.includes(i.workflowSnapshot.templateCode),
       );
     }
     if (entityTypes && entityTypes.length > 0) {
-      filteredInstances = filteredInstances.filter((i) => entityTypes.includes(i.entity.type));
+      filteredInstances = filteredInstances.filter((i) =>
+        entityTypes.includes(i.entity.type),
+      );
     }
 
     // Calculate durations
@@ -61,9 +67,14 @@ export class ComplianceReportingService implements IComplianceReportingService {
     // Sort for percentile calculations
     durations.sort((a, b) => a - b);
 
-    const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
-    const medianDuration = durations.length > 0 ? durations[Math.floor(durations.length / 2)] : 0;
-    const p95Duration = durations.length > 0 ? durations[Math.floor(durations.length * 0.95)] : 0;
+    const avgDuration =
+      durations.length > 0
+        ? durations.reduce((a, b) => a + b, 0) / durations.length
+        : 0;
+    const medianDuration =
+      durations.length > 0 ? durations[Math.floor(durations.length / 2)] : 0;
+    const p95Duration =
+      durations.length > 0 ? durations[Math.floor(durations.length * 0.95)] : 0;
 
     // Breakdown by workflow
     const byWorkflow = new Map<string, number[]>();
@@ -71,13 +82,16 @@ export class ComplianceReportingService implements IComplianceReportingService {
       if (!inst.completedAt) continue;
       const code = inst.workflowSnapshot.templateCode;
       if (!byWorkflow.has(code)) byWorkflow.set(code, []);
-      byWorkflow.get(code)!.push(inst.completedAt.getTime() - inst.createdAt.getTime());
+      byWorkflow
+        .get(code)!
+        .push(inst.completedAt.getTime() - inst.createdAt.getTime());
     }
 
     const breakdown = Array.from(byWorkflow.entries()).map(([code, durs]) => ({
       groupKey: code,
-      groupLabel: filteredInstances.find((i) => i.workflowSnapshot.templateCode === code)?.workflowSnapshot
-        .templateName,
+      groupLabel: filteredInstances.find(
+        (i) => i.workflowSnapshot.templateCode === code,
+      )?.workflowSnapshot.templateName,
       instanceCount: durs.length,
       avgDurationMs: durs.reduce((a, b) => a + b, 0) / durs.length,
       minDurationMs: Math.min(...durs),
@@ -109,7 +123,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
     for (const inst of filteredInstances) {
       if (!inst.completedAt) continue;
       const dayKey = inst.completedAt.toISOString().split("T")[0];
-      if (!trendsByDay.has(dayKey)) trendsByDay.set(dayKey, { total: 0, count: 0 });
+      if (!trendsByDay.has(dayKey))
+        trendsByDay.set(dayKey, { total: 0, count: 0 });
       const entry = trendsByDay.get(dayKey)!;
       entry.total += inst.completedAt.getTime() - inst.createdAt.getTime();
       entry.count++;
@@ -144,7 +159,9 @@ export class ComplianceReportingService implements IComplianceReportingService {
   /**
    * Generate SLA breach report
    */
-  async generateSlaBreachReport(options: ReportOptions): Promise<SlaBreachReport> {
+  async generateSlaBreachReport(
+    options: ReportOptions,
+  ): Promise<SlaBreachReport> {
     const { period, tenantId } = options;
 
     // Get audit events for SLA breaches
@@ -166,10 +183,10 @@ export class ComplianceReportingService implements IComplianceReportingService {
 
     // Breach types (response vs completion)
     const responseBreaches = breachEvents.filter(
-      (e) => (e.details?.breachType as string) === "response"
+      (e) => (e.details?.breachType as string) === "response",
     ).length;
     const completionBreaches = breachEvents.filter(
-      (e) => (e.details?.breachType as string) === "completion"
+      (e) => (e.details?.breachType as string) === "completion",
     ).length;
 
     // By workflow
@@ -192,13 +209,16 @@ export class ComplianceReportingService implements IComplianceReportingService {
       }
     }
 
-    const byWorkflow = Array.from(byWorkflowMap.entries()).map(([code, data]) => ({
-      templateCode: code,
-      templateName: data.name,
-      totalInstances: data.total,
-      breachedInstances: data.breached.size,
-      breachRate: data.total > 0 ? (data.breached.size / data.total) * 100 : 0,
-    }));
+    const byWorkflow = Array.from(byWorkflowMap.entries()).map(
+      ([code, data]) => ({
+        templateCode: code,
+        templateName: data.name,
+        totalInstances: data.total,
+        breachedInstances: data.breached.size,
+        breachRate:
+          data.total > 0 ? (data.breached.size / data.total) * 100 : 0,
+      }),
+    );
 
     // By step
     const byStepMap = new Map<
@@ -211,7 +231,12 @@ export class ComplianceReportingService implements IComplianceReportingService {
       const breachDuration = (event.details?.breachDurationMs as number) || 0;
 
       if (!byStepMap.has(stepName)) {
-        byStepMap.set(stepName, { level: stepLevel, total: 0, breaches: 0, totalBreachMs: 0 });
+        byStepMap.set(stepName, {
+          level: stepLevel,
+          total: 0,
+          breaches: 0,
+          totalBreachMs: 0,
+        });
       }
       const entry = byStepMap.get(stepName)!;
       entry.breaches++;
@@ -228,7 +253,12 @@ export class ComplianceReportingService implements IComplianceReportingService {
       const stepName = (event.details?.stepName as string) || "Unknown";
       const stepLevel = (event.details?.stepLevel as number) || 0;
       if (!byStepMap.has(stepName)) {
-        byStepMap.set(stepName, { level: stepLevel, total: 0, breaches: 0, totalBreachMs: 0 });
+        byStepMap.set(stepName, {
+          level: stepLevel,
+          total: 0,
+          breaches: 0,
+          totalBreachMs: 0,
+        });
       }
       byStepMap.get(stepName)!.total++;
     }
@@ -239,11 +269,15 @@ export class ComplianceReportingService implements IComplianceReportingService {
       totalActivations: data.total,
       breaches: data.breaches,
       breachRate: data.total > 0 ? (data.breaches / data.total) * 100 : 0,
-      avgBreachDurationMs: data.breaches > 0 ? data.totalBreachMs / data.breaches : 0,
+      avgBreachDurationMs:
+        data.breaches > 0 ? data.totalBreachMs / data.breaches : 0,
     }));
 
     // Trends by day
-    const trendsByDay = new Map<string, { total: number; breached: Set<string> }>();
+    const trendsByDay = new Map<
+      string,
+      { total: number; breached: Set<string> }
+    >();
     for (const inst of instances) {
       const dayKey = inst.createdAt.toISOString().split("T")[0];
       if (!trendsByDay.has(dayKey)) {
@@ -263,12 +297,16 @@ export class ComplianceReportingService implements IComplianceReportingService {
         date: new Date(date),
         totalInstances: data.total,
         breachedInstances: data.breached.size,
-        breachRate: data.total > 0 ? (data.breached.size / data.total) * 100 : 0,
+        breachRate:
+          data.total > 0 ? (data.breached.size / data.total) * 100 : 0,
       }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     // Top breaches
-    const breachCountByInstance = new Map<string, { ref: string; workflow: string; count: number; totalMs: number }>();
+    const breachCountByInstance = new Map<
+      string,
+      { ref: string; workflow: string; count: number; totalMs: number }
+    >();
     for (const event of breachEvents) {
       if (!breachCountByInstance.has(event.instanceId)) {
         breachCountByInstance.set(event.instanceId, {
@@ -299,7 +337,10 @@ export class ComplianceReportingService implements IComplianceReportingService {
       overall: {
         totalInstances: instances.length,
         breachedInstances: breachedInstanceIds.size,
-        breachRate: instances.length > 0 ? (breachedInstanceIds.size / instances.length) * 100 : 0,
+        breachRate:
+          instances.length > 0
+            ? (breachedInstanceIds.size / instances.length) * 100
+            : 0,
         avgBreachDurationMs: 0, // Would calculate from events
         totalBreaches: breachEvents.length,
       },
@@ -317,7 +358,9 @@ export class ComplianceReportingService implements IComplianceReportingService {
   /**
    * Generate escalation report
    */
-  async generateEscalationReport(options: ReportOptions): Promise<EscalationReport> {
+  async generateEscalationReport(
+    options: ReportOptions,
+  ): Promise<EscalationReport> {
     const { period, tenantId } = options;
 
     // Get escalation events
@@ -341,11 +384,13 @@ export class ComplianceReportingService implements IComplianceReportingService {
       const reason = (event.details?.reason as string) || "SLA Breach";
       byReasonMap.set(reason, (byReasonMap.get(reason) || 0) + 1);
     }
-    const byReason = Array.from(byReasonMap.entries()).map(([reason, count]) => ({
-      reason,
-      count,
-      percentage: events.length > 0 ? (count / events.length) * 100 : 0,
-    }));
+    const byReason = Array.from(byReasonMap.entries()).map(
+      ([reason, count]) => ({
+        reason,
+        count,
+        percentage: events.length > 0 ? (count / events.length) * 100 : 0,
+      }),
+    );
 
     // By action
     const byActionMap = new Map<string, number>();
@@ -353,18 +398,27 @@ export class ComplianceReportingService implements IComplianceReportingService {
       const action = (event.details?.escalationAction as string) || "notify";
       byActionMap.set(action, (byActionMap.get(action) || 0) + 1);
     }
-    const byAction = Array.from(byActionMap.entries()).map(([action, count]) => ({
-      action,
-      count,
-      percentage: events.length > 0 ? (count / events.length) * 100 : 0,
-    }));
+    const byAction = Array.from(byActionMap.entries()).map(
+      ([action, count]) => ({
+        action,
+        count,
+        percentage: events.length > 0 ? (count / events.length) * 100 : 0,
+      }),
+    );
 
     // By level
-    const byLevelMap = new Map<number, { count: number; resolvedAtLevel: number; escalatedFurther: number }>();
+    const byLevelMap = new Map<
+      number,
+      { count: number; resolvedAtLevel: number; escalatedFurther: number }
+    >();
     for (const event of events) {
       const level = (event.details?.escalationLevel as number) || 1;
       if (!byLevelMap.has(level)) {
-        byLevelMap.set(level, { count: 0, resolvedAtLevel: 0, escalatedFurther: 0 });
+        byLevelMap.set(level, {
+          count: 0,
+          resolvedAtLevel: 0,
+          escalatedFurther: 0,
+        });
       }
       byLevelMap.get(level)!.count++;
     }
@@ -378,7 +432,15 @@ export class ComplianceReportingService implements IComplianceReportingService {
       .sort((a, b) => a.level - b.level);
 
     // By workflow
-    const byWorkflowMap = new Map<string, { name: string; total: number; escalated: Set<string>; totalEscalations: number }>();
+    const byWorkflowMap = new Map<
+      string,
+      {
+        name: string;
+        total: number;
+        escalated: Set<string>;
+        totalEscalations: number;
+      }
+    >();
     for (const inst of instances) {
       const code = inst.workflowSnapshot.templateCode;
       if (!byWorkflowMap.has(code)) {
@@ -399,21 +461,34 @@ export class ComplianceReportingService implements IComplianceReportingService {
       }
     }
 
-    const byWorkflow = Array.from(byWorkflowMap.entries()).map(([code, data]) => ({
-      templateCode: code,
-      templateName: data.name,
-      totalInstances: data.total,
-      escalatedInstances: data.escalated.size,
-      escalationRate: data.total > 0 ? (data.escalated.size / data.total) * 100 : 0,
-      avgEscalationLevel: data.totalEscalations > 0 ? data.totalEscalations / data.escalated.size : 0,
-    }));
+    const byWorkflow = Array.from(byWorkflowMap.entries()).map(
+      ([code, data]) => ({
+        templateCode: code,
+        templateName: data.name,
+        totalInstances: data.total,
+        escalatedInstances: data.escalated.size,
+        escalationRate:
+          data.total > 0 ? (data.escalated.size / data.total) * 100 : 0,
+        avgEscalationLevel:
+          data.totalEscalations > 0
+            ? data.totalEscalations / data.escalated.size
+            : 0,
+      }),
+    );
 
     // Trends
-    const trendsByDay = new Map<string, { total: number; escalated: Set<string>; escalations: number }>();
+    const trendsByDay = new Map<
+      string,
+      { total: number; escalated: Set<string>; escalations: number }
+    >();
     for (const inst of instances) {
       const dayKey = inst.createdAt.toISOString().split("T")[0];
       if (!trendsByDay.has(dayKey)) {
-        trendsByDay.set(dayKey, { total: 0, escalated: new Set(), escalations: 0 });
+        trendsByDay.set(dayKey, {
+          total: 0,
+          escalated: new Set(),
+          escalations: 0,
+        });
       }
       trendsByDay.get(dayKey)!.total++;
     }
@@ -439,10 +514,15 @@ export class ComplianceReportingService implements IComplianceReportingService {
       overall: {
         totalInstances: instances.length,
         escalatedInstances: escalatedInstanceIds.size,
-        escalationRate: instances.length > 0 ? (escalatedInstanceIds.size / instances.length) * 100 : 0,
+        escalationRate:
+          instances.length > 0
+            ? (escalatedInstanceIds.size / instances.length) * 100
+            : 0,
         totalEscalations: events.length,
         avgEscalationsPerInstance:
-          escalatedInstanceIds.size > 0 ? events.length / escalatedInstanceIds.size : 0,
+          escalatedInstanceIds.size > 0
+            ? events.length / escalatedInstanceIds.size
+            : 0,
       },
       byReason,
       byAction,
@@ -455,7 +535,9 @@ export class ComplianceReportingService implements IComplianceReportingService {
   /**
    * Generate approver workload report
    */
-  async generateApproverWorkloadReport(options: ReportOptions): Promise<ApproverWorkloadReport> {
+  async generateApproverWorkloadReport(
+    options: ReportOptions,
+  ): Promise<ApproverWorkloadReport> {
     const { period, tenantId } = options;
 
     // Get action events to analyze approver activity
@@ -492,7 +574,10 @@ export class ComplianceReportingService implements IComplianceReportingService {
     >();
 
     // Process step.activated to count assignments
-    const activationsByStep = new Map<string, { timestamp: Date; approvers: Set<string> }>();
+    const activationsByStep = new Map<
+      string,
+      { timestamp: Date; approvers: Set<string> }
+    >();
     for (const event of events) {
       if (event.eventType === "step.activated" && event.stepInstanceId) {
         activationsByStep.set(event.stepInstanceId, {
@@ -553,7 +638,9 @@ export class ComplianceReportingService implements IComplianceReportingService {
       // Calculate response time if we have activation info
       if (event.stepInstanceId && activationsByStep.has(event.stepInstanceId)) {
         const activation = activationsByStep.get(event.stepInstanceId)!;
-        stats.responseTimes.push(event.timestamp.getTime() - activation.timestamp.getTime());
+        stats.responseTimes.push(
+          event.timestamp.getTime() - activation.timestamp.getTime(),
+        );
       }
 
       // Track action types
@@ -582,31 +669,36 @@ export class ComplianceReportingService implements IComplianceReportingService {
     }
 
     // Build approvers array
-    const approvers = Array.from(approverStats.entries()).map(([userId, stats]) => ({
-      userId,
-      displayName: stats.displayName,
-      departmentId: stats.departmentId,
-      totalAssigned: stats.assigned,
-      completed: stats.completed,
-      pending: stats.assigned - stats.completed,
-      delegated: stats.delegated,
-      escalated: stats.escalated,
-      avgResponseTimeMs:
-        stats.responseTimes.length > 0
-          ? stats.responseTimes.reduce((a, b) => a + b, 0) / stats.responseTimes.length
-          : 0,
-      minResponseTimeMs: stats.responseTimes.length > 0 ? Math.min(...stats.responseTimes) : 0,
-      maxResponseTimeMs: stats.responseTimes.length > 0 ? Math.max(...stats.responseTimes) : 0,
-      approved: stats.approved,
-      rejected: stats.rejected,
-      requestedChanges: stats.requestedChanges,
-      slaMet: stats.slaMet,
-      slaBreached: stats.slaBreached,
-      slaComplianceRate:
-        stats.slaMet + stats.slaBreached > 0
-          ? (stats.slaMet / (stats.slaMet + stats.slaBreached)) * 100
-          : 100,
-    }));
+    const approvers = Array.from(approverStats.entries()).map(
+      ([userId, stats]) => ({
+        userId,
+        displayName: stats.displayName,
+        departmentId: stats.departmentId,
+        totalAssigned: stats.assigned,
+        completed: stats.completed,
+        pending: stats.assigned - stats.completed,
+        delegated: stats.delegated,
+        escalated: stats.escalated,
+        avgResponseTimeMs:
+          stats.responseTimes.length > 0
+            ? stats.responseTimes.reduce((a, b) => a + b, 0) /
+              stats.responseTimes.length
+            : 0,
+        minResponseTimeMs:
+          stats.responseTimes.length > 0 ? Math.min(...stats.responseTimes) : 0,
+        maxResponseTimeMs:
+          stats.responseTimes.length > 0 ? Math.max(...stats.responseTimes) : 0,
+        approved: stats.approved,
+        rejected: stats.rejected,
+        requestedChanges: stats.requestedChanges,
+        slaMet: stats.slaMet,
+        slaBreached: stats.slaBreached,
+        slaComplianceRate:
+          stats.slaMet + stats.slaBreached > 0
+            ? (stats.slaMet / (stats.slaMet + stats.slaBreached)) * 100
+            : 100,
+      }),
+    );
 
     // Calculate overall stats
     const totalApprovers = approvers.length;
@@ -614,7 +706,7 @@ export class ComplianceReportingService implements IComplianceReportingService {
     const completedTasks = approvers.reduce((sum, a) => sum + a.completed, 0);
     const pendingTasks = approvers.reduce((sum, a) => sum + a.pending, 0);
     const allResponseTimes = approvers.flatMap((a) =>
-      a.avgResponseTimeMs > 0 ? [a.avgResponseTimeMs] : []
+      a.avgResponseTimeMs > 0 ? [a.avgResponseTimeMs] : [],
     );
     const avgResponseTimeMs =
       allResponseTimes.length > 0
@@ -659,16 +751,19 @@ export class ComplianceReportingService implements IComplianceReportingService {
       }
     }
 
-    const byDepartment = Array.from(byDeptMap.entries()).map(([deptId, data]) => ({
-      departmentId: deptId,
-      approverCount: data.count,
-      totalTasks: data.tasks,
-      avgTasksPerApprover: data.count > 0 ? data.tasks / data.count : 0,
-      avgResponseTimeMs:
-        data.responseTimes.length > 0
-          ? data.responseTimes.reduce((a, b) => a + b, 0) / data.responseTimes.length
-          : 0,
-    }));
+    const byDepartment = Array.from(byDeptMap.entries()).map(
+      ([deptId, data]) => ({
+        departmentId: deptId,
+        approverCount: data.count,
+        totalTasks: data.tasks,
+        avgTasksPerApprover: data.count > 0 ? data.tasks / data.count : 0,
+        avgResponseTimeMs:
+          data.responseTimes.length > 0
+            ? data.responseTimes.reduce((a, b) => a + b, 0) /
+              data.responseTimes.length
+            : 0,
+      }),
+    );
 
     return {
       period,
@@ -677,7 +772,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
         totalTasks,
         completedTasks,
         pendingTasks,
-        avgTasksPerApprover: totalApprovers > 0 ? totalTasks / totalApprovers : 0,
+        avgTasksPerApprover:
+          totalApprovers > 0 ? totalTasks / totalApprovers : 0,
         avgResponseTimeMs,
       },
       approvers,
@@ -689,14 +785,17 @@ export class ComplianceReportingService implements IComplianceReportingService {
   /**
    * Generate compliance summary
    */
-  async generateComplianceSummary(options: ReportOptions): Promise<ComplianceSummaryReport> {
+  async generateComplianceSummary(
+    options: ReportOptions,
+  ): Promise<ComplianceSummaryReport> {
     // Generate component reports
-    const [cycleDuration, slaBreaches, escalations, workload] = await Promise.all([
-      this.generateCycleDurationReport(options),
-      this.generateSlaBreachReport(options),
-      this.generateEscalationReport(options),
-      this.generateApproverWorkloadReport(options),
-    ]);
+    const [cycleDuration, slaBreaches, escalations, workload] =
+      await Promise.all([
+        this.generateCycleDurationReport(options),
+        this.generateSlaBreachReport(options),
+        this.generateEscalationReport(options),
+        this.generateApproverWorkloadReport(options),
+      ]);
 
     // Calculate compliance score (0-100)
     // Weights: SLA compliance (40%), Cycle time (30%), Escalation rate (20%), Automation (10%)
@@ -707,18 +806,23 @@ export class ComplianceReportingService implements IComplianceReportingService {
     const targetCycleTime = 86400000;
     const cycleTimeScore = Math.max(
       0,
-      100 - (cycleDuration.overall.avgDurationMs / targetCycleTime) * 50
+      100 - (cycleDuration.overall.avgDurationMs / targetCycleTime) * 50,
     );
 
     // Get auto-approval rate
-    const autoApprovalEvents = await this.auditRepository.getEvents(options.tenantId, {
-      startDate: options.period.startDate,
-      endDate: options.period.endDate,
-      eventTypes: ["step.auto_approved"],
-    });
+    const autoApprovalEvents = await this.auditRepository.getEvents(
+      options.tenantId,
+      {
+        startDate: options.period.startDate,
+        endDate: options.period.endDate,
+        eventTypes: ["step.auto_approved"],
+      },
+    );
     const automationRate =
       cycleDuration.overall.completedInstances > 0
-        ? (autoApprovalEvents.length / cycleDuration.overall.completedInstances) * 100
+        ? (autoApprovalEvents.length /
+            cycleDuration.overall.completedInstances) *
+          100
         : 0;
 
     const complianceScore =
@@ -764,7 +868,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
       recommendations.push({
         priority: slaBreaches.overall.breachRate > 30 ? "high" : "medium",
         category: "SLA Management",
-        recommendation: "Review SLA thresholds and escalation rules for frequently breached workflows",
+        recommendation:
+          "Review SLA thresholds and escalation rules for frequently breached workflows",
         potentialImpact: "Could reduce breach rate by 20-40%",
       });
     }
@@ -773,7 +878,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
       recommendations.push({
         priority: "high",
         category: "Process Optimization",
-        recommendation: "Analyze bottleneck steps and consider auto-approval conditions",
+        recommendation:
+          "Analyze bottleneck steps and consider auto-approval conditions",
         potentialImpact: "Could reduce average cycle time by 30-50%",
       });
     }
@@ -782,7 +888,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
       recommendations.push({
         priority: "medium",
         category: "Approver Management",
-        recommendation: "Review approver availability and consider adding backup approvers",
+        recommendation:
+          "Review approver availability and consider adding backup approvers",
         potentialImpact: "Could reduce escalations by 25-35%",
       });
     }
@@ -802,7 +909,10 @@ export class ComplianceReportingService implements IComplianceReportingService {
           category: "SLA Compliance",
           score: slaComplianceRate,
           issues: slaBreaches.overall.totalBreaches,
-          recommendations: slaBreaches.overall.breachRate > 10 ? ["Review SLA thresholds"] : [],
+          recommendations:
+            slaBreaches.overall.breachRate > 10
+              ? ["Review SLA thresholds"]
+              : [],
         },
         {
           category: "Process Efficiency",
@@ -817,7 +927,8 @@ export class ComplianceReportingService implements IComplianceReportingService {
           category: "Escalation Management",
           score: 100 - escalationRate,
           issues: escalations.overall.totalEscalations,
-          recommendations: escalationRate > 20 ? ["Improve approver response times"] : [],
+          recommendations:
+            escalationRate > 20 ? ["Improve approver response times"] : [],
         },
       ],
       riskIndicators,
@@ -833,7 +944,7 @@ export class ComplianceReportingService implements IComplianceReportingService {
     reportType: string,
     schedule: string,
     options: ReportOptions,
-    recipients: string[]
+    recipients: string[],
   ): Promise<string> {
     const scheduleId = `sched_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     this.scheduledReports.set(scheduleId, { schedule, options, recipients });
@@ -844,7 +955,10 @@ export class ComplianceReportingService implements IComplianceReportingService {
   /**
    * Cancel scheduled report
    */
-  async cancelScheduledReport(tenantId: string, scheduleId: string): Promise<void> {
+  async cancelScheduledReport(
+    tenantId: string,
+    scheduleId: string,
+  ): Promise<void> {
     this.scheduledReports.delete(scheduleId);
     // In real implementation, would unregister from scheduler service
   }
@@ -855,7 +969,7 @@ export class ComplianceReportingService implements IComplianceReportingService {
  */
 export function createComplianceReportingService(
   auditRepository: IAuditRepository,
-  instanceRepository: IApprovalInstanceRepository
+  instanceRepository: IApprovalInstanceRepository,
 ): IComplianceReportingService {
   return new ComplianceReportingService(auditRepository, instanceRepository);
 }

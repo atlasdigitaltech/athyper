@@ -28,39 +28,50 @@ export class InMemoryVersionRepository implements IVersionRepository {
 
   // Version CRUD
 
-  async createVersion(version: Omit<WorkflowVersion, "id">): Promise<WorkflowVersion> {
+  async createVersion(
+    version: Omit<WorkflowVersion, "id">,
+  ): Promise<WorkflowVersion> {
     const id = generateId("ver");
     const newVersion: WorkflowVersion = { id, ...version };
     this.versions.set(id, newVersion);
     return newVersion;
   }
 
-  async getVersion(tenantId: string, versionId: string): Promise<WorkflowVersion | null> {
+  async getVersion(
+    tenantId: string,
+    versionId: string,
+  ): Promise<WorkflowVersion | null> {
     return this.versions.get(versionId) || null;
   }
 
   async getVersionByNumber(
     tenantId: string,
     templateId: string,
-    version: number
+    version: number,
   ): Promise<WorkflowVersion | null> {
     return (
       Array.from(this.versions.values()).find(
-        (v) => v.templateId === templateId && v.version === version
+        (v) => v.templateId === templateId && v.version === version,
       ) || null
     );
   }
 
-  async getVersions(tenantId: string, templateId: string): Promise<WorkflowVersion[]> {
+  async getVersions(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion[]> {
     return Array.from(this.versions.values())
       .filter((v) => v.templateId === templateId)
       .sort((a, b) => b.version - a.version);
   }
 
-  async getActiveVersion(tenantId: string, templateId: string): Promise<WorkflowVersion | null> {
+  async getActiveVersion(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion | null> {
     return (
       Array.from(this.versions.values()).find(
-        (v) => v.templateId === templateId && v.status === "active"
+        (v) => v.templateId === templateId && v.status === "active",
       ) || null
     );
   }
@@ -68,7 +79,7 @@ export class InMemoryVersionRepository implements IVersionRepository {
   async updateVersion(
     tenantId: string,
     versionId: string,
-    updates: Partial<WorkflowVersion>
+    updates: Partial<WorkflowVersion>,
   ): Promise<WorkflowVersion> {
     const existing = this.versions.get(versionId);
     if (!existing) {
@@ -82,7 +93,7 @@ export class InMemoryVersionRepository implements IVersionRepository {
 
   async searchVersions(
     tenantId: string,
-    criteria: VersionSearchCriteria
+    criteria: VersionSearchCriteria,
   ): Promise<WorkflowVersion[]> {
     return Array.from(this.versions.values()).filter((v) => {
       if (criteria.templateId && v.templateId !== criteria.templateId) {
@@ -90,17 +101,25 @@ export class InMemoryVersionRepository implements IVersionRepository {
       }
 
       if (criteria.status) {
-        const statuses = Array.isArray(criteria.status) ? criteria.status : [criteria.status];
+        const statuses = Array.isArray(criteria.status)
+          ? criteria.status
+          : [criteria.status];
         if (!statuses.includes(v.status)) {
           return false;
         }
       }
 
-      if (criteria.createdAfter && new Date(v.createdAt) < criteria.createdAfter) {
+      if (
+        criteria.createdAfter &&
+        new Date(v.createdAt) < criteria.createdAfter
+      ) {
         return false;
       }
 
-      if (criteria.createdBefore && new Date(v.createdAt) > criteria.createdBefore) {
+      if (
+        criteria.createdBefore &&
+        new Date(v.createdAt) > criteria.createdBefore
+      ) {
         return false;
       }
 
@@ -129,7 +148,7 @@ export class InMemoryVersionRepository implements IVersionRepository {
   // Lifecycle events
 
   async createLifecycleEvent(
-    event: Omit<VersionLifecycleEvent, "id">
+    event: Omit<VersionLifecycleEvent, "id">,
   ): Promise<VersionLifecycleEvent> {
     const id = generateId("evt");
     const newEvent: VersionLifecycleEvent = { id, ...event };
@@ -141,9 +160,13 @@ export class InMemoryVersionRepository implements IVersionRepository {
     return newEvent;
   }
 
-  async getLifecycleEvents(tenantId: string, versionId: string): Promise<VersionLifecycleEvent[]> {
+  async getLifecycleEvents(
+    tenantId: string,
+    versionId: string,
+  ): Promise<VersionLifecycleEvent[]> {
     return (this.lifecycleEvents.get(versionId) || []).sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
   }
 
@@ -153,7 +176,7 @@ export class InMemoryVersionRepository implements IVersionRepository {
     tenantId: string,
     versionId: string,
     count: number,
-    activeCount: number
+    activeCount: number,
   ): Promise<void> {
     const version = this.versions.get(versionId);
     if (version) {
@@ -189,7 +212,7 @@ export class InMemoryVersionRepository implements IVersionRepository {
 
     const eventCount = Array.from(this.lifecycleEvents.values()).reduce(
       (sum, events) => sum + events.length,
-      0
+      0,
     );
 
     return {

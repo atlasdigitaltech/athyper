@@ -57,7 +57,7 @@ interface AttachmentRow {
  * Valid comment types that can have attachments
  */
 const VALID_COMMENT_TYPES = ["entity_comment", "approval_comment"] as const;
-type CommentType = typeof VALID_COMMENT_TYPES[number];
+type CommentType = (typeof VALID_COMMENT_TYPES)[number];
 
 /**
  * Attachment Link Service
@@ -65,7 +65,7 @@ type CommentType = typeof VALID_COMMENT_TYPES[number];
 export class AttachmentLinkService {
   constructor(
     private readonly db: Kysely<DB>,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -81,12 +81,12 @@ export class AttachmentLinkService {
     tenantId: string,
     attachmentId: string,
     commentType: CommentType,
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     // Validate comment type
     if (!VALID_COMMENT_TYPES.includes(commentType)) {
       throw new Error(
-        `Invalid comment type: ${commentType}. Must be one of: ${VALID_COMMENT_TYPES.join(", ")}`
+        `Invalid comment type: ${commentType}. Must be one of: ${VALID_COMMENT_TYPES.join(", ")}`,
       );
     }
 
@@ -120,7 +120,7 @@ export class AttachmentLinkService {
         commentId,
         tenantId,
       },
-      "[collab] Attachment linked to comment"
+      "[collab] Attachment linked to comment",
     );
   }
 
@@ -135,7 +135,7 @@ export class AttachmentLinkService {
   async listByComment(
     tenantId: string,
     commentType: CommentType,
-    commentId: string
+    commentId: string,
   ): Promise<Attachment[]> {
     const rows = await this.db
       .selectFrom("doc.attachment")
@@ -158,7 +158,10 @@ export class AttachmentLinkService {
    * @param tenantId - Tenant ID
    * @param attachmentId - Attachment UUID
    */
-  async unlinkFromComment(tenantId: string, attachmentId: string): Promise<void> {
+  async unlinkFromComment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<void> {
     await this.db
       .updateTable("doc.attachment")
       .set({
@@ -174,7 +177,7 @@ export class AttachmentLinkService {
         attachmentId,
         tenantId,
       },
-      "[collab] Attachment unlinked from comment"
+      "[collab] Attachment unlinked from comment",
     );
   }
 
@@ -185,7 +188,10 @@ export class AttachmentLinkService {
    * @param attachmentId - Attachment UUID
    * @returns Attachment or undefined if not found
    */
-  async getById(tenantId: string, attachmentId: string): Promise<Attachment | undefined> {
+  async getById(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<Attachment | undefined> {
     const row = await this.db
       .selectFrom("doc.attachment")
       .selectAll()

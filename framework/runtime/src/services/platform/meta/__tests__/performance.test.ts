@@ -50,7 +50,9 @@ describe("Meta Engine Performance Tests", () => {
       expect(compiled).toBeDefined();
       expect(duration).toBeLessThan(PERF_BUDGETS.SINGLE_COMPILE);
 
-      console.log(`Single compile: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.SINGLE_COMPILE}ms)`);
+      console.log(
+        `Single compile: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.SINGLE_COMPILE}ms)`,
+      );
     });
 
     it.skip("should compile 200 entities under budget", async () => {
@@ -67,7 +69,7 @@ describe("Meta Engine Performance Tests", () => {
 
       // Compile all entities
       const results = await Promise.all(
-        schemas.map((schema) => mockCompile(schema))
+        schemas.map((schema) => mockCompile(schema)),
       );
 
       const duration = performance.now() - startTime;
@@ -76,9 +78,11 @@ describe("Meta Engine Performance Tests", () => {
       expect(duration).toBeLessThan(PERF_BUDGETS.COMPILE_200_ENTITIES);
 
       console.log(
-        `Compile ${entityCount} entities: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.COMPILE_200_ENTITIES}ms)`
+        `Compile ${entityCount} entities: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.COMPILE_200_ENTITIES}ms)`,
       );
-      console.log(`Average per entity: ${(duration / entityCount).toFixed(2)}ms`);
+      console.log(
+        `Average per entity: ${(duration / entityCount).toFixed(2)}ms`,
+      );
     });
 
     it("should have fast cache hits", async () => {
@@ -95,7 +99,9 @@ describe("Meta Engine Performance Tests", () => {
       expect(cached).toBeDefined();
       expect(duration).toBeLessThan(PERF_BUDGETS.CACHE_HIT);
 
-      console.log(`Cache hit: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.CACHE_HIT}ms)`);
+      console.log(
+        `Cache hit: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.CACHE_HIT}ms)`,
+      );
     });
   });
 
@@ -129,7 +135,7 @@ describe("Meta Engine Performance Tests", () => {
       expect(duration).toBeLessThan(PERF_BUDGETS.LIST_WITH_FILTERS);
 
       console.log(
-        `List with 5 filters + 2 sorts: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.LIST_WITH_FILTERS}ms)`
+        `List with 5 filters + 2 sorts: ${duration.toFixed(2)}ms (budget: ${PERF_BUDGETS.LIST_WITH_FILTERS}ms)`,
       );
     });
   });
@@ -161,8 +167,12 @@ describe("Meta Engine Performance Tests", () => {
 
       expect(p95).toBeLessThan(PERF_BUDGETS.POLICY_EVAL_P95);
 
-      console.log(`Policy eval p95: ${p95.toFixed(2)}ms (budget: ${PERF_BUDGETS.POLICY_EVAL_P95}ms)`);
-      console.log(`Policy eval avg: ${(durations.reduce((a, b) => a + b, 0) / sampleSize).toFixed(2)}ms`);
+      console.log(
+        `Policy eval p95: ${p95.toFixed(2)}ms (budget: ${PERF_BUDGETS.POLICY_EVAL_P95}ms)`,
+      );
+      console.log(
+        `Policy eval avg: ${(durations.reduce((a, b) => a + b, 0) / sampleSize).toFixed(2)}ms`,
+      );
     });
   });
 
@@ -176,8 +186,8 @@ describe("Meta Engine Performance Tests", () => {
       // Simulate 50 concurrent compilation requests for the same entity
       const results = await Promise.all(
         Array.from({ length: concurrentRequests }).map(() =>
-          mockCompile(schema)
-        )
+          mockCompile(schema),
+        ),
       );
 
       const duration = performance.now() - startTime;
@@ -189,7 +199,7 @@ describe("Meta Engine Performance Tests", () => {
       expect(duration).toBeLessThan(PERF_BUDGETS.SINGLE_COMPILE * 2);
 
       console.log(
-        `${concurrentRequests} concurrent compiles (stampede protection): ${duration.toFixed(2)}ms`
+        `${concurrentRequests} concurrent compiles (stampede protection): ${duration.toFixed(2)}ms`,
       );
     });
   });
@@ -202,7 +212,10 @@ describe("Meta Engine Performance Tests", () => {
 /**
  * Create test entity schema
  */
-function createTestEntitySchema(name: string, fieldCount: number): EntitySchema {
+function createTestEntitySchema(
+  name: string,
+  fieldCount: number,
+): EntitySchema {
   const fields = [
     // System fields (required)
     { name: "id", type: "uuid" as const, required: true },
@@ -221,7 +234,12 @@ function createTestEntitySchema(name: string, fieldCount: number): EntitySchema 
   for (let i = 0; i < fieldCount; i++) {
     fields.push({
       name: `field${i}`,
-      type: i % 3 === 0 ? ("string" as const) : i % 3 === 1 ? ("number" as const) : ("boolean" as const),
+      type:
+        i % 3 === 0
+          ? ("string" as const)
+          : i % 3 === 1
+            ? ("number" as const)
+            : ("boolean" as const),
       required: i % 2 === 0,
     });
   }
@@ -259,7 +277,9 @@ async function mockCompile(schema: EntitySchema): Promise<CompiledModel> {
 /**
  * Mock compile from cache (instant)
  */
-async function mockCompileFromCache(schema: EntitySchema): Promise<CompiledModel> {
+async function mockCompileFromCache(
+  schema: EntitySchema,
+): Promise<CompiledModel> {
   // Cache hits should be instant
   return {
     entityName: schema.name,

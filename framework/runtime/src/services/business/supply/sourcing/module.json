@@ -1,12 +1,7 @@
 ﻿{
-    "code":  "SOURCE",
-    "name":  "Sourcing Management",
-    "dependsOn":  [
-                      "REL",
-                      "WF",
-                      "DOC",
-                      "NOTIFY"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "SOURCE",
+  "name": "Sourcing Management",
+  "dependsOn": ["REL", "WF", "DOC", "NOTIFY"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

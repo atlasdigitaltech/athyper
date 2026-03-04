@@ -26,9 +26,9 @@ import type { Effect } from "../types.js";
  * Input source type
  */
 export type SimulatorInputSource =
-  | "manual"           // Manual JSON input
-  | "tenant_data"      // Pick from existing tenant data
-  | "audit_replay";    // Replay from audit log (phase-2)
+  | "manual" // Manual JSON input
+  | "tenant_data" // Pick from existing tenant data
+  | "audit_replay"; // Replay from audit log (phase-2)
 
 /**
  * Manual input specification
@@ -72,7 +72,10 @@ export type AuditReplayInput = {
 /**
  * Unified simulator input
  */
-export type SimulatorInput = ManualSimulatorInput | TenantDataInput | AuditReplayInput;
+export type SimulatorInput =
+  | ManualSimulatorInput
+  | TenantDataInput
+  | AuditReplayInput;
 
 // ============================================================================
 // Simulator Output Types
@@ -111,7 +114,11 @@ export type RuleEvalResult = {
   /** Whether rule matched (subject, scope, operation all matched) */
   matched: boolean;
   /** Why rule didn't match (if not matched) */
-  nonMatchReason?: "subject_mismatch" | "scope_mismatch" | "operation_mismatch" | "condition_failed";
+  nonMatchReason?:
+    | "subject_mismatch"
+    | "scope_mismatch"
+    | "operation_mismatch"
+    | "condition_failed";
   /** Condition evaluation results (if conditions exist) */
   conditionResults?: ConditionEvalResult[];
   /** Whether this rule was the deciding rule */
@@ -287,11 +294,19 @@ export type TestCaseAssertion =
   | { type: "allowed_equals"; value: boolean }
   | { type: "has_obligation"; obligationType: PolicyObligation["type"] }
   | { type: "no_obligations" }
-  | { type: "matched_rules_count"; operator: "eq" | "gt" | "lt" | "gte" | "lte"; value: number }
+  | {
+      type: "matched_rules_count";
+      operator: "eq" | "gt" | "lt" | "gte" | "lte";
+      value: number;
+    }
   | { type: "deciding_rule_is"; ruleId: string }
   | { type: "deciding_policy_is"; policyId: string }
   | { type: "eval_time_under"; maxMs: number }
-  | { type: "custom"; fn: (result: SimulatorResult) => boolean; description: string };
+  | {
+      type: "custom";
+      fn: (result: SimulatorResult) => boolean;
+      description: string;
+    };
 
 /**
  * Test case definition
@@ -408,7 +423,7 @@ export interface IPolicySimulator {
   simulate(
     tenantId: string,
     input: SimulatorInput,
-    options?: SimulatorOptions
+    options?: SimulatorOptions,
   ): Promise<SimulatorResult>;
 
   /**
@@ -416,7 +431,7 @@ export interface IPolicySimulator {
    */
   validatePolicy(
     policyDefinition: unknown,
-    options?: ValidationOptions
+    options?: ValidationOptions,
   ): Promise<PolicyValidationResult>;
 
   /**
@@ -424,7 +439,7 @@ export interface IPolicySimulator {
    */
   runTestCase(
     tenantId: string,
-    testCase: PolicyTestCase
+    testCase: PolicyTestCase,
   ): Promise<TestCaseRunResult>;
 
   /**
@@ -433,7 +448,7 @@ export interface IPolicySimulator {
   runTestSuite(
     tenantId: string,
     testCases: PolicyTestCase[],
-    suiteName?: string
+    suiteName?: string,
   ): Promise<TestSuiteResult>;
 }
 
@@ -455,7 +470,11 @@ export type SimulatorOptions = {
     versionId: string;
   };
   /** Conflict resolution override */
-  conflictResolutionOverride?: "deny_overrides" | "allow_overrides" | "priority_order" | "first_match";
+  conflictResolutionOverride?:
+    | "deny_overrides"
+    | "allow_overrides"
+    | "priority_order"
+    | "first_match";
 };
 
 /**
@@ -483,7 +502,10 @@ export interface ITestCaseRepository {
   /**
    * Get test case by ID
    */
-  getById(tenantId: string, testCaseId: string): Promise<StoredTestCase | undefined>;
+  getById(
+    tenantId: string,
+    testCaseId: string,
+  ): Promise<StoredTestCase | undefined>;
 
   /**
    * List test cases for a tenant
@@ -496,7 +518,7 @@ export interface ITestCaseRepository {
       enabled?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<StoredTestCase[]>;
 
   /**
@@ -505,7 +527,7 @@ export interface ITestCaseRepository {
   create(
     tenantId: string,
     testCase: Omit<PolicyTestCase, "id" | "createdAt">,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredTestCase>;
 
   /**
@@ -515,7 +537,7 @@ export interface ITestCaseRepository {
     tenantId: string,
     testCaseId: string,
     updates: Partial<PolicyTestCase>,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredTestCase>;
 
   /**
@@ -529,7 +551,7 @@ export interface ITestCaseRepository {
   updateRunResult(
     tenantId: string,
     testCaseId: string,
-    result: TestCaseRunResult
+    result: TestCaseRunResult,
   ): Promise<void>;
 
   /**

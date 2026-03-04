@@ -70,32 +70,33 @@ export const MAX_SIZE_BY_KIND: Record<DocumentKindType, number> = {
  * null = any content type allowed
  * array = restricted to listed MIME types only
  */
-export const ALLOWED_CONTENT_TYPES: Record<DocumentKindType, string[] | null> = {
-  attachment: null, // Any content type
-  generated: ["application/pdf"],
-  export: [
-    "text/csv",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // Excel .xlsx
-    "application/vnd.ms-excel", // Excel .xls
-  ],
-  template: [
-    "text/csv",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-  ],
-  letterhead: ["image/png", "image/jpeg", "image/svg+xml"],
-  avatar: ["image/png", "image/jpeg", "image/webp"],
-  signature: ["image/png", "image/jpeg", "image/svg+xml"],
-  certificate: ["application/pdf", "image/png", "image/jpeg"],
-  invoice: ["application/pdf"],
-  receipt: ["application/pdf", "image/png", "image/jpeg"],
-  contract: ["application/pdf"],
-  report: [
-    "application/pdf",
-    "text/csv",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ],
-};
+export const ALLOWED_CONTENT_TYPES: Record<DocumentKindType, string[] | null> =
+  {
+    attachment: null, // Any content type
+    generated: ["application/pdf"],
+    export: [
+      "text/csv",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // Excel .xlsx
+      "application/vnd.ms-excel", // Excel .xls
+    ],
+    template: [
+      "text/csv",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ],
+    letterhead: ["image/png", "image/jpeg", "image/svg+xml"],
+    avatar: ["image/png", "image/jpeg", "image/webp"],
+    signature: ["image/png", "image/jpeg", "image/svg+xml"],
+    certificate: ["application/pdf", "image/png", "image/jpeg"],
+    invoice: ["application/pdf"],
+    receipt: ["application/pdf", "image/png", "image/jpeg"],
+    contract: ["application/pdf"],
+    report: [
+      "application/pdf",
+      "text/csv",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ],
+  };
 
 /**
  * Validation result type
@@ -112,7 +113,10 @@ export interface ValidationResult {
  * @param sizeBytes - File size in bytes
  * @returns Validation result
  */
-export function validateFileSize(kind: DocumentKindType, sizeBytes: number): ValidationResult {
+export function validateFileSize(
+  kind: DocumentKindType,
+  sizeBytes: number,
+): ValidationResult {
   const maxSize = MAX_SIZE_BY_KIND[kind];
 
   if (sizeBytes > maxSize) {
@@ -139,7 +143,10 @@ export function validateFileSize(kind: DocumentKindType, sizeBytes: number): Val
  * @param contentType - MIME type of the file
  * @returns Validation result
  */
-export function validateContentType(kind: DocumentKindType, contentType: string): ValidationResult {
+export function validateContentType(
+  kind: DocumentKindType,
+  contentType: string,
+): ValidationResult {
   const allowed = ALLOWED_CONTENT_TYPES[kind];
 
   // If no restrictions, allow any content type

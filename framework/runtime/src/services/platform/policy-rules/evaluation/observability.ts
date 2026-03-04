@@ -75,10 +75,16 @@ export class ConsoleMetricsCollector implements IMetricsCollector {
   /** Get current metrics snapshot (for testing/debugging) */
   getSnapshot(): {
     counters: Record<string, number>;
-    histograms: Record<string, { count: number; sum: number; avg: number; p95: number }>;
+    histograms: Record<
+      string,
+      { count: number; sum: number; avg: number; p95: number }
+    >;
     gauges: Record<string, number>;
   } {
-    const histogramStats: Record<string, { count: number; sum: number; avg: number; p95: number }> = {};
+    const histogramStats: Record<
+      string,
+      { count: number; sum: number; avg: number; p95: number }
+    > = {};
 
     for (const [key, values] of this.histograms) {
       const sorted = [...values].sort((a, b) => a - b);
@@ -115,7 +121,10 @@ export type SpanContext = {
 /**
  * Span attributes
  */
-export type SpanAttributes = Record<string, string | number | boolean | undefined>;
+export type SpanAttributes = Record<
+  string,
+  string | number | boolean | undefined
+>;
 
 /**
  * Span interface
@@ -142,7 +151,11 @@ export interface ISpan {
  */
 export interface ITracer {
   /** Start a new span */
-  startSpan(name: string, attributes?: SpanAttributes, parent?: SpanContext): ISpan;
+  startSpan(
+    name: string,
+    attributes?: SpanAttributes,
+    parent?: SpanContext,
+  ): ISpan;
 
   /** Get current active span */
   getActiveSpan(): ISpan | undefined;
@@ -176,7 +189,11 @@ class NoOpSpan implements ISpan {
 export class ConsoleTracer implements ITracer {
   private activeSpan?: ISpan;
 
-  startSpan(name: string, attributes?: SpanAttributes, parent?: SpanContext): ISpan {
+  startSpan(
+    name: string,
+    attributes?: SpanAttributes,
+    parent?: SpanContext,
+  ): ISpan {
     const span = new ConsoleSpan(name, attributes, parent);
     this.activeSpan = span;
     return span;
@@ -194,14 +211,18 @@ class ConsoleSpan implements ISpan {
   private context: SpanContext;
   private startTime: number;
   private attributes: SpanAttributes = {};
-  private events: Array<{ name: string; timestamp: number; attributes?: SpanAttributes }> = [];
+  private events: Array<{
+    name: string;
+    timestamp: number;
+    attributes?: SpanAttributes;
+  }> = [];
   private status: "ok" | "error" = "ok";
   private statusMessage?: string;
 
   constructor(
     private name: string,
     initialAttributes?: SpanAttributes,
-    parent?: SpanContext
+    parent?: SpanContext,
   ) {
     this.startTime = Date.now();
     this.context = {
@@ -244,7 +265,7 @@ class ConsoleSpan implements ISpan {
           attributes: this.attributes,
           events: this.events,
         },
-      })
+      }),
     );
   }
 
@@ -257,7 +278,11 @@ class ConsoleSpan implements ISpan {
  * No-op tracer
  */
 export class NoOpTracer implements ITracer {
-  startSpan(_name: string, _attributes?: SpanAttributes, _parent?: SpanContext): ISpan {
+  startSpan(
+    _name: string,
+    _attributes?: SpanAttributes,
+    _parent?: SpanContext,
+  ): ISpan {
     return new NoOpSpan();
   }
 
@@ -364,7 +389,7 @@ export class StructuredPolicyLogger implements IPolicyLogger {
         resourceType: input.resource.type,
         resourceId: input.resource.id,
         correlationId: input.context.correlationId,
-      })
+      }),
     );
   }
 
@@ -387,7 +412,7 @@ export class StructuredPolicyLogger implements IPolicyLogger {
         matchedPolicyId: decision.decidingRule?.policyId,
         rulesMatched: decision.matchedRules.length,
         correlationId: input.context.correlationId,
-      })
+      }),
     );
   }
 
@@ -407,7 +432,7 @@ export class StructuredPolicyLogger implements IPolicyLogger {
         errorCode: (error as any).code,
         errorMessage: error.message,
         correlationId: input.context.correlationId,
-      })
+      }),
     );
   }
 
@@ -421,7 +446,7 @@ export class StructuredPolicyLogger implements IPolicyLogger {
         cacheType,
         hit,
         key: key.slice(0, 50), // Truncate key for logging
-      })
+      }),
     );
   }
 }
@@ -468,7 +493,7 @@ export class PolicyObservability {
     config?: Partial<PolicyObservabilityConfig>,
     metrics?: IMetricsCollector,
     tracer?: ITracer,
-    logger?: IPolicyLogger
+    logger?: IPolicyLogger,
   ) {
     this.config = { ...DEFAULT_OBSERVABILITY_CONFIG, ...config };
 
@@ -476,7 +501,8 @@ export class PolicyObservability {
     this.tracer = this.config.tracingEnabled
       ? (tracer ?? new ConsoleTracer())
       : new NoOpTracer();
-    this.logger = logger ?? new StructuredPolicyLogger(this.config.loggingEnabled);
+    this.logger =
+      logger ?? new StructuredPolicyLogger(this.config.loggingEnabled);
   }
 
   /**
@@ -504,21 +530,24 @@ export class PolicyObservability {
     this.metrics.recordHistogram(
       "policy_eval_latency_ms",
       decision.metadata.durationMs,
-      labels
+      labels,
     );
 
     // Gauge: matched rules
     this.metrics.recordGauge(
       "policy_eval_rules_matched",
       decision.matchedRules.length,
-      labels
+      labels,
     );
   }
 
   /**
    * Record cache metrics
    */
-  recordCacheAccess(cacheType: "subject" | "policy" | "facts", hit: boolean): void {
+  recordCacheAccess(
+    cacheType: "subject" | "policy" | "facts",
+    hit: boolean,
+  ): void {
     if (!this.config.metricsEnabled) return;
 
     this.metrics.incrementCounter("policy_cache_access_total", {
@@ -565,7 +594,11 @@ export class PolicyObservability {
   /**
    * Create child span
    */
-  startChildSpan(name: string, parent: SpanContext, attributes?: SpanAttributes): ISpan {
+  startChildSpan(
+    name: string,
+    parent: SpanContext,
+    attributes?: SpanAttributes,
+  ): ISpan {
     return this.tracer.startSpan(name, attributes, parent);
   }
 }
@@ -574,7 +607,7 @@ export class PolicyObservability {
  * Create observability instance with default settings
  */
 export function createPolicyObservability(
-  config?: Partial<PolicyObservabilityConfig>
+  config?: Partial<PolicyObservabilityConfig>,
 ): PolicyObservability {
   return new PolicyObservability(config);
 }

@@ -8,20 +8,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { PreviewService } from "../../domain/services/PreviewService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * Get preview/thumbnail URL
  * GET /api/content/preview/:attachmentId?type=thumbnail|preview
  */
 export class GetPreviewUrlHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const previewService = await ctx.container.resolve<PreviewService>(
-        TOKENS.previewService
+        TOKENS.previewService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -74,10 +80,14 @@ export class GetPreviewUrlHandler implements RouteHandler {
  * Body: { attachmentId }
  */
 export class GeneratePreviewHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const previewService = await ctx.container.resolve<PreviewService>(
-        TOKENS.previewService
+        TOKENS.previewService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";

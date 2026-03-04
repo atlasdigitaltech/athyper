@@ -7,8 +7,6 @@
 
 import { randomBytes } from "crypto";
 
-
-
 import { BackupCodesService } from "./backup-codes.service.js";
 import { TotpService } from "./totp.service.js";
 
@@ -76,7 +74,7 @@ export class MfaService implements IMfaService {
   constructor(
     private readonly db: Kysely<any>,
     private readonly logger: Logger,
-    config?: Partial<MfaServiceConfig>
+    config?: Partial<MfaServiceConfig>,
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.totp = new TotpService({ issuer: this.config.totpIssuer });
@@ -138,7 +136,8 @@ export class MfaService implements IMfaService {
       backupCodesRemaining,
       trustedDevicesCount: trustedResult?.count ?? 0,
       lastUsedAt: config?.lastUsedAt,
-      requiresSetup: policy.isRequired && !(config?.isEnabled && config?.isVerified),
+      requiresSetup:
+        policy.isRequired && !(config?.isEnabled && config?.isVerified),
       gracePeriodEndsAt: policy.gracePeriodEndsAt,
     };
   }
@@ -146,7 +145,10 @@ export class MfaService implements IMfaService {
   /**
    * Check if MFA is required for a principal
    */
-  async isRequired(principalId: string, tenantId: string): Promise<MfaPolicyCheckResult> {
+  async isRequired(
+    principalId: string,
+    tenantId: string,
+  ): Promise<MfaPolicyCheckResult> {
     // Check tenant-level policy
     const tenantPolicy = await this.db
       .selectFrom("sec.mfa_policy")
@@ -170,7 +172,7 @@ export class MfaService implements IMfaService {
       .innerJoin("core.role_binding as rb", (join) =>
         join
           .onRef("rb.persona_code", "=", "mp.scope_ref")
-          .on("rb.principal_id", "=", principalId)
+          .on("rb.principal_id", "=", principalId),
       )
       .selectAll("mp")
       .where("mp.tenant_id", "=", tenantId)
@@ -202,7 +204,7 @@ export class MfaService implements IMfaService {
   async startEnrollment(
     principalId: string,
     tenantId: string,
-    method: MfaMethod = "totp"
+    method: MfaMethod = "totp",
   ): Promise<EnrollmentStartResult> {
     // Check if already enrolled
     const existing = await this.db
@@ -236,7 +238,7 @@ export class MfaService implements IMfaService {
     const setupData = await this.totp.generateSetupData(
       secret,
       accountName,
-      this.config.totpIssuer
+      this.config.totpIssuer,
     );
 
     // Upsert MFA config
@@ -276,7 +278,9 @@ export class MfaService implements IMfaService {
   /**
    * Verify MFA enrollment with first code
    */
-  async verifyEnrollment(input: EnrollmentVerifyInput): Promise<EnrollmentCompleteResult> {
+  async verifyEnrollment(
+    input: EnrollmentVerifyInput,
+  ): Promise<EnrollmentCompleteResult> {
     const { principalId, tenantId, code, ipAddress, userAgent } = input;
 
     // Get pending config
@@ -318,7 +322,9 @@ export class MfaService implements IMfaService {
     }
 
     // Generate backup codes
-    const backupCodesResult = this.backupCodes.generate(this.config.backupCodesCount);
+    const backupCodesResult = this.backupCodes.generate(
+      this.config.backupCodesCount,
+    );
 
     // Hash and store backup codes
     await this.storeBackupCodes(config.id, backupCodesResult.codes);
@@ -431,9 +437,10 @@ export class MfaService implements IMfaService {
    */
   async verifyChallenge(
     input: MfaVerifyInput,
-    context: MfaVerificationContext
+    context: MfaVerificationContext,
   ): Promise<MfaVerifyResult> {
-    const { challengeToken, code, isBackupCode, rememberDevice, deviceName } = input;
+    const { challengeToken, code, isBackupCode, rememberDevice, deviceName } =
+      input;
     const { principalId, tenantId, ipAddress, userAgent, deviceId } = context;
 
     // Get challenge
@@ -479,8 +486,18 @@ export class MfaService implements IMfaService {
     let verified = false;
 
     // Try backup code first if specified or if format matches
-    if (isBackupCode || (this.backupCodes as BackupCodesService).isBackupCodeFormat(code)) {
-      verified = await this.verifyBackupCode(config.id, code, principalId, tenantId, ipAddress, userAgent);
+    if (
+      isBackupCode ||
+      (this.backupCodes as BackupCodesService).isBackupCodeFormat(code)
+    ) {
+      verified = await this.verifyBackupCode(
+        config.id,
+        code,
+        principalId,
+        tenantId,
+        ipAddress,
+        userAgent,
+      );
     } else {
       // Verify TOTP
       const totpResult = this.totp.verify(config.totp_secret!, code);
@@ -495,7 +512,9 @@ export class MfaService implements IMfaService {
       // Check if should lock
       let lockedUntil: Date | undefined;
       if (remainingAttempts <= 0) {
-        lockedUntil = new Date(Date.now() + this.config.lockoutDurationMinutes * 60 * 1000);
+        lockedUntil = new Date(
+          Date.now() + this.config.lockoutDurationMinutes * 60 * 1000,
+        );
 
         await this.logAudit({
           principalId,
@@ -563,7 +582,12 @@ export class MfaService implements IMfaService {
     // Trust device if requested
     let trustToken: string | undefined;
     if (rememberDevice && deviceId) {
-      const trustResult = await this.trustDevice(principalId, tenantId, deviceId, deviceName);
+      const trustResult = await this.trustDevice(
+        principalId,
+        tenantId,
+        deviceId,
+        deviceName,
+      );
       trustToken = trustResult.trustToken;
     }
 
@@ -577,7 +601,11 @@ export class MfaService implements IMfaService {
   /**
    * Disable MFA for a principal
    */
-  async disable(principalId: string, tenantId: string, code: string): Promise<boolean> {
+  async disable(
+    principalId: string,
+    tenantId: string,
+    code: string,
+  ): Promise<boolean> {
     // Get config
     const config = await this.db
       .selectFrom("sec.mfa_config")
@@ -627,7 +655,10 @@ export class MfaService implements IMfaService {
   /**
    * Regenerate backup codes
    */
-  async regenerateBackupCodes(principalId: string, tenantId: string): Promise<BackupCodesResult> {
+  async regenerateBackupCodes(
+    principalId: string,
+    tenantId: string,
+  ): Promise<BackupCodesResult> {
     // Get config
     const config = await this.db
       .selectFrom("sec.mfa_config")
@@ -667,7 +698,10 @@ export class MfaService implements IMfaService {
   /**
    * Get trusted devices for a principal
    */
-  async getTrustedDevices(principalId: string, tenantId: string): Promise<TrustedDevice[]> {
+  async getTrustedDevices(
+    principalId: string,
+    tenantId: string,
+  ): Promise<TrustedDevice[]> {
     const devices = await this.db
       .selectFrom("sec.mfa_trusted_device")
       .selectAll()
@@ -702,12 +736,12 @@ export class MfaService implements IMfaService {
     principalId: string,
     tenantId: string,
     deviceId: string,
-    deviceName?: string
+    deviceName?: string,
   ): Promise<TrustDeviceResult> {
     const trustToken = randomBytes(32).toString("hex");
     const trustTokenHash = await this.hashToken(trustToken);
     const expiresAt = new Date(
-      Date.now() + this.config.trustedDeviceExpiryDays * 24 * 60 * 60 * 1000
+      Date.now() + this.config.trustedDeviceExpiryDays * 24 * 60 * 60 * 1000,
     );
 
     await this.db
@@ -727,7 +761,7 @@ export class MfaService implements IMfaService {
           is_revoked: false,
           revoked_at: null,
           last_used_at: new Date(),
-        })
+        }),
       )
       .execute();
 
@@ -740,7 +774,7 @@ export class MfaService implements IMfaService {
   async isTrustedDevice(
     principalId: string,
     tenantId: string,
-    trustToken: string
+    trustToken: string,
   ): Promise<boolean> {
     const tokenHash = await this.hashToken(trustToken);
 
@@ -770,7 +804,11 @@ export class MfaService implements IMfaService {
   /**
    * Revoke a trusted device
    */
-  async revokeDevice(principalId: string, tenantId: string, deviceId: string): Promise<void> {
+  async revokeDevice(
+    principalId: string,
+    tenantId: string,
+    deviceId: string,
+  ): Promise<void> {
     await this.db
       .updateTable("sec.mfa_trusted_device")
       .set({
@@ -786,7 +824,10 @@ export class MfaService implements IMfaService {
   /**
    * Revoke all trusted devices
    */
-  async revokeAllDevices(principalId: string, tenantId: string): Promise<number> {
+  async revokeAllDevices(
+    principalId: string,
+    tenantId: string,
+  ): Promise<number> {
     const result = await this.db
       .updateTable("sec.mfa_trusted_device")
       .set({
@@ -808,7 +849,10 @@ export class MfaService implements IMfaService {
   /**
    * Store hashed backup codes
    */
-  private async storeBackupCodes(configId: string, codes: string[]): Promise<void> {
+  private async storeBackupCodes(
+    configId: string,
+    codes: string[],
+  ): Promise<void> {
     for (const code of codes) {
       const hash = await this.backupCodes.hash(code);
       await this.db
@@ -830,7 +874,7 @@ export class MfaService implements IMfaService {
     principalId: string,
     tenantId: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<boolean> {
     // Get unused backup codes
     const codes = await this.db
@@ -929,7 +973,7 @@ export class MfaService implements IMfaService {
 export function createMfaService(
   db: Kysely<any>,
   logger: Logger,
-  config?: Partial<MfaServiceConfig>
+  config?: Partial<MfaServiceConfig>,
 ): MfaService {
   return new MfaService(db, logger, config);
 }

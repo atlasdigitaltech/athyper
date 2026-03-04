@@ -19,7 +19,7 @@ import type { CommentEventsService } from "../domain/comment-events.service.js";
 export class CommentEventsStreamHandler {
   async handle(ctx: HttpHandlerContext) {
     const eventsService = await ctx.container.resolve<CommentEventsService>(
-      TOKENS.collabEventsService
+      TOKENS.collabEventsService,
     );
 
     const { entityType, entityId } = ctx.request.query;
@@ -33,7 +33,7 @@ export class CommentEventsStreamHandler {
       {
         entityType: entityType as string | undefined,
         entityId: entityId as string | undefined,
-      }
+      },
     );
 
     // Connection will stay open until client disconnects
@@ -51,7 +51,7 @@ export class CommentEventsStreamHandler {
 export class CommentEventsStatsHandler {
   async handle(ctx: HttpHandlerContext) {
     const eventsService = await ctx.container.resolve<CommentEventsService>(
-      TOKENS.collabEventsService
+      TOKENS.collabEventsService,
     );
 
     const { entityType, entityId } = ctx.request.query;
@@ -61,7 +61,7 @@ export class CommentEventsStatsHandler {
       count = eventsService.getEntityClientCount(
         ctx.tenant.tenantId,
         entityType as string,
-        entityId as string
+        entityId as string,
       );
     } else {
       count = eventsService.getClientCount();

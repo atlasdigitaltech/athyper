@@ -16,10 +16,13 @@ import Redis from "ioredis";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
-import { createMetaServices, DdlGeneratorService, MigrationRunnerService } from "../services/platform/meta/index.js";
+import {
+  createMetaServices,
+  DdlGeneratorService,
+  MigrationRunnerService,
+} from "../services/platform/meta/index.js";
 
 import type { DB } from "@athyper/adapter-db";
-
 
 // Get command from args
 const command = process.argv[2] || "plan";
@@ -47,7 +50,8 @@ if (!redisUrl) {
 }
 
 // Get tenant ID (default to system tenant)
-const tenantId = process.env.TENANT_ID || "00000000-0000-0000-0000-000000000000";
+const tenantId =
+  process.env.TENANT_ID || "00000000-0000-0000-0000-000000000000";
 
 async function main() {
   // Assert admin URL is defined (checked above)

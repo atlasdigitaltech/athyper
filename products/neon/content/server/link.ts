@@ -5,7 +5,12 @@
  * unlinking, and querying links.
  */
 
-export type LinkKind = "primary" | "related" | "supporting" | "compliance" | "audit";
+export type LinkKind =
+  | "primary"
+  | "related"
+  | "supporting"
+  | "compliance"
+  | "audit";
 
 export interface LinkDocumentParams {
   attachmentId: string;
@@ -45,7 +50,9 @@ export interface LinkedEntity {
  * @returns Created link
  * @throws Error if attachment or entity not found
  */
-export async function linkDocumentToEntity(params: LinkDocumentParams): Promise<EntityDocumentLink> {
+export async function linkDocumentToEntity(
+  params: LinkDocumentParams,
+): Promise<EntityDocumentLink> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");
@@ -123,7 +130,9 @@ export async function getLinkedEntities(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Get linked entities failed: ${res.status}`);
+    throw new Error(
+      error.message || `Get linked entities failed: ${res.status}`,
+    );
   }
 
   return res.json();

@@ -11,20 +11,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { CommentService } from "../../domain/services/CommentService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * List comments for attachment
  * GET /api/content/comments/:attachmentId?includeDeleted=false
  */
 export class ListCommentsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const commentService = await ctx.container.resolve<CommentService>(
-        TOKENS.commentService
+        TOKENS.commentService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -64,10 +70,14 @@ export class ListCommentsHandler implements RouteHandler {
  * Body: { attachmentId, content, mentions?, parentId? }
  */
 export class CreateCommentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const commentService = await ctx.container.resolve<CommentService>(
-        TOKENS.commentService
+        TOKENS.commentService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -121,10 +131,14 @@ export class CreateCommentHandler implements RouteHandler {
  * Body: { content, mentions? }
  */
 export class UpdateCommentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const commentService = await ctx.container.resolve<CommentService>(
-        TOKENS.commentService
+        TOKENS.commentService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -175,10 +189,14 @@ export class UpdateCommentHandler implements RouteHandler {
  * DELETE /api/content/comments/:id
  */
 export class DeleteCommentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const commentService = await ctx.container.resolve<CommentService>(
-        TOKENS.commentService
+        TOKENS.commentService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -220,10 +238,14 @@ export class DeleteCommentHandler implements RouteHandler {
  * Body: { content, mentions? }
  */
 export class ReplyToCommentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const commentService = await ctx.container.resolve<CommentService>(
-        TOKENS.commentService
+        TOKENS.commentService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";

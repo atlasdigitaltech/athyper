@@ -51,7 +51,8 @@ export async function GET(req: Request) {
     }
 
     // Validate entityId is UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(entityId)) {
       return NextResponse.json(
         {
@@ -79,14 +80,26 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const attachments = await contentService.listByEntity(tenantId, entityType, entityId);
+    const attachments = await contentService.listByEntity(
+      tenantId,
+      entityType,
+      entityId,
+    );
 
     return NextResponse.json({ success: true, data: attachments });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Return empty array when content service is unavailable (graceful degradation)
-    const msg = err?.message ?? "";
-    if (msg.includes("RUNTIME_API_URL") || msg.includes("Unknown error") || msg.includes("fetch failed")) {
-      console.warn("[GET /api/content/by-entity] Content service unavailable, returning empty:", msg);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
+    if (
+      message.includes("RUNTIME_API_URL") ||
+      message.includes("Unknown error") ||
+      message.includes("fetch failed")
+    ) {
+      console.warn(
+        "[GET /api/content/by-entity] Content service unavailable, returning empty:",
+        message,
+      );
       return NextResponse.json({ success: true, data: [] });
     }
     console.error("List attachments error:", err);
@@ -94,8 +107,8 @@ export async function GET(req: Request) {
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

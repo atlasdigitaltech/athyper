@@ -55,13 +55,31 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
     try {
       switch (group) {
         case "lifecycle":
-          return await this.executeLifecycleAction(entityName, entityId, operation, ctx, payload);
+          return await this.executeLifecycleAction(
+            entityName,
+            entityId,
+            operation,
+            ctx,
+            payload,
+          );
 
         case "approval":
-          return await this.executeApprovalAction(entityName, entityId, operation, ctx, payload);
+          return await this.executeApprovalAction(
+            entityName,
+            entityId,
+            operation,
+            ctx,
+            payload,
+          );
 
         case "entity":
-          return await this.executeEntityAction(entityName, entityId, operation, ctx, payload);
+          return await this.executeEntityAction(
+            entityName,
+            entityId,
+            operation,
+            ctx,
+            payload,
+          );
 
         default:
           return {
@@ -75,13 +93,15 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
           };
       }
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "action_dispatch_error",
-        actionCode,
-        entityName,
-        entityId,
-        error: String(error),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "action_dispatch_error",
+          actionCode,
+          entityName,
+          entityId,
+          error: String(error),
+        }),
+      );
 
       return {
         success: false,
@@ -127,7 +147,10 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
       reasonCode = "terminal_state";
     } else if (result.reason?.includes("Approval")) {
       reasonCode = "approval_pending";
-    } else if (result.reason?.includes("denied") || result.reason?.includes("Missing required")) {
+    } else if (
+      result.reason?.includes("denied") ||
+      result.reason?.includes("Missing required")
+    ) {
       reasonCode = "policy_denied";
     }
 
@@ -137,7 +160,9 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
       error: {
         reasonCode,
         blockedBy: "lifecycle",
-        details: [{ message: result.error ?? result.reason ?? "Transition failed" }],
+        details: [
+          { message: result.error ?? result.reason ?? "Transition failed" },
+        ],
       },
     };
   }
@@ -173,7 +198,10 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
     }
 
     // Find user's pending task
-    const userTasks = await this.approvalService.getTasksForUser(ctx.userId, ctx.tenantId);
+    const userTasks = await this.approvalService.getTasksForUser(
+      ctx.userId,
+      ctx.tenantId,
+    );
     const myTask = userTasks.data.find(
       (t) => t.approvalInstanceId === instance.id && t.status === "pending",
     );
@@ -185,7 +213,9 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
         error: {
           reasonCode: "policy_denied",
           blockedBy: "approval",
-          details: [{ message: "You have no pending approval task for this record" }],
+          details: [
+            { message: "You have no pending approval task for this record" },
+          ],
         },
       };
     }
@@ -212,7 +242,9 @@ export class ActionDispatcherServiceImpl implements ActionDispatcher {
       error: {
         reasonCode: "validation_failed",
         blockedBy: "approval",
-        details: [{ message: result.error ?? result.reason ?? "Decision failed" }],
+        details: [
+          { message: result.error ?? result.reason ?? "Decision failed" },
+        ],
       },
     };
   }

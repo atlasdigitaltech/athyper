@@ -133,7 +133,12 @@ export class ApproverResolverService {
       const assignTo = rule.assign_to as Record<string, unknown> | null;
       if (!assignTo) continue;
 
-      const assignees = await this.resolveTarget(assignTo, context, tenantId, rule.id);
+      const assignees = await this.resolveTarget(
+        assignTo,
+        context,
+        tenantId,
+        rule.id,
+      );
       if (assignees.length > 0) return assignees;
     }
 
@@ -173,7 +178,7 @@ export class ApproverResolverService {
 
       case "hierarchy":
         return this.resolveByHierarchy(
-          context.requester_id as string ?? context.userId as string ?? "",
+          (context.requester_id as string) ?? (context.userId as string) ?? "",
           tenantId,
           ruleId,
           (assignTo.skip_levels as number) ?? 1,
@@ -241,7 +246,8 @@ export class ApproverResolverService {
 
     const cacheKey = `${CACHE_PREFIX}:${tenantId}:role:${roleCode}:${ouScope ?? "*"}`;
     const cached = await this.getCache(cacheKey);
-    if (cached) return cached.map((pid: string) => ({ principalId: pid, ruleId }));
+    if (cached)
+      return cached.map((pid: string) => ({ principalId: pid, ruleId }));
 
     let principalIds: string[];
 
@@ -294,7 +300,8 @@ export class ApproverResolverService {
 
     const cacheKey = `${CACHE_PREFIX}:${tenantId}:group:${groupCode}`;
     const cached = await this.getCache(cacheKey);
-    if (cached) return cached.map((pid: string) => ({ principalId: pid, ruleId }));
+    if (cached)
+      return cached.map((pid: string) => ({ principalId: pid, ruleId }));
 
     const rows = await sql`
       SELECT DISTINCT gm.principal_id
@@ -356,7 +363,8 @@ export class ApproverResolverService {
     // 3. Find principals assigned to the target OU (managers)
     const cacheKey = `${CACHE_PREFIX}:${tenantId}:hierarchy:${currentOuId}`;
     const cached = await this.getCache(cacheKey);
-    if (cached) return cached.map((pid: string) => ({ principalId: pid, ruleId }));
+    if (cached)
+      return cached.map((pid: string) => ({ principalId: pid, ruleId }));
 
     const rows = await sql`
       SELECT DISTINCT po.principal_id
@@ -386,7 +394,8 @@ export class ApproverResolverService {
 
     const cacheKey = `${CACHE_PREFIX}:${tenantId}:dept:${ouCode}`;
     const cached = await this.getCache(cacheKey);
-    if (cached) return cached.map((pid: string) => ({ principalId: pid, ruleId }));
+    if (cached)
+      return cached.map((pid: string) => ({ principalId: pid, ruleId }));
 
     const rows = await sql`
       SELECT DISTINCT po.principal_id
@@ -419,7 +428,8 @@ export class ApproverResolverService {
 
     const cacheKey = `${CACHE_PREFIX}:${tenantId}:custom:${fieldPath}:${String(fieldValue)}`;
     const cached = await this.getCache(cacheKey);
-    if (cached) return cached.map((pid: string) => ({ principalId: pid, ruleId }));
+    if (cached)
+      return cached.map((pid: string) => ({ principalId: pid, ruleId }));
 
     // Use JSONB containment operator for metadata lookup
     // For a field like "cost_center", this checks metadata @> '{"cost_center": "CC-100"}'

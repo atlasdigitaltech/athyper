@@ -10,7 +10,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * GET /api/collab/timeline
@@ -54,19 +54,22 @@ export async function GET(req: NextRequest) {
     // Call backend service (via API mesh or direct framework call)
     // For now, using direct framework integration (assumes shared runtime)
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
-    const response = await fetch(`${backendUrl}/api/collab/timeline?${params}`, {
-      headers: {
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/timeline?${params}`,
+      {
+        headers: {
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const error = await response.text();
       console.error("Timeline API error:", error);
       return NextResponse.json(
         { error: "Failed to fetch timeline", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
     console.error("Timeline route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -35,7 +35,7 @@ export class AdminActionsService implements IAdminActionsService {
   constructor(
     private readonly adminRepository: IAdminActionRepository,
     private readonly instanceRepository: IApprovalInstanceRepository,
-    private readonly auditService?: IAuditTrailService
+    private readonly auditService?: IAuditTrailService,
   ) {}
 
   /**
@@ -46,7 +46,7 @@ export class AdminActionsService implements IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
     // Validate action
     const validation = await this.validateAction(
@@ -54,7 +54,7 @@ export class AdminActionsService implements IAdminActionsService {
       instanceId,
       stepInstanceId,
       "force_approve",
-      adminId
+      adminId,
     );
 
     if (!validation.allowed) {
@@ -65,7 +65,10 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -74,7 +77,10 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const previousState = { status: step.status, approvalCounts: step.approvalCounts };
+    const previousState = {
+      status: step.status,
+      approvalCounts: step.approvalCounts,
+    };
     const now = new Date();
 
     // Update all pending approvers to approved (by admin)
@@ -106,13 +112,21 @@ export class AdminActionsService implements IAdminActionsService {
     });
 
     // Log the action
-    await this.logAction(tenantId, instanceId, stepInstanceId, "force_approve", adminId, reason, {
-      success: true,
-      message: "Step force approved",
-      affectedEntities: { steps: [stepInstanceId] },
-      previousState,
-      newState: { status: "approved" },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "force_approve",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: "Step force approved",
+        affectedEntities: { steps: [stepInstanceId] },
+        previousState,
+        newState: { status: "approved" },
+      },
+    );
 
     // Record audit event
     if (this.auditService) {
@@ -126,7 +140,8 @@ export class AdminActionsService implements IAdminActionsService {
         description: `Step force approved: ${reason}`,
         metadata: {
           previousStatus: step.status,
-          pendingApprovers: step.approvers.filter((a) => a.status === "pending").length,
+          pendingApprovers: step.approvers.filter((a) => a.status === "pending")
+            .length,
         },
       });
     }
@@ -148,14 +163,14 @@ export class AdminActionsService implements IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
     const validation = await this.validateAction(
       tenantId,
       instanceId,
       stepInstanceId,
       "force_reject",
-      adminId
+      adminId,
     );
 
     if (!validation.allowed) {
@@ -166,7 +181,10 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -212,13 +230,21 @@ export class AdminActionsService implements IAdminActionsService {
     });
 
     // Log the action
-    await this.logAction(tenantId, instanceId, stepInstanceId, "force_reject", adminId, reason, {
-      success: true,
-      message: "Step force rejected",
-      affectedEntities: { steps: [stepInstanceId], instances: [instanceId] },
-      previousState,
-      newState: { status: "rejected" },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "force_reject",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: "Step force rejected",
+        affectedEntities: { steps: [stepInstanceId], instances: [instanceId] },
+        previousState,
+        newState: { status: "rejected" },
+      },
+    );
 
     // Record audit event
     if (this.auditService) {
@@ -252,14 +278,14 @@ export class AdminActionsService implements IAdminActionsService {
     stepInstanceId: string,
     newApprovers: Array<{ userId: string; name: string; email: string }>,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
     const validation = await this.validateAction(
       tenantId,
       instanceId,
       stepInstanceId,
       "reassign_step",
-      adminId
+      adminId,
     );
 
     if (!validation.allowed) {
@@ -270,7 +296,10 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -280,7 +309,9 @@ export class AdminActionsService implements IAdminActionsService {
     }
 
     const now = new Date();
-    const previousApprovers = step.approvers.filter((a) => a.status === "pending");
+    const previousApprovers = step.approvers.filter(
+      (a) => a.status === "pending",
+    );
 
     // Create new approver list
     const updatedApprovers: AssignedApprover[] = [
@@ -314,7 +345,10 @@ export class AdminActionsService implements IAdminActionsService {
     // Record reassignment
     const reassignment: StepReassignment = {
       stepInstanceId,
-      fromApprovers: previousApprovers.map((a) => ({ userId: a.userId, name: a.displayName || a.userId })),
+      fromApprovers: previousApprovers.map((a) => ({
+        userId: a.userId,
+        name: a.displayName || a.userId,
+      })),
       toApprovers: newApprovers,
       reason,
       reassignedBy: adminId,
@@ -326,14 +360,25 @@ export class AdminActionsService implements IAdminActionsService {
     await this.adminRepository.createReassignment(reassignment);
 
     // Log the action
-    await this.logAction(tenantId, instanceId, stepInstanceId, "reassign_step", adminId, reason, {
-      success: true,
-      message: `Reassigned from ${previousApprovers.length} to ${newApprovers.length} approvers`,
-      affectedEntities: {
-        steps: [stepInstanceId],
-        approvers: [...previousApprovers.map((a) => a.userId), ...newApprovers.map((a) => a.userId)],
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "reassign_step",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: `Reassigned from ${previousApprovers.length} to ${newApprovers.length} approvers`,
+        affectedEntities: {
+          steps: [stepInstanceId],
+          approvers: [
+            ...previousApprovers.map((a) => a.userId),
+            ...newApprovers.map((a) => a.userId),
+          ],
+        },
       },
-    });
+    );
 
     // Record audit event
     if (this.auditService) {
@@ -371,9 +416,12 @@ export class AdminActionsService implements IAdminActionsService {
     stepInstanceId: string,
     approver: { userId: string; name: string; email: string },
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -414,16 +462,27 @@ export class AdminActionsService implements IAdminActionsService {
       },
     });
 
-    await this.logAction(tenantId, instanceId, stepInstanceId, "add_approver", adminId, reason, {
-      success: true,
-      message: `Added approver ${approver.name}`,
-      affectedEntities: { approvers: [approver.userId] },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "add_approver",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: `Added approver ${approver.name}`,
+        affectedEntities: { approvers: [approver.userId] },
+      },
+    );
 
     return {
       success: true,
       message: `Added ${approver.name} as approver`,
-      affectedEntities: { steps: [stepInstanceId], approvers: [approver.userId] },
+      affectedEntities: {
+        steps: [stepInstanceId],
+        approvers: [approver.userId],
+      },
     };
   }
 
@@ -436,9 +495,12 @@ export class AdminActionsService implements IAdminActionsService {
     stepInstanceId: string,
     approverId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -464,7 +526,9 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const updatedApprovers = step.approvers.filter((a) => a.userId !== approverId);
+    const updatedApprovers = step.approvers.filter(
+      (a) => a.userId !== approverId,
+    );
 
     await this.instanceRepository.updateStepInstance(tenantId, stepInstanceId, {
       approvers: updatedApprovers,
@@ -475,11 +539,19 @@ export class AdminActionsService implements IAdminActionsService {
       },
     });
 
-    await this.logAction(tenantId, instanceId, stepInstanceId, "remove_approver", adminId, reason, {
-      success: true,
-      message: `Removed approver ${approver.displayName || approver.userId}`,
-      affectedEntities: { approvers: [approverId] },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "remove_approver",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: `Removed approver ${approver.displayName || approver.userId}`,
+        affectedEntities: { approvers: [approverId] },
+      },
+    );
 
     return {
       success: true,
@@ -496,9 +568,12 @@ export class AdminActionsService implements IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -516,13 +591,21 @@ export class AdminActionsService implements IAdminActionsService {
       completedAt: now,
     });
 
-    await this.logAction(tenantId, instanceId, stepInstanceId, "skip_step", adminId, reason, {
-      success: true,
-      message: "Step skipped",
-      affectedEntities: { steps: [stepInstanceId] },
-      previousState,
-      newState: { status: "skipped" },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "skip_step",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: "Step skipped",
+        affectedEntities: { steps: [stepInstanceId] },
+        previousState,
+        newState: { status: "skipped" },
+      },
+    );
 
     if (this.auditService) {
       await this.auditService.recordEvent(tenantId, {
@@ -552,9 +635,12 @@ export class AdminActionsService implements IAdminActionsService {
     tenantId: string,
     instanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
     if (!instance) {
       return {
         success: false,
@@ -580,8 +666,13 @@ export class AdminActionsService implements IAdminActionsService {
     });
 
     // Cancel all active steps
-    const steps = await this.instanceRepository.getStepInstances(tenantId, instanceId);
-    const activeSteps = steps.filter((s) => s.status === "active" || s.status === "pending");
+    const steps = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instanceId,
+    );
+    const activeSteps = steps.filter(
+      (s) => s.status === "active" || s.status === "pending",
+    );
 
     for (const step of activeSteps) {
       await this.instanceRepository.updateStepInstance(tenantId, step.id, {
@@ -591,16 +682,24 @@ export class AdminActionsService implements IAdminActionsService {
       });
     }
 
-    await this.logAction(tenantId, instanceId, undefined, "cancel_workflow", adminId, reason, {
-      success: true,
-      message: "Workflow cancelled",
-      affectedEntities: {
-        instances: [instanceId],
-        steps: activeSteps.map((s) => s.id),
+    await this.logAction(
+      tenantId,
+      instanceId,
+      undefined,
+      "cancel_workflow",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: "Workflow cancelled",
+        affectedEntities: {
+          instances: [instanceId],
+          steps: activeSteps.map((s) => s.id),
+        },
+        previousState,
+        newState: { status: "cancelled" },
       },
-      previousState,
-      newState: { status: "cancelled" },
-    });
+    );
 
     if (this.auditService) {
       await this.auditService.recordEvent(tenantId, {
@@ -633,9 +732,12 @@ export class AdminActionsService implements IAdminActionsService {
     tenantId: string,
     instanceId: string,
     options: RestartOptions,
-    adminId: string
+    adminId: string,
   ): Promise<AdminActionResult> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
     if (!instance) {
       return {
         success: false,
@@ -644,7 +746,10 @@ export class AdminActionsService implements IAdminActionsService {
       };
     }
 
-    const steps = await this.instanceRepository.getStepInstances(tenantId, instanceId);
+    const steps = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instanceId,
+    );
     const restartStep = steps.find((s) => s.id === options.fromStepId);
 
     if (!restartStep) {
@@ -701,14 +806,22 @@ export class AdminActionsService implements IAdminActionsService {
       completedAt: undefined,
     });
 
-    await this.logAction(tenantId, instanceId, options.fromStepId, "restart_from_step", adminId, options.reason, {
-      success: true,
-      message: `Workflow restarted from step ${restartStep.name}`,
-      affectedEntities: {
-        instances: [instanceId],
-        steps: affectedSteps,
+    await this.logAction(
+      tenantId,
+      instanceId,
+      options.fromStepId,
+      "restart_from_step",
+      adminId,
+      options.reason,
+      {
+        success: true,
+        message: `Workflow restarted from step ${restartStep.name}`,
+        affectedEntities: {
+          instances: [instanceId],
+          steps: affectedSteps,
+        },
       },
-    });
+    );
 
     if (this.auditService) {
       await this.auditService.recordEvent(tenantId, {
@@ -745,9 +858,12 @@ export class AdminActionsService implements IAdminActionsService {
     stepInstanceId: string,
     newDeadline: Date,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult> {
-    const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+    const step = await this.instanceRepository.getStepInstance(
+      tenantId,
+      stepInstanceId,
+    );
     if (!step) {
       return {
         success: false,
@@ -779,13 +895,21 @@ export class AdminActionsService implements IAdminActionsService {
 
     await this.adminRepository.createDeadlineModification(modification);
 
-    await this.logAction(tenantId, instanceId, stepInstanceId, "modify_deadline", adminId, reason, {
-      success: true,
-      message: `Deadline modified to ${newDeadline.toISOString()}`,
-      affectedEntities: { steps: [stepInstanceId] },
-      previousState: { deadline: originalDeadline },
-      newState: { deadline: newDeadline },
-    });
+    await this.logAction(
+      tenantId,
+      instanceId,
+      stepInstanceId,
+      "modify_deadline",
+      adminId,
+      reason,
+      {
+        success: true,
+        message: `Deadline modified to ${newDeadline.toISOString()}`,
+        affectedEntities: { steps: [stepInstanceId] },
+        previousState: { deadline: originalDeadline },
+        newState: { deadline: newDeadline },
+      },
+    );
 
     return {
       success: true,
@@ -799,7 +923,10 @@ export class AdminActionsService implements IAdminActionsService {
   /**
    * Get admin action history for an instance
    */
-  async getActionHistory(tenantId: string, instanceId: string): Promise<AdminActionLog[]> {
+  async getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminActionLog[]> {
     return this.adminRepository.getActionLogs(tenantId, instanceId);
   }
 
@@ -810,9 +937,12 @@ export class AdminActionsService implements IAdminActionsService {
     tenantId: string,
     adminId: string,
     actionType: AdminActionType,
-    instanceId: string
+    instanceId: string,
   ): Promise<{ allowed: boolean; reason?: string }> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
 
     if (!instance) {
       return { allowed: false, reason: "Instance not found" };
@@ -822,7 +952,10 @@ export class AdminActionsService implements IAdminActionsService {
     const terminalStatuses = ["completed", "rejected", "cancelled"];
     if (terminalStatuses.includes(instance.status)) {
       if (!["restart_from_step"].includes(actionType)) {
-        return { allowed: false, reason: `Cannot perform action on ${instance.status} workflow` };
+        return {
+          allowed: false,
+          reason: `Cannot perform action on ${instance.status} workflow`,
+        };
       }
     }
 
@@ -838,23 +971,40 @@ export class AdminActionsService implements IAdminActionsService {
     instanceId: string,
     stepInstanceId: string | undefined,
     actionType: AdminActionType,
-    adminId: string
+    adminId: string,
   ): Promise<{ allowed: boolean; reason?: string }> {
-    const canPerform = await this.canPerformAction(tenantId, adminId, actionType, instanceId);
+    const canPerform = await this.canPerformAction(
+      tenantId,
+      adminId,
+      actionType,
+      instanceId,
+    );
 
     if (!canPerform.allowed) {
       return canPerform;
     }
 
     if (stepInstanceId) {
-      const step = await this.instanceRepository.getStepInstance(tenantId, stepInstanceId);
+      const step = await this.instanceRepository.getStepInstance(
+        tenantId,
+        stepInstanceId,
+      );
       if (!step) {
         return { allowed: false, reason: "Step not found" };
       }
 
-      const terminalStepStatuses = ["approved", "rejected", "skipped", "cancelled", "expired"];
+      const terminalStepStatuses = [
+        "approved",
+        "rejected",
+        "skipped",
+        "cancelled",
+        "expired",
+      ];
       if (terminalStepStatuses.includes(step.status)) {
-        return { allowed: false, reason: `Cannot perform action on ${step.status} step` };
+        return {
+          allowed: false,
+          reason: `Cannot perform action on ${step.status} step`,
+        };
       }
     }
 
@@ -871,7 +1021,7 @@ export class AdminActionsService implements IAdminActionsService {
     actionType: AdminActionType,
     performedBy: string,
     reason: string,
-    result: AdminActionResult
+    result: AdminActionResult,
   ): Promise<void> {
     await this.adminRepository.createActionLog({
       tenantId,
@@ -893,7 +1043,11 @@ export class AdminActionsService implements IAdminActionsService {
 export function createAdminActionsService(
   adminRepository: IAdminActionRepository,
   instanceRepository: IApprovalInstanceRepository,
-  auditService?: IAuditTrailService
+  auditService?: IAuditTrailService,
 ): IAdminActionsService {
-  return new AdminActionsService(adminRepository, instanceRepository, auditService);
+  return new AdminActionsService(
+    adminRepository,
+    instanceRepository,
+    auditService,
+  );
 }

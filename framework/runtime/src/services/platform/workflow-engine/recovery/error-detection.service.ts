@@ -38,7 +38,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
   constructor(
     private readonly errorRepository: IRecoveryErrorRepository,
     private readonly instanceRepository: IApprovalInstanceRepository,
-    private readonly userService: IUserValidationService
+    private readonly userService: IUserValidationService,
   ) {}
 
   /**
@@ -46,9 +46,12 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   async checkInstanceHealth(
     tenantId: string,
-    instanceId: string
+    instanceId: string,
   ): Promise<WorkflowHealthCheck> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
 
     if (!instance) {
       return {
@@ -82,7 +85,10 @@ export class ErrorDetectionService implements IErrorDetectionService {
     }
 
     // Get all step instances
-    const steps = await this.instanceRepository.getStepInstances(tenantId, instanceId);
+    const steps = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instanceId,
+    );
 
     // Check active and pending steps
     for (const step of steps) {
@@ -123,7 +129,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
   private async checkStepHealth(
     tenantId: string,
     instance: ApprovalInstance,
-    step: ApprovalStepInstance
+    step: ApprovalStepInstance,
   ): Promise<WorkflowHealthIssue[]> {
     const issues: WorkflowHealthIssue[] = [];
 
@@ -163,7 +169,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   private checkSlaHealth(
     instance: ApprovalInstance,
-    steps: ApprovalStepInstance[]
+    steps: ApprovalStepInstance[],
   ): WorkflowHealthIssue[] {
     const issues: WorkflowHealthIssue[] = [];
     const now = new Date();
@@ -171,7 +177,10 @@ export class ErrorDetectionService implements IErrorDetectionService {
     for (const step of steps) {
       if (step.status !== "active") continue;
 
-      if (step.sla?.completionDueAt && new Date(step.sla.completionDueAt) < now) {
+      if (
+        step.sla?.completionDueAt &&
+        new Date(step.sla.completionDueAt) < now
+      ) {
         issues.push({
           type: "sla_expired",
           severity: "error",
@@ -190,7 +199,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   private checkForStuckWorkflow(
     instance: ApprovalInstance,
-    steps: ApprovalStepInstance[]
+    steps: ApprovalStepInstance[],
   ): WorkflowHealthIssue | null {
     // Check for no active steps when workflow is in progress
     if (instance.status === "in_progress") {
@@ -205,7 +214,8 @@ export class ErrorDetectionService implements IErrorDetectionService {
           return {
             type: "system_error",
             severity: "critical",
-            message: "Workflow appears stuck - no active steps and no steps can be activated",
+            message:
+              "Workflow appears stuck - no active steps and no steps can be activated",
             autoResolvable: false,
           };
         }
@@ -221,7 +231,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
   async detectStepErrors(
     tenantId: string,
     instance: ApprovalInstance,
-    step: ApprovalStepInstance
+    step: ApprovalStepInstance,
   ): Promise<WorkflowError[]> {
     const errors: WorkflowError[] = [];
     const validation = await this.validateApprovers(tenantId, step.approvers);
@@ -259,13 +269,16 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   async validateApprovers(
     tenantId: string,
-    approvers: AssignedApprover[]
+    approvers: AssignedApprover[],
   ): Promise<{
     valid: AssignedApprover[];
     invalid: Array<{ approver: AssignedApprover; reason: WorkflowErrorType }>;
   }> {
     const valid: AssignedApprover[] = [];
-    const invalid: Array<{ approver: AssignedApprover; reason: WorkflowErrorType }> = [];
+    const invalid: Array<{
+      approver: AssignedApprover;
+      reason: WorkflowErrorType;
+    }> = [];
 
     for (const approver of approvers) {
       // Skip already responded approvers
@@ -292,7 +305,9 @@ export class ErrorDetectionService implements IErrorDetectionService {
 
       // Check if group still has members (if group-based assignment)
       if (approver.resolutionStrategy === "group" && approver.resolvedBy) {
-        const members = await this.userService.getGroupMembers(approver.resolvedBy);
+        const members = await this.userService.getGroupMembers(
+          approver.resolvedBy,
+        );
         if (!members.includes(approver.userId)) {
           invalid.push({ approver, reason: "group_empty" });
           continue;
@@ -310,7 +325,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   private getErrorMessage(
     errorType: WorkflowErrorType,
-    approver: AssignedApprover
+    approver: AssignedApprover,
   ): string {
     switch (errorType) {
       case "deactivated_user":
@@ -329,7 +344,9 @@ export class ErrorDetectionService implements IErrorDetectionService {
   /**
    * Get severity for error type
    */
-  private getSeverityForError(errorType: WorkflowErrorType): "warning" | "error" | "critical" {
+  private getSeverityForError(
+    errorType: WorkflowErrorType,
+  ): "warning" | "error" | "critical" {
     switch (errorType) {
       case "deactivated_user":
       case "quorum_unreachable":
@@ -376,7 +393,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
    */
   private getSuggestedActionsForError(
     errorType: WorkflowErrorType,
-    approver: AssignedApprover
+    approver: AssignedApprover,
   ): RecoveryAction[] {
     const actions: RecoveryAction[] = [];
 
@@ -400,7 +417,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
             description: "Skip this approver",
             requiresConfirmation: true,
             estimatedImpact: "May affect quorum requirements",
-          }
+          },
         );
         break;
 
@@ -418,7 +435,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
             description: "Skip this approver",
             requiresConfirmation: true,
             estimatedImpact: "May affect quorum requirements",
-          }
+          },
         );
         break;
 
@@ -435,7 +452,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
             description: "Cancel the workflow",
             requiresConfirmation: true,
             estimatedImpact: "Workflow will be cancelled",
-          }
+          },
         );
         break;
 
@@ -452,7 +469,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
             description: "Admin takes action",
             requiresConfirmation: true,
             estimatedImpact: "Admin decision will be recorded",
-          }
+          },
         );
         break;
 
@@ -469,7 +486,7 @@ export class ErrorDetectionService implements IErrorDetectionService {
             description: "Admin intervention required",
             requiresConfirmation: true,
             estimatedImpact: "Admin will manually resolve",
-          }
+          },
         );
     }
 
@@ -519,7 +536,11 @@ export class ErrorDetectionService implements IErrorDetectionService {
 export function createErrorDetectionService(
   errorRepository: IRecoveryErrorRepository,
   instanceRepository: IApprovalInstanceRepository,
-  userService: IUserValidationService
+  userService: IUserValidationService,
 ): IErrorDetectionService {
-  return new ErrorDetectionService(errorRepository, instanceRepository, userService);
+  return new ErrorDetectionService(
+    errorRepository,
+    instanceRepository,
+    userService,
+  );
 }

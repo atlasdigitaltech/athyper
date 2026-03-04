@@ -46,7 +46,11 @@
         "iam": {
           "issuerUrl": "https://iam.mesh-stg.athyper.com/realms/athyper",
           "clientId": "athyper-api-runtime",
-          "allowedAzp": ["neon-web", "neon-svc-bff", "athyper-svc-runtime-worker"],
+          "allowedAzp": [
+            "neon-web",
+            "neon-svc-bff",
+            "athyper-svc-runtime-worker"
+          ],
           "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"
         },
         "defaults": {

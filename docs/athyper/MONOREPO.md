@@ -8,24 +8,24 @@ A **monorepo** is a single version-controlled repository that contains multiple 
 
 ## Why a Monorepo?
 
-| Benefit | How Athyper Uses It |
-|---------|---------------------|
-| **Atomic changes** | A schema change in `framework/core` and its consumers in `framework/runtime` ship in the same commit — no version drift |
-| **Shared tooling** | One ESLint config, one Prettier config, one Vitest setup, one TypeScript base — enforced everywhere |
-| **Dependency graph visibility** | `dependency-cruiser` validates layer boundaries at lint time; Turborepo understands the build graph |
+| Benefit                          | How Athyper Uses It                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Atomic changes**               | A schema change in `framework/core` and its consumers in `framework/runtime` ship in the same commit — no version drift        |
+| **Shared tooling**               | One ESLint config, one Prettier config, one Vitest setup, one TypeScript base — enforced everywhere                            |
+| **Dependency graph visibility**  | `dependency-cruiser` validates layer boundaries at lint time; Turborepo understands the build graph                            |
 | **Code sharing without publish** | `packages/ui`, `packages/i18n`, `packages/dashboard` are consumed via workspace protocol (`workspace:*`) — no npm publish step |
-| **Single CI pipeline** | One PR touches framework + product + tests; CI validates the full integration, not just one slice |
+| **Single CI pipeline**           | One PR touches framework + product + tests; CI validates the full integration, not just one slice                              |
 
 ## Repository Identity
 
-| Property | Value |
-|----------|-------|
-| Package manager | **pnpm** (v10) with workspaces |
-| Build orchestrator | **Turborepo** (`turbo.json`) |
-| Node version | `>=20.11.0 <21` (pinned in `.nvmrc`) |
-| Language | TypeScript 5.9+ everywhere |
-| Test framework | Vitest 4.x (root `vitest.config.ts`) |
-| Linter | ESLint 9 flat config with boundaries plugin |
+| Property           | Value                                       |
+| ------------------ | ------------------------------------------- |
+| Package manager    | **pnpm** (v10) with workspaces              |
+| Build orchestrator | **Turborepo** (`turbo.json`)                |
+| Node version       | `>=20.11.0 <21` (pinned in `.nvmrc`)        |
+| Language           | TypeScript 5.9+ everywhere                  |
+| Test framework     | Vitest 4.x (root `vitest.config.ts`)        |
+| Linter             | ESLint 9 flat config with boundaries plugin |
 
 ## Workspace Layout
 
@@ -66,6 +66,7 @@ athyper-private/
 ```
 
 **Rules enforced at lint time:**
+
 - `core` imports nothing outside `core`
 - `adapters` import only `core`
 - `runtime` imports `core` + `adapters` (via package entrypoints, never deep internals)
@@ -96,11 +97,11 @@ packages:
 
 ### Package Naming
 
-| Scope | Pattern | Example |
-|-------|---------|---------|
+| Scope     | Pattern           | Example                                                    |
+| --------- | ----------------- | ---------------------------------------------------------- |
 | Framework | `@athyper/<name>` | `@athyper/core`, `@athyper/runtime`, `@athyper/adapter-db` |
-| Packages | `@athyper/<name>` | `@athyper/ui`, `@athyper/i18n`, `@athyper/dashboard` |
-| Product | `@neon/<name>` | `@neon/web`, `@neon/auth`, `@neon/content` |
+| Packages  | `@athyper/<name>` | `@athyper/ui`, `@athyper/i18n`, `@athyper/dashboard`       |
+| Product   | `@neon/<name>`    | `@neon/web`, `@neon/auth`, `@neon/content`                 |
 
 ### Internal Imports
 
@@ -114,17 +115,21 @@ Every runtime service module follows the **RuntimeModule** pattern:
 
 ```typescript
 export const myModule: RuntimeModule = {
-  register(container) { /* bind services into DI container */ },
-  contribute(container) { /* register routes, jobs, health checks */ },
+  register(container) {
+    /* bind services into DI container */
+  },
+  contribute(container) {
+    /* register routes, jobs, health checks */
+  },
 };
 ```
 
 ## Related Documentation
 
-| Document | Path |
-|----------|------|
-| Folder Structure | [FOLDER-STRUCTURE.md](./FOLDER-STRUCTURE.md) |
+| Document             | Path                                                 |
+| -------------------- | ---------------------------------------------------- |
+| Folder Structure     | [FOLDER-STRUCTURE.md](./FOLDER-STRUCTURE.md)         |
 | Service Architecture | [SERVICE-ARCHITECTURE.md](./SERVICE-ARCHITECTURE.md) |
-| Shared Packages | [PACKAGES.md](./PACKAGES.md) |
-| Infrastructure | [INFRASTRUCTURE.md](./INFRASTRUCTURE.md) |
-| Build & Tooling | [BUILD-TOOLING.md](./BUILD-TOOLING.md) |
+| Shared Packages      | [PACKAGES.md](./PACKAGES.md)                         |
+| Infrastructure       | [INFRASTRUCTURE.md](./INFRASTRUCTURE.md)             |
+| Build & Tooling      | [BUILD-TOOLING.md](./BUILD-TOOLING.md)               |

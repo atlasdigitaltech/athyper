@@ -160,7 +160,10 @@ export class ApprovalInstanceApiController {
       const tenantId = this.getTenantId(req);
       const body = req.body as CreateInstanceRequest;
 
-      const result = await this.service.createInstance(tenantId, body as CreateApprovalInstanceInput);
+      const result = await this.service.createInstance(
+        tenantId,
+        body as CreateApprovalInstanceInput,
+      );
 
       if (result.success) {
         res.status(201).json({
@@ -226,8 +229,12 @@ export class ApprovalInstanceApiController {
         requesterId: query.requesterId,
         pendingApproverId: query.pendingApproverId,
         templateCode: query.templateCode,
-        createdAfter: query.createdAfter ? new Date(query.createdAfter) : undefined,
-        createdBefore: query.createdBefore ? new Date(query.createdBefore) : undefined,
+        createdAfter: query.createdAfter
+          ? new Date(query.createdAfter)
+          : undefined,
+        createdBefore: query.createdBefore
+          ? new Date(query.createdBefore)
+          : undefined,
         includeCompleted: query.includeCompleted === "true",
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
         offset: query.offset ? parseInt(query.offset, 10) : undefined,
@@ -255,7 +262,11 @@ export class ApprovalInstanceApiController {
       const tenantId = this.getTenantId(req);
       const { entityType, entityId } = req.params;
 
-      const instances = await this.service.getInstancesForEntity(tenantId, entityType, entityId);
+      const instances = await this.service.getInstancesForEntity(
+        tenantId,
+        entityType,
+        entityId,
+      );
 
       res.json({
         success: true,
@@ -275,7 +286,10 @@ export class ApprovalInstanceApiController {
       const tenantId = this.getTenantId(req);
       const instanceId = req.params.id;
 
-      const stepInstances = await this.service.getStepInstances(tenantId, instanceId);
+      const stepInstances = await this.service.getStepInstances(
+        tenantId,
+        instanceId,
+      );
 
       res.json({
         success: true,
@@ -342,7 +356,7 @@ export class ApprovalInstanceApiController {
         tenantId,
         instanceId,
         userId,
-        body.reason
+        body.reason,
       );
 
       res.json({
@@ -369,7 +383,7 @@ export class ApprovalInstanceApiController {
         tenantId,
         instanceId,
         userId,
-        body.reason
+        body.reason,
       );
 
       res.json({
@@ -396,7 +410,7 @@ export class ApprovalInstanceApiController {
         tenantId,
         instanceId,
         userId,
-        body.reason
+        body.reason,
       );
 
       res.json({
@@ -418,7 +432,11 @@ export class ApprovalInstanceApiController {
       const userId = this.getUserId(req);
       const instanceId = req.params.id;
 
-      const instance = await this.service.releaseInstance(tenantId, instanceId, userId);
+      const instance = await this.service.releaseInstance(
+        tenantId,
+        instanceId,
+        userId,
+      );
 
       res.json({
         success: true,
@@ -438,7 +456,11 @@ export class ApprovalInstanceApiController {
       const tenantId = this.getTenantId(req);
       const { entityType, entityId } = req.params;
 
-      const lock = await this.service.checkEntityLock(tenantId, entityType, entityId);
+      const lock = await this.service.checkEntityLock(
+        tenantId,
+        entityType,
+        entityId,
+      );
 
       res.json({
         success: true,
@@ -608,7 +630,7 @@ export function getApprovalInstanceRoutes(): RouteDefinition[] {
  * Create approval instance API controller
  */
 export function createApprovalInstanceApiController(
-  service: IApprovalInstanceService
+  service: IApprovalInstanceService,
 ): ApprovalInstanceApiController {
   return new ApprovalInstanceApiController(service);
 }

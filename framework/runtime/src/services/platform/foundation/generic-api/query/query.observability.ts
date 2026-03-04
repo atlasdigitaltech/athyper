@@ -6,7 +6,11 @@
  */
 
 import type { JoinPlan } from "./join-planner.js";
-import type { QueryRequest, QueryResponse, QueryValidationResult } from "./query-dsl.js";
+import type {
+  QueryRequest,
+  QueryResponse,
+  QueryValidationResult,
+} from "./query-dsl.js";
 import type { Logger } from "../../../../../kernel/logger.js";
 
 // ============================================================================
@@ -187,7 +191,9 @@ export class InMemoryMetricsCollector implements IQueryMetricsCollector {
   }
 
   getMetrics(): QueryMetricsSnapshot {
-    const executionTimes = this.executions.map((e) => e.executionTimeMs).sort((a, b) => a - b);
+    const executionTimes = this.executions
+      .map((e) => e.executionTimeMs)
+      .sort((a, b) => a - b);
 
     const p95Index = Math.floor(executionTimes.length * 0.95);
     const p99Index = Math.floor(executionTimes.length * 0.99);
@@ -216,13 +222,18 @@ export class InMemoryMetricsCollector implements IQueryMetricsCollector {
       errorsByType,
       avgJoinCount:
         this.executions.length > 0
-          ? this.executions.reduce((sum, e) => sum + e.joinCount, 0) / this.executions.length
+          ? this.executions.reduce((sum, e) => sum + e.joinCount, 0) /
+            this.executions.length
           : 0,
       avgFieldCount:
         this.executions.length > 0
-          ? this.executions.reduce((sum, e) => sum + e.fieldCount, 0) / this.executions.length
+          ? this.executions.reduce((sum, e) => sum + e.fieldCount, 0) /
+            this.executions.length
           : 0,
-      totalRowsReturned: this.executions.reduce((sum, e) => sum + e.rowCount, 0),
+      totalRowsReturned: this.executions.reduce(
+        (sum, e) => sum + e.rowCount,
+        0,
+      ),
       periodStart: this.periodStart,
       periodEnd: new Date(),
     };
@@ -274,7 +285,7 @@ export interface IQueryTracer {
   startSpan(
     name: string,
     attributes: Partial<QuerySpanAttributes>,
-    parentContext?: SpanContext
+    parentContext?: SpanContext,
   ): QuerySpan;
 }
 
@@ -305,7 +316,7 @@ export class NoOpTracer implements IQueryTracer {
   startSpan(
     _name: string,
     _attributes: Partial<QuerySpanAttributes>,
-    _parentContext?: SpanContext
+    _parentContext?: SpanContext,
   ): QuerySpan {
     return new NoOpSpan();
   }
@@ -335,7 +346,7 @@ export class ConsoleTracer implements IQueryTracer {
   startSpan(
     name: string,
     attributes: Partial<QuerySpanAttributes>,
-    parentContext?: SpanContext
+    parentContext?: SpanContext,
   ): QuerySpan {
     const context: SpanContext = {
       traceId: parentContext?.traceId ?? this.generateId(32),
@@ -344,7 +355,13 @@ export class ConsoleTracer implements IQueryTracer {
     };
 
     const startTime = Date.now();
-    const span = new ConsoleSpan(context, name, attributes, startTime, this.logger);
+    const span = new ConsoleSpan(
+      context,
+      name,
+      attributes,
+      startTime,
+      this.logger,
+    );
 
     this.logger.debug(`[TRACE] Span started: ${name}`, {
       traceId: context.traceId,
@@ -371,15 +388,21 @@ export class ConsoleTracer implements IQueryTracer {
  */
 class ConsoleSpan implements QuerySpan {
   private attributes: Record<string, unknown>;
-  private events: Array<{ name: string; attributes?: Record<string, unknown>; timestamp: number }> = [];
-  private status: { status: "ok" | "error"; message?: string } = { status: "ok" };
+  private events: Array<{
+    name: string;
+    attributes?: Record<string, unknown>;
+    timestamp: number;
+  }> = [];
+  private status: { status: "ok" | "error"; message?: string } = {
+    status: "ok",
+  };
 
   constructor(
     public context: SpanContext,
     private name: string,
     initialAttributes: Partial<QuerySpanAttributes>,
     private startTime: number,
-    private logger: Logger
+    private logger: Logger,
   ) {
     this.attributes = { ...initialAttributes };
   }
@@ -437,7 +460,9 @@ export interface ObservableQueryServiceOptions {
 /**
  * Create observability hooks for query service
  */
-export function createQueryObservabilityHooks(options: ObservableQueryServiceOptions) {
+export function createQueryObservabilityHooks(
+  options: ObservableQueryServiceOptions,
+) {
   const {
     metrics = new InMemoryMetricsCollector(),
     tracer = new NoOpTracer(),
@@ -454,7 +479,7 @@ export function createQueryObservabilityHooks(options: ObservableQueryServiceOpt
       query: QueryRequest,
       _tenantId: string,
       requestId?: string,
-      traceId?: string
+      traceId?: string,
     ): { span: QuerySpan; startTime: number } {
       const span = tracer.startSpan(
         "query.execute",
@@ -469,7 +494,7 @@ export function createQueryObservabilityHooks(options: ObservableQueryServiceOpt
           "db.system": "postgresql",
           "db.operation": "SELECT",
         },
-        traceId ? { traceId, spanId: requestId ?? traceId } : undefined
+        traceId ? { traceId, spanId: requestId ?? traceId } : undefined,
       );
 
       span.addEvent("query.plan.start");
@@ -500,7 +525,7 @@ export function createQueryObservabilityHooks(options: ObservableQueryServiceOpt
       result: QueryResponse<T>,
       tenantId: string,
       usedReplica: boolean,
-      subjectType?: string
+      subjectType?: string,
     ): void {
       const executionTimeMs = Date.now() - startTime;
 
@@ -547,7 +572,7 @@ export function createQueryObservabilityHooks(options: ObservableQueryServiceOpt
     onValidationFailure(
       query: QueryRequest,
       validation: QueryValidationResult,
-      validationTimeMs: number
+      validationTimeMs: number,
     ): void {
       metrics.recordQueryValidation({
         entity: query.from,
@@ -564,7 +589,7 @@ export function createQueryObservabilityHooks(options: ObservableQueryServiceOpt
       span: QuerySpan,
       startTime: number,
       query: QueryRequest,
-      error: Error
+      error: Error,
     ): void {
       const executionTimeMs = Date.now() - startTime;
 

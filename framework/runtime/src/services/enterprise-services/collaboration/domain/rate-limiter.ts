@@ -28,7 +28,7 @@ export class CommentRateLimiter {
     private readonly logger: Logger,
     private readonly config?: {
       commentsPerMinute?: number;
-    }
+    },
   ) {}
 
   /**
@@ -64,7 +64,7 @@ export class CommentRateLimiter {
           currentCount,
           limit,
         },
-        "[collab] Rate limit exceeded for user"
+        "[collab] Rate limit exceeded for user",
       );
     }
 
@@ -88,7 +88,7 @@ export class CommentRateLimiter {
 
     if (!result.allowed) {
       throw new Error(
-        `Rate limit exceeded: ${result.currentCount}/${result.limit} comments in the last minute. Please try again later.`
+        `Rate limit exceeded: ${result.currentCount}/${result.limit} comments in the last minute. Please try again later.`,
       );
     }
   }

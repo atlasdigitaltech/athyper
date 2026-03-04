@@ -123,17 +123,17 @@ export type PolicyAction = "create" | "read" | "update" | "delete" | "*";
  * Policy condition operators
  */
 export type PolicyOperator =
-  | "eq"          // Equal
-  | "ne"          // Not equal
-  | "in"          // In array
-  | "not_in"      // Not in array
-  | "gt"          // Greater than
-  | "gte"         // Greater than or equal
-  | "lt"          // Less than
-  | "lte"         // Less than or equal
-  | "contains"    // String contains
+  | "eq" // Equal
+  | "ne" // Not equal
+  | "in" // In array
+  | "not_in" // Not in array
+  | "gt" // Greater than
+  | "gte" // Greater than or equal
+  | "lt" // Less than
+  | "lte" // Less than or equal
+  | "contains" // String contains
   | "starts_with" // String starts with
-  | "ends_with";  // String ends with
+  | "ends_with"; // String ends with
 
 /**
  * Policy condition
@@ -794,22 +794,22 @@ export type HealthCheckResult = {
  * Defines the type of modification an overlay change applies
  */
 export type OverlayChangeKind =
-  | "addField"          // Add a new field to entity
-  | "modifyField"       // Modify existing field properties
-  | "removeField"       // Remove a field from entity
-  | "tweakPolicy"       // Modify policy configuration
-  | "addIndex"          // Add database index (future)
-  | "removeIndex"       // Remove database index (future)
-  | "tweakRelation";    // Modify relationship (future)
+  | "addField" // Add a new field to entity
+  | "modifyField" // Modify existing field properties
+  | "removeField" // Remove a field from entity
+  | "tweakPolicy" // Modify policy configuration
+  | "addIndex" // Add database index (future)
+  | "removeIndex" // Remove database index (future)
+  | "tweakRelation"; // Modify relationship (future)
 
 /**
  * Overlay conflict resolution mode
  * Defines how to handle conflicts when applying overlays
  */
 export type OverlayConflictMode =
-  | "fail"      // Throw error if target already exists/conflicts
+  | "fail" // Throw error if target already exists/conflicts
   | "overwrite" // Replace existing target completely
-  | "merge";    // Deep merge with existing target (for objects)
+  | "merge"; // Deep merge with existing target (for objects)
 
 /**
  * Overlay change definition
@@ -917,40 +917,40 @@ export type CompiledModelWithOverlays = {
  * Defines the level at which a rule applies
  */
 export type PolicyRuleScopeType =
-  | "global"           // Applies to all resources
-  | "module"           // Applies to a specific module
-  | "entity"           // Applies to a specific entity type
-  | "entity_version"   // Applies to a specific entity version
-  | "record";          // Applies to specific records
+  | "global" // Applies to all resources
+  | "module" // Applies to a specific module
+  | "entity" // Applies to a specific entity type
+  | "entity_version" // Applies to a specific entity version
+  | "record"; // Applies to specific records
 
 /**
  * Policy rule subject type
  * Defines who the rule applies to
  */
 export type PolicyRuleSubjectType =
-  | "kc_role"    // Keycloak role
-  | "kc_group"   // Keycloak group
-  | "user"       // Specific user
-  | "service";   // Service account
+  | "kc_role" // Keycloak role
+  | "kc_group" // Keycloak group
+  | "user" // Specific user
+  | "service"; // Service account
 
 /**
  * Policy condition type
  * Different types of conditions that can be evaluated
  */
 export type PolicyConditionType =
-  | "ou_check"            // Organizational unit check
-  | "numeric_threshold"   // Numeric comparison (e.g., amount < 1000)
-  | "attribute_match"     // Principal attribute match
-  | "record_field"        // Record field check
-  | "expression";         // Custom expression (future)
+  | "ou_check" // Organizational unit check
+  | "numeric_threshold" // Numeric comparison (e.g., amount < 1000)
+  | "attribute_match" // Principal attribute match
+  | "record_field" // Record field check
+  | "expression"; // Custom expression (future)
 
 /**
  * OU (Organizational Unit) check mode
  */
 export type OUCheckMode =
-  | "single"    // Must be exactly this OU
-  | "subtree"   // This OU or any descendant
-  | "multi";    // Any of the specified OUs
+  | "single" // Must be exactly this OU
+  | "subtree" // This OU or any descendant
+  | "multi"; // Any of the specified OUs
 
 /**
  * Policy condition definition
@@ -1619,10 +1619,10 @@ export type LifecycleTransitionResult = {
  * Type of automated lifecycle timer action.
  */
 export type LifecycleTimerType =
-  | "auto_close"        // Automatically close/complete entity after period
-  | "auto_cancel"       // Automatically cancel entity after period
-  | "reminder"          // Send reminder notification
-  | "auto_transition";  // Generic auto-transition to target state
+  | "auto_close" // Automatically close/complete entity after period
+  | "auto_cancel" // Automatically cancel entity after period
+  | "reminder" // Send reminder notification
+  | "auto_transition"; // Generic auto-transition to target state
 
 /**
  * Lifecycle Timer Policy
@@ -2177,7 +2177,7 @@ export type NumberingSequence = {
   id: string;
   tenant_id: string;
   entity_name: string;
-  period_key: string;  // "__global__" | "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
+  period_key: string; // "__global__" | "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
   current_value: number;
   updated_at: Date;
 };
@@ -2233,7 +2233,9 @@ export type ApprovalTemplateCreateInput = {
 /**
  * Input for updating an approval template.
  */
-export type ApprovalTemplateUpdateInput = Partial<Omit<ApprovalTemplateCreateInput, "code">>;
+export type ApprovalTemplateUpdateInput = Partial<
+  Omit<ApprovalTemplateCreateInput, "code">
+>;
 
 /**
  * Result of template structural validation.

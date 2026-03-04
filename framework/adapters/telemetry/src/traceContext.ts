@@ -32,7 +32,7 @@ export function getOtelTraceContext(): TraceContext | undefined {
  */
 export async function withSpan<T>(
   name: string,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> {
   const tracer = trace.getTracer("@athyper/telemetry");
 

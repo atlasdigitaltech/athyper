@@ -4,7 +4,7 @@
  * Type definitions for comments, mentions, and activity timeline.
  */
 
-export type CommentVisibility = 'public' | 'internal' | 'private';
+export type CommentVisibility = "public" | "internal" | "private";
 
 export interface EntityComment {
   id: string;
@@ -139,7 +139,15 @@ export interface Attachment {
 /**
  * Comment Reaction
  */
-export type ReactionType = '👍' | '❤️' | '🎉' | '👀' | '👎' | '🚀' | '💡' | '🤔';
+export type ReactionType =
+  | "👍"
+  | "❤️"
+  | "🎉"
+  | "👀"
+  | "👎"
+  | "🚀"
+  | "💡"
+  | "🤔";
 
 export interface CommentReaction {
   id: string;
@@ -222,8 +230,13 @@ export interface LoadDraftRequest {
 /**
  * Comment Moderation & Flagging
  */
-export type FlagReason = 'spam' | 'offensive' | 'harassment' | 'misinformation' | 'other';
-export type FlagStatus = 'pending' | 'reviewed' | 'dismissed' | 'actioned';
+export type FlagReason =
+  | "spam"
+  | "offensive"
+  | "harassment"
+  | "misinformation"
+  | "other";
+export type FlagStatus = "pending" | "reviewed" | "dismissed" | "actioned";
 
 export interface CommentFlag {
   id: string;
@@ -252,7 +265,7 @@ export interface CreateFlagRequest {
 export interface ReviewFlagRequest {
   reviewedBy: string;
   resolution: string;
-  action: 'dismiss' | 'hide_comment' | 'delete_comment';
+  action: "dismiss" | "hide_comment" | "delete_comment";
 }
 
 export interface CommentModerationStatus {

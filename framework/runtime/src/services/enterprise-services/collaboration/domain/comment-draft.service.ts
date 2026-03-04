@@ -6,7 +6,11 @@
 
 import type { Logger } from "../../../../kernel/logger.js";
 import type { CommentDraftRepository } from "../persistence/comment-draft.repository.js";
-import type { CommentDraft, SaveDraftRequest, LoadDraftRequest } from "../types.js";
+import type {
+  CommentDraft,
+  SaveDraftRequest,
+  LoadDraftRequest,
+} from "../types.js";
 
 /**
  * Comment Draft Service
@@ -14,7 +18,7 @@ import type { CommentDraft, SaveDraftRequest, LoadDraftRequest } from "../types.
 export class CommentDraftService {
   constructor(
     private readonly repo: CommentDraftRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -39,7 +43,7 @@ export class CommentDraftService {
         entityType: req.entityType,
         entityId: req.entityId,
       },
-      "[collab] Draft saved"
+      "[collab] Draft saved",
     );
 
     return draft;
@@ -64,14 +68,18 @@ export class CommentDraftService {
         entityType: req.entityType,
         entityId: req.entityId,
       },
-      "[collab] Draft deleted"
+      "[collab] Draft deleted",
     );
   }
 
   /**
    * List user's recent drafts
    */
-  async listUserDrafts(tenantId: string, userId: string, limit?: number): Promise<CommentDraft[]> {
+  async listUserDrafts(
+    tenantId: string,
+    userId: string,
+    limit?: number,
+  ): Promise<CommentDraft[]> {
     return this.repo.listByUser(tenantId, userId, limit);
   }
 
@@ -83,7 +91,7 @@ export class CommentDraftService {
 
     this.logger.info(
       { deletedCount, olderThanDays },
-      "[collab] Old drafts cleanup completed"
+      "[collab] Old drafts cleanup completed",
     );
 
     return deletedCount;

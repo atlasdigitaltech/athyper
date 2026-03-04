@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/command";
 import { useAllEntityCapabilities } from "@/lib/use-all-entity-capabilities";
 
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -57,7 +56,10 @@ export function GlobalCommandPalette() {
   const grouped = useMemo(() => {
     const groups: Array<{
       entityName: string;
-      items: Array<{ entity: EntityCapabilities; op: EntityOperationDescriptor }>;
+      items: Array<{
+        entity: EntityCapabilities;
+        op: EntityOperationDescriptor;
+      }>;
     }> = [];
 
     for (const entity of all) {

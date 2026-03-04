@@ -75,7 +75,12 @@ content: {
 Trigger the worker manually:
 
 ```typescript
-const handler = createCleanupOrphanedUploadsHandler(db, storage, config, logger);
+const handler = createCleanupOrphanedUploadsHandler(
+  db,
+  storage,
+  config,
+  logger,
+);
 await handler();
 ```
 
@@ -95,6 +100,7 @@ The worker emits structured logs:
 - `[content:worker:cleanup-orphaned] Cleanup completed`
 
 Monitor metrics:
+
 - `found` - total orphaned uploads found
 - `deletedFromStorage` - S3 objects deleted
 - `deletedFromDb` - DB records deleted

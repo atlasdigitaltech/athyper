@@ -152,7 +152,7 @@ export interface FieldLevelResponseOptions {
  * ```
  */
 export function fieldLevelWriteMiddleware(
-  options: FieldLevelMiddlewareOptions
+  options: FieldLevelMiddlewareOptions,
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   const {
     fieldAccessService,
@@ -188,7 +188,8 @@ export function fieldLevelWriteMiddleware(
       }
 
       // Resolve entity ID
-      const entityId = typeof entityIdOrFn === "function" ? entityIdOrFn(req) : entityIdOrFn;
+      const entityId =
+        typeof entityIdOrFn === "function" ? entityIdOrFn(req) : entityIdOrFn;
 
       // Build context
       const context: FieldAccessContext = {
@@ -221,7 +222,7 @@ export function fieldLevelWriteMiddleware(
         entityId,
         bodyAfterDenied,
         subject,
-        context
+        context,
       );
 
       // Re-add always-allowed fields
@@ -305,7 +306,7 @@ export function fieldLevelWriteMiddleware(
  * ```
  */
 export function createFieldLevelResponseFilter(
-  options: FieldLevelResponseOptions
+  options: FieldLevelResponseOptions,
 ): (req: Request, data: unknown) => Promise<unknown> {
   const {
     fieldAccessService,
@@ -328,7 +329,7 @@ export function createFieldLevelResponseFilter(
     // Handle arrays
     if (Array.isArray(data)) {
       const results = await Promise.all(
-        data.map((item) => filterSingleRecord(req, item))
+        data.map((item) => filterSingleRecord(req, item)),
       );
       return results;
     }
@@ -337,7 +338,10 @@ export function createFieldLevelResponseFilter(
     return filterSingleRecord(req, data);
   };
 
-  async function filterSingleRecord(req: Request, data: unknown): Promise<unknown> {
+  async function filterSingleRecord(
+    req: Request,
+    data: unknown,
+  ): Promise<unknown> {
     if (data === null || data === undefined || typeof data !== "object") {
       return data;
     }
@@ -357,12 +361,15 @@ export function createFieldLevelResponseFilter(
     }
 
     // Resolve entity ID
-    const entityId = typeof entityIdOrFn === "function" ? entityIdOrFn(req) : entityIdOrFn;
+    const entityId =
+      typeof entityIdOrFn === "function" ? entityIdOrFn(req) : entityIdOrFn;
 
     // Build context
     const context: FieldAccessContext = {
       tenantId: getTenantId(req, subject),
-      recordId: getRecordId ? getRecordId(record) : (record.id as string | undefined),
+      recordId: getRecordId
+        ? getRecordId(record)
+        : (record.id as string | undefined),
       requestId: (req as any).requestContext?.requestId,
       traceId: (req as any).requestContext?.traceContext?.traceId,
     };
@@ -386,7 +393,7 @@ export function createFieldLevelResponseFilter(
       entityId,
       recordAfterDenied,
       subject,
-      context
+      context,
     );
 
     // Re-add always-allowed fields
@@ -412,7 +419,7 @@ export function createFieldLevelResponseFilter(
  * ```
  */
 export function fieldLevelResponseMiddleware(
-  options: FieldLevelResponseOptions
+  options: FieldLevelResponseOptions,
 ): (req: Request, res: Response, next: NextFunction) => void {
   const filterResponse = createFieldLevelResponseFilter(options);
 
@@ -498,7 +505,9 @@ function defaultGetRecordId(req: Request): string | undefined {
  * Create both write and response middleware for an entity.
  * Convenient factory for setting up field-level security.
  */
-export function createFieldLevelMiddleware(options: FieldLevelMiddlewareOptions): {
+export function createFieldLevelMiddleware(
+  options: FieldLevelMiddlewareOptions,
+): {
   write: (req: Request, res: Response, next: NextFunction) => Promise<void>;
   response: (req: Request, res: Response, next: NextFunction) => void;
   filterResponse: (req: Request, data: unknown) => Promise<unknown>;

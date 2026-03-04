@@ -122,11 +122,13 @@ export class AuditOutboxRepo {
    */
   async markFailed(id: string, error: string): Promise<void> {
     // Get current attempts to compute backoff
-    const row = await this.db
+    const row = (await this.db
       .selectFrom(TABLE as any)
       .select(["attempts", "max_attempts"])
       .where("id", "=", id)
-      .executeTakeFirst() as { attempts: number; max_attempts: number } | undefined;
+      .executeTakeFirst()) as
+      | { attempts: number; max_attempts: number }
+      | undefined;
 
     if (!row) return;
 
@@ -172,11 +174,11 @@ export class AuditOutboxRepo {
    * Count pending items in the outbox (for health check / metrics).
    */
   async countPending(): Promise<number> {
-    const result = await this.db
+    const result = (await this.db
       .selectFrom(TABLE as any)
       .select(this.db.fn.countAll().as("count"))
       .where("status", "in", ["pending", "failed"])
-      .executeTakeFirst() as { count: string | number } | undefined;
+      .executeTakeFirst()) as { count: string | number } | undefined;
 
     return Number(result?.count ?? 0);
   }
@@ -185,11 +187,11 @@ export class AuditOutboxRepo {
    * Count dead-letter items (for monitoring).
    */
   async countDead(): Promise<number> {
-    const result = await this.db
+    const result = (await this.db
       .selectFrom(TABLE as any)
       .select(this.db.fn.countAll().as("count"))
       .where("status", "=", "dead")
-      .executeTakeFirst() as { count: string | number } | undefined;
+      .executeTakeFirst()) as { count: string | number } | undefined;
 
     return Number(result?.count ?? 0);
   }
@@ -220,15 +222,26 @@ export class AuditOutboxRepo {
       id: row.id,
       tenantId: row.tenant_id,
       eventType: row.event_type,
-      payload: typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload,
+      payload:
+        typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload,
       status: row.status,
       attempts: row.attempts,
       maxAttempts: row.max_attempts,
-      availableAt: row.available_at instanceof Date ? row.available_at : new Date(row.available_at),
-      lockedAt: row.locked_at ? (row.locked_at instanceof Date ? row.locked_at : new Date(row.locked_at)) : null,
+      availableAt:
+        row.available_at instanceof Date
+          ? row.available_at
+          : new Date(row.available_at),
+      lockedAt: row.locked_at
+        ? row.locked_at instanceof Date
+          ? row.locked_at
+          : new Date(row.locked_at)
+        : null,
       lockedBy: row.locked_by ?? null,
       lastError: row.last_error ?? null,
-      createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
+      createdAt:
+        row.created_at instanceof Date
+          ? row.created_at
+          : new Date(row.created_at),
     };
   }
 }

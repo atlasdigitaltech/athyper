@@ -8,20 +8,20 @@
  *
  * Output: SQL INSERT statements for ref.commodity_code with domain_code='hs'
  */
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const csvPath = path.join(__dirname, 'hs-codes.csv');
-const outPath = path.join(__dirname, '..', 'sql', '202_seed_hs.sql');
+const csvPath = path.join(__dirname, "hs-codes.csv");
+const outPath = path.join(__dirname, "..", "sql", "202_seed_hs.sql");
 
-const raw = fs.readFileSync(csvPath, 'utf-8');
-const lines = raw.split('\n').filter(l => l.trim());
+const raw = fs.readFileSync(csvPath, "utf-8");
+const lines = raw.split("\n").filter((l) => l.trim());
 
 // Skip header
 const dataLines = lines.slice(1);
 
-const chapters = [];  // level 2 in CSV = our level 1
-const headings = [];  // level 4 in CSV = our level 2
+const chapters = []; // level 2 in CSV = our level 1
+const headings = []; // level 4 in CSV = our level 2
 const subheadings = []; // level 6 in CSV = our level 3
 
 // Track all codes for determining leaf status
@@ -34,10 +34,10 @@ for (const line of dataLines) {
   if (fields.length < 5) continue;
 
   const [section, hscode, description, parent, level] = fields;
-  if (!hscode || hscode === 'TOTAL') continue;
+  if (!hscode || hscode === "TOTAL") continue;
 
   allCodes.add(hscode.trim());
-  if (parent && parent !== 'TOTAL') {
+  if (parent && parent !== "TOTAL") {
     parentCodes.add(parent.trim());
   }
 }
@@ -48,11 +48,11 @@ for (const line of dataLines) {
   if (fields.length < 5) continue;
 
   const [section, hscode, description, parent, level] = fields;
-  if (!hscode || hscode === 'TOTAL') continue;
+  if (!hscode || hscode === "TOTAL") continue;
 
   const code = hscode.trim();
   const desc = description.trim();
-  const parentCode = (parent && parent !== 'TOTAL') ? parent.trim() : null;
+  const parentCode = parent && parent !== "TOTAL" ? parent.trim() : null;
   const csvLevel = parseInt(level, 10);
   const isLeaf = !parentCodes.has(code); // leaf if no other code references it as parent
 
@@ -60,13 +60,31 @@ for (const line of dataLines) {
   let levelNo;
   if (csvLevel === 2) {
     levelNo = 1;
-    chapters.push({ code, name: desc, parent: parentCode, level: levelNo, isLeaf });
+    chapters.push({
+      code,
+      name: desc,
+      parent: parentCode,
+      level: levelNo,
+      isLeaf,
+    });
   } else if (csvLevel === 4) {
     levelNo = 2;
-    headings.push({ code, name: desc, parent: parentCode, level: levelNo, isLeaf });
+    headings.push({
+      code,
+      name: desc,
+      parent: parentCode,
+      level: levelNo,
+      isLeaf,
+    });
   } else if (csvLevel === 6) {
     levelNo = 3;
-    subheadings.push({ code, name: desc, parent: parentCode, level: levelNo, isLeaf });
+    subheadings.push({
+      code,
+      name: desc,
+      parent: parentCode,
+      level: levelNo,
+      isLeaf,
+    });
   }
 }
 
@@ -104,16 +122,18 @@ function generateInserts(label, rows) {
 
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    sqlParts.push(`INSERT INTO ref.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)`);
+    sqlParts.push(
+      `INSERT INTO ref.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)`,
+    );
     sqlParts.push(`VALUES`);
 
     const values = batch.map((r, idx) => {
-      const parentClause = r.parent ? `'${r.parent}'` : 'NULL';
-      const comma = idx < batch.length - 1 ? ',' : '';
+      const parentClause = r.parent ? `'${r.parent}'` : "NULL";
+      const comma = idx < batch.length - 1 ? "," : "";
       return `  ('hs', '${r.code}', '${esc(r.name)}', ${parentClause}, ${r.level}, ${r.isLeaf}, 'active', 'seed')${comma}`;
     });
 
-    sqlParts.push(values.join('\n'));
+    sqlParts.push(values.join("\n"));
     sqlParts.push(`ON CONFLICT (domain_code, code) DO UPDATE SET`);
     sqlParts.push(`  name = excluded.name,`);
     sqlParts.push(`  parent_code = excluded.parent_code,`);
@@ -126,16 +146,19 @@ function generateInserts(label, rows) {
 // Chapters first (level 1), then headings (level 2), then subheadings (level 3)
 generateInserts(`HS Chapters (Level 1) — ${chapters.length} entries`, chapters);
 generateInserts(`HS Headings (Level 2) — ${headings.length} entries`, headings);
-generateInserts(`HS Subheadings (Level 3) — ${subheadings.length} entries`, subheadings);
+generateInserts(
+  `HS Subheadings (Level 3) — ${subheadings.length} entries`,
+  subheadings,
+);
 
-const sql = sqlParts.join('\n');
-fs.writeFileSync(outPath, sql, 'utf-8');
+const sql = sqlParts.join("\n");
+fs.writeFileSync(outPath, sql, "utf-8");
 console.log(`\nWrote ${outPath} (${(sql.length / 1024).toFixed(0)} KB)`);
 
 // Simple CSV parser that handles quoted fields
 function parseCSVLine(line) {
   const fields = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
 
   for (let i = 0; i < line.length; i++) {
@@ -147,9 +170,9 @@ function parseCSVLine(line) {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (ch === ',' && !inQuotes) {
+    } else if (ch === "," && !inQuotes) {
       fields.push(current);
-      current = '';
+      current = "";
     } else {
       current += ch;
     }

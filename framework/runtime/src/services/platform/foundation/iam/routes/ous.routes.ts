@@ -15,7 +15,11 @@ import type { Kysely } from "kysely";
 // ============================================================================
 
 const CreateOuNodeBodySchema = z.object({
-  code: z.string().min(1).max(100).regex(/^[a-z][a-z0-9_-]*$/),
+  code: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z][a-z0-9_-]*$/),
   name: z.string().min(1).max(255),
   parentId: z.string().uuid().optional(),
   description: z.string().max(1000).optional(),
@@ -52,14 +56,17 @@ export interface OusRoutesDependencies {
  */
 export function createOusRoutes(
   router: Router,
-  deps: OusRoutesDependencies
+  deps: OusRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId } = deps;
 
   /**
    * Helper: Build path for a node
    */
-  async function buildPath(parentId: string | null, code: string): Promise<string> {
+  async function buildPath(
+    parentId: string | null,
+    code: string,
+  ): Promise<string> {
     if (!parentId) {
       return `/${code}/`;
     }
@@ -136,7 +143,7 @@ export function createOusRoutes(
         logger.error("Failed to get OU tree", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -158,7 +165,8 @@ export function createOusRoutes(
           });
         }
 
-        const { code, name, parentId, description, metadata } = parseResult.data;
+        const { code, name, parentId, description, metadata } =
+          parseResult.data;
 
         // Verify parent exists if provided
         if (parentId) {
@@ -231,7 +239,7 @@ export function createOusRoutes(
         logger.error("Failed to create OU node", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -307,7 +315,7 @@ export function createOusRoutes(
         logger.error("Failed to get OU node", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -372,7 +380,7 @@ export function createOusRoutes(
         logger.error("Failed to update OU node", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -487,7 +495,7 @@ export function createOusRoutes(
             db
               .selectFrom("core.ou_membership")
               .select("principal_id")
-              .where("ou_node_id", "=", nodeId)
+              .where("ou_node_id", "=", nodeId),
           )
           .execute();
 
@@ -501,7 +509,7 @@ export function createOusRoutes(
         logger.error("Failed to move OU node", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -566,7 +574,7 @@ export function createOusRoutes(
         logger.error("Failed to delete OU node", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -629,7 +637,7 @@ export function createOusRoutes(
         logger.error("Failed to list OU members", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -707,7 +715,7 @@ export function createOusRoutes(
             oc.columns(["principal_id", "ou_node_id"]).doUpdateSet({
               is_primary: isPrimary,
               updated_at: new Date(),
-            })
+            }),
           )
           .returning([
             "id",
@@ -729,7 +737,7 @@ export function createOusRoutes(
         logger.error("Failed to assign OU member", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -776,7 +784,7 @@ export function createOusRoutes(
         logger.error("Failed to remove OU member", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

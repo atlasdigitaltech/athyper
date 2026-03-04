@@ -13,7 +13,7 @@ import type { ReadTrackingRepository } from "../persistence/read-tracking.reposi
 export class ReadTrackingService {
   constructor(
     private readonly repo: ReadTrackingRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -23,7 +23,7 @@ export class ReadTrackingService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    userId: string
+    userId: string,
   ): Promise<void> {
     await this.repo.markAsRead({
       tenantId,
@@ -37,7 +37,7 @@ export class ReadTrackingService {
         commentId,
         userId,
       },
-      "[collab] Comment marked as read"
+      "[collab] Comment marked as read",
     );
   }
 
@@ -50,16 +50,21 @@ export class ReadTrackingService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    userId: string
+    userId: string,
   ): Promise<void> {
-    await this.repo.markMultipleAsRead(tenantId, commentType, commentIds, userId);
+    await this.repo.markMultipleAsRead(
+      tenantId,
+      commentType,
+      commentIds,
+      userId,
+    );
 
     this.logger.info(
       {
         count: commentIds.length,
         userId,
       },
-      "[collab] Multiple comments marked as read"
+      "[collab] Multiple comments marked as read",
     );
   }
 
@@ -70,7 +75,7 @@ export class ReadTrackingService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    userId: string
+    userId: string,
   ): Promise<boolean> {
     return this.repo.isRead(tenantId, commentType, commentId, userId);
   }
@@ -84,9 +89,14 @@ export class ReadTrackingService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentIds: string[],
-    userId: string
+    userId: string,
   ): Promise<Set<string>> {
-    return this.repo.getUnreadComments(tenantId, commentType, commentIds, userId);
+    return this.repo.getUnreadComments(
+      tenantId,
+      commentType,
+      commentIds,
+      userId,
+    );
   }
 
   /**
@@ -99,8 +109,14 @@ export class ReadTrackingService {
     commentType: "entity_comment" | "approval_comment",
     userId: string,
     entityType?: string,
-    entityId?: string
+    entityId?: string,
   ): Promise<number> {
-    return this.repo.countUnread(tenantId, commentType, userId, entityType, entityId);
+    return this.repo.countUnread(
+      tenantId,
+      commentType,
+      userId,
+      entityType,
+      entityId,
+    );
   }
 }

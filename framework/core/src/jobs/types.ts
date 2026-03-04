@@ -3,7 +3,12 @@
  * Core abstractions for background job processing
  */
 
-export type JobStatus = "pending" | "active" | "completed" | "failed" | "delayed";
+export type JobStatus =
+  | "pending"
+  | "active"
+  | "completed"
+  | "failed"
+  | "delayed";
 
 export type JobPriority = "critical" | "high" | "normal" | "low";
 
@@ -76,7 +81,7 @@ export interface JobResult<T = unknown> {
 }
 
 export type JobHandler<TInput = unknown, TOutput = unknown> = (
-  job: Job<TInput>
+  job: Job<TInput>,
 ) => Promise<TOutput>;
 
 export interface ProcessOptions {
@@ -95,7 +100,9 @@ export interface JobQueue {
   /**
    * Add multiple jobs in bulk
    */
-  addBulk<T>(jobs: Array<{ data: JobData<T>; options?: JobOptions }>): Promise<Job<T>[]>;
+  addBulk<T>(
+    jobs: Array<{ data: JobData<T>; options?: JobOptions }>,
+  ): Promise<Job<T>[]>;
 
   /**
    * Process jobs with a handler

@@ -9,32 +9,36 @@
  * 5. platform fallback  (empty dashboard with module heading)
  */
 
-import type { DashboardLayout, DashboardVisibility, Workbench } from "./dashboard.types.js";
+import type {
+  DashboardLayout,
+  DashboardVisibility,
+  Workbench,
+} from "./dashboard.types.js";
 
 export type ResolutionTier =
-    | "user_override"
-    | "tenant_override"
-    | "tenant_default"
-    | "system_default"
-    | "platform_fallback";
+  | "user_override"
+  | "tenant_override"
+  | "tenant_default"
+  | "system_default"
+  | "platform_fallback";
 
 export interface ResolvedDashboard {
-    dashboardId: string;
-    code: string;
-    titleKey: string;
-    descriptionKey?: string;
-    moduleCode: string;
-    workbench: Workbench;
-    visibility: DashboardVisibility;
-    layout: DashboardLayout;
-    versionNo: number;
-    resolvedFrom: ResolutionTier;
+  dashboardId: string;
+  code: string;
+  titleKey: string;
+  descriptionKey?: string;
+  moduleCode: string;
+  workbench: Workbench;
+  visibility: DashboardVisibility;
+  layout: DashboardLayout;
+  versionNo: number;
+  resolvedFrom: ResolutionTier;
 }
 
 export interface ResolutionContext {
-    tenantId: string;
-    userId: string;
-    workbench: Workbench;
-    moduleCode: string;
-    dashboardCode: string;
+  tenantId: string;
+  userId: string;
+  workbench: Workbench;
+  moduleCode: string;
+  dashboardCode: string;
 }

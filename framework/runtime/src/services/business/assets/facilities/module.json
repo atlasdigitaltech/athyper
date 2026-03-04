@@ -1,10 +1,7 @@
 ﻿{
-    "code":  "ASSETFM",
-    "name":  "Facility Management",
-    "dependsOn":  [
-                      "ASSET",
-                      "MAINT"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "ASSETFM",
+  "name": "Facility Management",
+  "dependsOn": ["ASSET", "MAINT"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

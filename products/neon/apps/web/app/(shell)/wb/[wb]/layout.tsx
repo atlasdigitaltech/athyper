@@ -5,25 +5,28 @@ import { AuthProvider } from "@/lib/auth/auth-context";
 import { isWorkbench, type Workbench } from "@/lib/auth/types";
 
 interface WorkbenchLayoutProps {
-    children: React.ReactNode;
-    params: Promise<{ wb: string }>;
+  children: React.ReactNode;
+  params: Promise<{ wb: string }>;
 }
 
-export default async function WorkbenchLayout({ children, params }: WorkbenchLayoutProps) {
-    const { wb } = await params;
+export default async function WorkbenchLayout({
+  children,
+  params,
+}: WorkbenchLayoutProps) {
+  const { wb } = await params;
 
-    // Validate the workbench param against the frozen enumeration
-    if (!isWorkbench(wb)) {
-        notFound();
-    }
+  // Validate the workbench param against the frozen enumeration
+  if (!isWorkbench(wb)) {
+    notFound();
+  }
 
-    const validWorkbench: Workbench = wb;
+  const validWorkbench: Workbench = wb;
 
-    return (
-        <AuthProvider activeWorkbench={validWorkbench}>
-            <ShellClientLayout workbench={validWorkbench}>
-                {children}
-            </ShellClientLayout>
-        </AuthProvider>
-    );
+  return (
+    <AuthProvider activeWorkbench={validWorkbench}>
+      <ShellClientLayout workbench={validWorkbench}>
+        {children}
+      </ShellClientLayout>
+    </AuthProvider>
+  );
 }

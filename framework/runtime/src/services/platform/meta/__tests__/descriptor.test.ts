@@ -50,7 +50,9 @@ function makeCompiledModel(userFieldNames: string[] = ["title", "amount"]) {
   } as any;
 }
 
-function makeFeatureFlags(overrides: Partial<EntityFeatureFlags> = {}): EntityFeatureFlags {
+function makeFeatureFlags(
+  overrides: Partial<EntityFeatureFlags> = {},
+): EntityFeatureFlags {
   return {
     approval_required: false,
     numbering_enabled: false,
@@ -173,7 +175,15 @@ function createService() {
     capabilitiesService as any,
   );
 
-  return { svc, compiler, classification, lifecycle, approval, policyGate, capabilitiesService };
+  return {
+    svc,
+    compiler,
+    classification,
+    lifecycle,
+    approval,
+    policyGate,
+    capabilitiesService,
+  };
 }
 
 // ============================================================================
@@ -281,7 +291,8 @@ describe("EntityPageDescriptorServiceImpl", () => {
         async (checks: Array<{ action: string; resource: string }>) => {
           const map = new Map<string, { allowed: boolean }>();
           for (const check of checks) {
-            const allowed = check.action !== "update" && check.action !== "delete";
+            const allowed =
+              check.action !== "update" && check.action !== "delete";
             map.set(`${check.action}:${check.resource}`, { allowed });
           }
           return map;
@@ -324,7 +335,12 @@ describe("EntityPageDescriptorServiceImpl", () => {
       const { svc } = createService();
 
       // Default policyGate mock returns allowed for all checks including "create"
-      const desc = await svc.describeDynamic("test_entity", "r1", ctx, "create");
+      const desc = await svc.describeDynamic(
+        "test_entity",
+        "r1",
+        ctx,
+        "create",
+      );
 
       expect(desc.resolvedViewMode).toBe("create");
     });
@@ -334,7 +350,9 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const stateBadge = desc.badges.find((b: any) => b.code === "lifecycle_state");
+      const stateBadge = desc.badges.find(
+        (b: any) => b.code === "lifecycle_state",
+      );
       expect(stateBadge).toBeDefined();
       expect(stateBadge!.label).toBe("Draft");
       expect(stateBadge!.variant).toBe("default"); // non-terminal
@@ -349,7 +367,9 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const stateBadge = desc.badges.find((b: any) => b.code === "lifecycle_state");
+      const stateBadge = desc.badges.find(
+        (b: any) => b.code === "lifecycle_state",
+      );
       expect(stateBadge!.variant).toBe("outline");
     });
 
@@ -362,7 +382,9 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const approvalBadge = desc.badges.find((b: any) => b.code === "approval_status");
+      const approvalBadge = desc.badges.find(
+        (b: any) => b.code === "approval_status",
+      );
       expect(approvalBadge).toBeDefined();
       expect(approvalBadge!.variant).toBe("warning");
       expect(approvalBadge!.label).toContain("open");
@@ -390,9 +412,15 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const submitAction = desc.actions.find((a: any) => a.code === "lifecycle.submit");
-      const rejectAction = desc.actions.find((a: any) => a.code === "lifecycle.reject");
-      const cancelAction = desc.actions.find((a: any) => a.code === "lifecycle.cancel");
+      const submitAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.submit",
+      );
+      const rejectAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.reject",
+      );
+      const cancelAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.cancel",
+      );
       expect(submitAction).toBeDefined();
       expect(rejectAction).toBeUndefined();
       expect(cancelAction).toBeUndefined();
@@ -405,15 +433,17 @@ describe("EntityPageDescriptorServiceImpl", () => {
         status: "open",
       });
       approval.getTasksForUser.mockResolvedValue({
-        data: [
-          { id: "task-1", status: "pending", approvalInstanceId: "ai-1" },
-        ],
+        data: [{ id: "task-1", status: "pending", approvalInstanceId: "ai-1" }],
       });
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const approveAction = desc.actions.find((a: any) => a.code === "approval.approve");
-      const rejectAction = desc.actions.find((a: any) => a.code === "approval.reject");
+      const approveAction = desc.actions.find(
+        (a: any) => a.code === "approval.approve",
+      );
+      const rejectAction = desc.actions.find(
+        (a: any) => a.code === "approval.reject",
+      );
       expect(approveAction).toBeDefined();
       expect(rejectAction).toBeDefined();
       expect(rejectAction!.variant).toBe("destructive");
@@ -429,7 +459,9 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const approveAction = desc.actions.find((a: any) => a.code === "approval.approve");
+      const approveAction = desc.actions.find(
+        (a: any) => a.code === "approval.approve",
+      );
       expect(approveAction).toBeUndefined();
     });
 
@@ -438,8 +470,12 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const updateAction = desc.actions.find((a: any) => a.code === "entity.update");
-      const deleteAction = desc.actions.find((a: any) => a.code === "entity.delete");
+      const updateAction = desc.actions.find(
+        (a: any) => a.code === "entity.update",
+      );
+      const deleteAction = desc.actions.find(
+        (a: any) => a.code === "entity.delete",
+      );
       expect(updateAction).toBeDefined();
       expect(deleteAction).toBeDefined();
       expect(deleteAction!.requiresConfirmation).toBe(true);
@@ -460,8 +496,12 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const updateAction = desc.actions.find((a: any) => a.code === "entity.update");
-      const deleteAction = desc.actions.find((a: any) => a.code === "entity.delete");
+      const updateAction = desc.actions.find(
+        (a: any) => a.code === "entity.update",
+      );
+      const deleteAction = desc.actions.find(
+        (a: any) => a.code === "entity.delete",
+      );
       expect(updateAction).toBeUndefined();
       expect(deleteAction).toBeUndefined();
     });
@@ -473,7 +513,9 @@ describe("EntityPageDescriptorServiceImpl", () => {
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
       expect(desc.currentState).toBeUndefined();
-      const stateBadge = desc.badges.find((b: any) => b.code === "lifecycle_state");
+      const stateBadge = desc.badges.find(
+        (b: any) => b.code === "lifecycle_state",
+      );
       expect(stateBadge).toBeUndefined();
     });
 
@@ -525,9 +567,15 @@ describe("EntityPageDescriptorServiceImpl", () => {
 
       const desc = await svc.describeDynamic("test_entity", "r1", ctx);
 
-      const submitAction = desc.actions.find((a: any) => a.code === "lifecycle.submit");
-      const rejectAction = desc.actions.find((a: any) => a.code === "lifecycle.reject");
-      const cancelAction = desc.actions.find((a: any) => a.code === "lifecycle.cancel");
+      const submitAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.submit",
+      );
+      const rejectAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.reject",
+      );
+      const cancelAction = desc.actions.find(
+        (a: any) => a.code === "lifecycle.cancel",
+      );
 
       expect(submitAction!.requiresConfirmation).toBe(false);
       expect(rejectAction!.requiresConfirmation).toBe(true);

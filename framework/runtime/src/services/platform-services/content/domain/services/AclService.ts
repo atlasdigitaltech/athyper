@@ -66,7 +66,10 @@ export class AclService {
     );
 
     // 1. Verify attachment exists
-    const attachment = await this.attachmentRepo.getById(params.attachmentId, params.tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      params.attachmentId,
+      params.tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment ${params.attachmentId} not found`);
     }
@@ -94,7 +97,11 @@ export class AclService {
     });
 
     this.logger.info(
-      { aclId: acl.id, attachmentId: params.attachmentId, permission: params.permission },
+      {
+        aclId: acl.id,
+        attachmentId: params.attachmentId,
+        permission: params.permission,
+      },
       "[acl:service] Permission granted",
     );
 
@@ -149,7 +156,9 @@ export class AclService {
    * 3. If granted, return true
    * 4. If no ACL, return null (defer to global policy)
    */
-  async checkPermission(params: CheckPermissionParams): Promise<boolean | null> {
+  async checkPermission(
+    params: CheckPermissionParams,
+  ): Promise<boolean | null> {
     this.logger.debug(
       {
         attachmentId: params.attachmentId,
@@ -210,10 +219,19 @@ export class AclService {
   /**
    * List ACLs for a document
    */
-  async listDocumentAcls(tenantId: string, attachmentId: string, activeOnly = true) {
-    this.logger.debug({ attachmentId, activeOnly }, "[acl:service] Listing ACLs");
+  async listDocumentAcls(
+    tenantId: string,
+    attachmentId: string,
+    activeOnly = true,
+  ) {
+    this.logger.debug(
+      { attachmentId, activeOnly },
+      "[acl:service] Listing ACLs",
+    );
 
-    return this.aclRepo.listByAttachment(tenantId, attachmentId, { activeOnly });
+    return this.aclRepo.listByAttachment(tenantId, attachmentId, {
+      activeOnly,
+    });
   }
 
   /**
@@ -226,7 +244,10 @@ export class AclService {
     const deletedCount = await this.aclRepo.deleteExpired(tenantId, new Date());
 
     if (deletedCount > 0) {
-      this.logger.info({ tenantId, deletedCount }, "[acl:service] Expired ACLs cleaned up");
+      this.logger.info(
+        { tenantId, deletedCount },
+        "[acl:service] Expired ACLs cleaned up",
+      );
     }
 
     return deletedCount;

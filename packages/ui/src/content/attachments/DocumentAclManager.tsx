@@ -26,7 +26,10 @@ export interface DocumentAclManagerProps {
   readonly?: boolean;
 }
 
-export function DocumentAclManager({ attachmentId, readonly = false }: DocumentAclManagerProps) {
+export function DocumentAclManager({
+  attachmentId,
+  readonly = false,
+}: DocumentAclManagerProps) {
   const [acls, setAcls] = useState<DocumentAcl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +58,8 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
       }
 
       setAcls(data.data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -89,8 +92,8 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
 
       fetchAcls();
       setShowGrantForm(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
@@ -118,8 +121,8 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
       }
 
       fetchAcls();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
@@ -153,7 +156,8 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
       {showGrantForm && !readonly && (
         <div className="border rounded-lg p-4 bg-gray-50">
           <p className="text-sm text-gray-600 mb-2">
-            Grant permission form (simplified - would need user/role picker in production)
+            Grant permission form (simplified - would need user/role picker in
+            production)
           </p>
           <div className="text-xs text-gray-500">
             TODO: Add user/role selector and permission dropdown
@@ -175,7 +179,9 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
             >
               <div>
                 <div className="text-sm font-medium text-gray-900">
-                  {acl.principalId ? `User: ${acl.principalId}` : `Role: ${acl.roleId}`}
+                  {acl.principalId
+                    ? `User: ${acl.principalId}`
+                    : `Role: ${acl.roleId}`}
                 </div>
                 <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                   <span className="capitalize">{acl.permission}</span>
@@ -184,7 +190,9 @@ export function DocumentAclManager({ attachmentId, readonly = false }: DocumentA
                   {acl.expiresAt && (
                     <>
                       <span>•</span>
-                      <span>Expires {new Date(acl.expiresAt).toLocaleDateString()}</span>
+                      <span>
+                        Expires {new Date(acl.expiresAt).toLocaleDateString()}
+                      </span>
                     </>
                   )}
                 </div>

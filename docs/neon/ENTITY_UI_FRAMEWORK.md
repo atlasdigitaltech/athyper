@@ -42,13 +42,13 @@
 
 One page skeleton renders all entities. Differences come only from:
 
-| Input | Source | Purpose |
-|-------|--------|---------|
-| `entityClass` | `EntityClassificationService.getClassification()` | MASTER / DOCUMENT / CONTROL |
-| `featureFlags` | `EntityFeatureFlags` from `meta.entity.feature_flags` JSONB | Toggles capabilities |
-| `compiledModel` | `MetaCompiler.compile()` → `CompiledModel` | Field definitions, validation, SQL |
-| `entityState` | `LifecycleManager.getCurrentState()` + `ApprovalService.getInstanceForEntity()` | Current lifecycle + approval status |
-| `policyContext` | `PolicyGate.authorize()` | What the user can see and do |
+| Input           | Source                                                                          | Purpose                             |
+| --------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
+| `entityClass`   | `EntityClassificationService.getClassification()`                               | MASTER / DOCUMENT / CONTROL         |
+| `featureFlags`  | `EntityFeatureFlags` from `meta.entity.feature_flags` JSONB                     | Toggles capabilities                |
+| `compiledModel` | `MetaCompiler.compile()` → `CompiledModel`                                      | Field definitions, validation, SQL  |
+| `entityState`   | `LifecycleManager.getCurrentState()` + `ApprovalService.getInstanceForEntity()` | Current lifecycle + approval status |
+| `policyContext` | `PolicyGate.authorize()`                                                        | What the user can see and do        |
 
 **Result**: One UI framework, many behaviors. No entity-specific React pages.
 
@@ -56,24 +56,24 @@ One page skeleton renders all entities. Differences come only from:
 
 Entity classification drives layout presets and system-generated columns:
 
-| Kind (DB) | EntityClass | Layout Preset | System Columns |
-|-----------|-------------|---------------|----------------|
-| `ref`, `mdm` | `MASTER` | Stable attributes + related lists | `entity_type_code`, `status`, `source_system`, `metadata` |
-| `ent` | `CONTROL` | Configuration forms | `entity_type_code`, `status`, `source_system`, `metadata` |
-| `doc` | `DOCUMENT` | Header + Lines + Totals | All common + `document_number`, `posting_date` |
+| Kind (DB)    | EntityClass | Layout Preset                     | System Columns                                            |
+| ------------ | ----------- | --------------------------------- | --------------------------------------------------------- |
+| `ref`, `mdm` | `MASTER`    | Stable attributes + related lists | `entity_type_code`, `status`, `source_system`, `metadata` |
+| `ent`        | `CONTROL`   | Configuration forms               | `entity_type_code`, `status`, `source_system`, `metadata` |
+| `doc`        | `DOCUMENT`  | Header + Lines + Totals           | All common + `document_number`, `posting_date`            |
 
 **Feature flags** (stored in `meta.entity.feature_flags` JSONB):
 
-| Flag | Type | Default | Effect |
-|------|------|---------|--------|
-| `entity_class` | `EntityClass` | undefined | Drives layout preset |
-| `approval_required` | boolean | false | Enables approval workflow for lifecycle transitions |
-| `numbering_enabled` | boolean | false | Enables automatic document numbering (DOCUMENT class) |
-| `effective_dating_enabled` | boolean | false | Adds `effective_from`/`effective_to` columns (any class) |
-| `versioning_mode` | `"none"` \| `"sequential"` \| `"major_minor"` | `"none"` | Schema versioning strategy |
-| `lifecycle_enabled` | boolean | false | Enables lifecycle state machine (*to be added*) |
-| `attachments_enabled` | boolean | false | Enables file attachments (*to be added*) |
-| `posting_enabled` | boolean | false | Enables posting/accounting (*future — Phase 2*) |
+| Flag                       | Type                                          | Default   | Effect                                                   |
+| -------------------------- | --------------------------------------------- | --------- | -------------------------------------------------------- |
+| `entity_class`             | `EntityClass`                                 | undefined | Drives layout preset                                     |
+| `approval_required`        | boolean                                       | false     | Enables approval workflow for lifecycle transitions      |
+| `numbering_enabled`        | boolean                                       | false     | Enables automatic document numbering (DOCUMENT class)    |
+| `effective_dating_enabled` | boolean                                       | false     | Adds `effective_from`/`effective_to` columns (any class) |
+| `versioning_mode`          | `"none"` \| `"sequential"` \| `"major_minor"` | `"none"`  | Schema versioning strategy                               |
+| `lifecycle_enabled`        | boolean                                       | false     | Enables lifecycle state machine (_to be added_)          |
+| `attachments_enabled`      | boolean                                       | false     | Enables file attachments (_to be added_)                 |
+| `posting_enabled`          | boolean                                       | false     | Enables posting/accounting (_future — Phase 2_)          |
 
 > **Note**: `lifecycle_enabled` and `attachments_enabled` are new flags to be added to `EntityFeatureFlags`. `posting_enabled` is reserved for Phase 2.
 
@@ -180,7 +180,7 @@ type EntityPageDescriptor = {
     attachments: boolean;
     effectiveDating: boolean;
     numbering: boolean;
-    posting: boolean;        // future
+    posting: boolean; // future
   };
 
   /** Header badges (status pills) */
@@ -202,14 +202,20 @@ type EntityPageDescriptor = {
   modelHash: string;
 
   /** Descriptor generation timestamp */
-  generatedAt: string;  // ISO 8601
+  generatedAt: string; // ISO 8601
 };
 ```
 
 ### 3.2 HeaderBadge
 
 ```typescript
-type BadgeVariant = "default" | "info" | "success" | "warning" | "error" | "muted";
+type BadgeVariant =
+  | "default"
+  | "info"
+  | "success"
+  | "warning"
+  | "error"
+  | "muted";
 
 type HeaderBadge = {
   /** Badge category */
@@ -231,7 +237,15 @@ type HeaderBadge = {
 ```typescript
 type TabDescriptor = {
   /** Stable tab identifier (maps to plugin component) */
-  code: "details" | "lifecycle" | "approvals" | "accounting" | "audit" | "attachments" | "timeline" | "versions";
+  code:
+    | "details"
+    | "lifecycle"
+    | "approvals"
+    | "accounting"
+    | "audit"
+    | "attachments"
+    | "timeline"
+    | "versions";
 
   /** Human-readable label */
   label: string;
@@ -334,7 +348,16 @@ type SectionField = {
   label: string;
 
   /** Widget type override (default: inferred from field type) */
-  widget?: "text" | "number" | "date" | "datetime" | "select" | "reference" | "textarea" | "checkbox" | "json";
+  widget?:
+    | "text"
+    | "number"
+    | "date"
+    | "datetime"
+    | "select"
+    | "reference"
+    | "textarea"
+    | "checkbox"
+    | "json";
 
   /** Column span (1 or 2) */
   span?: number;
@@ -353,18 +376,18 @@ type SectionField = {
 
 Stable reason codes for consistent UI messages across all entities.
 
-| Reason Code | Meaning | Typical Message |
-|-------------|---------|-----------------|
-| `feature_disabled` | Feature flag is off for this entity | "This capability is not enabled for this entity" |
-| `policy_denied` | PolicyGate denied the action | "You don't have permission to perform this action" |
-| `state_blocked` | Current lifecycle state doesn't allow this | "Not available in current state: {state}" |
-| `validation_failed` | Data validation prevents action | "Required fields are missing or invalid" |
-| `no_pending_task` | User has no approval task for this entity | "No approval task assigned to you" |
-| `terminal_state` | Entity is in a terminal lifecycle state | "This record is closed and cannot be modified" |
-| `approval_pending` | An approval workflow is in-flight, blocking other actions | "Approval is in progress" |
-| `missing_required_attachment` | Required attachment not yet uploaded | "Required attachment is missing" *(future)* |
-| `not_in_effective_period` | Record is outside its effective date range | "Outside effective date range" *(future)* |
-| `concurrent_modification` | Optimistic lock conflict | "This record was modified by another user" |
+| Reason Code                   | Meaning                                                   | Typical Message                                    |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| `feature_disabled`            | Feature flag is off for this entity                       | "This capability is not enabled for this entity"   |
+| `policy_denied`               | PolicyGate denied the action                              | "You don't have permission to perform this action" |
+| `state_blocked`               | Current lifecycle state doesn't allow this                | "Not available in current state: {state}"          |
+| `validation_failed`           | Data validation prevents action                           | "Required fields are missing or invalid"           |
+| `no_pending_task`             | User has no approval task for this entity                 | "No approval task assigned to you"                 |
+| `terminal_state`              | Entity is in a terminal lifecycle state                   | "This record is closed and cannot be modified"     |
+| `approval_pending`            | An approval workflow is in-flight, blocking other actions | "Approval is in progress"                          |
+| `missing_required_attachment` | Required attachment not yet uploaded                      | "Required attachment is missing" _(future)_        |
+| `not_in_effective_period`     | Record is outside its effective date range                | "Outside effective date range" _(future)_          |
+| `concurrent_modification`     | Optimistic lock conflict                                  | "This record was modified by another user"         |
 
 **Implementation rule**: Every disabled action MUST include a `reasonCode` and optionally a `reasonText`. The frontend uses `reasonCode` for i18n lookup and `reasonText` as fallback/override.
 
@@ -372,14 +395,15 @@ Stable reason codes for consistent UI messages across all entities.
 
 ## 5. Action Groups (Locked)
 
-| Group | Max Count | Rendering | Examples |
-|-------|-----------|-----------|----------|
-| `primary` | 1–2 | Prominent buttons, top-right | Save, Submit |
-| `secondary` | 2–4 | Standard buttons or button group | Activate, Duplicate, Export |
-| `danger` | 0–1 | Red/destructive styling | Delete, Cancel, Reverse |
-| `overflow` | Unlimited | Dropdown/kebab menu | Print, Share, History, Debug |
+| Group       | Max Count | Rendering                        | Examples                     |
+| ----------- | --------- | -------------------------------- | ---------------------------- |
+| `primary`   | 1–2       | Prominent buttons, top-right     | Save, Submit                 |
+| `secondary` | 2–4       | Standard buttons or button group | Activate, Duplicate, Export  |
+| `danger`    | 0–1       | Red/destructive styling          | Delete, Cancel, Reverse      |
+| `overflow`  | Unlimited | Dropdown/kebab menu              | Print, Share, History, Debug |
 
 **Rules**:
+
 - `primary` group shows at most 2 actions. If more qualify, overflow the rest.
 - `danger` actions always require confirmation (`requiresConfirmation: true`).
 - Disabled actions render as disabled with tooltip showing `reasonText`.
@@ -399,15 +423,15 @@ Stable reason codes for consistent UI messages across all entities.
 
 #### Dependencies
 
-| Service | Token | Purpose |
-|---------|-------|---------|
-| MetaCompiler | `meta.compiler` | Get `CompiledModel` (cached) |
-| EntityClassificationService | `meta.classificationService` | Get `EntityClass` + `EntityFeatureFlags` |
-| LifecycleManager | *(injected via factory)* | Get current state, available transitions |
-| ApprovalService | `meta.approvalService` | Get approval instance, tasks for user |
-| PolicyGate | `meta.policyGate` | Batch authorize all possible actions |
-| AuditLogger | `meta.auditLogger` | Get recent audit events (for badge counts) |
-| NumberingEngine | `meta.numberingEngine` | Preview next number (for create mode) |
+| Service                     | Token                        | Purpose                                    |
+| --------------------------- | ---------------------------- | ------------------------------------------ |
+| MetaCompiler                | `meta.compiler`              | Get `CompiledModel` (cached)               |
+| EntityClassificationService | `meta.classificationService` | Get `EntityClass` + `EntityFeatureFlags`   |
+| LifecycleManager            | _(injected via factory)_     | Get current state, available transitions   |
+| ApprovalService             | `meta.approvalService`       | Get approval instance, tasks for user      |
+| PolicyGate                  | `meta.policyGate`            | Batch authorize all possible actions       |
+| AuditLogger                 | `meta.auditLogger`           | Get recent audit events (for badge counts) |
+| NumberingEngine             | `meta.numberingEngine`       | Preview next number (for create mode)      |
 
 #### Static Descriptor (cacheable)
 
@@ -422,6 +446,7 @@ async describeEntity(
 ```
 
 Computes:
+
 1. `layoutPreset` from `entityClass`
 2. `capabilities` from `featureFlags`
 3. `tabs` — all possible tabs with visibility from feature flags
@@ -444,6 +469,7 @@ async describeEntityRecord(
 ```
 
 Computes (in addition to static):
+
 1. `headerBadges` — lifecycle state, approval status, posting status
 2. `actions` — all actions with enabled/disabled + reasons
 3. `drawers` — available drawers based on capabilities
@@ -474,20 +500,20 @@ This avoids N sequential calls to `PolicyGate.authorize()` per page load.
 
 #### Routing Table
 
-| Handler Key | Service | Method |
-|-------------|---------|--------|
-| `entity.save` | GenericDataAPI | `create()` or `update()` |
-| `entity.delete` | GenericDataAPI | `delete()` |
-| `entity.restore` | GenericDataAPI | `restore()` |
-| `entity.duplicate` | GenericDataAPI | `create()` (with cloned data) |
-| `lifecycle.{operationCode}` | LifecycleManager | `transition()` |
-| `approval.submit` | ApprovalService | `createApprovalInstance()` |
-| `approval.withdraw` | ApprovalService | *(cancel instance)* |
-| `approval.approve` | ApprovalService | `makeDecision({ decision: "approve" })` |
-| `approval.reject` | ApprovalService | `makeDecision({ decision: "reject" })` |
-| `posting.simulate` | PostingEngine | `simulate()` *(future)* |
-| `posting.post` | PostingEngine | `post()` *(future)* |
-| `posting.reverse` | PostingEngine | `reverse()` *(future)* |
+| Handler Key                 | Service          | Method                                  |
+| --------------------------- | ---------------- | --------------------------------------- |
+| `entity.save`               | GenericDataAPI   | `create()` or `update()`                |
+| `entity.delete`             | GenericDataAPI   | `delete()`                              |
+| `entity.restore`            | GenericDataAPI   | `restore()`                             |
+| `entity.duplicate`          | GenericDataAPI   | `create()` (with cloned data)           |
+| `lifecycle.{operationCode}` | LifecycleManager | `transition()`                          |
+| `approval.submit`           | ApprovalService  | `createApprovalInstance()`              |
+| `approval.withdraw`         | ApprovalService  | _(cancel instance)_                     |
+| `approval.approve`          | ApprovalService  | `makeDecision({ decision: "approve" })` |
+| `approval.reject`           | ApprovalService  | `makeDecision({ decision: "reject" })`  |
+| `posting.simulate`          | PostingEngine    | `simulate()` _(future)_                 |
+| `posting.post`              | PostingEngine    | `post()` _(future)_                     |
+| `posting.reverse`           | PostingEngine    | `reverse()` _(future)_                  |
 
 #### Action Execution Response
 
@@ -522,12 +548,12 @@ type ActionExecutionResult = {
 
 ### 7.1 Endpoints
 
-| Method | Path | Purpose | Cacheable |
-|--------|------|---------|-----------|
-| `GET` | `/api/ui/entity-page/:entityName` | Static descriptor (layout, tabs, sections, capabilities) | Yes — by `entityName` + `modelHash` |
-| `GET` | `/api/ui/entity-page/:entityName/:id` | Dynamic descriptor (actions, badges, my tasks, transitions) | No |
-| `POST` | `/api/ui/entity-page/:entityName/:id/actions/:actionCode` | Execute action (server-side) | No |
-| `GET` | `/api/ui/entity-page/:entityName/:id/drawer/:drawerCode` | Load drawer content (approval peek, audit peek) | No |
+| Method | Path                                                      | Purpose                                                     | Cacheable                           |
+| ------ | --------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------- |
+| `GET`  | `/api/ui/entity-page/:entityName`                         | Static descriptor (layout, tabs, sections, capabilities)    | Yes — by `entityName` + `modelHash` |
+| `GET`  | `/api/ui/entity-page/:entityName/:id`                     | Dynamic descriptor (actions, badges, my tasks, transitions) | No                                  |
+| `POST` | `/api/ui/entity-page/:entityName/:id/actions/:actionCode` | Execute action (server-side)                                | No                                  |
+| `GET`  | `/api/ui/entity-page/:entityName/:id/drawer/:drawerCode`  | Load drawer content (approval peek, audit peek)             | No                                  |
 
 ### 7.2 Static Descriptor Endpoint
 
@@ -566,6 +592,7 @@ POST /api/ui/entity-page/:entityName/:id/actions/:actionCode
 ```
 
 **Request Body**:
+
 ```typescript
 {
   /** Optional note (for approval decisions, lifecycle transitions) */
@@ -593,6 +620,7 @@ GET /api/ui/entity-page/:entityName/:id/drawer/:drawerCode
 **Response** (varies by drawer code):
 
 **Approval Drawer**:
+
 ```typescript
 {
   instance: ApprovalInstance | null;
@@ -603,6 +631,7 @@ GET /api/ui/entity-page/:entityName/:id/drawer/:drawerCode
 ```
 
 **Audit Drawer**:
+
 ```typescript
 {
   recentEvents: AuditEvent[];     // last 5 for peek
@@ -611,6 +640,7 @@ GET /api/ui/entity-page/:entityName/:id/drawer/:drawerCode
 ```
 
 **Timeline Drawer** (Phase 5):
+
 ```typescript
 {
   events: TimelineEvent[];        // merged + sorted
@@ -632,6 +662,7 @@ Replace all existing `[entity]` stub pages with a single universal route:
 ```
 
 **Removed routes** (replaced by universal shell):
+
 - `(shell)/app/[entity]/page.tsx`
 - `(shell)/app/[entity]/[id]/page.tsx`
 - `(shell)/app/[entity]/[id]/approvals/page.tsx`
@@ -641,6 +672,7 @@ Replace all existing `[entity]` stub pages with a single universal route:
 - `(shell)/app/[entity]/view/kanban/page.tsx`
 
 **Retained routes** (admin/config — not entity data pages):
+
 - `(shell)/wb/[wb]/meta/entities/[entity]/**` — admin workbench for entity configuration
 
 ### 8.2 EntityPageShell Component
@@ -668,17 +700,17 @@ export default function EntityPageShell({ params }: EntityPageShellProps) {
 
 ### 8.3 Rendering Rules
 
-| Component | Data Source | Behavior |
-|-----------|------------|----------|
-| **Header** | `descriptor.entity` + `descriptor.headerBadges` | Always visible. Badges clickable → open drawer |
-| **Action Bar** | `descriptor.actions` | Groups into primary/secondary/danger/overflow. Disabled = tooltip with reason |
-| **Tab Bar** | `descriptor.tabs` (filtered to `visible: true`) | Only visible tabs rendered. Badge counts on tab labels |
-| **Details Tab** | `descriptor.sections` + record data from `GenericDataAPI` | Form fields rendered from section layout. Read-only respects `resolvedViewMode` |
-| **Lifecycle Tab** | Drawer content endpoint (lifecycle) | Current state + transition history + available transitions |
-| **Approvals Tab** | Drawer content endpoint (approval, mode=full) | Stage timeline + tasks + decisions |
-| **Audit Tab** | Drawer content endpoint (audit, mode=full) | Full audit log with filters |
-| **Attachments Tab** | Attachment API | Upload/download/delete with policy gates |
-| **Context Drawer** | Drawer content endpoint (peek mode) | Quick summary; opened by clicking badges |
+| Component           | Data Source                                               | Behavior                                                                        |
+| ------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Header**          | `descriptor.entity` + `descriptor.headerBadges`           | Always visible. Badges clickable → open drawer                                  |
+| **Action Bar**      | `descriptor.actions`                                      | Groups into primary/secondary/danger/overflow. Disabled = tooltip with reason   |
+| **Tab Bar**         | `descriptor.tabs` (filtered to `visible: true`)           | Only visible tabs rendered. Badge counts on tab labels                          |
+| **Details Tab**     | `descriptor.sections` + record data from `GenericDataAPI` | Form fields rendered from section layout. Read-only respects `resolvedViewMode` |
+| **Lifecycle Tab**   | Drawer content endpoint (lifecycle)                       | Current state + transition history + available transitions                      |
+| **Approvals Tab**   | Drawer content endpoint (approval, mode=full)             | Stage timeline + tasks + decisions                                              |
+| **Audit Tab**       | Drawer content endpoint (audit, mode=full)                | Full audit log with filters                                                     |
+| **Attachments Tab** | Attachment API                                            | Upload/download/delete with policy gates                                        |
+| **Context Drawer**  | Drawer content endpoint (peek mode)                       | Quick summary; opened by clicking badges                                        |
 
 ---
 
@@ -745,8 +777,12 @@ class PluginRegistry {
   register(plugin: EntityPagePlugin): void;
   getTab(code: string): React.ComponentType<TabProps> | undefined;
   getDrawer(code: string): React.ComponentType<DrawerProps> | undefined;
-  getBadgeFormatter(type: string): ((badge: HeaderBadge) => React.ReactNode) | undefined;
-  getActionConfirm(actionCode: string): EntityPagePlugin["actionConfirm"] | undefined;
+  getBadgeFormatter(
+    type: string,
+  ): ((badge: HeaderBadge) => React.ReactNode) | undefined;
+  getActionConfirm(
+    actionCode: string,
+  ): EntityPagePlugin["actionConfirm"] | undefined;
 }
 
 // Default registration
@@ -773,11 +809,12 @@ interface DescriptorContributor {
 ```
 
 Built-in contributors:
+
 - `LifecycleContributor` — lifecycle tab, transition actions, state badge
 - `ApprovalContributor` — approval tab, approval actions, status badge
 - `AuditContributor` — audit tab, audit drawer
 - `AttachmentsContributor` — attachments tab, upload/delete actions
-- `PostingContributor` — accounting tab, posting actions, posting badge *(future)*
+- `PostingContributor` — accounting tab, posting actions, posting badge _(future)_
 
 ---
 
@@ -789,12 +826,12 @@ Built-in contributors:
 
 **Contributions**:
 
-| Contribution | Details |
-|---|---|
-| **Tab** | `code: "lifecycle"`, visible when `capabilities.lifecycle` |
-| **Badge** | `type: "lifecycle"`, value = current state name, variant = mapped from state code |
-| **Actions** | One action per `AvailableTransition` from `LifecycleManager.getAvailableTransitions()` |
-| **Drawer** | `code: "lifecycle"`, peek = current state + last 3 transitions |
+| Contribution | Details                                                                                |
+| ------------ | -------------------------------------------------------------------------------------- |
+| **Tab**      | `code: "lifecycle"`, visible when `capabilities.lifecycle`                             |
+| **Badge**    | `type: "lifecycle"`, value = current state name, variant = mapped from state code      |
+| **Actions**  | One action per `AvailableTransition` from `LifecycleManager.getAvailableTransitions()` |
+| **Drawer**   | `code: "lifecycle"`, peek = current state + last 3 transitions                         |
 
 **Action mapping**:
 
@@ -813,20 +850,20 @@ Built-in contributors:
 
 **Tab content** (Lifecycle tab):
 
-| Section | Content |
-|---------|---------|
-| Current State | State name + badge + time in state |
-| Transition History | Chronological table: timestamp, from → to, operation, actor, notes |
+| Section               | Content                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| Current State         | State name + badge + time in state                                   |
+| Transition History    | Chronological table: timestamp, from → to, operation, actor, notes   |
 | Available Transitions | Cards with operation name + target state + enabled/disabled + reason |
 
 **Block reasons**:
 
-| Condition | reasonCode | blockedBy |
-|-----------|------------|-----------|
-| `!transition.authorized` | `policy_denied` | `policy` |
-| `transition.requiresApproval` | `approval_pending` | `approval` |
-| Terminal state | `terminal_state` | `state` |
-| No matching transition from current state | `state_blocked` | `state` |
+| Condition                                 | reasonCode         | blockedBy  |
+| ----------------------------------------- | ------------------ | ---------- |
+| `!transition.authorized`                  | `policy_denied`    | `policy`   |
+| `transition.requiresApproval`             | `approval_pending` | `approval` |
+| Terminal state                            | `terminal_state`   | `state`    |
+| No matching transition from current state | `state_blocked`    | `state`    |
 
 ### 10.2 Approval Plugin
 
@@ -834,43 +871,43 @@ Built-in contributors:
 
 **Contributions**:
 
-| Contribution | Details |
-|---|---|
-| **Tab** | `code: "approvals"`, visible when `capabilities.approval` |
-| **Badge** | `type: "approval"`, value = instance status, variant = status-dependent |
-| **Actions** | `submit_for_approval`, `withdraw`, `approve`, `reject` |
-| **Drawer** | `code: "approval"`, peek = status + my tasks + last 5 events |
+| Contribution | Details                                                                 |
+| ------------ | ----------------------------------------------------------------------- |
+| **Tab**      | `code: "approvals"`, visible when `capabilities.approval`               |
+| **Badge**    | `type: "approval"`, value = instance status, variant = status-dependent |
+| **Actions**  | `submit_for_approval`, `withdraw`, `approve`, `reject`                  |
+| **Drawer**   | `code: "approval"`, peek = status + my tasks + last 5 events            |
 
 **Action mapping**:
 
-| Action | Condition | Handler |
-|--------|-----------|---------|
-| Submit for Approval | Lifecycle transition has approval gate AND no active instance | `approval.submit` |
-| Withdraw | Active instance in `open` status AND user is submitter | `approval.withdraw` |
-| Approve | User has pending task with `taskType: "approver"` | `approval.approve` |
-| Reject | User has pending task with `taskType: "approver"` | `approval.reject` |
-| Resubmit | Previous instance was rejected AND lifecycle allows resubmit | `approval.submit` |
+| Action              | Condition                                                     | Handler             |
+| ------------------- | ------------------------------------------------------------- | ------------------- |
+| Submit for Approval | Lifecycle transition has approval gate AND no active instance | `approval.submit`   |
+| Withdraw            | Active instance in `open` status AND user is submitter        | `approval.withdraw` |
+| Approve             | User has pending task with `taskType: "approver"`             | `approval.approve`  |
+| Reject              | User has pending task with `taskType: "approver"`             | `approval.reject`   |
+| Resubmit            | Previous instance was rejected AND lifecycle allows resubmit  | `approval.submit`   |
 
 **Approval actions always require notes** (`requiresNote: true` for approve/reject).
 
 **Tab content** (Approvals tab):
 
-| Section | Content |
-|---------|---------|
-| Stage Timeline | Visual stage progression: stage 1 → stage 2 → ... with status indicators |
-| My Tasks | List of tasks assigned to current user for this entity |
-| All Tasks | Table: stage, assignee, type, status, decided at, decision note |
-| Decision History | Chronological events: created, submitted, approved, rejected, escalated |
+| Section          | Content                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| Stage Timeline   | Visual stage progression: stage 1 → stage 2 → ... with status indicators |
+| My Tasks         | List of tasks assigned to current user for this entity                   |
+| All Tasks        | Table: stage, assignee, type, status, decided at, decision note          |
+| Decision History | Chronological events: created, submitted, approved, rejected, escalated  |
 
 **Badge mapping**:
 
-| Instance Status | Badge Value | Variant |
-|-----------------|-------------|---------|
-| No instance | *(no badge)* | — |
-| `open` | "Pending Approval" | `warning` |
-| `completed` | "Approved" | `success` |
-| `rejected` | "Rejected" | `error` |
-| `canceled` | "Withdrawn" | `muted` |
+| Instance Status | Badge Value        | Variant   |
+| --------------- | ------------------ | --------- |
+| No instance     | _(no badge)_       | —         |
+| `open`          | "Pending Approval" | `warning` |
+| `completed`     | "Approved"         | `success` |
+| `rejected`      | "Rejected"         | `error`   |
+| `canceled`      | "Withdrawn"        | `muted`   |
 
 ### 10.3 Audit Plugin
 
@@ -878,20 +915,20 @@ Built-in contributors:
 
 **Contributions**:
 
-| Contribution | Details |
-|---|---|
-| **Tab** | `code: "audit"`, visible always (recommended default-on for all entities) |
-| **Drawer** | `code: "audit"`, peek = last 5 events |
+| Contribution | Details                                                                   |
+| ------------ | ------------------------------------------------------------------------- |
+| **Tab**      | `code: "audit"`, visible always (recommended default-on for all entities) |
+| **Drawer**   | `code: "audit"`, peek = last 5 events                                     |
 
 No actions contributed (audit is read-only).
 
 **Tab content** (Audit tab):
 
-| Section | Content |
-|---------|---------|
+| Section    | Content                                                                |
+| ---------- | ---------------------------------------------------------------------- |
 | Event List | Paginated table: timestamp, event type, actor, action, result, details |
-| Filters | Event type, actor, date range, result (success/failure) |
-| Export | Download audit log as CSV *(overflow action)* |
+| Filters    | Event type, actor, date range, result (success/failure)                |
+| Export     | Download audit log as CSV _(overflow action)_                          |
 
 **Data source**: `AuditLogger.getResourceAudit(entityRef, options)`
 
@@ -903,22 +940,22 @@ No actions contributed (audit is read-only).
 
 **Contributions**:
 
-| Contribution | Details |
-|---|---|
-| **Tab** | `code: "attachments"`, visible when `capabilities.attachments` |
-| **Badge count** | Number of attachments on tab label |
-| **Actions** | Upload (policy-gated), Delete (policy-gated, requires confirmation) |
-| **Drawer** | `code: "attachments"`, peek = last 3 + count |
+| Contribution    | Details                                                             |
+| --------------- | ------------------------------------------------------------------- |
+| **Tab**         | `code: "attachments"`, visible when `capabilities.attachments`      |
+| **Badge count** | Number of attachments on tab label                                  |
+| **Actions**     | Upload (policy-gated), Delete (policy-gated, requires confirmation) |
+| **Drawer**      | `code: "attachments"`, peek = last 3 + count                        |
 
 **API Endpoints** (new):
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/data/:entity/:id/attachments` | List attachments |
-| `POST` | `/api/data/:entity/:id/attachments/presign` | Get pre-signed upload URL |
-| `POST` | `/api/data/:entity/:id/attachments` | Register upload (after S3 upload) |
-| `GET` | `/api/data/:entity/:id/attachments/:attachmentId/download` | Get pre-signed download URL |
-| `DELETE` | `/api/data/:entity/:id/attachments/:attachmentId` | Soft-delete attachment |
+| Method   | Path                                                       | Purpose                           |
+| -------- | ---------------------------------------------------------- | --------------------------------- |
+| `GET`    | `/api/data/:entity/:id/attachments`                        | List attachments                  |
+| `POST`   | `/api/data/:entity/:id/attachments/presign`                | Get pre-signed upload URL         |
+| `POST`   | `/api/data/:entity/:id/attachments`                        | Register upload (after S3 upload) |
+| `GET`    | `/api/data/:entity/:id/attachments/:attachmentId/download` | Get pre-signed download URL       |
+| `DELETE` | `/api/data/:entity/:id/attachments/:attachmentId`          | Soft-delete attachment            |
 
 **Upload flow**: Browser → pre-signed URL → S3/MinIO → register metadata via POST. No proxy — direct-to-storage upload.
 
@@ -955,7 +992,7 @@ interface ResourceTimelineService {
       sources?: TimelineEventSource[];
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<{
     events: TimelineEvent[];
     totalCount: number;
@@ -969,18 +1006,18 @@ interface ResourceTimelineService {
     entityName: string,
     entityId: string,
     tenantId: string,
-    limit?: number
+    limit?: number,
   ): Promise<TimelineEvent[]>;
 }
 ```
 
 **Data sources**:
 
-| Source | Service Method | Timestamp Field |
-|--------|---------------|-----------------|
-| Audit | `AuditLogger.getResourceAudit()` | `event.timestamp` |
-| Lifecycle | `LifecycleManager.getHistory()` | `event.occurredAt` |
-| Approval | `ApprovalService.getEvents()` | `event.occurredAt` |
+| Source    | Service Method                   | Timestamp Field    |
+| --------- | -------------------------------- | ------------------ |
+| Audit     | `AuditLogger.getResourceAudit()` | `event.timestamp`  |
+| Lifecycle | `LifecycleManager.getHistory()`  | `event.occurredAt` |
+| Approval  | `ApprovalService.getEvents()`    | `event.occurredAt` |
 
 **Design decision**: Use union types, not a normalized common format. Each plugin renders its own event type with full fidelity.
 
@@ -991,6 +1028,7 @@ interface ResourceTimelineService {
 ### Problem
 
 For Master entities with approval enabled, the flow should be:
+
 1. Propose change → create draft version
 2. Diff view: active version vs. draft version
 3. Submit for approval → approvers see the diff
@@ -999,20 +1037,20 @@ For Master entities with approval enabled, the flow should be:
 
 ### Backend Additions Required
 
-| Component | Description |
-|-----------|-------------|
-| Draft version concept | `EntityVersion` with `status: "draft"` (new field or convention) |
-| Diff engine | Compare active `EntitySchema` vs. draft `EntitySchema` → structured diff |
-| Approval hook | On approval completion → `MetaRegistry.activateVersion()` |
-| Version promotion | Atomic: deactivate current + activate draft |
+| Component             | Description                                                              |
+| --------------------- | ------------------------------------------------------------------------ |
+| Draft version concept | `EntityVersion` with `status: "draft"` (new field or convention)         |
+| Diff engine           | Compare active `EntitySchema` vs. draft `EntitySchema` → structured diff |
+| Approval hook         | On approval completion → `MetaRegistry.activateVersion()`                |
+| Version promotion     | Atomic: deactivate current + activate draft                              |
 
 ### UI Additions
 
-| Component | Description |
-|-----------|-------------|
-| "Propose Change" action | Creates draft version, opens edit mode |
-| Diff viewer | Side-by-side comparison: current vs. proposed fields/policies |
-| Approval tab enrichment | Shows diff alongside approval decisions |
+| Component               | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| "Propose Change" action | Creates draft version, opens edit mode                        |
+| Diff viewer             | Side-by-side comparison: current vs. proposed fields/policies |
+| Approval tab enrichment | Shows diff alongside approval decisions                       |
 
 **Note**: This requires `MetaRegistry.activateVersion()` to be extended with approval context. The current implementation exists but lacks the draft-promotion-on-approval hook.
 
@@ -1024,21 +1062,21 @@ For Master entities with approval enabled, the flow should be:
 
 The posting plugin requires a posting engine that does not yet exist. Required backend:
 
-| Component | Description |
-|-----------|-------------|
-| Posting run model | `meta.posting_run` table: entity_ref, period, status, journal entries |
-| Journal entry model | `meta.journal_entry` table: debit/credit, account, amount, currency |
-| Subledger/GL integration | Posting impact definition per entity |
-| Reversal model | Linked reversal entries with reason tracking |
+| Component                | Description                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| Posting run model        | `meta.posting_run` table: entity_ref, period, status, journal entries |
+| Journal entry model      | `meta.journal_entry` table: debit/credit, account, amount, currency   |
+| Subledger/GL integration | Posting impact definition per entity                                  |
+| Reversal model           | Linked reversal entries with reason tracking                          |
 
 ### Plugin Contributions (Future)
 
-| Contribution | Details |
-|---|---|
-| **Tab** | `code: "accounting"`, visible when `capabilities.posting` |
-| **Badge** | `type: "posting"`, value = posting status ("Not Posted", "Simulated", "Posted", "Reversed") |
-| **Actions** | `posting.simulate`, `posting.post`, `posting.reverse` |
-| **Drawer** | `code: "accounting"`, peek = journal summary + posting status |
+| Contribution | Details                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| **Tab**      | `code: "accounting"`, visible when `capabilities.posting`                                   |
+| **Badge**    | `type: "posting"`, value = posting status ("Not Posted", "Simulated", "Posted", "Reversed") |
+| **Actions**  | `posting.simulate`, `posting.post`, `posting.reverse`                                       |
+| **Drawer**   | `code: "accounting"`, peek = journal summary + posting status                               |
 
 ### Feature Flag
 
@@ -1063,45 +1101,45 @@ Every disabled action MUST include:
 
 **Backend implementation**: The `EntityPageDescriptorService` computes reasons from:
 
-| `blockedBy` | Source |
-|-------------|--------|
-| `feature` | `EntityFeatureFlags` check |
-| `policy` | `PolicyGate.authorize()` → `PolicyDecision.reason` |
-| `state` | `LifecycleManager.canTransition()` → `LifecycleTransitionResult.reason` |
-| `approval` | `ApprovalService.getInstanceForEntity()` → active instance exists |
-| `validation` | `CompiledModel` validators (basic) or custom validation rules |
+| `blockedBy`  | Source                                                                  |
+| ------------ | ----------------------------------------------------------------------- |
+| `feature`    | `EntityFeatureFlags` check                                              |
+| `policy`     | `PolicyGate.authorize()` → `PolicyDecision.reason`                      |
+| `state`      | `LifecycleManager.canTransition()` → `LifecycleTransitionResult.reason` |
+| `approval`   | `ApprovalService.getInstanceForEntity()` → active instance exists       |
+| `validation` | `CompiledModel` validators (basic) or custom validation rules           |
 
 ### B) Deterministic UI
 
 **Non-negotiable rule**: The frontend NEVER computes "can I do this?"
 
-| Frontend Does | Frontend Does NOT |
-|---------------|-------------------|
-| Render enabled/disabled from descriptor | Evaluate policy rules |
-| Show reason text from descriptor | Check lifecycle state transitions |
-| Group actions by `group` field | Determine action eligibility |
-| Open drawer from badge click | Compute approval status |
-| Submit action to server endpoint | Execute business logic |
+| Frontend Does                           | Frontend Does NOT                 |
+| --------------------------------------- | --------------------------------- |
+| Render enabled/disabled from descriptor | Evaluate policy rules             |
+| Show reason text from descriptor        | Check lifecycle state transitions |
+| Group actions by `group` field          | Determine action eligibility      |
+| Open drawer from badge click            | Compute approval status           |
+| Submit action to server endpoint        | Execute business logic            |
 
 ### C) Performance
 
-| Strategy | Implementation |
-|----------|---------------|
-| Static/dynamic descriptor split | Static cached by `entityName` + `modelHash`; dynamic per-request |
-| Batch policy checks | `PolicyGate.authorizeMany()` — single pass through compiled policies |
-| Parallel service calls | Descriptor service calls lifecycle + approval + policy concurrently |
-| ETag-based caching | `modelHash` as ETag for static descriptor; 304 Not Modified |
-| Drawer lazy loading | Drawer content loaded on-demand, not with page |
+| Strategy                        | Implementation                                                       |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Static/dynamic descriptor split | Static cached by `entityName` + `modelHash`; dynamic per-request     |
+| Batch policy checks             | `PolicyGate.authorizeMany()` — single pass through compiled policies |
+| Parallel service calls          | Descriptor service calls lifecycle + approval + policy concurrently  |
+| ETag-based caching              | `modelHash` as ETag for static descriptor; 304 Not Modified          |
+| Drawer lazy loading             | Drawer content loaded on-demand, not with page                       |
 
 ### D) Security
 
-| Rule | Enforcement |
-|------|-------------|
-| All actions executed server-side | `POST .../actions/:actionCode` — no client-side execution |
-| Policy checked per action | `PolicyGate.enforce()` before every action dispatch |
-| Tenant isolation | `RequestContext.tenantId` enforced on every query |
-| CSRF protection | Existing middleware: `__csrf` cookie + `x-csrf-token` header |
-| Session validation | Existing middleware: `neon_sid` cookie, Redis-backed sessions |
+| Rule                             | Enforcement                                                   |
+| -------------------------------- | ------------------------------------------------------------- |
+| All actions executed server-side | `POST .../actions/:actionCode` — no client-side execution     |
+| Policy checked per action        | `PolicyGate.enforce()` before every action dispatch           |
+| Tenant isolation                 | `RequestContext.tenantId` enforced on every query             |
+| CSRF protection                  | Existing middleware: `__csrf` cookie + `x-csrf-token` header  |
+| Session validation               | Existing middleware: `neon_sid` cookie, Redis-backed sessions |
 
 ### E) Error Contract
 
@@ -1164,6 +1202,7 @@ Fixed layout skeleton — never changes across entities. Only content varies.
 ```
 
 **Drawer usage rule**:
+
 - **Drawer** = quick peek (approval status, last 5 audit events, attachment count)
 - **Tab** = full exploration (approval history, complete audit log, all attachments)
 - Badge click → opens drawer. Tab click → full view.
@@ -1174,28 +1213,28 @@ Fixed layout skeleton — never changes across entities. Only content varies.
 
 ### Enterprise-Grade Patterns
 
-| Pattern | Implementation |
-|---------|---------------|
-| **Status-first UI** | Lifecycle + approval + posting badges always visible in header |
-| **Drawer-based deep views** | Right drawer for quick checks without leaving current context |
-| **Explainable disabled actions** | Disabled button + tooltip showing reason code + text |
-| **Consistency rule** | Same Approval tab UI for invoices, purchase orders, master changes |
-| **Side-by-side diff for masters** | Version comparison in Approvals tab when reviewing master changes |
-| **Event timeline** | Unified timeline combining lifecycle + approval + audit events |
-| **Contextual quick actions** | Header actions change based on state — never "random buttons" |
-| **Progressive disclosure** | Drawer → Tab → Detail dialog, increasing depth |
+| Pattern                           | Implementation                                                     |
+| --------------------------------- | ------------------------------------------------------------------ |
+| **Status-first UI**               | Lifecycle + approval + posting badges always visible in header     |
+| **Drawer-based deep views**       | Right drawer for quick checks without leaving current context      |
+| **Explainable disabled actions**  | Disabled button + tooltip showing reason code + text               |
+| **Consistency rule**              | Same Approval tab UI for invoices, purchase orders, master changes |
+| **Side-by-side diff for masters** | Version comparison in Approvals tab when reviewing master changes  |
+| **Event timeline**                | Unified timeline combining lifecycle + approval + audit events     |
+| **Contextual quick actions**      | Header actions change based on state — never "random buttons"      |
+| **Progressive disclosure**        | Drawer → Tab → Detail dialog, increasing depth                     |
 
 ### Master vs. Document UX Differences
 
 Both use the same `EntityPageShell`. Layout preset drives the difference:
 
-| Aspect | Master (`layoutPreset: "master"`) | Document (`layoutPreset: "document"`) |
-|--------|-----------------------------------|---------------------------------------|
-| Form layout | Stable attributes + related entity lists | Header section + line items grid + totals |
-| Approval context | "Change Request" — diff view between versions | "Business Authorization" — approve the document |
-| Lifecycle focus | Active/Inactive toggle | Full lifecycle: Draft → Submitted → Approved → Posted |
-| Numbering | Code-based (manual or configured) | Auto-generated via NumberingEngine |
-| Key fields | Code, Name, Category, Status | Document Number, Posting Date, Currency, Amount |
+| Aspect           | Master (`layoutPreset: "master"`)             | Document (`layoutPreset: "document"`)                 |
+| ---------------- | --------------------------------------------- | ----------------------------------------------------- |
+| Form layout      | Stable attributes + related entity lists      | Header section + line items grid + totals             |
+| Approval context | "Change Request" — diff view between versions | "Business Authorization" — approve the document       |
+| Lifecycle focus  | Active/Inactive toggle                        | Full lifecycle: Draft → Submitted → Approved → Posted |
+| Numbering        | Code-based (manual or configured)             | Auto-generated via NumberingEngine                    |
+| Key fields       | Code, Name, Category, Status                  | Document Number, Posting Date, Currency, Amount       |
 
 ---
 
@@ -1203,25 +1242,25 @@ Both use the same `EntityPageShell`. Layout preset drives the difference:
 
 Current implementation status of all backend services required by this framework:
 
-| Service | Token | Contract | Implementation | Status |
-|---------|-------|----------|----------------|--------|
-| MetaRegistry | `meta.registry` | `MetaRegistry` | `MetaRegistryService` | Built |
-| MetaCompiler | `meta.compiler` | `MetaCompiler` | `MetaCompilerService` | Built |
-| PolicyGate | `meta.policyGate` | `PolicyGate` | `PolicyGateService` | Built |
-| AuditLogger | `meta.auditLogger` | `AuditLogger` | `AuditLoggerService` | Built |
-| GenericDataAPI | `meta.dataAPI` | `GenericDataAPI` | `GenericDataAPIService` | Built |
-| MetaStore | `meta.store` | `MetaStore` | `MetaStoreService` | Built |
-| LifecycleRouteCompiler | — | `LifecycleRouteCompiler` | `LifecycleRouteCompilerService` | Built |
-| LifecycleManager | — | `LifecycleManager` | `LifecycleManagerService` | Built |
-| ApprovalService | `meta.approvalService` | `ApprovalService` | `ApprovalServiceImpl` | Built |
-| ClassificationService | `meta.classificationService` | `EntityClassificationService` | `EntityClassificationServiceImpl` | Built |
-| NumberingEngine | `meta.numberingEngine` | `NumberingEngine` | `NumberingEngineService` | Built |
-| DdlGenerator | — | `DdlGenerator` | `DdlGeneratorService` | Built |
-| **EntityPageDescriptorService** | `ui.entityPageDescriptor` | — | — | **New** |
-| **ActionDispatcher** | `ui.actionDispatcher` | — | — | **New** |
-| **ResourceTimelineService** | `ui.timeline` | — | — | **New (Phase 5)** |
-| **AttachmentService** | `ui.attachments` | — | — | **New (Phase 4)** |
-| **PolicyGate.authorizeMany()** | — | — | — | **New method** |
+| Service                         | Token                        | Contract                      | Implementation                    | Status            |
+| ------------------------------- | ---------------------------- | ----------------------------- | --------------------------------- | ----------------- |
+| MetaRegistry                    | `meta.registry`              | `MetaRegistry`                | `MetaRegistryService`             | Built             |
+| MetaCompiler                    | `meta.compiler`              | `MetaCompiler`                | `MetaCompilerService`             | Built             |
+| PolicyGate                      | `meta.policyGate`            | `PolicyGate`                  | `PolicyGateService`               | Built             |
+| AuditLogger                     | `meta.auditLogger`           | `AuditLogger`                 | `AuditLoggerService`              | Built             |
+| GenericDataAPI                  | `meta.dataAPI`               | `GenericDataAPI`              | `GenericDataAPIService`           | Built             |
+| MetaStore                       | `meta.store`                 | `MetaStore`                   | `MetaStoreService`                | Built             |
+| LifecycleRouteCompiler          | —                            | `LifecycleRouteCompiler`      | `LifecycleRouteCompilerService`   | Built             |
+| LifecycleManager                | —                            | `LifecycleManager`            | `LifecycleManagerService`         | Built             |
+| ApprovalService                 | `meta.approvalService`       | `ApprovalService`             | `ApprovalServiceImpl`             | Built             |
+| ClassificationService           | `meta.classificationService` | `EntityClassificationService` | `EntityClassificationServiceImpl` | Built             |
+| NumberingEngine                 | `meta.numberingEngine`       | `NumberingEngine`             | `NumberingEngineService`          | Built             |
+| DdlGenerator                    | —                            | `DdlGenerator`                | `DdlGeneratorService`             | Built             |
+| **EntityPageDescriptorService** | `ui.entityPageDescriptor`    | —                             | —                                 | **New**           |
+| **ActionDispatcher**            | `ui.actionDispatcher`        | —                             | —                                 | **New**           |
+| **ResourceTimelineService**     | `ui.timeline`                | —                             | —                                 | **New (Phase 5)** |
+| **AttachmentService**           | `ui.attachments`             | —                             | —                                 | **New (Phase 4)** |
+| **PolicyGate.authorizeMany()**  | —                            | —                             | —                                 | **New method**    |
 
 ### Circular Dependency Note
 
@@ -1247,97 +1286,97 @@ This also naturally feeds the Phase 5 unified timeline.
 
 ### Phase 0 — Lock Contracts (1–2 days)
 
-| Deliverable | Description |
-|-------------|-------------|
-| Descriptor schema types | `EntityPageDescriptor` + all sub-types in `@athyper/core/meta` |
-| Reason code enum | `ReasonCode` type with all stable codes |
-| Action group rules | `ActionGroup` type and grouping rules |
-| `PolicyGate.authorizeMany()` | Add batch policy check to contract |
-| New feature flags | Add `lifecycle_enabled`, `attachments_enabled`, `posting_enabled` to `EntityFeatureFlags` |
+| Deliverable                  | Description                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Descriptor schema types      | `EntityPageDescriptor` + all sub-types in `@athyper/core/meta`                            |
+| Reason code enum             | `ReasonCode` type with all stable codes                                                   |
+| Action group rules           | `ActionGroup` type and grouping rules                                                     |
+| `PolicyGate.authorizeMany()` | Add batch policy check to contract                                                        |
+| New feature flags            | Add `lifecycle_enabled`, `attachments_enabled`, `posting_enabled` to `EntityFeatureFlags` |
 
 **Outcome**: All contracts locked. No ambiguity for implementors.
 
 ### Phase 1 — Backend: Descriptor Engine (Week 1)
 
-| Task | Description |
-|------|-------------|
-| `EntityPageDescriptorService` | Orchestrates all services → `EntityPageDescriptor` |
-| `ActionDispatcher` | Routes action codes to correct backend service |
-| Static descriptor endpoint | `GET /api/ui/entity-page/:entityName` |
-| Dynamic descriptor endpoint | `GET /api/ui/entity-page/:entityName/:id` |
-| Action execution endpoint | `POST /api/ui/entity-page/:entityName/:id/actions/:actionCode` |
-| Drawer content endpoint | `GET /api/ui/entity-page/:entityName/:id/drawer/:drawerCode` |
-| `PolicyGate.authorizeMany()` impl | Batch policy evaluation |
+| Task                              | Description                                                    |
+| --------------------------------- | -------------------------------------------------------------- |
+| `EntityPageDescriptorService`     | Orchestrates all services → `EntityPageDescriptor`             |
+| `ActionDispatcher`                | Routes action codes to correct backend service                 |
+| Static descriptor endpoint        | `GET /api/ui/entity-page/:entityName`                          |
+| Dynamic descriptor endpoint       | `GET /api/ui/entity-page/:entityName/:id`                      |
+| Action execution endpoint         | `POST /api/ui/entity-page/:entityName/:id/actions/:actionCode` |
+| Drawer content endpoint           | `GET /api/ui/entity-page/:entityName/:id/drawer/:drawerCode`   |
+| `PolicyGate.authorizeMany()` impl | Batch policy evaluation                                        |
 
 **Outcome**: React becomes a renderer. All business logic stays server-side.
 
 ### Phase 2 — Frontend: Entity Page Shell (Week 2)
 
-| Task | Description |
-|------|-------------|
-| `EntityPageShell` component | Single-route universal entity page |
-| Header component | Entity info + badges + action bar |
-| Tab bar component | Dynamic tabs from descriptor |
-| Context drawer component | Right-side drawer, opened from badges |
-| Plugin registry | Frontend plugin registration and lookup |
-| Details tab | Default form rendering from `CompiledModel` fields |
-| Action execution hooks | `useActionExecutor` — calls server endpoint, handles response |
+| Task                        | Description                                                   |
+| --------------------------- | ------------------------------------------------------------- |
+| `EntityPageShell` component | Single-route universal entity page                            |
+| Header component            | Entity info + badges + action bar                             |
+| Tab bar component           | Dynamic tabs from descriptor                                  |
+| Context drawer component    | Right-side drawer, opened from badges                         |
+| Plugin registry             | Frontend plugin registration and lookup                       |
+| Details tab                 | Default form rendering from `CompiledModel` fields            |
+| Action execution hooks      | `useActionExecutor` — calls server endpoint, handles response |
 
 **Outcome**: One page renders all entities. No duplication.
 
 ### Phase 3 — Plugins: Lifecycle + Approval (Weeks 2–3)
 
-| Task | Description |
-|------|-------------|
-| Lifecycle tab component | State visualization + history + transitions |
-| Lifecycle drawer (peek) | Current state + last 3 events |
-| Approval tab component | Stage timeline + tasks + decisions |
-| Approval drawer (peek) | Status + my tasks + last 5 events |
+| Task                        | Description                                               |
+| --------------------------- | --------------------------------------------------------- |
+| Lifecycle tab component     | State visualization + history + transitions               |
+| Lifecycle drawer (peek)     | Current state + last 3 events                             |
+| Approval tab component      | Stage timeline + tasks + decisions                        |
+| Approval drawer (peek)      | Status + my tasks + last 5 events                         |
 | Action confirmation dialogs | Note input for approve/reject, confirm for danger actions |
 
 **Outcome**: Approvable framework visible and consistent for end users.
 
 ### Phase 4 — Audit + Attachments (Weeks 3–4)
 
-| Task | Description |
-|------|-------------|
-| Audit tab component | Full event list + filters |
-| Audit drawer (peek) | Last 5 events |
-| `meta.entity_attachment` table | New database table (see Appendix C) |
-| Attachment service | CRUD + pre-signed URL generation |
-| Attachment API endpoints | List, upload, download, delete |
-| Attachments tab component | File list + upload + policy-gated delete |
-| Attachments drawer (peek) | Last 3 + count |
+| Task                           | Description                              |
+| ------------------------------ | ---------------------------------------- |
+| Audit tab component            | Full event list + filters                |
+| Audit drawer (peek)            | Last 5 events                            |
+| `meta.entity_attachment` table | New database table (see Appendix C)      |
+| Attachment service             | CRUD + pre-signed URL generation         |
+| Attachment API endpoints       | List, upload, download, delete           |
+| Attachments tab component      | File list + upload + policy-gated delete |
+| Attachments drawer (peek)      | Last 3 + count                           |
 
 **Outcome**: Enterprise document UX complete.
 
 ### Phase 5 — Unified Timeline (Week 4)
 
-| Task | Description |
-|------|-------------|
+| Task                      | Description                               |
+| ------------------------- | ----------------------------------------- |
 | `ResourceTimelineService` | Merge audit + lifecycle + approval events |
-| Timeline drawer | Peek last 5 merged events |
-| Timeline tab (optional) | Full merged timeline with source filters |
+| Timeline drawer           | Peek last 5 merged events                 |
+| Timeline tab (optional)   | Full merged timeline with source filters  |
 
 **Outcome**: Single source of truth for "what happened to this record."
 
 ### Phase 6 — Master Change Request / Diff (Phase 2 Epic)
 
-| Task | Description |
-|------|-------------|
-| Draft version model | `EntityVersion.status: "draft"` |
-| Diff computation engine | Active vs. draft schema comparison |
+| Task                        | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| Draft version model         | `EntityVersion.status: "draft"`               |
+| Diff computation engine     | Active vs. draft schema comparison            |
 | Approval-to-activation hook | Promote draft → active on approval completion |
-| Diff viewer component | Side-by-side field/policy comparison |
+| Diff viewer component       | Side-by-side field/policy comparison          |
 
 ### Phase 7 — Posting Plugin (Phase 2 Epic)
 
-| Task | Description |
-|------|-------------|
-| Posting engine (full epic) | Runs, journals, reversals |
-| Accounting tab | Journal preview + posting history |
-| Posting drawer | Status + journal summary |
-| Posting actions | Simulate, Post, Reverse |
+| Task                       | Description                       |
+| -------------------------- | --------------------------------- |
+| Posting engine (full epic) | Runs, journals, reversals         |
+| Accounting tab             | Journal preview + posting history |
+| Posting drawer             | Status + journal summary          |
+| Posting actions            | Simulate, Post, Reverse           |
 
 ---
 
@@ -1540,64 +1579,64 @@ All contracts defined in `framework/core/src/meta/contracts.ts`.
 
 ### Key Interfaces (Summary)
 
-| Interface | Methods | Token |
-|-----------|---------|-------|
-| `MetaRegistry` | createEntity, getEntity, listEntities, updateEntity, deleteEntity, createVersion, getVersion, getActiveVersion, listVersions, activateVersion, deactivateVersion, updateVersion, deleteVersion | `meta.registry` |
-| `MetaCompiler` | compile, recompile, validate, invalidateCache, getCached, precompileAll, healthCheck | `meta.compiler` |
-| `PolicyGate` | can *(deprecated)*, authorize, enforce, getPolicies, evaluatePolicy, getAllowedFields, invalidatePolicyCache, healthCheck | `meta.policyGate` |
-| `AuditLogger` | log, query, getEvent, getRecent, getResourceAudit, getUserAudit, getTenantAudit, healthCheck | `meta.auditLogger` |
-| `GenericDataAPI` | list, get, count, create, update, delete, restore, permanentDelete, bulkCreate, bulkUpdate, bulkDelete, healthCheck | `meta.dataAPI` |
-| `MetaStore` | getCompiledModel, getEntityWithCompiledModel, createEntityWithVersion, publishVersion, getSchema, healthCheck | `meta.store` |
-| `LifecycleRouteCompiler` | compile, recompile, resolveLifecycle, getCached, invalidateCache, precompileAll, healthCheck | — |
-| `LifecycleManager` | createInstance, getInstance, getInstanceOrFail, transition, canTransition, getAvailableTransitions, validateGates, requiresApproval, getHistory, getCurrentState, isTerminalState, enforceTerminalState, healthCheck | — |
-| `ApprovalService` | createApprovalInstance, getInstance, getInstanceForEntity, getTask, getTasksForInstance, getTasksForUser, getAssignmentSnapshot, makeDecision, isInstanceComplete, isStageComplete, scheduleReminder, scheduleEscalation, processReminder, processEscalation, cancelTimers, getEvents, getEscalations, healthCheck | `meta.approvalService` |
-| `EntityClassificationService` | resolveClass, resolveFeatureFlags, getClassification | `meta.classificationService` |
-| `NumberingEngine` | generateNumber, previewNextNumber, getRule, healthCheck | `meta.numberingEngine` |
-| `DdlGenerator` | generateDdl, generateBatch, generateMigrationScript | — |
+| Interface                     | Methods                                                                                                                                                                                                                                                                                                            | Token                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| `MetaRegistry`                | createEntity, getEntity, listEntities, updateEntity, deleteEntity, createVersion, getVersion, getActiveVersion, listVersions, activateVersion, deactivateVersion, updateVersion, deleteVersion                                                                                                                     | `meta.registry`              |
+| `MetaCompiler`                | compile, recompile, validate, invalidateCache, getCached, precompileAll, healthCheck                                                                                                                                                                                                                               | `meta.compiler`              |
+| `PolicyGate`                  | can _(deprecated)_, authorize, enforce, getPolicies, evaluatePolicy, getAllowedFields, invalidatePolicyCache, healthCheck                                                                                                                                                                                          | `meta.policyGate`            |
+| `AuditLogger`                 | log, query, getEvent, getRecent, getResourceAudit, getUserAudit, getTenantAudit, healthCheck                                                                                                                                                                                                                       | `meta.auditLogger`           |
+| `GenericDataAPI`              | list, get, count, create, update, delete, restore, permanentDelete, bulkCreate, bulkUpdate, bulkDelete, healthCheck                                                                                                                                                                                                | `meta.dataAPI`               |
+| `MetaStore`                   | getCompiledModel, getEntityWithCompiledModel, createEntityWithVersion, publishVersion, getSchema, healthCheck                                                                                                                                                                                                      | `meta.store`                 |
+| `LifecycleRouteCompiler`      | compile, recompile, resolveLifecycle, getCached, invalidateCache, precompileAll, healthCheck                                                                                                                                                                                                                       | —                            |
+| `LifecycleManager`            | createInstance, getInstance, getInstanceOrFail, transition, canTransition, getAvailableTransitions, validateGates, requiresApproval, getHistory, getCurrentState, isTerminalState, enforceTerminalState, healthCheck                                                                                               | —                            |
+| `ApprovalService`             | createApprovalInstance, getInstance, getInstanceForEntity, getTask, getTasksForInstance, getTasksForUser, getAssignmentSnapshot, makeDecision, isInstanceComplete, isStageComplete, scheduleReminder, scheduleEscalation, processReminder, processEscalation, cancelTimers, getEvents, getEscalations, healthCheck | `meta.approvalService`       |
+| `EntityClassificationService` | resolveClass, resolveFeatureFlags, getClassification                                                                                                                                                                                                                                                               | `meta.classificationService` |
+| `NumberingEngine`             | generateNumber, previewNextNumber, getRule, healthCheck                                                                                                                                                                                                                                                            | `meta.numberingEngine`       |
+| `DdlGenerator`                | generateDdl, generateBatch, generateMigrationScript                                                                                                                                                                                                                                                                | —                            |
 
 ### Existing HTTP Routes (meta module)
 
-| Method | Path | Handler |
-|--------|------|---------|
-| `POST` | `/api/meta/entities` | CreateEntityHandler |
-| `GET` | `/api/meta/entities` | ListEntitiesHandler |
-| `GET` | `/api/meta/entities/:name` | GetEntityHandler |
-| `PUT` | `/api/meta/entities/:name` | UpdateEntityHandler |
-| `DELETE` | `/api/meta/entities/:name` | DeleteEntityHandler |
-| `POST` | `/api/meta/entities/:name/versions` | CreateVersionHandler |
-| `GET` | `/api/meta/entities/:name/versions` | ListVersionsHandler |
-| `GET` | `/api/meta/entities/:name/versions/:version` | GetVersionHandler |
-| `POST` | `/api/meta/entities/:name/versions/:version/activate` | ActivateVersionHandler |
-| `DELETE` | `/api/meta/entities/:name/versions/:version` | DeleteVersionHandler |
-| `GET` | `/api/data/:entity` | ListRecordsHandler |
-| `GET` | `/api/data/:entity/:id` | GetRecordHandler |
-| `GET` | `/api/data/:entity/count` | CountRecordsHandler |
-| `POST` | `/api/data/:entity` | CreateRecordHandler |
-| `PUT` | `/api/data/:entity/:id` | UpdateRecordHandler |
-| `DELETE` | `/api/data/:entity/:id` | DeleteRecordHandler |
-| `POST` | `/api/data/:entity/:id/restore` | RestoreRecordHandler |
-| `DELETE` | `/api/data/:entity/:id/permanent` | PermanentDeleteRecordHandler |
-| `POST` | `/api/data/:entity/bulk` | BulkCreateRecordsHandler |
-| `PATCH` | `/api/data/:entity/bulk` | BulkUpdateRecordsHandler |
-| `DELETE` | `/api/data/:entity/bulk` | BulkDeleteRecordsHandler |
+| Method   | Path                                                  | Handler                      |
+| -------- | ----------------------------------------------------- | ---------------------------- |
+| `POST`   | `/api/meta/entities`                                  | CreateEntityHandler          |
+| `GET`    | `/api/meta/entities`                                  | ListEntitiesHandler          |
+| `GET`    | `/api/meta/entities/:name`                            | GetEntityHandler             |
+| `PUT`    | `/api/meta/entities/:name`                            | UpdateEntityHandler          |
+| `DELETE` | `/api/meta/entities/:name`                            | DeleteEntityHandler          |
+| `POST`   | `/api/meta/entities/:name/versions`                   | CreateVersionHandler         |
+| `GET`    | `/api/meta/entities/:name/versions`                   | ListVersionsHandler          |
+| `GET`    | `/api/meta/entities/:name/versions/:version`          | GetVersionHandler            |
+| `POST`   | `/api/meta/entities/:name/versions/:version/activate` | ActivateVersionHandler       |
+| `DELETE` | `/api/meta/entities/:name/versions/:version`          | DeleteVersionHandler         |
+| `GET`    | `/api/data/:entity`                                   | ListRecordsHandler           |
+| `GET`    | `/api/data/:entity/:id`                               | GetRecordHandler             |
+| `GET`    | `/api/data/:entity/count`                             | CountRecordsHandler          |
+| `POST`   | `/api/data/:entity`                                   | CreateRecordHandler          |
+| `PUT`    | `/api/data/:entity/:id`                               | UpdateRecordHandler          |
+| `DELETE` | `/api/data/:entity/:id`                               | DeleteRecordHandler          |
+| `POST`   | `/api/data/:entity/:id/restore`                       | RestoreRecordHandler         |
+| `DELETE` | `/api/data/:entity/:id/permanent`                     | PermanentDeleteRecordHandler |
+| `POST`   | `/api/data/:entity/bulk`                              | BulkCreateRecordsHandler     |
+| `PATCH`  | `/api/data/:entity/bulk`                              | BulkUpdateRecordsHandler     |
+| `DELETE` | `/api/data/:entity/bulk`                              | BulkDeleteRecordsHandler     |
 
 ### Existing HTTP Routes (UI module)
 
-| Method | Path | Handler |
-|--------|------|---------|
-| `GET` | `/api/ui/dashboards` | ListDashboardsHandler |
-| `GET` | `/api/ui/dashboards/:id` | GetDashboardHandler |
-| `GET` | `/api/ui/dashboards/:id/draft` | GetDraftHandler |
-| `POST` | `/api/ui/dashboards` | CreateDashboardHandler |
-| `POST` | `/api/ui/dashboards/:id/duplicate` | DuplicateDashboardHandler |
-| `PATCH` | `/api/ui/dashboards/:id` | UpdateDashboardHandler |
-| `PUT` | `/api/ui/dashboards/:id/layout` | SaveDraftLayoutHandler |
-| `POST` | `/api/ui/dashboards/:id/publish` | PublishDashboardHandler |
-| `DELETE` | `/api/ui/dashboards/:id/draft` | DiscardDraftHandler |
-| `DELETE` | `/api/ui/dashboards/:id` | DeleteDashboardHandler |
-| `GET` | `/api/ui/dashboards/:id/acl` | ListAclHandler |
-| `POST` | `/api/ui/dashboards/:id/acl` | AddAclHandler |
-| `DELETE` | `/api/ui/dashboards/:id/acl/:aclId` | RemoveAclHandler |
+| Method   | Path                                | Handler                   |
+| -------- | ----------------------------------- | ------------------------- |
+| `GET`    | `/api/ui/dashboards`                | ListDashboardsHandler     |
+| `GET`    | `/api/ui/dashboards/:id`            | GetDashboardHandler       |
+| `GET`    | `/api/ui/dashboards/:id/draft`      | GetDraftHandler           |
+| `POST`   | `/api/ui/dashboards`                | CreateDashboardHandler    |
+| `POST`   | `/api/ui/dashboards/:id/duplicate`  | DuplicateDashboardHandler |
+| `PATCH`  | `/api/ui/dashboards/:id`            | UpdateDashboardHandler    |
+| `PUT`    | `/api/ui/dashboards/:id/layout`     | SaveDraftLayoutHandler    |
+| `POST`   | `/api/ui/dashboards/:id/publish`    | PublishDashboardHandler   |
+| `DELETE` | `/api/ui/dashboards/:id/draft`      | DiscardDraftHandler       |
+| `DELETE` | `/api/ui/dashboards/:id`            | DeleteDashboardHandler    |
+| `GET`    | `/api/ui/dashboards/:id/acl`        | ListAclHandler            |
+| `POST`   | `/api/ui/dashboards/:id/acl`        | AddAclHandler             |
+| `DELETE` | `/api/ui/dashboards/:id/acl/:aclId` | RemoveAclHandler          |
 
 ---
 
@@ -1637,28 +1676,28 @@ CREATE INDEX idx_attachment_uploaded_by
 
 ### Existing Tables Referenced
 
-| Table | Schema | Purpose |
-|-------|--------|---------|
-| `meta.entity` | `meta` | Entity definitions (kind, feature_flags, naming_policy) |
-| `meta.entity_version` | `meta` | Schema versions (schema JSON, is_active) |
-| `meta.lifecycle` | `meta` | Lifecycle definitions (code, name, version) |
-| `meta.lifecycle_state` | `meta` | States within lifecycles (code, is_terminal, sort_order) |
-| `meta.lifecycle_transition` | `meta` | Allowed transitions (from → to, operation_code) |
-| `meta.lifecycle_transition_gate` | `meta` | Gate requirements (required_operations, approval_template_id) |
-| `meta.entity_lifecycle` | `meta` | Entity-to-lifecycle mapping (conditions, priority) |
-| `meta.entity_lifecycle_instance` | `meta` | Runtime lifecycle instances (entity_id → state_id) |
-| `meta.entity_lifecycle_event` | `meta` | Transition audit trail |
-| `meta.approval_template` | `meta` | Approval workflow templates |
-| `meta.approval_template_stage` | `meta` | Stages within templates (mode: serial/parallel) |
-| `meta.approval_template_rule` | `meta` | Assignee resolution rules (conditions → assignTo) |
-| `meta.approval_instance` | `meta` | Runtime approval instances |
-| `meta.approval_stage` | `meta` | Runtime approval stages |
-| `meta.approval_task` | `meta` | Runtime approval tasks |
-| `meta.approval_assignment_snapshot` | `meta` | Immutable assignment records |
-| `meta.approval_event` | `meta` | Approval audit trail |
-| `meta.approval_escalation` | `meta` | Escalation events |
-| `meta.numbering_sequence` | `meta` | Atomic sequence counters (period_key → current_value) |
+| Table                               | Schema | Purpose                                                       |
+| ----------------------------------- | ------ | ------------------------------------------------------------- |
+| `meta.entity`                       | `meta` | Entity definitions (kind, feature_flags, naming_policy)       |
+| `meta.entity_version`               | `meta` | Schema versions (schema JSON, is_active)                      |
+| `meta.lifecycle`                    | `meta` | Lifecycle definitions (code, name, version)                   |
+| `meta.lifecycle_state`              | `meta` | States within lifecycles (code, is_terminal, sort_order)      |
+| `meta.lifecycle_transition`         | `meta` | Allowed transitions (from → to, operation_code)               |
+| `meta.lifecycle_transition_gate`    | `meta` | Gate requirements (required_operations, approval_template_id) |
+| `meta.entity_lifecycle`             | `meta` | Entity-to-lifecycle mapping (conditions, priority)            |
+| `meta.entity_lifecycle_instance`    | `meta` | Runtime lifecycle instances (entity_id → state_id)            |
+| `meta.entity_lifecycle_event`       | `meta` | Transition audit trail                                        |
+| `meta.approval_template`            | `meta` | Approval workflow templates                                   |
+| `meta.approval_template_stage`      | `meta` | Stages within templates (mode: serial/parallel)               |
+| `meta.approval_template_rule`       | `meta` | Assignee resolution rules (conditions → assignTo)             |
+| `meta.approval_instance`            | `meta` | Runtime approval instances                                    |
+| `meta.approval_stage`               | `meta` | Runtime approval stages                                       |
+| `meta.approval_task`                | `meta` | Runtime approval tasks                                        |
+| `meta.approval_assignment_snapshot` | `meta` | Immutable assignment records                                  |
+| `meta.approval_event`               | `meta` | Approval audit trail                                          |
+| `meta.approval_escalation`          | `meta` | Escalation events                                             |
+| `meta.numbering_sequence`           | `meta` | Atomic sequence counters (period_key → current_value)         |
 
 ---
 
-*End of specification.*
+_End of specification._

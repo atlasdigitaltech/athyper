@@ -28,4 +28,5 @@ export const ContentAuditEvent = {
   PERMISSION_GRANTED: "content.permission_granted",
 } as const;
 
-export type ContentAuditEventType = typeof ContentAuditEvent[keyof typeof ContentAuditEvent];
+export type ContentAuditEventType =
+  (typeof ContentAuditEvent)[keyof typeof ContentAuditEvent];

@@ -25,9 +25,7 @@ import type {
 export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private cache = new Map<string, CompiledLifecycleRoute>();
 
-  constructor(
-    private readonly db: LifecycleDB_Type,
-  ) {}
+  constructor(private readonly db: LifecycleDB_Type) {}
 
   /**
    * Compile lifecycle routes for an entity
@@ -35,16 +33,18 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
    */
   async compile(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute> {
     const cacheKey = `${tenantId}:${entityName}`;
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      console.log(JSON.stringify({
-        msg: "lifecycle_route_cache_hit",
-        entityName,
-        tenantId,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_route_cache_hit",
+          entityName,
+          tenantId,
+        }),
+      );
       return cached;
     }
 
@@ -56,16 +56,18 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
    */
   async recompile(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute> {
     const cacheKey = `${tenantId}:${entityName}`;
     this.cache.delete(cacheKey);
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_route_recompile",
-      entityName,
-      tenantId,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_route_recompile",
+        entityName,
+        tenantId,
+      }),
+    );
 
     return this.compileAndCache(entityName, tenantId);
   }
@@ -78,40 +80,46 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   async resolveLifecycle(
     entityName: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<string | undefined> {
     const route = await this.compile(entityName, ctx.tenantId);
 
     // Evaluate rules in priority order
     for (const rule of route.rules) {
       if (this.evaluateConditions(rule.conditions, ctx, record)) {
-        console.log(JSON.stringify({
-          msg: "lifecycle_resolved",
-          entityName,
-          tenantId: ctx.tenantId,
-          lifecycleId: rule.lifecycleId,
-          priority: rule.priority,
-        }));
+        console.log(
+          JSON.stringify({
+            msg: "lifecycle_resolved",
+            entityName,
+            tenantId: ctx.tenantId,
+            lifecycleId: rule.lifecycleId,
+            priority: rule.priority,
+          }),
+        );
         return rule.lifecycleId;
       }
     }
 
     // Fall back to default lifecycle (if configured)
     if (route.defaultLifecycleId) {
-      console.log(JSON.stringify({
-        msg: "lifecycle_resolved_default",
-        entityName,
-        tenantId: ctx.tenantId,
-        lifecycleId: route.defaultLifecycleId,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_resolved_default",
+          entityName,
+          tenantId: ctx.tenantId,
+          lifecycleId: route.defaultLifecycleId,
+        }),
+      );
       return route.defaultLifecycleId;
     }
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_not_resolved",
-      entityName,
-      tenantId: ctx.tenantId,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_not_resolved",
+        entityName,
+        tenantId: ctx.tenantId,
+      }),
+    );
 
     return undefined;
   }
@@ -121,7 +129,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
    */
   async getCached(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute | undefined> {
     const cacheKey = `${tenantId}:${entityName}`;
     return this.cache.get(cacheKey);
@@ -134,11 +142,13 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
     const cacheKey = `${tenantId}:${entityName}`;
     this.cache.delete(cacheKey);
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_route_cache_invalidated",
-      entityName,
-      tenantId,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_route_cache_invalidated",
+        entityName,
+        tenantId,
+      }),
+    );
   }
 
   /**
@@ -162,20 +172,24 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
         const route = await this.compile(row.entity_name, tenantId);
         compiled.push(route);
       } catch (error) {
-        console.error(JSON.stringify({
-          msg: "lifecycle_route_precompile_error",
-          entityName: row.entity_name,
-          tenantId,
-          error: String(error),
-        }));
+        console.error(
+          JSON.stringify({
+            msg: "lifecycle_route_precompile_error",
+            entityName: row.entity_name,
+            tenantId,
+            error: String(error),
+          }),
+        );
       }
     }
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_routes_precompiled",
-      tenantId,
-      count: compiled.length,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_routes_precompiled",
+        tenantId,
+        count: compiled.length,
+      }),
+    );
 
     return compiled;
   }
@@ -186,7 +200,11 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   async healthCheck(): Promise<HealthCheckResult> {
     try {
       // Check database connectivity
-      await this.db.selectFrom("core.entity_lifecycle_instance").select("id").limit(1).execute();
+      await this.db
+        .selectFrom("core.entity_lifecycle_instance")
+        .select("id")
+        .limit(1)
+        .execute();
 
       return {
         healthy: true,
@@ -209,7 +227,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
    */
   private async compileAndCache(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute> {
     const startTime = performance.now();
 
@@ -242,24 +260,28 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
 
       const duration = performance.now() - startTime;
 
-      console.log(JSON.stringify({
-        msg: "lifecycle_route_compiled",
-        entityName,
-        tenantId,
-        ruleCount: rules.length,
-        compiledHash: compiled.compiledHash,
-        durationMs: duration,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_route_compiled",
+          entityName,
+          tenantId,
+          ruleCount: rules.length,
+          compiledHash: compiled.compiledHash,
+          durationMs: duration,
+        }),
+      );
 
       return compiled;
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "lifecycle_route_compile_error",
-        entityName,
-        tenantId,
-        error: String(error),
-        durationMs: performance.now() - startTime,
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "lifecycle_route_compile_error",
+          entityName,
+          tenantId,
+          error: String(error),
+          durationMs: performance.now() - startTime,
+        }),
+      );
       throw error;
     }
   }
@@ -269,7 +291,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
    */
   private async loadEntityLifecycleRules(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityLifecycle[]> {
     const rows = await this.db
       .selectFrom("meta.entity_lifecycle")
@@ -297,7 +319,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private findDefaultLifecycle(rules: EntityLifecycle[]): string | undefined {
     // Find rule with no conditions (unconditional fallback)
     const defaultRule = rules.find(
-      (rule) => !rule.conditions || Object.keys(rule.conditions).length === 0
+      (rule) => !rule.conditions || Object.keys(rule.conditions).length === 0,
     );
 
     return defaultRule?.lifecycleId;
@@ -309,7 +331,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private computeHash(
     entityName: string,
     tenantId: string,
-    rules: EntityLifecycle[]
+    rules: EntityLifecycle[],
   ): string {
     const input = {
       entityName,
@@ -362,7 +384,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private async storeCompiledRoute(
     entityName: string,
     tenantId: string,
-    compiled: CompiledLifecycleRoute
+    compiled: CompiledLifecycleRoute,
   ): Promise<void> {
     await this.db
       .insertInto("meta.entity_lifecycle_route_compiled")
@@ -379,7 +401,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
       .onConflict((oc) =>
         oc.columns(["tenant_id", "entity_name", "compiled_hash"]).doUpdateSet({
           generated_at: (eb) => eb.ref("excluded.generated_at"),
-        })
+        }),
       )
       .execute();
   }
@@ -393,7 +415,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private evaluateConditions(
     conditions: Record<string, unknown> | undefined,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): boolean {
     // No conditions = always match
     if (!conditions || Object.keys(conditions).length === 0) {
@@ -425,7 +447,7 @@ export class LifecycleRouteCompilerService implements LifecycleRouteCompiler {
   private resolveConditionValue(
     path: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): unknown {
     if (path.startsWith("ctx.")) {
       const key = path.substring(4);

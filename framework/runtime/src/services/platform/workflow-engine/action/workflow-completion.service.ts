@@ -37,7 +37,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
   constructor(
     private readonly instanceRepository: IApprovalInstanceRepository,
     private readonly entityStateHandler?: IEntityStateHandler,
-    private readonly notificationService?: INotificationService
+    private readonly notificationService?: INotificationService,
   ) {}
 
   /**
@@ -52,7 +52,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
    */
   async completeAsApproved(
     tenantId: string,
-    instance: ApprovalInstance
+    instance: ApprovalInstance,
   ): Promise<WorkflowCompletionResult> {
     const now = new Date();
     const eventsFired: WorkflowEvent[] = [];
@@ -60,17 +60,21 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
 
     try {
       // Update instance status
-      const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-        status: "approved",
-        entityState: "approved",
-        decision: {
-          outcome: "approved",
-          decidedAt: now,
+      const updatedInstance = await this.instanceRepository.update(
+        tenantId,
+        instance.id,
+        {
+          status: "approved",
+          entityState: "approved",
+          decision: {
+            outcome: "approved",
+            decidedAt: now,
+          },
+          completedAt: now,
+          updatedAt: now,
+          activeStepIds: [],
         },
-        completedAt: now,
-        updatedAt: now,
-        activeStepIds: [],
-      });
+      );
 
       // Update entity state via handler
       const newEntityState: EntityApprovalState = "approved";
@@ -80,7 +84,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
           instance.entity.type,
           instance.entity.id,
           newEntityState,
-          { instanceId: instance.id, reason: "Workflow approved" }
+          { instanceId: instance.id, reason: "Workflow approved" },
         );
       }
 
@@ -90,7 +94,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
         await this.instanceRepository.releaseLock(
           tenantId,
           instance.entity.type,
-          instance.entity.id
+          instance.entity.id,
         );
         entityUnlocked = true;
 
@@ -99,7 +103,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
             tenantId,
             instance.entity.type,
             instance.entity.id,
-            { instanceId: instance.id }
+            { instanceId: instance.id },
           );
         }
       } catch (err) {
@@ -168,12 +172,20 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
       }
 
       // Execute post-approval hooks
-      const hookResults = await this.executeHooks(tenantId, updatedInstance, "approved");
+      const hookResults = await this.executeHooks(
+        tenantId,
+        updatedInstance,
+        "approved",
+      );
       hooksExecuted.push(...hookResults);
 
       // Send completion notification
       if (this.notificationService) {
-        await this.notificationService.sendApprovalComplete(tenantId, updatedInstance, "approved");
+        await this.notificationService.sendApprovalComplete(
+          tenantId,
+          updatedInstance,
+          "approved",
+        );
       }
 
       return {
@@ -205,7 +217,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
   async completeAsRejected(
     tenantId: string,
     instance: ApprovalInstance,
-    reason: string
+    reason: string,
   ): Promise<WorkflowCompletionResult> {
     const now = new Date();
     const eventsFired: WorkflowEvent[] = [];
@@ -215,21 +227,26 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
       // Determine target entity state (could be configurable per template)
       const template = instance.workflowSnapshot.definition;
       const targetState: EntityApprovalState =
-        (template.metadata?.rejectionTargetState as EntityApprovalState) || "rejected";
+        (template.metadata?.rejectionTargetState as EntityApprovalState) ||
+        "rejected";
 
       // Update instance status
-      const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-        status: "rejected",
-        entityState: targetState,
-        decision: {
-          outcome: "rejected",
-          decidedAt: now,
-          reason,
+      const updatedInstance = await this.instanceRepository.update(
+        tenantId,
+        instance.id,
+        {
+          status: "rejected",
+          entityState: targetState,
+          decision: {
+            outcome: "rejected",
+            decidedAt: now,
+            reason,
+          },
+          completedAt: now,
+          updatedAt: now,
+          activeStepIds: [],
         },
-        completedAt: now,
-        updatedAt: now,
-        activeStepIds: [],
-      });
+      );
 
       // Update entity state via handler
       if (this.entityStateHandler) {
@@ -238,7 +255,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
           instance.entity.type,
           instance.entity.id,
           targetState,
-          { instanceId: instance.id, reason: `Workflow rejected: ${reason}` }
+          { instanceId: instance.id, reason: `Workflow rejected: ${reason}` },
         );
       }
 
@@ -248,7 +265,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
         await this.instanceRepository.releaseLock(
           tenantId,
           instance.entity.type,
-          instance.entity.id
+          instance.entity.id,
         );
         entityUnlocked = true;
 
@@ -257,7 +274,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
             tenantId,
             instance.entity.type,
             instance.entity.id,
-            { instanceId: instance.id }
+            { instanceId: instance.id },
           );
         }
       } catch (err) {
@@ -312,12 +329,20 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
       eventsFired.push(stateChangedEvent);
 
       // Execute post-rejection hooks
-      const hookResults = await this.executeHooks(tenantId, updatedInstance, "rejected");
+      const hookResults = await this.executeHooks(
+        tenantId,
+        updatedInstance,
+        "rejected",
+      );
       hooksExecuted.push(...hookResults);
 
       // Send completion notification
       if (this.notificationService) {
-        await this.notificationService.sendApprovalComplete(tenantId, updatedInstance, "rejected");
+        await this.notificationService.sendApprovalComplete(
+          tenantId,
+          updatedInstance,
+          "rejected",
+        );
       }
 
       return {
@@ -350,7 +375,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
     tenantId: string,
     instance: ApprovalInstance,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<WorkflowCompletionResult> {
     const now = new Date();
     const eventsFired: WorkflowEvent[] = [];
@@ -358,20 +383,24 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
 
     try {
       // Update instance status
-      const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-        status: "cancelled",
-        entityState: "cancelled",
-        decision: {
-          outcome: "cancelled",
-          decidedAt: now,
-          decidedBy: userId,
-          reason: reason || "Cancelled by user",
+      const updatedInstance = await this.instanceRepository.update(
+        tenantId,
+        instance.id,
+        {
+          status: "cancelled",
+          entityState: "cancelled",
+          decision: {
+            outcome: "cancelled",
+            decidedAt: now,
+            decidedBy: userId,
+            reason: reason || "Cancelled by user",
+          },
+          completedAt: now,
+          updatedAt: now,
+          updatedBy: userId,
+          activeStepIds: [],
         },
-        completedAt: now,
-        updatedAt: now,
-        updatedBy: userId,
-        activeStepIds: [],
-      });
+      );
 
       // Update entity state via handler
       const newEntityState: EntityApprovalState = "cancelled";
@@ -381,7 +410,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
           instance.entity.type,
           instance.entity.id,
           newEntityState,
-          { instanceId: instance.id, reason: reason || "Workflow cancelled" }
+          { instanceId: instance.id, reason: reason || "Workflow cancelled" },
         );
       }
 
@@ -391,7 +420,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
         await this.instanceRepository.releaseLock(
           tenantId,
           instance.entity.type,
-          instance.entity.id
+          instance.entity.id,
         );
         entityUnlocked = true;
 
@@ -400,7 +429,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
             tenantId,
             instance.entity.type,
             instance.entity.id,
-            { instanceId: instance.id }
+            { instanceId: instance.id },
           );
         }
       } catch (err) {
@@ -438,7 +467,11 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
       eventsFired.push(cancelledEvent);
 
       // Execute post-cancellation hooks
-      const hookResults = await this.executeHooks(tenantId, updatedInstance, "cancelled");
+      const hookResults = await this.executeHooks(
+        tenantId,
+        updatedInstance,
+        "cancelled",
+      );
       hooksExecuted.push(...hookResults);
 
       return {
@@ -470,17 +503,19 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
   async executeHooks(
     tenantId: string,
     instance: ApprovalInstance,
-    outcome: "approved" | "rejected" | "cancelled"
+    outcome: "approved" | "rejected" | "cancelled",
   ): Promise<HookExecutionResult[]> {
     const results: HookExecutionResult[] = [];
 
     // Get hooks from template
     const template = instance.workflowSnapshot.definition;
-    const hooks = (template.metadata?.postApprovalHooks as PostApprovalHook[]) || [];
+    const hooks =
+      (template.metadata?.postApprovalHooks as PostApprovalHook[]) || [];
 
     // Filter hooks for this outcome
     const applicableHooks = hooks.filter(
-      (h) => h.enabled && (h.triggerOn === outcome || h.triggerOn === "completed")
+      (h) =>
+        h.enabled && (h.triggerOn === outcome || h.triggerOn === "completed"),
     );
 
     for (const hook of applicableHooks) {
@@ -503,7 +538,9 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
           retryCount++;
 
           if (retryCount < maxAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, backoffMs * retryCount));
+            await new Promise((resolve) =>
+              setTimeout(resolve, backoffMs * retryCount),
+            );
           }
         }
       }
@@ -528,7 +565,7 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
     hook: PostApprovalHook,
     tenantId: string,
     instance: ApprovalInstance,
-    outcome: "approved" | "rejected" | "cancelled"
+    outcome: "approved" | "rejected" | "cancelled",
   ): Promise<unknown> {
     const payload = {
       tenantId,
@@ -554,7 +591,9 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
           });
 
           if (!response.ok) {
-            throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Webhook failed: ${response.status} ${response.statusText}`,
+            );
           }
 
           return await response.json();
@@ -626,11 +665,11 @@ export class WorkflowCompletionService implements IWorkflowCompletionService {
 export function createWorkflowCompletionService(
   instanceRepository: IApprovalInstanceRepository,
   entityStateHandler?: IEntityStateHandler,
-  notificationService?: INotificationService
+  notificationService?: INotificationService,
 ): IWorkflowCompletionService {
   return new WorkflowCompletionService(
     instanceRepository,
     entityStateHandler,
-    notificationService
+    notificationService,
   );
 }

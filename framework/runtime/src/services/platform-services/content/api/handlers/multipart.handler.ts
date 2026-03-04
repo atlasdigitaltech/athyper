@@ -10,10 +10,12 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { MultipartUploadService } from "../../domain/services/MultipartUploadService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * Initiate multipart upload
@@ -21,26 +23,39 @@ import type { Request, Response } from "express";
  * Body: { entityType, entityId, kind, fileName, contentType, sizeBytes }
  */
 export class InitiateMultipartHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
-      const multipartService = await ctx.container.resolve<MultipartUploadService>(
-        TOKENS.multipartUploadService
-      );
+      const multipartService =
+        await ctx.container.resolve<MultipartUploadService>(
+          TOKENS.multipartUploadService,
+        );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const actorId = ctx.auth.userId ?? "anonymous";
 
-      const { entityType, entityId, kind, fileName, contentType, sizeBytes } = req.body as {
-        entityType?: string;
-        entityId?: string;
-        kind?: string;
-        fileName?: string;
-        contentType?: string;
-        sizeBytes?: number;
-      };
+      const { entityType, entityId, kind, fileName, contentType, sizeBytes } =
+        req.body as {
+          entityType?: string;
+          entityId?: string;
+          kind?: string;
+          fileName?: string;
+          contentType?: string;
+          sizeBytes?: number;
+        };
 
       // Validate required fields
-      if (!entityType || !entityId || !kind || !fileName || !contentType || !sizeBytes) {
+      if (
+        !entityType ||
+        !entityId ||
+        !kind ||
+        !fileName ||
+        !contentType ||
+        !sizeBytes
+      ) {
         res.status(400).json({
           success: false,
           error: {
@@ -81,11 +96,16 @@ export class InitiateMultipartHandler implements RouteHandler {
  * Body: { uploadId, partNumbers: [1, 2, 3, ...] }
  */
 export class GetPartUploadUrlsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
-      const multipartService = await ctx.container.resolve<MultipartUploadService>(
-        TOKENS.multipartUploadService
-      );
+      const multipartService =
+        await ctx.container.resolve<MultipartUploadService>(
+          TOKENS.multipartUploadService,
+        );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const actorId = ctx.auth.userId ?? "anonymous";
@@ -134,11 +154,16 @@ export class GetPartUploadUrlsHandler implements RouteHandler {
  * Body: { uploadId, parts: [{ PartNumber, ETag }, ...], sha256 }
  */
 export class CompleteMultipartHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
-      const multipartService = await ctx.container.resolve<MultipartUploadService>(
-        TOKENS.multipartUploadService
-      );
+      const multipartService =
+        await ctx.container.resolve<MultipartUploadService>(
+          TOKENS.multipartUploadService,
+        );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const actorId = ctx.auth.userId ?? "anonymous";
@@ -189,11 +214,16 @@ export class CompleteMultipartHandler implements RouteHandler {
  * Body: { uploadId }
  */
 export class AbortMultipartHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
-      const multipartService = await ctx.container.resolve<MultipartUploadService>(
-        TOKENS.multipartUploadService
-      );
+      const multipartService =
+        await ctx.container.resolve<MultipartUploadService>(
+          TOKENS.multipartUploadService,
+        );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const actorId = ctx.auth.userId ?? "anonymous";

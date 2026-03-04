@@ -75,14 +75,14 @@ File: `framework/runtime/src/services/platform-services/content/domain/services/
 
 Every content update creates a new version:
 
-| Field | Purpose |
-|-------|---------|
+| Field           | Purpose                           |
+| --------------- | --------------------------------- |
 | `versionNumber` | Auto-incrementing version counter |
-| `contentHash` | SHA-256 hash for deduplication |
-| `createdBy` | User who created the version |
-| `createdAt` | Timestamp |
-| `comment` | Optional version comment |
-| `storageKey` | S3 key for this version's content |
+| `contentHash`   | SHA-256 hash for deduplication    |
+| `createdBy`     | User who created the version      |
+| `createdAt`     | Timestamp                         |
+| `comment`       | Optional version comment          |
+| `storageKey`    | S3 key for this version's content |
 
 ### Operations
 
@@ -100,23 +100,23 @@ File: `framework/runtime/src/services/platform-services/content/domain/services/
 
 Per-document permission grants:
 
-| Permission | Effect |
-|------------|--------|
-| `read` | Can download and view document |
-| `write` | Can upload new versions |
-| `delete` | Can delete the document |
-| `share` | Can grant permissions to others |
-| `admin` | Full control (all permissions) |
+| Permission | Effect                          |
+| ---------- | ------------------------------- |
+| `read`     | Can download and view document  |
+| `write`    | Can upload new versions         |
+| `delete`   | Can delete the document         |
+| `share`    | Can grant permissions to others |
+| `admin`    | Full control (all permissions)  |
 
 ### Grant Levels
 
-| Level | Scope |
-|-------|-------|
-| `user` | Specific user ID |
-| `role` | Anyone with the specified role |
-| `group` | Members of a specified group |
-| `tenant` | All users in the tenant |
-| `public` | Anyone (with link) |
+| Level    | Scope                          |
+| -------- | ------------------------------ |
+| `user`   | Specific user ID               |
+| `role`   | Anyone with the specified role |
+| `group`  | Members of a specified group   |
+| `tenant` | All users in the tenant        |
+| `public` | Anyone (with link)             |
 
 Repository: `content/persistence/DocumentAclRepo.ts`
 API handler: `content/api/handlers/acl.handler.ts`
@@ -156,12 +156,12 @@ Documents are linked to business entities via a many-to-many relationship:
 Entity (e.g., Order #123)  ──M:N──  Document (e.g., PO.pdf v3)
 ```
 
-| Operation | Endpoint |
-|-----------|----------|
-| Link document to entity | `POST /api/content/link` |
-| Unlink document from entity | `DELETE /api/content/link` |
-| List entity documents | `GET /api/content/entity/:type/:id` |
-| List document entities | `GET /api/content/doc/:id/entities` |
+| Operation                   | Endpoint                            |
+| --------------------------- | ----------------------------------- |
+| Link document to entity     | `POST /api/content/link`            |
+| Unlink document from entity | `DELETE /api/content/link`          |
+| List entity documents       | `GET /api/content/entity/:type/:id` |
+| List document entities      | `GET /api/content/doc/:id/entities` |
 
 API handler: `content/api/handlers/link.handler.ts`
 
@@ -172,6 +172,7 @@ API handler: `content/api/handlers/link.handler.ts`
 File: `framework/runtime/src/services/platform-services/content/domain/services/ExpiryService.ts`
 
 Documents can have expiration dates:
+
 - Set expiry date on upload or later
 - Expired documents are soft-deleted
 - Cleanup worker permanently deletes expired content
@@ -186,6 +187,7 @@ API handler: `content/api/handlers/expiry.handler.ts`
 File: `framework/runtime/src/services/platform-services/content/domain/services/PreviewService.ts`
 
 Generates preview thumbnails for supported file types:
+
 - Images: Resize to thumbnail dimensions
 - PDFs: First page thumbnail
 - Office documents: Converted preview (if renderer available)
@@ -201,13 +203,13 @@ File: `framework/runtime/src/services/platform-services/content/domain/services/
 
 Every document access is logged:
 
-| Field | Purpose |
-|-------|---------|
-| `documentId` | Which document |
-| `userId` | Who accessed it |
-| `action` | `view`, `download`, `edit`, `delete` |
-| `timestamp` | When |
-| `ip` | Client IP |
+| Field        | Purpose                              |
+| ------------ | ------------------------------------ |
+| `documentId` | Which document                       |
+| `userId`     | Who accessed it                      |
+| `action`     | `view`, `download`, `edit`, `delete` |
+| `timestamp`  | When                                 |
+| `ip`         | Client IP                            |
 
 Cleanup: `content/workers/cleanup-access-logs.worker.ts`
 Repository: `content/persistence/AccessLogRepo.ts`
@@ -223,15 +225,15 @@ File: `framework/runtime/src/services/platform-services/document/`
 
 ### Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| Template service | `DocTemplateService.ts` | Template CRUD, versioning, publish/retire |
-| HTML composer | `DocHtmlComposer.ts` | Merges template + data + brand + letterhead |
-| PDF renderer | `DocRenderService.ts` | HTML → PDF via Puppeteer |
-| Brand service | `DocBrandService.ts` | Brand profiles (colors, logos, fonts) |
-| Letterhead service | `DocLetterheadService.ts` | Letterhead management |
-| Output service | `DocOutputService.ts` | Output storage, download, verification |
-| DLQ manager | `DocRenderDlqManager.ts` | Dead letter queue for failed renders |
+| Component          | File                      | Purpose                                     |
+| ------------------ | ------------------------- | ------------------------------------------- |
+| Template service   | `DocTemplateService.ts`   | Template CRUD, versioning, publish/retire   |
+| HTML composer      | `DocHtmlComposer.ts`      | Merges template + data + brand + letterhead |
+| PDF renderer       | `DocRenderService.ts`     | HTML → PDF via Puppeteer                    |
+| Brand service      | `DocBrandService.ts`      | Brand profiles (colors, logos, fonts)       |
+| Letterhead service | `DocLetterheadService.ts` | Letterhead management                       |
+| Output service     | `DocOutputService.ts`     | Output storage, download, verification      |
+| DLQ manager        | `DocRenderDlqManager.ts`  | Dead letter queue for failed renders        |
 
 ### Render Pipeline
 
@@ -253,32 +255,32 @@ Template + Data + Brand + Letterhead
 
 ### Background Workers
 
-| Worker | Purpose |
-|--------|---------|
-| `renderDocument.worker.ts` | Async document rendering |
-| `cleanupOutputs.worker.ts` | Clean up expired outputs |
+| Worker                       | Purpose                             |
+| ---------------------------- | ----------------------------------- |
+| `renderDocument.worker.ts`   | Async document rendering            |
+| `cleanupOutputs.worker.ts`   | Clean up expired outputs            |
 | `recoverStuckJobs.worker.ts` | Recover renders stuck in processing |
 
 ---
 
 ## Database Schema (`doc`)
 
-| Table | Purpose |
-|-------|---------|
-| `doc.attachments` | File metadata (name, type, size, hash, storage key) |
-| `doc.document_acl` | Per-document permission grants |
-| `doc.document_versions` | Version history |
-| `doc.document_links` | Entity-document relationships |
-| `doc.document_comments` | Comments on documents |
-| `doc.access_log` | Document access audit trail |
-| `doc.templates` | Document templates |
-| `doc.template_versions` | Template version history |
-| `doc.template_bindings` | Template-entity bindings |
-| `doc.outputs` | Rendered document outputs |
-| `doc.render_jobs` | Render job queue |
-| `doc.render_dlq` | Render dead letter queue |
-| `doc.brand_profiles` | Brand configurations |
-| `doc.letterheads` | Letterhead definitions |
+| Table                   | Purpose                                             |
+| ----------------------- | --------------------------------------------------- |
+| `doc.attachments`       | File metadata (name, type, size, hash, storage key) |
+| `doc.document_acl`      | Per-document permission grants                      |
+| `doc.document_versions` | Version history                                     |
+| `doc.document_links`    | Entity-document relationships                       |
+| `doc.document_comments` | Comments on documents                               |
+| `doc.access_log`        | Document access audit trail                         |
+| `doc.templates`         | Document templates                                  |
+| `doc.template_versions` | Template version history                            |
+| `doc.template_bindings` | Template-entity bindings                            |
+| `doc.outputs`           | Rendered document outputs                           |
+| `doc.render_jobs`       | Render job queue                                    |
+| `doc.render_dlq`        | Render dead letter queue                            |
+| `doc.brand_profiles`    | Brand configurations                                |
+| `doc.letterheads`       | Letterhead definitions                              |
 
 SQL: `framework/adapters/db/src/sql/070_doc.sql`
 
@@ -288,14 +290,14 @@ SQL: `framework/adapters/db/src/sql/070_doc.sql`
 
 Shared React components in `packages/ui/src/content/`:
 
-| Component | Purpose |
-|-----------|---------|
-| `AttachmentCard` | File attachment display with actions |
-| `AttachmentList` | List of attachment cards |
-| `EntityDocumentsPanel` | Document panel for entity detail pages |
-| `FilePicker` | File selection dialog |
-| `DocumentVersionTimeline` | Version history timeline view |
-| `DocumentAclManager` | ACL management interface |
+| Component                 | Purpose                                |
+| ------------------------- | -------------------------------------- |
+| `AttachmentCard`          | File attachment display with actions   |
+| `AttachmentList`          | List of attachment cards               |
+| `EntityDocumentsPanel`    | Document panel for entity detail pages |
+| `FilePicker`              | File selection dialog                  |
+| `DocumentVersionTimeline` | Version history timeline view          |
+| `DocumentAclManager`      | ACL management interface               |
 
 API client: `packages/api-client/src/content/contentClient.ts`
 
@@ -303,16 +305,16 @@ API client: `packages/api-client/src/content/contentClient.ts`
 
 ## Tests
 
-| Test File | Coverage |
-|-----------|----------|
-| `content-taxonomy.test.ts` | Content type classification |
-| `storage-key-builder.test.ts` | Storage key generation |
-| `cleanupOrphanedUploads.worker.test.ts` | Orphaned upload cleanup |
-| `DocHtmlComposer.test.ts` | HTML composition |
-| `DocRenderDlqManager.test.ts` | DLQ operations |
-| `OutputStatusMachine.test.ts` | Output state transitions |
-| `PdfRenderer.test.ts` | PDF rendering |
-| `contentClient.test.ts` | API client |
+| Test File                               | Coverage                    |
+| --------------------------------------- | --------------------------- |
+| `content-taxonomy.test.ts`              | Content type classification |
+| `storage-key-builder.test.ts`           | Storage key generation      |
+| `cleanupOrphanedUploads.worker.test.ts` | Orphaned upload cleanup     |
+| `DocHtmlComposer.test.ts`               | HTML composition            |
+| `DocRenderDlqManager.test.ts`           | DLQ operations              |
+| `OutputStatusMachine.test.ts`           | Output state transitions    |
+| `PdfRenderer.test.ts`                   | PDF rendering               |
+| `contentClient.test.ts`                 | API client                  |
 
 ---
 

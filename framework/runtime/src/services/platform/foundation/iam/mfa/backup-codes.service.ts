@@ -75,7 +75,10 @@ async function hashCode(code: string): Promise<string> {
   return new Promise((resolve, reject) => {
     pbkdf2(code, salt, 100000, 32, "sha256", (err, derivedKey) => {
       if (err) reject(err);
-      else resolve(`$pbkdf2$${salt.toString("hex")}$${derivedKey.toString("hex")}`);
+      else
+        resolve(
+          `$pbkdf2$${salt.toString("hex")}$${derivedKey.toString("hex")}`,
+        );
     });
   });
 }
@@ -204,7 +207,9 @@ export class BackupCodesService implements IBackupCodesService {
 /**
  * Create a backup codes service instance
  */
-export function createBackupCodesService(codeCount?: number): BackupCodesService {
+export function createBackupCodesService(
+  codeCount?: number,
+): BackupCodesService {
   return new BackupCodesService(codeCount);
 }
 

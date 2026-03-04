@@ -4,26 +4,38 @@ import type { Container } from "../../../../kernel/container.js";
 import type { RuntimeModule } from "../../../types.js";
 
 export const federationEngineModule: RuntimeModule = {
-    name: "engine.federation",
+  name: "engine.federation",
 
-    register(c: Container) {
-        // Register federation repositories and services
-    },
+  register(c: Container) {
+    // Register federation repositories and services
+  },
 
-    contribute(c: Container) {
-        // Register FX revaluation jobs, netting proposals, consolidation
-    },
+  contribute(c: Container) {
+    // Register FX revaluation jobs, netting proposals, consolidation
+  },
 };
 
 // Re-export domain types
 export type {
-    LegalEntity, CreateLegalEntityInput, EntityType, ConsolidationMethod,
-    IntercompanyAgreement, AgreementType, TransferPricingMethod,
-    IntercompanyTransaction, CreateICTransactionInput, ICTxnType, ICTxnStatus,
-    FxRate, CreateFxRateInput, FxRateType,
-    FxRevaluation,
-    ConsolidationElimination, EliminationType,
-    NettingBatch, NettingStatus,
+  LegalEntity,
+  CreateLegalEntityInput,
+  EntityType,
+  ConsolidationMethod,
+  IntercompanyAgreement,
+  AgreementType,
+  TransferPricingMethod,
+  IntercompanyTransaction,
+  CreateICTransactionInput,
+  ICTxnType,
+  ICTxnStatus,
+  FxRate,
+  CreateFxRateInput,
+  FxRateType,
+  FxRevaluation,
+  ConsolidationElimination,
+  EliminationType,
+  NettingBatch,
+  NettingStatus,
 } from "./domain/types.js";
 
 // Re-export services
@@ -36,4 +48,10 @@ export type { FxRateRepo } from "./persistence/fx-rate-repo.js";
 export type { ICTransactionRepo } from "./persistence/ic-transaction-repo.js";
 
 // Re-export domain logic
-export { translateAmount, translateAmountInverse, calculateUnrealizedGainLoss, selectRate, triangulateRate } from "./domain/fx-translator.js";
+export {
+  translateAmount,
+  translateAmountInverse,
+  calculateUnrealizedGainLoss,
+  selectRate,
+  triangulateRate,
+} from "./domain/fx-translator.js";

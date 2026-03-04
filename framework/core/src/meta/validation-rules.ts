@@ -13,11 +13,26 @@
 // ============================================================================
 
 export type ConditionOperator =
-  | "eq" | "ne" | "gt" | "gte" | "lt" | "lte"
-  | "in" | "not_in" | "contains" | "not_contains"
-  | "starts_with" | "ends_with" | "matches"
-  | "exists" | "not_exists" | "between"
-  | "empty" | "not_empty" | "date_before" | "date_after";
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "in"
+  | "not_in"
+  | "contains"
+  | "not_contains"
+  | "starts_with"
+  | "ends_with"
+  | "matches"
+  | "exists"
+  | "not_exists"
+  | "between"
+  | "empty"
+  | "not_empty"
+  | "date_before"
+  | "date_after";
 
 export type ConditionLeaf = {
   field: string;
@@ -144,21 +159,21 @@ export type DateRangeRule = BaseValidationRule & {
   kind: "date_range";
   afterField?: string;
   beforeField?: string;
-  minDate?: string;  // ISO 8601
-  maxDate?: string;  // ISO 8601
+  minDate?: string; // ISO 8601
+  maxDate?: string; // ISO 8601
 };
 
 /** Value must exist as a record in the target entity */
 export type ReferentialIntegrityRule = BaseValidationRule & {
   kind: "referential";
   targetEntity: string;
-  targetField?: string;  // default: "id"
+  targetField?: string; // default: "id"
 };
 
 /** Value must be unique (optionally scoped to other fields) */
 export type UniqueRule = BaseValidationRule & {
   kind: "unique";
-  scope?: string[];  // Composite uniqueness scope fields
+  scope?: string[]; // Composite uniqueness scope fields
 };
 
 // ============================================================================

@@ -31,15 +31,19 @@ function generateId(prefix: string = "id"): string {
  */
 function evaluateCondition(
   condition: ApprovalCondition,
-  context: ConditionEvaluationContext
+  context: ConditionEvaluationContext,
 ): boolean {
   const { rules, logic } = condition;
 
   // If no rules, evaluate nested conditions
   if (!rules || rules.length === 0) {
     if (condition.conditions && condition.conditions.length > 0) {
-      const nestedResults = condition.conditions.map((c) => evaluateCondition(c, context));
-      return logic === "and" ? nestedResults.every(Boolean) : nestedResults.some(Boolean);
+      const nestedResults = condition.conditions.map((c) =>
+        evaluateCondition(c, context),
+      );
+      return logic === "and"
+        ? nestedResults.every(Boolean)
+        : nestedResults.some(Boolean);
     }
     return true; // No rules or conditions means condition is met
   }
@@ -65,15 +69,28 @@ function evaluateCondition(
       case "nin":
         return Array.isArray(rule.value) && !rule.value.includes(value);
       case "contains":
-        return typeof value === "string" && value.includes(rule.value as string);
+        return (
+          typeof value === "string" && value.includes(rule.value as string)
+        );
       case "startsWith":
-        return typeof value === "string" && value.startsWith(rule.value as string);
+        return (
+          typeof value === "string" && value.startsWith(rule.value as string)
+        );
       case "endsWith":
-        return typeof value === "string" && value.endsWith(rule.value as string);
+        return (
+          typeof value === "string" && value.endsWith(rule.value as string)
+        );
       case "matches":
-        return typeof value === "string" && new RegExp(rule.value as string).test(value);
+        return (
+          typeof value === "string" &&
+          new RegExp(rule.value as string).test(value)
+        );
       case "between":
-        if (typeof value === "number" && Array.isArray(rule.value) && rule.value.length === 2) {
+        if (
+          typeof value === "number" &&
+          Array.isArray(rule.value) &&
+          rule.value.length === 2
+        ) {
           return value >= rule.value[0] && value <= rule.value[1];
         }
         return false;
@@ -82,11 +99,19 @@ function evaluateCondition(
       case "notExists":
         return value === undefined;
       case "empty":
-        return value === "" || value === null || value === undefined ||
-               (Array.isArray(value) && value.length === 0);
+        return (
+          value === "" ||
+          value === null ||
+          value === undefined ||
+          (Array.isArray(value) && value.length === 0)
+        );
       case "notEmpty":
-        return value !== "" && value !== null && value !== undefined &&
-               !(Array.isArray(value) && value.length === 0);
+        return (
+          value !== "" &&
+          value !== null &&
+          value !== undefined &&
+          !(Array.isArray(value) && value.length === 0)
+        );
       default:
         return false;
     }
@@ -104,7 +129,7 @@ function evaluateCondition(
  */
 function getValueFromContext(
   field: string,
-  context: ConditionEvaluationContext
+  context: ConditionEvaluationContext,
 ): unknown {
   const parts = field.split(".");
 
@@ -114,15 +139,24 @@ function getValueFromContext(
   }
 
   if (parts[0] === "requester") {
-    return getNestedValue(context.requester as Record<string, unknown>, parts.slice(1));
+    return getNestedValue(
+      context.requester as Record<string, unknown>,
+      parts.slice(1),
+    );
   }
 
   if (parts[0] === "instance") {
-    return getNestedValue(context.instance as unknown as Record<string, unknown>, parts.slice(1));
+    return getNestedValue(
+      context.instance as unknown as Record<string, unknown>,
+      parts.slice(1),
+    );
   }
 
   if (parts[0] === "step") {
-    return getNestedValue(context.currentStep as unknown as Record<string, unknown>, parts.slice(1));
+    return getNestedValue(
+      context.currentStep as unknown as Record<string, unknown>,
+      parts.slice(1),
+    );
   }
 
   if (parts[0] === "context" && context.customContext) {
@@ -158,7 +192,9 @@ function getNestedValue(obj: Record<string, unknown>, path: string[]): unknown {
 export class StepCompletionService implements IStepCompletionService {
   constructor(
     private readonly instanceRepository: IApprovalInstanceRepository,
-    private readonly eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+    private readonly eventHandlers?: Array<
+      (event: WorkflowEvent) => Promise<void>
+    >,
   ) {}
 
   /**
@@ -166,7 +202,7 @@ export class StepCompletionService implements IStepCompletionService {
    */
   async evaluateStepCompletion(
     tenantId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<StepCompletionEvaluation> {
     const counts = stepInstance.approvalCounts;
     const requirement = stepInstance.requirement;
@@ -196,9 +232,10 @@ export class StepCompletionService implements IStepCompletionService {
         if (isComplete) {
           outcome = counts.rejected === 0 ? "approved" : "rejected";
           quorumMet = counts.approved === counts.total;
-          reason = counts.rejected === 0
-            ? `All ${counts.total} approvers approved`
-            : `${counts.rejected} of ${counts.total} rejected`;
+          reason =
+            counts.rejected === 0
+              ? `All ${counts.total} approvers approved`
+              : `${counts.rejected} of ${counts.total} rejected`;
         }
         break;
 
@@ -223,7 +260,9 @@ export class StepCompletionService implements IStepCompletionService {
             requiredCount = stepInstance.quorum.value;
           } else {
             // Percentage
-            requiredCount = Math.ceil((stepInstance.quorum.value / 100) * counts.total);
+            requiredCount = Math.ceil(
+              (stepInstance.quorum.value / 100) * counts.total,
+            );
           }
         } else {
           // Default to majority
@@ -261,17 +300,23 @@ export class StepCompletionService implements IStepCompletionService {
   async getNextStepsToActivate(
     tenantId: string,
     instance: ApprovalInstance,
-    completedStep: ApprovalStepInstance
+    completedStep: ApprovalStepInstance,
   ): Promise<StepActivationDecision[]> {
-    const allSteps = await this.instanceRepository.getStepInstances(tenantId, instance.id);
+    const allSteps = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instance.id,
+    );
     const decisions: StepActivationDecision[] = [];
 
     // Get completed step IDs including the just-completed one
-    const completedStepIds = new Set([...instance.completedStepIds, completedStep.id]);
+    const completedStepIds = new Set([
+      ...instance.completedStepIds,
+      completedStep.id,
+    ]);
 
     // Find pending steps
     const pendingSteps = allSteps.filter(
-      (s) => s.status === "pending" && !completedStepIds.has(s.id)
+      (s) => s.status === "pending" && !completedStepIds.has(s.id),
     );
 
     // Build context for condition evaluation
@@ -321,7 +366,7 @@ export class StepCompletionService implements IStepCompletionService {
         };
 
         const conditionsMet = step.conditions.every((cond) =>
-          evaluateCondition(cond, conditionsContext)
+          evaluateCondition(cond, conditionsContext),
         );
 
         decision.conditionsMet = conditionsMet;
@@ -343,7 +388,7 @@ export class StepCompletionService implements IStepCompletionService {
         };
 
         const shouldSkip = stepDef.skipConditions.some((cond) =>
-          evaluateCondition(cond, skipContext)
+          evaluateCondition(cond, skipContext),
         );
 
         if (shouldSkip) {
@@ -355,7 +400,11 @@ export class StepCompletionService implements IStepCompletionService {
       }
 
       // Check for auto-approve conditions
-      const autoApproveReason = await this.checkAutoApprove(tenantId, instance, step);
+      const autoApproveReason = await this.checkAutoApprove(
+        tenantId,
+        instance,
+        step,
+      );
       if (autoApproveReason) {
         decision.shouldAutoApprove = true;
         decision.autoApproveReason = autoApproveReason;
@@ -375,7 +424,7 @@ export class StepCompletionService implements IStepCompletionService {
   async activateStep(
     tenantId: string,
     instance: ApprovalInstance,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<ApprovalStepInstance> {
     const now = new Date();
 
@@ -387,7 +436,7 @@ export class StepCompletionService implements IStepCompletionService {
         status: "active",
         activatedAt: now,
         dependenciesSatisfied: true,
-      }
+      },
     );
 
     // Fire activation event
@@ -416,7 +465,7 @@ export class StepCompletionService implements IStepCompletionService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<ApprovalStepInstance> {
     const now = new Date();
 
@@ -428,7 +477,7 @@ export class StepCompletionService implements IStepCompletionService {
         status: "skipped",
         skipReason: reason,
         completedAt: now,
-      }
+      },
     );
 
     // Fire skip event
@@ -456,7 +505,7 @@ export class StepCompletionService implements IStepCompletionService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<ApprovalStepInstance> {
     const now = new Date();
 
@@ -484,7 +533,7 @@ export class StepCompletionService implements IStepCompletionService {
         autoApproved: true,
         autoApproveReason: reason,
         completedAt: now,
-      }
+      },
     );
 
     // Fire completion event
@@ -513,18 +562,24 @@ export class StepCompletionService implements IStepCompletionService {
   private async checkAutoApprove(
     tenantId: string,
     instance: ApprovalInstance,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<string | null> {
     // Check for self-approval (requester is the only approver)
-    if (stepInstance.approvers.length === 1 &&
-        stepInstance.approvers[0].userId === instance.requester.userId) {
+    if (
+      stepInstance.approvers.length === 1 &&
+      stepInstance.approvers[0].userId === instance.requester.userId
+    ) {
       // Check if self-approval is allowed in template
       const template = instance.workflowSnapshot.definition;
-      const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
+      const stepDef = template.steps.find(
+        (s) => s.id === stepInstance.stepDefinitionId,
+      );
 
       // If step definition allows self-approval, auto-approve
       // (This would be controlled by a property in the step definition)
-      const allowSelfApproval = stepDef?.metadata?.allowSelfApproval as boolean | undefined;
+      const allowSelfApproval = stepDef?.metadata?.allowSelfApproval as
+        | boolean
+        | undefined;
       if (allowSelfApproval) {
         return "Requester is the only approver (self-approval allowed)";
       }
@@ -534,10 +589,18 @@ export class StepCompletionService implements IStepCompletionService {
     const entityData = instance.metadata as Record<string, unknown> | undefined;
     const amount = entityData?.amount as number | undefined;
     const template = instance.workflowSnapshot.definition;
-    const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
+    const stepDef = template.steps.find(
+      (s) => s.id === stepInstance.stepDefinitionId,
+    );
 
-    const autoApproveThreshold = stepDef?.metadata?.autoApproveThreshold as number | undefined;
-    if (autoApproveThreshold && amount !== undefined && amount < autoApproveThreshold) {
+    const autoApproveThreshold = stepDef?.metadata?.autoApproveThreshold as
+      | number
+      | undefined;
+    if (
+      autoApproveThreshold &&
+      amount !== undefined &&
+      amount < autoApproveThreshold
+    ) {
       return `Amount (${amount}) below auto-approve threshold (${autoApproveThreshold})`;
     }
 
@@ -565,7 +628,7 @@ export class StepCompletionService implements IStepCompletionService {
  */
 export function createStepCompletionService(
   instanceRepository: IApprovalInstanceRepository,
-  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>,
 ): IStepCompletionService {
   return new StepCompletionService(instanceRepository, eventHandlers);
 }

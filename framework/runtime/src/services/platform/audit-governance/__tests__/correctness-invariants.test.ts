@@ -11,7 +11,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AuditFeatureFlagResolver } from "../domain/audit-feature-flags.js";
-import { AuditHashChainService, GENESIS_HASH } from "../domain/hash-chain.service.js";
+import {
+  AuditHashChainService,
+  GENESIS_HASH,
+} from "../domain/hash-chain.service.js";
 import { AuditRedactionPipeline } from "../domain/redaction-pipeline.js";
 import { ResilientAuditWriter } from "../domain/resilient-audit-writer.js";
 
@@ -19,14 +22,26 @@ import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 
 // ─── Test Helpers ──────────────────────────────────────────────────
 
-function makeEvent(overrides: Partial<Omit<AuditEvent, "id">> = {}): Omit<AuditEvent, "id"> {
+function makeEvent(
+  overrides: Partial<Omit<AuditEvent, "id">> = {},
+): Omit<AuditEvent, "id"> {
   return {
     tenantId: "t-1",
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date("2025-06-15T10:00:00Z"),
     ...overrides,
@@ -42,7 +57,12 @@ function createMockOutboxRepo() {
 function createMockCircuitBreaker() {
   return {
     execute: vi.fn(async (fn: any) => fn()),
-    getMetrics: vi.fn(() => ({ state: "CLOSED", failures: 0, successes: 0, totalCalls: 0 })),
+    getMetrics: vi.fn(() => ({
+      state: "CLOSED",
+      failures: 0,
+      successes: 0,
+      totalCalls: 0,
+    })),
     reset: vi.fn(),
   };
 }
@@ -59,7 +79,9 @@ describe("Invariant: Outbox Roundtrip", () => {
       eventBuffered: vi.fn(),
     };
 
-    const writer = new ResilientAuditWriter(outbox as any, breaker as any, { metrics });
+    const writer = new ResilientAuditWriter(outbox as any, breaker as any, {
+      metrics,
+    });
 
     const event = makeEvent({ eventType: "workflow.started" });
     await writer.write("t-1", event);
@@ -71,14 +93,19 @@ describe("Invariant: Outbox Roundtrip", () => {
       expect.objectContaining({ eventType: "workflow.started" }),
     );
     expect(metrics.eventIngested).toHaveBeenCalledWith(
-      expect.objectContaining({ tenant: "t-1", event_type: "workflow.started" }),
+      expect.objectContaining({
+        tenant: "t-1",
+        event_type: "workflow.started",
+      }),
     );
   });
 
   it("should buffer event when outbox is unavailable", async () => {
     const outbox = createMockOutboxRepo();
     const breaker = {
-      execute: vi.fn(async () => { throw new Error("DB down"); }),
+      execute: vi.fn(async () => {
+        throw new Error("DB down");
+      }),
       getMetrics: vi.fn(() => ({ state: "OPEN" })),
       reset: vi.fn(),
     };
@@ -110,7 +137,12 @@ describe("Invariant: Hash Chain Integrity", () => {
 
     for (let i = 0; i < 10; i++) {
       const event = makeEvent({
-        eventType: i % 3 === 0 ? "workflow.created" : i % 3 === 1 ? "workflow.started" : "step.activated",
+        eventType:
+          i % 3 === 0
+            ? "workflow.created"
+            : i % 3 === 1
+              ? "workflow.started"
+              : "step.activated",
         timestamp: new Date(`2025-06-15T10:0${i}:00Z`),
       });
       const hash = await svc.computeHash("t-1", event);
@@ -140,7 +172,9 @@ describe("Invariant: Hash Chain Integrity", () => {
     const events: any[] = [];
 
     for (let i = 0; i < 5; i++) {
-      const event = makeEvent({ timestamp: new Date(`2025-06-15T10:0${i}:00Z`) });
+      const event = makeEvent({
+        timestamp: new Date(`2025-06-15T10:0${i}:00Z`),
+      });
       const hash = await svc.computeHash("t-1", event);
       events.push({
         ...event,
@@ -320,7 +354,10 @@ describe("Invariant: Feature Flag Controls", () => {
 
     await writer.write("t-1", makeEvent());
 
-    expect(syncWriter.recordEvent).toHaveBeenCalledWith("t-1", expect.anything());
+    expect(syncWriter.recordEvent).toHaveBeenCalledWith(
+      "t-1",
+      expect.anything(),
+    );
     expect(outbox.enqueue).not.toHaveBeenCalled();
     expect(metrics.eventIngested).toHaveBeenCalled();
   });

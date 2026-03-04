@@ -105,13 +105,14 @@ function mapTaskFromDb(row: Record<string, unknown>): ApprovalTask {
 }
 
 function mapSnapshotFromDb(
-  row: Record<string, unknown>
+  row: Record<string, unknown>,
 ): ApprovalAssignmentSnapshot {
   return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
     approvalTaskId: row.approval_task_id as string,
-    resolvedAssignment: (row.resolved_assignment as Record<string, unknown>) ?? {},
+    resolvedAssignment:
+      (row.resolved_assignment as Record<string, unknown>) ?? {},
     resolvedFromRuleId: (row.resolved_from_rule_id as string) ?? undefined,
     resolvedFromVersionId:
       (row.resolved_from_version_id as string) ?? undefined,
@@ -134,9 +135,7 @@ function mapEventFromDb(row: Record<string, unknown>): ApprovalEvent {
   };
 }
 
-function mapEscalationFromDb(
-  row: Record<string, unknown>
-): ApprovalEscalation {
+function mapEscalationFromDb(row: Record<string, unknown>): ApprovalEscalation {
   return {
     id: row.id as string,
     tenantId: row.tenant_id as string,
@@ -188,7 +187,7 @@ export class ApprovalServiceImpl implements ApprovalService {
   // =========================================================================
 
   async createApprovalInstance(
-    request: ApprovalCreationRequest
+    request: ApprovalCreationRequest,
   ): Promise<ApprovalCreationResult> {
     try {
       const {
@@ -252,7 +251,10 @@ export class ApprovalServiceImpl implements ApprovalService {
           entity_id: entityId,
           status: "open",
           requested_by: ctx.userId,
-          metadata: JSON.stringify({ transitionId, assignmentContext: assignmentContext ?? {} }),
+          metadata: JSON.stringify({
+            transitionId,
+            assignmentContext: assignmentContext ?? {},
+          }),
         } as any)
         .execute();
 
@@ -317,14 +319,20 @@ export class ApprovalServiceImpl implements ApprovalService {
       }
 
       // 8. Log creation event
-      await this.logEvent(instanceId, ctx.tenantId, "instance_created", {
-        entityName,
-        entityId,
-        transitionId,
-        templateCode: template.code,
-        stageCount: templateStages.length,
-        taskCount: totalTasks,
-      }, ctx.userId);
+      await this.logEvent(
+        instanceId,
+        ctx.tenantId,
+        "instance_created",
+        {
+          entityName,
+          entityId,
+          transitionId,
+          templateCode: template.code,
+          stageCount: templateStages.length,
+          taskCount: totalTasks,
+        },
+        ctx.userId,
+      );
 
       return {
         success: true,
@@ -346,7 +354,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async getInstance(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalInstance | undefined> {
     const row = await this.db
       .selectFrom("wf.approval_instance")
@@ -355,13 +363,15 @@ export class ApprovalServiceImpl implements ApprovalService {
       .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
 
-    return row ? mapInstanceFromDb(row as unknown as Record<string, unknown>) : undefined;
+    return row
+      ? mapInstanceFromDb(row as unknown as Record<string, unknown>)
+      : undefined;
   }
 
   async getInstanceForEntity(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalInstance | undefined> {
     const row = await this.db
       .selectFrom("wf.approval_instance")
@@ -372,7 +382,9 @@ export class ApprovalServiceImpl implements ApprovalService {
       .where("status", "=", "open")
       .executeTakeFirst();
 
-    return row ? mapInstanceFromDb(row as unknown as Record<string, unknown>) : undefined;
+    return row
+      ? mapInstanceFromDb(row as unknown as Record<string, unknown>)
+      : undefined;
   }
 
   // =========================================================================
@@ -381,7 +393,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async getTask(
     taskId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTask | undefined> {
     const row = await this.db
       .selectFrom("wf.approval_task")
@@ -390,12 +402,14 @@ export class ApprovalServiceImpl implements ApprovalService {
       .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
 
-    return row ? mapTaskFromDb(row as unknown as Record<string, unknown>) : undefined;
+    return row
+      ? mapTaskFromDb(row as unknown as Record<string, unknown>)
+      : undefined;
   }
 
   async getTasksForInstance(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTask[]> {
     const rows = await this.db
       .selectFrom("wf.approval_task")
@@ -404,13 +418,15 @@ export class ApprovalServiceImpl implements ApprovalService {
       .where("tenant_id", "=", tenantId)
       .execute();
 
-    return rows.map((r) => mapTaskFromDb(r as unknown as Record<string, unknown>));
+    return rows.map((r) =>
+      mapTaskFromDb(r as unknown as Record<string, unknown>),
+    );
   }
 
   async getTasksForUser(
     userId: string,
     tenantId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalTask>> {
     const limit = options?.limit ?? 20;
     const offset = options?.offset ?? 0;
@@ -445,7 +461,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async getAssignmentSnapshot(
     taskId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalAssignmentSnapshot | undefined> {
     const row = await this.db
       .selectFrom("wf.approval_assignment_snapshot")
@@ -464,7 +480,7 @@ export class ApprovalServiceImpl implements ApprovalService {
   // =========================================================================
 
   async makeDecision(
-    request: ApprovalDecisionRequest
+    request: ApprovalDecisionRequest,
   ): Promise<ApprovalDecisionResult> {
     try {
       const { taskId, decision, note, ctx } = request;
@@ -505,13 +521,13 @@ export class ApprovalServiceImpl implements ApprovalService {
         ctx.tenantId,
         `task_${decision}d`,
         { taskId, decision, note },
-        ctx.userId
+        ctx.userId,
       );
 
       // 3. Check if stage is complete
       const stageComplete = await this.isStageComplete(
         task.approvalStageId,
-        ctx.tenantId
+        ctx.tenantId,
       );
 
       let stageStatus: string | undefined;
@@ -522,14 +538,16 @@ export class ApprovalServiceImpl implements ApprovalService {
         // Determine stage outcome
         const stageOutcome = await this.resolveStageOutcome(
           task.approvalStageId,
-          ctx.tenantId
+          ctx.tenantId,
         );
         stageStatus = stageOutcome;
 
         // Update stage status
         await this.db
           .updateTable("wf.approval_stage")
-          .set({ status: stageOutcome === "rejected" ? "canceled" : "completed" })
+          .set({
+            status: stageOutcome === "rejected" ? "canceled" : "completed",
+          })
           .where("id", "=", task.approvalStageId)
           .where("tenant_id", "=", ctx.tenantId)
           .execute();
@@ -554,13 +572,13 @@ export class ApprovalServiceImpl implements ApprovalService {
             ctx.tenantId,
             "instance_rejected",
             { rejectedTaskId: taskId },
-            ctx.userId
+            ctx.userId,
           );
         } else {
           // Stage completed with approval — check if all stages done
           const allComplete = await this.isInstanceComplete(
             task.approvalInstanceId,
-            ctx.tenantId
+            ctx.tenantId,
           );
 
           if (allComplete) {
@@ -578,13 +596,13 @@ export class ApprovalServiceImpl implements ApprovalService {
               ctx.tenantId,
               "instance_completed",
               {},
-              ctx.userId
+              ctx.userId,
             );
 
             // 5. Trigger lifecycle resume on completion
             transitionTriggered = await this.resumeLifecycleTransition(
               task.approvalInstanceId,
-              ctx.tenantId
+              ctx.tenantId,
             );
           }
         }
@@ -609,7 +627,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async isInstanceComplete(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<boolean> {
     const stages = await this.db
       .selectFrom("wf.approval_stage")
@@ -642,7 +660,10 @@ export class ApprovalServiceImpl implements ApprovalService {
     if (tasks.length === 0) return true;
 
     const mode = (stage as any).mode as string;
-    const quorum = (stage as any).quorum as { type?: string; value?: number } | null;
+    const quorum = (stage as any).quorum as {
+      type?: string;
+      value?: number;
+    } | null;
 
     if (mode === "serial") {
       // Serial: all tasks must be completed in order (no pending tasks)
@@ -656,7 +677,11 @@ export class ApprovalServiceImpl implements ApprovalService {
       return approvedCount >= quorum.value;
     }
 
-    if (quorum && quorum.type === "percentage" && typeof quorum.value === "number") {
+    if (
+      quorum &&
+      quorum.type === "percentage" &&
+      typeof quorum.value === "number"
+    ) {
       // Percentage-based quorum: X% of tasks must be approved
       const approvedCount = tasks.filter((t) => t.status === "approved").length;
       const requiredCount = Math.ceil((quorum.value / 100) * tasks.length);
@@ -678,7 +703,7 @@ export class ApprovalServiceImpl implements ApprovalService {
   async scheduleReminder(
     taskId: string,
     fireAt: Date,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
     if (!this.jobQueue) return;
 
@@ -730,7 +755,7 @@ export class ApprovalServiceImpl implements ApprovalService {
     taskId: string,
     fireAt: Date,
     escalationPayload: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
     if (!this.jobQueue) return;
 
@@ -770,7 +795,11 @@ export class ApprovalServiceImpl implements ApprovalService {
       task.approvalInstanceId,
       tenantId,
       "sla_escalation_scheduled",
-      { taskId, fireAt: fireAt.toISOString(), escalationKind: escalationPayload.kind },
+      {
+        taskId,
+        fireAt: fireAt.toISOString(),
+        escalationKind: escalationPayload.kind,
+      },
       "system",
     );
   }
@@ -780,10 +809,7 @@ export class ApprovalServiceImpl implements ApprovalService {
    * Verifies the task is still pending, then logs the reminder event.
    * Notification delivery is delegated to the notification service (future integration).
    */
-  async processReminder(
-    taskId: string,
-    tenantId: string
-  ): Promise<void> {
+  async processReminder(taskId: string, tenantId: string): Promise<void> {
     const task = await this.getTask(taskId, tenantId);
     if (!task || task.status !== "pending") return;
 
@@ -807,7 +833,7 @@ export class ApprovalServiceImpl implements ApprovalService {
   async processEscalation(
     taskId: string,
     escalationPayload: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
     const task = await this.getTask(taskId, tenantId);
     if (!task || task.status !== "pending") return;
@@ -846,10 +872,7 @@ export class ApprovalServiceImpl implements ApprovalService {
    * This method logs the cancellation intent for audit trail; the actual
    * jobs are silently skipped when they fire.
    */
-  async cancelTimers(
-    taskId: string,
-    tenantId: string
-  ): Promise<void> {
+  async cancelTimers(taskId: string, tenantId: string): Promise<void> {
     // Guard check ensures workers skip stale jobs at execution time.
     // Log the intent for audit purposes.
     const task = await this.getTask(taskId, tenantId);
@@ -910,7 +933,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async getEvents(
     instanceId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalEvent>> {
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
@@ -944,7 +967,7 @@ export class ApprovalServiceImpl implements ApprovalService {
 
   async getEscalations(
     instanceId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalEscalation>> {
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;
@@ -1012,11 +1035,13 @@ export class ApprovalServiceImpl implements ApprovalService {
     }>,
     context: Record<string, unknown>,
     tenantId?: string,
-  ): Promise<Array<{
-    principalId?: string;
-    groupId?: string;
-    ruleId?: string;
-  }>> {
+  ): Promise<
+    Array<{
+      principalId?: string;
+      groupId?: string;
+      ruleId?: string;
+    }>
+  > {
     if (rules.length === 0) return [];
 
     // Delegate to resolver if available (full condition eval + strategy expansion)
@@ -1059,7 +1084,7 @@ export class ApprovalServiceImpl implements ApprovalService {
    */
   private async resolveStageOutcome(
     stageId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<"completed" | "rejected"> {
     const tasks = await this.db
       .selectFrom("wf.approval_task")
@@ -1079,7 +1104,7 @@ export class ApprovalServiceImpl implements ApprovalService {
    */
   private async resumeLifecycleTransition(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<boolean> {
     if (!this.lifecycleManager) return false;
 
@@ -1129,7 +1154,7 @@ export class ApprovalServiceImpl implements ApprovalService {
         tenantId,
         "lifecycle_resume_failed",
         { transitionId: instance.transition_id },
-        "system"
+        "system",
       );
       return false;
     }
@@ -1143,7 +1168,7 @@ export class ApprovalServiceImpl implements ApprovalService {
     tenantId: string,
     eventType: string,
     payload: Record<string, unknown>,
-    actorId?: string
+    actorId?: string,
   ): Promise<void> {
     try {
       await this.db

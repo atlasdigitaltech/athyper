@@ -5,6 +5,11 @@
 
 import { ok, fail } from "../../shared/engine-base.js";
 import {
+  compareAmounts,
+  subtractAmounts,
+  sumAmounts,
+} from "../../shared/money.js";
+import {
   calculateDepreciation,
   type DepreciationParams,
 } from "../domain/depreciation-calculator.js";
@@ -22,9 +27,11 @@ import {
   type DepreciationMethod,
 } from "../domain/types.js";
 // MC-4 compliance: BigInt arithmetic instead of parseFloat
-import { compareAmounts, subtractAmounts, sumAmounts } from "../../shared/money.js";
 
-import type { ServiceResult, OperationContext } from "../../shared/engine-base.js";
+import type {
+  ServiceResult,
+  OperationContext,
+} from "../../shared/engine-base.js";
 import type { AssetBookRepository } from "../persistence/asset-book-repo.js";
 import type { AssetRepository } from "../persistence/asset-repo.js";
 
@@ -117,7 +124,10 @@ export class DefaultAssetService implements AssetService {
     const bookTypes = bookInputs.map((b) => b.bookType);
     const uniqueTypes = new Set(bookTypes);
     if (uniqueTypes.size !== bookTypes.length) {
-      return fail("DUPLICATE_BOOK_TYPE", "Each book type must be unique per asset");
+      return fail(
+        "DUPLICATE_BOOK_TYPE",
+        "Each book type must be unique per asset",
+      );
     }
 
     const asset = await this.assetRepo.create(input);
@@ -141,7 +151,9 @@ export class DefaultAssetService implements AssetService {
     ctx: OperationContext,
     assetId: string,
     referenceJeId?: string,
-  ): Promise<ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>> {
+  ): Promise<
+    ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>
+  > {
     const tenantId = ctx.tenantId;
     const asset = await this.assetRepo.findById(tenantId, assetId);
     if (!asset) {
@@ -192,7 +204,9 @@ export class DefaultAssetService implements AssetService {
     depreciationDate: string,
     nextDepreciationDate: string | null,
     overrideParams?: Partial<DepreciationParams>,
-  ): Promise<ServiceResult<{ transaction: AssetTransaction; book: AssetBook }>> {
+  ): Promise<
+    ServiceResult<{ transaction: AssetTransaction; book: AssetBook }>
+  > {
     const tenantId = ctx.tenantId;
 
     const asset = await this.assetRepo.findById(tenantId, assetId);
@@ -215,7 +229,10 @@ export class DefaultAssetService implements AssetService {
       bookType,
     );
     if (!book) {
-      return fail("BOOK_NOT_FOUND", `Book ${bookType} not found for asset ${assetId}`);
+      return fail(
+        "BOOK_NOT_FOUND",
+        `Book ${bookType} not found for asset ${assetId}`,
+      );
     }
 
     const params: DepreciationParams = {
@@ -348,7 +365,9 @@ export class DefaultAssetService implements AssetService {
         completedAt: new Date().toISOString(),
       });
       const message =
-        error instanceof Error ? error.message : "Unknown error during batch depreciation";
+        error instanceof Error
+          ? error.message
+          : "Unknown error during batch depreciation";
       return fail("BATCH_DEPRECIATION_FAILED", message);
     }
   }
@@ -362,7 +381,9 @@ export class DefaultAssetService implements AssetService {
     newCostBasis: string,
     newResidualValue: string | undefined,
     referenceJeId?: string,
-  ): Promise<ServiceResult<{ transaction: AssetTransaction; book: AssetBook }>> {
+  ): Promise<
+    ServiceResult<{ transaction: AssetTransaction; book: AssetBook }>
+  > {
     const tenantId = ctx.tenantId;
 
     const asset = await this.assetRepo.findById(tenantId, assetId);
@@ -376,13 +397,18 @@ export class DefaultAssetService implements AssetService {
       bookType,
     );
     if (!book) {
-      return fail("BOOK_NOT_FOUND", `Book ${bookType} not found for asset ${assetId}`);
+      return fail(
+        "BOOK_NOT_FOUND",
+        `Book ${bookType} not found for asset ${assetId}`,
+      );
     }
 
     // MC-4 compliance: compareAmounts / subtractAmounts instead of parseFloat
     const isUpward = compareAmounts(newCostBasis, book.costBasis) > 0;
 
-    const txnType = isUpward ? AssetTxnType.REVALUE_UP : AssetTxnType.REVALUE_DOWN;
+    const txnType = isUpward
+      ? AssetTxnType.REVALUE_UP
+      : AssetTxnType.REVALUE_DOWN;
     const diff = subtractAmounts(newCostBasis, book.costBasis);
     // Absolute value: if diff is negative, strip the leading "-"
     const amount = diff.startsWith("-") ? diff.slice(1) : diff;
@@ -430,7 +456,9 @@ export class DefaultAssetService implements AssetService {
     disposalAmount: string,
     referenceJeId?: string,
     notes?: string,
-  ): Promise<ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>> {
+  ): Promise<
+    ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>
+  > {
     const tenantId = ctx.tenantId;
 
     const asset = await this.assetRepo.findById(tenantId, assetId);
@@ -489,14 +517,19 @@ export class DefaultAssetService implements AssetService {
     assetId: string,
     referenceJeId?: string,
     notes?: string,
-  ): Promise<ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>> {
+  ): Promise<
+    ServiceResult<{ asset: Asset; transactions: AssetTransaction[] }>
+  > {
     const tenantId = ctx.tenantId;
 
     const asset = await this.assetRepo.findById(tenantId, assetId);
     if (!asset) {
       return fail("ASSET_NOT_FOUND", `Asset ${assetId} not found`);
     }
-    if (asset.status === AssetStatus.RETIRED || asset.status === AssetStatus.DISPOSED) {
+    if (
+      asset.status === AssetStatus.RETIRED ||
+      asset.status === AssetStatus.DISPOSED
+    ) {
       return fail(
         "INVALID_STATUS_TRANSITION",
         `Asset is already ${asset.status}`,

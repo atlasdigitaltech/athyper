@@ -25,9 +25,15 @@ import type {
  * User resolution service interface
  */
 interface IUserResolutionService {
-  getUserById(userId: string): Promise<{ id: string; name: string; email: string } | null>;
-  getUsersByRole(roleId: string): Promise<Array<{ id: string; name: string; email: string }>>;
-  getUserManager(userId: string): Promise<{ id: string; name: string; email: string } | null>;
+  getUserById(
+    userId: string,
+  ): Promise<{ id: string; name: string; email: string } | null>;
+  getUsersByRole(
+    roleId: string,
+  ): Promise<Array<{ id: string; name: string; email: string }>>;
+  getUserManager(
+    userId: string,
+  ): Promise<{ id: string; name: string; email: string } | null>;
 }
 
 /**
@@ -38,7 +44,7 @@ export class RecoveryService implements IRecoveryService {
     private readonly errorRepository: IRecoveryErrorRepository,
     private readonly instanceRepository: IApprovalInstanceRepository,
     private readonly userService: IUserResolutionService,
-    private readonly auditService?: IAuditTrailService
+    private readonly auditService?: IAuditTrailService,
   ) {}
 
   /**
@@ -46,7 +52,7 @@ export class RecoveryService implements IRecoveryService {
    */
   async getSuggestedActions(
     tenantId: string,
-    error: WorkflowError
+    error: WorkflowError,
   ): Promise<RecoveryAction[]> {
     // Return cached suggestions if available
     if (error.suggestedActions && error.suggestedActions.length > 0) {
@@ -77,19 +83,17 @@ export class RecoveryService implements IRecoveryService {
             description: "Skip this approver and continue",
             requiresConfirmation: true,
             estimatedImpact: "May affect quorum calculation",
-          }
+          },
         );
         break;
 
       case "role_mismatch":
-        actions.push(
-          {
-            type: "reassign_to_role",
-            description: "Reassign to another user with the required role",
-            requiresConfirmation: true,
-            estimatedImpact: "New role member will be assigned",
-          }
-        );
+        actions.push({
+          type: "reassign_to_role",
+          description: "Reassign to another user with the required role",
+          requiresConfirmation: true,
+          estimatedImpact: "New role member will be assigned",
+        });
         break;
 
       case "quorum_unreachable":
@@ -105,30 +109,26 @@ export class RecoveryService implements IRecoveryService {
             description: "Cancel the workflow",
             requiresConfirmation: true,
             estimatedImpact: "Workflow will be terminated",
-          }
+          },
         );
         break;
 
       case "sla_expired":
-        actions.push(
-          {
-            type: "escalate",
-            description: "Escalate to higher level",
-            requiresConfirmation: false,
-            estimatedImpact: "Additional approvers will be notified",
-          }
-        );
+        actions.push({
+          type: "escalate",
+          description: "Escalate to higher level",
+          requiresConfirmation: false,
+          estimatedImpact: "Additional approvers will be notified",
+        });
         break;
 
       case "notification_failed":
-        actions.push(
-          {
-            type: "retry_action",
-            description: "Retry sending notification",
-            requiresConfirmation: false,
-            estimatedImpact: "Notification will be resent",
-          }
-        );
+        actions.push({
+          type: "retry_action",
+          description: "Retry sending notification",
+          requiresConfirmation: false,
+          estimatedImpact: "Notification will be resent",
+        });
         break;
 
       default:
@@ -144,7 +144,7 @@ export class RecoveryService implements IRecoveryService {
             description: "Request admin intervention",
             requiresConfirmation: true,
             estimatedImpact: "Admin will manually resolve the issue",
-          }
+          },
         );
     }
 
@@ -158,7 +158,7 @@ export class RecoveryService implements IRecoveryService {
     tenantId: string,
     errorId: string,
     action: RecoveryAction,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     const error = await this.errorRepository.getError(tenantId, errorId);
 
@@ -187,12 +187,16 @@ export class RecoveryService implements IRecoveryService {
             tenantId,
             error,
             action.parameters as { newUserId: string },
-            performedBy
+            performedBy,
           );
           break;
 
         case "reassign_to_manager":
-          result = await this.executeReassignToManager(tenantId, error, performedBy);
+          result = await this.executeReassignToManager(
+            tenantId,
+            error,
+            performedBy,
+          );
           break;
 
         case "reassign_to_role":
@@ -200,7 +204,7 @@ export class RecoveryService implements IRecoveryService {
             tenantId,
             error,
             action.parameters as { roleId: string },
-            performedBy
+            performedBy,
           );
           break;
 
@@ -213,11 +217,19 @@ export class RecoveryService implements IRecoveryService {
           break;
 
         case "pause_workflow":
-          result = await this.executePauseWorkflow(tenantId, error, performedBy);
+          result = await this.executePauseWorkflow(
+            tenantId,
+            error,
+            performedBy,
+          );
           break;
 
         case "cancel_workflow":
-          result = await this.executeCancelWorkflow(tenantId, error, performedBy);
+          result = await this.executeCancelWorkflow(
+            tenantId,
+            error,
+            performedBy,
+          );
           break;
 
         case "retry_action":
@@ -294,18 +306,25 @@ export class RecoveryService implements IRecoveryService {
     instanceId: string,
     reason: PauseReason,
     message: string,
-    pausedBy: string
+    pausedBy: string,
   ): Promise<WorkflowPause> {
     // Check if already paused
-    const existingPause = await this.errorRepository.getActivePause(tenantId, instanceId);
+    const existingPause = await this.errorRepository.getActivePause(
+      tenantId,
+      instanceId,
+    );
     if (existingPause) {
       throw new Error("Workflow is already paused");
     }
 
     // Update instance status
-    const _instance = await this.instanceRepository.update(tenantId, instanceId, {
-      status: "on_hold",
-    });
+    const _instance = await this.instanceRepository.update(
+      tenantId,
+      instanceId,
+      {
+        status: "on_hold",
+      },
+    );
 
     // Create pause record
     const pause = await this.errorRepository.createPause({
@@ -341,10 +360,13 @@ export class RecoveryService implements IRecoveryService {
   async resumeWorkflow(
     tenantId: string,
     instanceId: string,
-    resumedBy: string
+    resumedBy: string,
   ): Promise<ApprovalInstance> {
     // Get active pause
-    const pause = await this.errorRepository.getActivePause(tenantId, instanceId);
+    const pause = await this.errorRepository.getActivePause(
+      tenantId,
+      instanceId,
+    );
     if (!pause) {
       throw new Error("Workflow is not paused");
     }
@@ -356,9 +378,13 @@ export class RecoveryService implements IRecoveryService {
     });
 
     // Update instance status
-    const instance = await this.instanceRepository.update(tenantId, instanceId, {
-      status: "in_progress",
-    });
+    const instance = await this.instanceRepository.update(
+      tenantId,
+      instanceId,
+      {
+        status: "in_progress",
+      },
+    );
 
     // Record audit event
     if (this.auditService) {
@@ -371,7 +397,8 @@ export class RecoveryService implements IRecoveryService {
         description: "Workflow resumed",
         metadata: {
           pauseId: pause.id,
-          pauseDuration: new Date().getTime() - new Date(pause.pausedAt).getTime(),
+          pauseDuration:
+            new Date().getTime() - new Date(pause.pausedAt).getTime(),
         },
       });
     }
@@ -384,7 +411,7 @@ export class RecoveryService implements IRecoveryService {
    */
   async attemptAutoRecovery(
     tenantId: string,
-    error: WorkflowError
+    error: WorkflowError,
   ): Promise<RecoveryResult | null> {
     // Only attempt auto-recovery for specific error types
     if (!["notification_failed", "system_error"].includes(error.errorType)) {
@@ -414,7 +441,7 @@ export class RecoveryService implements IRecoveryService {
     tenantId: string,
     error: WorkflowError,
     params: { newUserId: string },
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     if (!error.stepInstanceId || !error.approverId || !params?.newUserId) {
       return {
@@ -442,7 +469,7 @@ export class RecoveryService implements IRecoveryService {
     // Get step instance
     const step = await this.instanceRepository.getStepInstance(
       tenantId,
-      error.stepInstanceId
+      error.stepInstanceId,
     );
 
     if (!step) {
@@ -473,9 +500,13 @@ export class RecoveryService implements IRecoveryService {
       return a;
     });
 
-    await this.instanceRepository.updateStepInstance(tenantId, error.stepInstanceId, {
-      approvers: updatedApprovers,
-    });
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      error.stepInstanceId,
+      {
+        approvers: updatedApprovers,
+      },
+    );
 
     return {
       success: true,
@@ -493,7 +524,7 @@ export class RecoveryService implements IRecoveryService {
   private async executeReassignToManager(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     if (!error.stepInstanceId || !error.approverId) {
       return {
@@ -522,7 +553,7 @@ export class RecoveryService implements IRecoveryService {
       tenantId,
       error,
       { newUserId: manager.id },
-      performedBy
+      performedBy,
     );
   }
 
@@ -533,7 +564,7 @@ export class RecoveryService implements IRecoveryService {
     tenantId: string,
     error: WorkflowError,
     params: { roleId: string },
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     if (!error.stepInstanceId || !params?.roleId) {
       return {
@@ -565,7 +596,7 @@ export class RecoveryService implements IRecoveryService {
       tenantId,
       error,
       { newUserId: newApprover.id },
-      performedBy
+      performedBy,
     );
   }
 
@@ -575,7 +606,7 @@ export class RecoveryService implements IRecoveryService {
   private async executeSkipApprover(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     if (!error.stepInstanceId || !error.approverId) {
       return {
@@ -590,7 +621,7 @@ export class RecoveryService implements IRecoveryService {
 
     const step = await this.instanceRepository.getStepInstance(
       tenantId,
-      error.stepInstanceId
+      error.stepInstanceId,
     );
 
     if (!step) {
@@ -624,10 +655,14 @@ export class RecoveryService implements IRecoveryService {
       delegated: step.approvalCounts.delegated, // Keep delegated count unchanged
     };
 
-    await this.instanceRepository.updateStepInstance(tenantId, error.stepInstanceId, {
-      approvers: updatedApprovers,
-      approvalCounts: newCounts,
-    });
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      error.stepInstanceId,
+      {
+        approvers: updatedApprovers,
+        approvalCounts: newCounts,
+      },
+    );
 
     return {
       success: true,
@@ -645,7 +680,7 @@ export class RecoveryService implements IRecoveryService {
   private async executeSkipStep(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     if (!error.stepInstanceId) {
       return {
@@ -658,11 +693,15 @@ export class RecoveryService implements IRecoveryService {
       };
     }
 
-    await this.instanceRepository.updateStepInstance(tenantId, error.stepInstanceId, {
-      status: "skipped",
-      skipReason: `Recovery action: ${error.message}`,
-      completedAt: new Date(),
-    });
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      error.stepInstanceId,
+      {
+        status: "skipped",
+        skipReason: `Recovery action: ${error.message}`,
+        completedAt: new Date(),
+      },
+    );
 
     return {
       success: true,
@@ -681,7 +720,7 @@ export class RecoveryService implements IRecoveryService {
   private async executePauseWorkflow(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     try {
       await this.pauseWorkflow(
@@ -689,7 +728,7 @@ export class RecoveryService implements IRecoveryService {
         error.instanceId,
         "error_recovery",
         error.message,
-        performedBy
+        performedBy,
       );
 
       return {
@@ -719,7 +758,7 @@ export class RecoveryService implements IRecoveryService {
   private async executeCancelWorkflow(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     await this.instanceRepository.update(tenantId, error.instanceId, {
       status: "cancelled",
@@ -743,7 +782,7 @@ export class RecoveryService implements IRecoveryService {
   private async executeRetryAction(
     tenantId: string,
     error: WorkflowError,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult> {
     // This would integrate with the specific action that failed
     // For now, just mark as retried
@@ -770,12 +809,12 @@ export function createRecoveryService(
   errorRepository: IRecoveryErrorRepository,
   instanceRepository: IApprovalInstanceRepository,
   userService: IUserResolutionService,
-  auditService?: IAuditTrailService
+  auditService?: IAuditTrailService,
 ): IRecoveryService {
   return new RecoveryService(
     errorRepository,
     instanceRepository,
     userService,
-    auditService
+    auditService,
   );
 }

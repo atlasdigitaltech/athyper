@@ -27,39 +27,38 @@
 import { bootstrap } from "./kernel/bootstrap.js";
 
 async function main(): Promise<void> {
-    try {
-        const _result = await bootstrap();
+  try {
+    const _result = await bootstrap();
 
-        // Log successful boot (logger is now available via container)
-        // The bootstrap function handles all logging internally
+    // Log successful boot (logger is now available via container)
+    // The bootstrap function handles all logging internally
 
-        // Keep process alive - the HTTP server / worker / scheduler
-        // will keep the event loop running
-        process.on("SIGTERM", () => {
-            // Graceful shutdown is handled by lifecycle.onShutdown in bootstrap
-            // This is just a fallback
-        });
+    // Keep process alive - the HTTP server / worker / scheduler
+    // will keep the event loop running
+    process.on("SIGTERM", () => {
+      // Graceful shutdown is handled by lifecycle.onShutdown in bootstrap
+      // This is just a fallback
+    });
 
-        process.on("SIGINT", () => {
-            // Graceful shutdown is handled by lifecycle.onShutdown in bootstrap
-            // This is just a fallback
-        });
-
-    } catch (err) {
-        // Bootstrap already logs and sets process.exitCode on failure
-        // Re-throw to ensure non-zero exit if not already set
-        if (!process.exitCode) {
-            process.exitCode = 1;
-        }
-
-        // In development, print the full error for debugging
-        if (process.env.NODE_ENV !== "production") {
-            console.error("\n[main] Bootstrap failed with error:\n", err);
-        }
-
-        // Don't call process.exit() - let the event loop drain naturally
-        // The exitCode is already set by bootstrap's fatal() handler
+    process.on("SIGINT", () => {
+      // Graceful shutdown is handled by lifecycle.onShutdown in bootstrap
+      // This is just a fallback
+    });
+  } catch (err) {
+    // Bootstrap already logs and sets process.exitCode on failure
+    // Re-throw to ensure non-zero exit if not already set
+    if (!process.exitCode) {
+      process.exitCode = 1;
     }
+
+    // In development, print the full error for debugging
+    if (process.env.NODE_ENV !== "production") {
+      console.error("\n[main] Bootstrap failed with error:\n", err);
+    }
+
+    // Don't call process.exit() - let the event loop drain naturally
+    // The exitCode is already set by bootstrap's fatal() handler
+  }
 }
 
 // Run the main function

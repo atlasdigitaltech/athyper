@@ -9,7 +9,6 @@
 // No parseFloat / toFixed anywhere in this module.
 // ============================================================
 
-import { DepreciationMethod } from "./types.js";
 import {
   toScaledBigInt,
   fromScaledBigInt,
@@ -18,16 +17,32 @@ import {
   multiplyAmounts,
 } from "../../shared/money.js";
 
+import { DepreciationMethod } from "./types.js";
+
 // Internal precision for all depreciation calculations (4 decimal places)
 const PRECISION = 4;
 
 // ── MACRS half-year convention rates (percentage of cost basis per year) ──
 // Simplified 5-year property table (GDS 200% DB switching to SL)
 // MC-4: rates expressed as string decimals instead of float constants
-const MACRS_5_YEAR_RATES = ["0.2", "0.32", "0.192", "0.1152", "0.1152", "0.0576"];
+const MACRS_5_YEAR_RATES = [
+  "0.2",
+  "0.32",
+  "0.192",
+  "0.1152",
+  "0.1152",
+  "0.0576",
+];
 // 7-year property table
 const MACRS_7_YEAR_RATES = [
-  "0.1429", "0.2449", "0.1749", "0.1249", "0.0893", "0.0892", "0.0893", "0.0446",
+  "0.1429",
+  "0.2449",
+  "0.1749",
+  "0.1249",
+  "0.0893",
+  "0.0892",
+  "0.0893",
+  "0.0446",
 ];
 
 export interface DepreciationParams {
@@ -161,9 +176,9 @@ function reducingBalance(params: DepreciationParams): DepreciationResult {
   let remainingMonths = months;
   if (depreciableBase > 0n) {
     // elapsedMonths = (accum * months) / depreciableBase (integer math)
-    const elapsedScaled = (accum * BigInt(months));
+    const elapsedScaled = accum * BigInt(months);
     const elapsedMonthsInt = Number(elapsedScaled / depreciableBase);
-    const elapsedRounded = Math.round(elapsedMonthsInt / (10 ** PRECISION));
+    const elapsedRounded = Math.round(elapsedMonthsInt / 10 ** PRECISION);
     remainingMonths = months - elapsedRounded;
   }
   const slMonthly =
@@ -223,9 +238,9 @@ function accelerated(params: DepreciationParams): DepreciationResult {
   const depreciableBase = cost - residual;
   let elapsedRounded = 0;
   if (depreciableBase > 0n) {
-    const elapsedScaled = (accum * BigInt(months));
+    const elapsedScaled = accum * BigInt(months);
     const elapsedMonthsInt = Number(elapsedScaled / depreciableBase);
-    elapsedRounded = Math.round(elapsedMonthsInt / (10 ** PRECISION));
+    elapsedRounded = Math.round(elapsedMonthsInt / 10 ** PRECISION);
   }
   const remainingMonths = Math.max(months - elapsedRounded, 1);
   const slMonthly = bigDivByInt(nbv - residual, remainingMonths);
@@ -265,14 +280,19 @@ function macrs(params: DepreciationParams): DepreciationResult {
 
   // MACRS depreciates to zero (residual = 0)
   // MC-4: remaining = costBasis - accumulatedDepreciation via subtractAmounts
-  const remaining = subtractAmounts(params.costBasis, params.accumulatedDepreciation, PRECISION);
+  const remaining = subtractAmounts(
+    params.costBasis,
+    params.accumulatedDepreciation,
+    PRECISION,
+  );
   if (compareAmounts(remaining, "0", PRECISION) <= 0) {
     return { monthlyAmount: ZERO };
   }
 
   // Cap: min(monthly, remaining)
   const remainingScaled = scaled(remaining);
-  const capped = monthlyScaled < remainingScaled ? monthlyScaled : remainingScaled;
+  const capped =
+    monthlyScaled < remainingScaled ? monthlyScaled : remainingScaled;
 
   return { monthlyAmount: unscaled(capped) };
 }

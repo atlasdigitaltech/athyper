@@ -27,7 +27,11 @@ services:
       - ${MESH_DATA}/memorycache:/data
     networks: [internal]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$MEMORYCACHE_PASSWORD\" ping >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli -a "$MEMORYCACHE_PASSWORD" ping >/dev/null 2>&1',
+        ]
       interval: 10s
       timeout: 3s
       retries: 10

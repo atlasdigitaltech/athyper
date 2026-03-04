@@ -10,8 +10,6 @@ import { EntityCapabilitiesService } from "@athyper/runtime/services/platform/me
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
-
 import {
   getApiContext,
   resolveTenantUuid,
@@ -74,10 +72,7 @@ export async function GET(
 
     return successResponse(capabilities);
   } catch (err) {
-    console.error(
-      `[GET /api/entity-capabilities/${entityKey}] Error:`,
-      err,
-    );
+    console.error(`[GET /api/entity-capabilities/${entityKey}] Error:`, err);
     return errorResponse(
       "INTERNAL_ERROR",
       "Failed to fetch entity capabilities",

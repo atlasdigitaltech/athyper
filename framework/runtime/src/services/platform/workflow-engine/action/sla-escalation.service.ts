@@ -20,8 +20,6 @@ import type {
 } from "../instance/types.js";
 import type { INotificationService } from "../task/types.js";
 
-
-
 /**
  * Generate unique ID
  */
@@ -36,7 +34,9 @@ export class SlaMonitoringService implements ISlaMonitoringService {
   constructor(
     private readonly instanceRepository: IApprovalInstanceRepository,
     private readonly notificationService?: INotificationService,
-    private readonly eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+    private readonly eventHandlers?: Array<
+      (event: WorkflowEvent) => Promise<void>
+    >,
   ) {}
 
   /**
@@ -44,7 +44,7 @@ export class SlaMonitoringService implements ISlaMonitoringService {
    */
   async checkStepSla(
     tenantId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<StepSlaStatus> {
     const now = new Date();
 
@@ -62,9 +62,12 @@ export class SlaMonitoringService implements ISlaMonitoringService {
       const isBreached = timeRemainingMs < 0;
 
       // Calculate warning threshold (default 80%)
-      const totalTime = responseDueAt.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
+      const totalTime =
+        responseDueAt.getTime() -
+        (stepInstance.activatedAt?.getTime() || now.getTime());
       const warningThreshold = totalTime * 0.8;
-      const elapsedTime = now.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
+      const elapsedTime =
+        now.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
       const isWarning = elapsedTime >= warningThreshold && !isBreached;
 
       status.responseSla = {
@@ -86,9 +89,12 @@ export class SlaMonitoringService implements ISlaMonitoringService {
       const timeRemainingMs = completionDueAt.getTime() - now.getTime();
       const isBreached = timeRemainingMs < 0;
 
-      const totalTime = completionDueAt.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
+      const totalTime =
+        completionDueAt.getTime() -
+        (stepInstance.activatedAt?.getTime() || now.getTime());
       const warningThreshold = totalTime * 0.8;
-      const elapsedTime = now.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
+      const elapsedTime =
+        now.getTime() - (stepInstance.activatedAt?.getTime() || now.getTime());
       const isWarning = elapsedTime >= warningThreshold && !isBreached;
 
       status.completionSla = {
@@ -112,11 +118,11 @@ export class SlaMonitoringService implements ISlaMonitoringService {
    */
   async checkInstanceSla(
     tenantId: string,
-    instance: ApprovalInstance
+    instance: ApprovalInstance,
   ): Promise<StepSlaStatus[]> {
     const stepInstances = await this.instanceRepository.getStepInstances(
       tenantId,
-      instance.id
+      instance.id,
     );
 
     const activeSteps = stepInstances.filter((s) => s.status === "active");
@@ -149,9 +155,11 @@ export class SlaMonitoringService implements ISlaMonitoringService {
           // Get step instance
           const stepInstances = await this.instanceRepository.getStepInstances(
             tenantId,
-            instance.id
+            instance.id,
           );
-          const stepInstance = stepInstances.find((s) => s.id === status.stepInstanceId);
+          const stepInstance = stepInstances.find(
+            (s) => s.id === status.stepInstanceId,
+          );
 
           if (stepInstance) {
             // Fire breach event
@@ -180,7 +188,7 @@ export class SlaMonitoringService implements ISlaMonitoringService {
                   escalationCount: stepInstance.sla?.escalationCount ?? 0,
                   warningTriggered: true,
                 },
-              }
+              },
             );
           }
         }
@@ -209,9 +217,11 @@ export class SlaMonitoringService implements ISlaMonitoringService {
           // Get step instance
           const stepInstances = await this.instanceRepository.getStepInstances(
             tenantId,
-            instance.id
+            instance.id,
           );
-          const stepInstance = stepInstances.find((s) => s.id === status.stepInstanceId);
+          const stepInstance = stepInstances.find(
+            (s) => s.id === status.stepInstanceId,
+          );
 
           if (stepInstance) {
             // Fire warning event
@@ -237,7 +247,7 @@ export class SlaMonitoringService implements ISlaMonitoringService {
                   escalationCount: stepInstance.sla?.escalationCount ?? 0,
                   warningTriggered: true,
                 },
-              }
+              },
             );
 
             warningsSent++;
@@ -272,7 +282,9 @@ export class EscalationService implements IEscalationService {
   constructor(
     private readonly instanceRepository: IApprovalInstanceRepository,
     private readonly notificationService?: INotificationService,
-    private readonly eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+    private readonly eventHandlers?: Array<
+      (event: WorkflowEvent) => Promise<void>
+    >,
   ) {}
 
   /**
@@ -281,7 +293,7 @@ export class EscalationService implements IEscalationService {
   async executeEscalation(
     tenantId: string,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<EscalationResult> {
     const now = new Date();
     const currentLevel = stepInstance.sla?.escalationCount || 0;
@@ -295,7 +307,10 @@ export class EscalationService implements IEscalationService {
     };
 
     // Get instance for context
-    const instance = await this.instanceRepository.getById(tenantId, stepInstance.instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      stepInstance.instanceId,
+    );
     if (!instance) {
       result.error = "Instance not found";
       return result;
@@ -303,13 +318,17 @@ export class EscalationService implements IEscalationService {
 
     // Get escalation rules from template
     const template = instance.workflowSnapshot.definition;
-    const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
-    const escalationRules = stepDef?.sla?.escalations || template.globalSla?.escalations || [];
+    const stepDef = template.steps.find(
+      (s) => s.id === stepInstance.stepDefinitionId,
+    );
+    const escalationRules =
+      stepDef?.sla?.escalations || template.globalSla?.escalations || [];
 
     // Find applicable escalation rule for current level (use array index)
     // newLevel is 1-based, array is 0-based
-    const applicableRule = escalationRules[newLevel - 1] ||
-                          escalationRules[escalationRules.length - 1];
+    const applicableRule =
+      escalationRules[newLevel - 1] ||
+      escalationRules[escalationRules.length - 1];
 
     if (!applicableRule) {
       // No escalation rule defined, just notify
@@ -320,12 +339,16 @@ export class EscalationService implements IEscalationService {
       result.executed = true;
 
       // Update step with new escalation level
-      await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-        sla: {
-          ...stepInstance.sla,
-          escalationCount: newLevel,
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          sla: {
+            ...stepInstance.sla,
+            escalationCount: newLevel,
+          },
         },
-      });
+      );
 
       return result;
     }
@@ -335,7 +358,7 @@ export class EscalationService implements IEscalationService {
       tenantId,
       instance,
       stepInstance,
-      newLevel
+      newLevel,
     );
 
     switch (applicableRule.action) {
@@ -346,7 +369,7 @@ export class EscalationService implements IEscalationService {
             instance,
             stepInstance,
             escalationTargets,
-            reason
+            reason,
           );
 
           result.newAssignees = newAssignees;
@@ -395,7 +418,7 @@ export class EscalationService implements IEscalationService {
             instance,
             stepInstance,
             escalationTargets,
-            reason
+            reason,
           );
           result.newAssignees = newAssignees;
           result.actionsTaken.push({
@@ -408,12 +431,16 @@ export class EscalationService implements IEscalationService {
     }
 
     // Update step with new escalation level
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      sla: {
-        ...stepInstance.sla,
-        escalationCount: newLevel,
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        sla: {
+          ...stepInstance.sla,
+          escalationCount: newLevel,
+        },
       },
-    });
+    );
 
     // Fire escalation event
     await this.fireEvent({
@@ -443,23 +470,29 @@ export class EscalationService implements IEscalationService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    escalationLevel: number
+    escalationLevel: number,
   ): Promise<EscalationTarget[]> {
     const targets: EscalationTarget[] = [];
 
     // Get escalation rules from template
     const template = instance.workflowSnapshot.definition;
-    const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
-    const escalationRules = stepDef?.sla?.escalations || template.globalSla?.escalations || [];
+    const stepDef = template.steps.find(
+      (s) => s.id === stepInstance.stepDefinitionId,
+    );
+    const escalationRules =
+      stepDef?.sla?.escalations || template.globalSla?.escalations || [];
 
     // Find rule for this level (use array index, 1-based to 0-based)
-    const rule = escalationRules[escalationLevel - 1] ||
-                 escalationRules[escalationRules.length - 1];
+    const rule =
+      escalationRules[escalationLevel - 1] ||
+      escalationRules[escalationRules.length - 1];
 
     if (!rule || !rule.target) {
       // Default: escalate to requester's manager if available
       // Note: managerId may be stored in metadata during instance creation
-      const managerId = (instance.metadata as Record<string, unknown> | undefined)?.requesterManagerId as string | undefined;
+      const managerId = (
+        instance.metadata as Record<string, unknown> | undefined
+      )?.requesterManagerId as string | undefined;
       if (managerId) {
         targets.push({
           type: "manager",
@@ -503,7 +536,9 @@ export class EscalationService implements IEscalationService {
 
       case "hierarchy": {
         // Hierarchy-based escalation (manager chain)
-        const managerId = (instance.metadata as Record<string, unknown> | undefined)?.requesterManagerId as string | undefined;
+        const managerId = (
+          instance.metadata as Record<string, unknown> | undefined
+        )?.requesterManagerId as string | undefined;
         if (managerId) {
           targets.push({
             type: "manager",
@@ -540,16 +575,18 @@ export class EscalationService implements IEscalationService {
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
     targets: EscalationTarget[],
-    _reason: string
+    _reason: string,
   ): Promise<AssignedApprover[]> {
     const now = new Date();
     const newApprovers: AssignedApprover[] = [];
 
     // Mark existing approvers as escalated - explicitly type as AssignedApprover[]
-    const updatedApprovers: AssignedApprover[] = stepInstance.approvers.map((a): AssignedApprover => ({
-      ...a,
-      status: a.status === "pending" ? "escalated" : a.status,
-    }));
+    const updatedApprovers: AssignedApprover[] = stepInstance.approvers.map(
+      (a): AssignedApprover => ({
+        ...a,
+        status: a.status === "pending" ? "escalated" : a.status,
+      }),
+    );
 
     // Add new approvers from escalation targets
     for (const target of targets) {
@@ -571,14 +608,19 @@ export class EscalationService implements IEscalationService {
     }
 
     // Update step instance
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      approvers: updatedApprovers,
-      approvalCounts: {
-        ...stepInstance.approvalCounts,
-        total: updatedApprovers.length,
-        pending: updatedApprovers.filter((a) => a.status === "pending").length,
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        approvers: updatedApprovers,
+        approvalCounts: {
+          ...stepInstance.approvalCounts,
+          total: updatedApprovers.length,
+          pending: updatedApprovers.filter((a) => a.status === "pending")
+            .length,
+        },
       },
-    });
+    );
 
     return newApprovers;
   }
@@ -591,7 +633,7 @@ export class EscalationService implements IEscalationService {
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
     targets: EscalationTarget[],
-    _reason: string
+    _reason: string,
   ): Promise<AssignedApprover[]> {
     const now = new Date();
     const newApprovers: AssignedApprover[] = [];
@@ -619,14 +661,19 @@ export class EscalationService implements IEscalationService {
     }
 
     // Update step instance
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      approvers: updatedApprovers,
-      approvalCounts: {
-        ...stepInstance.approvalCounts,
-        total: updatedApprovers.length,
-        pending: updatedApprovers.filter((a) => a.status === "pending").length,
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        approvers: updatedApprovers,
+        approvalCounts: {
+          ...stepInstance.approvalCounts,
+          total: updatedApprovers.length,
+          pending: updatedApprovers.filter((a) => a.status === "pending")
+            .length,
+        },
       },
-    });
+    );
 
     return newApprovers;
   }
@@ -638,7 +685,7 @@ export class EscalationService implements IEscalationService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -650,13 +697,17 @@ export class EscalationService implements IEscalationService {
       comment: a.status === "pending" ? `Auto-approved: ${reason}` : a.comment,
     }));
 
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      status: "approved",
-      approvers: updatedApprovers,
-      autoApproved: true,
-      autoApproveReason: reason,
-      completedAt: now,
-    });
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        status: "approved",
+        approvers: updatedApprovers,
+        autoApproved: true,
+        autoApproveReason: reason,
+        completedAt: now,
+      },
+    );
   }
 
   /**
@@ -666,14 +717,18 @@ export class EscalationService implements IEscalationService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const now = new Date();
 
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      status: "rejected",
-      completedAt: now,
-    });
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        status: "rejected",
+        completedAt: now,
+      },
+    );
 
     // Also update instance
     await this.instanceRepository.update(tenantId, instance.id, {
@@ -694,7 +749,7 @@ export class EscalationService implements IEscalationService {
   private async cancelWorkflow(
     tenantId: string,
     instance: ApprovalInstance,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -713,7 +768,7 @@ export class EscalationService implements IEscalationService {
     await this.instanceRepository.releaseLock(
       tenantId,
       instance.entity.type,
-      instance.entity.id
+      instance.entity.id,
     );
   }
 
@@ -739,9 +794,13 @@ export class EscalationService implements IEscalationService {
 export function createSlaMonitoringService(
   instanceRepository: IApprovalInstanceRepository,
   notificationService?: INotificationService,
-  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>,
 ): ISlaMonitoringService {
-  return new SlaMonitoringService(instanceRepository, notificationService, eventHandlers);
+  return new SlaMonitoringService(
+    instanceRepository,
+    notificationService,
+    eventHandlers,
+  );
 }
 
 /**
@@ -750,7 +809,11 @@ export function createSlaMonitoringService(
 export function createEscalationService(
   instanceRepository: IApprovalInstanceRepository,
   notificationService?: INotificationService,
-  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>,
 ): IEscalationService {
-  return new EscalationService(instanceRepository, notificationService, eventHandlers);
+  return new EscalationService(
+    instanceRepository,
+    notificationService,
+    eventHandlers,
+  );
 }

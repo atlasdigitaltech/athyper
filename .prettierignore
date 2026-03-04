@@ -47,3 +47,10 @@ pnpm-lock.yaml
 
 # TypeScript build info
 **/*.tsbuildinfo
+
+# GitHub Actions & CI config (infrastructure YAML, not source)
+.github/
+
+# Shell scripts & git hooks
+scripts/
+.githooks/

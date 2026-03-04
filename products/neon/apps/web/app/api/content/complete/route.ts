@@ -3,7 +3,6 @@ import * as contentService from "@neon/content/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-
 /**
  * Validation schema for upload completion request
  */
@@ -67,14 +66,16 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Upload completion error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const code = (err as Record<string, unknown>)?.code;
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: err.code ?? "INTERNAL_ERROR",
-          message: err.message,
+          code: code ?? "INTERNAL_ERROR",
+          message,
         },
       },
       { status: 500 },

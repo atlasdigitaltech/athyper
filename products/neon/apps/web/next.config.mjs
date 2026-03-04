@@ -14,12 +14,12 @@ const nextConfig = {
     "@athyper/workbench-user",
     "@athyper/i18n",
     "@athyper/dashboard",
-    "@athyper/runtime"
+    "@athyper/runtime",
   ],
   serverExternalPackages: ["pg", "kysely"],
   experimental: {
-    serverActions: { allowedOrigins: ["neon.athyper.local", "localhost:3001"] }
-  }
+    serverActions: { allowedOrigins: ["neon.athyper.local", "localhost:3001"] },
+  },
 };
 
 export default nextConfig;

@@ -20,8 +20,19 @@ const WhereConditionSchema: z.ZodType<any> = z.lazy(() =>
     z.object({
       field: z.string(),
       operator: z.enum([
-        "eq", "neq", "gt", "gte", "lt", "lte",
-        "in", "nin", "like", "ilike", "is_null", "is_not_null", "between"
+        "eq",
+        "neq",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "nin",
+        "like",
+        "ilike",
+        "is_null",
+        "is_not_null",
+        "between",
       ]),
       value: z.unknown(),
     }),
@@ -29,7 +40,7 @@ const WhereConditionSchema: z.ZodType<any> = z.lazy(() =>
       logic: z.enum(["and", "or"]),
       conditions: z.array(WhereConditionSchema),
     }),
-  ])
+  ]),
 );
 
 const JoinDefinitionSchema = z.object({
@@ -54,7 +65,10 @@ const QueryOptionsSchema = z.object({
 
 const QueryRequestSchema = z.object({
   from: z.string(),
-  as: z.string().regex(/^[a-z][a-z0-9_]*$/i).optional(),
+  as: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]*$/i)
+    .optional(),
   select: z.array(z.string()).min(1).max(50),
   joins: z.array(JoinDefinitionSchema).max(5).optional(),
   where: WhereConditionSchema.optional(),
@@ -89,7 +103,7 @@ export interface QueryRoutesDependencies {
  */
 export function createQueryRoutes(
   router: Router,
-  deps: QueryRoutesDependencies
+  deps: QueryRoutesDependencies,
 ): Router {
   const { queryService, logger, getSubject, getTenantId } = deps;
 
@@ -97,167 +111,179 @@ export function createQueryRoutes(
    * POST /query/run
    * Execute a query
    */
-  router.post("/query/run", async (req: Request, res: Response, next: NextFunction) => {
-    const startTime = Date.now();
-    const requestId = req.headers["x-request-id"] as string | undefined;
-    const traceId = req.headers["x-trace-id"] as string | undefined;
+  router.post(
+    "/query/run",
+    async (req: Request, res: Response, next: NextFunction) => {
+      const startTime = Date.now();
+      const requestId = req.headers["x-request-id"] as string | undefined;
+      const traceId = req.headers["x-trace-id"] as string | undefined;
 
-    try {
-      // Validate request body
-      const parseResult = QueryRequestSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({
-          error: "INVALID_REQUEST",
-          message: "Invalid query format",
-          details: parseResult.error.errors,
+      try {
+        // Validate request body
+        const parseResult = QueryRequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+          return res.status(400).json({
+            error: "INVALID_REQUEST",
+            message: "Invalid query format",
+            details: parseResult.error.errors,
+          });
+        }
+
+        const query = parseResult.data;
+        const subject = getSubject(req);
+        const tenantId = getTenantId(req);
+
+        // Execute query
+        const result = await queryService.executeQuery(query, {
+          tenantId,
+          subject,
+          options: {
+            timeout: query.options?.timeout,
+            useReplica: query.options?.useReplica,
+            explain: query.options?.explain,
+            requestId,
+            traceId,
+          },
         });
-      }
 
-      const query = parseResult.data;
-      const subject = getSubject(req);
-      const tenantId = getTenantId(req);
+        // Add timing header
+        res.setHeader("X-Query-Time-Ms", String(result.meta.executionTimeMs));
 
-      // Execute query
-      const result = await queryService.executeQuery(query, {
-        tenantId,
-        subject,
-        options: {
-          timeout: query.options?.timeout,
-          useReplica: query.options?.useReplica,
-          explain: query.options?.explain,
+        return res.json(result);
+      } catch (error: any) {
+        logger.error("Query execution failed", {
+          error,
           requestId,
-          traceId,
-        },
-      });
-
-      // Add timing header
-      res.setHeader("X-Query-Time-Ms", String(result.meta.executionTimeMs));
-
-      return res.json(result);
-    } catch (error: any) {
-      logger.error("Query execution failed", {
-        error,
-        requestId,
-        duration: Date.now() - startTime,
-      });
-
-      if (error.name === "QueryValidationError") {
-        return res.status(400).json({
-          error: "QUERY_VALIDATION_ERROR",
-          message: error.message,
-          details: error.errors,
+          duration: Date.now() - startTime,
         });
-      }
 
-      if (error.name === "QueryTimeoutError") {
-        return res.status(504).json({
-          error: "QUERY_TIMEOUT",
-          message: error.message,
-        });
-      }
+        if (error.name === "QueryValidationError") {
+          return res.status(400).json({
+            error: "QUERY_VALIDATION_ERROR",
+            message: error.message,
+            details: error.errors,
+          });
+        }
 
-      return next(error);
-    }
-  });
+        if (error.name === "QueryTimeoutError") {
+          return res.status(504).json({
+            error: "QUERY_TIMEOUT",
+            message: error.message,
+          });
+        }
+
+        return next(error);
+      }
+    },
+  );
 
   /**
    * POST /query/validate
    * Validate a query without executing
    */
-  router.post("/query/validate", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const parseResult = ValidateRequestSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({
-          error: "INVALID_REQUEST",
-          message: "Invalid request format",
-          details: parseResult.error.errors,
+  router.post(
+    "/query/validate",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const parseResult = ValidateRequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+          return res.status(400).json({
+            error: "INVALID_REQUEST",
+            message: "Invalid request format",
+            details: parseResult.error.errors,
+          });
+        }
+
+        const { query } = parseResult.data;
+        const tenantId = getTenantId(req);
+
+        const validation = await queryService.validateQuery(query, tenantId);
+
+        return res.json({
+          valid: validation.valid,
+          errors: validation.errors,
+          warnings: validation.warnings,
         });
+      } catch (error) {
+        logger.error("Query validation failed", { error });
+        return next(error);
       }
-
-      const { query } = parseResult.data;
-      const tenantId = getTenantId(req);
-
-      const validation = await queryService.validateQuery(query, tenantId);
-
-      return res.json({
-        valid: validation.valid,
-        errors: validation.errors,
-        warnings: validation.warnings,
-      });
-    } catch (error) {
-      logger.error("Query validation failed", { error });
-      return next(error);
-    }
-  });
+    },
+  );
 
   /**
    * POST /query/explain
    * Explain query execution plan
    */
-  router.post("/query/explain", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const parseResult = ExplainRequestSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({
-          error: "INVALID_REQUEST",
-          message: "Invalid request format",
-          details: parseResult.error.errors,
+  router.post(
+    "/query/explain",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const parseResult = ExplainRequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+          return res.status(400).json({
+            error: "INVALID_REQUEST",
+            message: "Invalid request format",
+            details: parseResult.error.errors,
+          });
+        }
+
+        const { query } = parseResult.data;
+        const subject = getSubject(req);
+        const tenantId = getTenantId(req);
+
+        const explanation = await queryService.explainQuery(query, {
+          tenantId,
+          subject,
         });
+
+        return res.json({
+          valid: explanation.validation.valid,
+          errors: explanation.validation.errors,
+          warnings: explanation.validation.warnings,
+          plan: explanation.plan
+            ? {
+                baseEntity: explanation.plan.baseEntity,
+                baseTable: explanation.plan.baseTable,
+                joins: explanation.plan.joins.map((j) => ({
+                  entity: j.targetEntity,
+                  table: j.targetTable,
+                  type: j.definition.type,
+                  alias: j.definition.as,
+                  depth: j.depth,
+                })),
+                joinGraph: explanation.plan.joinGraph,
+                maxDepth: explanation.plan.maxDepth,
+              }
+            : undefined,
+          projectedSql: explanation.projectedSql,
+        });
+      } catch (error) {
+        logger.error("Query explain failed", { error });
+        return next(error);
       }
-
-      const { query } = parseResult.data;
-      const subject = getSubject(req);
-      const tenantId = getTenantId(req);
-
-      const explanation = await queryService.explainQuery(query, {
-        tenantId,
-        subject,
-      });
-
-      return res.json({
-        valid: explanation.validation.valid,
-        errors: explanation.validation.errors,
-        warnings: explanation.validation.warnings,
-        plan: explanation.plan
-          ? {
-              baseEntity: explanation.plan.baseEntity,
-              baseTable: explanation.plan.baseTable,
-              joins: explanation.plan.joins.map((j) => ({
-                entity: j.targetEntity,
-                table: j.targetTable,
-                type: j.definition.type,
-                alias: j.definition.as,
-                depth: j.depth,
-              })),
-              joinGraph: explanation.plan.joinGraph,
-              maxDepth: explanation.plan.maxDepth,
-            }
-          : undefined,
-        projectedSql: explanation.projectedSql,
-      });
-    } catch (error) {
-      logger.error("Query explain failed", { error });
-      return next(error);
-    }
-  });
+    },
+  );
 
   /**
    * GET /query/entities
    * List available entities for querying
    */
-  router.get("/query/entities", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // This would need access to the relationship registry
-      // For now, return a placeholder
-      return res.json({
-        message: "Entity listing requires relationship registry integration",
-      });
-    } catch (error) {
-      logger.error("Entity listing failed", { error });
-      return next(error);
-    }
-  });
+  router.get(
+    "/query/entities",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // This would need access to the relationship registry
+        // For now, return a placeholder
+        return res.json({
+          message: "Entity listing requires relationship registry integration",
+        });
+      } catch (error) {
+        logger.error("Entity listing failed", { error });
+        return next(error);
+      }
+    },
+  );
 
   /**
    * GET /query/entities/:entity/relationships
@@ -271,13 +297,14 @@ export function createQueryRoutes(
         // For now, return a placeholder
         return res.json({
           entity: req.params.entity,
-          message: "Relationship listing requires relationship registry integration",
+          message:
+            "Relationship listing requires relationship registry integration",
         });
       } catch (error) {
         logger.error("Relationship listing failed", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;
@@ -291,7 +318,7 @@ export function createQueryRoutes(
  * Query rate limiting middleware
  */
 export function queryRateLimitMiddleware(
-  maxRequestsPerMinute: number = 60
+  maxRequestsPerMinute: number = 60,
 ): (req: Request, res: Response, next: NextFunction) => void {
   const requests = new Map<string, number[]>();
 
@@ -327,7 +354,7 @@ export function queryRateLimitMiddleware(
  * Rejects overly complex queries early
  */
 export function queryComplexityMiddleware(
-  maxComplexity: number = 100
+  maxComplexity: number = 100,
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== "POST" || !req.body) {
@@ -381,7 +408,7 @@ function countWhereConditions(where: any): number {
   if (where.logic && where.conditions) {
     return where.conditions.reduce(
       (sum: number, c: any) => sum + countWhereConditions(c),
-      1
+      1,
     );
   }
 

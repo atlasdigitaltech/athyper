@@ -88,12 +88,18 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "direct", principal_id: "user-1" } })],
+        [
+          makeRule({
+            assign_to: { strategy: "direct", principal_id: "user-1" },
+          }),
+        ],
         {},
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "user-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "user-1", ruleId: expect.any(String) },
+      ]);
     });
 
     it("should resolve a single group_id", async () => {
@@ -106,7 +112,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ groupId: "grp-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { groupId: "grp-1", ruleId: expect.any(String) },
+      ]);
     });
 
     it("should resolve multiple assignees from array", async () => {
@@ -114,16 +122,18 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({
-          assign_to: {
-            strategy: "direct",
-            assignees: [
-              { principal_id: "user-1" },
-              { principal_id: "user-2" },
-              { group_id: "grp-1" },
-            ],
-          },
-        })],
+        [
+          makeRule({
+            assign_to: {
+              strategy: "direct",
+              assignees: [
+                { principal_id: "user-1" },
+                { principal_id: "user-2" },
+                { group_id: "grp-1" },
+              ],
+            },
+          }),
+        ],
         {},
         TENANT,
       );
@@ -145,7 +155,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "user-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "user-1", ruleId: expect.any(String) },
+      ]);
     });
   });
 
@@ -174,12 +186,22 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "role", role_code: "manager", ou_scope: "finance" } })],
+        [
+          makeRule({
+            assign_to: {
+              strategy: "role",
+              role_code: "manager",
+              ou_scope: "finance",
+            },
+          }),
+        ],
         {},
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "user-scoped", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "user-scoped", ruleId: expect.any(String) },
+      ]);
     });
 
     it("should return empty when no principals have the role", async () => {
@@ -187,7 +209,11 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "role", role_code: "nonexistent" } })],
+        [
+          makeRule({
+            assign_to: { strategy: "role", role_code: "nonexistent" },
+          }),
+        ],
         {},
         TENANT,
       );
@@ -204,7 +230,11 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "group", group_code: "finance-approvers" } })],
+        [
+          makeRule({
+            assign_to: { strategy: "group", group_code: "finance-approvers" },
+          }),
+        ],
         {},
         TENANT,
       );
@@ -230,7 +260,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "manager-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "manager-1", ruleId: expect.any(String) },
+      ]);
     });
 
     it("should walk multiple levels (skip_levels=2)", async () => {
@@ -250,7 +282,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "director-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "director-1", ruleId: expect.any(String) },
+      ]);
     });
 
     it("should return empty when requester has no OU", async () => {
@@ -272,24 +306,34 @@ describe("ApproverResolverService", () => {
   describe("department strategy", () => {
     it("should find principals in an OU by code", async () => {
       const { db } = createMockDb([
-        { rows: [{ principal_id: "dept-user-1" }, { principal_id: "dept-user-2" }] },
+        {
+          rows: [
+            { principal_id: "dept-user-1" },
+            { principal_id: "dept-user-2" },
+          ],
+        },
       ]);
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "department", department_code: "HR" } })],
+        [
+          makeRule({
+            assign_to: { strategy: "department", department_code: "HR" },
+          }),
+        ],
         {},
         TENANT,
       );
 
       expect(result).toHaveLength(2);
-      expect(result.map((r) => r.principalId)).toEqual(["dept-user-1", "dept-user-2"]);
+      expect(result.map((r) => r.principalId)).toEqual([
+        "dept-user-1",
+        "dept-user-2",
+      ]);
     });
 
     it("should also accept ou_code as alias", async () => {
-      const { db } = createMockDb([
-        { rows: [{ principal_id: "ou-user" }] },
-      ]);
+      const { db } = createMockDb([{ rows: [{ principal_id: "ou-user" }] }]);
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
@@ -298,26 +342,34 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "ou-user", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "ou-user", ruleId: expect.any(String) },
+      ]);
     });
   });
 
   describe("custom_field strategy", () => {
     it("should find principals by metadata field", async () => {
-      const { db } = createMockDb([
-        { rows: [{ principal_id: "cc-user-1" }] },
-      ]);
+      const { db } = createMockDb([{ rows: [{ principal_id: "cc-user-1" }] }]);
       const resolver = new ApproverResolverService(db);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({
-          assign_to: { strategy: "custom_field", field_path: "cost_center", field_value: "CC-100" },
-        })],
+        [
+          makeRule({
+            assign_to: {
+              strategy: "custom_field",
+              field_path: "cost_center",
+              field_value: "CC-100",
+            },
+          }),
+        ],
         {},
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "cc-user-1", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "cc-user-1", ruleId: expect.any(String) },
+      ]);
     });
   });
 
@@ -347,9 +399,15 @@ describe("ApproverResolverService", () => {
         }),
       ];
 
-      const result = await resolver.resolveAssignees(rules, { amount: 5000 }, TENANT);
+      const result = await resolver.resolveAssignees(
+        rules,
+        { amount: 5000 },
+        TENANT,
+      );
 
-      expect(result).toEqual([{ principalId: "low-approver", ruleId: "rule-match" }]);
+      expect(result).toEqual([
+        { principalId: "low-approver", ruleId: "rule-match" },
+      ]);
     });
 
     it("should match first rule when conditions are satisfied", async () => {
@@ -376,7 +434,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "finance-approver", ruleId: "rule-1" }]);
+      expect(result).toEqual([
+        { principalId: "finance-approver", ruleId: "rule-1" },
+      ]);
     });
 
     it("should evaluate OR conditions", async () => {
@@ -397,11 +457,13 @@ describe("ApproverResolverService", () => {
         }),
       ];
 
-      expect(await resolver.resolveAssignees(rules, { region: "EU" }, TENANT))
-        .toEqual([{ principalId: "regional-approver", ruleId: "rule-or" }]);
+      expect(
+        await resolver.resolveAssignees(rules, { region: "EU" }, TENANT),
+      ).toEqual([{ principalId: "regional-approver", ruleId: "rule-or" }]);
 
-      expect(await resolver.resolveAssignees(rules, { region: "APAC" }, TENANT))
-        .toEqual([]);
+      expect(
+        await resolver.resolveAssignees(rules, { region: "APAC" }, TENANT),
+      ).toEqual([]);
     });
 
     it("should skip rules with null/empty conditions (unconditional match)", async () => {
@@ -410,15 +472,19 @@ describe("ApproverResolverService", () => {
 
       // Rule with null conditions should match unconditionally
       const result = await resolver.resolveAssignees(
-        [makeRule({
-          conditions: null,
-          assign_to: { strategy: "direct", principal_id: "default-approver" },
-        })],
+        [
+          makeRule({
+            conditions: null,
+            assign_to: { strategy: "direct", principal_id: "default-approver" },
+          }),
+        ],
         {},
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "default-approver", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "default-approver", ruleId: expect.any(String) },
+      ]);
     });
   });
 
@@ -441,7 +507,9 @@ describe("ApproverResolverService", () => {
       ];
 
       const result = await resolver.resolveAssignees(rules, {}, TENANT);
-      expect(result).toEqual([{ principalId: "primary", ruleId: "high-priority" }]);
+      expect(result).toEqual([
+        { principalId: "primary", ruleId: "high-priority" },
+      ]);
     });
   });
 
@@ -483,7 +551,11 @@ describe("ApproverResolverService", () => {
       const resolver = new ApproverResolverService(db, cache);
 
       const result = await resolver.resolveAssignees(
-        [makeRule({ assign_to: { strategy: "group", group_code: "finance-team" } })],
+        [
+          makeRule({
+            assign_to: { strategy: "group", group_code: "finance-team" },
+          }),
+        ],
         {},
         TENANT,
       );
@@ -508,7 +580,9 @@ describe("ApproverResolverService", () => {
         TENANT,
       );
 
-      expect(result).toEqual([{ principalId: "no-cache-user", ruleId: expect.any(String) }]);
+      expect(result).toEqual([
+        { principalId: "no-cache-user", ruleId: expect.any(String) },
+      ]);
     });
   });
 

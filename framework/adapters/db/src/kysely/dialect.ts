@@ -12,7 +12,7 @@ import type pg from "pg";
  * - No prepared statements (PgBouncer limitation)
  */
 export function createPostgresDialect(pool: pg.Pool): PostgresDialect {
-    return new PostgresDialect({
-        pool: pool as any, // Kysely expects any for pool
-    });
+  return new PostgresDialect({
+    pool: pool as any, // Kysely expects any for pool
+  });
 }

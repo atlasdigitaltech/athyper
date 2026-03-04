@@ -15,7 +15,10 @@
  * - Max object size: 5TB
  */
 
-import { validateFileSize, validateContentType } from "../../domain/content-taxonomy";
+import {
+  validateFileSize,
+  validateContentType,
+} from "../../domain/content-taxonomy";
 import { storageKeyForDocument } from "../../storage/storage-key-builder";
 
 import type { ContentAuditEmitter } from "./ContentAuditEmitter";
@@ -24,8 +27,6 @@ import type { DocumentKindType } from "../../domain/content-taxonomy";
 import type { AttachmentRepo } from "../../persistence/AttachmentRepo";
 import type { MultipartUploadRepo } from "../../persistence/MultipartUploadRepo";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
-
-
 
 export interface InitiateMultipartParams {
   tenantId: string;
@@ -79,12 +80,21 @@ export class MultipartUploadService {
    * Initiate multipart upload for large file
    */
   async initiateMultipart(params: InitiateMultipartParams) {
-    const { tenantId, entityType, entityId, kind, fileName, contentType, sizeBytes, actorId } = params;
+    const {
+      tenantId,
+      entityType,
+      entityId,
+      kind,
+      fileName,
+      contentType,
+      sizeBytes,
+      actorId,
+    } = params;
 
     // Validate file is large enough for multipart
     if (sizeBytes < MULTIPART_THRESHOLD) {
       throw new Error(
-        `File too small for multipart upload (${sizeBytes} bytes). Use regular upload for files < ${MULTIPART_THRESHOLD} bytes`
+        `File too small for multipart upload (${sizeBytes} bytes). Use regular upload for files < ${MULTIPART_THRESHOLD} bytes`,
       );
     }
 
@@ -102,7 +112,9 @@ export class MultipartUploadService {
     // Calculate total parts (using 10MB chunks)
     const totalParts = Math.ceil(sizeBytes / DEFAULT_PART_SIZE);
     if (totalParts > MAX_PARTS) {
-      throw new Error(`File too large: requires ${totalParts} parts (max ${MAX_PARTS})`);
+      throw new Error(
+        `File too large: requires ${totalParts} parts (max ${MAX_PARTS})`,
+      );
     }
 
     // Generate attachment ID and storage key
@@ -140,7 +152,7 @@ export class MultipartUploadService {
     const s3UploadId = await (this.storage as any).initiateMultipartUpload(
       (this.storage as any).bucket,
       storageKey,
-      contentType
+      contentType,
     );
 
     // Create multipart upload tracking record
@@ -170,7 +182,7 @@ export class MultipartUploadService {
 
     this.logger.info(
       { attachmentId, s3UploadId, totalParts, sizeBytes },
-      "[MultipartUploadService] Multipart upload initiated"
+      "[MultipartUploadService] Multipart upload initiated",
     );
 
     return {
@@ -207,12 +219,17 @@ export class MultipartUploadService {
     // Validate part numbers
     for (const partNumber of partNumbers) {
       if (partNumber < 1 || partNumber > upload.totalParts) {
-        throw new Error(`Invalid part number: ${partNumber} (max ${upload.totalParts})`);
+        throw new Error(
+          `Invalid part number: ${partNumber} (max ${upload.totalParts})`,
+        );
       }
     }
 
     // Get attachment for storage key
-    const attachment = await this.attachmentRepo.getById(upload.attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      upload.attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${upload.attachmentId}`);
     }
@@ -221,12 +238,14 @@ export class MultipartUploadService {
     const partUrls: Array<{ partNumber: number; uploadUrl: string }> = [];
 
     for (const partNumber of partNumbers) {
-      const uploadUrl = await (this.storage as any).generatePresignedUploadPartUrl(
+      const uploadUrl = await (
+        this.storage as any
+      ).generatePresignedUploadPartUrl(
         (this.storage as any).bucket,
         attachment.storageKey,
         upload.s3UploadId,
         partNumber,
-        3600 // 1 hour expiry
+        3600, // 1 hour expiry
       );
 
       partUrls.push({ partNumber, uploadUrl });
@@ -243,7 +262,7 @@ export class MultipartUploadService {
 
     this.logger.info(
       { uploadId, partCount: partNumbers.length },
-      "[MultipartUploadService] Generated part upload URLs"
+      "[MultipartUploadService] Generated part upload URLs",
     );
 
     return {
@@ -272,16 +291,22 @@ export class MultipartUploadService {
 
     // Check status
     if (upload.status !== "uploading") {
-      throw new Error(`Multipart upload not in uploading state: ${upload.status}`);
+      throw new Error(
+        `Multipart upload not in uploading state: ${upload.status}`,
+      );
     }
 
     // Validate all parts present
     if (parts.length !== upload.totalParts) {
-      throw new Error(`Part count mismatch: expected ${upload.totalParts}, got ${parts.length}`);
+      throw new Error(
+        `Part count mismatch: expected ${upload.totalParts}, got ${parts.length}`,
+      );
     }
 
     // Sort parts by PartNumber
-    const sortedParts = parts.slice().sort((a, b) => a.PartNumber - b.PartNumber);
+    const sortedParts = parts
+      .slice()
+      .sort((a, b) => a.PartNumber - b.PartNumber);
 
     // Validate part numbers sequential
     for (let i = 0; i < sortedParts.length; i++) {
@@ -291,7 +316,10 @@ export class MultipartUploadService {
     }
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(upload.attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      upload.attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${upload.attachmentId}`);
     }
@@ -302,7 +330,7 @@ export class MultipartUploadService {
         (this.storage as any).bucket,
         attachment.storageKey,
         upload.s3UploadId,
-        sortedParts
+        sortedParts,
       );
 
       // Update attachment with SHA-256
@@ -326,8 +354,12 @@ export class MultipartUploadService {
       });
 
       this.logger.info(
-        { uploadId, attachmentId: upload.attachmentId, totalParts: upload.totalParts },
-        "[MultipartUploadService] Multipart upload completed"
+        {
+          uploadId,
+          attachmentId: upload.attachmentId,
+          totalParts: upload.totalParts,
+        },
+        "[MultipartUploadService] Multipart upload completed",
       );
 
       return {
@@ -340,7 +372,7 @@ export class MultipartUploadService {
 
       this.logger.error(
         { uploadId, error: error.message },
-        "[MultipartUploadService] Failed to complete multipart upload"
+        "[MultipartUploadService] Failed to complete multipart upload",
       );
 
       throw error;
@@ -365,7 +397,10 @@ export class MultipartUploadService {
     }
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(upload.attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      upload.attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${upload.attachmentId}`);
     }
@@ -375,7 +410,7 @@ export class MultipartUploadService {
       await (this.storage as any).abortMultipartUpload(
         (this.storage as any).bucket,
         attachment.storageKey,
-        upload.s3UploadId
+        upload.s3UploadId,
       );
 
       // Mark multipart upload aborted
@@ -398,12 +433,12 @@ export class MultipartUploadService {
 
       this.logger.info(
         { uploadId, attachmentId: upload.attachmentId },
-        "[MultipartUploadService] Multipart upload aborted"
+        "[MultipartUploadService] Multipart upload aborted",
       );
     } catch (error: any) {
       this.logger.error(
         { uploadId, error: error.message },
-        "[MultipartUploadService] Failed to abort multipart upload"
+        "[MultipartUploadService] Failed to abort multipart upload",
       );
 
       throw error;
@@ -429,17 +464,24 @@ export class MultipartUploadService {
     for (const upload of expired) {
       try {
         // Get attachment
-        const attachment = await this.attachmentRepo.getById(upload.attachmentId, tenantId);
+        const attachment = await this.attachmentRepo.getById(
+          upload.attachmentId,
+          tenantId,
+        );
         if (attachment) {
           // Abort S3 upload
           await (this.storage as any).abortMultipartUpload(
             (this.storage as any).bucket,
             attachment.storageKey,
-            upload.s3UploadId
+            upload.s3UploadId,
           );
 
           // Delete attachment
-          await this.attachmentRepo.delete(upload.attachmentId, tenantId, "system");
+          await this.attachmentRepo.delete(
+            upload.attachmentId,
+            tenantId,
+            "system",
+          );
         }
 
         // Mark as aborted
@@ -449,14 +491,14 @@ export class MultipartUploadService {
       } catch (error: any) {
         this.logger.error(
           { uploadId: upload.id, error: error.message },
-          "[MultipartUploadService] Failed to cleanup expired upload"
+          "[MultipartUploadService] Failed to cleanup expired upload",
         );
       }
     }
 
     this.logger.info(
       { tenantId, cleanedCount },
-      "[MultipartUploadService] Cleaned up expired multipart uploads"
+      "[MultipartUploadService] Cleaned up expired multipart uploads",
     );
 
     return cleanedCount;
@@ -465,15 +507,22 @@ export class MultipartUploadService {
   /**
    * Cleanup old completed/aborted records (retention)
    */
-  async cleanupOldRecords(tenantId: string, olderThanDays: number): Promise<number> {
+  async cleanupOldRecords(
+    tenantId: string,
+    olderThanDays: number,
+  ): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    const deleted = await this.multipartRepo.deleteOld(tenantId, cutoffDate, 1000);
+    const deleted = await this.multipartRepo.deleteOld(
+      tenantId,
+      cutoffDate,
+      1000,
+    );
 
     this.logger.info(
       { tenantId, olderThanDays, deletedCount: deleted },
-      "[MultipartUploadService] Cleaned up old multipart records"
+      "[MultipartUploadService] Cleaned up old multipart records",
     );
 
     return deleted;

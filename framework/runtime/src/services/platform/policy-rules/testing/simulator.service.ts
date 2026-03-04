@@ -65,7 +65,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   constructor(
     private readonly db: Kysely<DB>,
     private readonly evaluator: IPolicyEvaluator,
-    private readonly factsProvider: IFactsProvider
+    private readonly factsProvider: IFactsProvider,
   ) {}
 
   /**
@@ -74,7 +74,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   async simulate(
     tenantId: string,
     input: SimulatorInput,
-    options?: SimulatorOptions
+    options?: SimulatorOptions,
   ): Promise<SimulatorResult> {
     const startTime = Date.now();
     const opts = { ...DEFAULT_SIMULATOR_OPTIONS, ...options };
@@ -84,11 +84,8 @@ export class PolicySimulatorService implements IPolicySimulator {
     try {
       // 1. Resolve input to PolicyInput
       const resolveStart = Date.now();
-      const { policyInput, subjectResolution, resourceResolution } = await this.resolveInput(
-        tenantId,
-        input,
-        correlationId
-      );
+      const { policyInput, subjectResolution, resourceResolution } =
+        await this.resolveInput(tenantId, input, correlationId);
       const _resolveTime = Date.now() - resolveStart;
 
       // 2. Build subject keys for explain tree
@@ -125,7 +122,7 @@ export class PolicySimulatorService implements IPolicySimulator {
           resolutionTimeMs: resourceResolution.timeMs,
         },
         opts,
-        evalTime
+        evalTime,
       );
 
       // 5. Build result
@@ -165,7 +162,7 @@ export class PolicySimulatorService implements IPolicySimulator {
    */
   async validatePolicy(
     policyDefinition: unknown,
-    options?: ValidationOptions
+    options?: ValidationOptions,
   ): Promise<PolicyValidationResult> {
     const opts = {
       validateSchema: true,
@@ -195,7 +192,9 @@ export class PolicySimulatorService implements IPolicySimulator {
     // 2. Expression validation
     let expressionsValid = true;
     if (opts.validateExpressions && schemaValid) {
-      const exprErrors = this.validatePolicyExpressions(policyDefinition as any);
+      const exprErrors = this.validatePolicyExpressions(
+        policyDefinition as any,
+      );
       for (const err of exprErrors) {
         if (err.severity === "error") {
           errors.push(err);
@@ -216,7 +215,10 @@ export class PolicySimulatorService implements IPolicySimulator {
       });
     }
 
-    const valid = schemaValid && expressionsValid && (opts.strict ? warnings.length === 0 : true);
+    const valid =
+      schemaValid &&
+      expressionsValid &&
+      (opts.strict ? warnings.length === 0 : true);
 
     return {
       valid,
@@ -237,7 +239,7 @@ export class PolicySimulatorService implements IPolicySimulator {
    */
   async runTestCase(
     tenantId: string,
-    testCase: PolicyTestCase
+    testCase: PolicyTestCase,
   ): Promise<TestCaseRunResult> {
     const startTime = Date.now();
 
@@ -256,7 +258,9 @@ export class PolicySimulatorService implements IPolicySimulator {
         testCaseId: testCase.id,
         testCaseName: testCase.name,
         passed,
-        failureReason: passed ? undefined : this.buildFailureReason(failedAssertions),
+        failureReason: passed
+          ? undefined
+          : this.buildFailureReason(failedAssertions),
         assertionResults,
         simulatorResult: result,
         durationMs: Date.now() - startTime,
@@ -294,7 +298,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   async runTestSuite(
     tenantId: string,
     testCases: PolicyTestCase[],
-    suiteName: string = "Default Suite"
+    suiteName: string = "Default Suite",
   ): Promise<TestSuiteResult> {
     const startTime = Date.now();
     const testResults: TestCaseRunResult[] = [];
@@ -348,7 +352,8 @@ export class PolicySimulatorService implements IPolicySimulator {
     }
 
     const totalTests = testCases.length;
-    const passRate = totalTests > 0 ? (passedTests / (totalTests - skippedTests)) * 100 : 0;
+    const passRate =
+      totalTests > 0 ? (passedTests / (totalTests - skippedTests)) * 100 : 0;
 
     return {
       suiteName,
@@ -371,11 +376,17 @@ export class PolicySimulatorService implements IPolicySimulator {
   private async resolveInput(
     tenantId: string,
     input: SimulatorInput,
-    correlationId: string
+    correlationId: string,
   ): Promise<{
     policyInput: PolicyInput;
-    subjectResolution: { method: "manual" | "database" | "cache"; timeMs: number };
-    resourceResolution: { method: "manual" | "database" | "cache"; timeMs: number };
+    subjectResolution: {
+      method: "manual" | "database" | "cache";
+      timeMs: number;
+    };
+    resourceResolution: {
+      method: "manual" | "database" | "cache";
+      timeMs: number;
+    };
   }> {
     switch (input.source) {
       case "manual":
@@ -392,7 +403,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   private async resolveManualInput(
     tenantId: string,
     input: ManualSimulatorInput,
-    correlationId: string
+    correlationId: string,
   ): Promise<{
     policyInput: PolicyInput;
     subjectResolution: { method: "manual"; timeMs: number };
@@ -421,7 +432,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   private async resolveTenantDataInput(
     tenantId: string,
     input: TenantDataInput,
-    correlationId: string
+    correlationId: string,
   ): Promise<{
     policyInput: PolicyInput;
     subjectResolution: { method: "database" | "cache"; timeMs: number };
@@ -429,7 +440,10 @@ export class PolicySimulatorService implements IPolicySimulator {
   }> {
     // Resolve subject from facts provider
     const subjectStart = Date.now();
-    const subject = await this.factsProvider.resolveSubject(input.principalId, tenantId);
+    const subject = await this.factsProvider.resolveSubject(
+      input.principalId,
+      tenantId,
+    );
     const subjectTimeMs = Date.now() - subjectStart;
 
     // Resolve resource from facts provider
@@ -437,7 +451,7 @@ export class PolicySimulatorService implements IPolicySimulator {
     const resource = await this.factsProvider.resolveResource(
       tenantId,
       input.resourceType,
-      input.resourceId
+      input.resourceId,
     );
     const resourceTimeMs = Date.now() - resourceStart;
 
@@ -464,7 +478,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   private async resolveAuditReplayInput(
     tenantId: string,
     input: AuditReplayInput,
-    correlationId: string
+    correlationId: string,
   ): Promise<{
     policyInput: PolicyInput;
     subjectResolution: { method: "database"; timeMs: number };
@@ -482,7 +496,10 @@ export class PolicySimulatorService implements IPolicySimulator {
       principalType: (event.actor as any).principalType ?? "user",
       roles: (event.actor as any).roles ?? [],
       groups: (event.actor as any).groups ?? [],
-      ouMembership: (event.actor as any).ouMembership ?? { path: "/", code: "root" },
+      ouMembership: (event.actor as any).ouMembership ?? {
+        path: "/",
+        code: "root",
+      },
       attributes: (event.actor as any).attributes ?? {},
     };
 
@@ -532,7 +549,7 @@ export class PolicySimulatorService implements IPolicySimulator {
    */
   private async loadAuditEvent(
     tenantId: string,
-    eventId: string
+    eventId: string,
   ): Promise<{
     actor: { userId: string; [key: string]: unknown };
     entity: { type: string; id: string; [key: string]: unknown } | null;
@@ -541,24 +558,30 @@ export class PolicySimulatorService implements IPolicySimulator {
     details: Record<string, unknown> | undefined;
     workflow: { templateCode: string; [key: string]: unknown } | null;
   }> {
-    const row = await this.db
+    const row = (await this.db
       .selectFrom("audit.workflow_event_log" as any)
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .where("id", "=", eventId)
-      .executeTakeFirst() as any;
+      .executeTakeFirst()) as any;
 
     if (!row) {
       throw new Error(
         `Audit event '${eventId}' not found for tenant '${tenantId}'. ` +
-        `The event may have been purged or the ID is incorrect.`
+          `The event may have been purged or the ID is incorrect.`,
       );
     }
 
     const parseJson = (v: unknown) => {
       if (!v) return null;
       if (typeof v === "object") return v;
-      if (typeof v === "string") { try { return JSON.parse(v); } catch { return null; } }
+      if (typeof v === "string") {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return null;
+        }
+      }
       return null;
     };
 
@@ -566,7 +589,10 @@ export class PolicySimulatorService implements IPolicySimulator {
       actor: parseJson(row.actor) ?? { userId: row.actor_user_id ?? "unknown" },
       entity: parseJson(row.entity),
       action: row.action ?? undefined,
-      timestamp: row.event_timestamp instanceof Date ? row.event_timestamp : new Date(row.event_timestamp),
+      timestamp:
+        row.event_timestamp instanceof Date
+          ? row.event_timestamp
+          : new Date(row.event_timestamp),
       details: parseJson(row.details) ?? undefined,
       workflow: parseJson(row.workflow),
     };
@@ -602,12 +628,36 @@ export class PolicySimulatorService implements IPolicySimulator {
 
     // Map known event types to actions
     const AUDIT_EVENT_TO_ACTION: Record<string, PolicyAction> = {
-      "workflow.submitted": { namespace: "WORKFLOW", code: "SUBMIT", fullCode: "WORKFLOW.SUBMIT" },
-      "action.approve": { namespace: "WORKFLOW", code: "APPROVE", fullCode: "WORKFLOW.APPROVE" },
-      "action.reject": { namespace: "WORKFLOW", code: "REJECT", fullCode: "WORKFLOW.REJECT" },
-      "action.delegate": { namespace: "DELEGATION", code: "DELEGATE", fullCode: "DELEGATION.DELEGATE" },
-      "workflow.cancelled": { namespace: "WORKFLOW", code: "CANCEL", fullCode: "WORKFLOW.CANCEL" },
-      "step.escalated": { namespace: "WORKFLOW", code: "ESCALATE", fullCode: "WORKFLOW.ESCALATE" },
+      "workflow.submitted": {
+        namespace: "WORKFLOW",
+        code: "SUBMIT",
+        fullCode: "WORKFLOW.SUBMIT",
+      },
+      "action.approve": {
+        namespace: "WORKFLOW",
+        code: "APPROVE",
+        fullCode: "WORKFLOW.APPROVE",
+      },
+      "action.reject": {
+        namespace: "WORKFLOW",
+        code: "REJECT",
+        fullCode: "WORKFLOW.REJECT",
+      },
+      "action.delegate": {
+        namespace: "DELEGATION",
+        code: "DELEGATE",
+        fullCode: "DELEGATION.DELEGATE",
+      },
+      "workflow.cancelled": {
+        namespace: "WORKFLOW",
+        code: "CANCEL",
+        fullCode: "WORKFLOW.CANCEL",
+      },
+      "step.escalated": {
+        namespace: "WORKFLOW",
+        code: "ESCALATE",
+        fullCode: "WORKFLOW.ESCALATE",
+      },
     };
 
     const eventAction = event.action ?? "";
@@ -617,8 +667,8 @@ export class PolicySimulatorService implements IPolicySimulator {
     // Fallback: use the raw action string
     throw new Error(
       `Cannot resolve PolicyAction from audit event action '${eventAction}'. ` +
-      `Known mappings: ${Object.keys(AUDIT_EVENT_TO_ACTION).join(", ")}. ` +
-      `Ensure the audit event has a valid action field (e.g., "ENTITY.CREATE") or is a known event type.`
+        `Known mappings: ${Object.keys(AUDIT_EVENT_TO_ACTION).join(", ")}. ` +
+        `Ensure the audit event has a valid action field (e.g., "ENTITY.CREATE") or is a known event type.`,
     );
   }
 
@@ -632,7 +682,7 @@ export class PolicySimulatorService implements IPolicySimulator {
     subjectResolution: SimulatorExplainTree["subjectResolution"],
     resourceResolution: SimulatorExplainTree["resourceResolution"],
     options: SimulatorOptions,
-    evalTimeMs: number
+    evalTimeMs: number,
   ): SimulatorExplainTree {
     // Build policy evaluation results from matched rules
     const policiesMap = new Map<string, PolicyEvalResult>();
@@ -696,12 +746,16 @@ export class PolicySimulatorService implements IPolicySimulator {
     };
   }
 
-  private buildConditionResults(conditions: ConditionGroup): ConditionEvalResult[] {
+  private buildConditionResults(
+    conditions: ConditionGroup,
+  ): ConditionEvalResult[] {
     const results: ConditionEvalResult[] = [];
 
     for (const condition of conditions.conditions) {
       if ("conditions" in condition) {
-        results.push(...this.buildConditionResults(condition as ConditionGroup));
+        results.push(
+          ...this.buildConditionResults(condition as ConditionGroup),
+        );
       } else {
         const c = condition as Condition;
         results.push({
@@ -717,7 +771,9 @@ export class PolicySimulatorService implements IPolicySimulator {
     return results;
   }
 
-  private buildSubjectKeys(subject: PolicySubject): Array<{ type: string; key: string }> {
+  private buildSubjectKeys(
+    subject: PolicySubject,
+  ): Array<{ type: string; key: string }> {
     const keys: Array<{ type: string; key: string }> = [];
 
     keys.push({ type: "user", key: subject.principalId });
@@ -777,7 +833,13 @@ export class PolicySimulatorService implements IPolicySimulator {
         severity: "error",
       });
     } else {
-      const validScopeTypes = ["global", "module", "entity", "entity_version", "record"];
+      const validScopeTypes = [
+        "global",
+        "module",
+        "entity",
+        "entity_version",
+        "record",
+      ];
       if (!validScopeTypes.includes(p.scopeType as string)) {
         errors.push({
           code: "INVALID_SCOPE_TYPE",
@@ -845,14 +907,20 @@ export class PolicySimulatorService implements IPolicySimulator {
 
     // Validate conditions if present
     if (r.conditions) {
-      const conditionErrors = this.validateConditionsSchema(r.conditions, `${path}.conditions`);
+      const conditionErrors = this.validateConditionsSchema(
+        r.conditions,
+        `${path}.conditions`,
+      );
       errors.push(...conditionErrors);
     }
 
     return errors;
   }
 
-  private validateConditionsSchema(conditions: unknown, path: string): ValidationError[] {
+  private validateConditionsSchema(
+    conditions: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
 
     if (!conditions || typeof conditions !== "object") {
@@ -890,11 +958,17 @@ export class PolicySimulatorService implements IPolicySimulator {
         const item = c.conditions[i] as Record<string, unknown>;
         if (item.conditions) {
           // Nested group
-          const nestedErrors = this.validateConditionsSchema(item, `${path}.conditions[${i}]`);
+          const nestedErrors = this.validateConditionsSchema(
+            item,
+            `${path}.conditions[${i}]`,
+          );
           errors.push(...nestedErrors);
         } else {
           // Single condition
-          const condErrors = this.validateSingleConditionSchema(item, `${path}.conditions[${i}]`);
+          const condErrors = this.validateSingleConditionSchema(
+            item,
+            `${path}.conditions[${i}]`,
+          );
           errors.push(...condErrors);
         }
       }
@@ -903,7 +977,10 @@ export class PolicySimulatorService implements IPolicySimulator {
     return errors;
   }
 
-  private validateSingleConditionSchema(condition: Record<string, unknown>, path: string): ValidationError[] {
+  private validateSingleConditionSchema(
+    condition: Record<string, unknown>,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
 
     if (!condition.field || typeof condition.field !== "string") {
@@ -924,9 +1001,20 @@ export class PolicySimulatorService implements IPolicySimulator {
       });
     } else {
       const validOperators = [
-        "eq", "ne", "gt", "gte", "lt", "lte",
-        "in", "not_in", "contains", "starts_with", "ends_with",
-        "matches", "exists", "not_exists",
+        "eq",
+        "ne",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "not_in",
+        "contains",
+        "starts_with",
+        "ends_with",
+        "matches",
+        "exists",
+        "not_exists",
       ];
       if (!validOperators.includes(condition.operator as string)) {
         errors.push({
@@ -940,7 +1028,10 @@ export class PolicySimulatorService implements IPolicySimulator {
 
     // Value is required for most operators
     const noValueOperators = ["exists", "not_exists"];
-    if (!noValueOperators.includes(condition.operator as string) && condition.value === undefined) {
+    if (
+      !noValueOperators.includes(condition.operator as string) &&
+      condition.value === undefined
+    ) {
       errors.push({
         code: "MISSING_VALUE",
         message: "Condition must have a value",
@@ -961,7 +1052,10 @@ export class PolicySimulatorService implements IPolicySimulator {
         const rule = policy.rules[i];
         if (rule.conditions) {
           try {
-            this.validateConditionExpressions(rule.conditions, `rules[${i}].conditions`);
+            this.validateConditionExpressions(
+              rule.conditions,
+              `rules[${i}].conditions`,
+            );
           } catch (e) {
             errors.push({
               code: "INVALID_EXPRESSION",
@@ -985,8 +1079,15 @@ export class PolicySimulatorService implements IPolicySimulator {
         } else {
           // Validate field path format
           if (cond.field && typeof cond.field === "string") {
-            const validPrefixes = ["subject.", "resource.", "action.", "context."];
-            const hasValidPrefix = validPrefixes.some((p) => cond.field.startsWith(p));
+            const validPrefixes = [
+              "subject.",
+              "resource.",
+              "action.",
+              "context.",
+            ];
+            const hasValidPrefix = validPrefixes.some((p) =>
+              cond.field.startsWith(p),
+            );
             // Allow shorthand fields (no prefix)
             if (cond.field.includes(".") && !hasValidPrefix) {
               throw new Error(`Invalid field path: ${cond.field}`);
@@ -1012,7 +1113,7 @@ export class PolicySimulatorService implements IPolicySimulator {
 
   private checkAssertions(
     testCase: PolicyTestCase,
-    result: SimulatorResult
+    result: SimulatorResult,
   ): Array<{
     assertion: string;
     passed: boolean;
@@ -1046,7 +1147,7 @@ export class PolicySimulatorService implements IPolicySimulator {
     if (testCase.expected.obligations) {
       for (const expectedOb of testCase.expected.obligations) {
         const found = result.decision.obligations.find(
-          (ob) => ob.type === expectedOb.type
+          (ob) => ob.type === expectedOb.type,
         );
         assertionResults.push({
           assertion: `has_obligation:${expectedOb.type}`,
@@ -1062,7 +1163,9 @@ export class PolicySimulatorService implements IPolicySimulator {
       if (testCase.expected.decidingRule.ruleId) {
         assertionResults.push({
           assertion: "deciding_rule_is",
-          passed: result.decision.decidingRule?.ruleId === testCase.expected.decidingRule.ruleId,
+          passed:
+            result.decision.decidingRule?.ruleId ===
+            testCase.expected.decidingRule.ruleId,
           actual: result.decision.decidingRule?.ruleId,
           expected: testCase.expected.decidingRule.ruleId,
         });
@@ -1070,7 +1173,9 @@ export class PolicySimulatorService implements IPolicySimulator {
       if (testCase.expected.decidingRule.policyId) {
         assertionResults.push({
           assertion: "deciding_policy_is",
-          passed: result.decision.decidingRule?.policyId === testCase.expected.decidingRule.policyId,
+          passed:
+            result.decision.decidingRule?.policyId ===
+            testCase.expected.decidingRule.policyId,
           actual: result.decision.decidingRule?.policyId,
           expected: testCase.expected.decidingRule.policyId,
         });
@@ -1090,8 +1195,13 @@ export class PolicySimulatorService implements IPolicySimulator {
 
   private checkSingleAssertion(
     assertion: TestCaseAssertion,
-    result: SimulatorResult
-  ): { assertion: string; passed: boolean; actual?: unknown; expected?: unknown } {
+    result: SimulatorResult,
+  ): {
+    assertion: string;
+    passed: boolean;
+    actual?: unknown;
+    expected?: unknown;
+  } {
     switch (assertion.type) {
       case "effect_equals":
         return {
@@ -1111,7 +1221,7 @@ export class PolicySimulatorService implements IPolicySimulator {
 
       case "has_obligation": {
         const hasObligation = result.decision.obligations.some(
-          (ob) => ob.type === assertion.obligationType
+          (ob) => ob.type === assertion.obligationType,
         );
         return {
           assertion: `has_obligation:${assertion.obligationType}`,
@@ -1210,12 +1320,16 @@ export class PolicySimulatorService implements IPolicySimulator {
   }
 
   private buildFailureReason(
-    failedAssertions: Array<{ assertion: string; actual?: unknown; expected?: unknown }>
+    failedAssertions: Array<{
+      assertion: string;
+      actual?: unknown;
+      expected?: unknown;
+    }>,
   ): string {
     return failedAssertions
       .map(
         (a) =>
-          `${a.assertion}: expected ${JSON.stringify(a.expected)}, got ${JSON.stringify(a.actual)}`
+          `${a.assertion}: expected ${JSON.stringify(a.expected)}, got ${JSON.stringify(a.actual)}`,
       )
       .join("; ");
   }
@@ -1227,7 +1341,7 @@ export class PolicySimulatorService implements IPolicySimulator {
   private createErrorDecision(
     error: unknown,
     startTime: number,
-    correlationId: string
+    correlationId: string,
   ): PolicyDecision {
     return {
       effect: "deny",
@@ -1301,7 +1415,7 @@ export class PolicySimulatorService implements IPolicySimulator {
 export function createPolicySimulator(
   db: Kysely<DB>,
   evaluator: IPolicyEvaluator,
-  factsProvider: IFactsProvider
+  factsProvider: IFactsProvider,
 ): PolicySimulatorService {
   return new PolicySimulatorService(db, evaluator, factsProvider);
 }

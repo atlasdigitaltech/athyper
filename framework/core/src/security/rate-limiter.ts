@@ -3,7 +3,10 @@
  * Supports per-tenant, per-user, and per-IP rate limiting
  */
 
-export type RateLimitStrategy = "token_bucket" | "sliding_window" | "fixed_window";
+export type RateLimitStrategy =
+  | "token_bucket"
+  | "sliding_window"
+  | "fixed_window";
 
 export interface RateLimitConfig {
   /**
@@ -29,7 +32,10 @@ export interface RateLimitConfig {
   /**
    * Skip rate limiting based on request
    */
-  skip?: (key: string, metadata?: Record<string, unknown>) => boolean | Promise<boolean>;
+  skip?: (
+    key: string,
+    metadata?: Record<string, unknown>,
+  ) => boolean | Promise<boolean>;
 
   /**
    * Custom key generator
@@ -143,7 +149,9 @@ export class MemoryRateLimiter implements RateLimiter {
       remaining: Math.floor(bucket.tokens),
       limit: this.config.maxRequests,
       resetMs: bucket.resetTime - Date.now(),
-      retryAfter: allowed ? undefined : Math.ceil((bucket.resetTime - Date.now()) / 1000),
+      retryAfter: allowed
+        ? undefined
+        : Math.ceil((bucket.resetTime - Date.now()) / 1000),
     };
   }
 
@@ -174,7 +182,11 @@ export class MemoryRateLimiter implements RateLimiter {
     return this.config.keyPrefix ? `${this.config.keyPrefix}:${key}` : key;
   }
 
-  private getBucket(key: string): { tokens: number; lastRefill: number; resetTime: number } {
+  private getBucket(key: string): {
+    tokens: number;
+    lastRefill: number;
+    resetTime: number;
+  } {
     const now = Date.now();
     let bucket = this.buckets.get(key);
 
@@ -190,7 +202,11 @@ export class MemoryRateLimiter implements RateLimiter {
     return bucket;
   }
 
-  private refillBucket(bucket: { tokens: number; lastRefill: number; resetTime: number }): void {
+  private refillBucket(bucket: {
+    tokens: number;
+    lastRefill: number;
+    resetTime: number;
+  }): void {
     const now = Date.now();
 
     // If window has passed, reset
@@ -206,7 +222,10 @@ export class MemoryRateLimiter implements RateLimiter {
     const refillRate = this.config.maxRequests / this.config.windowMs;
     const tokensToAdd = elapsed * refillRate;
 
-    bucket.tokens = Math.min(this.config.maxRequests, bucket.tokens + tokensToAdd);
+    bucket.tokens = Math.min(
+      this.config.maxRequests,
+      bucket.tokens + tokensToAdd,
+    );
     bucket.lastRefill = now;
   }
 

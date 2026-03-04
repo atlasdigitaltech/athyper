@@ -6,7 +6,13 @@
  * These types are used by both runtime and telemetry adapters.
  */
 
-export type TelemetryLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+export type TelemetryLevel =
+  | "trace"
+  | "debug"
+  | "info"
+  | "warn"
+  | "error"
+  | "fatal";
 
 export type DataClass = "public" | "internal" | "confidential" | "restricted";
 export type RetentionClass = "standard" | "extended" | "legal_hold";

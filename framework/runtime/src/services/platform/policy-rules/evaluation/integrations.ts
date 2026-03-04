@@ -45,10 +45,17 @@ export type PolicyMiddlewareOptions<TContext> = {
   getOperation: (ctx: TContext) => { namespace: string; code: string };
 
   /** Extract resource from context */
-  getResource: (ctx: TContext) => { type: string; id?: string; module?: string };
+  getResource: (ctx: TContext) => {
+    type: string;
+    id?: string;
+    module?: string;
+  };
 
   /** Handler for unauthorized access */
-  onUnauthorized?: (ctx: TContext, decision: PolicyDecision) => void | Promise<void>;
+  onUnauthorized?: (
+    ctx: TContext,
+    decision: PolicyDecision,
+  ) => void | Promise<void>;
 
   /** Handler for errors */
   onError?: (ctx: TContext, error: Error) => void | Promise<void>;
@@ -66,7 +73,7 @@ export type PolicyMiddlewareOptions<TContext> = {
 export function createPolicyMiddleware<TContext extends MiddlewareContext>(
   evaluator: IPolicyEvaluator,
   options: PolicyMiddlewareOptions<TContext>,
-  observability?: PolicyObservability
+  observability?: PolicyObservability,
 ): (ctx: TContext, next: () => Promise<void>) => Promise<void> {
   return async (ctx: TContext, next: () => Promise<void>): Promise<void> => {
     // Skip if configured
@@ -123,7 +130,8 @@ export function createPolicyMiddleware<TContext extends MiddlewareContext>(
         context: {
           tenantId,
           timestamp: new Date(),
-          correlationId: (ctx.get("correlationId") as string) ?? crypto.randomUUID(),
+          correlationId:
+            (ctx.get("correlationId") as string) ?? crypto.randomUUID(),
           channel: "api",
           attributes: {},
         },
@@ -133,7 +141,10 @@ export function createPolicyMiddleware<TContext extends MiddlewareContext>(
       const span = observability?.startEvaluationSpan(input);
 
       try {
-        const decision = await evaluator.evaluate(input, options.evaluationOptions);
+        const decision = await evaluator.evaluate(
+          input,
+          options.evaluationOptions,
+        );
 
         // Record metrics
         observability?.recordEvaluation(input, decision);
@@ -230,7 +241,7 @@ export type WorkflowAuthResult = {
 export class WorkflowPolicyIntegration {
   constructor(
     private readonly evaluator: IPolicyEvaluator,
-    private readonly observability?: PolicyObservability
+    private readonly observability?: PolicyObservability,
   ) {}
 
   /**
@@ -240,7 +251,7 @@ export class WorkflowPolicyIntegration {
     principalId: string,
     tenantId: string,
     subject: PolicySubject,
-    transition: WorkflowTransitionContext
+    transition: WorkflowTransitionContext,
   ): Promise<WorkflowAuthResult> {
     const input: PolicyInput = {
       subject,
@@ -321,19 +332,25 @@ export class WorkflowPolicyIntegration {
     entityId: string,
     workflowId: string,
     currentState: string,
-    possibleTransitions: Array<{ name: string; toState: string }>
+    possibleTransitions: Array<{ name: string; toState: string }>,
   ): Promise<Array<{ name: string; toState: string; allowed: boolean }>> {
-    const results: Array<{ name: string; toState: string; allowed: boolean }> = [];
+    const results: Array<{ name: string; toState: string; allowed: boolean }> =
+      [];
 
     for (const transition of possibleTransitions) {
-      const authResult = await this.canTransition(principalId, tenantId, subject, {
-        workflowId,
-        fromState: currentState,
-        toState: transition.toState,
-        transitionName: transition.name,
-        entityType,
-        entityId,
-      });
+      const authResult = await this.canTransition(
+        principalId,
+        tenantId,
+        subject,
+        {
+          workflowId,
+          fromState: currentState,
+          toState: transition.toState,
+          transitionName: transition.name,
+          entityType,
+          entityId,
+        },
+      );
 
       results.push({
         name: transition.name,
@@ -358,7 +375,9 @@ export class WorkflowPolicyIntegration {
       escalate: "ESCALATE",
     };
 
-    return mapping[transitionName.toLowerCase()] ?? transitionName.toUpperCase();
+    return (
+      mapping[transitionName.toLowerCase()] ?? transitionName.toUpperCase()
+    );
   }
 }
 
@@ -415,7 +434,7 @@ export class UICapabilityService {
 
   constructor(
     private readonly evaluator: IPolicyEvaluator,
-    private readonly observability?: PolicyObservability
+    private readonly observability?: PolicyObservability,
   ) {}
 
   /**
@@ -427,7 +446,7 @@ export class UICapabilityService {
     subject: PolicySubject,
     resourceType: string,
     resourceId?: string,
-    operations?: string[]
+    operations?: string[],
   ): Promise<UICapabilitiesResponse> {
     // Default operations for entity resources
     const opsToCheck = operations ?? [
@@ -495,7 +514,7 @@ export class UICapabilityService {
     tenantId: string,
     subject: PolicySubject,
     resources: Array<{ type: string; id?: string }>,
-    operations?: string[]
+    operations?: string[],
   ): Promise<UICapabilitiesResponse[]> {
     const results: UICapabilitiesResponse[] = [];
 
@@ -506,7 +525,7 @@ export class UICapabilityService {
         subject,
         resource.type,
         resource.id,
-        operations
+        operations,
       );
       results.push(caps);
     }
@@ -602,7 +621,7 @@ export class BatchPolicyProcessor {
 
   constructor(
     private readonly evaluator: IPolicyEvaluator,
-    private readonly observability?: PolicyObservability
+    private readonly observability?: PolicyObservability,
   ) {}
 
   /**
@@ -610,7 +629,10 @@ export class BatchPolicyProcessor {
    */
   async processBatch(
     requests: BatchAuthRequest[],
-    subjectResolver: (principalId: string, tenantId: string) => Promise<PolicySubject>
+    subjectResolver: (
+      principalId: string,
+      tenantId: string,
+    ) => Promise<PolicySubject>,
   ): Promise<BatchAuthResult[]> {
     const results: BatchAuthResult[] = [];
 
@@ -623,7 +645,10 @@ export class BatchPolicyProcessor {
           const startTime = Date.now();
 
           try {
-            const subject = await subjectResolver(req.principalId, req.tenantId);
+            const subject = await subjectResolver(
+              req.principalId,
+              req.tenantId,
+            );
             const [namespace, code] = req.operation.split(".");
 
             const input: PolicyInput = {
@@ -668,7 +693,7 @@ export class BatchPolicyProcessor {
               durationMs: Date.now() - startTime,
             };
           }
-        })
+        }),
       );
 
       results.push(...batchResults);
@@ -683,7 +708,7 @@ export class BatchPolicyProcessor {
         denied: results.filter((r) => !r.allowed).length,
         avgDurationMs:
           results.reduce((sum, r) => sum + r.durationMs, 0) / results.length,
-      })
+      }),
     );
 
     return results;
@@ -702,7 +727,7 @@ export class BatchPolicyProcessor {
       severity: "low" | "medium" | "high" | "critical";
       message: string;
     }>,
-    subjectForCompliance: PolicySubject
+    subjectForCompliance: PolicySubject,
   ): Promise<ComplianceCheckResult[]> {
     const results: ComplianceCheckResult[] = [];
 
@@ -764,8 +789,11 @@ export class BatchPolicyProcessor {
         totalResources: resources.length,
         compliant: results.filter((r) => r.compliant).length,
         nonCompliant: results.filter((r) => !r.compliant).length,
-        totalViolations: results.reduce((sum, r) => sum + r.violations.length, 0),
-      })
+        totalViolations: results.reduce(
+          (sum, r) => sum + r.violations.length,
+          0,
+        ),
+      }),
     );
 
     return results;
@@ -788,7 +816,7 @@ export class BatchPolicyProcessor {
  */
 export function createWorkflowIntegration(
   evaluator: IPolicyEvaluator,
-  observability?: PolicyObservability
+  observability?: PolicyObservability,
 ): WorkflowPolicyIntegration {
   return new WorkflowPolicyIntegration(evaluator, observability);
 }
@@ -798,7 +826,7 @@ export function createWorkflowIntegration(
  */
 export function createUICapabilityService(
   evaluator: IPolicyEvaluator,
-  observability?: PolicyObservability
+  observability?: PolicyObservability,
 ): UICapabilityService {
   return new UICapabilityService(evaluator, observability);
 }
@@ -808,7 +836,7 @@ export function createUICapabilityService(
  */
 export function createBatchProcessor(
   evaluator: IPolicyEvaluator,
-  observability?: PolicyObservability
+  observability?: PolicyObservability,
 ): BatchPolicyProcessor {
   return new BatchPolicyProcessor(evaluator, observability);
 }

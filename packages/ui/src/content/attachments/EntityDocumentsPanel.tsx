@@ -12,7 +12,7 @@ import { useState } from "react";
 import { AttachmentList } from "./AttachmentList";
 import { FilePicker } from "./FilePicker";
 
-import type { DocumentKind } from "@athyper/api-client/content";
+import type { Attachment, DocumentKind } from "@athyper/api-client/content";
 
 export interface EntityDocumentsPanelProps {
   entityType: string;
@@ -39,8 +39,10 @@ export function EntityDocumentsPanel({
   /**
    * Handle successful uploads
    */
-  const handleUploaded = (items: any[]) => {
-    setUploadSuccess(`${items.length} ${items.length === 1 ? "file" : "files"} uploaded successfully`);
+  const handleUploaded = (items: Attachment[]) => {
+    setUploadSuccess(
+      `${items.length} ${items.length === 1 ? "file" : "files"} uploaded successfully`,
+    );
     setShowPicker(false);
     setRefreshKey((prev) => prev + 1);
 
@@ -121,13 +123,20 @@ export function EntityDocumentsPanel({
               />
             </svg>
             <div className="flex-1">
-              <p className="text-sm text-red-800 whitespace-pre-line">{uploadError}</p>
+              <p className="text-sm text-red-800 whitespace-pre-line">
+                {uploadError}
+              </p>
             </div>
             <button
               onClick={() => setUploadError(null)}
               className="ml-2 text-red-600 hover:text-red-800"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

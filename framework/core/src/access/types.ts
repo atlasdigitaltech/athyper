@@ -12,6 +12,6 @@ export interface AccessPolicy {
   can(
     action: string,
     resource: string,
-    ctx: AccessContext
+    ctx: AccessContext,
   ): boolean | Promise<boolean>;
 }

@@ -8,7 +8,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * PATCH /api/collab/comments/[id]
@@ -18,7 +18,7 @@ import type { NextRequest} from "next/server";
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Authenticate
   const sid = await getSessionId();
@@ -34,7 +34,7 @@ export async function PATCH(
     if (!commentText) {
       return NextResponse.json(
         { error: "Missing required field: commentText" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -55,7 +55,7 @@ export async function PATCH(
       console.error("Update comment error:", error);
       return NextResponse.json(
         { error: "Failed to update comment", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -65,7 +65,7 @@ export async function PATCH(
     console.error("Update comment route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -75,7 +75,7 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Authenticate
   const sid = await getSessionId();
@@ -101,7 +101,7 @@ export async function DELETE(
       console.error("Delete comment error:", error);
       return NextResponse.json(
         { error: "Failed to delete comment", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -111,7 +111,7 @@ export async function DELETE(
     console.error("Delete comment route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

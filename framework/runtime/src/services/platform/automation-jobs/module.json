@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "SCHED",
-    "name":  "Automation \u0026 Jobs",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "SCHED",
+  "name": "Automation \u0026 Jobs",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

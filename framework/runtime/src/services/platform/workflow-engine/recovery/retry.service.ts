@@ -21,10 +21,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   initialDelayMs: 1000,
   maxDelayMs: 300000, // 5 minutes
   backoffMultiplier: 2,
-  retryableErrors: [
-    "notification_failed",
-    "system_error",
-  ],
+  retryableErrors: ["notification_failed", "system_error"],
 };
 
 /**
@@ -33,7 +30,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 type RetryActionHandler = (
   tenantId: string,
   error: WorkflowError,
-  attempt: RetryAttempt
+  attempt: RetryAttempt,
 ) => Promise<{ success: boolean; error?: string }>;
 
 /**
@@ -45,7 +42,7 @@ export class RetryService implements IRetryService {
 
   constructor(
     private readonly errorRepository: IRecoveryErrorRepository,
-    config?: Partial<RetryConfig>
+    config?: Partial<RetryConfig>,
   ) {
     this.config = { ...DEFAULT_RETRY_CONFIG, ...config };
     this.actionHandlers = new Map();
@@ -63,7 +60,7 @@ export class RetryService implements IRetryService {
    */
   async scheduleRetry(
     tenantId: string,
-    error: WorkflowError
+    error: WorkflowError,
   ): Promise<RetryAttempt> {
     // Check if error is retryable
     if (!this.config.retryableErrors.includes(error.errorType)) {
@@ -77,8 +74,9 @@ export class RetryService implements IRetryService {
 
     // Calculate next retry delay with exponential backoff
     const delay = Math.min(
-      this.config.initialDelayMs * Math.pow(this.config.backoffMultiplier, error.retryCount),
-      this.config.maxDelayMs
+      this.config.initialDelayMs *
+        Math.pow(this.config.backoffMultiplier, error.retryCount),
+      this.config.maxDelayMs,
     );
 
     const nextRetryAt = new Date(Date.now() + delay);
@@ -108,16 +106,22 @@ export class RetryService implements IRetryService {
    */
   async executeRetry(
     tenantId: string,
-    attemptId: string
+    attemptId: string,
   ): Promise<RetryAttempt> {
-    const attempts = await this.errorRepository.getRetryAttempts(tenantId, attemptId);
+    const attempts = await this.errorRepository.getRetryAttempts(
+      tenantId,
+      attemptId,
+    );
     const attempt = attempts.find((a) => a.id === attemptId);
 
     if (!attempt) {
       throw new Error("Retry attempt not found");
     }
 
-    const error = await this.errorRepository.getError(tenantId, attempt.errorId);
+    const error = await this.errorRepository.getError(
+      tenantId,
+      attempt.errorId,
+    );
     if (!error) {
       throw new Error("Error not found for retry attempt");
     }
@@ -151,7 +155,7 @@ export class RetryService implements IRetryService {
         completedAt: new Date(),
         success,
         error: errorMessage,
-      }
+      },
     );
 
     // Update error
@@ -164,7 +168,10 @@ export class RetryService implements IRetryService {
     } else {
       await this.errorRepository.updateError(tenantId, error.id, {
         retryCount: error.retryCount + 1,
-        status: error.retryCount + 1 >= this.config.maxRetries ? "detected" : "acknowledged",
+        status:
+          error.retryCount + 1 >= this.config.maxRetries
+            ? "detected"
+            : "acknowledged",
       });
 
       // Schedule next retry if under limit
@@ -183,7 +190,10 @@ export class RetryService implements IRetryService {
    * Cancel pending retries for an error
    */
   async cancelRetries(tenantId: string, errorId: string): Promise<void> {
-    const attempts = await this.errorRepository.getRetryAttempts(tenantId, errorId);
+    const attempts = await this.errorRepository.getRetryAttempts(
+      tenantId,
+      errorId,
+    );
 
     for (const attempt of attempts) {
       if (!attempt.completedAt) {
@@ -209,7 +219,10 @@ export class RetryService implements IRetryService {
     const pendingAttempts: RetryAttempt[] = [];
 
     for (const error of errors) {
-      const attempts = await this.errorRepository.getRetryAttempts(tenantId, error.id);
+      const attempts = await this.errorRepository.getRetryAttempts(
+        tenantId,
+        error.id,
+      );
       const pending = attempts.filter((a) => !a.completedAt && a.nextRetryAt);
       pendingAttempts.push(...pending);
     }
@@ -223,7 +236,9 @@ export class RetryService implements IRetryService {
   async processDueRetries(tenantId: string): Promise<RetryAttempt[]> {
     const now = new Date();
     const pending = await this.getPendingRetries(tenantId);
-    const due = pending.filter((a) => a.nextRetryAt && new Date(a.nextRetryAt) <= now);
+    const due = pending.filter(
+      (a) => a.nextRetryAt && new Date(a.nextRetryAt) <= now,
+    );
     const results: RetryAttempt[] = [];
 
     for (const attempt of due) {
@@ -244,7 +259,7 @@ export class RetryService implements IRetryService {
  */
 export function createRetryService(
   errorRepository: IRecoveryErrorRepository,
-  config?: Partial<RetryConfig>
+  config?: Partial<RetryConfig>,
 ): IRetryService {
   return new RetryService(errorRepository, config);
 }

@@ -30,7 +30,7 @@ import type { Logger } from "../../../../kernel/logger.js";
 export class SchemaComposerService {
   constructor(
     private overlayRepo: IOverlayRepository,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   // ============================================================================
@@ -42,9 +42,12 @@ export class SchemaComposerService {
    */
   async loadOverlaysForEntity(
     baseEntityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<OverlayWithChanges[]> {
-    const overlays = await this.overlayRepo.findActiveByBaseEntity(baseEntityId, tenantId);
+    const overlays = await this.overlayRepo.findActiveByBaseEntity(
+      baseEntityId,
+      tenantId,
+    );
 
     // Load changes for each overlay
     const overlaysWithChanges: OverlayWithChanges[] = [];
@@ -63,7 +66,7 @@ export class SchemaComposerService {
   applyOverlays(
     baseSchema: Record<string, unknown>,
     overlays: OverlayWithChanges[],
-    defaultConflictMode: OverlayConflictMode = "fail"
+    defaultConflictMode: OverlayConflictMode = "fail",
   ): { schema: Record<string, unknown>; result: OverlayApplyResult } {
     // Deep clone to avoid mutating original
     const schema = JSON.parse(JSON.stringify(baseSchema));
@@ -113,7 +116,7 @@ export class SchemaComposerService {
    */
   validateOverlay(
     baseSchema: Record<string, unknown>,
-    overlay: OverlayWithChanges
+    overlay: OverlayWithChanges,
   ): OverlayValidationResult {
     const errors: OverlayValidationErrorDetail[] = [];
     const warnings: OverlayValidationWarning[] = [];
@@ -126,7 +129,11 @@ export class SchemaComposerService {
       errors.push(...structureErrors);
 
       // Validate against schema
-      const schemaResult = this.validateChangeAgainstSchema(baseSchema, change, i);
+      const schemaResult = this.validateChangeAgainstSchema(
+        baseSchema,
+        change,
+        i,
+      );
       errors.push(...schemaResult.errors);
       warnings.push(...schemaResult.warnings);
     }
@@ -145,7 +152,7 @@ export class SchemaComposerService {
     baseEntityId: string,
     tenantId: string,
     baseSchema: Record<string, unknown>,
-    additionalOverlay?: OverlayWithChanges
+    additionalOverlay?: OverlayWithChanges,
   ): Promise<CompositionPreviewResult> {
     // Load existing overlays
     const overlays = await this.loadOverlaysForEntity(baseEntityId, tenantId);
@@ -200,7 +207,7 @@ export class SchemaComposerService {
   private applyChange(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    conflictMode: OverlayConflictMode
+    conflictMode: OverlayConflictMode,
   ): { success: boolean; conflict?: string } {
     try {
       switch (change.kind) {
@@ -251,7 +258,7 @@ export class SchemaComposerService {
   private applyAddField(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    conflictMode: OverlayConflictMode
+    conflictMode: OverlayConflictMode,
   ): { success: boolean; conflict?: string } {
     const existing = this.getValueAtPath(schema, change.path);
 
@@ -268,8 +275,15 @@ export class SchemaComposerService {
           return { success: true };
 
         case "merge":
-          if (typeof existing === "object" && typeof change.value === "object") {
-            this.setValueAtPath(schema, change.path, this.deepMerge(existing, change.value));
+          if (
+            typeof existing === "object" &&
+            typeof change.value === "object"
+          ) {
+            this.setValueAtPath(
+              schema,
+              change.path,
+              this.deepMerge(existing, change.value),
+            );
           } else {
             this.setValueAtPath(schema, change.path, change.value);
           }
@@ -287,7 +301,7 @@ export class SchemaComposerService {
   private applyModifyField(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    conflictMode: OverlayConflictMode
+    conflictMode: OverlayConflictMode,
   ): { success: boolean; conflict?: string } {
     const existing = this.getValueAtPath(schema, change.path);
 
@@ -307,8 +321,16 @@ export class SchemaComposerService {
       }
     }
 
-    if (conflictMode === "merge" && typeof existing === "object" && typeof change.value === "object") {
-      this.setValueAtPath(schema, change.path, this.deepMerge(existing, change.value));
+    if (
+      conflictMode === "merge" &&
+      typeof existing === "object" &&
+      typeof change.value === "object"
+    ) {
+      this.setValueAtPath(
+        schema,
+        change.path,
+        this.deepMerge(existing, change.value),
+      );
     } else {
       this.setValueAtPath(schema, change.path, change.value);
     }
@@ -321,7 +343,7 @@ export class SchemaComposerService {
    */
   private applyRemoveField(
     schema: Record<string, unknown>,
-    change: OverlayChangeRecord
+    change: OverlayChangeRecord,
   ): { success: boolean; conflict?: string } {
     const existing = this.getValueAtPath(schema, change.path);
 
@@ -340,15 +362,22 @@ export class SchemaComposerService {
   private applyTweakPolicy(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    conflictMode: OverlayConflictMode
+    conflictMode: OverlayConflictMode,
   ): { success: boolean; conflict?: string } {
     // Policy tweaks always merge by default
     const existing = this.getValueAtPath(schema, change.path);
 
     if (existing === undefined) {
       this.setValueAtPath(schema, change.path, change.value);
-    } else if (typeof existing === "object" && typeof change.value === "object") {
-      this.setValueAtPath(schema, change.path, this.deepMerge(existing, change.value));
+    } else if (
+      typeof existing === "object" &&
+      typeof change.value === "object"
+    ) {
+      this.setValueAtPath(
+        schema,
+        change.path,
+        this.deepMerge(existing, change.value),
+      );
     } else if (conflictMode === "fail") {
       return {
         success: false,
@@ -367,7 +396,7 @@ export class SchemaComposerService {
   private applyAddIndex(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    conflictMode: OverlayConflictMode
+    conflictMode: OverlayConflictMode,
   ): { success: boolean; conflict?: string } {
     // Ensure indexes array exists
     if (!schema.indexes) {
@@ -375,10 +404,16 @@ export class SchemaComposerService {
     }
 
     const indexes = schema.indexes as Array<unknown>;
-    const indexDef = change.value as { name: string; columns: string[]; unique?: boolean };
+    const indexDef = change.value as {
+      name: string;
+      columns: string[];
+      unique?: boolean;
+    };
 
     // Check if index with same name already exists
-    const existingIndex = indexes.find((idx: any) => idx.name === indexDef.name);
+    const existingIndex = indexes.find(
+      (idx: any) => idx.name === indexDef.name,
+    );
 
     if (existingIndex) {
       switch (conflictMode) {
@@ -388,11 +423,14 @@ export class SchemaComposerService {
             conflict: `Index already exists: ${indexDef.name}`,
           };
 
-        case "overwrite":
+        case "overwrite": {
           // Remove existing and add new
-          const index = indexes.findIndex((idx: any) => idx.name === indexDef.name);
+          const index = indexes.findIndex(
+            (idx: any) => idx.name === indexDef.name,
+          );
           indexes.splice(index, 1, indexDef);
           return { success: true };
+        }
 
         case "merge":
           // Merge index properties
@@ -411,7 +449,7 @@ export class SchemaComposerService {
    */
   private applyRemoveIndex(
     schema: Record<string, unknown>,
-    change: OverlayChangeRecord
+    change: OverlayChangeRecord,
   ): { success: boolean; conflict?: string } {
     if (!schema.indexes || !Array.isArray(schema.indexes)) {
       // No indexes to remove - that's okay
@@ -420,7 +458,7 @@ export class SchemaComposerService {
 
     const indexName = change.value as string;
     const indexes = schema.indexes as Array<any>;
-    const index = indexes.findIndex(idx => idx.name === indexName);
+    const index = indexes.findIndex((idx) => idx.name === indexName);
 
     if (index === -1) {
       // Index doesn't exist - that's okay, consider it removed
@@ -437,7 +475,7 @@ export class SchemaComposerService {
 
   private validateChangeStructure(
     change: OverlayChangeRecord,
-    index: number
+    index: number,
   ): OverlayValidationErrorDetail[] {
     const errors: OverlayValidationErrorDetail[] = [];
 
@@ -482,7 +520,11 @@ export class SchemaComposerService {
         });
       } else {
         const indexDef = change.value as any;
-        if (!indexDef.name || !indexDef.columns || !Array.isArray(indexDef.columns)) {
+        if (
+          !indexDef.name ||
+          !indexDef.columns ||
+          !Array.isArray(indexDef.columns)
+        ) {
           errors.push({
             changeIndex: index,
             path: change.path,
@@ -490,7 +532,11 @@ export class SchemaComposerService {
             code: "INVALID_INDEX_DEF",
           });
         }
-        if (indexDef.columns && Array.isArray(indexDef.columns) && indexDef.columns.length === 0) {
+        if (
+          indexDef.columns &&
+          Array.isArray(indexDef.columns) &&
+          indexDef.columns.length === 0
+        ) {
           errors.push({
             changeIndex: index,
             path: change.path,
@@ -518,8 +564,11 @@ export class SchemaComposerService {
   private validateChangeAgainstSchema(
     schema: Record<string, unknown>,
     change: OverlayChangeRecord,
-    index: number
-  ): { errors: OverlayValidationErrorDetail[]; warnings: OverlayValidationWarning[] } {
+    index: number,
+  ): {
+    errors: OverlayValidationErrorDetail[];
+    warnings: OverlayValidationWarning[];
+  } {
     const errors: OverlayValidationErrorDetail[] = [];
     const warnings: OverlayValidationWarning[] = [];
 
@@ -591,7 +640,11 @@ export class SchemaComposerService {
   /**
    * Set value at a JSON path (creates intermediate objects as needed)
    */
-  private setValueAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  private setValueAtPath(
+    obj: Record<string, unknown>,
+    path: string,
+    value: unknown,
+  ): void {
     const parts = path.split(".");
     let current = obj;
 

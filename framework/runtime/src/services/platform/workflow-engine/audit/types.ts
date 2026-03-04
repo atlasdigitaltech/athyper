@@ -706,28 +706,46 @@ export interface ReportOptions {
  */
 export interface IAuditRepository {
   /** Record an audit event */
-  recordEvent(tenantId: string, event: Omit<AuditEvent, "id">): Promise<AuditEvent>;
+  recordEvent(
+    tenantId: string,
+    event: Omit<AuditEvent, "id">,
+  ): Promise<AuditEvent>;
 
   /** Get audit events */
-  getEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<AuditEvent[]>;
+  getEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<AuditEvent[]>;
 
   /** Get audit trail for an instance */
-  getInstanceAuditTrail(tenantId: string, instanceId: string): Promise<InstanceAuditTrail>;
+  getInstanceAuditTrail(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<InstanceAuditTrail>;
 
   /** Get step audit summary */
-  getStepAuditSummary(tenantId: string, stepInstanceId: string): Promise<StepAuditSummary>;
+  getStepAuditSummary(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<StepAuditSummary>;
 
   /** Count events */
-  countEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<number>;
+  countEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<number>;
 
   /** Get events by correlation ID */
-  getEventsByCorrelationId(tenantId: string, correlationId: string): Promise<AuditEvent[]>;
+  getEventsByCorrelationId(
+    tenantId: string,
+    correlationId: string,
+  ): Promise<AuditEvent[]>;
 
   /** Aggregate data for reporting */
   aggregateForReport(
     tenantId: string,
     reportType: string,
-    options: ReportOptions
+    options: ReportOptions,
   ): Promise<Record<string, unknown>>;
 }
 
@@ -763,29 +781,38 @@ export interface IAuditTrailService {
       previousState?: Record<string, unknown>;
       newState?: Record<string, unknown>;
       metadata?: Record<string, unknown>;
-    }
+    },
   ): Promise<AuditEvent>;
 
   /** Record an audit event (simplified signature for admin/recovery operations) */
   recordEvent(
     tenantId: string,
-    event: SimpleAuditEventInput
+    event: SimpleAuditEventInput,
   ): Promise<AuditEvent>;
 
   /** Get audit trail for instance */
-  getAuditTrail(tenantId: string, instanceId: string): Promise<InstanceAuditTrail>;
+  getAuditTrail(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<InstanceAuditTrail>;
 
   /** Get audit events */
-  getEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<AuditEvent[]>;
+  getEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<AuditEvent[]>;
 
   /** Get step history */
-  getStepHistory(tenantId: string, stepInstanceId: string): Promise<AuditEvent[]>;
+  getStepHistory(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<AuditEvent[]>;
 
   /** Export audit trail */
   exportAuditTrail(
     tenantId: string,
     instanceId: string,
-    format: "json" | "csv" | "pdf"
+    format: "json" | "csv" | "pdf",
   ): Promise<{ content: string | Buffer; mimeType: string }>;
 }
 
@@ -794,7 +821,9 @@ export interface IAuditTrailService {
  */
 export interface IComplianceReportingService {
   /** Generate cycle duration report */
-  generateCycleDurationReport(options: ReportOptions): Promise<CycleDurationReport>;
+  generateCycleDurationReport(
+    options: ReportOptions,
+  ): Promise<CycleDurationReport>;
 
   /** Generate SLA breach report */
   generateSlaBreachReport(options: ReportOptions): Promise<SlaBreachReport>;
@@ -803,10 +832,14 @@ export interface IComplianceReportingService {
   generateEscalationReport(options: ReportOptions): Promise<EscalationReport>;
 
   /** Generate approver workload report */
-  generateApproverWorkloadReport(options: ReportOptions): Promise<ApproverWorkloadReport>;
+  generateApproverWorkloadReport(
+    options: ReportOptions,
+  ): Promise<ApproverWorkloadReport>;
 
   /** Generate compliance summary */
-  generateComplianceSummary(options: ReportOptions): Promise<ComplianceSummaryReport>;
+  generateComplianceSummary(
+    options: ReportOptions,
+  ): Promise<ComplianceSummaryReport>;
 
   /** Schedule recurring report */
   scheduleReport(
@@ -814,7 +847,7 @@ export interface IComplianceReportingService {
     reportType: string,
     schedule: string, // cron expression
     options: ReportOptions,
-    recipients: string[]
+    recipients: string[],
   ): Promise<string>; // returns schedule ID
 
   /** Cancel scheduled report */

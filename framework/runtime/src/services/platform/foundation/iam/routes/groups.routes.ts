@@ -53,7 +53,7 @@ export interface GroupsRoutesDependencies {
  */
 export function createGroupsRoutes(
   router: Router,
-  deps: GroupsRoutesDependencies
+  deps: GroupsRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId } = deps;
 
@@ -89,7 +89,7 @@ export function createGroupsRoutes(
             eb.or([
               eb("code", "ilike", `%${query.search}%`),
               eb("name", "ilike", `%${query.search}%`),
-            ])
+            ]),
           );
         }
 
@@ -110,7 +110,7 @@ export function createGroupsRoutes(
         logger.error("Failed to list groups", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -158,7 +158,14 @@ export function createGroupsRoutes(
             source: "local",
             tenant_id: tenantId,
           })
-          .returning(["id", "code", "name", "description", "source", "created_at as createdAt"])
+          .returning([
+            "id",
+            "code",
+            "name",
+            "description",
+            "source",
+            "created_at as createdAt",
+          ])
           .executeTakeFirstOrThrow();
 
         return res.status(201).json(result);
@@ -166,7 +173,7 @@ export function createGroupsRoutes(
         logger.error("Failed to create group", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -208,7 +215,7 @@ export function createGroupsRoutes(
         logger.error("Failed to get group", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -279,7 +286,7 @@ export function createGroupsRoutes(
         logger.error("Failed to update group", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -322,7 +329,7 @@ export function createGroupsRoutes(
         logger.error("Failed to delete group", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -372,7 +379,7 @@ export function createGroupsRoutes(
         logger.error("Failed to list group members", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -447,9 +454,13 @@ export function createGroupsRoutes(
             oc.columns(["group_id", "principal_id"]).doUpdateSet({
               valid_from: validFrom ? new Date(validFrom) : new Date(),
               valid_until: validUntil ? new Date(validUntil) : null,
-            })
+            }),
           )
-          .returning(["id", "group_id as groupId", "principal_id as principalId"])
+          .returning([
+            "id",
+            "group_id as groupId",
+            "principal_id as principalId",
+          ])
           .executeTakeFirstOrThrow();
 
         // Invalidate entitlement cache
@@ -463,7 +474,7 @@ export function createGroupsRoutes(
         logger.error("Failed to add group member", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -517,7 +528,7 @@ export function createGroupsRoutes(
         logger.error("Failed to remove group member", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

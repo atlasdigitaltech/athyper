@@ -31,22 +31,26 @@
 ## Component Responsibilities
 
 ### athyper — Business Operating Framework
+
 - Defines the shared data models and interface contracts
 - Orchestrates lifecycle events across components
 - Provides configuration management
 - Establishes versioning and compatibility guarantees
 
 ### neon — Business Operating Platform
+
 - Hosts and runs business services
 - Exposes APIs consumed by mesh and atlas
 - Manages state and persistence
 
 ### mesh — Business Operating Network
+
 - Handles inter-component and external communication
 - Routes events, messages, and requests
 - Manages service discovery
 
 ### atlas — Business Operating AI Agent
+
 - Provides AI-driven decision support
 - Automates business workflows
 - Integrates with neon (data) and mesh (communication)
@@ -67,12 +71,12 @@
 
 > To be defined as the framework evolves.
 
-| Interface | Direction | Description |
-|-----------|-----------|-------------|
-| `FrameworkContext` | athyper → all | Shared config and runtime context |
-| `PlatformAdapter` | neon → athyper | Platform capability registration |
-| `NetworkAdapter` | mesh → athyper | Network routing registration |
-| `AgentAdapter` | atlas → athyper | AI capability registration |
+| Interface          | Direction       | Description                       |
+| ------------------ | --------------- | --------------------------------- |
+| `FrameworkContext` | athyper → all   | Shared config and runtime context |
+| `PlatformAdapter`  | neon → athyper  | Platform capability registration  |
+| `NetworkAdapter`   | mesh → athyper  | Network routing registration      |
+| `AgentAdapter`     | atlas → athyper | AI capability registration        |
 
 ---
 
@@ -96,22 +100,22 @@ athyper/
 
 ## Versioning Strategy
 
-| Version Range | Status |
-|--------------|--------|
-| `v0.x.x` | Development / pre-release |
-| `v1.0.0` | First stable release |
-| `v1.x.x` | Stable, backwards-compatible updates |
-| `v2.0.0+` | Breaking changes |
+| Version Range | Status                               |
+| ------------- | ------------------------------------ |
+| `v0.x.x`      | Development / pre-release            |
+| `v1.0.0`      | First stable release                 |
+| `v1.x.x`      | Stable, backwards-compatible updates |
+| `v2.0.0+`     | Breaking changes                     |
 
 ---
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-03-04 | Repository created | Base version `v0.1.0` established |
+| Date       | Decision           | Rationale                             |
+| ---------- | ------------------ | ------------------------------------- |
+| 2026-03-04 | Repository created | Base version `v0.1.0` established     |
 | 2026-03-04 | MIT License chosen | Open, permissive for ecosystem growth |
 
 ---
 
-*Last updated: 2026-03-04*
+_Last updated: 2026-03-04_

@@ -4,18 +4,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../../../platform/foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../../../platform/foundation/http/types.js";
 import type { VersionService } from "../../domain/services/VersionService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * GET /api/content/versions/:id
  * Get version history for document
  */
 export class GetVersionsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const versionService = await ctx.container.resolve<VersionService>(TOKENS.versionService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const versionService = await ctx.container.resolve<VersionService>(
+      TOKENS.versionService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const documentId = req.params.id;
@@ -28,12 +36,18 @@ export class GetVersionsHandler implements RouteHandler {
     }
 
     try {
-      const versions = await versionService.getVersionHistory(documentId, tenantId);
+      const versions = await versionService.getVersionHistory(
+        documentId,
+        tenantId,
+      );
 
       res.status(200).json({ success: true, data: versions });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "VERSION_HISTORY_ERROR", message } });
+      res.status(500).json({
+        success: false,
+        error: { code: "VERSION_HISTORY_ERROR", message },
+      });
     }
   }
 }
@@ -43,8 +57,14 @@ export class GetVersionsHandler implements RouteHandler {
  * Initiate new version upload
  */
 export class InitiateVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const versionService = await ctx.container.resolve<VersionService>(TOKENS.versionService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const versionService = await ctx.container.resolve<VersionService>(
+      TOKENS.versionService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -55,12 +75,18 @@ export class InitiateVersionHandler implements RouteHandler {
       sizeBytes: number;
     };
 
-    if (!body.documentId || !body.fileName || !body.contentType || !body.sizeBytes) {
+    if (
+      !body.documentId ||
+      !body.fileName ||
+      !body.contentType ||
+      !body.sizeBytes
+    ) {
       res.status(400).json({
         success: false,
         error: {
           code: "MISSING_FIELDS",
-          message: "documentId, fileName, contentType, and sizeBytes are required",
+          message:
+            "documentId, fileName, contentType, and sizeBytes are required",
         },
       });
       return;
@@ -81,9 +107,14 @@ export class InitiateVersionHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "VERSION_INIT_ERROR", message } });
+        res.status(500).json({
+          success: false,
+          error: { code: "VERSION_INIT_ERROR", message },
+        });
       }
     }
   }
@@ -94,8 +125,14 @@ export class InitiateVersionHandler implements RouteHandler {
  * Complete version upload
  */
 export class CompleteVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const versionService = await ctx.container.resolve<VersionService>(TOKENS.versionService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const versionService = await ctx.container.resolve<VersionService>(
+      TOKENS.versionService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -107,18 +144,31 @@ export class CompleteVersionHandler implements RouteHandler {
     if (!body.uploadId || !body.sha256) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_FIELDS", message: "uploadId and sha256 are required" },
+        error: {
+          code: "MISSING_FIELDS",
+          message: "uploadId and sha256 are required",
+        },
       });
       return;
     }
 
     try {
-      await versionService.completeVersionUpload(body.uploadId, tenantId, body.sha256, actorId);
+      await versionService.completeVersionUpload(
+        body.uploadId,
+        tenantId,
+        body.sha256,
+        actorId,
+      );
 
-      res.status(200).json({ success: true, data: { uploadId: body.uploadId } });
+      res
+        .status(200)
+        .json({ success: true, data: { uploadId: body.uploadId } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "VERSION_COMPLETE_ERROR", message } });
+      res.status(500).json({
+        success: false,
+        error: { code: "VERSION_COMPLETE_ERROR", message },
+      });
     }
   }
 }
@@ -128,8 +178,14 @@ export class CompleteVersionHandler implements RouteHandler {
  * Restore previous version
  */
 export class RestoreVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const versionService = await ctx.container.resolve<VersionService>(TOKENS.versionService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const versionService = await ctx.container.resolve<VersionService>(
+      TOKENS.versionService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -141,7 +197,10 @@ export class RestoreVersionHandler implements RouteHandler {
     if (!body.documentId || body.versionNo === undefined) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_FIELDS", message: "documentId and versionNo are required" },
+        error: {
+          code: "MISSING_FIELDS",
+          message: "documentId and versionNo are required",
+        },
       });
       return;
     }
@@ -159,9 +218,14 @@ export class RestoreVersionHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "VERSION_RESTORE_ERROR", message } });
+        res.status(500).json({
+          success: false,
+          error: { code: "VERSION_RESTORE_ERROR", message },
+        });
       }
     }
   }

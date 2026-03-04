@@ -88,7 +88,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     private readonly policyCompiler: PolicyCompilerService,
     private readonly policyResolution: PolicyResolutionService,
     private readonly operationCatalog: OperationCatalogService,
-    config?: Partial<PolicyEvaluatorConfig>
+    config?: Partial<PolicyEvaluatorConfig>,
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -98,7 +98,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
    */
   async evaluate(
     input: PolicyInput,
-    options?: PolicyEvaluationOptions
+    options?: PolicyEvaluationOptions,
   ): Promise<PolicyDecision> {
     const startTime = Date.now();
     const opts = this.mergeOptions(options);
@@ -110,7 +110,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
 
       // 1. Get operation info
       const operation = await this.operationCatalog.getOperation(
-        `${input.action.namespace}.${input.action.code}` as OperationCode
+        `${input.action.namespace}.${input.action.code}` as OperationCode,
       );
 
       if (!operation) {
@@ -119,7 +119,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           [`Unknown operation: ${input.action.fullCode}`],
           [],
           startTime,
-          opts
+          opts,
         );
       }
 
@@ -132,14 +132,17 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           moduleCode: input.resource.module,
           entityVersionId: input.resource.versionId,
           recordId: input.resource.id,
-        }
+        },
       );
 
       if (opts.trace) {
         trace.push({
           step: "scope_filter",
           type: "scope_filter",
-          input: { tenantId: input.context.tenantId, resource: input.resource.type },
+          input: {
+            tenantId: input.context.tenantId,
+            resource: input.resource.type,
+          },
           output: { policiesFound: policies.length },
           durationUs: (Date.now() - scopeFilterStart) * 1000,
         });
@@ -152,7 +155,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           [],
           startTime,
           opts,
-          trace
+          trace,
         );
       }
 
@@ -169,7 +172,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
         if (Date.now() > deadline) {
           throw new PolicyEvaluationError(
             PolicyErrorCodes.POLICY_EVAL_TIMEOUT,
-            `Evaluation timed out after ${opts.limits?.timeoutMs}ms`
+            `Evaluation timed out after ${opts.limits?.timeoutMs}ms`,
           );
         }
 
@@ -184,7 +187,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
         const compiled = await this.policyCompiler.getOrCompile(
           input.context.tenantId,
           policy.activeVersionId,
-          "system"
+          "system",
         );
 
         if (!compiled) continue;
@@ -197,7 +200,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           operation.id,
           input,
           policy.scopeType,
-          opts
+          opts,
         );
 
         rulesScanned += rules.scanned;
@@ -206,8 +209,14 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           trace.push({
             step: `evaluate_policy_${policy.policy.name}`,
             type: "condition_eval",
-            input: { policyId: policy.policy.id, versionId: policy.activeVersionId },
-            output: { rulesMatched: rules.matched.length, rulesScanned: rules.scanned },
+            input: {
+              policyId: policy.policy.id,
+              versionId: policy.activeVersionId,
+            },
+            output: {
+              rulesMatched: rules.matched.length,
+              rulesScanned: rules.scanned,
+            },
             durationUs: (Date.now() - conditionEvalStart) * 1000,
           });
         }
@@ -249,14 +258,17 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
       const decision = this.resolveEffect(
         matchedRules,
         input,
-        opts.conflictResolution ?? "deny_overrides"
+        opts.conflictResolution ?? "deny_overrides",
       );
 
       if (opts.trace) {
         trace.push({
           step: "effect_resolution",
           type: "effect_resolution",
-          input: { matchedRulesCount: matchedRules.length, strategy: opts.conflictResolution },
+          input: {
+            matchedRulesCount: matchedRules.length,
+            strategy: opts.conflictResolution,
+          },
           output: { effect: decision.effect },
           durationUs: (Date.now() - effectResolutionStart) * 1000,
         });
@@ -269,7 +281,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
         const ruleObligations = await this.processObligations(
           decision.decidingRule,
           input,
-          decision.effect
+          decision.effect,
         );
         obligations.push(...ruleObligations);
 
@@ -326,7 +338,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           action: input.action.fullCode,
           resource: input.resource.type,
           error: String(error),
-        })
+        }),
       );
 
       if (this.config.failMode === "closed" || opts.strict) {
@@ -336,13 +348,13 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           [],
           startTime,
           opts,
-          trace
+          trace,
         );
       }
 
       throw new PolicyEvaluationError(
         PolicyErrorCodes.INTERNAL_ERROR,
-        `Evaluation failed: ${String(error)}`
+        `Evaluation failed: ${String(error)}`,
       );
     }
   }
@@ -352,7 +364,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
    */
   async isAllowed(
     input: PolicyInput,
-    options?: PolicyEvaluationOptions
+    options?: PolicyEvaluationOptions,
   ): Promise<boolean> {
     const decision = await this.evaluate(input, {
       ...options,
@@ -367,7 +379,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
    */
   async enforce(
     input: PolicyInput,
-    options?: PolicyEvaluationOptions
+    options?: PolicyEvaluationOptions,
   ): Promise<void> {
     const decision = await this.evaluate(input, options);
 
@@ -378,7 +390,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
         {
           reasons: decision.reasons,
           matchedRule: decision.decidingRule,
-        }
+        },
       );
     }
   }
@@ -390,7 +402,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     subject: PolicySubject,
     resource: PolicyResource,
     context: PolicyContext,
-    options?: PolicyEvaluationOptions
+    options?: PolicyEvaluationOptions,
   ): Promise<Map<string, PolicyDecision>> {
     const permissions = new Map<string, PolicyDecision>();
 
@@ -429,7 +441,9 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   /**
    * Merge options with defaults
    */
-  private mergeOptions(options?: PolicyEvaluationOptions): Required<PolicyEvaluationOptions> {
+  private mergeOptions(
+    options?: PolicyEvaluationOptions,
+  ): Required<PolicyEvaluationOptions> {
     return {
       ...DEFAULT_EVALUATION_OPTIONS,
       ...options,
@@ -443,7 +457,9 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   /**
    * Build subject keys for rule matching
    */
-  private buildSubjectKeys(subject: PolicySubject): Array<{ type: SubjectType; key: string }> {
+  private buildSubjectKeys(
+    subject: PolicySubject,
+  ): Array<{ type: SubjectType; key: string }> {
     const keys: Array<{ type: SubjectType; key: string }> = [];
 
     // User key
@@ -476,12 +492,16 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     operationId: string,
     input: PolicyInput,
     scopeType: ScopeType,
-    options: Required<PolicyEvaluationOptions>
+    options: Required<PolicyEvaluationOptions>,
   ): Promise<{
-    matched: Array<CompiledRule & { subjectType: SubjectType; subjectKey: string }>;
+    matched: Array<
+      CompiledRule & { subjectType: SubjectType; subjectKey: string }
+    >;
     scanned: number;
   }> {
-    const matched: Array<CompiledRule & { subjectType: SubjectType; subjectKey: string }> = [];
+    const matched: Array<
+      CompiledRule & { subjectType: SubjectType; subjectKey: string }
+    > = [];
     let scanned = 0;
 
     // Build scope key for lookup
@@ -511,7 +531,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
           const conditionResult = this.evaluateConditions(
             rule.conditions,
             input,
-            options.limits?.maxExpressionDepth ?? 10
+            options.limits?.maxExpressionDepth ?? 10,
           );
 
           if (!conditionResult) continue;
@@ -541,7 +561,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
             const conditionResult = this.evaluateConditions(
               rule.conditions,
               input,
-              options.limits?.maxExpressionDepth ?? 10
+              options.limits?.maxExpressionDepth ?? 10,
             );
 
             if (!conditionResult) continue;
@@ -562,7 +582,10 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   /**
    * Build scope key for index lookup
    */
-  private buildScopeKey(scopeType: ScopeType, resource: PolicyResource): string {
+  private buildScopeKey(
+    scopeType: ScopeType,
+    resource: PolicyResource,
+  ): string {
     switch (scopeType) {
       case "global":
         return "global:*";
@@ -584,12 +607,12 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     conditions: ConditionGroup,
     input: PolicyInput,
     maxDepth: number,
-    currentDepth: number = 0
+    currentDepth: number = 0,
   ): boolean {
     if (currentDepth > maxDepth) {
       throw new PolicyEvaluationError(
         PolicyErrorCodes.POLICY_EXPR_TOO_DEEP,
-        `Expression depth exceeded maximum of ${maxDepth}`
+        `Expression depth exceeded maximum of ${maxDepth}`,
       );
     }
 
@@ -598,7 +621,14 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     if (operator === "and") {
       for (const condition of conditions.conditions) {
         if ("conditions" in condition) {
-          if (!this.evaluateConditions(condition as ConditionGroup, input, maxDepth, currentDepth + 1)) {
+          if (
+            !this.evaluateConditions(
+              condition as ConditionGroup,
+              input,
+              maxDepth,
+              currentDepth + 1,
+            )
+          ) {
             return false;
           }
         } else {
@@ -611,7 +641,14 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     } else {
       for (const condition of conditions.conditions) {
         if ("conditions" in condition) {
-          if (this.evaluateConditions(condition as ConditionGroup, input, maxDepth, currentDepth + 1)) {
+          if (
+            this.evaluateConditions(
+              condition as ConditionGroup,
+              input,
+              maxDepth,
+              currentDepth + 1,
+            )
+          ) {
             return true;
           }
         } else {
@@ -627,7 +664,10 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   /**
    * Evaluate a single condition
    */
-  private evaluateSingleCondition(condition: Condition, input: PolicyInput): boolean {
+  private evaluateSingleCondition(
+    condition: Condition,
+    input: PolicyInput,
+  ): boolean {
     const fieldValue = this.resolveFieldValue(condition.field, input);
     const compareValue = condition.value;
 
@@ -639,51 +679,69 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
         return fieldValue !== compareValue;
 
       case "gt":
-        return typeof fieldValue === "number" &&
+        return (
+          typeof fieldValue === "number" &&
           typeof compareValue === "number" &&
-          fieldValue > compareValue;
+          fieldValue > compareValue
+        );
 
       case "gte":
-        return typeof fieldValue === "number" &&
+        return (
+          typeof fieldValue === "number" &&
           typeof compareValue === "number" &&
-          fieldValue >= compareValue;
+          fieldValue >= compareValue
+        );
 
       case "lt":
-        return typeof fieldValue === "number" &&
+        return (
+          typeof fieldValue === "number" &&
           typeof compareValue === "number" &&
-          fieldValue < compareValue;
+          fieldValue < compareValue
+        );
 
       case "lte":
-        return typeof fieldValue === "number" &&
+        return (
+          typeof fieldValue === "number" &&
           typeof compareValue === "number" &&
-          fieldValue <= compareValue;
+          fieldValue <= compareValue
+        );
 
       case "in":
         return Array.isArray(compareValue) && compareValue.includes(fieldValue);
 
       case "not_in":
-        return Array.isArray(compareValue) && !compareValue.includes(fieldValue);
+        return (
+          Array.isArray(compareValue) && !compareValue.includes(fieldValue)
+        );
 
       case "contains":
-        return typeof fieldValue === "string" &&
+        return (
+          typeof fieldValue === "string" &&
           typeof compareValue === "string" &&
-          fieldValue.includes(compareValue);
+          fieldValue.includes(compareValue)
+        );
 
       case "starts_with":
-        return typeof fieldValue === "string" &&
+        return (
+          typeof fieldValue === "string" &&
           typeof compareValue === "string" &&
-          fieldValue.startsWith(compareValue);
+          fieldValue.startsWith(compareValue)
+        );
 
       case "ends_with":
-        return typeof fieldValue === "string" &&
+        return (
+          typeof fieldValue === "string" &&
           typeof compareValue === "string" &&
-          fieldValue.endsWith(compareValue);
+          fieldValue.endsWith(compareValue)
+        );
 
       case "matches":
         try {
-          return typeof fieldValue === "string" &&
+          return (
+            typeof fieldValue === "string" &&
             typeof compareValue === "string" &&
-            new RegExp(compareValue).test(fieldValue);
+            new RegExp(compareValue).test(fieldValue)
+          );
         } catch {
           return false;
         }
@@ -752,7 +810,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   private resolveEffect(
     matchedRules: MatchedRule[],
     input: PolicyInput,
-    strategy: ConflictResolution
+    strategy: ConflictResolution,
   ): { effect: Effect; reasons: string[]; decidingRule?: MatchedRule } {
     if (matchedRules.length === 0) {
       return {
@@ -763,10 +821,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
 
     // Sort rules by determinism rules
     const sorted = [...matchedRules].sort((a, b) =>
-      compareRules(
-        { ...a, ruleId: a.ruleId },
-        { ...b, ruleId: b.ruleId }
-      )
+      compareRules({ ...a, ruleId: a.ruleId }, { ...b, ruleId: b.ruleId }),
     );
 
     switch (strategy) {
@@ -841,7 +896,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
   private async processObligations(
     _rule: MatchedRule,
     _input: PolicyInput,
-    _effect: Effect
+    _effect: Effect,
   ): Promise<PolicyObligation[]> {
     // TODO: Load obligations from rule definition
     // For now, return empty - obligations would be stored with rules
@@ -859,7 +914,7 @@ export class PolicyEvaluatorService implements IPolicyEvaluator {
     matchedRules: MatchedRule[],
     startTime: number,
     options: Required<PolicyEvaluationOptions>,
-    trace?: TraceStep[]
+    trace?: TraceStep[],
   ): PolicyDecision {
     const decision: PolicyDecision = {
       effect: "deny",
@@ -897,7 +952,7 @@ export function createPolicyEvaluator(
   policyCompiler: PolicyCompilerService,
   policyResolution: PolicyResolutionService,
   operationCatalog: OperationCatalogService,
-  config?: Partial<PolicyEvaluatorConfig>
+  config?: Partial<PolicyEvaluatorConfig>,
 ): PolicyEvaluatorService {
   return new PolicyEvaluatorService(
     db,
@@ -905,6 +960,6 @@ export function createPolicyEvaluator(
     policyCompiler,
     policyResolution,
     operationCatalog,
-    config
+    config,
   );
 }

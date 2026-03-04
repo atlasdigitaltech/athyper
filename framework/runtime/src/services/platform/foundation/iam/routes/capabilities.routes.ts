@@ -20,7 +20,10 @@ import type { NextFunction, Request, Response, Router } from "express";
 const CheckCapabilityQuerySchema = z.object({
   persona: z.enum(PERSONA_CODES as [string, ...string[]]),
   operation: z.string().min(1),
-  isOwner: z.enum(["true", "false"]).optional().transform((v) => v === "true"),
+  isOwner: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   recordOuPath: z.string().optional(),
   subjectOuPath: z.string().optional(),
   moduleCode: z.string().optional(),
@@ -40,7 +43,7 @@ export interface CapabilitiesRoutesDependencies {
  */
 export function createCapabilitiesRoutes(
   router: Router,
-  deps: CapabilitiesRoutesDependencies
+  deps: CapabilitiesRoutesDependencies,
 ): Router {
   const { capabilityService, logger } = deps;
 
@@ -58,7 +61,7 @@ export function createCapabilitiesRoutes(
         logger.error("Failed to get capability matrix", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -75,7 +78,7 @@ export function createCapabilitiesRoutes(
         logger.error("Failed to get capability matrix rows", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -92,7 +95,7 @@ export function createCapabilitiesRoutes(
         logger.error("Failed to list personas", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -123,7 +126,7 @@ export function createCapabilitiesRoutes(
         logger.error("Failed to list operations", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -143,8 +146,14 @@ export function createCapabilitiesRoutes(
           });
         }
 
-        const { persona, operation, isOwner, recordOuPath, subjectOuPath, moduleCode } =
-          parseResult.data;
+        const {
+          persona,
+          operation,
+          isOwner,
+          recordOuPath,
+          subjectOuPath,
+          moduleCode,
+        } = parseResult.data;
 
         const result = await capabilityService.hasCapability(
           persona as PersonaCode,
@@ -154,7 +163,7 @@ export function createCapabilitiesRoutes(
             recordOuPath,
             subjectOuPath,
             moduleCode,
-          }
+          },
         );
 
         return res.json(result);
@@ -162,7 +171,7 @@ export function createCapabilitiesRoutes(
         logger.error("Failed to check capability", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -182,13 +191,14 @@ export function createCapabilitiesRoutes(
           });
         }
 
-        const capabilities = await capabilityService.getPersonaCapabilities(code);
+        const capabilities =
+          await capabilityService.getPersonaCapabilities(code);
         return res.json({ persona: code, capabilities });
       } catch (error) {
         logger.error("Failed to get persona capabilities", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -200,13 +210,14 @@ export function createCapabilitiesRoutes(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const code = req.params.code;
-        const personas = await capabilityService.getPersonasWithCapability(code);
+        const personas =
+          await capabilityService.getPersonasWithCapability(code);
         return res.json({ operation: code, personas });
       } catch (error) {
         logger.error("Failed to get personas for operation", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

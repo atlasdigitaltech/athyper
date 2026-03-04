@@ -24,30 +24,30 @@ The universal event store -- an append-only, immutable log of all domain events 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Unique event identifier |
-| event_type | varchar(100) | NOT NULL | | Event type code (e.g., `COMMITMENT_CREATED`, `POSTING_COMPLETED`) |
-| event_version | varchar(20) | NOT NULL | `'v2.1'` | Schema version of the event payload |
-| created_at | timestamptz | NOT NULL | `now()` | Event timestamp (partition key) |
-| source_engine | varchar(50) | NOT NULL | | Engine that produced this event (e.g., `budget`, `commitment`, `posting`) |
-| txn_id | uuid | NOT NULL | | Transaction identifier this event belongs to |
-| doc_id | uuid | NOT NULL | | Document identifier this event relates to |
-| doc_type | varchar(20) | NOT NULL | | Document type: `PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER` |
-| correlation_id | uuid | NOT NULL | | Correlation ID for distributed tracing |
-| causation_id | uuid | YES | | ID of the event that caused this event (event chaining) |
-| actor_type | varchar(20) | NOT NULL | | Who triggered the event: `USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER` |
-| actor_id | uuid | NOT NULL | | Identifier of the actor |
-| tenant_id | uuid | NOT NULL | | Owning tenant |
-| entity_code | varchar(20) | YES | | Legal entity code |
-| ou_id | uuid | YES | | Operating unit ID |
-| payload | jsonb | NOT NULL | `'{}'` | Event payload (domain-specific data) |
-| payload_hash | varchar(64) | NOT NULL | | SHA-256 hash of the payload for integrity verification |
-| metadata | jsonb | YES | `'{}'` | Extensible metadata (timing, environment, version info) |
-| partition_domain | varchar(30) | NOT NULL | | Aggregate partition domain (e.g., `budget`, `commitment`) |
-| partition_key | varchar(200) | NOT NULL | | Aggregate partition key (e.g., the specific budget or commitment ID) |
-| sequence_no | bigint | NOT NULL | | Monotonically increasing sequence within the partition |
-| idempotency_key | varchar(200) | YES | | Idempotency key to prevent duplicate event emission |
+| Column           | Type         | Nullable | Default             | Description                                                                                                       |
+| ---------------- | ------------ | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| id               | uuid         | NOT NULL | `gen_random_uuid()` | Unique event identifier                                                                                           |
+| event_type       | varchar(100) | NOT NULL |                     | Event type code (e.g., `COMMITMENT_CREATED`, `POSTING_COMPLETED`)                                                 |
+| event_version    | varchar(20)  | NOT NULL | `'v2.1'`            | Schema version of the event payload                                                                               |
+| created_at       | timestamptz  | NOT NULL | `now()`             | Event timestamp (partition key)                                                                                   |
+| source_engine    | varchar(50)  | NOT NULL |                     | Engine that produced this event (e.g., `budget`, `commitment`, `posting`)                                         |
+| txn_id           | uuid         | NOT NULL |                     | Transaction identifier this event belongs to                                                                      |
+| doc_id           | uuid         | NOT NULL |                     | Document identifier this event relates to                                                                         |
+| doc_type         | varchar(20)  | NOT NULL |                     | Document type: `PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER` |
+| correlation_id   | uuid         | NOT NULL |                     | Correlation ID for distributed tracing                                                                            |
+| causation_id     | uuid         | YES      |                     | ID of the event that caused this event (event chaining)                                                           |
+| actor_type       | varchar(20)  | NOT NULL |                     | Who triggered the event: `USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER`                                                |
+| actor_id         | uuid         | NOT NULL |                     | Identifier of the actor                                                                                           |
+| tenant_id        | uuid         | NOT NULL |                     | Owning tenant                                                                                                     |
+| entity_code      | varchar(20)  | YES      |                     | Legal entity code                                                                                                 |
+| ou_id            | uuid         | YES      |                     | Operating unit ID                                                                                                 |
+| payload          | jsonb        | NOT NULL | `'{}'`              | Event payload (domain-specific data)                                                                              |
+| payload_hash     | varchar(64)  | NOT NULL |                     | SHA-256 hash of the payload for integrity verification                                                            |
+| metadata         | jsonb        | YES      | `'{}'`              | Extensible metadata (timing, environment, version info)                                                           |
+| partition_domain | varchar(30)  | NOT NULL |                     | Aggregate partition domain (e.g., `budget`, `commitment`)                                                         |
+| partition_key    | varchar(200) | NOT NULL |                     | Aggregate partition key (e.g., the specific budget or commitment ID)                                              |
+| sequence_no      | bigint       | NOT NULL |                     | Monotonically increasing sequence within the partition                                                            |
+| idempotency_key  | varchar(200) | YES      |                     | Idempotency key to prevent duplicate event emission                                                               |
 
 ### Primary Key
 
@@ -59,22 +59,22 @@ None declared (event store is self-contained; references are logical).
 
 ### Constraints
 
-| Constraint | Type | Description |
-|------------|------|-------------|
-| (inline) | CHECK | `doc_type` IN (`PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER`) |
-| (inline) | CHECK | `actor_type` IN (`USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER`) |
+| Constraint | Type  | Description                                                                                                        |
+| ---------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| (inline)   | CHECK | `doc_type` IN (`PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER`) |
+| (inline)   | CHECK | `actor_type` IN (`USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER`)                                                        |
 
 ### Indexes
 
-| Index | Columns | Condition | Description |
-|-------|---------|-----------|-------------|
-| idx_evt_event_tenant_partition | (tenant_id, partition_domain, partition_key, sequence_no) | | Stream replay: read events for a specific aggregate |
-| uidx_evt_event_partition_seq | (tenant_id, partition_domain, partition_key, sequence_no, created_at) | UNIQUE | Guarantee sequence uniqueness within a partition |
-| idx_evt_event_txn | (tenant_id, txn_id) | | Find all events for a transaction |
-| idx_evt_event_type | (tenant_id, event_type) | | Find events by type |
-| idx_evt_event_correlation | (tenant_id, correlation_id) | | Distributed trace lookup |
-| idx_evt_event_doc | (tenant_id, doc_id) | | Find events for a document |
-| uidx_evt_event_idempotency | (tenant_id, idempotency_key, created_at) | UNIQUE, `WHERE idempotency_key IS NOT NULL` | Prevent duplicate events via idempotency key |
+| Index                          | Columns                                                               | Condition                                   | Description                                         |
+| ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------- |
+| idx_evt_event_tenant_partition | (tenant_id, partition_domain, partition_key, sequence_no)             |                                             | Stream replay: read events for a specific aggregate |
+| uidx_evt_event_partition_seq   | (tenant_id, partition_domain, partition_key, sequence_no, created_at) | UNIQUE                                      | Guarantee sequence uniqueness within a partition    |
+| idx_evt_event_txn              | (tenant_id, txn_id)                                                   |                                             | Find all events for a transaction                   |
+| idx_evt_event_type             | (tenant_id, event_type)                                               |                                             | Find events by type                                 |
+| idx_evt_event_correlation      | (tenant_id, correlation_id)                                           |                                             | Distributed trace lookup                            |
+| idx_evt_event_doc              | (tenant_id, doc_id)                                                   |                                             | Find events for a document                          |
+| uidx_evt_event_idempotency     | (tenant_id, idempotency_key, created_at)                              | UNIQUE, `WHERE idempotency_key IS NOT NULL` | Prevent duplicate events via idempotency key        |
 
 ### Partitioning
 
@@ -99,17 +99,17 @@ Stores point-in-time snapshots of projection state for performance optimization.
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Unique snapshot identifier |
-| projection_id | varchar(100) | NOT NULL | | Identifier of the projection this snapshot is for |
-| partition_domain | varchar(30) | NOT NULL | | Aggregate partition domain |
-| partition_key | varchar(200) | NOT NULL | | Aggregate partition key |
-| last_sequence_no | bigint | NOT NULL | | Sequence number up to which this snapshot is valid |
-| state_checksum | varchar(64) | NOT NULL | | SHA-256 checksum of the snapshot data for integrity |
-| snapshot_data | jsonb | NOT NULL | | Serialized projection state |
-| created_at | timestamptz | NOT NULL | `now()` | When the snapshot was taken |
-| tenant_id | uuid | NOT NULL | | Owning tenant |
+| Column           | Type         | Nullable | Default             | Description                                         |
+| ---------------- | ------------ | -------- | ------------------- | --------------------------------------------------- |
+| id               | uuid         | NOT NULL | `gen_random_uuid()` | Unique snapshot identifier                          |
+| projection_id    | varchar(100) | NOT NULL |                     | Identifier of the projection this snapshot is for   |
+| partition_domain | varchar(30)  | NOT NULL |                     | Aggregate partition domain                          |
+| partition_key    | varchar(200) | NOT NULL |                     | Aggregate partition key                             |
+| last_sequence_no | bigint       | NOT NULL |                     | Sequence number up to which this snapshot is valid  |
+| state_checksum   | varchar(64)  | NOT NULL |                     | SHA-256 checksum of the snapshot data for integrity |
+| snapshot_data    | jsonb        | NOT NULL |                     | Serialized projection state                         |
+| created_at       | timestamptz  | NOT NULL | `now()`             | When the snapshot was taken                         |
+| tenant_id        | uuid         | NOT NULL |                     | Owning tenant                                       |
 
 ### Primary Key
 
@@ -125,9 +125,9 @@ None beyond NOT NULL constraints.
 
 ### Indexes
 
-| Index | Columns | Condition | Description |
-|-------|---------|-----------|-------------|
-| idx_evt_snapshot_projection | (tenant_id, projection_id, partition_domain, partition_key) | | Find snapshots for a specific projection and aggregate |
+| Index                       | Columns                                                     | Condition | Description                                            |
+| --------------------------- | ----------------------------------------------------------- | --------- | ------------------------------------------------------ |
+| idx_evt_snapshot_projection | (tenant_id, projection_id, partition_domain, partition_key) |           | Find snapshots for a specific projection and aggregate |
 
 ### Relationships
 
@@ -145,23 +145,23 @@ Formal registration of all event projections (read-model builders) in the system
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Unique registry entry identifier |
-| projection_id | varchar(100) | NOT NULL | | Logical projection identifier |
-| owning_engine | varchar(50) | NOT NULL | | Engine that owns this projection (e.g., `budget`, `posting`) |
-| projection_version | varchar(20) | NOT NULL | | Current version of the projection logic |
-| source_event_types | text[] | NOT NULL | | Array of event types this projection consumes |
-| partition_domains | text[] | NOT NULL | | Array of partition domains this projection operates on |
-| checkpoint_strategy | varchar(20) | NOT NULL | `'SEQUENCE_NO'` | How checkpoints are maintained |
-| rebuild_strategy | varchar(30) | NOT NULL | `'SNAPSHOT_AND_CATCHUP'` | How to rebuild the projection from scratch |
-| snapshot_interval | integer | YES | | How many events between automatic snapshots |
-| consistency_model | varchar(30) | NOT NULL | `'BOUNDED_STALENESS'` | Consistency guarantee: e.g., `BOUNDED_STALENESS`, `EVENTUAL` |
-| data_retention | varchar(50) | NOT NULL | `'INHERIT_EVENT_STORE'` | Data retention policy for this projection |
-| is_active | boolean | NOT NULL | `true` | Whether this projection is currently active |
-| created_at | timestamptz | NOT NULL | `now()` | Registration timestamp |
-| updated_at | timestamptz | NOT NULL | `now()` | Last update timestamp |
-| tenant_id | uuid | NOT NULL | | Owning tenant |
+| Column              | Type         | Nullable | Default                  | Description                                                  |
+| ------------------- | ------------ | -------- | ------------------------ | ------------------------------------------------------------ |
+| id                  | uuid         | NOT NULL | `gen_random_uuid()`      | Unique registry entry identifier                             |
+| projection_id       | varchar(100) | NOT NULL |                          | Logical projection identifier                                |
+| owning_engine       | varchar(50)  | NOT NULL |                          | Engine that owns this projection (e.g., `budget`, `posting`) |
+| projection_version  | varchar(20)  | NOT NULL |                          | Current version of the projection logic                      |
+| source_event_types  | text[]       | NOT NULL |                          | Array of event types this projection consumes                |
+| partition_domains   | text[]       | NOT NULL |                          | Array of partition domains this projection operates on       |
+| checkpoint_strategy | varchar(20)  | NOT NULL | `'SEQUENCE_NO'`          | How checkpoints are maintained                               |
+| rebuild_strategy    | varchar(30)  | NOT NULL | `'SNAPSHOT_AND_CATCHUP'` | How to rebuild the projection from scratch                   |
+| snapshot_interval   | integer      | YES      |                          | How many events between automatic snapshots                  |
+| consistency_model   | varchar(30)  | NOT NULL | `'BOUNDED_STALENESS'`    | Consistency guarantee: e.g., `BOUNDED_STALENESS`, `EVENTUAL` |
+| data_retention      | varchar(50)  | NOT NULL | `'INHERIT_EVENT_STORE'`  | Data retention policy for this projection                    |
+| is_active           | boolean      | NOT NULL | `true`                   | Whether this projection is currently active                  |
+| created_at          | timestamptz  | NOT NULL | `now()`                  | Registration timestamp                                       |
+| updated_at          | timestamptz  | NOT NULL | `now()`                  | Last update timestamp                                        |
+| tenant_id           | uuid         | NOT NULL |                          | Owning tenant                                                |
 
 ### Primary Key
 
@@ -173,8 +173,8 @@ None declared.
 
 ### Constraints
 
-| Constraint | Type | Description |
-|------------|------|-------------|
+| Constraint           | Type   | Description                                                |
+| -------------------- | ------ | ---------------------------------------------------------- |
 | uq_evt_projection_id | UNIQUE | Unique projection per tenant: `(tenant_id, projection_id)` |
 
 ### Indexes
@@ -196,16 +196,16 @@ Tracks the last-processed event for each projection per aggregate partition, ena
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Unique checkpoint identifier |
-| projection_id | varchar(100) | NOT NULL | | Projection this checkpoint belongs to |
-| partition_domain | varchar(30) | NOT NULL | | Aggregate partition domain |
-| partition_key | varchar(200) | NOT NULL | | Aggregate partition key |
-| last_event_id | uuid | NOT NULL | | ID of the last processed event |
-| last_sequence_no | bigint | NOT NULL | | Sequence number of the last processed event |
-| updated_at | timestamptz | NOT NULL | `now()` | When this checkpoint was last updated |
-| tenant_id | uuid | NOT NULL | | Owning tenant |
+| Column           | Type         | Nullable | Default             | Description                                 |
+| ---------------- | ------------ | -------- | ------------------- | ------------------------------------------- |
+| id               | uuid         | NOT NULL | `gen_random_uuid()` | Unique checkpoint identifier                |
+| projection_id    | varchar(100) | NOT NULL |                     | Projection this checkpoint belongs to       |
+| partition_domain | varchar(30)  | NOT NULL |                     | Aggregate partition domain                  |
+| partition_key    | varchar(200) | NOT NULL |                     | Aggregate partition key                     |
+| last_event_id    | uuid         | NOT NULL |                     | ID of the last processed event              |
+| last_sequence_no | bigint       | NOT NULL |                     | Sequence number of the last processed event |
+| updated_at       | timestamptz  | NOT NULL | `now()`             | When this checkpoint was last updated       |
+| tenant_id        | uuid         | NOT NULL |                     | Owning tenant                               |
 
 ### Primary Key
 
@@ -217,8 +217,8 @@ None declared.
 
 ### Constraints
 
-| Constraint | Type | Description |
-|------------|------|-------------|
+| Constraint        | Type   | Description                                                                                                |
+| ----------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
 | uq_evt_checkpoint | UNIQUE | One checkpoint per projection per partition: `(tenant_id, projection_id, partition_domain, partition_key)` |
 
 ### Indexes
@@ -241,12 +241,12 @@ Monotonic sequence generator for event streams. Each row maintains the current s
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| tenant_id | uuid | NOT NULL | | Owning tenant |
-| partition_domain | varchar(30) | NOT NULL | | Aggregate partition domain |
-| partition_key | varchar(200) | NOT NULL | | Aggregate partition key |
-| current_seq | bigint | NOT NULL | `0` | Current sequence value for this partition |
+| Column           | Type         | Nullable | Default | Description                               |
+| ---------------- | ------------ | -------- | ------- | ----------------------------------------- |
+| tenant_id        | uuid         | NOT NULL |         | Owning tenant                             |
+| partition_domain | varchar(30)  | NOT NULL |         | Aggregate partition domain                |
+| partition_key    | varchar(200) | NOT NULL |         | Aggregate partition key                   |
+| current_seq      | bigint       | NOT NULL | `0`     | Current sequence value for this partition |
 
 ### Primary Key
 

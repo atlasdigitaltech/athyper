@@ -15,29 +15,29 @@ import type { WebhookEventRepo } from "../../persistence/WebhookEventRepo.js";
 import type { JobQueue } from "@athyper/core";
 
 export interface WorkerConfig {
-    outboxConcurrency?: number;
-    webhookConcurrency?: number;
+  outboxConcurrency?: number;
+  webhookConcurrency?: number;
 }
 
 export async function registerIntegrationWorkers(
-    jobQueue: JobQueue,
-    scheduler: DeliveryScheduler,
-    webhookEventRepo: WebhookEventRepo,
-    eventGateway: EventGateway,
-    logger: Logger,
-    config?: WorkerConfig,
+  jobQueue: JobQueue,
+  scheduler: DeliveryScheduler,
+  webhookEventRepo: WebhookEventRepo,
+  eventGateway: EventGateway,
+  logger: Logger,
+  config?: WorkerConfig,
 ): Promise<void> {
-    await jobQueue.process(
-        INT_JOB_TYPES.DELIVER_OUTBOX,
-        config?.outboxConcurrency ?? 3,
-        createDeliverOutboxHandler(scheduler, logger),
-    );
+  await jobQueue.process(
+    INT_JOB_TYPES.DELIVER_OUTBOX,
+    config?.outboxConcurrency ?? 3,
+    createDeliverOutboxHandler(scheduler, logger),
+  );
 
-    await jobQueue.process(
-        INT_JOB_TYPES.PROCESS_WEBHOOK,
-        config?.webhookConcurrency ?? 2,
-        createProcessWebhookHandler(webhookEventRepo, eventGateway, logger),
-    );
+  await jobQueue.process(
+    INT_JOB_TYPES.PROCESS_WEBHOOK,
+    config?.webhookConcurrency ?? 2,
+    createProcessWebhookHandler(webhookEventRepo, eventGateway, logger),
+  );
 
-    logger.info("[int:workers] Integration workers registered");
+  logger.info("[int:workers] Integration workers registered");
 }

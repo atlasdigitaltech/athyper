@@ -25,7 +25,11 @@ import type { Logger } from "../../../../../kernel/logger.js";
 /**
  * Relationship cardinality
  */
-export type Cardinality = "one-to-one" | "one-to-many" | "many-to-one" | "many-to-many";
+export type Cardinality =
+  | "one-to-one"
+  | "one-to-many"
+  | "many-to-one"
+  | "many-to-many";
 
 /**
  * Declared relationship between entities
@@ -98,7 +102,7 @@ export interface IRelationshipRegistry {
   /** Get relationship between two entities */
   getRelationship(
     sourceEntity: string,
-    targetEntity: string
+    targetEntity: string,
   ): Promise<EntityRelationship | undefined>;
 
   /** Get all relationships for an entity */
@@ -160,17 +164,22 @@ export class InMemoryRelationshipRegistry implements IRelationshipRegistry {
 
   async getRelationship(
     sourceEntity: string,
-    targetEntity: string
+    targetEntity: string,
   ): Promise<EntityRelationship | undefined> {
     const rels = this.relationships.get(sourceEntity) ?? [];
     return rels.find((r) => r.targetEntity === targetEntity);
   }
 
-  async getEntityRelationships(entityName: string): Promise<EntityRelationship[]> {
+  async getEntityRelationships(
+    entityName: string,
+  ): Promise<EntityRelationship[]> {
     return this.relationships.get(entityName) ?? [];
   }
 
-  async isJoinAllowed(sourceEntity: string, targetEntity: string): Promise<boolean> {
+  async isJoinAllowed(
+    sourceEntity: string,
+    targetEntity: string,
+  ): Promise<boolean> {
     const rel = await this.getRelationship(sourceEntity, targetEntity);
     return rel !== undefined;
   }
@@ -244,13 +253,16 @@ export class JoinPlanner {
   constructor(
     private registry: IRelationshipRegistry,
     private guardrails: QueryGuardrails = DEFAULT_GUARDRAILS,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   /**
    * Validate and plan joins for a query
    */
-  async planJoins(query: QueryRequest, _tenantId: string): Promise<{
+  async planJoins(
+    query: QueryRequest,
+    _tenantId: string,
+  ): Promise<{
     plan?: JoinPlan;
     validation: QueryValidationResult;
   }> {
@@ -343,7 +355,10 @@ export class JoinPlanner {
         }
 
         // Validate join is allowed
-        const relationship = await this.registry.getRelationship(sourceEntity, join.entity);
+        const relationship = await this.registry.getRelationship(
+          sourceEntity,
+          join.entity,
+        );
         if (!relationship) {
           errors.push({
             code: "JOIN_NOT_ALLOWED",
@@ -354,7 +369,11 @@ export class JoinPlanner {
         }
 
         // Calculate depth
-        const depth = this.calculateJoinDepth(sourceAlias, plannedJoins, baseAlias);
+        const depth = this.calculateJoinDepth(
+          sourceAlias,
+          plannedJoins,
+          baseAlias,
+        );
         if (depth > this.guardrails.maxDepth) {
           errors.push({
             code: "MAX_DEPTH_EXCEEDED",
@@ -445,7 +464,12 @@ export class JoinPlanner {
     }
 
     // Build join graph
-    const joinGraph = this.buildJoinGraph(query, baseEntity, plannedJoins, aliasToEntity);
+    const joinGraph = this.buildJoinGraph(
+      query,
+      baseEntity,
+      plannedJoins,
+      aliasToEntity,
+    );
 
     const plan: JoinPlan = {
       baseEntity: query.from,
@@ -487,13 +511,15 @@ export class JoinPlanner {
   private calculateJoinDepth(
     sourceAlias: string,
     plannedJoins: PlannedJoin[],
-    baseAlias: string
+    baseAlias: string,
   ): number {
     if (sourceAlias === baseAlias) {
       return 1;
     }
 
-    const sourceJoin = plannedJoins.find((j) => j.definition.as === sourceAlias);
+    const sourceJoin = plannedJoins.find(
+      (j) => j.definition.as === sourceAlias,
+    );
     if (sourceJoin) {
       return sourceJoin.depth + 1;
     }
@@ -508,7 +534,7 @@ export class JoinPlanner {
     query: QueryRequest,
     baseEntity: EntityMetadata,
     plannedJoins: PlannedJoin[],
-    _aliasToEntity: Map<string, string>
+    _aliasToEntity: Map<string, string>,
   ): JoinGraphNode[] {
     const nodes: JoinGraphNode[] = [];
     const baseAlias = query.as ?? query.from.charAt(0).toLowerCase();

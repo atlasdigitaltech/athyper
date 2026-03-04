@@ -4,7 +4,7 @@
  * Comprehensive test suite for H4: Auto-Transitions/Timers
  */
 
-import { describe, it, beforeEach, jest } from "@jest/globals";
+import { describe, it, beforeEach, vi } from "vitest";
 
 import type { JobQueue } from "@athyper/core";
 import type {
@@ -15,30 +15,30 @@ import type {
 
 // Mock implementations
 const mockDb = {
-  selectFrom: jest.fn().mockReturnThis(),
-  select: jest.fn().mockReturnThis(),
-  selectAll: jest.fn().mockReturnThis(),
-  where: jest.fn().mockReturnThis(),
-  execute: jest.fn(),
-  executeTakeFirst: jest.fn(),
-  executeTakeFirstOrThrow: jest.fn(),
-  insertInto: jest.fn().mockReturnThis(),
-  values: jest.fn().mockReturnThis(),
-  returningAll: jest.fn().mockReturnThis(),
-  updateTable: jest.fn().mockReturnThis(),
-  set: jest.fn().mockReturnThis(),
-  orderBy: jest.fn().mockReturnThis(),
+  selectFrom: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  selectAll: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  execute: vi.fn(),
+  executeTakeFirst: vi.fn(),
+  executeTakeFirstOrThrow: vi.fn(),
+  insertInto: vi.fn().mockReturnThis(),
+  values: vi.fn().mockReturnThis(),
+  returningAll: vi.fn().mockReturnThis(),
+  updateTable: vi.fn().mockReturnThis(),
+  set: vi.fn().mockReturnThis(),
+  orderBy: vi.fn().mockReturnThis(),
 } as any;
 
 const mockJobQueue = {
-  add: jest.fn(),
-  removeJob: jest.fn(),
-  process: jest.fn(),
+  add: vi.fn(),
+  removeJob: vi.fn(),
+  process: vi.fn(),
 } as any as JobQueue;
 
 const mockLifecycleManager = {
-  getInstance: jest.fn(),
-  transition: jest.fn(),
+  getInstance: vi.fn(),
+  transition: vi.fn(),
 } as any as LifecycleManager;
 
 const testCtx: RequestContext = {
@@ -53,7 +53,7 @@ describe("Lifecycle Timer Service", () => {
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create timer service instance (would import LifecycleTimerServiceImpl)
     // timerService = new LifecycleTimerServiceImpl(mockDb);
@@ -258,7 +258,9 @@ describe("Lifecycle Timer Service", () => {
       };
 
       mockDb.executeTakeFirst.mockResolvedValueOnce(mockSchedule);
-      mockLifecycleManager.getInstance.mockResolvedValueOnce({ id: "instance-1" });
+      mockLifecycleManager.getInstance.mockResolvedValueOnce({
+        id: "instance-1",
+      });
       mockLifecycleManager.transition.mockResolvedValueOnce({ success: true });
 
       // Act

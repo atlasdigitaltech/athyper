@@ -34,7 +34,9 @@ function ApprovalCommentItem({ comment }: { comment: ApprovalComment }) {
       <div className="flex items-center gap-2 mb-2">
         <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center">
           <span className="text-xs font-medium text-white">
-            {(comment.commenterDisplayName || comment.commenterId).charAt(0).toUpperCase()}
+            {(comment.commenterDisplayName || comment.commenterId)
+              .charAt(0)
+              .toUpperCase()}
           </span>
         </div>
         <span className="text-sm font-medium text-gray-900">
@@ -51,7 +53,9 @@ function ApprovalCommentItem({ comment }: { comment: ApprovalComment }) {
       </div>
 
       {/* Comment Text */}
-      <p className="text-sm text-gray-700 whitespace-pre-wrap ml-9">{comment.commentText}</p>
+      <p className="text-sm text-gray-700 whitespace-pre-wrap ml-9">
+        {comment.commentText}
+      </p>
     </div>
   );
 }
@@ -176,7 +180,9 @@ function ApprovalCommentInput({
         />
 
         {/* Character Counter */}
-        <div className={`text-xs text-right mt-1 ${isNearLimit ? "text-red-600" : "text-gray-500"}`}>
+        <div
+          className={`text-xs text-right mt-1 ${isNearLimit ? "text-red-600" : "text-gray-500"}`}
+        >
           {remainingChars.toLocaleString()} characters remaining
         </div>
       </div>
@@ -225,7 +231,12 @@ function ApprovalCommentInput({
                   disabled={submitting}
                   className="ml-2 text-red-600 hover:text-red-800 disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -305,10 +316,11 @@ export function ApprovalCommentSection({
       if (approvalTaskId) {
         queryParts.push(`taskId=${encodeURIComponent(approvalTaskId)}`);
       }
-      const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+      const queryString =
+        queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
 
       const url = `/api/collab/approval-comments/${encodeURIComponent(
-        approvalInstanceId
+        approvalInstanceId,
       )}${queryString}`;
 
       const res = await fetch(url, { credentials: "same-origin" });
@@ -374,7 +386,9 @@ export function ApprovalCommentSection({
       {/* Comment List */}
       {comments.length === 0 ? (
         <div className="p-4 text-center text-gray-500 bg-blue-50 border border-blue-200 rounded-lg">
-          <p>No comments yet. Start the discussion by adding a comment above.</p>
+          <p>
+            No comments yet. Start the discussion by adding a comment above.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

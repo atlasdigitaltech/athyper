@@ -7,9 +7,4 @@ export type Session = {
   roles: string[];
 };
 
-export type WorkbenchType =
-  | "ADMIN"
-  | "USER"
-  | "PARTNER"
-  | "SERVICEMANAGER";
-
+export type WorkbenchType = "ADMIN" | "USER" | "PARTNER" | "SERVICEMANAGER";

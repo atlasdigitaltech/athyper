@@ -7,7 +7,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * GET /api/collab/approval-comments/:instanceId
@@ -19,7 +19,7 @@ import type { NextRequest} from "next/server";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ instanceId: string }> }
+  { params }: { params: Promise<{ instanceId: string }> },
 ) {
   // Authenticate
   const sid = await getSessionId();
@@ -51,7 +51,7 @@ export async function GET(
           Cookie: req.headers.get("cookie") || "",
           "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -59,7 +59,7 @@ export async function GET(
       console.error("List approval comments error:", error);
       return NextResponse.json(
         { error: "Failed to fetch approval comments", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -69,7 +69,7 @@ export async function GET(
     console.error("List approval comments route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

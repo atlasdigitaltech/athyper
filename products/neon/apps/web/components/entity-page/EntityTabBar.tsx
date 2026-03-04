@@ -49,7 +49,15 @@ export function EntityTabBar({
 
       {enabledTabs.map((tab) => (
         <TabsContent key={tab.code} value={tab.code}>
-          {renderTabContent(tab.code, sections, record, pluginProps, fieldMeta, resolvedRefs, featureFlags)}
+          {renderTabContent(
+            tab.code,
+            sections,
+            record,
+            pluginProps,
+            fieldMeta,
+            resolvedRefs,
+            featureFlags,
+          )}
         </TabsContent>
       ))}
     </Tabs>

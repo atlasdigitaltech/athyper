@@ -5,7 +5,10 @@
  * Follows the NotificationDlqRepo pattern exactly.
  */
 
-import type { AuditDlqEntry, CreateAuditDlqInput } from "../domain/models/AuditDlqEntry.js";
+import type {
+  AuditDlqEntry,
+  CreateAuditDlqInput,
+} from "../domain/models/AuditDlqEntry.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -60,7 +63,10 @@ export class AuditDlqRepo {
   /**
    * Get a single DLQ entry by ID (tenant-scoped).
    */
-  async getById(tenantId: string, id: string): Promise<AuditDlqEntry | undefined> {
+  async getById(
+    tenantId: string,
+    id: string,
+  ): Promise<AuditDlqEntry | undefined> {
     const row = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -108,7 +114,11 @@ export class AuditDlqRepo {
    * Mark a DLQ entry as replayed.
    * Does NOT delete the entry — keeps it for audit trail.
    */
-  async markReplayed(tenantId: string, id: string, replayedBy: string): Promise<void> {
+  async markReplayed(
+    tenantId: string,
+    id: string,
+    replayedBy: string,
+  ): Promise<void> {
     await this.db
       .updateTable(TABLE as any)
       .set((eb: any) => ({
@@ -174,7 +184,11 @@ export class AuditDlqRepo {
   private parseJson(value: unknown): Record<string, unknown> | null {
     if (!value) return null;
     if (typeof value === "string") {
-      try { return JSON.parse(value); } catch { return null; }
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
     }
     return value as Record<string, unknown>;
   }

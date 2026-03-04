@@ -10,7 +10,10 @@
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
 import type { Request, Response } from "express";
 import type { Kysely } from "kysely";
 
@@ -141,7 +144,11 @@ function mapVersion(row: any): Record<string, unknown> {
 // ============================================================================
 
 export class ListFieldsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -149,7 +156,10 @@ export class ListFieldsHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -170,7 +180,11 @@ export class ListFieldsHandler implements RouteHandler {
 // ============================================================================
 
 export class ListRelationsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -178,7 +192,10 @@ export class ListRelationsHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -198,7 +215,11 @@ export class ListRelationsHandler implements RouteHandler {
 // ============================================================================
 
 export class ListIndexesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -206,7 +227,10 @@ export class ListIndexesHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -226,7 +250,11 @@ export class ListIndexesHandler implements RouteHandler {
 // ============================================================================
 
 export class GetEntityPoliciesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -240,7 +268,10 @@ export class GetEntityPoliciesHandler implements RouteHandler {
     if (!entity) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -265,7 +296,9 @@ export class GetEntityPoliciesHandler implements RouteHandler {
       success: true,
       data: {
         entityPolicy: entityPolicy ? mapEntityPolicy(entityPolicy) : null,
-        fieldSecurityPolicies: fieldSecurityPolicies.map(mapFieldSecurityPolicy),
+        fieldSecurityPolicies: fieldSecurityPolicies.map(
+          mapFieldSecurityPolicy,
+        ),
       },
     });
   }
@@ -276,7 +309,11 @@ export class GetEntityPoliciesHandler implements RouteHandler {
 // ============================================================================
 
 export class GetCompiledHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -284,7 +321,10 @@ export class GetCompiledHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -323,7 +363,11 @@ export class GetCompiledHandler implements RouteHandler {
 // ============================================================================
 
 export class GetLifecycleBindingsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -337,7 +381,10 @@ export class GetLifecycleBindingsHandler implements RouteHandler {
     if (!entity) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -358,12 +405,14 @@ export class GetLifecycleBindingsHandler implements RouteHandler {
 
     if (lifecycleIds.length > 0) {
       [states, transitions] = await Promise.all([
-        db.selectFrom("meta.lifecycle_state")
+        db
+          .selectFrom("meta.lifecycle_state")
           .selectAll()
           .where("lifecycle_id", "in", lifecycleIds)
           .orderBy("sort_order", "asc")
           .execute(),
-        db.selectFrom("meta.lifecycle_transition")
+        db
+          .selectFrom("meta.lifecycle_transition")
           .selectAll()
           .where("lifecycle_id", "in", lifecycleIds)
           .execute(),
@@ -399,7 +448,11 @@ export class GetLifecycleBindingsHandler implements RouteHandler {
 // ============================================================================
 
 export class GetValidationHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -407,7 +460,10 @@ export class GetValidationHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -442,7 +498,11 @@ export class GetValidationHandler implements RouteHandler {
 // ============================================================================
 
 export class ListEntityVersionsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -455,7 +515,10 @@ export class ListEntityVersionsHandler implements RouteHandler {
     if (!entity) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -476,7 +539,11 @@ export class ListEntityVersionsHandler implements RouteHandler {
 // ============================================================================
 
 export class GetDiffHandler implements RouteHandler {
-  async handle(_req: Request, res: Response, _ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    _req: Request,
+    res: Response,
+    _ctx: HttpHandlerContext,
+  ): Promise<void> {
     // Diff is a complex operation — return empty for now
     res.status(200).json({
       success: true,
@@ -490,7 +557,11 @@ export class GetDiffHandler implements RouteHandler {
 // ============================================================================
 
 export class CompileEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -498,17 +569,37 @@ export class CompileEntityHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
 
     // Fetch entity, fields, relations, indexes for the latest version
     const [entity, fields, relations, indexes] = await Promise.all([
-      db.selectFrom("meta.entity").selectAll().where("id", "=", resolved.entityId).executeTakeFirst(),
-      db.selectFrom("meta.field").selectAll().where("entity_version_id", "=", resolved.versionId).orderBy("sort_order", "asc").execute(),
-      db.selectFrom("meta.relation").selectAll().where("entity_version_id", "=", resolved.versionId).execute(),
-      db.selectFrom("meta.index_def").selectAll().where("entity_version_id", "=", resolved.versionId).execute(),
+      db
+        .selectFrom("meta.entity")
+        .selectAll()
+        .where("id", "=", resolved.entityId)
+        .executeTakeFirst(),
+      db
+        .selectFrom("meta.field")
+        .selectAll()
+        .where("entity_version_id", "=", resolved.versionId)
+        .orderBy("sort_order", "asc")
+        .execute(),
+      db
+        .selectFrom("meta.relation")
+        .selectAll()
+        .where("entity_version_id", "=", resolved.versionId)
+        .execute(),
+      db
+        .selectFrom("meta.index_def")
+        .selectAll()
+        .where("entity_version_id", "=", resolved.versionId)
+        .execute(),
     ]);
 
     // Build compiled JSON
@@ -560,7 +651,11 @@ export class CompileEntityHandler implements RouteHandler {
 // ============================================================================
 
 export class MutateFieldsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -568,7 +663,10 @@ export class MutateFieldsHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -586,7 +684,9 @@ export class MutateFieldsHandler implements RouteHandler {
           .where("entity_version_id", "=", resolved.versionId)
           .execute();
       }
-      res.status(200).json({ success: true, data: { reordered: fieldIds.length } });
+      res
+        .status(200)
+        .json({ success: true, data: { reordered: fieldIds.length } });
       return;
     }
 
@@ -599,11 +699,16 @@ export class MutateFieldsHandler implements RouteHandler {
       if (body.uiType !== undefined) updates.ui_type = body.uiType;
       if (body.isRequired !== undefined) updates.is_required = body.isRequired;
       if (body.isUnique !== undefined) updates.is_unique = body.isUnique;
-      if (body.isSearchable !== undefined) updates.is_searchable = body.isSearchable;
-      if (body.isFilterable !== undefined) updates.is_filterable = body.isFilterable;
-      if (body.defaultValue !== undefined) updates.default_value = JSON.stringify(body.defaultValue);
-      if (body.validation !== undefined) updates.validation = JSON.stringify(body.validation);
-      if (body.lookupConfig !== undefined) updates.lookup_config = JSON.stringify(body.lookupConfig);
+      if (body.isSearchable !== undefined)
+        updates.is_searchable = body.isSearchable;
+      if (body.isFilterable !== undefined)
+        updates.is_filterable = body.isFilterable;
+      if (body.defaultValue !== undefined)
+        updates.default_value = JSON.stringify(body.defaultValue);
+      if (body.validation !== undefined)
+        updates.validation = JSON.stringify(body.validation);
+      if (body.lookupConfig !== undefined)
+        updates.lookup_config = JSON.stringify(body.lookupConfig);
       updates.updated_at = new Date();
 
       const updated = await db
@@ -615,7 +720,10 @@ export class MutateFieldsHandler implements RouteHandler {
         .executeTakeFirst();
 
       if (!updated) {
-        res.status(404).json({ success: false, error: { code: "FIELD_NOT_FOUND", message: "Field not found" } });
+        res.status(404).json({
+          success: false,
+          error: { code: "FIELD_NOT_FOUND", message: "Field not found" },
+        });
         return;
       }
       res.status(200).json({ success: true, data: mapField(updated) });
@@ -637,9 +745,13 @@ export class MutateFieldsHandler implements RouteHandler {
         is_unique: (body.isUnique as boolean) ?? false,
         is_searchable: (body.isSearchable as boolean) ?? false,
         is_filterable: (body.isFilterable as boolean) ?? false,
-        default_value: body.defaultValue ? JSON.stringify(body.defaultValue) : null,
+        default_value: body.defaultValue
+          ? JSON.stringify(body.defaultValue)
+          : null,
         validation: body.validation ? JSON.stringify(body.validation) : null,
-        lookup_config: body.lookupConfig ? JSON.stringify(body.lookupConfig) : null,
+        lookup_config: body.lookupConfig
+          ? JSON.stringify(body.lookupConfig)
+          : null,
         sort_order: (body.sortOrder as number) ?? 0,
         created_by: "system",
       } as any)
@@ -655,7 +767,11 @@ export class MutateFieldsHandler implements RouteHandler {
 // ============================================================================
 
 export class DeleteFieldHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -663,7 +779,10 @@ export class DeleteFieldHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }
@@ -684,7 +803,11 @@ export class DeleteFieldHandler implements RouteHandler {
 // ============================================================================
 
 export class MutateRelationsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
 
@@ -692,7 +815,10 @@ export class MutateRelationsHandler implements RouteHandler {
     if (!resolved) {
       res.status(404).json({
         success: false,
-        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+        error: {
+          code: "ENTITY_NOT_FOUND",
+          message: `Entity '${name}' not found`,
+        },
       });
       return;
     }

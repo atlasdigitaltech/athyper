@@ -74,12 +74,20 @@ export interface SecurityHeadersOptions {
   /**
    * Cross-Origin-Opener-Policy header
    */
-  crossOriginOpenerPolicy?: "same-origin" | "same-origin-allow-popups" | "unsafe-none" | false;
+  crossOriginOpenerPolicy?:
+    | "same-origin"
+    | "same-origin-allow-popups"
+    | "unsafe-none"
+    | false;
 
   /**
    * Cross-Origin-Resource-Policy header
    */
-  crossOriginResourcePolicy?: "same-origin" | "same-site" | "cross-origin" | false;
+  crossOriginResourcePolicy?:
+    | "same-origin"
+    | "same-site"
+    | "cross-origin"
+    | false;
 }
 
 /**
@@ -131,7 +139,7 @@ const DEFAULT_OPTIONS: Required<SecurityHeadersOptions> = {
  * Security headers middleware
  */
 export function securityHeaders(
-  options: SecurityHeadersOptions = {}
+  options: SecurityHeadersOptions = {},
 ): (req: Request, res: Response, next: NextFunction) => void {
   const config = { ...DEFAULT_OPTIONS, ...options };
 
@@ -173,7 +181,9 @@ export function securityHeaders(
 
     // Permissions-Policy
     if (config.permissionsPolicy !== false) {
-      const permissionsPolicy = buildPermissionsPolicyHeader(config.permissionsPolicy);
+      const permissionsPolicy = buildPermissionsPolicyHeader(
+        config.permissionsPolicy,
+      );
       res.setHeader("Permissions-Policy", permissionsPolicy);
     }
 
@@ -184,17 +194,26 @@ export function securityHeaders(
 
     // Cross-Origin-Embedder-Policy
     if (config.crossOriginEmbedderPolicy !== false) {
-      res.setHeader("Cross-Origin-Embedder-Policy", config.crossOriginEmbedderPolicy);
+      res.setHeader(
+        "Cross-Origin-Embedder-Policy",
+        config.crossOriginEmbedderPolicy,
+      );
     }
 
     // Cross-Origin-Opener-Policy
     if (config.crossOriginOpenerPolicy !== false) {
-      res.setHeader("Cross-Origin-Opener-Policy", config.crossOriginOpenerPolicy);
+      res.setHeader(
+        "Cross-Origin-Opener-Policy",
+        config.crossOriginOpenerPolicy,
+      );
     }
 
     // Cross-Origin-Resource-Policy
     if (config.crossOriginResourcePolicy !== false) {
-      res.setHeader("Cross-Origin-Resource-Policy", config.crossOriginResourcePolicy);
+      res.setHeader(
+        "Cross-Origin-Resource-Policy",
+        config.crossOriginResourcePolicy,
+      );
     }
 
     next();
@@ -219,7 +238,7 @@ function buildCspHeader(directives: Record<string, string[]>): string {
  * Build HSTS header value
  */
 function buildHstsHeader(
-  options: Exclude<NonNullable<SecurityHeadersOptions["hsts"]>, false>
+  options: Exclude<NonNullable<SecurityHeadersOptions["hsts"]>, false>,
 ): string {
   const parts = [`max-age=${options.maxAge}`];
 
@@ -237,10 +256,15 @@ function buildHstsHeader(
 /**
  * Build Permissions-Policy header value
  */
-function buildPermissionsPolicyHeader(policies: Record<string, string[]>): string {
+function buildPermissionsPolicyHeader(
+  policies: Record<string, string[]>,
+): string {
   return Object.entries(policies)
     .map(([feature, allowlist]) => {
-      if (allowlist.length === 0 || (allowlist.length === 1 && allowlist[0] === "()")) {
+      if (
+        allowlist.length === 0 ||
+        (allowlist.length === 1 && allowlist[0] === "()")
+      ) {
         return `${feature}=()`;
       }
       return `${feature}=(${allowlist.join(" ")})`;
@@ -350,12 +374,18 @@ export function corsHeaders(options: {
 
     // Handle Allowed Headers
     if (options.allowedHeaders) {
-      res.setHeader("Access-Control-Allow-Headers", options.allowedHeaders.join(", "));
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        options.allowedHeaders.join(", "),
+      );
     }
 
     // Handle Exposed Headers
     if (options.exposedHeaders) {
-      res.setHeader("Access-Control-Expose-Headers", options.exposedHeaders.join(", "));
+      res.setHeader(
+        "Access-Control-Expose-Headers",
+        options.exposedHeaders.join(", "),
+      );
     }
 
     // Handle Credentials

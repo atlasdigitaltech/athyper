@@ -42,27 +42,48 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     return `${tenantId}:${id}`;
   }
 
-  private makeLockKey(tenantId: string, entityType: string, entityId: string): string {
+  private makeLockKey(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): string {
     return `${tenantId}:${entityType}:${entityId}`;
   }
 
   // Instance CRUD
-  async getById(tenantId: string, instanceId: string): Promise<ApprovalInstance | undefined> {
+  async getById(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalInstance | undefined> {
     return this.instances.get(this.makeKey(tenantId, instanceId));
   }
 
-  async getByEntityId(tenantId: string, entityType: string, entityId: string): Promise<ApprovalInstance[]> {
+  async getByEntityId(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<ApprovalInstance[]> {
     return Array.from(this.instances.values()).filter(
-      (i) => i.tenantId === tenantId && i.entity.type === entityType && i.entity.id === entityId
+      (i) =>
+        i.tenantId === tenantId &&
+        i.entity.type === entityType &&
+        i.entity.id === entityId,
     );
   }
 
-  async list(tenantId: string, options?: ApprovalInstanceQueryOptions): Promise<ApprovalInstance[]> {
-    let results = Array.from(this.instances.values()).filter((i) => i.tenantId === tenantId);
+  async list(
+    tenantId: string,
+    options?: ApprovalInstanceQueryOptions,
+  ): Promise<ApprovalInstance[]> {
+    let results = Array.from(this.instances.values()).filter(
+      (i) => i.tenantId === tenantId,
+    );
 
     // Apply filters
     if (options?.status) {
-      const statuses = Array.isArray(options.status) ? options.status : [options.status];
+      const statuses = Array.isArray(options.status)
+        ? options.status
+        : [options.status];
       results = results.filter((i) => statuses.includes(i.status));
     }
 
@@ -75,11 +96,15 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     }
 
     if (options?.requesterId) {
-      results = results.filter((i) => i.requester.userId === options.requesterId);
+      results = results.filter(
+        (i) => i.requester.userId === options.requesterId,
+      );
     }
 
     if (options?.templateCode) {
-      results = results.filter((i) => i.workflowSnapshot.templateCode === options.templateCode);
+      results = results.filter(
+        (i) => i.workflowSnapshot.templateCode === options.templateCode,
+      );
     }
 
     if (options?.createdAfter) {
@@ -91,11 +116,19 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     }
 
     if (options?.tags && options.tags.length > 0) {
-      results = results.filter((i) => i.tags?.some((t) => options.tags!.includes(t)));
+      results = results.filter((i) =>
+        i.tags?.some((t) => options.tags!.includes(t)),
+      );
     }
 
     if (!options?.includeCompleted) {
-      const completedStatuses: ApprovalInstanceStatus[] = ["approved", "rejected", "cancelled", "expired", "withdrawn"];
+      const completedStatuses: ApprovalInstanceStatus[] = [
+        "approved",
+        "rejected",
+        "cancelled",
+        "expired",
+        "withdrawn",
+      ];
       results = results.filter((i) => !completedStatuses.includes(i.status));
     }
 
@@ -105,11 +138,13 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
       results = results.filter((instance) => {
         // Get step instances for this instance
         const steps = Array.from(this.stepInstances.values()).filter(
-          (s) => s.instanceId === instance.id && s.status === "active"
+          (s) => s.instanceId === instance.id && s.status === "active",
         );
         // Check if user is a pending approver
         return steps.some((step) =>
-          step.approvers.some((a) => a.userId === userId && a.status === "pending")
+          step.approvers.some(
+            (a) => a.userId === userId && a.status === "pending",
+          ),
         );
       });
     }
@@ -135,7 +170,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
 
   async create(
     tenantId: string,
-    instance: Omit<ApprovalInstance, "id" | "createdAt">
+    instance: Omit<ApprovalInstance, "id" | "createdAt">,
   ): Promise<ApprovalInstance> {
     const id = this.generateId("api");
     const now = new Date();
@@ -154,7 +189,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   async update(
     tenantId: string,
     instanceId: string,
-    updates: Partial<ApprovalInstance>
+    updates: Partial<ApprovalInstance>,
   ): Promise<ApprovalInstance> {
     const key = this.makeKey(tenantId, instanceId);
     const existing = this.instances.get(key);
@@ -194,7 +229,10 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   }
 
   // Step instance operations
-  async getStepInstances(tenantId: string, instanceId: string): Promise<ApprovalStepInstance[]> {
+  async getStepInstances(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalStepInstance[]> {
     return Array.from(this.stepInstances.values())
       .filter((s) => s.instanceId === instanceId)
       .sort((a, b) => {
@@ -203,13 +241,16 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
       });
   }
 
-  async getStepInstance(tenantId: string, stepInstanceId: string): Promise<ApprovalStepInstance | undefined> {
+  async getStepInstance(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalStepInstance | undefined> {
     return this.stepInstances.get(this.makeKey(tenantId, stepInstanceId));
   }
 
   async createStepInstances(
     tenantId: string,
-    steps: Omit<ApprovalStepInstance, "id">[]
+    steps: Omit<ApprovalStepInstance, "id">[],
   ): Promise<ApprovalStepInstance[]> {
     const created: ApprovalStepInstance[] = [];
 
@@ -229,7 +270,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   async updateStepInstance(
     tenantId: string,
     stepInstanceId: string,
-    updates: Partial<ApprovalStepInstance>
+    updates: Partial<ApprovalStepInstance>,
   ): Promise<ApprovalStepInstance> {
     const key = this.makeKey(tenantId, stepInstanceId);
     const existing = this.stepInstances.get(key);
@@ -251,7 +292,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   // Action records
   async recordAction(
     tenantId: string,
-    action: Omit<ApprovalActionRecord, "id">
+    action: Omit<ApprovalActionRecord, "id">,
   ): Promise<ApprovalActionRecord> {
     const id = this.generateId("aar");
     const record: ApprovalActionRecord = {
@@ -262,20 +303,28 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     return record;
   }
 
-  async getActionHistory(tenantId: string, instanceId: string): Promise<ApprovalActionRecord[]> {
+  async getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalActionRecord[]> {
     return Array.from(this.actionRecords.values())
       .filter((a) => a.instanceId === instanceId)
       .sort((a, b) => a.performedAt.getTime() - b.performedAt.getTime());
   }
 
   // Entity locks
-  async acquireLock(tenantId: string, lock: Omit<EntityLock, "id">): Promise<EntityLock> {
+  async acquireLock(
+    tenantId: string,
+    lock: Omit<EntityLock, "id">,
+  ): Promise<EntityLock> {
     const key = this.makeLockKey(tenantId, lock.entityType, lock.entityId);
 
     // Check for existing lock
     const existing = this.entityLocks.get(key);
     if (existing) {
-      throw new Error(`Entity already locked: ${lock.entityType}/${lock.entityId}`);
+      throw new Error(
+        `Entity already locked: ${lock.entityType}/${lock.entityId}`,
+      );
     }
 
     const id = this.generateId("elk");
@@ -288,19 +337,29 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     return created;
   }
 
-  async releaseLock(tenantId: string, entityType: string, entityId: string): Promise<void> {
+  async releaseLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<void> {
     const key = this.makeLockKey(tenantId, entityType, entityId);
     this.entityLocks.delete(key);
   }
 
-  async getLock(tenantId: string, entityType: string, entityId: string): Promise<EntityLock | undefined> {
-    return this.entityLocks.get(this.makeLockKey(tenantId, entityType, entityId));
+  async getLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<EntityLock | undefined> {
+    return this.entityLocks.get(
+      this.makeLockKey(tenantId, entityType, entityId),
+    );
   }
 
   // State transitions
   async recordStateTransition(
     tenantId: string,
-    transition: Omit<EntityStateTransition, "id">
+    transition: Omit<EntityStateTransition, "id">,
   ): Promise<EntityStateTransition> {
     const id = this.generateId("est");
     const record: EntityStateTransition = {
@@ -314,17 +373,22 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   async getStateTransitions(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<EntityStateTransition[]> {
     return Array.from(this.stateTransitions.values())
       .filter(
-        (t) => t.tenantId === tenantId && t.entityType === entityType && t.entityId === entityId
+        (t) =>
+          t.tenantId === tenantId &&
+          t.entityType === entityType &&
+          t.entityId === entityId,
       )
       .sort((a, b) => a.transitionedAt.getTime() - b.transitionedAt.getTime());
   }
 
   // Dashboard queries
-  async countByStatus(tenantId: string): Promise<Record<ApprovalInstanceStatus, number>> {
+  async countByStatus(
+    tenantId: string,
+  ): Promise<Record<ApprovalInstanceStatus, number>> {
     const counts: Record<string, number> = {
       pending: 0,
       in_progress: 0,
@@ -345,18 +409,24 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     return counts as Record<ApprovalInstanceStatus, number>;
   }
 
-  async getPendingForUser(tenantId: string, userId: string): Promise<ApprovalInstance[]> {
+  async getPendingForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<ApprovalInstance[]> {
     return this.list(tenantId, { pendingApproverId: userId });
   }
 
   // Optimistic locking support
-  private instanceLocks: Map<string, { lockToken: string; lockOwner: string; expiresAt: Date }> = new Map();
+  private instanceLocks: Map<
+    string,
+    { lockToken: string; lockOwner: string; expiresAt: Date }
+  > = new Map();
 
   async updateWithLock(
     tenantId: string,
     instanceId: string,
     updates: Partial<ApprovalInstance>,
-    expectedVersion: number
+    expectedVersion: number,
   ): Promise<ApprovalInstance> {
     const key = this.makeKey(tenantId, instanceId);
     const existing = this.instances.get(key);
@@ -378,7 +448,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
     tenantId: string,
     instanceId: string,
     lockOwner: string,
-    timeoutMs: number = 5000
+    timeoutMs: number = 5000,
   ): Promise<{ lockToken: string; expiresAt: Date } | null> {
     const key = this.makeKey(tenantId, instanceId);
     const existing = this.instanceLocks.get(key);
@@ -401,7 +471,7 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
   async releaseInstanceLock(
     tenantId: string,
     instanceId: string,
-    lockToken: string
+    lockToken: string,
   ): Promise<boolean> {
     const key = this.makeKey(tenantId, instanceId);
     const existing = this.instanceLocks.get(key);
@@ -440,7 +510,10 @@ export class InMemoryApprovalInstanceRepository implements IApprovalInstanceRepo
 export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepository {
   constructor(private readonly db: Kysely<DB>) {}
 
-  async getById(tenantId: string, instanceId: string): Promise<ApprovalInstance | undefined> {
+  async getById(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalInstance | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_instance" as any)
       .selectAll()
@@ -452,7 +525,11 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return this.mapRowToInstance(result);
   }
 
-  async getByEntityId(tenantId: string, entityType: string, entityId: string): Promise<ApprovalInstance[]> {
+  async getByEntityId(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<ApprovalInstance[]> {
     const results = await this.db
       .selectFrom("meta.approval_instance" as any)
       .selectAll()
@@ -465,14 +542,19 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return results.map((r: any) => this.mapRowToInstance(r));
   }
 
-  async list(tenantId: string, options?: ApprovalInstanceQueryOptions): Promise<ApprovalInstance[]> {
+  async list(
+    tenantId: string,
+    options?: ApprovalInstanceQueryOptions,
+  ): Promise<ApprovalInstance[]> {
     let query = this.db
       .selectFrom("meta.approval_instance" as any)
       .selectAll()
       .where("tenant_id", "=", tenantId);
 
     if (options?.status) {
-      const statuses = Array.isArray(options.status) ? options.status : [options.status];
+      const statuses = Array.isArray(options.status)
+        ? options.status
+        : [options.status];
       query = query.where("status", "in", statuses);
     }
 
@@ -501,7 +583,13 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     }
 
     if (!options?.includeCompleted) {
-      const completedStatuses = ["approved", "rejected", "cancelled", "expired", "withdrawn"];
+      const completedStatuses = [
+        "approved",
+        "rejected",
+        "cancelled",
+        "expired",
+        "withdrawn",
+      ];
       query = query.where("status", "not in", completedStatuses);
     }
 
@@ -521,7 +609,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
 
   async create(
     tenantId: string,
-    instance: Omit<ApprovalInstance, "id" | "createdAt">
+    instance: Omit<ApprovalInstance, "id" | "createdAt">,
   ): Promise<ApprovalInstance> {
     const id = crypto.randomUUID();
     const now = new Date();
@@ -571,7 +659,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   async update(
     tenantId: string,
     instanceId: string,
-    updates: Partial<ApprovalInstance>
+    updates: Partial<ApprovalInstance>,
   ): Promise<ApprovalInstance> {
     const now = new Date();
     const updateData: Record<string, unknown> = {
@@ -579,17 +667,24 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     };
 
     if (updates.status !== undefined) updateData.status = updates.status;
-    if (updates.entityState !== undefined) updateData.entity_state = updates.entityState;
+    if (updates.entityState !== undefined)
+      updateData.entity_state = updates.entityState;
     if (updates.lockMode !== undefined) updateData.lock_mode = updates.lockMode;
     if (updates.isLocked !== undefined) updateData.is_locked = updates.isLocked;
-    if (updates.activeStepIds !== undefined) updateData.active_step_ids = JSON.stringify(updates.activeStepIds);
-    if (updates.completedStepIds !== undefined) updateData.completed_step_ids = JSON.stringify(updates.completedStepIds);
-    if (updates.skippedStepIds !== undefined) updateData.skipped_step_ids = JSON.stringify(updates.skippedStepIds);
+    if (updates.activeStepIds !== undefined)
+      updateData.active_step_ids = JSON.stringify(updates.activeStepIds);
+    if (updates.completedStepIds !== undefined)
+      updateData.completed_step_ids = JSON.stringify(updates.completedStepIds);
+    if (updates.skippedStepIds !== undefined)
+      updateData.skipped_step_ids = JSON.stringify(updates.skippedStepIds);
     if (updates.sla !== undefined) updateData.sla = JSON.stringify(updates.sla);
-    if (updates.decision !== undefined) updateData.decision = JSON.stringify(updates.decision);
+    if (updates.decision !== undefined)
+      updateData.decision = JSON.stringify(updates.decision);
     if (updates.priority !== undefined) updateData.priority = updates.priority;
-    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
-    if (updates.updatedBy !== undefined) updateData.updated_by = updates.updatedBy;
+    if (updates.completedAt !== undefined)
+      updateData.completed_at = updates.completedAt;
+    if (updates.updatedBy !== undefined)
+      updateData.updated_by = updates.updatedBy;
 
     await this.db
       .updateTable("meta.approval_instance" as any)
@@ -627,7 +722,10 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   }
 
   // Step instance operations
-  async getStepInstances(tenantId: string, instanceId: string): Promise<ApprovalStepInstance[]> {
+  async getStepInstances(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalStepInstance[]> {
     const results = await this.db
       .selectFrom("meta.approval_step_instance" as any)
       .selectAll()
@@ -639,7 +737,10 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return results.map((r: any) => this.mapRowToStepInstance(r));
   }
 
-  async getStepInstance(tenantId: string, stepInstanceId: string): Promise<ApprovalStepInstance | undefined> {
+  async getStepInstance(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalStepInstance | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_step_instance" as any)
       .selectAll()
@@ -652,7 +753,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
 
   async createStepInstances(
     tenantId: string,
-    steps: Omit<ApprovalStepInstance, "id">[]
+    steps: Omit<ApprovalStepInstance, "id">[],
   ): Promise<ApprovalStepInstance[]> {
     const created: ApprovalStepInstance[] = [];
 
@@ -696,21 +797,30 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   async updateStepInstance(
     tenantId: string,
     stepInstanceId: string,
-    updates: Partial<ApprovalStepInstance>
+    updates: Partial<ApprovalStepInstance>,
   ): Promise<ApprovalStepInstance> {
     const updateData: Record<string, unknown> = {};
 
     if (updates.status !== undefined) updateData.status = updates.status;
-    if (updates.approvers !== undefined) updateData.approvers = JSON.stringify(updates.approvers);
-    if (updates.dependenciesSatisfied !== undefined) updateData.dependencies_satisfied = updates.dependenciesSatisfied;
-    if (updates.conditionsMet !== undefined) updateData.conditions_met = updates.conditionsMet;
-    if (updates.skipReason !== undefined) updateData.skip_reason = updates.skipReason;
-    if (updates.autoApproved !== undefined) updateData.auto_approved = updates.autoApproved;
-    if (updates.autoApproveReason !== undefined) updateData.auto_approve_reason = updates.autoApproveReason;
+    if (updates.approvers !== undefined)
+      updateData.approvers = JSON.stringify(updates.approvers);
+    if (updates.dependenciesSatisfied !== undefined)
+      updateData.dependencies_satisfied = updates.dependenciesSatisfied;
+    if (updates.conditionsMet !== undefined)
+      updateData.conditions_met = updates.conditionsMet;
+    if (updates.skipReason !== undefined)
+      updateData.skip_reason = updates.skipReason;
+    if (updates.autoApproved !== undefined)
+      updateData.auto_approved = updates.autoApproved;
+    if (updates.autoApproveReason !== undefined)
+      updateData.auto_approve_reason = updates.autoApproveReason;
     if (updates.sla !== undefined) updateData.sla = JSON.stringify(updates.sla);
-    if (updates.approvalCounts !== undefined) updateData.approval_counts = JSON.stringify(updates.approvalCounts);
-    if (updates.activatedAt !== undefined) updateData.activated_at = updates.activatedAt;
-    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
+    if (updates.approvalCounts !== undefined)
+      updateData.approval_counts = JSON.stringify(updates.approvalCounts);
+    if (updates.activatedAt !== undefined)
+      updateData.activated_at = updates.activatedAt;
+    if (updates.completedAt !== undefined)
+      updateData.completed_at = updates.completedAt;
 
     await this.db
       .updateTable("meta.approval_step_instance" as any)
@@ -720,7 +830,9 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
 
     const result = await this.getStepInstance(tenantId, stepInstanceId);
     if (!result) {
-      throw new Error(`Step instance not found after update: ${stepInstanceId}`);
+      throw new Error(
+        `Step instance not found after update: ${stepInstanceId}`,
+      );
     }
     return result;
   }
@@ -728,7 +840,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   // Action records
   async recordAction(
     tenantId: string,
-    action: Omit<ApprovalActionRecord, "id">
+    action: Omit<ApprovalActionRecord, "id">,
   ): Promise<ApprovalActionRecord> {
     const id = crypto.randomUUID();
 
@@ -743,8 +855,12 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
         user_display_name: action.userDisplayName,
         action: action.action,
         comment: action.comment,
-        additional_fields: action.additionalFields ? JSON.stringify(action.additionalFields) : null,
-        delegation_target: action.delegationTarget ? JSON.stringify(action.delegationTarget) : null,
+        additional_fields: action.additionalFields
+          ? JSON.stringify(action.additionalFields)
+          : null,
+        delegation_target: action.delegationTarget
+          ? JSON.stringify(action.delegationTarget)
+          : null,
         performed_at: action.performedAt,
         ip_address: action.ipAddress,
         user_agent: action.userAgent,
@@ -754,7 +870,10 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return { ...action, id };
   }
 
-  async getActionHistory(tenantId: string, instanceId: string): Promise<ApprovalActionRecord[]> {
+  async getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalActionRecord[]> {
     const results = await this.db
       .selectFrom("meta.approval_action_record" as any)
       .selectAll()
@@ -766,11 +885,20 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   }
 
   // Entity locks
-  async acquireLock(tenantId: string, lock: Omit<EntityLock, "id">): Promise<EntityLock> {
+  async acquireLock(
+    tenantId: string,
+    lock: Omit<EntityLock, "id">,
+  ): Promise<EntityLock> {
     // Check for existing lock
-    const existing = await this.getLock(tenantId, lock.entityType, lock.entityId);
+    const existing = await this.getLock(
+      tenantId,
+      lock.entityType,
+      lock.entityId,
+    );
     if (existing) {
-      throw new Error(`Entity already locked: ${lock.entityType}/${lock.entityId}`);
+      throw new Error(
+        `Entity already locked: ${lock.entityType}/${lock.entityId}`,
+      );
     }
 
     const id = crypto.randomUUID();
@@ -793,7 +921,11 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return { ...lock, id };
   }
 
-  async releaseLock(tenantId: string, entityType: string, entityId: string): Promise<void> {
+  async releaseLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom("meta.entity_lock" as any)
       .where("tenant_id", "=", tenantId)
@@ -802,7 +934,11 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
       .execute();
   }
 
-  async getLock(tenantId: string, entityType: string, entityId: string): Promise<EntityLock | undefined> {
+  async getLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<EntityLock | undefined> {
     const result = await this.db
       .selectFrom("meta.entity_lock" as any)
       .selectAll()
@@ -818,7 +954,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   // State transitions
   async recordStateTransition(
     tenantId: string,
-    transition: Omit<EntityStateTransition, "id">
+    transition: Omit<EntityStateTransition, "id">,
   ): Promise<EntityStateTransition> {
     const id = crypto.randomUUID();
 
@@ -844,7 +980,7 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   async getStateTransitions(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<EntityStateTransition[]> {
     const results = await this.db
       .selectFrom("meta.entity_state_transition" as any)
@@ -859,7 +995,9 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
   }
 
   // Dashboard queries
-  async countByStatus(tenantId: string): Promise<Record<ApprovalInstanceStatus, number>> {
+  async countByStatus(
+    tenantId: string,
+  ): Promise<Record<ApprovalInstanceStatus, number>> {
     const results = await this.db
       .selectFrom("meta.approval_instance" as any)
       .select(["status"])
@@ -886,7 +1024,10 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
     return counts as Record<ApprovalInstanceStatus, number>;
   }
 
-  async getPendingForUser(tenantId: string, userId: string): Promise<ApprovalInstance[]> {
+  async getPendingForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<ApprovalInstance[]> {
     // This is a more complex query that joins with step instances
     // For now, use a simpler approach
     const instances = await this.list(tenantId, { includeCompleted: false });
@@ -897,7 +1038,9 @@ export class DatabaseApprovalInstanceRepository implements IApprovalInstanceRepo
       const hasPending = steps.some(
         (step) =>
           step.status === "active" &&
-          step.approvers.some((a) => a.userId === userId && a.status === "pending")
+          step.approvers.some(
+            (a) => a.userId === userId && a.status === "pending",
+          ),
       );
       if (hasPending) {
         pending.push(instance);
@@ -1067,6 +1210,8 @@ export function createInMemoryApprovalInstanceRepository(): InMemoryApprovalInst
 /**
  * Create database approval instance repository
  */
-export function createDatabaseApprovalInstanceRepository(db: Kysely<DB>): DatabaseApprovalInstanceRepository {
+export function createDatabaseApprovalInstanceRepository(
+  db: Kysely<DB>,
+): DatabaseApprovalInstanceRepository {
   return new DatabaseApprovalInstanceRepository(db);
 }

@@ -19,14 +19,25 @@ import type { ReactionType } from "../types.js";
  */
 export class ToggleReactionHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReactionService>(TOKENS.collabReactionService);
+    const service = await ctx.container.resolve<ReactionService>(
+      TOKENS.collabReactionService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const commentId = ctx.request.params.id;
     const { reactionType } = ctx.request.body;
 
     // Validate reaction type
-    const validReactions: ReactionType[] = ['👍', '❤️', '🎉', '👀', '👎', '🚀', '💡', '🤔'];
+    const validReactions: ReactionType[] = [
+      "👍",
+      "❤️",
+      "🎉",
+      "👀",
+      "👎",
+      "🚀",
+      "💡",
+      "🤔",
+    ];
     if (!validReactions.includes(reactionType)) {
       return {
         ok: false,
@@ -40,7 +51,7 @@ export class ToggleReactionHandler {
       "entity_comment",
       commentId,
       userId,
-      reactionType
+      reactionType,
     );
 
     return {
@@ -60,7 +71,9 @@ export class ToggleReactionHandler {
  */
 export class GetReactionsHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReactionService>(TOKENS.collabReactionService);
+    const service = await ctx.container.resolve<ReactionService>(
+      TOKENS.collabReactionService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const commentId = ctx.request.params.id;
@@ -69,7 +82,7 @@ export class GetReactionsHandler {
       tenantId,
       "entity_comment",
       commentId,
-      userId
+      userId,
     );
 
     return {
@@ -86,14 +99,25 @@ export class GetReactionsHandler {
  */
 export class ToggleApprovalReactionHandler {
   async handle(ctx: HttpHandlerContext) {
-    const service = await ctx.container.resolve<ReactionService>(TOKENS.collabReactionService);
+    const service = await ctx.container.resolve<ReactionService>(
+      TOKENS.collabReactionService,
+    );
     const tenantId = ctx.tenant.tenantId;
     const userId = ctx.auth.userId || ctx.auth.subject || "anonymous";
     const commentId = ctx.request.params.id;
     const { reactionType } = ctx.request.body;
 
     // Validate reaction type
-    const validReactions: ReactionType[] = ['👍', '❤️', '🎉', '👀', '👎', '🚀', '💡', '🤔'];
+    const validReactions: ReactionType[] = [
+      "👍",
+      "❤️",
+      "🎉",
+      "👀",
+      "👎",
+      "🚀",
+      "💡",
+      "🤔",
+    ];
     if (!validReactions.includes(reactionType)) {
       return {
         ok: false,
@@ -107,7 +131,7 @@ export class ToggleApprovalReactionHandler {
       "approval_comment",
       commentId,
       userId,
-      reactionType
+      reactionType,
     );
 
     return {

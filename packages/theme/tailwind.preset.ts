@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        xl: "0.9rem"
-      }
-    }
-  }
+        xl: "0.9rem",
+      },
+    },
+  },
 } satisfies Config;

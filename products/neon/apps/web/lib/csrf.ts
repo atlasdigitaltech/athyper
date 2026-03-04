@@ -29,7 +29,7 @@ import { randomUUID } from "node:crypto";
  * Called during login callback and session refresh.
  */
 export function generateCsrfToken(): string {
-    return randomUUID();
+  return randomUUID();
 }
 
 /**
@@ -39,8 +39,11 @@ export function generateCsrfToken(): string {
  * @param cookieToken - Value from the `__csrf` cookie (set by server at login)
  * @returns true if both are present, non-empty, and equal
  */
-export function validateCsrf(headerToken: string | null | undefined, cookieToken: string | null | undefined): boolean {
-    if (!headerToken || !cookieToken) return false;
-    if (headerToken.length === 0 || cookieToken.length === 0) return false;
-    return headerToken === cookieToken;
+export function validateCsrf(
+  headerToken: string | null | undefined,
+  cookieToken: string | null | undefined,
+): boolean {
+  if (!headerToken || !cookieToken) return false;
+  if (headerToken.length === 0 || cookieToken.length === 0) return false;
+  return headerToken === cookieToken;
 }

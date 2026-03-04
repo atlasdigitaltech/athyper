@@ -6,8 +6,8 @@
 
 import { PERSONA_CODES } from "./types.js";
 
-import type { PersonaRegistryService } from "./persona-registry.service.js";
 import type { IPersonaCapabilityRepository } from "./persona-capability.repository.js";
+import type { PersonaRegistryService } from "./persona-registry.service.js";
 import type {
   AuthorizationDecision,
   CapabilityCheckResult,
@@ -22,7 +22,6 @@ import type {
 } from "./types.js";
 import type { Logger } from "../../../../../kernel/logger.js";
 
-
 // ============================================================================
 // Service Interface
 // ============================================================================
@@ -32,11 +31,13 @@ export interface IPersonaCapabilityService {
   hasCapability(
     personaCode: PersonaCode,
     operationCode: string,
-    context?: CapabilityContext
+    context?: CapabilityContext,
   ): Promise<CapabilityCheckResult>;
 
   /** Get all granted capabilities for a persona */
-  getPersonaCapabilities(personaCode: PersonaCode): Promise<PersonaCapability[]>;
+  getPersonaCapabilities(
+    personaCode: PersonaCode,
+  ): Promise<PersonaCapability[]>;
 
   /** Get all personas that have a specific capability */
   getPersonasWithCapability(operationCode: string): Promise<PersonaCode[]>;
@@ -54,7 +55,7 @@ export interface IPersonaCapabilityService {
   authorize(
     subject: SubjectWithPersona,
     operationCode: string,
-    context: CapabilityContext & { tenantId: string }
+    context: CapabilityContext & { tenantId: string },
   ): Promise<AuthorizationDecision>;
 }
 
@@ -72,7 +73,7 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   constructor(
     private repo: IPersonaCapabilityRepository,
     private logger: Logger,
-    options?: { cacheTtlMs?: number; registry?: PersonaRegistryService }
+    options?: { cacheTtlMs?: number; registry?: PersonaRegistryService },
   ) {
     this.cacheTtlMs = options?.cacheTtlMs ?? 5 * 60 * 1000; // 5 minutes default
     this.registry = options?.registry ?? null;
@@ -84,10 +85,13 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   async hasCapability(
     personaCode: PersonaCode,
     operationCode: string,
-    context?: CapabilityContext
+    context?: CapabilityContext,
   ): Promise<CapabilityCheckResult> {
     // Get the capability grant
-    const capability = await this.repo.getCapabilityForOperation(personaCode, operationCode);
+    const capability = await this.repo.getCapabilityForOperation(
+      personaCode,
+      operationCode,
+    );
 
     // No capability defined or not granted
     if (!capability || !capability.isGranted) {
@@ -126,7 +130,7 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
    */
   private evaluateConstraint(
     capability: PersonaCapability,
-    context?: CapabilityContext
+    context?: CapabilityContext,
   ): { allowed: boolean; reason?: string } {
     const constraintType = capability.constraintType;
 
@@ -155,9 +159,12 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
         // Must be within OU scope
         if (!context?.subjectOuPath || !context?.recordOuPath) {
           // If no OU context, allow but log warning
-          this.logger.debug("OU constraint check skipped - missing OU context", {
-            capability: capability.operationCode,
-          });
+          this.logger.debug(
+            "OU constraint check skipped - missing OU context",
+            {
+              capability: capability.operationCode,
+            },
+          );
           return { allowed: true };
         }
         if (!this.isInOuScope(context.subjectOuPath, context.recordOuPath)) {
@@ -199,7 +206,9 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   /**
    * Get all granted capabilities for a persona
    */
-  async getPersonaCapabilities(personaCode: PersonaCode): Promise<PersonaCapability[]> {
+  async getPersonaCapabilities(
+    personaCode: PersonaCode,
+  ): Promise<PersonaCapability[]> {
     // Check cache
     if (this.isCacheValid()) {
       const cached = this.capabilityCache.get(personaCode);
@@ -218,13 +227,15 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   /**
    * Get all personas that have a specific capability
    */
-  async getPersonasWithCapability(operationCode: string): Promise<PersonaCode[]> {
+  async getPersonasWithCapability(
+    operationCode: string,
+  ): Promise<PersonaCode[]> {
     const personas: PersonaCode[] = [];
 
     for (const personaCode of PERSONA_CODES) {
       const capability = await this.repo.getCapabilityForOperation(
         personaCode,
-        operationCode
+        operationCode,
       );
       if (capability?.isGranted) {
         personas.push(personaCode);
@@ -257,7 +268,8 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
       for (const persona of matrix.personas) {
         const capability = matrix.capabilities.find(
           (c) =>
-            c.personaCode === persona.code && c.operationCode === operation.code
+            c.personaCode === persona.code &&
+            c.operationCode === operation.code,
         );
 
         grants[persona.code] = {
@@ -339,7 +351,7 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   async authorize(
     subject: SubjectWithPersona,
     operationCode: string,
-    context: CapabilityContext & { tenantId: string }
+    context: CapabilityContext & { tenantId: string },
   ): Promise<AuthorizationDecision> {
     const persona = subject.effectivePersona;
 
@@ -359,12 +371,13 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
 
     // 2. Check module subscription if constraint is 'module'
     if (capabilityResult.constraintType === "module") {
-      const moduleCode = context.moduleCode ?? await this.resolveModuleCode(context.entityKey);
+      const moduleCode =
+        context.moduleCode ?? (await this.resolveModuleCode(context.entityKey));
 
       if (moduleCode) {
         const hasSubscription = await this.repo.hasModuleSubscription(
           context.tenantId,
-          moduleCode
+          moduleCode,
         );
 
         if (!hasSubscription) {
@@ -391,7 +404,9 @@ export class PersonaCapabilityService implements IPersonaCapabilityService {
   /**
    * Resolve module code from entity key
    */
-  private async resolveModuleCode(entityKey?: string): Promise<string | undefined> {
+  private async resolveModuleCode(
+    entityKey?: string,
+  ): Promise<string | undefined> {
     if (!entityKey) return undefined;
 
     const mapping = await this.repo.getEntityModuleMapping(entityKey);

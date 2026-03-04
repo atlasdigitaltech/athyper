@@ -1,14 +1,17 @@
 import { AuthAuditEvent, emitBffAudit } from "@neon/auth/audit";
-import { buildAuthorizationUrl, generatePkceChallenge } from "@neon/auth/keycloak";
+import {
+  buildAuthorizationUrl,
+  generatePkceChallenge,
+} from "@neon/auth/keycloak";
 import { NextResponse } from "next/server";
 
 async function getRedisClient() {
-    const { createClient } = await import("redis");
-    const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-    const client = createClient({ url });
-    client.on("error", () => {});
-    if (!client.isOpen) await client.connect();
-    return client;
+  const { createClient } = await import("redis");
+  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
+  const client = createClient({ url });
+  client.on("error", () => {});
+  if (!client.isOpen) await client.connect();
+  return client;
 }
 
 /**
@@ -21,66 +24,76 @@ async function getRedisClient() {
  * by middleware, browser caching, or Next.js internal routing.
  */
 export async function GET(req: Request) {
-    if (process.env.PLATFORM_CONTROL_ENABLED !== "true") {
-        return NextResponse.json(
-            { error: "PLATFORM_CONTROL_DISABLED", message: "Platform control is not enabled." },
-            { status: 403 },
-        );
-    }
+  if (process.env.PLATFORM_CONTROL_ENABLED !== "true") {
+    return NextResponse.json(
+      {
+        error: "PLATFORM_CONTROL_DISABLED",
+        message: "Platform control is not enabled.",
+      },
+      { status: 403 },
+    );
+  }
 
-    const url = new URL(req.url);
-    const workbench = url.searchParams.get("workbench") ?? "admin";
-    const returnUrl = url.searchParams.get("returnUrl") ?? "/platform";
+  const url = new URL(req.url);
+  const workbench = url.searchParams.get("workbench") ?? "admin";
+  const returnUrl = url.searchParams.get("returnUrl") ?? "/platform";
 
-    const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "http://keycloak.local";
-    const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const redirectUri = `${publicBaseUrl}/api/auth/callback`;
-    const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
+  const baseUrl =
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+  const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const redirectUri = `${publicBaseUrl}/api/auth/callback`;
+  const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
 
-    const realm = process.env.PLATFORM_KEYCLOAK_REALM ?? "platform-control";
-    const clientId = process.env.PLATFORM_KEYCLOAK_CLIENT_ID ?? "athyper-admin";
+  const realm = process.env.PLATFORM_KEYCLOAK_REALM ?? "platform-control";
+  const clientId = process.env.PLATFORM_KEYCLOAK_CLIENT_ID ?? "athyper-admin";
 
-    const { codeVerifier, codeChallenge, state } = generatePkceChallenge();
+  const { codeVerifier, codeChallenge, state } = generatePkceChallenge();
 
-    let redis;
-    try {
-        redis = await getRedisClient();
-    } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return NextResponse.json(
-            { error: "REDIS_UNAVAILABLE", message: `Redis unavailable: ${msg}` },
-            { status: 503 },
-        );
-    }
+  let redis;
+  try {
+    redis = await getRedisClient();
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: "REDIS_UNAVAILABLE", message: `Redis unavailable: ${msg}` },
+      { status: 503 },
+    );
+  }
 
-    try {
-        await redis.set(
-            `pkce_state:${state}`,
-            JSON.stringify({ codeVerifier, workbench, returnUrl, isPlatformLogin: true, realm }),
-            { EX: 300 },
-        );
-
-        await emitBffAudit(redis, AuthAuditEvent.LOGIN_INITIATED, {
-            tenantId,
-            ip: req.headers.get("x-forwarded-for") ?? "unknown",
-            userAgent: req.headers.get("user-agent") ?? "unknown",
-            realm,
-            workbench,
-            meta: { returnUrl },
-        });
-    } finally {
-        await redis.quit();
-    }
-
-    const authUrl = buildAuthorizationUrl({
-        baseUrl,
+  try {
+    await redis.set(
+      `pkce_state:${state}`,
+      JSON.stringify({
+        codeVerifier,
+        workbench,
+        returnUrl,
+        isPlatformLogin: true,
         realm,
-        clientId,
-        redirectUri,
-        codeChallenge,
-        state,
-        prompt: "login",
-    });
+      }),
+      { EX: 300 },
+    );
 
-    return NextResponse.redirect(authUrl);
+    await emitBffAudit(redis, AuthAuditEvent.LOGIN_INITIATED, {
+      tenantId,
+      ip: req.headers.get("x-forwarded-for") ?? "unknown",
+      userAgent: req.headers.get("user-agent") ?? "unknown",
+      realm,
+      workbench,
+      meta: { returnUrl },
+    });
+  } finally {
+    await redis.quit();
+  }
+
+  const authUrl = buildAuthorizationUrl({
+    baseUrl,
+    realm,
+    clientId,
+    redirectUri,
+    codeChallenge,
+    state,
+    prompt: "login",
+  });
+
+  return NextResponse.redirect(authUrl);
 }

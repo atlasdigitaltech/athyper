@@ -99,7 +99,11 @@ export type VersionSelection =
  * Cache invalidation event
  */
 export type CacheInvalidationEvent = {
-  type: "policy_published" | "policy_updated" | "policy_deleted" | "rules_changed";
+  type:
+    | "policy_published"
+    | "policy_updated"
+    | "policy_deleted"
+    | "rules_changed";
   tenantId: string;
   policyId: string;
   versionId?: string;
@@ -130,7 +134,7 @@ export interface IPolicyStore {
   selectVersion(
     policyId: string,
     tenantId: string,
-    selection: VersionSelection
+    selection: VersionSelection,
   ): Promise<PolicyVersion | undefined>;
 
   /**
@@ -141,7 +145,10 @@ export interface IPolicyStore {
   /**
    * Get rule operations
    */
-  getRuleOperations(tenantId: string, ruleIds: string[]): Promise<RuleOperation[]>;
+  getRuleOperations(
+    tenantId: string,
+    ruleIds: string[],
+  ): Promise<RuleOperation[]>;
 
   /**
    * List policies for a tenant
@@ -153,7 +160,7 @@ export interface IPolicyStore {
       isActive?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<PolicyDefinition[]>;
 
   /**
@@ -176,13 +183,17 @@ export interface IPolicyStore {
  */
 export class PolicyStoreService implements IPolicyStore {
   /** In-memory cache for compiled policies */
-  private compiledCache: Map<string, { policy: CompiledPolicy; expiresAt: number }> = new Map();
+  private compiledCache: Map<
+    string,
+    { policy: CompiledPolicy; expiresAt: number }
+  > = new Map();
 
   /** Cache TTL in ms */
   private cacheTtlMs: number = 5 * 60 * 1000; // 5 minutes
 
   /** Invalidation handlers */
-  private invalidationHandlers: Set<(event: CacheInvalidationEvent) => void> = new Set();
+  private invalidationHandlers: Set<(event: CacheInvalidationEvent) => void> =
+    new Set();
 
   constructor(private readonly db: Kysely<DB>) {}
 
@@ -270,7 +281,7 @@ export class PolicyStoreService implements IPolicyStore {
   async selectVersion(
     policyId: string,
     tenantId: string,
-    selection: VersionSelection
+    selection: VersionSelection,
   ): Promise<PolicyVersion | undefined> {
     let query = this.db
       .selectFrom("meta.permission_policy_version")
@@ -310,7 +321,7 @@ export class PolicyStoreService implements IPolicyStore {
             eb.or([
               eb("published_at", "is", null),
               eb("published_at", "<=", selection.timestamp),
-            ])
+            ]),
           )
           .orderBy("published_at", "desc")
           .limit(1);
@@ -397,7 +408,10 @@ export class PolicyStoreService implements IPolicyStore {
   /**
    * Get rule operations
    */
-  async getRuleOperations(tenantId: string, ruleIds: string[]): Promise<RuleOperation[]> {
+  async getRuleOperations(
+    tenantId: string,
+    ruleIds: string[],
+  ): Promise<RuleOperation[]> {
     if (ruleIds.length === 0) return [];
 
     const results = await this.db
@@ -436,7 +450,7 @@ export class PolicyStoreService implements IPolicyStore {
       isActive?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<PolicyDefinition[]> {
     let query = this.db
       .selectFrom("meta.permission_policy")
@@ -524,7 +538,7 @@ export class PolicyStoreService implements IPolicyStore {
       JSON.stringify({
         msg: "policy_cache_invalidated",
         event,
-      })
+      }),
     );
   }
 
@@ -535,7 +549,10 @@ export class PolicyStoreService implements IPolicyStore {
   /**
    * Get cached compiled policy
    */
-  getCachedCompiled(tenantId: string, versionId: string): CompiledPolicy | undefined {
+  getCachedCompiled(
+    tenantId: string,
+    versionId: string,
+  ): CompiledPolicy | undefined {
     const key = `${tenantId}:${versionId}`;
     const entry = this.compiledCache.get(key);
 
@@ -552,7 +569,11 @@ export class PolicyStoreService implements IPolicyStore {
   /**
    * Set cached compiled policy
    */
-  setCachedCompiled(tenantId: string, versionId: string, policy: CompiledPolicy): void {
+  setCachedCompiled(
+    tenantId: string,
+    versionId: string,
+    policy: CompiledPolicy,
+  ): void {
     const key = `${tenantId}:${versionId}`;
     this.compiledCache.set(key, {
       policy,
@@ -598,7 +619,10 @@ export class PolicyHotReloadManager {
 
   constructor(
     private readonly policyStore: IPolicyStore,
-    private readonly compilerInvalidate: (tenantId: string, versionId: string) => void
+    private readonly compilerInvalidate: (
+      tenantId: string,
+      versionId: string,
+    ) => void,
   ) {}
 
   /**
@@ -612,7 +636,7 @@ export class PolicyHotReloadManager {
     console.log(
       JSON.stringify({
         msg: "policy_hot_reload_started",
-      })
+      }),
     );
   }
 
@@ -628,7 +652,7 @@ export class PolicyHotReloadManager {
     console.log(
       JSON.stringify({
         msg: "policy_hot_reload_stopped",
-      })
+      }),
     );
   }
 
@@ -640,7 +664,7 @@ export class PolicyHotReloadManager {
       JSON.stringify({
         msg: "policy_hot_reload_invalidation",
         event,
-      })
+      }),
     );
 
     // Invalidate compiler cache

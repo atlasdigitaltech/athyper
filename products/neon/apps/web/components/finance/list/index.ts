@@ -4,11 +4,11 @@
 
 // Shared cell renderers & constants
 export {
-    STATUS_COLORS,
-    StatusBadgeCell,
-    MoneyCell,
-    DateCell,
-    ApprovalRouteBadge,
+  STATUS_COLORS,
+  StatusBadgeCell,
+  MoneyCell,
+  DateCell,
+  ApprovalRouteBadge,
 } from "./finance-shared";
 
 // List page config factories

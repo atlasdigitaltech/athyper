@@ -33,16 +33,16 @@ An entity is defined with fields, relations, lifecycle, validation, and UI layou
 
 ```typescript
 interface EntityDefinition {
-    name: string;           // e.g., "purchase_order"
-    label: string;          // e.g., "Purchase Order"
-    schema: string;         // DB schema (usually "ent")
-    fields: FieldDefinition[];
-    relations: RelationDefinition[];
-    lifecycle?: LifecycleDefinition;
-    validation?: ValidationRule[];
-    numbering?: NumberingConfig;
-    classification?: ClassificationConfig;
-    capabilities?: EntityCapabilities;
+  name: string; // e.g., "purchase_order"
+  label: string; // e.g., "Purchase Order"
+  schema: string; // DB schema (usually "ent")
+  fields: FieldDefinition[];
+  relations: RelationDefinition[];
+  lifecycle?: LifecycleDefinition;
+  validation?: ValidationRule[];
+  numbering?: NumberingConfig;
+  classification?: ClassificationConfig;
+  capabilities?: EntityCapabilities;
 }
 ```
 
@@ -52,15 +52,15 @@ Contracts: `framework/core/src/meta/contracts.ts`
 
 ```typescript
 interface FieldDefinition {
-    name: string;
-    label: string;
-    type: FieldType;          // text, number, date, boolean, enum, relation, ...
-    required: boolean;
-    unique: boolean;
-    indexed: boolean;
-    defaultValue?: unknown;
-    validation?: FieldValidation;
-    overlay?: OverlayConfig;  // Per-tenant customization
+  name: string;
+  label: string;
+  type: FieldType; // text, number, date, boolean, enum, relation, ...
+  required: boolean;
+  unique: boolean;
+  indexed: boolean;
+  defaultValue?: unknown;
+  validation?: FieldValidation;
+  overlay?: OverlayConfig; // Per-tenant customization
 }
 ```
 
@@ -70,13 +70,13 @@ The compiler transforms an `EntityDefinition` into a `CompiledModel` — an inte
 
 ```typescript
 interface CompiledModel {
-    entity: EntityDefinition;
-    columns: ColumnSpec[];      // SQL column definitions
-    indexes: IndexSpec[];       // SQL index definitions
-    routes: RouteSpec[];        // HTTP route definitions
-    lifecycle: CompiledLifecycle;
-    validation: CompiledValidation;
-    descriptor: PageDescriptor; // UI rendering hints
+  entity: EntityDefinition;
+  columns: ColumnSpec[]; // SQL column definitions
+  indexes: IndexSpec[]; // SQL index definitions
+  routes: RouteSpec[]; // HTTP route definitions
+  lifecycle: CompiledLifecycle;
+  validation: CompiledValidation;
+  descriptor: PageDescriptor; // UI rendering hints
 }
 ```
 
@@ -86,19 +86,19 @@ interface CompiledModel {
 
 Location: `framework/runtime/src/services/platform/meta/`
 
-| Subdirectory | Files | Purpose |
-|-------------|-------|---------|
-| `core/` | ~10 | Compiler, compiler cache, meta store, registry, event bus, policy gate, audit logger |
-| `schema/` | ~5 | DDL generator, migration runner, publish service, change notifier |
-| `data/` | ~4 | Generic data API service, DB helpers, query validator |
-| `lifecycle/` | ~6 | Lifecycle manager, route compiler, timer, SLA workers |
-| `approval/` | ~4 | Approval service, template service, approver resolver |
-| `classification/` | ~2 | Entity classification service |
-| `numbering/` | ~3 | Auto-numbering engine |
-| `validation/` | ~3 | Rule engine service (field validation) |
-| `capabilities/` | ~2 | Entity capabilities (feature flags per entity) |
-| `descriptor/` | ~3 | Page descriptor service, action dispatcher |
-| `handlers/` | ~8 | HTTP handlers for all meta operations |
+| Subdirectory      | Files | Purpose                                                                              |
+| ----------------- | ----- | ------------------------------------------------------------------------------------ |
+| `core/`           | ~10   | Compiler, compiler cache, meta store, registry, event bus, policy gate, audit logger |
+| `schema/`         | ~5    | DDL generator, migration runner, publish service, change notifier                    |
+| `data/`           | ~4    | Generic data API service, DB helpers, query validator                                |
+| `lifecycle/`      | ~6    | Lifecycle manager, route compiler, timer, SLA workers                                |
+| `approval/`       | ~4    | Approval service, template service, approver resolver                                |
+| `classification/` | ~2    | Entity classification service                                                        |
+| `numbering/`      | ~3    | Auto-numbering engine                                                                |
+| `validation/`     | ~3    | Rule engine service (field validation)                                               |
+| `capabilities/`   | ~2    | Entity capabilities (feature flags per entity)                                       |
+| `descriptor/`     | ~3    | Page descriptor service, action dispatcher                                           |
+| `handlers/`       | ~8    | HTTP handlers for all meta operations                                                |
 
 ---
 
@@ -128,6 +128,7 @@ CompiledModel ──► Redis cache (hot path)
 ### Compiler Cache
 
 Compiled models are cached in Redis for fast access. Cache invalidation occurs on:
+
 - Entity definition changes
 - Field additions/modifications
 - Relation changes
@@ -141,14 +142,14 @@ File: `meta/data/generic-data-api.service.ts`
 
 Provides CRUD endpoints for any meta-defined entity without custom code:
 
-| Operation | Endpoint | Description |
-|-----------|----------|-------------|
-| Create | `POST /api/data/{entity}` | Create new record |
-| Read | `GET /api/data/{entity}/{id}` | Get record by ID |
-| List | `GET /api/data/{entity}` | List with filters, sorting, pagination |
-| Update | `PUT /api/data/{entity}/{id}` | Update record |
-| Delete | `DELETE /api/data/{entity}/{id}` | Soft-delete record |
-| Bulk | `POST /api/data/{entity}/bulk` | Bulk create/update |
+| Operation | Endpoint                         | Description                            |
+| --------- | -------------------------------- | -------------------------------------- |
+| Create    | `POST /api/data/{entity}`        | Create new record                      |
+| Read      | `GET /api/data/{entity}/{id}`    | Get record by ID                       |
+| List      | `GET /api/data/{entity}`         | List with filters, sorting, pagination |
+| Update    | `PUT /api/data/{entity}/{id}`    | Update record                          |
+| Delete    | `DELETE /api/data/{entity}/{id}` | Soft-delete record                     |
+| Bulk      | `POST /api/data/{entity}/bulk`   | Bulk create/update                     |
 
 ### Query DSL
 
@@ -159,7 +160,11 @@ The generic data API supports a query DSL for filtering:
   "filters": [
     { "field": "status", "op": "eq", "value": "active" },
     { "field": "amount", "op": "gte", "value": 1000 },
-    { "field": "created_at", "op": "between", "value": ["2026-01-01", "2026-12-31"] }
+    {
+      "field": "created_at",
+      "op": "between",
+      "value": ["2026-01-01", "2026-12-31"]
+    }
   ],
   "sort": [{ "field": "created_at", "dir": "desc" }],
   "page": { "offset": 0, "limit": 25 }
@@ -178,19 +183,19 @@ Each entity can have a lifecycle state machine:
 
 ```typescript
 interface LifecycleDefinition {
-    states: StateDefinition[];
-    transitions: TransitionDefinition[];
-    initialState: string;
-    terminalStates: string[];
+  states: StateDefinition[];
+  transitions: TransitionDefinition[];
+  initialState: string;
+  terminalStates: string[];
 }
 
 interface TransitionDefinition {
-    from: string;
-    to: string;
-    action: string;
-    guards?: TransitionGuard[];
-    sideEffects?: SideEffect[];
-    approval?: ApprovalRequirement;
+  from: string;
+  to: string;
+  action: string;
+  guards?: TransitionGuard[];
+  sideEffects?: SideEffect[];
+  approval?: ApprovalRequirement;
 }
 ```
 
@@ -207,6 +212,7 @@ interface TransitionDefinition {
 File: `meta/lifecycle/lifecycle-timer.service.ts`
 
 SLA timers on lifecycle states:
+
 - Escalation after N hours in a state
 - Auto-transition after timeout
 - Notification on SLA breach
@@ -223,10 +229,10 @@ Lifecycle transitions can require approval:
 
 ```typescript
 interface ApprovalRequirement {
-    template: string;         // Approval template reference
-    approvers: ApproverRule[]; // Who can approve
-    minApprovals: number;     // Required approval count
-    escalation?: EscalationConfig;
+  template: string; // Approval template reference
+  approvers: ApproverRule[]; // Who can approve
+  minApprovals: number; // Required approval count
+  escalation?: EscalationConfig;
 }
 ```
 
@@ -235,6 +241,7 @@ interface ApprovalRequirement {
 File: `meta/approval/approver-resolver.ts` (tested in `approver-resolver.test.ts`)
 
 Resolvers determine who can approve:
+
 - **Role-based**: Users with specific role
 - **Hierarchy-based**: Manager of the requestor
 - **Dynamic**: Resolved at runtime based on record data
@@ -247,16 +254,16 @@ File: `meta/validation/rule-engine.service.ts`
 
 Field-level validation rules:
 
-| Rule Type | Example |
-|-----------|---------|
-| `required` | Field must have a value |
-| `min` / `max` | Numeric range |
-| `minLength` / `maxLength` | String length |
-| `pattern` | Regex match |
-| `enum` | Must be one of allowed values |
-| `unique` | Must be unique across records |
-| `custom` | Custom validation function |
-| `cross-field` | Validation across multiple fields |
+| Rule Type                 | Example                           |
+| ------------------------- | --------------------------------- |
+| `required`                | Field must have a value           |
+| `min` / `max`             | Numeric range                     |
+| `minLength` / `maxLength` | String length                     |
+| `pattern`                 | Regex match                       |
+| `enum`                    | Must be one of allowed values     |
+| `unique`                  | Must be unique across records     |
+| `custom`                  | Custom validation function        |
+| `cross-field`             | Validation across multiple fields |
 
 Tests: `meta/__tests__/rule-engine.test.ts`
 
@@ -270,11 +277,11 @@ Generates sequential document numbers:
 
 ```typescript
 interface NumberingConfig {
-    prefix: string;          // e.g., "PO"
-    separator: string;       // e.g., "-"
-    padding: number;         // e.g., 6 → "PO-000001"
-    resetPeriod?: "yearly" | "monthly" | "never";
-    scope?: "tenant" | "entity" | "global";
+  prefix: string; // e.g., "PO"
+  separator: string; // e.g., "-"
+  padding: number; // e.g., 6 → "PO-000001"
+  resetPeriod?: "yearly" | "monthly" | "never";
+  scope?: "tenant" | "entity" | "global";
 }
 ```
 
@@ -289,6 +296,7 @@ Tests: `meta/__tests__/numbering.test.ts`
 File: `meta/classification/entity-classification.service.ts`
 
 Entities can be classified into categories:
+
 - Business type (transactional, master, reference)
 - Module affiliation
 - Compliance level
@@ -304,15 +312,15 @@ File: `meta/capabilities/entity-capabilities.service.ts`
 
 Per-entity feature flags:
 
-| Capability | Purpose |
-|-----------|---------|
-| `hasLifecycle` | Entity has a state machine |
-| `hasApproval` | Transitions require approval |
-| `hasNumbering` | Auto-numbering enabled |
-| `hasAudit` | Full audit trail |
-| `hasComments` | Collaboration comments |
-| `hasAttachments` | File attachments |
-| `hasVersioning` | Record versioning |
+| Capability       | Purpose                      |
+| ---------------- | ---------------------------- |
+| `hasLifecycle`   | Entity has a state machine   |
+| `hasApproval`    | Transitions require approval |
+| `hasNumbering`   | Auto-numbering enabled       |
+| `hasAudit`       | Full audit trail             |
+| `hasComments`    | Collaboration comments       |
+| `hasAttachments` | File attachments             |
+| `hasVersioning`  | Record versioning            |
 
 ---
 
@@ -324,19 +332,19 @@ Generates UI rendering hints from the entity definition:
 
 ```typescript
 interface PageDescriptor {
-    listView: {
-        columns: ColumnDescriptor[];
-        defaultSort: SortConfig;
-        filters: FilterDescriptor[];
-    };
-    detailView: {
-        sections: SectionDescriptor[];
-        tabs: TabDescriptor[];
-    };
-    createForm: {
-        fields: FormFieldDescriptor[];
-        layout: LayoutConfig;
-    };
+  listView: {
+    columns: ColumnDescriptor[];
+    defaultSort: SortConfig;
+    filters: FilterDescriptor[];
+  };
+  detailView: {
+    sections: SectionDescriptor[];
+    tabs: TabDescriptor[];
+  };
+  createForm: {
+    fields: FormFieldDescriptor[];
+    layout: LayoutConfig;
+  };
 }
 ```
 
@@ -350,14 +358,14 @@ Per-tenant field customization without modifying the base entity definition:
 
 ```typescript
 interface FieldOverlay {
-    entityType: string;
-    tenantId: string;
-    fieldName: string;
-    label?: string;        // Override label
-    required?: boolean;    // Override required
-    visible?: boolean;     // Show/hide
-    defaultValue?: unknown; // Override default
-    customValidation?: ValidationRule[];
+  entityType: string;
+  tenantId: string;
+  fieldName: string;
+  label?: string; // Override label
+  required?: boolean; // Override required
+  visible?: boolean; // Show/hide
+  defaultValue?: unknown; // Override default
+  customValidation?: ValidationRule[];
 }
 ```
 
@@ -394,10 +402,10 @@ CREATE TABLE ent.purchase_order (
 
 HTTP handlers in `meta/handlers/`:
 
-| Handler | Endpoint Pattern | Operations |
-|---------|-----------------|------------|
-| `descriptor.handler.ts` | `/api/admin/mesh/meta-studio/{entity}` | Entity CRUD, compile, publish, diff |
-| `overlay.handler.ts` | `/api/admin/mesh/meta-studio/{entity}/overlays` | Overlay CRUD |
+| Handler                 | Endpoint Pattern                                | Operations                          |
+| ----------------------- | ----------------------------------------------- | ----------------------------------- |
+| `descriptor.handler.ts` | `/api/admin/mesh/meta-studio/{entity}`          | Entity CRUD, compile, publish, diff |
+| `overlay.handler.ts`    | `/api/admin/mesh/meta-studio/{entity}/overlays` | Overlay CRUD                        |
 
 Neon web app routes: `products/neon/apps/web/app/api/admin/mesh/meta-studio/`
 
@@ -405,24 +413,24 @@ Neon web app routes: `products/neon/apps/web/app/api/admin/mesh/meta-studio/`
 
 ## Test Coverage (16 tests)
 
-| Test | Coverage |
-|------|----------|
-| `compiler.test.ts` | Compilation pipeline |
-| `create-pipeline.test.ts` | Record creation pipeline |
-| `descriptor.test.ts` | Page descriptor generation |
+| Test                                | Coverage                         |
+| ----------------------------------- | -------------------------------- |
+| `compiler.test.ts`                  | Compilation pipeline             |
+| `create-pipeline.test.ts`           | Record creation pipeline         |
+| `descriptor.test.ts`                | Page descriptor generation       |
 | `lifecycle-approval-bridge.test.ts` | Lifecycle + approval integration |
-| `lifecycle-timer.test.ts` | SLA timer behavior |
-| `terminal-state.test.ts` | Terminal state handling |
-| `approval.test.ts` | Approval workflow |
-| `approver-resolver.test.ts` | Approver resolution |
-| `numbering.test.ts` | Auto-numbering |
-| `classification.test.ts` | Entity classification |
-| `ddl-classification.test.ts` | DDL from classification |
-| `rule-engine.test.ts` | Validation rules |
-| `effective-dating.test.ts` | Effective-dated records |
-| `generic-data-api.test.ts` | Generic CRUD API |
-| `cascade-delete.test.ts` | Cascade delete behavior |
-| `sla-scheduling.test.ts` | SLA scheduling |
+| `lifecycle-timer.test.ts`           | SLA timer behavior               |
+| `terminal-state.test.ts`            | Terminal state handling          |
+| `approval.test.ts`                  | Approval workflow                |
+| `approver-resolver.test.ts`         | Approver resolution              |
+| `numbering.test.ts`                 | Auto-numbering                   |
+| `classification.test.ts`            | Entity classification            |
+| `ddl-classification.test.ts`        | DDL from classification          |
+| `rule-engine.test.ts`               | Validation rules                 |
+| `effective-dating.test.ts`          | Effective-dated records          |
+| `generic-data-api.test.ts`          | Generic CRUD API                 |
+| `cascade-delete.test.ts`            | Cascade delete behavior          |
+| `sla-scheduling.test.ts`            | SLA scheduling                   |
 
 ---
 

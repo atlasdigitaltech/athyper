@@ -4,21 +4,21 @@
 
 ## Quick Navigation
 
-| Schema | Domain | Tables | Description |
-|--------|--------|--------|-------------|
-| [`core`](core/README.md) | Foundation & IAM | 18 | Tenants, principals, roles, groups, OUs, entitlements, operations, personas, modules |
-| [`meta`](meta/README.md) | Entity Metadata Engine | 30+ | Entity registry, versioning, fields, policies, lifecycles, overlays, approvals, permissions, notifications |
-| [`ref`](ref/README.md) | Reference Data | 10 | Countries, currencies, languages, locales, timezones, UoM, commodity/industry codes, labels |
-| [`ent`](ent/README.md) | Master Data | 7 | Customers, suppliers, employees, products, categories, classifications, relationships |
-| [`sec`](sec/README.md) | Security & MFA | 8 | MFA challenges/configs, TOTP, email/SMS OTP, WebAuthn, security events, trusted devices, password history |
-| [`wf`](wf/README.md) | Workflow & Approvals | 13 | Lifecycles, workflow instances, transitions, approval definitions/instances/tasks/stages/escalations |
-| [`doc`](doc/README.md) | Document Management | 12 | Attachments, documents, templates, letterheads, brand profiles, render outputs, DLQ, ACLs |
-| [`collab`](collab/README.md) | Collaboration | 22 | Comments, mentions, reactions, read tracking, drafts, moderation, SLA, analytics, messaging, delegation, sharing |
-| [`audit`](audit/README.md) | Audit & Compliance | 7 | Audit logs, permission decisions, field access, workflow events (partitioned), hash anchors, DLQ, integrity reports |
-| [`notify`](notify/README.md) | Notifications | 8 | Notifications (partitioned), preferences, delivery pipeline, DLQ, digests, WhatsApp consent, suppression, push subscriptions |
-| [`ui`](ui/README.md) | User Interface State | 5 | User preferences, saved views, dashboard widgets, recent activity, search history |
-| [`evt`](evt/README.md) | Event Store | 2 | Event log, event snapshots |
-| [`fin`](fin/README.md) | Financial Domain | 15+ | Budgets, commitments, postings, tax, assets, inventory, commissions, production, federation |
+| Schema                       | Domain                 | Tables | Description                                                                                                                  |
+| ---------------------------- | ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| [`core`](core/README.md)     | Foundation & IAM       | 18     | Tenants, principals, roles, groups, OUs, entitlements, operations, personas, modules                                         |
+| [`meta`](meta/README.md)     | Entity Metadata Engine | 30+    | Entity registry, versioning, fields, policies, lifecycles, overlays, approvals, permissions, notifications                   |
+| [`ref`](ref/README.md)       | Reference Data         | 10     | Countries, currencies, languages, locales, timezones, UoM, commodity/industry codes, labels                                  |
+| [`ent`](ent/README.md)       | Master Data            | 7      | Customers, suppliers, employees, products, categories, classifications, relationships                                        |
+| [`sec`](sec/README.md)       | Security & MFA         | 8      | MFA challenges/configs, TOTP, email/SMS OTP, WebAuthn, security events, trusted devices, password history                    |
+| [`wf`](wf/README.md)         | Workflow & Approvals   | 13     | Lifecycles, workflow instances, transitions, approval definitions/instances/tasks/stages/escalations                         |
+| [`doc`](doc/README.md)       | Document Management    | 12     | Attachments, documents, templates, letterheads, brand profiles, render outputs, DLQ, ACLs                                    |
+| [`collab`](collab/README.md) | Collaboration          | 22     | Comments, mentions, reactions, read tracking, drafts, moderation, SLA, analytics, messaging, delegation, sharing             |
+| [`audit`](audit/README.md)   | Audit & Compliance     | 7      | Audit logs, permission decisions, field access, workflow events (partitioned), hash anchors, DLQ, integrity reports          |
+| [`notify`](notify/README.md) | Notifications          | 8      | Notifications (partitioned), preferences, delivery pipeline, DLQ, digests, WhatsApp consent, suppression, push subscriptions |
+| [`ui`](ui/README.md)         | User Interface State   | 5      | User preferences, saved views, dashboard widgets, recent activity, search history                                            |
+| [`evt`](evt/README.md)       | Event Store            | 2      | Event log, event snapshots                                                                                                   |
+| [`fin`](fin/README.md)       | Financial Domain       | 15+    | Budgets, commitments, postings, tax, assets, inventory, commissions, production, federation                                  |
 
 ## Architecture Overview
 
@@ -28,13 +28,13 @@
 
 ## Database Engine
 
-| Property | Value |
-|----------|-------|
-| **Engine** | PostgreSQL 16+ |
-| **Extensions** | `pgcrypto`, `citext` |
-| **Provisioning** | Checksum-tracked via `public.schema_provisions` |
-| **SQL Files** | `framework/adapters/db/src/sql/` (40+ files, prefix-ordered) |
-| **ORM** | Prisma (codegen only, no migrations) |
+| Property         | Value                                                        |
+| ---------------- | ------------------------------------------------------------ |
+| **Engine**       | PostgreSQL 16+                                               |
+| **Extensions**   | `pgcrypto`, `citext`                                         |
+| **Provisioning** | Checksum-tracked via `public.schema_provisions`              |
+| **SQL Files**    | `framework/adapters/db/src/sql/` (40+ files, prefix-ordered) |
+| **ORM**          | Prisma (codegen only, no migrations)                         |
 
 ## Schema Tiers
 
@@ -115,6 +115,7 @@ core/
 ## Contributing
 
 When adding a new table:
+
 1. Add the DDL to the appropriate `framework/adapters/db/src/sql/` file
 2. Update the schema README in this wiki
 3. Document both functional purpose and technical details

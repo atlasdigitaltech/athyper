@@ -7,12 +7,12 @@ export function createRedisClient(options: RedisOptions): RedisClient {
     lazyConnect: true,
     maxRetriesPerRequest: 2,
     enableReadyCheck: true,
-    ...options
+    ...options,
   });
 
   client.on("error", (err) => {
     // Keep adapter dumb; runtime logger should also log at call sites
-     
+
     console.error(JSON.stringify({ msg: "redis_error", err: String(err) }));
   });
 

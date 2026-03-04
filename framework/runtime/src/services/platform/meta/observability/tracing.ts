@@ -7,7 +7,11 @@
  * Follows the same pattern as notification/observability/tracing.ts.
  */
 
-import { generateSpanId, generateTraceId, type TraceContext } from "@athyper/core";
+import {
+  generateSpanId,
+  generateTraceId,
+  type TraceContext,
+} from "@athyper/core";
 
 // ─── Span Names ─────────────────────────────────────────────────────
 
@@ -63,7 +67,11 @@ export interface MetaSpan {
   endTime?: number;
   status: "ok" | "error" | "unset";
   statusMessage?: string;
-  events: Array<{ name: string; time: number; attributes?: Record<string, unknown> }>;
+  events: Array<{
+    name: string;
+    time: number;
+    attributes?: Record<string, unknown>;
+  }>;
   setAttribute(key: string, value: string | number | boolean): void;
   addEvent(name: string, attributes?: Record<string, unknown>): void;
   setStatus(status: "ok" | "error", message?: string): void;
@@ -95,7 +103,11 @@ export function startSpan(
       this.attributes[key] = value;
     },
     addEvent(eventName: string, attrs?: Record<string, unknown>) {
-      this.events.push({ name: eventName, time: Date.now(), attributes: attrs });
+      this.events.push({
+        name: eventName,
+        time: Date.now(),
+        attributes: attrs,
+      });
     },
     setStatus(s: "ok" | "error", message?: string) {
       this.status = s;

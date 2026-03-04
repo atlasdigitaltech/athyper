@@ -1,10 +1,7 @@
 ﻿{
-    "code":  "PRJCOST",
-    "name":  "Project Management",
-    "dependsOn":  [
-                      "ACC",
-                      "BUDGET"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "PRJCOST",
+  "name": "Project Management",
+  "dependsOn": ["ACC", "BUDGET"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

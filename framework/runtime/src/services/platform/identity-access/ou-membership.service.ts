@@ -73,7 +73,7 @@ export class OUMembershipService {
         id,
         tenantId: request.tenantId,
         code: request.code,
-      })
+      }),
     );
 
     return {
@@ -92,14 +92,7 @@ export class OUMembershipService {
   async getOUNode(nodeId: string): Promise<OUNodeInfo | undefined> {
     const result = await this.db
       .selectFrom("core.organizational_unit")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "parent_id",
-        "description",
-      ])
+      .select(["id", "tenant_id", "code", "name", "parent_id", "description"])
       .where("id", "=", nodeId)
       .executeTakeFirst();
 
@@ -120,18 +113,11 @@ export class OUMembershipService {
    */
   async getOUNodeByCode(
     tenantId: string,
-    code: string
+    code: string,
   ): Promise<OUNodeInfo | undefined> {
     const result = await this.db
       .selectFrom("core.organizational_unit")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "parent_id",
-        "description",
-      ])
+      .select(["id", "tenant_id", "code", "name", "parent_id", "description"])
       .where("tenant_id", "=", tenantId)
       .where("code", "=", code)
       .executeTakeFirst();
@@ -155,7 +141,7 @@ export class OUMembershipService {
     principalId: string,
     tenantId: string,
     ouNodeId: string,
-    assignedBy: string
+    assignedBy: string,
   ): Promise<void> {
     const node = await this.getOUNode(ouNodeId);
     if (!node) {
@@ -182,14 +168,17 @@ export class OUMembershipService {
         msg: "principal_assigned_to_ou",
         principalId,
         ouNodeId,
-      })
+      }),
     );
   }
 
   /**
    * Remove principal from OU
    */
-  async removePrincipalFromOU(principalId: string, tenantId: string): Promise<void> {
+  async removePrincipalFromOU(
+    principalId: string,
+    tenantId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom("core.principal_ou")
       .where("principal_id", "=", principalId)
@@ -200,7 +189,7 @@ export class OUMembershipService {
       JSON.stringify({
         msg: "principal_removed_from_ou",
         principalId,
-      })
+      }),
     );
   }
 
@@ -228,18 +217,11 @@ export class OUMembershipService {
       parentId?: string | null;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<OUNodeInfo[]> {
     let query = this.db
       .selectFrom("core.organizational_unit")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "parent_id",
-        "description",
-      ])
+      .select(["id", "tenant_id", "code", "name", "parent_id", "description"])
       .where("tenant_id", "=", tenantId);
 
     if (filters?.parentId !== undefined) {
@@ -281,14 +263,7 @@ export class OUMembershipService {
       const parentId = queue.shift()!;
       const children = await this.db
         .selectFrom("core.organizational_unit")
-        .select([
-          "id",
-          "tenant_id",
-          "code",
-          "name",
-          "parent_id",
-          "description",
-        ])
+        .select(["id", "tenant_id", "code", "name", "parent_id", "description"])
         .where("tenant_id", "=", node.tenantId)
         .where("parent_id", "=", parentId)
         .execute();

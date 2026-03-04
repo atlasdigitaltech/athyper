@@ -21,7 +21,7 @@ interface Attachment {
 /**
  * Reaction Type
  */
-type ReactionType = '👍' | '❤️' | '🎉' | '👀' | '👎' | '🚀' | '💡' | '🤔';
+type ReactionType = "👍" | "❤️" | "🎉" | "👀" | "👎" | "🚀" | "💡" | "🤔";
 
 /**
  * Reaction Summary
@@ -36,7 +36,7 @@ interface ReactionSummary {
 /**
  * Comment Visibility
  */
-type CommentVisibility = 'public' | 'internal' | 'private';
+type CommentVisibility = "public" | "internal" | "private";
 
 /**
  * Comment with nested replies
@@ -167,14 +167,16 @@ export function CommentThread({
   const indentationClass = `ml-${Math.min(comment.threadDepth * 4, 16)}`;
 
   return (
-    <div className={`${comment.threadDepth > 0 ? "ml-8 border-l-2 border-gray-200 pl-4" : ""}`}>
+    <div
+      className={`${comment.threadDepth > 0 ? "ml-8 border-l-2 border-gray-200 pl-4" : ""}`}
+    >
       {/* Comment Card */}
       <div
         id={`comment-${comment.id}`}
         className={`p-3 border rounded-lg hover:shadow-sm transition-all mb-3 ${
-          comment.isHidden ? 'bg-gray-100 opacity-60' : 'bg-white'
-        } ${comment.isUnread ? 'border-blue-400 border-l-4' : 'border-gray-200'} ${
-          highlighted ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+          comment.isHidden ? "bg-gray-100 opacity-60" : "bg-white"
+        } ${comment.isUnread ? "border-blue-400 border-l-4" : "border-gray-200"} ${
+          highlighted ? "ring-2 ring-blue-400 bg-blue-50" : ""
         }`}
       >
         {/* Header */}
@@ -182,11 +184,16 @@ export function CommentThread({
           <div className="flex items-center gap-2 flex-wrap">
             {/* Unread Badge */}
             {comment.isUnread && (
-              <div className="w-2 h-2 bg-blue-500 rounded-full" title="Unread" />
+              <div
+                className="w-2 h-2 bg-blue-500 rounded-full"
+                title="Unread"
+              />
             )}
             <div className="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center">
               <span className="text-xs font-medium text-gray-600">
-                {(comment.commenterDisplayName || comment.commenterId).charAt(0).toUpperCase()}
+                {(comment.commenterDisplayName || comment.commenterId)
+                  .charAt(0)
+                  .toUpperCase()}
               </span>
             </div>
             <span className="text-sm font-medium text-gray-900">
@@ -202,18 +209,34 @@ export function CommentThread({
               </span>
             )}
             {/* Visibility Badge */}
-            {comment.visibility === 'internal' && (
+            {comment.visibility === "internal" && (
               <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                <svg
+                  className="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 Internal
               </span>
             )}
-            {comment.visibility === 'private' && (
+            {comment.visibility === "private" && (
               <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                <svg
+                  className="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 Private
               </span>
@@ -221,8 +244,16 @@ export function CommentThread({
             {/* Hidden Badge */}
             {comment.isHidden && (
               <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded-full flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                <svg
+                  className="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
+                    clipRule="evenodd"
+                  />
                   <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                 </svg>
                 Hidden
@@ -231,7 +262,7 @@ export function CommentThread({
             {/* Flag Count Badge */}
             {comment.flagCount && comment.flagCount > 0 && (
               <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full">
-                {comment.flagCount} flag{comment.flagCount > 1 ? 's' : ''}
+                {comment.flagCount} flag{comment.flagCount > 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -248,8 +279,18 @@ export function CommentThread({
               {linkCopied ? (
                 <span className="text-green-600">✓ Copied!</span>
               ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
                 </svg>
               )}
             </button>
@@ -262,8 +303,18 @@ export function CommentThread({
                 className="text-xs text-gray-600 hover:text-red-600"
                 title="Flag comment"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"
+                  />
                 </svg>
               </button>
             )}
@@ -271,8 +322,18 @@ export function CommentThread({
             {/* Owner Actions */}
             {isOwner && (
               <>
-                <button type="button" className="text-xs text-blue-600 hover:text-blue-800">Edit</button>
-                <button type="button" className="text-xs text-red-600 hover:text-red-800">Delete</button>
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="text-xs text-red-600 hover:text-red-800"
+                >
+                  Delete
+                </button>
               </>
             )}
           </div>
@@ -288,7 +349,8 @@ export function CommentThread({
         {/* Comment Text */}
         {comment.isHidden ? (
           <div className="p-3 bg-gray-100 border border-gray-300 rounded text-sm text-gray-600 italic mb-2">
-            This comment has been hidden by a moderator due to policy violations.
+            This comment has been hidden by a moderator due to policy
+            violations.
           </div>
         ) : (
           <MarkdownContent content={comment.commentText} className="mb-2" />
@@ -327,12 +389,15 @@ export function CommentThread({
               onClick={() => setShowReplies(!showReplies)}
               className="text-gray-600 hover:text-gray-800"
             >
-              {showReplies ? "▼" : "►"} {replyCount} {replyCount === 1 ? "reply" : "replies"}
+              {showReplies ? "▼" : "►"} {replyCount}{" "}
+              {replyCount === 1 ? "reply" : "replies"}
             </button>
           )}
 
           {!canReply && comment.threadDepth >= maxDepth && (
-            <span className="text-gray-400 italic">Max thread depth reached</span>
+            <span className="text-gray-400 italic">
+              Max thread depth reached
+            </span>
           )}
         </div>
       </div>
@@ -373,7 +438,9 @@ export function CommentThread({
 
       {/* Loading State */}
       {loading && showReplies && (
-        <div className="ml-8 text-sm text-gray-500 animate-pulse">Loading replies...</div>
+        <div className="ml-8 text-sm text-gray-500 animate-pulse">
+          Loading replies...
+        </div>
       )}
     </div>
   );

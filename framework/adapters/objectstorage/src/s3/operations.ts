@@ -10,15 +10,24 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import type { ObjectMetadata, ObjectStorageAdapter, ObjectStorageConfig, PutOptions } from "../types.js";
+import type {
+  ObjectMetadata,
+  ObjectStorageAdapter,
+  ObjectStorageConfig,
+  PutOptions,
+} from "../types.js";
 
 export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
   constructor(
     private client: S3Client,
-    private config: ObjectStorageConfig
+    private config: ObjectStorageConfig,
   ) {}
 
-  async put(key: string, body: Buffer | string, opts?: PutOptions): Promise<void> {
+  async put(
+    key: string,
+    body: Buffer | string,
+    opts?: PutOptions,
+  ): Promise<void> {
     try {
       await this.client.send(
         new PutObjectCommand({
@@ -28,11 +37,12 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
           ContentType: opts?.contentType,
           Metadata: opts?.metadata,
           ACL: opts?.acl,
-        })
+        }),
       );
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_put_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({ msg: "s3_put_error", key, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -43,7 +53,7 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new GetObjectCommand({
           Bucket: this.config.bucket,
           Key: key,
-        })
+        }),
       );
 
       if (!response.Body) {
@@ -58,8 +68,9 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
 
       return Buffer.concat(chunks);
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_get_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({ msg: "s3_get_error", key, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -70,11 +81,12 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new DeleteObjectCommand({
           Bucket: this.config.bucket,
           Key: key,
-        })
+        }),
       );
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_delete_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({ msg: "s3_delete_error", key, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -85,15 +97,20 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new HeadObjectCommand({
           Bucket: this.config.bucket,
           Key: key,
-        })
+        }),
       );
       return true;
     } catch (error: any) {
-      if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+      if (
+        error.name === "NotFound" ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         return false;
       }
-       
-      console.error(JSON.stringify({ msg: "s3_exists_error", key, err: String(error) }));
+
+      console.error(
+        JSON.stringify({ msg: "s3_exists_error", key, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -104,7 +121,7 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new ListObjectsV2Command({
           Bucket: this.config.bucket,
           Prefix: prefix,
-        })
+        }),
       );
 
       return (response.Contents ?? []).map((obj) => ({
@@ -114,8 +131,9 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         etag: obj.ETag,
       }));
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_list_error", prefix, err: String(error) }));
+      console.error(
+        JSON.stringify({ msg: "s3_list_error", prefix, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -127,10 +145,17 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         Key: key,
       });
 
-      return await getSignedUrl(this.client, command, { expiresIn: expirySeconds });
+      return await getSignedUrl(this.client, command, {
+        expiresIn: expirySeconds,
+      });
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_presigned_url_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({
+          msg: "s3_presigned_url_error",
+          key,
+          err: String(error),
+        }),
+      );
       throw error;
     }
   }
@@ -142,10 +167,17 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         Key: key,
       });
 
-      return await getSignedUrl(this.client, command, { expiresIn: expirySeconds });
+      return await getSignedUrl(this.client, command, {
+        expiresIn: expirySeconds,
+      });
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_put_presigned_url_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({
+          msg: "s3_put_presigned_url_error",
+          key,
+          err: String(error),
+        }),
+      );
       throw error;
     }
   }
@@ -156,7 +188,7 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new HeadObjectCommand({
           Bucket: this.config.bucket,
           Key: key,
-        })
+        }),
       );
 
       return {
@@ -167,8 +199,9 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         contentType: response.ContentType,
       };
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_metadata_error", key, err: String(error) }));
+      console.error(
+        JSON.stringify({ msg: "s3_metadata_error", key, err: String(error) }),
+      );
       throw error;
     }
   }
@@ -181,11 +214,16 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
           Delete: {
             Objects: keys.map((key) => ({ Key: key })),
           },
-        })
+        }),
       );
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_delete_many_error", count: keys.length, err: String(error) }));
+      console.error(
+        JSON.stringify({
+          msg: "s3_delete_many_error",
+          count: keys.length,
+          err: String(error),
+        }),
+      );
       throw error;
     }
   }
@@ -197,11 +235,17 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
           Bucket: this.config.bucket,
           CopySource: `${this.config.bucket}/${sourceKey}`,
           Key: destKey,
-        })
+        }),
       );
     } catch (error) {
-       
-      console.error(JSON.stringify({ msg: "s3_copy_error", sourceKey, destKey, err: String(error) }));
+      console.error(
+        JSON.stringify({
+          msg: "s3_copy_error",
+          sourceKey,
+          destKey,
+          err: String(error),
+        }),
+      );
       throw error;
     }
   }
@@ -213,7 +257,7 @@ export class S3ObjectStorageAdapter implements ObjectStorageAdapter {
         new ListObjectsV2Command({
           Bucket: this.config.bucket,
           MaxKeys: 1,
-        })
+        }),
       );
       return { healthy: true };
     } catch (error) {

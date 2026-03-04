@@ -18,7 +18,7 @@ export interface RetentionPolicy {
   policyName: string;
   entityType?: string;
   retentionDays: number;
-  action: 'archive' | 'hard_delete' | 'keep';
+  action: "archive" | "hard_delete" | "keep";
   enabled: boolean;
 }
 
@@ -39,7 +39,7 @@ export class CommentRetentionService {
   constructor(
     private readonly db: Kysely<DB>,
     private readonly auditWriter: AuditWriter,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -49,8 +49,8 @@ export class CommentRetentionService {
     tenantId: string,
     policyName: string,
     retentionDays: number,
-    action: 'archive' | 'hard_delete' | 'keep',
-    entityType?: string
+    action: "archive" | "hard_delete" | "keep",
+    entityType?: string,
   ): Promise<RetentionPolicy> {
     const id = crypto.randomUUID();
     const now = new Date();
@@ -60,7 +60,7 @@ export class CommentRetentionService {
       .values({
         id,
         tenant_id: tenantId,
-        created_by: 'system',
+        created_by: "system",
         policy_name: policyName,
         entity_type: entityType ?? null,
         retention_days: retentionDays,
@@ -79,7 +79,7 @@ export class CommentRetentionService {
         retentionDays,
         action,
       },
-      "[collab] Retention policy created"
+      "[collab] Retention policy created",
     );
 
     return {
@@ -132,11 +132,21 @@ export class CommentRetentionService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - policy.retentionDays);
 
-      if (policy.action === 'archive') {
-        const count = await this.archiveOldComments(tenantId, cutoffDate, policy.entityType, policy.id);
+      if (policy.action === "archive") {
+        const count = await this.archiveOldComments(
+          tenantId,
+          cutoffDate,
+          policy.entityType,
+          policy.id,
+        );
         archivedCount += count;
-      } else if (policy.action === 'hard_delete') {
-        const count = await this.hardDeleteOldComments(tenantId, cutoffDate, policy.entityType, policy.id);
+      } else if (policy.action === "hard_delete") {
+        const count = await this.hardDeleteOldComments(
+          tenantId,
+          cutoffDate,
+          policy.entityType,
+          policy.id,
+        );
         deletedCount += count;
       }
     }
@@ -148,7 +158,7 @@ export class CommentRetentionService {
         archivedCount,
         deletedCount,
       },
-      "[collab] Retention policies applied"
+      "[collab] Retention policies applied",
     );
 
     return { archived: archivedCount, deleted: deletedCount };
@@ -161,7 +171,7 @@ export class CommentRetentionService {
     tenantId: string,
     cutoffDate: Date,
     entityType?: string,
-    policyId?: string
+    policyId?: string,
   ): Promise<number> {
     const now = new Date();
 
@@ -170,7 +180,7 @@ export class CommentRetentionService {
       .updateTable("collab.entity_comment")
       .set({
         archived_at: now,
-        archived_by: 'system',
+        archived_by: "system",
         retention_policy_id: policyId ?? null,
       })
       .where("tenant_id", "=", tenantId)
@@ -210,7 +220,7 @@ export class CommentRetentionService {
     tenantId: string,
     cutoffDate: Date,
     entityType?: string,
-    policyId?: string
+    policyId?: string,
   ): Promise<number> {
     const now = new Date();
 
@@ -248,7 +258,7 @@ export class CommentRetentionService {
           count,
           cutoffDate: cutoffDate.toISOString(),
         },
-        "[collab] Comments hard deleted by retention policy"
+        "[collab] Comments hard deleted by retention policy",
       );
     }
 
@@ -261,7 +271,7 @@ export class CommentRetentionService {
   async restoreArchivedComment(
     tenantId: string,
     commentId: string,
-    restoredBy: string
+    restoredBy: string,
   ): Promise<void> {
     await this.db
       .updateTable("collab.entity_comment")
@@ -287,7 +297,7 @@ export class CommentRetentionService {
 
     this.logger.info(
       { commentId, restoredBy },
-      "[collab] Archived comment restored"
+      "[collab] Archived comment restored",
     );
   }
 
@@ -336,7 +346,7 @@ export class CommentRetentionService {
     tenantId: string,
     entityType: string,
     entityId: string,
-    archivedBy: string
+    archivedBy: string,
   ): Promise<number> {
     const now = new Date();
 
@@ -400,7 +410,7 @@ export class CommentRetentionService {
   async updatePolicy(
     tenantId: string,
     policyId: string,
-    updates: { enabled?: boolean }
+    updates: { enabled?: boolean },
   ): Promise<void> {
     await this.db
       .updateTable("collab.comment_retention_policy")
@@ -429,7 +439,7 @@ export class CommentRetentionService {
    */
   async listArchivedComments(
     tenantId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const { limit = 50, offset = 0 } = options ?? {};
 
@@ -452,7 +462,7 @@ export class CommentRetentionService {
   async findCommentsForRetention(
     tenantId: string,
     entityType: string,
-    cutoffDate: Date
+    cutoffDate: Date,
   ): Promise<Array<{ id: string }>> {
     const rows = await this.db
       .selectFrom("collab.entity_comment")
@@ -473,7 +483,7 @@ export class CommentRetentionService {
   async archiveComment(
     tenantId: string,
     commentId: string,
-    archivedBy: string
+    archivedBy: string,
   ): Promise<void> {
     await this.db
       .updateTable("collab.entity_comment")
@@ -489,10 +499,7 @@ export class CommentRetentionService {
   /**
    * Hard delete a single comment
    */
-  async hardDeleteComment(
-    tenantId: string,
-    commentId: string
-  ): Promise<void> {
+  async hardDeleteComment(tenantId: string, commentId: string): Promise<void> {
     await this.db
       .deleteFrom("collab.entity_comment")
       .where("id", "=", commentId)

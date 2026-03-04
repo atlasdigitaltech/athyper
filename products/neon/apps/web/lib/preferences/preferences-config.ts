@@ -11,12 +11,20 @@
  * Others are flexible and can use any persistence.
  */
 
-
-import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "./layout";
+import type {
+  ContentLayout,
+  NavbarStyle,
+  SidebarCollapsible,
+  SidebarVariant,
+} from "./layout";
 import type { ThemeMode, ThemePreset } from "./theme";
 import type { FontKey } from "@/lib/fonts/registry";
 
-export type PreferencePersistence = "none" | "client-cookie" | "server-cookie" | "localStorage";
+export type PreferencePersistence =
+  | "none"
+  | "client-cookie"
+  | "server-cookie"
+  | "localStorage";
 
 /**
  * All available preference keys and their value types.
@@ -37,7 +45,10 @@ export type PreferenceKey = keyof PreferenceValueMap;
  * Layout-critical keys → these affect SSR UI (sidebar shape)
  * so they must be accessible on the server.
  */
-export const LAYOUT_CRITICAL_KEYS = ["sidebar_variant", "sidebar_collapsible"] as const;
+export const LAYOUT_CRITICAL_KEYS = [
+  "sidebar_variant",
+  "sidebar_collapsible",
+] as const;
 export type LayoutCriticalKey = (typeof LAYOUT_CRITICAL_KEYS)[number];
 
 /**

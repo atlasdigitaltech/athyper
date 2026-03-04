@@ -52,7 +52,9 @@ describe("Circuit Breaker", () => {
     it("should reject calls immediately when OPEN", async () => {
       const fn = vi.fn().mockResolvedValue("success");
 
-      await expect(breaker.execute(fn)).rejects.toThrow(CircuitBreakerOpenError);
+      await expect(breaker.execute(fn)).rejects.toThrow(
+        CircuitBreakerOpenError,
+      );
       expect(fn).not.toHaveBeenCalled();
     });
 
@@ -64,7 +66,9 @@ describe("Circuit Breaker", () => {
         expect.fail("Should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(CircuitBreakerOpenError);
-        expect((error as CircuitBreakerOpenError).nextAttemptTime).toBeInstanceOf(Date);
+        expect(
+          (error as CircuitBreakerOpenError).nextAttemptTime,
+        ).toBeInstanceOf(Date);
       }
     });
   });

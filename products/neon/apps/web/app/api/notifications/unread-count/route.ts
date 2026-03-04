@@ -9,55 +9,59 @@ import { InAppNotificationRepo } from "@athyper/runtime/services/platform-servic
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
-
-import { getApiContext, resolveTenantUuid, unauthorizedResponse, successResponse, errorResponse } from "@/lib/api-context";
+import {
+  getApiContext,
+  resolveTenantUuid,
+  unauthorizedResponse,
+  successResponse,
+  errorResponse,
+} from "@/lib/api-context";
 
 function isStubMode(): boolean {
-    return !process.env.DATABASE_URL && process.env.ENABLE_DEV_STUBS === "true";
+  return !process.env.DATABASE_URL && process.env.ENABLE_DEV_STUBS === "true";
 }
 
 async function getDbClient(): Promise<Kysely<DB>> {
-    const { Pool } = await import("pg");
-    const { Kysely, PostgresDialect } = await import("kysely");
+  const { Pool } = await import("pg");
+  const { Kysely, PostgresDialect } = await import("kysely");
 
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-    });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
 
-    return new Kysely<DB>({
-        dialect: new PostgresDialect({ pool }),
-    });
+  return new Kysely<DB>({
+    dialect: new PostgresDialect({ pool }),
+  });
 }
 
 export async function GET() {
-    if (isStubMode()) {
-        return successResponse({ count: 0 });
+  if (isStubMode()) {
+    return successResponse({ count: 0 });
+  }
+
+  const { context, redis } = await getApiContext();
+
+  try {
+    if (!context) {
+      return unauthorizedResponse();
     }
 
-    const { context, redis } = await getApiContext();
+    // Initialize repo
+    const db = await getDbClient();
+    const tenantUuid = await resolveTenantUuid(db, context.tenantId);
+    const repo = new InAppNotificationRepo(db);
 
-    try {
-        if (!context) {
-            return unauthorizedResponse();
-        }
+    // Get unread count
+    const count = await repo.unreadCount(tenantUuid, context.userId);
 
-        // Initialize repo
-        const db = await getDbClient();
-        const tenantUuid = await resolveTenantUuid(db, context.tenantId);
-        const repo = new InAppNotificationRepo(db);
+    // Clean up
+    await db.destroy();
 
-        // Get unread count
-        const count = await repo.unreadCount(tenantUuid, context.userId);
-
-        // Clean up
-        await db.destroy();
-
-        return successResponse({ count });
-    } catch (err) {
-        console.error("[GET /api/notifications/unread-count] Error:", err);
-        return errorResponse("INTERNAL_ERROR", "Failed to fetch unread count");
-    } finally {
-        await redis.quit();
-    }
+    return successResponse({ count });
+  } catch (err) {
+    console.error("[GET /api/notifications/unread-count] Error:", err);
+    return errorResponse("INTERNAL_ERROR", "Failed to fetch unread count");
+  } finally {
+    await redis.quit();
+  }
 }

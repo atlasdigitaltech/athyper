@@ -176,7 +176,7 @@ export class ApprovalWorkflowApiController {
       const template = await this.service.createTemplate(
         tenantId,
         body as CreateApprovalWorkflowInput,
-        userId
+        userId,
       );
 
       res.status(201).json({
@@ -203,7 +203,7 @@ export class ApprovalWorkflowApiController {
         tenantId,
         templateId,
         body as UpdateApprovalWorkflowInput,
-        userId
+        userId,
       );
 
       res.json({
@@ -331,7 +331,11 @@ export class ApprovalWorkflowApiController {
       const userId = this.getUserId(req);
       const templateId = req.params.id;
 
-      const template = await this.service.publishTemplate(tenantId, templateId, userId);
+      const template = await this.service.publishTemplate(
+        tenantId,
+        templateId,
+        userId,
+      );
 
       res.json({
         success: true,
@@ -358,7 +362,7 @@ export class ApprovalWorkflowApiController {
         templateId,
         body.newCode,
         body.newName,
-        userId
+        userId,
       );
 
       res.status(201).json({
@@ -454,7 +458,11 @@ export class ApprovalWorkflowApiController {
         metadata: body.metadata,
       };
 
-      const approvers = await this.service.resolveApprovers(tenantId, step, context);
+      const approvers = await this.service.resolveApprovers(
+        tenantId,
+        step,
+        context,
+      );
 
       res.json({
         success: true,
@@ -478,7 +486,7 @@ export class ApprovalWorkflowApiController {
         tenantId,
         body.entityType,
         body.triggerEvent,
-        body.entityData
+        body.entityData,
       );
 
       res.json({
@@ -497,9 +505,8 @@ export class ApprovalWorkflowApiController {
   private getTenantId(req: Request): string {
     // Extract tenant ID from request context
     // This would typically come from auth middleware
-    const tenantId = (req as any).tenantId ||
-                     req.headers["x-tenant-id"] ||
-                     req.query.tenantId;
+    const tenantId =
+      (req as any).tenantId || req.headers["x-tenant-id"] || req.query.tenantId;
 
     if (!tenantId) {
       throw new ApprovalWorkflowError("UNAUTHORIZED", "Tenant ID required");
@@ -511,9 +518,8 @@ export class ApprovalWorkflowApiController {
   private getUserId(req: Request): string {
     // Extract user ID from request context
     // This would typically come from auth middleware
-    const userId = (req as any).userId ||
-                   (req as any).user?.id ||
-                   req.headers["x-user-id"];
+    const userId =
+      (req as any).userId || (req as any).user?.id || req.headers["x-user-id"];
 
     if (!userId) {
       throw new ApprovalWorkflowError("UNAUTHORIZED", "User ID required");
@@ -655,7 +661,7 @@ export function getApprovalWorkflowRoutes(): RouteDefinition[] {
  * Create approval workflow API controller
  */
 export function createApprovalWorkflowApiController(
-  service: IApprovalWorkflowService
+  service: IApprovalWorkflowService,
 ): ApprovalWorkflowApiController {
   return new ApprovalWorkflowApiController(service);
 }

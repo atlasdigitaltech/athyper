@@ -1,7 +1,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * GET /api/collab/analytics/leaderboard
@@ -22,19 +22,22 @@ export async function GET(req: NextRequest) {
     if (!startDate || !endDate) {
       return NextResponse.json(
         { error: "Missing required parameters: startDate and endDate" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
 
-    const response = await fetch(`${backendUrl}/api/collab/analytics/leaderboard?${searchParams.toString()}`, {
-      method: "GET",
-      headers: {
-        Cookie: req.headers.get("cookie") || "",
-        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+    const response = await fetch(
+      `${backendUrl}/api/collab/analytics/leaderboard?${searchParams.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Cookie: req.headers.get("cookie") || "",
+          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+        },
       },
-    });
+    );
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
@@ -42,7 +45,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching leaderboard:", error);
     return NextResponse.json(
       { error: "Failed to fetch leaderboard" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

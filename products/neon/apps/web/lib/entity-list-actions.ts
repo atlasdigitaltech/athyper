@@ -14,9 +14,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
-import {
-  useEntityCapabilities,
-} from "./entity-capabilities";
+import { useEntityCapabilities } from "./entity-capabilities";
 
 import type { BulkAction, RowAction } from "@/components/mesh/list/types";
 
@@ -44,7 +42,12 @@ export function useEntityListActions(entityKey: string): {
 
   return useMemo(() => {
     if (!capabilities) {
-      return { primaryAction: undefined, rowActions: [], bulkActions: [], loading };
+      return {
+        primaryAction: undefined,
+        rowActions: [],
+        bulkActions: [],
+        loading,
+      };
     }
 
     const listOps = capabilities.operations.filter(
@@ -57,7 +60,10 @@ export function useEntityListActions(entityKey: string): {
       ? {
           label: primaryOp.label,
           onClick: () => {
-            if (primaryOp.handlerType === "NAVIGATE" && primaryOp.handlerTarget) {
+            if (
+              primaryOp.handlerType === "NAVIGATE" &&
+              primaryOp.handlerTarget
+            ) {
               router.push(primaryOp.handlerTarget);
             } else if (primaryOp.handlerType === "NAVIGATE") {
               router.push(capabilities.routes.create);
@@ -114,7 +120,12 @@ export function useEntityListActions(entityKey: string): {
 // ============================================================================
 
 const DESTRUCTIVE_OPS = new Set([
-  "deny", "reject", "cancel", "void", "delete", "delete_draft",
+  "deny",
+  "reject",
+  "cancel",
+  "void",
+  "delete",
+  "delete_draft",
   "bulk_delete",
 ]);
 

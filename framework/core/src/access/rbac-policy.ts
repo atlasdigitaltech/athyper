@@ -22,21 +22,22 @@ export class RbacPolicy implements AccessPolicy {
     this.rules.set("admin", new Set(["*"]));
 
     // Manager has most permissions
-    this.rules.set("manager", new Set([
-      "read:*",
-      "create:*",
-      "update:*",
-      "delete:document",
-      "delete:task",
-    ]));
+    this.rules.set(
+      "manager",
+      new Set([
+        "read:*",
+        "create:*",
+        "update:*",
+        "delete:document",
+        "delete:task",
+      ]),
+    );
 
     // User has basic permissions
-    this.rules.set("user", new Set([
-      "read:*",
-      "create:document",
-      "create:task",
-      "update:own",
-    ]));
+    this.rules.set(
+      "user",
+      new Set(["read:*", "create:document", "create:task", "update:own"]),
+    );
 
     // Guest has read-only
     this.rules.set("guest", new Set(["read:*"]));

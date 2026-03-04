@@ -95,7 +95,7 @@
     },
 
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
 
@@ -154,6 +154,16 @@
     "db:studio": { "cache": false },
     "kysely:codegen": { "cache": false }
   },
-  "globalEnv": [],
+  "globalEnv": [
+    "AUDIT_ENCRYPTION_MASTER_KEY",
+    "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+    "NODE_TLS_REJECT_UNAUTHORIZED",
+    "API_MESH_URL",
+    "ENABLE_DEV_STUBS",
+    "ENTITY_DATA_PARAMS",
+    "PLATFORM_CONTROL_ENABLED",
+    "PLATFORM_KEYCLOAK_CLIENT_ID",
+    "PLATFORM_KEYCLOAK_REALM"
+  ],
   "globalPassThroughEnv": ["CI", "FORCE_COLOR", "NODE_OPTIONS"]
 }

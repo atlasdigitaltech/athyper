@@ -5,7 +5,10 @@
 import { TOKENS } from "../../../../../kernel/tokens.js";
 import { DocumentKind } from "../../domain/content-taxonomy.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../../../platform/foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../../../platform/foundation/http/types.js";
 import type { ContentService } from "../../domain/services/ContentService.js";
 import type { Request, Response } from "express";
 
@@ -14,8 +17,14 @@ import type { Request, Response } from "express";
  * Initiate file upload
  */
 export class InitiateUploadHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -41,7 +50,8 @@ export class InitiateUploadHandler implements RouteHandler {
         success: false,
         error: {
           code: "MISSING_FIELDS",
-          message: "entityType, entityId, kind, fileName, contentType, and sizeBytes are required",
+          message:
+            "entityType, entityId, kind, fileName, contentType, and sizeBytes are required",
         },
       });
       return;
@@ -75,7 +85,10 @@ export class InitiateUploadHandler implements RouteHandler {
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "UPLOAD_INIT_ERROR", message } });
+      res.status(500).json({
+        success: false,
+        error: { code: "UPLOAD_INIT_ERROR", message },
+      });
     }
   }
 }
@@ -85,8 +98,14 @@ export class InitiateUploadHandler implements RouteHandler {
  * Complete file upload
  */
 export class CompleteUploadHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -98,7 +117,10 @@ export class CompleteUploadHandler implements RouteHandler {
     if (!body.uploadId || !body.sha256) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_FIELDS", message: "uploadId and sha256 are required" },
+        error: {
+          code: "MISSING_FIELDS",
+          message: "uploadId and sha256 are required",
+        },
       });
       return;
     }
@@ -111,10 +133,15 @@ export class CompleteUploadHandler implements RouteHandler {
         actorId,
       });
 
-      res.status(200).json({ success: true, data: { uploadId: body.uploadId } });
+      res
+        .status(200)
+        .json({ success: true, data: { uploadId: body.uploadId } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "UPLOAD_COMPLETE_ERROR", message } });
+      res.status(500).json({
+        success: false,
+        error: { code: "UPLOAD_COMPLETE_ERROR", message },
+      });
     }
   }
 }
@@ -124,8 +151,14 @@ export class CompleteUploadHandler implements RouteHandler {
  * Get presigned download URL
  */
 export class GetDownloadUrlHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -149,7 +182,9 @@ export class GetDownloadUrlHandler implements RouteHandler {
 
       // Log access (non-blocking)
       try {
-        const accessLogService = await ctx.container.resolve<any>(TOKENS.accessLogService);
+        const accessLogService = await ctx.container.resolve<any>(
+          TOKENS.accessLogService,
+        );
         await accessLogService.logAccess({
           tenantId,
           attachmentId,
@@ -168,9 +203,13 @@ export class GetDownloadUrlHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "DOWNLOAD_ERROR", message } });
+        res
+          .status(500)
+          .json({ success: false, error: { code: "DOWNLOAD_ERROR", message } });
       }
     }
   }
@@ -181,8 +220,14 @@ export class GetDownloadUrlHandler implements RouteHandler {
  * Delete file
  */
 export class DeleteFileHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -201,7 +246,9 @@ export class DeleteFileHandler implements RouteHandler {
     try {
       // Delete preview files if they exist (non-blocking)
       try {
-        const previewService = await ctx.container.resolve<any>(TOKENS.previewService);
+        const previewService = await ctx.container.resolve<any>(
+          TOKENS.previewService,
+        );
         await previewService.deletePreview(attachmentId, tenantId);
       } catch (previewError) {
         // Don't fail the request if preview deletion fails
@@ -220,9 +267,13 @@ export class DeleteFileHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "DELETE_ERROR", message } });
+        res
+          .status(500)
+          .json({ success: false, error: { code: "DELETE_ERROR", message } });
       }
     }
   }
@@ -233,8 +284,14 @@ export class DeleteFileHandler implements RouteHandler {
  * List attachments for entity
  */
 export class ListByEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const entityType = req.query.entity as string;
@@ -244,21 +301,31 @@ export class ListByEntityHandler implements RouteHandler {
     if (!entityType || !entityId) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_PARAMS", message: "entity and id query params are required" },
+        error: {
+          code: "MISSING_PARAMS",
+          message: "entity and id query params are required",
+        },
       });
       return;
     }
 
     try {
-      const attachments = await contentService.listByEntity(tenantId, entityType, entityId, {
-        kind,
-        currentOnly: true,
-      });
+      const attachments = await contentService.listByEntity(
+        tenantId,
+        entityType,
+        entityId,
+        {
+          kind,
+          currentOnly: true,
+        },
+      );
 
       res.status(200).json({ success: true, data: attachments });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "LIST_ERROR", message } });
+      res
+        .status(500)
+        .json({ success: false, error: { code: "LIST_ERROR", message } });
     }
   }
 }
@@ -268,8 +335,14 @@ export class ListByEntityHandler implements RouteHandler {
  * Get attachment metadata
  */
 export class GetMetadataHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const contentService = await ctx.container.resolve<ContentService>(TOKENS.contentService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const contentService = await ctx.container.resolve<ContentService>(
+      TOKENS.contentService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const attachmentId = req.params.id;
@@ -295,7 +368,9 @@ export class GetMetadataHandler implements RouteHandler {
       res.status(200).json({ success: true, data: metadata });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "METADATA_ERROR", message } });
+      res
+        .status(500)
+        .json({ success: false, error: { code: "METADATA_ERROR", message } });
     }
   }
 }

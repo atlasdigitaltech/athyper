@@ -19,22 +19,26 @@ export function createCleanupStaleMultipartHandler(container: Container) {
   return async (job: any) => {
     const logger = await container.resolve<Logger>(TOKENS.logger);
     const multipartService = await container.resolve<MultipartUploadService>(
-      TOKENS.multipartUploadService
+      TOKENS.multipartUploadService,
     );
 
     const { tenantId } = job.data as CleanupStaleMultipartJobData;
 
     logger.info(
       { tenantId },
-      "[worker:cleanup-stale-multipart] Starting stale multipart cleanup job"
+      "[worker:cleanup-stale-multipart] Starting stale multipart cleanup job",
     );
 
     try {
       // Cleanup expired uploads
-      const expiredCount = await multipartService.cleanupExpiredUploads(tenantId);
+      const expiredCount =
+        await multipartService.cleanupExpiredUploads(tenantId);
 
       // Cleanup old completed/aborted records (older than 30 days)
-      const oldRecordsCount = await multipartService.cleanupOldRecords(tenantId, 30);
+      const oldRecordsCount = await multipartService.cleanupOldRecords(
+        tenantId,
+        30,
+      );
 
       logger.info(
         {
@@ -42,7 +46,7 @@ export function createCleanupStaleMultipartHandler(container: Container) {
           expiredCount,
           oldRecordsCount,
         },
-        "[worker:cleanup-stale-multipart] Stale multipart cleanup complete"
+        "[worker:cleanup-stale-multipart] Stale multipart cleanup complete",
       );
 
       return {
@@ -53,7 +57,7 @@ export function createCleanupStaleMultipartHandler(container: Container) {
     } catch (error: any) {
       logger.error(
         { tenantId, error: error.message },
-        "[worker:cleanup-stale-multipart] Stale multipart cleanup failed"
+        "[worker:cleanup-stale-multipart] Stale multipart cleanup failed",
       );
 
       throw error;

@@ -5,6 +5,7 @@ This document describes the implementation of deterministic, versioned, and inst
 ## Overview
 
 The compilation system now provides:
+
 1. **Canonical compilation identity** - Deterministic, reproducible compilation with stable hashing
 2. **Compilation diagnostics** - TypeScript-style ERROR/WARN/INFO messages with quality gates
 3. **Performance instrumentation** - Metrics and tracing for compilation performance
@@ -12,6 +13,7 @@ The compilation system now provides:
 ## Phase 9.1: Canonical Compilation Identity
 
 ### Goals
+
 - Compiled models must be reproducible (same inputs → same output)
 - Compilations must be cacheable with stable keys
 - Compilations must be debuggable ("why did it change?")
@@ -19,7 +21,9 @@ The compilation system now provides:
 ### Implementation
 
 #### Input Hash
+
 Stable hash of all compilation inputs:
+
 - Entity name
 - Version string
 - All fields (with stable ordering)
@@ -28,6 +32,7 @@ Stable hash of all compilation inputs:
 - Future: relations, indexes, overlays
 
 **Algorithm**:
+
 ```typescript
 computeInputHash(entityName, version, schema) {
   const inputs = {
@@ -44,7 +49,9 @@ computeInputHash(entityName, version, schema) {
 ```
 
 #### Output Hash
+
 Hash of the compiled model JSON:
+
 ```typescript
 computeOutputHash(compiled) {
   const canonical = canonicalizeJSON(compiled);
@@ -53,7 +60,9 @@ computeOutputHash(compiled) {
 ```
 
 #### JSON Canonicalization
+
 Ensures stable key ordering for deterministic hashing:
+
 - Objects: Keys sorted alphabetically
 - Arrays: Elements in original order
 - Primitives: Standard JSON encoding
@@ -63,12 +72,13 @@ Ensures stable key ordering for deterministic hashing:
 ### Storage
 
 Hashes are stored in the CompiledModel:
+
 ```typescript
 type CompiledModel = {
   // ... existing fields
 
-  inputHash: string;   // Stable hash of compilation inputs
-  outputHash: string;  // Hash of compiled JSON output
+  inputHash: string; // Stable hash of compilation inputs
+  outputHash: string; // Hash of compiled JSON output
   diagnostics: CompileDiagnostic[];
 };
 ```
@@ -76,14 +86,17 @@ type CompiledModel = {
 ### Use Cases
 
 **Cache Invalidation**:
+
 - Check if `inputHash` changed → recompile needed
 - Compare `outputHash` to detect actual changes in output
 
 **Debugging**:
+
 - "Why did compilation result change?" → Compare input hashes
 - "Did schema change affect output?" → Compare output hashes
 
 **Reproducibility**:
+
 - Same input hash guarantees identical compilation
 - Compilations are idempotent
 
@@ -92,7 +105,9 @@ type CompiledModel = {
 ## Phase 9.2: Compilation Diagnostics
 
 ### Goals
+
 Treat compilation like TypeScript compiler:
+
 - Collect ERROR, WARN, and INFO diagnostics
 - Block publish if ERROR diagnostics exist
 - Allow draft compilation with warnings
@@ -100,13 +115,16 @@ Treat compilation like TypeScript compiler:
 ### Diagnostic Levels
 
 #### ERROR
+
 Blocking issues that prevent correct operation:
+
 - Unknown data type
 - Enum without values
 - Reference field without `referenceTo`
 - Policy referencing non-existent field
 
 **Example**:
+
 ```json
 {
   "severity": "ERROR",
@@ -117,12 +135,15 @@ Blocking issues that prevent correct operation:
 ```
 
 #### WARN
+
 Quality issues that should be reviewed:
+
 - Field marked for indexing but not actually indexed (future)
 - Searchable field without text index (future)
 - Performance concerns
 
 **Example**:
+
 ```json
 {
   "severity": "WARN",
@@ -133,7 +154,9 @@ Quality issues that should be reviewed:
 ```
 
 #### INFO
+
 Informational messages:
+
 - Required field without default value
 - Field will be indexed
 - Policy has no conditions (always applies)
@@ -141,6 +164,7 @@ Informational messages:
 - Implicit fields injected
 
 **Example**:
+
 ```json
 {
   "severity": "INFO",
@@ -155,20 +179,22 @@ Informational messages:
 ```typescript
 type CompileDiagnostic = {
   severity: "ERROR" | "WARN" | "INFO";
-  code: string;              // machine-readable code
-  message: string;           // human-readable message
-  field?: string;            // affected field
-  context?: Record<string, unknown>;  // additional context
+  code: string; // machine-readable code
+  message: string; // human-readable message
+  field?: string; // affected field
+  context?: Record<string, unknown>; // additional context
 };
 ```
 
 ### Quality Gates
 
 **Draft Compilation**:
+
 - Allowed with WARN and INFO diagnostics
 - Blocked only on ERROR diagnostics
 
 **Publish Compilation** (future):
+
 ```typescript
 if (hasErrors(diagnostics)) {
   throw new Error(`Cannot publish: ${errorCount} error(s)`);
@@ -178,6 +204,7 @@ if (hasErrors(diagnostics)) {
 ### Current Diagnostic Checks
 
 **Field Validation**:
+
 1. ✅ Unknown data type → ERROR
 2. ✅ Enum without values → ERROR
 3. ✅ Reference without `referenceTo` → ERROR
@@ -185,22 +212,26 @@ if (hasErrors(diagnostics)) {
 5. ✅ Field marked for indexing → INFO
 
 **Policy Validation**:
+
 1. ✅ Policy with no conditions → INFO
 2. ✅ Field-level policy referencing unknown field → ERROR
 
 ### Future Diagnostic Checks
 
 **Performance Warnings**:
+
 - Field marked filterable but not indexed → WARN
 - Field marked searchable without text index → WARN
 - Large enum (>100 values) → WARN
 
 **Data Integrity**:
+
 - Missing required field mapping → ERROR
 - Invalid relation configuration → ERROR
 - Circular reference detected → ERROR
 
 **Best Practices**:
+
 - Unused policy → WARN
 - Overly permissive policy (e.g., `"allow *"`) → INFO
 - Missing field labels → INFO
@@ -210,6 +241,7 @@ if (hasErrors(diagnostics)) {
 ## Phase 9.3: Performance Instrumentation
 
 ### Goals
+
 - Measure and log compilation performance
 - Track cache hit/miss rates
 - Enable performance optimization
@@ -219,6 +251,7 @@ if (hasErrors(diagnostics)) {
 All metrics are logged as JSON to stdout for structured logging collection.
 
 #### Compilation Success
+
 ```json
 {
   "msg": "compilation_success",
@@ -237,6 +270,7 @@ All metrics are logged as JSON to stdout for structured logging collection.
 ```
 
 #### Compilation Failure
+
 ```json
 {
   "msg": "compilation_error",
@@ -248,6 +282,7 @@ All metrics are logged as JSON to stdout for structured logging collection.
 ```
 
 #### Cache Hit
+
 ```json
 {
   "msg": "compilation_cache_hit",
@@ -259,6 +294,7 @@ All metrics are logged as JSON to stdout for structured logging collection.
 ```
 
 #### Cache Miss
+
 ```json
 {
   "msg": "compilation_cache_miss",
@@ -268,6 +304,7 @@ All metrics are logged as JSON to stdout for structured logging collection.
 ```
 
 #### Cache Write
+
 ```json
 {
   "msg": "compilation_cache_set",
@@ -280,11 +317,13 @@ All metrics are logged as JSON to stdout for structured logging collection.
 ### Performance Tracking
 
 **Duration Breakdown**:
+
 - `duration_ms`: Total compilation time (including validation, compilation, caching)
 - `compile_duration_ms`: Pure compilation time (schema → compiled model)
 - `cache_duration_ms`: Cache write time
 
 **Trace Spans** (conceptual):
+
 ```
 compile()
 ├─ load raw meta bundle (cache lookup)
@@ -301,6 +340,7 @@ compile()
 ### Monitoring & Observability
 
 **Key Metrics to Monitor**:
+
 1. `compilation_duration_ms` histogram
    - p50, p95, p99 latencies
    - Alert if p99 > 500ms
@@ -318,6 +358,7 @@ compile()
    - Monitor quality trends
 
 **Sample Prometheus Queries**:
+
 ```promql
 # Compilation duration p95
 histogram_quantile(0.95, rate(compilation_duration_ms_bucket[5m]))
@@ -337,6 +378,7 @@ rate(compilation_fail_total[5m]) / rate(compilation_total[5m])
 ### Files Modified
 
 **Core Package** (`framework/core/`):
+
 1. `src/meta/types.ts`:
    - Added `DiagnosticSeverity`, `CompileDiagnostic`, `CompilationResult` types
    - Added `inputHash`, `outputHash`, `diagnostics` to `CompiledModel`
@@ -345,6 +387,7 @@ rate(compilation_fail_total[5m]) / rate(compilation_total[5m])
    - Exported new diagnostic types
 
 **Runtime Package** (`framework/runtime/`):
+
 1. `src/services/meta/compiler.service.ts`:
    - Added `computeInputHash()` - stable input hashing
    - Added `computeOutputHash()` - compiled model hashing
@@ -359,6 +402,7 @@ rate(compilation_fail_total[5m]) / rate(compilation_total[5m])
 ### Code Example
 
 **Compilation with Diagnostics**:
+
 ```typescript
 const schema = {
   fields: [
@@ -386,11 +430,17 @@ try {
 ```
 
 **Fix and Recompile**:
+
 ```typescript
 const fixedSchema = {
   fields: [
     { name: "id", type: "string", required: true },
-    { name: "status", type: "enum", required: true, enumValues: ["active", "inactive"] },
+    {
+      name: "status",
+      type: "enum",
+      required: true,
+      enumValues: ["active", "inactive"],
+    },
     { name: "email", type: "string", required: true },
   ],
   policies: [
@@ -415,6 +465,7 @@ const compiled = await compiler.compile("User", "v1");
 ### Unit Tests
 
 Test canonical hashing:
+
 ```typescript
 it("should produce same hash for same inputs", () => {
   const schema1 = { fields: [{ name: "a", ... }, { name: "b", ... }] };
@@ -438,6 +489,7 @@ it("should produce different hash for different inputs", () => {
 ```
 
 Test diagnostics:
+
 ```typescript
 it("should collect ERROR for enum without values", async () => {
   const schema = {
@@ -445,7 +497,7 @@ it("should collect ERROR for enum without values", async () => {
   };
 
   await expect(compiler.compile("User", "v1")).rejects.toThrow(
-    "Enum field 'status' has no enum values defined"
+    "Enum field 'status' has no enum values defined",
   );
 });
 
@@ -467,6 +519,7 @@ it("should allow compilation with INFO diagnostics", async () => {
 ### Integration Tests
 
 Test idempotency:
+
 ```typescript
 it("should produce identical output when compiled twice", async () => {
   const compiled1 = await compiler.compile("User", "v1");
@@ -482,12 +535,14 @@ it("should produce identical output when compiled twice", async () => {
 ## Future Enhancements
 
 ### Phase 9.1+ Enhancements
+
 - Store compiled snapshots in `meta.entity_compiled` table
 - Store overlay-specific compilations in `meta.entity_compiled_overlay`
 - Support schema diff ("what changed between v1 and v2?")
 - Versioned compilation history
 
 ### Phase 9.2+ Enhancements
+
 - Persist diagnostics to `MetaAudit` table
 - Configurable quality gates (block on ERROR, optional block on WARN)
 - Diagnostic suppression rules
@@ -495,6 +550,7 @@ it("should produce identical output when compiled twice", async () => {
 - Rich error messages with fix suggestions
 
 ### Phase 9.3+ Enhancements
+
 - OpenTelemetry trace spans
 - Prometheus metrics export
 - Grafana dashboard for compilation metrics
@@ -506,6 +562,7 @@ it("should produce identical output when compiled twice", async () => {
 ## Build Status
 
 ✅ **Both packages build successfully**
+
 - Core package: 68ms
 - Runtime package: 163ms
 - JavaScript compilation: SUCCESS
@@ -547,6 +604,7 @@ The overlay engine enables controlled, tenant-specific or application-specific c
 **Purpose**: Apply overlays deterministically during compilation
 
 **Key Concepts**:
+
 - **Overlay Set**: Ordered array of overlay IDs (published only)
 - **Change Kinds**: add_field, modify_field, remove_field, tweak_policy
 - **Conflict Modes**: fail, overwrite, merge
@@ -558,18 +616,18 @@ The overlay engine enables controlled, tenant-specific or application-specific c
 
 ```typescript
 export type OverlayChangeKind =
-  | "add_field"          // Add a new field to entity
-  | "modify_field"       // Modify existing field properties
-  | "remove_field"       // Remove a field from entity
-  | "tweak_policy"       // Modify policy configuration
-  | "add_index"          // Add database index (future)
-  | "remove_index"       // Remove database index (future)
-  | "tweak_relation";    // Modify relationship (future)
+  | "add_field" // Add a new field to entity
+  | "modify_field" // Modify existing field properties
+  | "remove_field" // Remove a field from entity
+  | "tweak_policy" // Modify policy configuration
+  | "add_index" // Add database index (future)
+  | "remove_index" // Remove database index (future)
+  | "tweak_relation"; // Modify relationship (future)
 
 export type OverlayConflictMode =
-  | "fail"      // Throw error if target already exists/conflicts
+  | "fail" // Throw error if target already exists/conflicts
   | "overwrite" // Replace existing target completely
-  | "merge";    // Deep merge with existing target (for objects)
+  | "merge"; // Deep merge with existing target (for objects)
 
 export type OverlayChange = {
   id: string;
@@ -757,6 +815,7 @@ private applyOverlays(
 #### Change Handlers
 
 **add_field**:
+
 ```typescript
 private applyAddField(schema: EntitySchema, change: OverlayChange): void {
   const fieldDef = change.changeJson as FieldDefinition;
@@ -782,6 +841,7 @@ private applyAddField(schema: EntitySchema, change: OverlayChange): void {
 ```
 
 **modify_field**:
+
 ```typescript
 private applyModifyField(schema: EntitySchema, change: OverlayChange): void {
   const fieldName = change.changeJson.name as string;
@@ -803,6 +863,7 @@ private applyModifyField(schema: EntitySchema, change: OverlayChange): void {
 ```
 
 **remove_field**:
+
 ```typescript
 private applyRemoveField(schema: EntitySchema, change: OverlayChange): void {
   const fieldName = change.changeJson.name as string;
@@ -822,6 +883,7 @@ private applyRemoveField(schema: EntitySchema, change: OverlayChange): void {
 ```
 
 **tweak_policy**:
+
 ```typescript
 private applyTweakPolicy(schema: EntitySchema, change: OverlayChange): void {
   const policyDef = change.changeJson as PolicyDefinition;
@@ -880,7 +942,9 @@ const overlay = {
 };
 
 // Compile with overlay
-const compiled = await compiler.compileWithOverlays("Invoice", "v1", ["ovl_123"]);
+const compiled = await compiler.compileWithOverlays("Invoice", "v1", [
+  "ovl_123",
+]);
 // Result: Invoice entity now has "discount" field
 ```
 
@@ -920,9 +984,9 @@ const compiled = await compiler.compileWithOverlays("User", "v1", ["ovl_456"]);
 ```typescript
 // Apply multiple overlays in sequence
 const overlaySet = [
-  "ovl_base_customizations",    // Applied first
-  "ovl_tenant_specific",         // Applied second
-  "ovl_temporary_hotfix",        // Applied last
+  "ovl_base_customizations", // Applied first
+  "ovl_tenant_specific", // Applied second
+  "ovl_temporary_hotfix", // Applied last
 ];
 
 const compiled = await compiler.compileWithOverlays("Order", "v1", overlaySet);
@@ -950,7 +1014,7 @@ const overlay = {
         action: "read",
         resource: "Employee",
         conditions: [
-          { field: "ctx.roles", operator: "in", value: ["admin", "hr"] }
+          { field: "ctx.roles", operator: "in", value: ["admin", "hr"] },
         ],
         priority: 100,
       },
@@ -964,6 +1028,7 @@ const overlay = {
 ### Conflict Resolution
 
 **fail Mode**:
+
 ```typescript
 // Throws error if field/policy already exists
 {
@@ -975,6 +1040,7 @@ const overlay = {
 ```
 
 **overwrite Mode**:
+
 ```typescript
 // Replaces existing field/policy completely
 {
@@ -986,6 +1052,7 @@ const overlay = {
 ```
 
 **merge Mode**:
+
 ```typescript
 // Deep merges with existing field/policy
 {
@@ -1042,19 +1109,24 @@ All overlay operations are logged for audit and debugging:
 Compiled models with overlays are cached separately:
 
 **Cache Key Pattern**:
+
 ```
 meta:compiled_overlay:{entityName}:{version}:{overlaySetHash}
 ```
 
 **Overlay Set Hash**:
+
 ```typescript
-const overlaySetHash = sha256(JSON.stringify({
-  overlaySet: ["ovl_123", "ovl_456"],
-  baseOutputHash: "abc123..."
-}));
+const overlaySetHash = sha256(
+  JSON.stringify({
+    overlaySet: ["ovl_123", "ovl_456"],
+    baseOutputHash: "abc123...",
+  }),
+);
 ```
 
 **Cache Invalidation**:
+
 - When overlay status changes (draft → published)
 - When overlay changes are modified
 - When base entity version changes
@@ -1063,6 +1135,7 @@ const overlaySetHash = sha256(JSON.stringify({
 ### Future Enhancements (Phase 10.2+)
 
 **Overlay APIs**:
+
 - `POST /api/meta/overlays` - Create overlay
 - `GET /api/meta/overlays/:id` - Get overlay
 - `PUT /api/meta/overlays/:id` - Update overlay
@@ -1072,12 +1145,14 @@ const overlaySetHash = sha256(JSON.stringify({
 - `POST /api/meta/entities/:name/versions/:version/compile?overlay=...` - Preview compile
 
 **Additional Change Kinds**:
+
 - `add_index` / `remove_index` - Index management
 - `tweak_relation` - Relationship modifications
 - `add_validation` / `remove_validation` - Validation rules
 - `tweak_ui_config` - UI-specific customizations
 
 **Advanced Features**:
+
 - Overlay inheritance (base overlay → tenant overlay)
 - Overlay diff/preview before publish
 - Rollback support (revert to previous overlay version)
@@ -1087,6 +1162,7 @@ const overlaySetHash = sha256(JSON.stringify({
 ### Acceptance Criteria
 
 ✅ **Phase 10.1 Complete**:
+
 1. Overlay types defined in core package
 2. Overlay resolution algorithm implemented
 3. Four change kinds supported: add_field, modify_field, remove_field, tweak_policy
@@ -1097,6 +1173,7 @@ const overlaySetHash = sha256(JSON.stringify({
 8. JavaScript compilation succeeds
 
 **Next Steps (Phase 10.2)**:
+
 1. Add overlay CRUD APIs to MetaRegistry contract
 2. Implement overlay database operations
 3. Add preview compile endpoint
@@ -1105,4 +1182,4 @@ const overlaySetHash = sha256(JSON.stringify({
 
 ---
 
-*Generated: 2026-02-05*
+_Generated: 2026-02-05_

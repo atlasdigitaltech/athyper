@@ -14,26 +14,26 @@
 
 /** Where the operation appears in the UI */
 export type OperationSurface =
-  | "LIST"          // list page only
-  | "DETAIL"        // detail page only
-  | "BOTH"          // both list and detail
-  | "PALETTE_ONLY"  // command palette only (no visible button)
-  | "HIDDEN";       // disabled from all UI
+  | "LIST" // list page only
+  | "DETAIL" // detail page only
+  | "BOTH" // both list and detail
+  | "PALETTE_ONLY" // command palette only (no visible button)
+  | "HIDDEN"; // disabled from all UI
 
 /** How the operation is rendered on its surface */
 export type OperationPlacement =
-  | "PRIMARY"   // primary action button (prominent CTA)
-  | "TOOLBAR"   // toolbar button row
-  | "OVERFLOW"  // overflow/more menu
-  | "CONTEXT"   // context/right-click menu
-  | "COMMAND";  // command palette only
+  | "PRIMARY" // primary action button (prominent CTA)
+  | "TOOLBAR" // toolbar button row
+  | "OVERFLOW" // overflow/more menu
+  | "CONTEXT" // context/right-click menu
+  | "COMMAND"; // command palette only
 
 /** How the operation is dispatched when triggered */
 export type HandlerType =
-  | "NAVIGATE"  // client-side router.push(handlerTarget)
-  | "API"       // POST to entity action endpoint
-  | "MODAL"     // open modal dialog by key
-  | "INLINE";   // inline component render
+  | "NAVIGATE" // client-side router.push(handlerTarget)
+  | "API" // POST to entity action endpoint
+  | "MODAL" // open modal dialog by key
+  | "INLINE"; // inline component render
 
 // ============================================================================
 // Entity Capabilities (full resolved output)
@@ -180,38 +180,38 @@ export interface TabHint {
  * Used to generate command palette aliases like "NEW PO", "APPROVE INV".
  */
 export const VERB_MAP: Record<string, string> = {
-  create:       "NEW",
-  read:         "VIEW",
-  update:       "EDIT",
-  delete:       "DELETE",
+  create: "NEW",
+  read: "VIEW",
+  update: "EDIT",
+  delete: "DELETE",
   delete_draft: "DELETE DRAFT",
-  submit:       "SUBMIT",
-  amend:        "AMEND",
-  cancel:       "CANCEL",
-  close:        "CLOSE",
-  reopen:       "REOPEN",
-  withdraw:     "WITHDRAW",
-  escalate:     "ESCALATE",
-  approve:      "APPROVE",
-  deny:         "REJECT",
-  post:         "POST",
-  reverse:      "REVERSE",
-  reconcile:    "RECONCILE",
-  copy:         "COPY",
-  merge:        "MERGE",
-  report:       "REPORT",
-  print:        "PRINT",
-  import:       "IMPORT",
-  export:       "EXPORT",
-  bulk_import:  "BULK IMPORT",
-  bulk_export:  "BULK EXPORT",
-  bulk_update:  "BULK UPDATE",
-  bulk_delete:  "BULK DELETE",
-  delegate:     "DELEGATE",
-  share_readonly:  "SHARE",
-  share_editable:  "SHARE EDIT",
-  comment_add:     "COMMENT",
-  attachment_add:  "ATTACH",
-  follow:          "FOLLOW",
-  tag:             "TAG",
+  submit: "SUBMIT",
+  amend: "AMEND",
+  cancel: "CANCEL",
+  close: "CLOSE",
+  reopen: "REOPEN",
+  withdraw: "WITHDRAW",
+  escalate: "ESCALATE",
+  approve: "APPROVE",
+  deny: "REJECT",
+  post: "POST",
+  reverse: "REVERSE",
+  reconcile: "RECONCILE",
+  copy: "COPY",
+  merge: "MERGE",
+  report: "REPORT",
+  print: "PRINT",
+  import: "IMPORT",
+  export: "EXPORT",
+  bulk_import: "BULK IMPORT",
+  bulk_export: "BULK EXPORT",
+  bulk_update: "BULK UPDATE",
+  bulk_delete: "BULK DELETE",
+  delegate: "DELEGATE",
+  share_readonly: "SHARE",
+  share_editable: "SHARE EDIT",
+  comment_add: "COMMENT",
+  attachment_add: "ATTACH",
+  follow: "FOLLOW",
+  tag: "TAG",
 };

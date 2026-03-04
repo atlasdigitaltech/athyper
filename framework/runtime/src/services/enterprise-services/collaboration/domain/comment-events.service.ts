@@ -24,7 +24,11 @@ interface SSEClient {
 /**
  * Comment Event Type
  */
-export type CommentEventType = "comment_created" | "comment_updated" | "comment_deleted" | "reply_created";
+export type CommentEventType =
+  | "comment_created"
+  | "comment_updated"
+  | "comment_deleted"
+  | "reply_created";
 
 /**
  * Comment Event Payload
@@ -64,7 +68,7 @@ export class CommentEventsService {
     options?: {
       entityType?: string;
       entityId?: string;
-    }
+    },
   ): string {
     const clientId = crypto.randomUUID();
 
@@ -72,7 +76,7 @@ export class CommentEventsService {
     response.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "X-Accel-Buffering": "no", // Disable nginx buffering
     });
 
@@ -102,7 +106,7 @@ export class CommentEventsService {
         entityId: options?.entityId,
         totalClients: this.clients.size,
       },
-      "[collab] SSE client connected"
+      "[collab] SSE client connected",
     );
 
     // Handle client disconnect
@@ -127,7 +131,7 @@ export class CommentEventsService {
         clientId,
         totalClients: this.clients.size,
       },
-      "[collab] SSE client disconnected"
+      "[collab] SSE client disconnected",
     );
   }
 
@@ -154,7 +158,7 @@ export class CommentEventsService {
       } catch (err) {
         this.logger.error(
           { clientId, error: String(err) },
-          "[collab] Failed to send SSE event"
+          "[collab] Failed to send SSE event",
         );
         // Remove failed client
         this.unregisterClient(clientId);
@@ -168,7 +172,7 @@ export class CommentEventsService {
         sentCount,
         totalClients: this.clients.size,
       },
-      "[collab] Comment event broadcasted"
+      "[collab] Comment event broadcasted",
     );
   }
 
@@ -199,7 +203,7 @@ export class CommentEventsService {
         } catch (err) {
           this.logger.warn(
             { clientId, error: String(err) },
-            "[collab] Heartbeat failed, removing client"
+            "[collab] Heartbeat failed, removing client",
           );
           this.unregisterClient(clientId);
         }
@@ -227,7 +231,11 @@ export class CommentEventsService {
   /**
    * Get clients for a specific entity
    */
-  getEntityClientCount(tenantId: string, entityType: string, entityId: string): number {
+  getEntityClientCount(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): number {
     let count = 0;
     for (const client of this.clients.values()) {
       if (

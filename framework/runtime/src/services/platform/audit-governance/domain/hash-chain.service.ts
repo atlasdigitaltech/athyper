@@ -17,13 +17,13 @@ import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
 // ============================================================================
 // Constants
 // ============================================================================
 
 /** Genesis hash for the first event in a tenant's chain */
-export const GENESIS_HASH = "GENESIS_0000000000000000000000000000000000000000000000000000000000000000";
+export const GENESIS_HASH =
+  "GENESIS_0000000000000000000000000000000000000000000000000000000000000000";
 
 const ANCHOR_TABLE = "audit.hash_anchor" as keyof DB & string;
 
@@ -70,9 +70,10 @@ export class AuditHashChainService {
 
     const payload = stableJsonStringify({
       tenant_id: tenantId,
-      event_timestamp: event.timestamp instanceof Date
-        ? event.timestamp.toISOString()
-        : String(event.timestamp),
+      event_timestamp:
+        event.timestamp instanceof Date
+          ? event.timestamp.toISOString()
+          : String(event.timestamp),
       instance_id: event.instanceId,
       event_type: event.eventType,
       actor_user_id: event.actor?.userId,
@@ -92,14 +93,14 @@ export class AuditHashChainService {
    */
   async initFromDb(db: Kysely<DB>, tenantId: string): Promise<void> {
     // Try to get the latest hash from the audit events table
-    const latest = await db
+    const latest = (await db
       .selectFrom("audit.workflow_event_log" as any)
       .select(["hash_curr"])
       .where("tenant_id", "=", tenantId)
       .where("hash_curr", "is not", null)
       .orderBy("event_timestamp", "desc")
       .limit(1)
-      .executeTakeFirst() as { hash_curr: string } | undefined;
+      .executeTakeFirst()) as { hash_curr: string } | undefined;
 
     if (latest?.hash_curr) {
       this.lastHashByTenant.set(tenantId, latest.hash_curr);
@@ -113,7 +114,13 @@ export class AuditHashChainService {
    */
   verifyChain(
     tenantId: string,
-    events: Array<{ id: string; hash_prev: string | null; hash_curr: string | null } & Partial<AuditEvent>>,
+    events: Array<
+      {
+        id: string;
+        hash_prev: string | null;
+        hash_curr: string | null;
+      } & Partial<AuditEvent>
+    >,
   ): ChainVerificationResult {
     if (events.length === 0) {
       return { valid: true, eventsChecked: 0, message: "No events to verify" };
@@ -143,9 +150,10 @@ export class AuditHashChainService {
       // Recompute the hash to verify it wasn't tampered
       const payload = stableJsonStringify({
         tenant_id: tenantId,
-        event_timestamp: event.timestamp instanceof Date
-          ? event.timestamp.toISOString()
-          : String(event.timestamp),
+        event_timestamp:
+          event.timestamp instanceof Date
+            ? event.timestamp.toISOString()
+            : String(event.timestamp),
         instance_id: event.instanceId,
         event_type: event.eventType,
         actor_user_id: event.actor?.userId,
@@ -192,13 +200,13 @@ export class AuditHashChainService {
     const dayEnd = new Date(anchorDate);
     dayEnd.setHours(23, 59, 59, 999);
 
-    const countResult = await db
+    const countResult = (await db
       .selectFrom("audit.workflow_event_log" as any)
       .select(db.fn.countAll().as("count"))
       .where("tenant_id", "=", tenantId)
       .where("event_timestamp", ">=", dayStart)
       .where("event_timestamp", "<=", dayEnd)
-      .executeTakeFirst() as { count: string | number } | undefined;
+      .executeTakeFirst()) as { count: string | number } | undefined;
 
     const eventCount = Number(countResult?.count ?? 0);
 
@@ -213,9 +221,7 @@ export class AuditHashChainService {
         created_at: new Date(),
       })
       .onConflict((oc) =>
-        (oc as any)
-          .constraint("hash_anchor_uniq")
-          .doNothing(),
+        (oc as any).constraint("hash_anchor_uniq").doNothing(),
       )
       .execute();
   }

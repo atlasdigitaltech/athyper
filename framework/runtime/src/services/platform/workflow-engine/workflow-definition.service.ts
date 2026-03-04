@@ -36,40 +36,53 @@ export interface IUserResolver {
   getUsersByRole(
     tenantId: string,
     roleCode: string,
-    scope?: { orgId?: string; entityId?: string }
+    scope?: { orgId?: string; entityId?: string },
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>>;
 
   /** Get users in a group */
   getUsersByGroup(
     tenantId: string,
-    groupId: string
+    groupId: string,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>>;
 
   /** Get manager(s) in hierarchy */
   getManagerInHierarchy(
     tenantId: string,
     userId: string,
-    options?: { level?: number; stopAtRole?: string }
-  ): Promise<Array<{ userId: string; displayName?: string; email?: string; level: number }>>;
+    options?: { level?: number; stopAtRole?: string },
+  ): Promise<
+    Array<{
+      userId: string;
+      displayName?: string;
+      email?: string;
+      level: number;
+    }>
+  >;
 
   /** Get cost center owner */
   getCostCenterOwner(
     tenantId: string,
-    costCenterId: string
-  ): Promise<{ userId: string; displayName?: string; email?: string } | undefined>;
+    costCenterId: string,
+  ): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  >;
 
   /** Get department head */
   getDepartmentHead(
     tenantId: string,
-    departmentId: string
-  ): Promise<{ userId: string; displayName?: string; email?: string } | undefined>;
+    departmentId: string,
+  ): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  >;
 
   /** Get user by field value */
   getUserByFieldValue(
     tenantId: string,
     fieldPath: string,
-    value: unknown
-  ): Promise<{ userId: string; displayName?: string; email?: string } | undefined>;
+    value: unknown,
+  ): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  >;
 }
 
 // ============================================================================
@@ -81,27 +94,44 @@ export interface IUserResolver {
  * Override with actual implementation in production.
  */
 export class DefaultUserResolver implements IUserResolver {
-  async getUsersByRole(): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
+  async getUsersByRole(): Promise<
+    Array<{ userId: string; displayName?: string; email?: string }>
+  > {
     return [];
   }
 
-  async getUsersByGroup(): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
+  async getUsersByGroup(): Promise<
+    Array<{ userId: string; displayName?: string; email?: string }>
+  > {
     return [];
   }
 
-  async getManagerInHierarchy(): Promise<Array<{ userId: string; displayName?: string; email?: string; level: number }>> {
+  async getManagerInHierarchy(): Promise<
+    Array<{
+      userId: string;
+      displayName?: string;
+      email?: string;
+      level: number;
+    }>
+  > {
     return [];
   }
 
-  async getCostCenterOwner(): Promise<{ userId: string; displayName?: string; email?: string } | undefined> {
+  async getCostCenterOwner(): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  > {
     return undefined;
   }
 
-  async getDepartmentHead(): Promise<{ userId: string; displayName?: string; email?: string } | undefined> {
+  async getDepartmentHead(): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  > {
     return undefined;
   }
 
-  async getUserByFieldValue(): Promise<{ userId: string; displayName?: string; email?: string } | undefined> {
+  async getUserByFieldValue(): Promise<
+    { userId: string; displayName?: string; email?: string } | undefined
+  > {
     return undefined;
   }
 }
@@ -116,7 +146,7 @@ export class DefaultUserResolver implements IUserResolver {
 export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowService {
   constructor(
     private readonly repository: IApprovalWorkflowRepository,
-    private readonly userResolver: IUserResolver = new DefaultUserResolver()
+    private readonly userResolver: IUserResolver = new DefaultUserResolver(),
   ) {}
 
   // ==========================================================================
@@ -126,7 +156,9 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   /**
    * Validate an approval workflow template
    */
-  validate(template: CreateApprovalWorkflowInput | StoredApprovalWorkflowTemplate): TemplateValidationResult {
+  validate(
+    template: CreateApprovalWorkflowInput | StoredApprovalWorkflowTemplate,
+  ): TemplateValidationResult {
     return validateApprovalWorkflowTemplate(template);
   }
 
@@ -140,7 +172,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   async createTemplate(
     tenantId: string,
     template: CreateApprovalWorkflowInput,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     // Validate template
     const validation = this.validate(template);
@@ -148,7 +180,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       throw new ApprovalWorkflowError(
         "VALIDATION_ERROR",
         `Template validation failed: ${validation.errors.map((e) => e.message).join(", ")}`,
-        validation
+        validation,
       );
     }
 
@@ -157,7 +189,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     if (existing) {
       throw new ApprovalWorkflowError(
         "DUPLICATE_CODE",
-        `Template with code '${template.code}' already exists`
+        `Template with code '${template.code}' already exists`,
       );
     }
 
@@ -173,12 +205,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     tenantId: string,
     templateId: string,
     updates: UpdateApprovalWorkflowInput,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     // Get existing template
     const existing = await this.repository.getById(tenantId, templateId);
     if (!existing) {
-      throw new ApprovalWorkflowError("NOT_FOUND", `Template not found: ${templateId}`);
+      throw new ApprovalWorkflowError(
+        "NOT_FOUND",
+        `Template not found: ${templateId}`,
+      );
     }
 
     // Merge and validate
@@ -188,7 +223,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       throw new ApprovalWorkflowError(
         "VALIDATION_ERROR",
         `Template validation failed: ${validation.errors.map((e) => e.message).join(", ")}`,
-        validation
+        validation,
       );
     }
 
@@ -196,7 +231,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     if (updates.code && updates.code !== existing.code) {
       throw new ApprovalWorkflowError(
         "INVALID_UPDATE",
-        "Cannot change template code. Clone the template instead."
+        "Cannot change template code. Clone the template instead.",
       );
     }
 
@@ -210,12 +245,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   async publishTemplate(
     tenantId: string,
     templateId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     // Get template
     const template = await this.repository.getById(tenantId, templateId);
     if (!template) {
-      throw new ApprovalWorkflowError("NOT_FOUND", `Template not found: ${templateId}`);
+      throw new ApprovalWorkflowError(
+        "NOT_FOUND",
+        `Template not found: ${templateId}`,
+      );
     }
 
     // Validate before publishing
@@ -224,7 +262,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       throw new ApprovalWorkflowError(
         "VALIDATION_ERROR",
         `Cannot publish invalid template: ${validation.errors.map((e) => e.message).join(", ")}`,
-        validation
+        validation,
       );
     }
 
@@ -232,7 +270,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     if (!template.enabled) {
       throw new ApprovalWorkflowError(
         "INVALID_STATE",
-        "Cannot publish disabled template. Enable it first."
+        "Cannot publish disabled template. Enable it first.",
       );
     }
 
@@ -245,7 +283,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    */
   async getTemplate(
     tenantId: string,
-    templateId: string
+    templateId: string,
   ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     return this.repository.getById(tenantId, templateId);
   }
@@ -255,7 +293,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    */
   async getActiveTemplate(
     tenantId: string,
-    code: string
+    code: string,
   ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     return this.repository.getActiveByCode(tenantId, code);
   }
@@ -265,7 +303,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    */
   async listTemplates(
     tenantId: string,
-    options?: ApprovalWorkflowQueryOptions
+    options?: ApprovalWorkflowQueryOptions,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     return this.repository.list(tenantId, options);
   }
@@ -276,14 +314,17 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   async deleteTemplate(tenantId: string, templateId: string): Promise<void> {
     const template = await this.repository.getById(tenantId, templateId);
     if (!template) {
-      throw new ApprovalWorkflowError("NOT_FOUND", `Template not found: ${templateId}`);
+      throw new ApprovalWorkflowError(
+        "NOT_FOUND",
+        `Template not found: ${templateId}`,
+      );
     }
 
     // Cannot delete active template
     if (template.isActive) {
       throw new ApprovalWorkflowError(
         "INVALID_STATE",
-        "Cannot delete active template. Unpublish it first."
+        "Cannot delete active template. Unpublish it first.",
       );
     }
 
@@ -298,12 +339,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     templateId: string,
     newCode: string,
     newName: string,
-    clonedBy: string
+    clonedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     // Check source exists
     const source = await this.repository.getById(tenantId, templateId);
     if (!source) {
-      throw new ApprovalWorkflowError("NOT_FOUND", `Template not found: ${templateId}`);
+      throw new ApprovalWorkflowError(
+        "NOT_FOUND",
+        `Template not found: ${templateId}`,
+      );
     }
 
     // Check new code doesn't exist
@@ -311,11 +355,17 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     if (existing) {
       throw new ApprovalWorkflowError(
         "DUPLICATE_CODE",
-        `Template with code '${newCode}' already exists`
+        `Template with code '${newCode}' already exists`,
       );
     }
 
-    return this.repository.clone(tenantId, templateId, newCode, newName, clonedBy);
+    return this.repository.clone(
+      tenantId,
+      templateId,
+      newCode,
+      newName,
+      clonedBy,
+    );
   }
 
   // ==========================================================================
@@ -329,13 +379,13 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     tenantId: string,
     entityType: ApprovalEntityType,
     triggerEvent: ApprovalTriggerEvent,
-    entityData?: Record<string, unknown>
+    entityData?: Record<string, unknown>,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     // Get matching templates
     const templates = await this.repository.findMatchingTemplates(
       tenantId,
       entityType,
-      triggerEvent
+      triggerEvent,
     );
 
     if (!entityData || templates.length === 0) {
@@ -351,13 +401,16 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       // Check trigger conditions
       if (trigger.conditions && trigger.conditions.length > 0) {
         return trigger.conditions.every((condition) =>
-          this.evaluateCondition(condition, entityData)
+          this.evaluateCondition(condition, entityData),
         );
       }
 
       // Check amount threshold
       if (trigger.amountThreshold) {
-        const amount = this.getFieldValue(entityData, trigger.amountThreshold.field);
+        const amount = this.getFieldValue(
+          entityData,
+          trigger.amountThreshold.field,
+        );
         if (amount === undefined) return false;
 
         const numAmount = Number(amount);
@@ -367,7 +420,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
           numAmount,
           trigger.amountThreshold.operator,
           trigger.amountThreshold.value,
-          trigger.amountThreshold.upperValue
+          trigger.amountThreshold.upperValue,
         );
       }
 
@@ -385,13 +438,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   async resolveApprovers(
     tenantId: string,
     step: ApprovalStep,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<ResolvedApprover[]> {
     const resolvedApprovers: ResolvedApprover[] = [];
     const seenUserIds = new Set<string>();
 
     // Sort approver rules by priority
-    const sortedRules = [...step.approvers].sort((a, b) => a.priority - b.priority);
+    const sortedRules = [...step.approvers].sort(
+      (a, b) => a.priority - b.priority,
+    );
 
     for (const rule of sortedRules) {
       // Skip fallback rules on first pass
@@ -404,7 +459,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
             entity: context.entity,
             requester: context.requester,
             metadata: context.metadata,
-          })
+          }),
         );
         if (!conditionsMet) continue;
       }
@@ -462,7 +517,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   private async resolveApproverRule(
     tenantId: string,
     rule: ApproverRule,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     switch (rule.type) {
       case "role":
@@ -491,11 +546,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   private async resolveRoleApprovers(
     tenantId: string,
     rule: ApproverRule,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     if (!rule.role) return [];
 
-    const allUsers: Array<{ userId: string; displayName?: string; email?: string }> = [];
+    const allUsers: Array<{
+      userId: string;
+      displayName?: string;
+      email?: string;
+    }> = [];
 
     for (const roleCode of rule.role.roles) {
       const scope: { orgId?: string; entityId?: string } = {};
@@ -505,7 +564,11 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
         scope.orgId = context.requester.orgId;
       }
 
-      const users = await this.userResolver.getUsersByRole(tenantId, roleCode, scope);
+      const users = await this.userResolver.getUsersByRole(
+        tenantId,
+        roleCode,
+        scope,
+      );
       allUsers.push(...users);
     }
 
@@ -522,7 +585,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    * Resolve user-based approvers
    */
   private async resolveUserApprovers(
-    rule: ApproverRule
+    rule: ApproverRule,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     if (!rule.user) return [];
 
@@ -535,7 +598,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   private async resolveDynamicApprovers(
     tenantId: string,
     rule: ApproverRule,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     if (!rule.dynamic) return [];
 
@@ -548,7 +611,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
           {
             level: options?.maxLevels,
             stopAtRole: options?.stopAtRole,
-          }
+          },
         );
 
         // Apply skip and include options
@@ -557,7 +620,9 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
           result = result.filter((m) => m.level > options.skipLevels!);
         }
         if (options?.includeLevels && options.includeLevels.length > 0) {
-          result = result.filter((m) => options.includeLevels!.includes(m.level));
+          result = result.filter((m) =>
+            options.includeLevels!.includes(m.level),
+          );
         }
 
         return result;
@@ -567,7 +632,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
         if (!context.requester.costCenterId) return [];
         const owner = await this.userResolver.getCostCenterOwner(
           tenantId,
-          context.requester.costCenterId
+          context.requester.costCenterId,
         );
         return owner ? [owner] : [];
       }
@@ -576,29 +641,33 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
         if (!context.requester.departmentId) return [];
         const head = await this.userResolver.getDepartmentHead(
           tenantId,
-          context.requester.departmentId
+          context.requester.departmentId,
         );
         return head ? [head] : [];
       }
 
       case "entity_owner": {
-        const ownerId = this.getFieldValue(context.entity, "owner_id") ||
-                        this.getFieldValue(context.entity, "ownerId") ||
-                        this.getFieldValue(context.entity, "created_by") ||
-                        this.getFieldValue(context.entity, "createdBy");
+        const ownerId =
+          this.getFieldValue(context.entity, "owner_id") ||
+          this.getFieldValue(context.entity, "ownerId") ||
+          this.getFieldValue(context.entity, "created_by") ||
+          this.getFieldValue(context.entity, "createdBy");
         if (!ownerId) return [];
         return [{ userId: String(ownerId) }];
       }
 
       case "custom_field": {
         if (!rule.dynamic.sourceField) return [];
-        const fieldValue = this.getFieldValue(context.entity, rule.dynamic.sourceField);
+        const fieldValue = this.getFieldValue(
+          context.entity,
+          rule.dynamic.sourceField,
+        );
         if (!fieldValue) return [];
 
         const user = await this.userResolver.getUserByFieldValue(
           tenantId,
           rule.dynamic.sourceField,
-          fieldValue
+          fieldValue,
         );
         return user ? [user] : [];
       }
@@ -613,11 +682,15 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    */
   private async resolveGroupApprovers(
     tenantId: string,
-    rule: ApproverRule
+    rule: ApproverRule,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     if (!rule.group) return [];
 
-    const allUsers: Array<{ userId: string; displayName?: string; email?: string }> = [];
+    const allUsers: Array<{
+      userId: string;
+      displayName?: string;
+      email?: string;
+    }> = [];
 
     for (const groupId of rule.group.groupIds) {
       const users = await this.userResolver.getUsersByGroup(tenantId, groupId);
@@ -638,7 +711,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
    */
   private async resolveExpressionApprovers(
     rule: ApproverRule,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<Array<{ userId: string; displayName?: string; email?: string }>> {
     if (!rule.expression) return [];
 
@@ -670,14 +743,22 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
   /**
    * Evaluate a condition against data
    */
-  private evaluateCondition(condition: ApprovalCondition, data: Record<string, unknown>): boolean {
+  private evaluateCondition(
+    condition: ApprovalCondition,
+    data: Record<string, unknown>,
+  ): boolean {
     const results: boolean[] = [];
 
     // Evaluate rules
     if (condition.rules) {
       for (const rule of condition.rules) {
         const fieldValue = this.getFieldValue(data, rule.field);
-        const result = this.evaluateConditionRule(fieldValue, rule.operator, rule.value, rule.upperValue);
+        const result = this.evaluateConditionRule(
+          fieldValue,
+          rule.operator,
+          rule.value,
+          rule.upperValue,
+        );
         results.push(result);
       }
     }
@@ -704,7 +785,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     fieldValue: unknown,
     operator: string,
     value?: unknown,
-    upperValue?: unknown
+    upperValue?: unknown,
   ): boolean {
     switch (operator) {
       case "eq":
@@ -712,25 +793,57 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       case "neq":
         return fieldValue !== value;
       case "gt":
-        return fieldValue !== undefined && fieldValue !== null && Number(fieldValue) > Number(value);
+        return (
+          fieldValue !== undefined &&
+          fieldValue !== null &&
+          Number(fieldValue) > Number(value)
+        );
       case "gte":
-        return fieldValue !== undefined && fieldValue !== null && Number(fieldValue) >= Number(value);
+        return (
+          fieldValue !== undefined &&
+          fieldValue !== null &&
+          Number(fieldValue) >= Number(value)
+        );
       case "lt":
-        return fieldValue !== undefined && fieldValue !== null && Number(fieldValue) < Number(value);
+        return (
+          fieldValue !== undefined &&
+          fieldValue !== null &&
+          Number(fieldValue) < Number(value)
+        );
       case "lte":
-        return fieldValue !== undefined && fieldValue !== null && Number(fieldValue) <= Number(value);
+        return (
+          fieldValue !== undefined &&
+          fieldValue !== null &&
+          Number(fieldValue) <= Number(value)
+        );
       case "in":
         return Array.isArray(value) && value.includes(fieldValue);
       case "nin":
         return Array.isArray(value) && !value.includes(fieldValue);
       case "contains":
-        return typeof fieldValue === "string" && typeof value === "string" && fieldValue.includes(value);
+        return (
+          typeof fieldValue === "string" &&
+          typeof value === "string" &&
+          fieldValue.includes(value)
+        );
       case "startsWith":
-        return typeof fieldValue === "string" && typeof value === "string" && fieldValue.startsWith(value);
+        return (
+          typeof fieldValue === "string" &&
+          typeof value === "string" &&
+          fieldValue.startsWith(value)
+        );
       case "endsWith":
-        return typeof fieldValue === "string" && typeof value === "string" && fieldValue.endsWith(value);
+        return (
+          typeof fieldValue === "string" &&
+          typeof value === "string" &&
+          fieldValue.endsWith(value)
+        );
       case "matches":
-        return typeof fieldValue === "string" && typeof value === "string" && new RegExp(value).test(fieldValue);
+        return (
+          typeof fieldValue === "string" &&
+          typeof value === "string" &&
+          new RegExp(value).test(fieldValue)
+        );
       case "exists":
         return fieldValue !== undefined && fieldValue !== null;
       case "notExists":
@@ -768,7 +881,7 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
     amount: number,
     operator: string,
     value: number,
-    upperValue?: number
+    upperValue?: number,
   ): boolean {
     switch (operator) {
       case "gt":
@@ -782,7 +895,9 @@ export class ApprovalWorkflowDefinitionService implements IApprovalWorkflowServi
       case "eq":
         return amount === value;
       case "between":
-        return amount >= value && (upperValue === undefined || amount <= upperValue);
+        return (
+          amount >= value && (upperValue === undefined || amount <= upperValue)
+        );
       default:
         return false;
     }
@@ -820,7 +935,7 @@ export class ApprovalWorkflowError extends Error {
   constructor(
     public readonly code: string,
     message: string,
-    public readonly details?: unknown
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApprovalWorkflowError";
@@ -836,7 +951,7 @@ export class ApprovalWorkflowError extends Error {
  */
 export function createApprovalWorkflowDefinitionService(
   repository: IApprovalWorkflowRepository,
-  userResolver?: IUserResolver
+  userResolver?: IUserResolver,
 ): ApprovalWorkflowDefinitionService {
   return new ApprovalWorkflowDefinitionService(repository, userResolver);
 }

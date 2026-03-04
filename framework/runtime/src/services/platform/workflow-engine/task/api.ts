@@ -234,7 +234,7 @@ export interface RouteDefinition {
 export class ApprovalTaskApiController {
   constructor(
     private readonly taskService: IApprovalTaskService,
-    private readonly notificationService: INotificationService
+    private readonly notificationService: INotificationService,
   ) {}
 
   /**
@@ -251,8 +251,12 @@ export class ApprovalTaskApiController {
       overdueOnly: request.overdueOnly,
       slaStatus: request.slaStatus,
       unreadOnly: request.unreadOnly,
-      createdAfter: request.createdAfter ? new Date(request.createdAfter) : undefined,
-      createdBefore: request.createdBefore ? new Date(request.createdBefore) : undefined,
+      createdAfter: request.createdAfter
+        ? new Date(request.createdAfter)
+        : undefined,
+      createdBefore: request.createdBefore
+        ? new Date(request.createdBefore)
+        : undefined,
       dueAfter: request.dueAfter ? new Date(request.dueAfter) : undefined,
       dueBefore: request.dueBefore ? new Date(request.dueBefore) : undefined,
       search: request.search,
@@ -265,7 +269,7 @@ export class ApprovalTaskApiController {
     const tasks = await this.taskService.getInbox(
       request.tenantId,
       request.userId,
-      filterOptions
+      filterOptions,
     );
 
     return {
@@ -284,7 +288,7 @@ export class ApprovalTaskApiController {
    */
   async getInboxSummary(
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<GetInboxSummaryResponse> {
     const summary = await this.taskService.getInboxSummary(tenantId, userId);
 
@@ -297,7 +301,9 @@ export class ApprovalTaskApiController {
   /**
    * Get work queue (prioritized task list)
    */
-  async getWorkQueue(request: GetWorkQueueRequest): Promise<GetWorkQueueResponse> {
+  async getWorkQueue(
+    request: GetWorkQueueRequest,
+  ): Promise<GetWorkQueueResponse> {
     const config: Partial<WorkQueueConfig> = {
       maxItems: request.maxItems,
       includeDelegated: request.includeDelegated,
@@ -307,7 +313,7 @@ export class ApprovalTaskApiController {
     const items = await this.taskService.getWorkQueue(
       request.tenantId,
       request.userId,
-      config
+      config,
     );
 
     return {
@@ -350,7 +356,10 @@ export class ApprovalTaskApiController {
   /**
    * Mark task as read
    */
-  async markTaskAsRead(tenantId: string, taskId: string): Promise<MarkTaskReadResponse> {
+  async markTaskAsRead(
+    tenantId: string,
+    taskId: string,
+  ): Promise<MarkTaskReadResponse> {
     const task = await this.taskService.markAsRead(tenantId, taskId);
 
     return {
@@ -364,7 +373,7 @@ export class ApprovalTaskApiController {
    */
   async markAllTasksAsRead(
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: boolean }> {
     await this.taskService.markAllAsRead(tenantId, userId);
 
@@ -374,12 +383,14 @@ export class ApprovalTaskApiController {
   /**
    * Complete task (take action)
    */
-  async completeTask(request: CompleteTaskRequest): Promise<CompleteTaskResponse> {
+  async completeTask(
+    request: CompleteTaskRequest,
+  ): Promise<CompleteTaskResponse> {
     const task = await this.taskService.completeTask(
       request.tenantId,
       request.taskId,
       request.action,
-      request.userId
+      request.userId,
     );
 
     return {
@@ -391,13 +402,15 @@ export class ApprovalTaskApiController {
   /**
    * Delegate task
    */
-  async delegateTask(request: DelegateTaskRequest): Promise<DelegateTaskResponse> {
+  async delegateTask(
+    request: DelegateTaskRequest,
+  ): Promise<DelegateTaskResponse> {
     const task = await this.taskService.delegateTask(
       request.tenantId,
       request.taskId,
       request.delegateTo,
       request.delegatedBy,
-      request.reason
+      request.reason,
     );
 
     return {
@@ -409,12 +422,14 @@ export class ApprovalTaskApiController {
   /**
    * Reassign task (admin)
    */
-  async reassignTask(request: ReassignTaskRequest): Promise<ReassignTaskResponse> {
+  async reassignTask(
+    request: ReassignTaskRequest,
+  ): Promise<ReassignTaskResponse> {
     const task = await this.taskService.reassignTask(
       request.tenantId,
       request.taskId,
       request.newAssigneeId,
-      request.reassignedBy
+      request.reassignedBy,
     );
 
     return {
@@ -428,9 +443,12 @@ export class ApprovalTaskApiController {
    */
   async getTasksForInstance(
     tenantId: string,
-    instanceId: string
+    instanceId: string,
   ): Promise<{ success: boolean; data: ApprovalTask[] }> {
-    const tasks = await this.taskService.getTasksForInstance(tenantId, instanceId);
+    const tasks = await this.taskService.getTasksForInstance(
+      tenantId,
+      instanceId,
+    );
 
     return {
       success: true,
@@ -442,7 +460,7 @@ export class ApprovalTaskApiController {
    * Get user notifications
    */
   async getNotifications(
-    request: GetNotificationsRequest
+    request: GetNotificationsRequest,
   ): Promise<GetNotificationsResponse> {
     const notifications = await this.notificationService.getNotifications(
       request.tenantId,
@@ -452,7 +470,7 @@ export class ApprovalTaskApiController {
         type: request.type as any,
         limit: request.limit,
         offset: request.offset,
-      }
+      },
     );
 
     return {
@@ -469,7 +487,7 @@ export class ApprovalTaskApiController {
    */
   async markNotificationAsRead(
     tenantId: string,
-    notificationId: string
+    notificationId: string,
   ): Promise<{ success: boolean }> {
     await this.notificationService.markAsRead(tenantId, notificationId);
 
@@ -481,7 +499,7 @@ export class ApprovalTaskApiController {
    */
   async markAllNotificationsAsRead(
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: boolean }> {
     await this.notificationService.markAllAsRead(tenantId, userId);
 
@@ -493,9 +511,12 @@ export class ApprovalTaskApiController {
    */
   async getNotificationPreferences(
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<GetPreferencesResponse> {
-    const prefs = await this.notificationService.getPreferences(tenantId, userId);
+    const prefs = await this.notificationService.getPreferences(
+      tenantId,
+      userId,
+    );
 
     if (!prefs) {
       throw new Error("Preferences not found");
@@ -511,12 +532,12 @@ export class ApprovalTaskApiController {
    * Update notification preferences
    */
   async updateNotificationPreferences(
-    request: UpdatePreferencesRequest
+    request: UpdatePreferencesRequest,
   ): Promise<UpdatePreferencesResponse> {
     const prefs = await this.notificationService.updatePreferences(
       request.tenantId,
       request.userId,
-      request.preferences
+      request.preferences,
     );
 
     return {
@@ -657,7 +678,7 @@ export function getApprovalTaskRoutes(): RouteDefinition[] {
  */
 export function createApprovalTaskApiController(
   taskService: IApprovalTaskService,
-  notificationService: INotificationService
+  notificationService: INotificationService,
 ): ApprovalTaskApiController {
   return new ApprovalTaskApiController(taskService, notificationService);
 }

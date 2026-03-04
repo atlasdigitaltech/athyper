@@ -36,7 +36,10 @@ describe("Health Check System", () => {
     it("should handle checker errors", async () => {
       const checker = vi.fn().mockRejectedValue(new Error("Connection failed"));
 
-      registry.register("failing", checker, { type: "database", required: true });
+      registry.register("failing", checker, {
+        type: "database",
+        required: true,
+      });
 
       const result = await registry.checkOne("failing");
 
@@ -48,13 +51,13 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       registry.register(
         "cache",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "cache", required: false }
+        { type: "cache", required: false },
       );
 
       const results = await registry.checkAll();
@@ -68,13 +71,13 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       registry.register(
         "cache",
         async () => ({ status: "degraded", timestamp: new Date() }),
-        { type: "cache", required: false }
+        { type: "cache", required: false },
       );
 
       const health = await registry.getSystemHealth();
@@ -87,7 +90,7 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "unhealthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       const health = await registry.getSystemHealth();
@@ -99,13 +102,13 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       registry.register(
         "cache",
         async () => ({ status: "unhealthy", timestamp: new Date() }),
-        { type: "cache", required: false }
+        { type: "cache", required: false },
       );
 
       const isReady = await registry.isReady();
@@ -117,7 +120,7 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "unhealthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       const isReady = await registry.isReady();
@@ -129,7 +132,7 @@ describe("Health Check System", () => {
       registry.register(
         "test",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "internal" }
+        { type: "internal" },
       );
 
       registry.unregister("test");
@@ -142,20 +145,28 @@ describe("Health Check System", () => {
       registry.register(
         "db",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "database", required: true }
+        { type: "database", required: true },
       );
 
       registry.register(
         "cache",
         async () => ({ status: "healthy", timestamp: new Date() }),
-        { type: "cache", required: false }
+        { type: "cache", required: false },
       );
 
       const list = registry.list();
 
       expect(list).toHaveLength(2);
-      expect(list[0]).toMatchObject({ name: "db", type: "database", required: true });
-      expect(list[1]).toMatchObject({ name: "cache", type: "cache", required: false });
+      expect(list[0]).toMatchObject({
+        name: "db",
+        type: "database",
+        required: true,
+      });
+      expect(list[1]).toMatchObject({
+        name: "cache",
+        type: "cache",
+        required: false,
+      });
     });
   });
 
@@ -185,7 +196,9 @@ describe("Health Check System", () => {
 
     it("should create a DB health checker", async () => {
       const db = {
-        health: vi.fn().mockResolvedValue({ healthy: true, message: "Connected" }),
+        health: vi
+          .fn()
+          .mockResolvedValue({ healthy: true, message: "Connected" }),
       };
 
       const checker = createDbHealthChecker(db);

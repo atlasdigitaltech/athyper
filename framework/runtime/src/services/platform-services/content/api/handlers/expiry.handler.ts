@@ -8,10 +8,12 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { ExpiryService } from "../../domain/services/ExpiryService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * Set expiration on attachment
@@ -19,10 +21,14 @@ import type { Request, Response } from "express";
  * Body: { attachmentId, expiresAt } OR { attachmentId, ttlSeconds }
  */
 export class SetExpirationHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const expiryService = await ctx.container.resolve<ExpiryService>(
-        TOKENS.expiryService
+        TOKENS.expiryService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -61,7 +67,7 @@ export class SetExpirationHandler implements RouteHandler {
           tenantId,
           attachmentId,
           ttlSeconds,
-          actorId
+          actorId,
         );
       } else {
         // Use explicit date
@@ -94,10 +100,14 @@ export class SetExpirationHandler implements RouteHandler {
  * Body: { attachmentId }
  */
 export class ClearExpirationHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const expiryService = await ctx.container.resolve<ExpiryService>(
-        TOKENS.expiryService
+        TOKENS.expiryService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";

@@ -12,7 +12,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import { compareRules } from "../types.js";
 
-import type { CompiledPolicy, ScopeType, SubjectType, Effect } from "../../types.js";
+import type {
+  CompiledPolicy,
+  ScopeType,
+  SubjectType,
+  Effect,
+} from "../../types.js";
 import type {
   PolicyInput,
   PolicyDecision,
@@ -41,7 +46,7 @@ function createMockCompiledPolicy(
     subjectKey?: string;
     operationId?: string;
     conditions?: any;
-  }>
+  }>,
 ): CompiledPolicy {
   const ruleIndex: CompiledPolicy["ruleIndex"] = {};
 
@@ -114,24 +119,35 @@ class MockFactsProvider {
     this.resources.set(key, resource);
   }
 
-  async resolveSubject(principalId: string, tenantId: string): Promise<PolicySubject> {
+  async resolveSubject(
+    principalId: string,
+    tenantId: string,
+  ): Promise<PolicySubject> {
     const key = `${tenantId}:${principalId}`;
-    return this.subjects.get(key) ?? {
-      principalId,
-      principalType: "user",
-      roles: [],
-      groups: [],
-      attributes: {},
-    };
+    return (
+      this.subjects.get(key) ?? {
+        principalId,
+        principalType: "user",
+        roles: [],
+        groups: [],
+        attributes: {},
+      }
+    );
   }
 
-  async resolveResource(tenantId: string, type: string, id?: string): Promise<PolicyResource> {
+  async resolveResource(
+    tenantId: string,
+    type: string,
+    id?: string,
+  ): Promise<PolicyResource> {
     const key = `${tenantId}:${type}:${id ?? "*"}`;
-    return this.resources.get(key) ?? {
-      type,
-      id,
-      attributes: {},
-    };
+    return (
+      this.resources.get(key) ?? {
+        type,
+        id,
+        attributes: {},
+      }
+    );
   }
 }
 
@@ -141,12 +157,12 @@ class MockFactsProvider {
 class MockPolicyEvaluator {
   constructor(
     private policyStore: MockPolicyStore,
-    private factsProvider: MockFactsProvider
+    private factsProvider: MockFactsProvider,
   ) {}
 
   async evaluate(
     input: PolicyInput,
-    options: PolicyEvaluationOptions = {}
+    options: PolicyEvaluationOptions = {},
   ): Promise<PolicyDecision> {
     const startTime = Date.now();
     const matchedRules: MatchedRule[] = [];
@@ -184,7 +200,10 @@ class MockPolicyEvaluator {
         for (const rule of rules) {
           // Evaluate conditions if present
           if (rule.conditions) {
-            const conditionResult = this.evaluateConditions(rule.conditions, input);
+            const conditionResult = this.evaluateConditions(
+              rule.conditions,
+              input,
+            );
             if (!conditionResult) continue;
           }
 
@@ -230,7 +249,10 @@ class MockPolicyEvaluator {
 
     // Resolve effect
     const conflictResolution = options.conflictResolution ?? "deny_overrides";
-    const { effect, decidingRule } = this.resolveEffect(matchedRules, conflictResolution);
+    const { effect, decidingRule } = this.resolveEffect(
+      matchedRules,
+      conflictResolution,
+    );
 
     return {
       effect,
@@ -239,11 +261,13 @@ class MockPolicyEvaluator {
       reasons: this.buildReasons(effect, decidingRule, matchedRules.length),
       matchedRules: options.explain ? matchedRules : [],
       decidingRule,
-      debug: options.explain ? {
-        rulesScanned,
-        rulesMatched: matchedRules.length,
-        policiesEvaluated,
-      } : undefined,
+      debug: options.explain
+        ? {
+            rulesScanned,
+            rulesMatched: matchedRules.length,
+            policiesEvaluated,
+          }
+        : undefined,
       metadata: {
         durationMs: Date.now() - startTime,
         evaluatedAt: new Date(),
@@ -253,7 +277,9 @@ class MockPolicyEvaluator {
     };
   }
 
-  private buildSubjectKeys(subject: PolicySubject): Array<{ type: SubjectType; key: string }> {
+  private buildSubjectKeys(
+    subject: PolicySubject,
+  ): Array<{ type: SubjectType; key: string }> {
     const keys: Array<{ type: SubjectType; key: string }> = [];
 
     keys.push({ type: "user", key: subject.principalId });
@@ -273,7 +299,10 @@ class MockPolicyEvaluator {
     return keys;
   }
 
-  private buildScopeKey(scopeType: ScopeType, resource: PolicyResource): string {
+  private buildScopeKey(
+    scopeType: ScopeType,
+    resource: PolicyResource,
+  ): string {
     return `${scopeType}:${resource.type}`;
   }
 
@@ -285,9 +314,13 @@ class MockPolicyEvaluator {
     const conditionList = conditions.conditions ?? [];
 
     if (operator === "and") {
-      return conditionList.every((c: any) => this.evaluateSingleCondition(c, input));
+      return conditionList.every((c: any) =>
+        this.evaluateSingleCondition(c, input),
+      );
     } else {
-      return conditionList.some((c: any) => this.evaluateSingleCondition(c, input));
+      return conditionList.some((c: any) =>
+        this.evaluateSingleCondition(c, input),
+      );
     }
   }
 
@@ -321,7 +354,7 @@ class MockPolicyEvaluator {
 
   private resolveEffect(
     matchedRules: MatchedRule[],
-    strategy: ConflictResolution
+    strategy: ConflictResolution,
   ): { effect: Effect; decidingRule?: MatchedRule } {
     if (matchedRules.length === 0) {
       return { effect: "deny" };
@@ -329,9 +362,21 @@ class MockPolicyEvaluator {
 
     const sorted = [...matchedRules].sort((a, b) =>
       compareRules(
-        { scopeType: a.scopeType, subjectType: a.subjectType, priority: a.priority, effect: a.effect, ruleId: a.ruleId },
-        { scopeType: b.scopeType, subjectType: b.subjectType, priority: b.priority, effect: b.effect, ruleId: b.ruleId }
-      )
+        {
+          scopeType: a.scopeType,
+          subjectType: a.subjectType,
+          priority: a.priority,
+          effect: a.effect,
+          ruleId: a.ruleId,
+        },
+        {
+          scopeType: b.scopeType,
+          subjectType: b.subjectType,
+          priority: b.priority,
+          effect: b.effect,
+          ruleId: b.ruleId,
+        },
+      ),
     );
 
     switch (strategy) {
@@ -354,7 +399,11 @@ class MockPolicyEvaluator {
     }
   }
 
-  private buildReasons(effect: Effect, decidingRule?: MatchedRule, _matchedCount?: number): string[] {
+  private buildReasons(
+    effect: Effect,
+    decidingRule?: MatchedRule,
+    _matchedCount?: number,
+  ): string[] {
     if (!decidingRule) {
       return ["No matching rules found (default deny)"];
     }
@@ -448,7 +497,12 @@ describe("Integration: Full Policy Evaluation Flow", () => {
     it("should deny when no rules match (default deny)", async () => {
       // Policy with rule for different subject
       const policy = createMockCompiledPolicy("policy-1", [
-        { ruleId: "r1", effect: "allow", priority: 100, subjectKey: "other-user" },
+        {
+          ruleId: "r1",
+          effect: "allow",
+          priority: 100,
+          subjectKey: "other-user",
+        },
       ]);
       policyStore.addPolicy(policy);
 
@@ -456,7 +510,9 @@ describe("Integration: Full Policy Evaluation Flow", () => {
       const decision = await evaluator.evaluate(input);
 
       expect(decision.allowed).toBe(false);
-      expect(decision.reasons).toContain("No matching rules found (default deny)");
+      expect(decision.reasons).toContain(
+        "No matching rules found (default deny)",
+      );
     });
   });
 
@@ -473,7 +529,9 @@ describe("Integration: Full Policy Evaluation Flow", () => {
       policyStore.addPolicy(policy2);
 
       const input = createTestInput();
-      const decision = await evaluator.evaluate(input, { conflictResolution: "priority_order" });
+      const decision = await evaluator.evaluate(input, {
+        conflictResolution: "priority_order",
+      });
 
       expect(decision.effect).toBe("deny");
       expect(decision.decidingRule?.ruleId).toBe("r2");
@@ -491,7 +549,9 @@ describe("Integration: Full Policy Evaluation Flow", () => {
       policyStore.addPolicy(policy2);
 
       const input = createTestInput();
-      const decision = await evaluator.evaluate(input, { conflictResolution: "deny_overrides" });
+      const decision = await evaluator.evaluate(input, {
+        conflictResolution: "deny_overrides",
+      });
 
       expect(decision.effect).toBe("deny");
       expect(decision.decidingRule?.ruleId).toBe("r2");
@@ -509,7 +569,9 @@ describe("Integration: Full Policy Evaluation Flow", () => {
       policyStore.addPolicy(policy2);
 
       const input = createTestInput();
-      const decision = await evaluator.evaluate(input, { conflictResolution: "allow_overrides" });
+      const decision = await evaluator.evaluate(input, {
+        conflictResolution: "allow_overrides",
+      });
 
       expect(decision.effect).toBe("allow");
       expect(decision.decidingRule?.ruleId).toBe("r2");
@@ -519,7 +581,13 @@ describe("Integration: Full Policy Evaluation Flow", () => {
   describe("Role-based Matching", () => {
     it("should match rules by role", async () => {
       const policy = createMockCompiledPolicy("policy-1", [
-        { ruleId: "r1", effect: "allow", priority: 100, subjectType: "kc_role", subjectKey: "editor" },
+        {
+          ruleId: "r1",
+          effect: "allow",
+          priority: 100,
+          subjectType: "kc_role",
+          subjectKey: "editor",
+        },
       ]);
       policyStore.addPolicy(policy);
 
@@ -541,13 +609,27 @@ describe("Integration: Full Policy Evaluation Flow", () => {
 
     it("should prefer user-specific rule over role rule", async () => {
       const policy = createMockCompiledPolicy("policy-1", [
-        { ruleId: "r1", effect: "deny", priority: 100, subjectType: "kc_role", subjectKey: "editor" },
-        { ruleId: "r2", effect: "allow", priority: 100, subjectType: "user", subjectKey: "user-123" },
+        {
+          ruleId: "r1",
+          effect: "deny",
+          priority: 100,
+          subjectType: "kc_role",
+          subjectKey: "editor",
+        },
+        {
+          ruleId: "r2",
+          effect: "allow",
+          priority: 100,
+          subjectType: "user",
+          subjectKey: "user-123",
+        },
       ]);
       policyStore.addPolicy(policy);
 
       const input = createTestInput();
-      const decision = await evaluator.evaluate(input, { conflictResolution: "priority_order" });
+      const decision = await evaluator.evaluate(input, {
+        conflictResolution: "priority_order",
+      });
 
       // User is more specific than role
       expect(decision.effect).toBe("allow");
@@ -565,7 +647,11 @@ describe("Integration: Full Policy Evaluation Flow", () => {
           conditions: {
             operator: "and",
             conditions: [
-              { field: "subject.attributes.department", operator: "eq", value: "engineering" },
+              {
+                field: "subject.attributes.department",
+                operator: "eq",
+                value: "engineering",
+              },
             ],
           },
         },
@@ -587,7 +673,11 @@ describe("Integration: Full Policy Evaluation Flow", () => {
           conditions: {
             operator: "and",
             conditions: [
-              { field: "subject.attributes.department", operator: "eq", value: "sales" },
+              {
+                field: "subject.attributes.department",
+                operator: "eq",
+                value: "sales",
+              },
             ],
           },
         },
@@ -609,8 +699,16 @@ describe("Integration: Full Policy Evaluation Flow", () => {
           conditions: {
             operator: "or",
             conditions: [
-              { field: "subject.attributes.department", operator: "eq", value: "sales" },
-              { field: "subject.attributes.department", operator: "eq", value: "engineering" },
+              {
+                field: "subject.attributes.department",
+                operator: "eq",
+                value: "sales",
+              },
+              {
+                field: "subject.attributes.department",
+                operator: "eq",
+                value: "engineering",
+              },
             ],
           },
         },
@@ -628,7 +726,13 @@ describe("Integration: Full Policy Evaluation Flow", () => {
     it("should include matched rules in explain mode", async () => {
       const policy = createMockCompiledPolicy("policy-1", [
         { ruleId: "r1", effect: "allow", priority: 100 },
-        { ruleId: "r2", effect: "allow", priority: 200, subjectType: "kc_role", subjectKey: "editor" },
+        {
+          ruleId: "r2",
+          effect: "allow",
+          priority: 200,
+          subjectType: "kc_role",
+          subjectKey: "editor",
+        },
       ]);
       policyStore.addPolicy(policy);
 
@@ -859,7 +963,9 @@ describe("Integration: Edge Cases", () => {
     const decision = await evaluator.evaluate(input);
 
     expect(decision.allowed).toBe(false);
-    expect(decision.reasons).toContain("No matching rules found (default deny)");
+    expect(decision.reasons).toContain(
+      "No matching rules found (default deny)",
+    );
   });
 
   it("should handle policy with no matching scope", async () => {
@@ -906,9 +1012,7 @@ describe("Integration: Edge Cases", () => {
 
     // Manually add wildcard rule
     policy.ruleIndex["entity:document"]["*"] = {
-      "ENTITY.read": [
-        { ruleId: "r1", effect: "allow", priority: 100 },
-      ],
+      "ENTITY.read": [{ ruleId: "r1", effect: "allow", priority: 100 }],
     };
 
     policyStore.addPolicy(policy);
@@ -929,7 +1033,13 @@ describe("Integration: Edge Cases", () => {
 
   it("should handle service accounts differently from users", async () => {
     const policy = createMockCompiledPolicy("policy-1", [
-      { ruleId: "r1", effect: "allow", priority: 100, subjectType: "service", subjectKey: "svc-123" },
+      {
+        ruleId: "r1",
+        effect: "allow",
+        priority: 100,
+        subjectType: "service",
+        subjectKey: "svc-123",
+      },
     ]);
     policyStore.addPolicy(policy);
 

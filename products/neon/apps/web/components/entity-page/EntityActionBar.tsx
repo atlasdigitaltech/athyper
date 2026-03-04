@@ -24,7 +24,9 @@ const buttonVariantMap: Record<string, "primary" | "ghost"> = {
 
 // Destructive actions get a semantic destructive override
 function getDestructiveClass(variant: string): string {
-  return variant === "destructive" ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" : "";
+  return variant === "destructive"
+    ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+    : "";
 }
 
 interface EntityActionBarProps {
@@ -33,8 +35,14 @@ interface EntityActionBarProps {
   disabled?: boolean;
 }
 
-export function EntityActionBar({ actions, onAction, disabled }: EntityActionBarProps) {
-  const [confirmAction, setConfirmAction] = useState<ActionDescriptor | null>(null);
+export function EntityActionBar({
+  actions,
+  onAction,
+  disabled,
+}: EntityActionBarProps) {
+  const [confirmAction, setConfirmAction] = useState<ActionDescriptor | null>(
+    null,
+  );
 
   if (actions.length === 0) return null;
 
@@ -77,13 +85,16 @@ export function EntityActionBar({ actions, onAction, disabled }: EntityActionBar
       {/* Confirmation dialog */}
       <Dialog
         open={confirmAction !== null}
-        onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAction(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Action</DialogTitle>
             <DialogDescription>
-              {confirmAction?.confirmationMessage ?? `Are you sure you want to ${confirmAction?.label?.toLowerCase()}?`}
+              {confirmAction?.confirmationMessage ??
+                `Are you sure you want to ${confirmAction?.label?.toLowerCase()}?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -91,8 +102,13 @@ export function EntityActionBar({ actions, onAction, disabled }: EntityActionBar
               Cancel
             </Button>
             <Button
-              variant={buttonVariantMap[confirmAction?.variant ?? "default"] ?? "primary"}
-              className={confirmAction ? getDestructiveClass(confirmAction.variant) : ""}
+              variant={
+                buttonVariantMap[confirmAction?.variant ?? "default"] ??
+                "primary"
+              }
+              className={
+                confirmAction ? getDestructiveClass(confirmAction.variant) : ""
+              }
               onClick={handleConfirm}
             >
               {confirmAction?.label ?? "Confirm"}

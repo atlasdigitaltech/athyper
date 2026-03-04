@@ -38,7 +38,13 @@ export interface AuditLoadSheddingPolicy {
 
 export interface LoadSheddingDecision {
   accepted: boolean;
-  reason: "required" | "never_drop" | "sampled_accept" | "sampled_reject" | "disabled" | "emergency_drop";
+  reason:
+    | "required"
+    | "never_drop"
+    | "sampled_accept"
+    | "sampled_reject"
+    | "disabled"
+    | "emergency_drop";
 }
 
 interface CachedPolicies {
@@ -50,7 +56,10 @@ interface CachedPolicies {
 // Never-drop rules (hardcoded safety — cannot be overridden)
 // ============================================================================
 
-const NEVER_DROP_CATEGORIES: ReadonlySet<string> = new Set(["admin", "recovery"]);
+const NEVER_DROP_CATEGORIES: ReadonlySet<string> = new Set([
+  "admin",
+  "recovery",
+]);
 
 const NEVER_DROP_EVENT_TYPES: ReadonlySet<string> = new Set([
   "workflow.approved",
@@ -158,7 +167,8 @@ export class AuditLoadSheddingService {
   }
 
   private getEventCategory(eventType: string): string | undefined {
-    const entry = AUDIT_EVENT_TAXONOMY[eventType as keyof typeof AUDIT_EVENT_TAXONOMY];
+    const entry =
+      AUDIT_EVENT_TAXONOMY[eventType as keyof typeof AUDIT_EVENT_TAXONOMY];
     return entry?.category;
   }
 
@@ -167,7 +177,10 @@ export class AuditLoadSheddingService {
     category: string | undefined,
   ): Promise<AuditLoadSheddingPolicy> {
     // Default: required (fail-safe — unknown events are always accepted)
-    const defaultPolicy: AuditLoadSheddingPolicy = { disposition: "required", sampleRate: 1.0 };
+    const defaultPolicy: AuditLoadSheddingPolicy = {
+      disposition: "required",
+      sampleRate: 1.0,
+    };
 
     if (!category) {
       return defaultPolicy;
@@ -202,7 +215,9 @@ export class AuditLoadSheddingService {
     return defaultPolicy;
   }
 
-  private async loadPolicies(tenantId: string): Promise<Map<string, AuditLoadSheddingPolicy>> {
+  private async loadPolicies(
+    tenantId: string,
+  ): Promise<Map<string, AuditLoadSheddingPolicy>> {
     // Check cache
     const cached = this.policyCache.get(tenantId);
     if (cached && Date.now() < cached.expiresAt) {

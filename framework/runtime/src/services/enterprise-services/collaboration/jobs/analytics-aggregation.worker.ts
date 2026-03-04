@@ -16,7 +16,6 @@ import type { Container } from "../../../../kernel/container.js";
 import type { Logger } from "../../../../kernel/logger.js";
 import type { CommentAnalyticsService } from "../domain/comment-analytics.service.js";
 
-
 /**
  * Analytics aggregation job payload
  */
@@ -37,9 +36,11 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
 
   try {
     // Check if job queue is available
-    const jobQueue = await container.resolve(TOKENS.jobQueue) as any;
+    const jobQueue = (await container.resolve(TOKENS.jobQueue)) as any;
     if (!jobQueue) {
-      logger.warn("[collab] Job queue not available, analytics aggregation will not run");
+      logger.warn(
+        "[collab] Job queue not available, analytics aggregation will not run",
+      );
       return;
     }
 
@@ -54,22 +55,26 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
           aggregationType: payload.aggregationType,
           targetDate: payload.targetDate,
         },
-        "[collab] Starting analytics aggregation"
+        "[collab] Starting analytics aggregation",
       );
 
       try {
-        const analyticsService = await container.resolve<CommentAnalyticsService>(
-          TOKENS.collabAnalyticsService
-        );
+        const analyticsService =
+          await container.resolve<CommentAnalyticsService>(
+            TOKENS.collabAnalyticsService,
+          );
 
         // Calculate date range based on aggregation type
-        const { startDate, endDate } = getDateRange(payload.targetDate, payload.aggregationType);
+        const { startDate, endDate } = getDateRange(
+          payload.targetDate,
+          payload.aggregationType,
+        );
 
         // Aggregate daily activity metrics
         const dailyMetrics = await analyticsService.getDailyAnalytics(
           payload.tenantId,
           new Date(startDate),
-          new Date(endDate)
+          new Date(endDate),
         );
 
         logger.debug(
@@ -79,7 +84,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
             endDate,
             totalDays: dailyMetrics.length,
           },
-          "[collab] Daily activity aggregated"
+          "[collab] Daily activity aggregated",
         );
 
         // Aggregate user engagement metrics
@@ -87,7 +92,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
           payload.tenantId,
           new Date(startDate),
           new Date(endDate),
-          100
+          100,
         );
 
         logger.debug(
@@ -95,7 +100,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
             tenantId: payload.tenantId,
             activeUsers: leaderboard.length,
           },
-          "[collab] User engagement aggregated"
+          "[collab] User engagement aggregated",
         );
 
         // Aggregate thread activity metrics
@@ -103,7 +108,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
           payload.tenantId,
           undefined,
           1000,
-          true
+          true,
         );
 
         logger.debug(
@@ -111,7 +116,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
             tenantId: payload.tenantId,
             activeThreads: activeThreads.length,
           },
-          "[collab] Thread activity aggregated"
+          "[collab] Thread activity aggregated",
         );
 
         const duration = Date.now() - startTime;
@@ -123,7 +128,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
             targetDate: payload.targetDate,
             durationMs: duration,
           },
-          "[collab] Analytics aggregation completed successfully"
+          "[collab] Analytics aggregation completed successfully",
         );
 
         await job.updateProgress(100);
@@ -134,7 +139,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
             tenantId: payload.tenantId,
             aggregationType: payload.aggregationType,
           },
-          "[collab] Analytics aggregation failed"
+          "[collab] Analytics aggregation failed",
         );
         throw err; // Rethrow to trigger job retry
       }
@@ -147,16 +152,18 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
       {
         cron: "0 2 * * *", // Daily at 2:00 AM UTC
         jobId: "analytics-daily-aggregation",
-      }
+      },
     );
 
-    logger.info("[collab] Analytics aggregation worker registered with daily schedule");
+    logger.info(
+      "[collab] Analytics aggregation worker registered with daily schedule",
+    );
   } catch (err) {
     logger.warn(
       {
         error: err instanceof Error ? err.message : String(err),
       },
-      "[collab] Analytics aggregation worker registration failed (non-fatal)"
+      "[collab] Analytics aggregation worker registration failed (non-fatal)",
     );
   }
 }
@@ -166,7 +173,7 @@ export async function registerAnalyticsAggregationWorker(container: Container) {
  */
 function getDateRange(
   targetDate: string,
-  type: "daily" | "weekly" | "monthly"
+  type: "daily" | "weekly" | "monthly",
 ): { startDate: string; endDate: string } {
   const date = new Date(targetDate);
 

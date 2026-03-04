@@ -6,7 +6,7 @@
 // from the backend and renders badges, actions, tabs using only the
 // descriptor output. "React is a renderer."
 
-import { Button, Card, Separator } from "@neon/ui";
+import { Button, Card } from "@neon/ui";
 import { AlertCircle, Pencil, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -40,21 +40,22 @@ interface EntityPageShellProps {
 
 function getCsrfToken(): string {
   if (typeof window === "undefined") return "";
-  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as SessionBootstrap | undefined;
+  const bootstrap = (window as any).__SESSION_BOOTSTRAP__ as
+    | SessionBootstrap
+    | undefined;
   return bootstrap?.csrfToken ?? "";
 }
 
 // Register built-in tab plugins (lifecycle, approvals)
 registerBuiltInPlugins();
 
-export function EntityPageShell({ entityName, entityId, initialViewMode }: EntityPageShellProps) {
-  const {
-    staticDescriptor,
-    dynamicDescriptor,
-    loading,
-    error,
-    refresh,
-  } = useEntityPageDescriptor(entityName, entityId, initialViewMode);
+export function EntityPageShell({
+  entityName,
+  entityId,
+  initialViewMode,
+}: EntityPageShellProps) {
+  const { staticDescriptor, dynamicDescriptor, loading, error, refresh } =
+    useEntityPageDescriptor(entityName, entityId, initialViewMode);
 
   const { fields: fieldMeta, entityMeta } = useEntityFields(entityName);
 
@@ -96,7 +97,9 @@ export function EntityPageShell({ entityName, entityId, initialViewMode }: Entit
     }
 
     fetchRecord();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [entityName, entityId]);
 
   const handleAction = useCallback(
@@ -200,7 +203,9 @@ export function EntityPageShell({ entityName, entityId, initialViewMode }: Entit
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" onClick={refresh} disabled={loading}>
-                  <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`size-4 ${loading ? "animate-spin" : ""}`}
+                  />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
@@ -212,9 +217,10 @@ export function EntityPageShell({ entityName, entityId, initialViewMode }: Entit
       />
 
       {/* View mode downgrade notice */}
-      {dynamicDescriptor.viewModeReason && dynamicDescriptor.viewModeReason !== "ok" && (
-        <ViewModeNotice reason={dynamicDescriptor.viewModeReason} />
-      )}
+      {dynamicDescriptor.viewModeReason &&
+        dynamicDescriptor.viewModeReason !== "ok" && (
+          <ViewModeNotice reason={dynamicDescriptor.viewModeReason} />
+        )}
 
       {/* Tabs */}
       <EntityTabBar

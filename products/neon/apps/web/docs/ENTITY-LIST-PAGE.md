@@ -178,10 +178,10 @@ Total latency: ~550ms from last keystroke to API request
 
 ### Two Filter Types
 
-| Type | Wire Format | SQL | Example |
-|------|-------------|-----|---------|
-| **Quick Filter** (dropdown) | `status:ACTIVE` | `status::text ILIKE 'ACTIVE'` | Status = Active |
-| **Column Text Filter** (input) | `name:~spain` | `name::text ILIKE '%spain%'` | Name contains "spain" |
+| Type                           | Wire Format     | SQL                           | Example               |
+| ------------------------------ | --------------- | ----------------------------- | --------------------- |
+| **Quick Filter** (dropdown)    | `status:ACTIVE` | `status::text ILIKE 'ACTIVE'` | Status = Active       |
+| **Column Text Filter** (input) | `name:~spain`   | `name::text ILIKE '%spain%'`  | Name contains "spain" |
 
 The `~` prefix signals ILIKE with wildcards (partial match). No prefix = ILIKE without wildcards (case-insensitive exact match).
 
@@ -256,7 +256,7 @@ ORDER BY name ASC NULLS LAST
 sortRules: [
   { fieldId: "status", dir: "asc" },
   { fieldId: "name", dir: "desc" },
-]
+];
 // → ORDER BY status ASC, then name DESC within same status
 ```
 
@@ -369,18 +369,18 @@ Maximum: 1000 (hard cap via `pagination.maxPageSize`)
 
 ## Client-Side vs Server-Side
 
-| Operation | Client-Side | Server-Side | Notes |
-|-----------|:-----------:|:-----------:|-------|
-| **Search** | Safety net (skipped in infinite mode) | WHERE + ILIKE | 250ms debounced |
-| **Quick Filter** | Safety net (skipped in infinite mode) | WHERE ILIKE (exact) | Dropdown selection |
-| **Column Text Filter** | Safety net (skipped in infinite mode) | WHERE ILIKE (partial) | 300ms + 250ms debounced |
-| **Sort** | Safety net (skipped in infinite mode) | ORDER BY + NULLS LAST | Only first sortRule sent |
-| **Group** | Always | pageSize=1000 fetch | Server sends full filtered set |
-| **Paginate** | Only when no server pagination | LIMIT/OFFSET | Server total for page count |
-| **Infinite Scroll** | Accumulation + dedup in page.tsx | Server paginates per-page | Manual load-more |
-| **Count** | filteredItems.length | COUNT(*) with same WHERE | Cached separately (5 min) |
-| **FK Resolution** | — | Server-side with caps | Rows decorated with `_ref_*` |
-| **View Mode** | localStorage preference | — | Responsive defaults |
+| Operation              |              Client-Side              |        Server-Side        | Notes                          |
+| ---------------------- | :-----------------------------------: | :-----------------------: | ------------------------------ |
+| **Search**             | Safety net (skipped in infinite mode) |       WHERE + ILIKE       | 250ms debounced                |
+| **Quick Filter**       | Safety net (skipped in infinite mode) |    WHERE ILIKE (exact)    | Dropdown selection             |
+| **Column Text Filter** | Safety net (skipped in infinite mode) |   WHERE ILIKE (partial)   | 300ms + 250ms debounced        |
+| **Sort**               | Safety net (skipped in infinite mode) |   ORDER BY + NULLS LAST   | Only first sortRule sent       |
+| **Group**              |                Always                 |    pageSize=1000 fetch    | Server sends full filtered set |
+| **Paginate**           |    Only when no server pagination     |       LIMIT/OFFSET        | Server total for page count    |
+| **Infinite Scroll**    |   Accumulation + dedup in page.tsx    | Server paginates per-page | Manual load-more               |
+| **Count**              |         filteredItems.length          | COUNT(\*) with same WHERE | Cached separately (5 min)      |
+| **FK Resolution**      |                   —                   |   Server-side with caps   | Rows decorated with `_ref_*`   |
+| **View Mode**          |        localStorage preference        |             —             | Responsive defaults            |
 
 ### Why Client Always Filters/Sorts (Paginated Mode)
 
@@ -411,26 +411,26 @@ DB query → write-back to L1 + L2
 
 ### Cache Keys
 
-| Type | Key Pattern | TTL |
-|------|-------------|-----|
-| Query Result | `ep:qr:ns{ns}:{tenantId}:{entity}:g{gen}:{hash}` | 2 min (reference: 30 min) |
-| Query Count | `ep:qc:ns{ns}:{tenantId}:{entity}:g{gen}:{hash}` | 5 min |
-| Entity Fields | `ep:fields:ns{ns}:{tenantId}:{entity}:{versionId}` | 24h |
-| FK Map | `ep:fkmap:ns{ns}:{schema}.{table}` | 24h |
-| Schema Columns | `ep:cols:ns{ns}:{schema}.{table}` | 24h |
-| FK Label | `ep:ref:ns{ns}:{tenantId}:{schema}.{table}:{id}` | 30 min |
-| Display Policy | `ep:dp:ns{ns}:{schema}.{table}` | 24h |
-| Generation Counter | `ep:egen:{tenantId}:{entity}` | 24h |
+| Type               | Key Pattern                                        | TTL                       |
+| ------------------ | -------------------------------------------------- | ------------------------- |
+| Query Result       | `ep:qr:ns{ns}:{tenantId}:{entity}:g{gen}:{hash}`   | 2 min (reference: 30 min) |
+| Query Count        | `ep:qc:ns{ns}:{tenantId}:{entity}:g{gen}:{hash}`   | 5 min                     |
+| Entity Fields      | `ep:fields:ns{ns}:{tenantId}:{entity}:{versionId}` | 24h                       |
+| FK Map             | `ep:fkmap:ns{ns}:{schema}.{table}`                 | 24h                       |
+| Schema Columns     | `ep:cols:ns{ns}:{schema}.{table}`                  | 24h                       |
+| FK Label           | `ep:ref:ns{ns}:{tenantId}:{schema}.{table}:{id}`   | 30 min                    |
+| Display Policy     | `ep:dp:ns{ns}:{schema}.{table}`                    | 24h                       |
+| Generation Counter | `ep:egen:{tenantId}:{entity}`                      | 24h                       |
 
 ### Category-Based TTLs
 
 Entity metadata can specify a `cacheCategory` via feature flags:
 
-| Category | Query TTL | Use Case |
-|----------|-----------|----------|
-| `reference` | 30 min | Countries, currencies, UOM — rarely change |
-| `master` | 5 min | Accounts, products — moderate change frequency |
-| `transactional` | 2 min (default) | Orders, invoices — frequent changes |
+| Category        | Query TTL       | Use Case                                       |
+| --------------- | --------------- | ---------------------------------------------- |
+| `reference`     | 30 min          | Countries, currencies, UOM — rarely change     |
+| `master`        | 5 min           | Accounts, products — moderate change frequency |
+| `transactional` | 2 min (default) | Orders, invoices — frequent changes            |
 
 ### Query Hash
 
@@ -476,10 +476,10 @@ Old cache entries expire naturally via TTL (2 min max)
 
 ### Write Path Integration
 
-| Endpoint | After Success |
-|----------|--------------|
-| `POST /api/data/:entity` | `invalidateEntityQueryCache(tenantId, entity)` |
-| `PATCH /api/data/:entity/:id` | `invalidateEntityQueryCache(tenantId, entity)` |
+| Endpoint                       | After Success                                  |
+| ------------------------------ | ---------------------------------------------- |
+| `POST /api/data/:entity`       | `invalidateEntityQueryCache(tenantId, entity)` |
+| `PATCH /api/data/:entity/:id`  | `invalidateEntityQueryCache(tenantId, entity)` |
 | `DELETE /api/data/:entity/:id` | `invalidateEntityQueryCache(tenantId, entity)` |
 
 ---
@@ -500,11 +500,11 @@ Old cache entries expire naturally via TTL (2 min max)
 
 ### Caps & Limits
 
-| Limit | Default | Purpose |
-|-------|---------|---------|
-| Per-column IDs | 200 | Prevent runaway queries |
-| Per-request IDs | 600 | Total budget across all FK columns |
-| Timeout | 250ms | Time budget for all FK resolution |
+| Limit           | Default | Purpose                            |
+| --------------- | ------- | ---------------------------------- |
+| Per-column IDs  | 200     | Prevent runaway queries            |
+| Per-request IDs | 600     | Total budget across all FK columns |
+| Timeout         | 250ms   | Time budget for all FK resolution  |
 
 ### Row Decoration
 
@@ -523,14 +523,14 @@ Column accessors check `_ref_<column>` first, displaying the resolved label inst
 
 ## View Modes
 
-| Mode | Component | Description |
-|------|-----------|-------------|
-| `table` | EntityDataGrid | Standard data table with `<colgroup>` and auto-sized columns |
-| `table-columns` | AdjustableDataGrid | Draggable/resizable columns via @tanstack/react-table |
-| `card-grid` | EntityCardGrid | Responsive card grid with density-aware gaps |
-| `kanban` | KanbanBoard | Swim lanes by status |
-| `tree` | EntityTreeView | Hierarchical tree with expand/collapse |
-| `timeline` | — | Placeholder (coming soon) |
+| Mode            | Component          | Description                                                  |
+| --------------- | ------------------ | ------------------------------------------------------------ |
+| `table`         | EntityDataGrid     | Standard data table with `<colgroup>` and auto-sized columns |
+| `table-columns` | AdjustableDataGrid | Draggable/resizable columns via @tanstack/react-table        |
+| `card-grid`     | EntityCardGrid     | Responsive card grid with density-aware gaps                 |
+| `kanban`        | KanbanBoard        | Swim lanes by status                                         |
+| `tree`          | EntityTreeView     | Hierarchical tree with expand/collapse                       |
+| `timeline`      | —                  | Placeholder (coming soon)                                    |
 
 ### Table Layout (table / table-columns)
 
@@ -552,11 +552,11 @@ User preferences saved to `localStorage` with `:userSet` flag — explicit choic
 
 ### Density
 
-| Mode | Behavior | System Default |
-|------|----------|----------------|
-| `compact` | Tight rows, xs text | Yes (mobile + desktop) |
-| `comfortable` | Standard spacing | — |
-| `spacious` | Relaxed padding | — |
+| Mode          | Behavior            | System Default         |
+| ------------- | ------------------- | ---------------------- |
+| `compact`     | Tight rows, xs text | Yes (mobile + desktop) |
+| `comfortable` | Standard spacing    | —                      |
+| `spacious`    | Relaxed padding     | —                      |
 
 Density is viewport-responsive: `config.defaultDensity` (mobile) / `config.defaultDensityDesktop` (desktop). Both default to `"compact"`.
 
@@ -696,55 +696,55 @@ Used to show opacity overlay on the data area during server round-trips.
 
 ### Core Architecture
 
-| Component | Path |
-|-----------|------|
-| State Management | `components/mesh/list/ListPageContext.tsx` |
-| Type Definitions | `components/mesh/list/types.ts` |
-| Page Component | `app/(shell)/app/[entity]/view/list/page.tsx` |
-| Data Fetching | `lib/use-entity-data.ts` |
-| Query Builder | `lib/entity-query-builder.ts` |
-| Config Builder | `lib/entity-list-config.ts` |
-| System Parameters | `config/entity-data-params.ts` |
-| Cache Invalidation | `lib/query-cache-invalidation.ts` |
-| Redis Cache | `lib/redis-cache.ts` |
-| Entity Meta Fields | `lib/entity-meta-fields.ts` |
+| Component          | Path                                          |
+| ------------------ | --------------------------------------------- |
+| State Management   | `components/mesh/list/ListPageContext.tsx`    |
+| Type Definitions   | `components/mesh/list/types.ts`               |
+| Page Component     | `app/(shell)/app/[entity]/view/list/page.tsx` |
+| Data Fetching      | `lib/use-entity-data.ts`                      |
+| Query Builder      | `lib/entity-query-builder.ts`                 |
+| Config Builder     | `lib/entity-list-config.ts`                   |
+| System Parameters  | `config/entity-data-params.ts`                |
+| Cache Invalidation | `lib/query-cache-invalidation.ts`             |
+| Redis Cache        | `lib/redis-cache.ts`                          |
+| Entity Meta Fields | `lib/entity-meta-fields.ts`                   |
 
 ### API Handlers
 
-| Component | Path |
-|-----------|------|
-| List + Create | `app/api/data/[entity]/route.ts` |
+| Component              | Path                                  |
+| ---------------------- | ------------------------------------- |
+| List + Create          | `app/api/data/[entity]/route.ts`      |
 | Read + Update + Delete | `app/api/data/[entity]/[id]/route.ts` |
 
 ### UI Components
 
-| Component | Path |
-|-----------|------|
-| View Router | `components/mesh/list/ViewRouter.tsx` |
-| Content Header | `components/mesh/list/ListContentHeader.tsx` |
-| Filter Chips | `components/mesh/list/FilterChips.tsx` |
-| Pagination Footer | `components/mesh/list/ListPageFooter.tsx` |
-| Data Table | `components/mesh/list/EntityDataGrid.tsx` |
-| Adjustable Table | `components/mesh/list/AdjustableDataGrid.tsx` |
-| Card Grid | `components/mesh/list/EntityCardGrid.tsx` |
-| Tree View | `components/mesh/list/EntityTreeView.tsx` |
-| Kanban Board | `components/mesh/list/KanbanBoard.tsx` |
-| Data Grid Row | `components/mesh/list/DataGridRow.tsx` |
-| Group Section | `components/mesh/list/GroupSection.tsx` |
+| Component                | Path                                              |
+| ------------------------ | ------------------------------------------------- |
+| View Router              | `components/mesh/list/ViewRouter.tsx`             |
+| Content Header           | `components/mesh/list/ListContentHeader.tsx`      |
+| Filter Chips             | `components/mesh/list/FilterChips.tsx`            |
+| Pagination Footer        | `components/mesh/list/ListPageFooter.tsx`         |
+| Data Table               | `components/mesh/list/EntityDataGrid.tsx`         |
+| Adjustable Table         | `components/mesh/list/AdjustableDataGrid.tsx`     |
+| Card Grid                | `components/mesh/list/EntityCardGrid.tsx`         |
+| Tree View                | `components/mesh/list/EntityTreeView.tsx`         |
+| Kanban Board             | `components/mesh/list/KanbanBoard.tsx`            |
+| Data Grid Row            | `components/mesh/list/DataGridRow.tsx`            |
+| Group Section            | `components/mesh/list/GroupSection.tsx`           |
 | Infinite Scroll Sentinel | `components/mesh/list/InfiniteScrollSentinel.tsx` |
-| Back to Top Button | `components/mesh/list/BackToTopButton.tsx` |
-| Settings Sheet | `components/mesh/list/ViewSettingsSheet.tsx` |
-| Adapt Filters Sheet | `components/mesh/list/AdaptFiltersSheet.tsx` |
-| Preview Drawer | `components/mesh/list/PreviewDrawer.tsx` |
-| Selection Toolbar | `components/mesh/list/SelectionToolbar.tsx` |
+| Back to Top Button       | `components/mesh/list/BackToTopButton.tsx`        |
+| Settings Sheet           | `components/mesh/list/ViewSettingsSheet.tsx`      |
+| Adapt Filters Sheet      | `components/mesh/list/AdaptFiltersSheet.tsx`      |
+| Preview Drawer           | `components/mesh/list/PreviewDrawer.tsx`          |
+| Selection Toolbar        | `components/mesh/list/SelectionToolbar.tsx`       |
 
 ### Hooks & Utilities
 
-| Component | Path |
-|-----------|------|
-| Smart Header | `components/mesh/list/useSmartHeader.ts` |
+| Component             | Path                                            |
+| --------------------- | ----------------------------------------------- |
+| Smart Header          | `components/mesh/list/useSmartHeader.ts`        |
 | Explorer Capabilities | `components/mesh/list/explorer-capabilities.ts` |
-| Column Helpers | `components/mesh/list/column-helpers.ts` |
-| Barrel Export | `components/mesh/list/index.ts` |
+| Column Helpers        | `components/mesh/list/column-helpers.ts`        |
+| Barrel Export         | `components/mesh/list/index.ts`                 |
 
 All paths relative to `products/neon/apps/web/`.

@@ -58,12 +58,20 @@ export class AuditAccessReportService {
 
     // Query field_access_log
     const fieldAccessResult = await this.queryFieldAccess(
-      tenantId, entityType, entityId, startDate, endDate,
+      tenantId,
+      entityType,
+      entityId,
+      startDate,
+      endDate,
     );
 
     // Query permission_decision_log
     const permissionResult = await this.queryPermissionDecisions(
-      tenantId, entityType, entityId, startDate, endDate,
+      tenantId,
+      entityType,
+      entityId,
+      startDate,
+      endDate,
     );
 
     // Merge by principal
@@ -115,7 +123,10 @@ export class AuditAccessReportService {
       .sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime())
       .slice(0, limit);
 
-    const totalAccessCount = principals.reduce((sum, p) => sum + p.accessCount, 0);
+    const totalAccessCount = principals.reduce(
+      (sum, p) => sum + p.accessCount,
+      0,
+    );
 
     return {
       entityType,
@@ -135,19 +146,27 @@ export class AuditAccessReportService {
     entityId: string,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<Array<{
-    principalId: string;
-    accessType: string;
-    count: number;
-    lastAccessedAt: Date;
-  }>> {
+  ): Promise<
+    Array<{
+      principalId: string;
+      accessType: string;
+      count: number;
+      lastAccessedAt: Date;
+    }>
+  > {
     const conditions = [
       sql`tenant_id = ${tenantId}::uuid`,
       sql`entity_type = ${entityType}`,
       sql`entity_id = ${entityId}`,
     ];
-    if (startDate) conditions.push(sql`accessed_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`accessed_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`accessed_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(
+        sql`accessed_at <= ${endDate.toISOString()}::timestamptz`,
+      );
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -176,18 +195,24 @@ export class AuditAccessReportService {
     entityId: string,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<Array<{
-    principalId: string;
-    count: number;
-    lastDecidedAt: Date;
-  }>> {
+  ): Promise<
+    Array<{
+      principalId: string;
+      count: number;
+      lastDecidedAt: Date;
+    }>
+  > {
     const conditions = [
       sql`tenant_id = ${tenantId}::uuid`,
       sql`resource_type = ${entityType}`,
       sql`resource_id = ${entityId}`,
     ];
-    if (startDate) conditions.push(sql`decided_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`decided_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`decided_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(sql`decided_at <= ${endDate.toISOString()}::timestamptz`);
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 

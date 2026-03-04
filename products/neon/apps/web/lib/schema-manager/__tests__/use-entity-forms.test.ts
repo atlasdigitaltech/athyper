@@ -32,7 +32,10 @@ afterEach(() => {
   mockFetch.mockReset();
 });
 
-function mockFetchSuccess(data: { sections: FormSection[] }, etag = "etag-123") {
+function mockFetchSuccess(
+  data: { sections: FormSection[] },
+  etag = "etag-123",
+) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     status: 200,
@@ -150,7 +153,12 @@ describe("useEntityForms", () => {
     });
 
     const newSections: FormSection[] = [
-      { code: "main", label: "Updated", columns: 3, fields: ["title", "amount"] },
+      {
+        code: "main",
+        label: "Updated",
+        columns: 3,
+        fields: ["title", "amount"],
+      },
     ];
 
     const saveResult = await result.current.saveLayout(newSections);

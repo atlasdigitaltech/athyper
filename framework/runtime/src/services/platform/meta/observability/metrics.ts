@@ -62,8 +62,16 @@ export class MetaMetrics {
 
   /** Record schema compilation latency in milliseconds. */
   compilationLatency(durationMs: number, labels: { entity: string }): void {
-    this.registry.recordHistogram(METRIC.compilationLatency, durationMs, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.compilationTotal, 1, labels as MetricLabels);
+    this.registry.recordHistogram(
+      METRIC.compilationLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.compilationTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record a compilation cache hit. */
@@ -73,7 +81,11 @@ export class MetaMetrics {
 
   /** Record a compilation cache miss. */
   cacheMiss(labels: { entity: string }): void {
-    this.registry.incrementCounter(METRIC.cacheMisses, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.cacheMisses,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Update the cache hit ratio gauge (hits / (hits + misses)). */
@@ -85,68 +97,148 @@ export class MetaMetrics {
 
   /** Record validation rule execution time in milliseconds. */
   ruleExecutionTime(durationMs: number, labels: { entity: string }): void {
-    this.registry.recordHistogram(METRIC.ruleExecutionTime, durationMs, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.validationTotal, 1, labels as MetricLabels);
+    this.registry.recordHistogram(
+      METRIC.ruleExecutionTime,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.validationTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record a validation failure (by entity and rule kind). */
-  validationFailure(labels: { entity: string; rule_kind: string; severity: string }): void {
-    this.registry.incrementCounter(METRIC.validationFailures, 1, labels as MetricLabels);
+  validationFailure(labels: {
+    entity: string;
+    rule_kind: string;
+    severity: string;
+  }): void {
+    this.registry.incrementCounter(
+      METRIC.validationFailures,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Policy ───────────────────────────────────────────────────────
 
   /** Record policy evaluation latency in milliseconds. */
-  policyEvalLatency(durationMs: number, labels: { entity: string; action: string }): void {
-    this.registry.recordHistogram(METRIC.policyEvalLatency, durationMs, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.policyEvalTotal, 1, labels as MetricLabels);
+  policyEvalLatency(
+    durationMs: number,
+    labels: { entity: string; action: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.policyEvalLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.policyEvalTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record a policy denial. */
   policyDenied(labels: { entity: string; action: string }): void {
-    this.registry.incrementCounter(METRIC.policyDenied, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.policyDenied,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────
 
   /** Record lifecycle transition latency in milliseconds. */
-  transitionLatency(durationMs: number, labels: { entity: string; operation: string }): void {
-    this.registry.recordHistogram(METRIC.transitionLatency, durationMs, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.transitionTotal, 1, labels as MetricLabels);
+  transitionLatency(
+    durationMs: number,
+    labels: { entity: string; operation: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.transitionLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.transitionTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record a failed lifecycle transition. */
-  transitionFailed(labels: { entity: string; operation: string; reason: string }): void {
-    this.registry.incrementCounter(METRIC.transitionFailed, 1, labels as MetricLabels);
+  transitionFailed(labels: {
+    entity: string;
+    operation: string;
+    reason: string;
+  }): void {
+    this.registry.incrementCounter(
+      METRIC.transitionFailed,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Data API ─────────────────────────────────────────────────────
 
   /** Record data API operation latency in milliseconds. */
-  dataOpLatency(durationMs: number, labels: { entity: string; operation: string }): void {
-    this.registry.recordHistogram(METRIC.dataOpLatency, durationMs, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.dataOpTotal, 1, labels as MetricLabels);
+  dataOpLatency(
+    durationMs: number,
+    labels: { entity: string; operation: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.dataOpLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.dataOpTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Overlay ──────────────────────────────────────────────────────
 
   /** Record an overlay merge conflict. */
   overlayConflict(labels: { entity: string; conflict_mode: string }): void {
-    this.registry.incrementCounter(METRIC.overlayConflicts, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.overlayConflicts,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Cascade Delete ───────────────────────────────────────────────
 
   /** Record cascade delete depth (how deep the recursion went). */
   cascadeDeleteDepth(depth: number, labels: { entity: string }): void {
-    this.registry.recordHistogram(METRIC.cascadeDeleteDepth, depth, labels as MetricLabels);
-    this.registry.incrementCounter(METRIC.cascadeDeleteTotal, 1, labels as MetricLabels);
+    this.registry.recordHistogram(
+      METRIC.cascadeDeleteDepth,
+      depth,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.cascadeDeleteTotal,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   // ── Approval ─────────────────────────────────────────────────────
 
   /** Record approver resolution latency in milliseconds. */
-  approvalResolutionLatency(durationMs: number, labels: { strategy: string }): void {
-    this.registry.recordHistogram(METRIC.approvalResolutionLatency, durationMs, labels as MetricLabels);
+  approvalResolutionLatency(
+    durationMs: number,
+    labels: { strategy: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.approvalResolutionLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
   }
 }

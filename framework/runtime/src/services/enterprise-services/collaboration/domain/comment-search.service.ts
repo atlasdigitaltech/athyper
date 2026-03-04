@@ -36,7 +36,7 @@ export interface CommentSearchResult {
 export class CommentSearchService {
   constructor(
     private readonly db: Kysely<DB>,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -52,9 +52,15 @@ export class CommentSearchService {
   async searchComments(
     tenantId: string,
     query: string,
-    options?: CommentSearchOptions
+    options?: CommentSearchOptions,
   ): Promise<CommentSearchResult> {
-    const { limit = 50, offset = 0, entityType, entityId, commenterId } = options ?? {};
+    const {
+      limit = 50,
+      offset = 0,
+      entityType,
+      entityId,
+      commenterId,
+    } = options ?? {};
 
     // Sanitize query (basic protection)
     const sanitizedQuery = query.trim();
@@ -125,7 +131,10 @@ export class CommentSearchService {
       commentText: row.comment_text,
       parentCommentId: row.parent_comment_id ?? undefined,
       threadDepth: row.thread_depth,
-      visibility: (row.visibility ?? "public") as "public" | "internal" | "private",
+      visibility: (row.visibility ?? "public") as
+        | "public"
+        | "internal"
+        | "private",
       deletedAt: row.deleted_at ?? undefined,
       deletedBy: row.deleted_by ?? undefined,
       createdAt: row.created_at,
@@ -140,7 +149,7 @@ export class CommentSearchService {
         query: sanitizedQuery,
         resultsFound: total,
       },
-      "[collab] Comment search executed"
+      "[collab] Comment search executed",
     );
 
     return {

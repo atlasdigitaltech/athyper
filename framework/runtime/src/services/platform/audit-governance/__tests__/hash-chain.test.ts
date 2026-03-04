@@ -3,18 +3,33 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { AuditHashChainService, GENESIS_HASH } from "../domain/hash-chain.service.js";
+import {
+  AuditHashChainService,
+  GENESIS_HASH,
+} from "../domain/hash-chain.service.js";
 
 import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 
-function makeEvent(overrides: Partial<Omit<AuditEvent, "id">> = {}): Omit<AuditEvent, "id"> {
+function makeEvent(
+  overrides: Partial<Omit<AuditEvent, "id">> = {},
+): Omit<AuditEvent, "id"> {
   return {
     tenantId: "t-1",
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date("2025-06-15T10:00:00Z"),
     ...overrides,
@@ -38,10 +53,13 @@ describe("AuditHashChainService", () => {
 
     it("should chain hashes for subsequent events", async () => {
       const first = await svc.computeHash("t-1", makeEvent());
-      const second = await svc.computeHash("t-1", makeEvent({
-        eventType: "workflow.started",
-        timestamp: new Date("2025-06-15T10:01:00Z"),
-      }));
+      const second = await svc.computeHash(
+        "t-1",
+        makeEvent({
+          eventType: "workflow.started",
+          timestamp: new Date("2025-06-15T10:01:00Z"),
+        }),
+      );
 
       expect(second.hash_prev).toBe(first.hash_curr);
       expect(second.hash_curr).not.toBe(first.hash_curr);

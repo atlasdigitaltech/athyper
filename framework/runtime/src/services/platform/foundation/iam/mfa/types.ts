@@ -309,7 +309,10 @@ export interface MfaAuditInput {
 /**
  * MFA enrollment status
  */
-export type EnrollmentStatus = "not_started" | "pending_verification" | "completed";
+export type EnrollmentStatus =
+  | "not_started"
+  | "pending_verification"
+  | "completed";
 
 /**
  * Enrollment start result
@@ -396,7 +399,7 @@ export interface ITotpService {
   generateSetupData(
     secret: string,
     accountName: string,
-    issuer?: string
+    issuer?: string,
   ): Promise<TotpSetupData>;
 
   /** Verify a TOTP code */
@@ -426,28 +429,54 @@ export interface IBackupCodesService {
 export interface IMfaService {
   // Status
   getStatus(principalId: string, tenantId: string): Promise<MfaStatus>;
-  isRequired(principalId: string, tenantId: string): Promise<MfaPolicyCheckResult>;
+  isRequired(
+    principalId: string,
+    tenantId: string,
+  ): Promise<MfaPolicyCheckResult>;
 
   // Enrollment
   startEnrollment(
     principalId: string,
     tenantId: string,
-    method?: MfaMethod
+    method?: MfaMethod,
   ): Promise<EnrollmentStartResult>;
-  verifyEnrollment(input: EnrollmentVerifyInput): Promise<EnrollmentCompleteResult>;
+  verifyEnrollment(
+    input: EnrollmentVerifyInput,
+  ): Promise<EnrollmentCompleteResult>;
   cancelEnrollment(principalId: string, tenantId: string): Promise<void>;
 
   // Verification
   createChallenge(input: CreateChallengeInput): Promise<MfaChallenge>;
-  verifyChallenge(input: MfaVerifyInput, context: MfaVerificationContext): Promise<MfaVerifyResult>;
+  verifyChallenge(
+    input: MfaVerifyInput,
+    context: MfaVerificationContext,
+  ): Promise<MfaVerifyResult>;
 
   // Management
-  disable(principalId: string, tenantId: string, code: string): Promise<boolean>;
-  regenerateBackupCodes(principalId: string, tenantId: string): Promise<BackupCodesResult>;
+  disable(
+    principalId: string,
+    tenantId: string,
+    code: string,
+  ): Promise<boolean>;
+  regenerateBackupCodes(
+    principalId: string,
+    tenantId: string,
+  ): Promise<BackupCodesResult>;
 
   // Trusted devices
-  getTrustedDevices(principalId: string, tenantId: string): Promise<TrustedDevice[]>;
-  revokeDevice(principalId: string, tenantId: string, deviceId: string): Promise<void>;
+  getTrustedDevices(
+    principalId: string,
+    tenantId: string,
+  ): Promise<TrustedDevice[]>;
+  revokeDevice(
+    principalId: string,
+    tenantId: string,
+    deviceId: string,
+  ): Promise<void>;
   revokeAllDevices(principalId: string, tenantId: string): Promise<number>;
-  isTrustedDevice(principalId: string, tenantId: string, trustToken: string): Promise<boolean>;
+  isTrustedDevice(
+    principalId: string,
+    tenantId: string,
+    trustToken: string,
+  ): Promise<boolean>;
 }

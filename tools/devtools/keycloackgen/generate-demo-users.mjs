@@ -5,13 +5,16 @@
  * Usage:  node tools/devtools/keycloackgen/generate-demo-users.mjs
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REALM_PATH = resolve(__dirname, "../../../mesh/config/iam/realm-demosetup.json");
+const REALM_PATH = resolve(
+  __dirname,
+  "../../../mesh/config/iam/realm-demosetup.json",
+);
 
 // ---------------------------------------------------------------------------
 // Reference data
@@ -30,111 +33,132 @@ const TENANTS = [
 ];
 
 const PERSONAS = [
-  { suffix: "viewer",       clientRoles: ["neon:PERSONA:viewer",       "neon:WORKBENCH:USER"]  },
-  { suffix: "reporter",     clientRoles: ["neon:PERSONA:reporter",     "neon:WORKBENCH:USER"]  },
-  { suffix: "requester",    clientRoles: ["neon:PERSONA:requester",    "neon:WORKBENCH:USER"]  },
-  { suffix: "agent",        clientRoles: ["neon:PERSONA:agent",        "neon:WORKBENCH:OPS"]   },
-  { suffix: "manager",      clientRoles: ["neon:PERSONA:manager",      "neon:WORKBENCH:USER"]  },
-  { suffix: "module_admin", clientRoles: ["neon:PERSONA:module_admin", "neon:WORKBENCH:ADMIN"] },
-  { suffix: "tenant_admin", clientRoles: ["neon:PERSONA:tenant_admin", "neon:WORKBENCH:ADMIN"] },
+  {
+    suffix: "viewer",
+    clientRoles: ["neon:PERSONA:viewer", "neon:WORKBENCH:USER"],
+  },
+  {
+    suffix: "reporter",
+    clientRoles: ["neon:PERSONA:reporter", "neon:WORKBENCH:USER"],
+  },
+  {
+    suffix: "requester",
+    clientRoles: ["neon:PERSONA:requester", "neon:WORKBENCH:USER"],
+  },
+  {
+    suffix: "agent",
+    clientRoles: ["neon:PERSONA:agent", "neon:WORKBENCH:OPS"],
+  },
+  {
+    suffix: "manager",
+    clientRoles: ["neon:PERSONA:manager", "neon:WORKBENCH:USER"],
+  },
+  {
+    suffix: "module_admin",
+    clientRoles: ["neon:PERSONA:module_admin", "neon:WORKBENCH:ADMIN"],
+  },
+  {
+    suffix: "tenant_admin",
+    clientRoles: ["neon:PERSONA:tenant_admin", "neon:WORKBENCH:ADMIN"],
+  },
 ];
 
 // Preserve existing Keycloak user UUIDs (critical for idp_identity links)
 const EXISTING_IDS = {
-  demoin_agent:        "d55a058d-2d7c-4d9e-a8f6-d4db2b8ea1e7",
-  demoin_manager:      "0e405c15-a1ce-4faa-a8ac-32db665a5ca9",
-  demoin_reporter:     "4fb19dab-3244-4f36-8862-9cd2ef1041dc",
-  demoin_requester:    "fc19202e-2366-4d15-b491-53fb4df61ce2",
+  demoin_agent: "d55a058d-2d7c-4d9e-a8f6-d4db2b8ea1e7",
+  demoin_manager: "0e405c15-a1ce-4faa-a8ac-32db665a5ca9",
+  demoin_reporter: "4fb19dab-3244-4f36-8862-9cd2ef1041dc",
+  demoin_requester: "fc19202e-2366-4d15-b491-53fb4df61ce2",
   demoin_tenant_admin: "06295c87-5c59-4914-9c5a-fe6530fbdc78",
-  demoin_viewer:       "1d13047f-fb34-482b-b48e-c511c7c64040",
-  demomy_manager:      "88e9fa9a-da3d-4b2e-83b0-e663779a3a0a",
-  demomy_viewer:       "3b76fefa-de60-4299-8561-3040960b8cea",
-  demous_manager:      "009afe9b-5ba8-41d4-be2f-c78eeb049090",
+  demoin_viewer: "1d13047f-fb34-482b-b48e-c511c7c64040",
+  demomy_manager: "88e9fa9a-da3d-4b2e-83b0-e663779a3a0a",
+  demomy_viewer: "3b76fefa-de60-4299-8561-3040960b8cea",
+  demous_manager: "009afe9b-5ba8-41d4-be2f-c78eeb049090",
 };
 
 // Culturally appropriate demo names per tenant (7 per country, ordered by persona)
 // Order: viewer, reporter, requester, agent, manager, module_admin, tenant_admin
 const NAMES = {
   demo_my: [
-    { first: "Aisyah",    last: "Wong"     },  // viewer
-    { first: "Hafiz",     last: "Abdullah"  },  // reporter
-    { first: "Siti",      last: "Rahman"    },  // requester
-    { first: "Rizal",     last: "Ismail"    },  // agent
-    { first: "Ahmad",     last: "Ibrahim"   },  // manager (existing)
-    { first: "Nurul",     last: "Hassan"    },  // module_admin
-    { first: "Farid",     last: "Osman"     },  // tenant_admin
+    { first: "Aisyah", last: "Wong" }, // viewer
+    { first: "Hafiz", last: "Abdullah" }, // reporter
+    { first: "Siti", last: "Rahman" }, // requester
+    { first: "Rizal", last: "Ismail" }, // agent
+    { first: "Ahmad", last: "Ibrahim" }, // manager (existing)
+    { first: "Nurul", last: "Hassan" }, // module_admin
+    { first: "Farid", last: "Osman" }, // tenant_admin
   ],
   demo_in: [
-    { first: "Vikram",    last: "Singh"     },  // viewer (existing)
-    { first: "Meena",     last: "Kumar"     },  // reporter (existing)
-    { first: "Anita",     last: "Desai"     },  // requester (existing)
-    { first: "Arjun",     last: "Nair"      },  // agent (existing)
-    { first: "Raj",       last: "Patel"     },  // manager (existing)
-    { first: "Deepa",     last: "Iyer"      },  // module_admin
-    { first: "Priya",     last: "Sharma"    },  // tenant_admin (existing)
+    { first: "Vikram", last: "Singh" }, // viewer (existing)
+    { first: "Meena", last: "Kumar" }, // reporter (existing)
+    { first: "Anita", last: "Desai" }, // requester (existing)
+    { first: "Arjun", last: "Nair" }, // agent (existing)
+    { first: "Raj", last: "Patel" }, // manager (existing)
+    { first: "Deepa", last: "Iyer" }, // module_admin
+    { first: "Priya", last: "Sharma" }, // tenant_admin (existing)
   ],
   demo_sa: [
-    { first: "Fatimah",   last: "Al-Rashid" },  // viewer
-    { first: "Omar",      last: "Al-Faisal" },  // reporter
-    { first: "Noura",     last: "Al-Qahtani"},  // requester
-    { first: "Khalid",    last: "Al-Dosari" },  // agent
-    { first: "Saleh",     last: "Al-Harbi"  },  // manager
-    { first: "Maha",      last: "Al-Shehri" },  // module_admin
-    { first: "Abdullah",  last: "Al-Otaibi" },  // tenant_admin
+    { first: "Fatimah", last: "Al-Rashid" }, // viewer
+    { first: "Omar", last: "Al-Faisal" }, // reporter
+    { first: "Noura", last: "Al-Qahtani" }, // requester
+    { first: "Khalid", last: "Al-Dosari" }, // agent
+    { first: "Saleh", last: "Al-Harbi" }, // manager
+    { first: "Maha", last: "Al-Shehri" }, // module_admin
+    { first: "Abdullah", last: "Al-Otaibi" }, // tenant_admin
   ],
   demo_qa: [
-    { first: "Amna",      last: "Al-Thani"  },  // viewer
-    { first: "Hassan",    last: "Al-Kuwari" },  // reporter
-    { first: "Maryam",    last: "Al-Mohannadi" }, // requester
-    { first: "Yousef",    last: "Al-Emadi"  },  // agent
-    { first: "Nasser",    last: "Al-Attiyah"},  // manager
-    { first: "Sheikha",   last: "Al-Misnad" },  // module_admin
-    { first: "Hamad",     last: "Al-Naimi"  },  // tenant_admin
+    { first: "Amna", last: "Al-Thani" }, // viewer
+    { first: "Hassan", last: "Al-Kuwari" }, // reporter
+    { first: "Maryam", last: "Al-Mohannadi" }, // requester
+    { first: "Yousef", last: "Al-Emadi" }, // agent
+    { first: "Nasser", last: "Al-Attiyah" }, // manager
+    { first: "Sheikha", last: "Al-Misnad" }, // module_admin
+    { first: "Hamad", last: "Al-Naimi" }, // tenant_admin
   ],
   demo_fr: [
-    { first: "Camille",   last: "Dubois"    },  // viewer
-    { first: "Lucas",     last: "Bernard"   },  // reporter
-    { first: "Manon",     last: "Leroy"     },  // requester
-    { first: "Antoine",   last: "Moreau"    },  // agent
-    { first: "Sophie",    last: "Laurent"   },  // manager
-    { first: "Pierre",    last: "Roux"      },  // module_admin
-    { first: "Claire",    last: "Fontaine"  },  // tenant_admin
+    { first: "Camille", last: "Dubois" }, // viewer
+    { first: "Lucas", last: "Bernard" }, // reporter
+    { first: "Manon", last: "Leroy" }, // requester
+    { first: "Antoine", last: "Moreau" }, // agent
+    { first: "Sophie", last: "Laurent" }, // manager
+    { first: "Pierre", last: "Roux" }, // module_admin
+    { first: "Claire", last: "Fontaine" }, // tenant_admin
   ],
   demo_de: [
-    { first: "Anna",      last: "Mueller"   },  // viewer
-    { first: "Lukas",     last: "Schmidt"   },  // reporter
-    { first: "Lena",      last: "Fischer"   },  // requester
-    { first: "Markus",    last: "Weber"     },  // agent
-    { first: "Julia",     last: "Schneider" },  // manager
-    { first: "Thomas",    last: "Hoffmann"  },  // module_admin
-    { first: "Katharina", last: "Becker"    },  // tenant_admin
+    { first: "Anna", last: "Mueller" }, // viewer
+    { first: "Lukas", last: "Schmidt" }, // reporter
+    { first: "Lena", last: "Fischer" }, // requester
+    { first: "Markus", last: "Weber" }, // agent
+    { first: "Julia", last: "Schneider" }, // manager
+    { first: "Thomas", last: "Hoffmann" }, // module_admin
+    { first: "Katharina", last: "Becker" }, // tenant_admin
   ],
   demo_ch: [
-    { first: "Lea",       last: "Brunner"   },  // viewer
-    { first: "Noah",      last: "Keller"    },  // reporter
-    { first: "Mia",       last: "Huber"     },  // requester
-    { first: "Luca",      last: "Gerber"    },  // agent
-    { first: "Elena",     last: "Widmer"    },  // manager
-    { first: "Samuel",    last: "Steiner"   },  // module_admin
-    { first: "Nina",      last: "Frei"      },  // tenant_admin
+    { first: "Lea", last: "Brunner" }, // viewer
+    { first: "Noah", last: "Keller" }, // reporter
+    { first: "Mia", last: "Huber" }, // requester
+    { first: "Luca", last: "Gerber" }, // agent
+    { first: "Elena", last: "Widmer" }, // manager
+    { first: "Samuel", last: "Steiner" }, // module_admin
+    { first: "Nina", last: "Frei" }, // tenant_admin
   ],
   demo_us: [
-    { first: "Emily",     last: "Davis"     },  // viewer
-    { first: "Michael",   last: "Brown"     },  // reporter
-    { first: "Jessica",   last: "Wilson"    },  // requester
-    { first: "James",     last: "Taylor"    },  // agent
-    { first: "Sarah",     last: "Johnson"   },  // manager (existing)
-    { first: "David",     last: "Martinez"  },  // module_admin
-    { first: "Rachel",    last: "Anderson"  },  // tenant_admin
+    { first: "Emily", last: "Davis" }, // viewer
+    { first: "Michael", last: "Brown" }, // reporter
+    { first: "Jessica", last: "Wilson" }, // requester
+    { first: "James", last: "Taylor" }, // agent
+    { first: "Sarah", last: "Johnson" }, // manager (existing)
+    { first: "David", last: "Martinez" }, // module_admin
+    { first: "Rachel", last: "Anderson" }, // tenant_admin
   ],
   demo_ca: [
-    { first: "Emma",      last: "Tremblay"  },  // viewer
-    { first: "Liam",      last: "Roy"       },  // reporter
-    { first: "Olivia",    last: "Gagnon"    },  // requester
-    { first: "Ethan",     last: "Bouchard"  },  // agent
-    { first: "Sophie",    last: "Cote"      },  // manager
-    { first: "Nathan",    last: "Gauthier"  },  // module_admin
-    { first: "Chloe",     last: "Bergeron"  },  // tenant_admin
+    { first: "Emma", last: "Tremblay" }, // viewer
+    { first: "Liam", last: "Roy" }, // reporter
+    { first: "Olivia", last: "Gagnon" }, // requester
+    { first: "Ethan", last: "Bouchard" }, // agent
+    { first: "Sophie", last: "Cote" }, // manager
+    { first: "Nathan", last: "Gauthier" }, // module_admin
+    { first: "Chloe", last: "Bergeron" }, // tenant_admin
   ],
 };
 
@@ -142,8 +166,10 @@ const NAMES = {
 const SHARED_CREDENTIAL_DATA = {
   type: "password",
   userLabel: "Demo password",
-  secretData: '{"value":"f9t235zCMOdcpzEEQNZ+U3oONEEU2811rZMWLO+owzE=","salt":"D1HM/TRp+MUfb6I5YXZ1HQ==","additionalParameters":{}}',
-  credentialData: '{"hashIterations":5,"algorithm":"argon2","additionalParameters":{"hashLength":["32"],"memory":["7168"],"type":["id"],"version":["1.3"],"parallelism":["1"]}}',
+  secretData:
+    '{"value":"f9t235zCMOdcpzEEQNZ+U3oONEEU2811rZMWLO+owzE=","salt":"D1HM/TRp+MUfb6I5YXZ1HQ==","additionalParameters":{}}',
+  credentialData:
+    '{"hashIterations":5,"algorithm":"argon2","additionalParameters":{"hashLength":["32"],"memory":["7168"],"type":["id"],"version":["1.3"],"parallelism":["1"]}}',
 };
 
 // ---------------------------------------------------------------------------
@@ -208,8 +234,8 @@ function patchRealm() {
   const realm = JSON.parse(readFileSync(REALM_PATH, "utf8"));
 
   // Separate service accounts from human users
-  const serviceAccounts = (realm.users || []).filter(
-    (u) => u.username?.startsWith("service-account-")
+  const serviceAccounts = (realm.users || []).filter((u) =>
+    u.username?.startsWith("service-account-"),
   );
 
   // Generate 63 demo users
@@ -235,14 +261,20 @@ function patchRealm() {
   // Write back
   writeFileSync(REALM_PATH, JSON.stringify(realm, null, 2) + "\n", "utf8");
   console.log(`Wrote ${REALM_PATH}`);
-  console.log(`  Total users: ${realm.users.length} (${demoUsers.length} demo + ${serviceAccounts.length} service accounts)`);
+  console.log(
+    `  Total users: ${realm.users.length} (${demoUsers.length} demo + ${serviceAccounts.length} service accounts)`,
+  );
   console.log(`  Organizations patched: ${realm.organizations?.length || 0}`);
 
   // Summary
   console.log("\nUser summary:");
   for (const t of TENANTS) {
-    const tUsers = demoUsers.filter((u) => u.username.startsWith(t.prefix + "_"));
-    console.log(`  ${t.code} (${t.prefix}): ${tUsers.map((u) => u.username.split("_").slice(1).join("_")).join(", ")}`);
+    const tUsers = demoUsers.filter((u) =>
+      u.username.startsWith(t.prefix + "_"),
+    );
+    console.log(
+      `  ${t.code} (${t.prefix}): ${tUsers.map((u) => u.username.split("_").slice(1).join("_")).join(", ")}`,
+    );
   }
 }
 

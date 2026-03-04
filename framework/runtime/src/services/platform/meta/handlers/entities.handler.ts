@@ -8,11 +8,12 @@ import { META_TOKENS } from "@athyper/core/meta";
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
 import type { MetaRegistry, RequestContext } from "@athyper/core/meta";
 import type { Request, Response } from "express";
-
-
 
 // ============================================================================
 // Helper Functions
@@ -35,9 +36,20 @@ function toMetaRequestContext(ctx: HttpHandlerContext): RequestContext {
 // ============================================================================
 
 export class CreateEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const {
-      name, description, kind, moduleId, tableSchema, tableName, governanceLevel, engineTag,
+      name,
+      description,
+      kind,
+      moduleId,
+      tableSchema,
+      tableName,
+      governanceLevel,
+      engineTag,
     } = req.body as {
       name: string;
       description?: string;
@@ -61,12 +73,19 @@ export class CreateEntityHandler implements RouteHandler {
       return;
     }
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
       const entity = await registry.createEntity(name, description, metaCtx, {
-        kind, moduleId, tableSchema, tableName, governanceLevel, engineTag,
+        kind,
+        moduleId,
+        tableSchema,
+        tableName,
+        governanceLevel,
+        engineTag,
       });
 
       res.status(201).json({
@@ -104,8 +123,14 @@ export class CreateEntityHandler implements RouteHandler {
 // ============================================================================
 
 export class ListEntitiesHandler implements RouteHandler {
-  async handle(_req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+  async handle(
+    _req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
 
     try {
       const result = await registry.listEntities();
@@ -135,10 +160,16 @@ export class ListEntitiesHandler implements RouteHandler {
 // ============================================================================
 
 export class GetEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
 
     try {
       const entity = await registry.getEntity(name);
@@ -178,15 +209,25 @@ export class GetEntityHandler implements RouteHandler {
 // ============================================================================
 
 export class UpdateEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
     const { description } = req.body as { description?: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
-      const entity = await registry.updateEntity(name, { description }, metaCtx);
+      const entity = await registry.updateEntity(
+        name,
+        { description },
+        metaCtx,
+      );
 
       res.status(200).json({
         success: true,
@@ -223,10 +264,16 @@ export class UpdateEntityHandler implements RouteHandler {
 // ============================================================================
 
 export class DeleteEntityHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {

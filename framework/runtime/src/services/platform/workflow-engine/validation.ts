@@ -27,7 +27,7 @@ import type {
  * Validate an approval workflow template
  */
 export function validateApprovalWorkflowTemplate(
-  template: CreateApprovalWorkflowInput | ApprovalWorkflowTemplate
+  template: CreateApprovalWorkflowInput | ApprovalWorkflowTemplate,
 ): TemplateValidationResult {
   const errors: TemplateValidationError[] = [];
   const warnings: TemplateValidationWarning[] = [];
@@ -65,7 +65,7 @@ export function validateApprovalWorkflowTemplate(
 function validateBasicFields(
   template: CreateApprovalWorkflowInput | ApprovalWorkflowTemplate,
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   // Name validation
   if (!template.name || template.name.trim().length === 0) {
@@ -95,7 +95,8 @@ function validateBasicFields(
   } else if (!/^[a-z][a-z0-9_-]*$/i.test(template.code)) {
     errors.push({
       code: "INVALID_CODE_FORMAT",
-      message: "Template code must start with a letter and contain only letters, numbers, underscores, and hyphens",
+      message:
+        "Template code must start with a letter and contain only letters, numbers, underscores, and hyphens",
       path: "code",
       severity: "error",
     });
@@ -140,7 +141,8 @@ function validateBasicFields(
   if (template.entityType === "custom" && !template.customEntityType) {
     errors.push({
       code: "MISSING_CUSTOM_ENTITY_TYPE",
-      message: "Custom entity type name is required when entity type is 'custom'",
+      message:
+        "Custom entity type name is required when entity type is 'custom'",
       path: "customEntityType",
       severity: "error",
     });
@@ -205,7 +207,7 @@ function validateBasicFields(
 function validateTriggers(
   triggers: ApprovalTrigger[],
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   if (!triggers) return;
 
@@ -244,7 +246,8 @@ function validateTriggers(
       if (!trigger.fromStates?.length && !trigger.toStates?.length) {
         warnings.push({
           code: "STATE_TRANSITION_NO_STATES",
-          message: "State transition trigger has no from/to states defined; will trigger on any transition",
+          message:
+            "State transition trigger has no from/to states defined; will trigger on any transition",
           path: path,
           severity: "warning",
         });
@@ -268,7 +271,8 @@ function validateTriggers(
       if (!trigger.amountThreshold) {
         errors.push({
           code: "AMOUNT_THRESHOLD_MISSING",
-          message: "Amount threshold configuration is required for on_amount_threshold trigger",
+          message:
+            "Amount threshold configuration is required for on_amount_threshold trigger",
           path: `${path}.amountThreshold`,
           severity: "error",
         });
@@ -290,7 +294,10 @@ function validateTriggers(
             severity: "error",
           });
         }
-        if (threshold.operator === "between" && threshold.upperValue === undefined) {
+        if (
+          threshold.operator === "between" &&
+          threshold.upperValue === undefined
+        ) {
           errors.push({
             code: "AMOUNT_THRESHOLD_BETWEEN_MISSING_UPPER",
             message: "Upper value is required for 'between' operator",
@@ -304,7 +311,12 @@ function validateTriggers(
     // Validate conditions if present
     if (trigger.conditions) {
       trigger.conditions.forEach((condition, condIndex) => {
-        validateCondition(condition, `${path}.conditions[${condIndex}]`, errors, warnings);
+        validateCondition(
+          condition,
+          `${path}.conditions[${condIndex}]`,
+          errors,
+          warnings,
+        );
       });
     }
   });
@@ -316,7 +328,7 @@ function validateTriggers(
 function validateSteps(
   steps: ApprovalStep[],
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   if (!steps) return;
 
@@ -418,12 +430,16 @@ function validateSteps(
       if (!step.quorum) {
         errors.push({
           code: "QUORUM_CONFIG_MISSING",
-          message: "Quorum configuration is required when requirement is 'quorum'",
+          message:
+            "Quorum configuration is required when requirement is 'quorum'",
           path: `${path}.quorum`,
           severity: "error",
         });
       } else {
-        if (!step.quorum.type || !["count", "percentage"].includes(step.quorum.type)) {
+        if (
+          !step.quorum.type ||
+          !["count", "percentage"].includes(step.quorum.type)
+        ) {
           errors.push({
             code: "INVALID_QUORUM_TYPE",
             message: "Quorum type must be 'count' or 'percentage'",
@@ -460,12 +476,20 @@ function validateSteps(
       });
     } else {
       step.approvers.forEach((approver, approverIndex) => {
-        validateApproverRule(approver, `${path}.approvers[${approverIndex}]`, errors, warnings);
+        validateApproverRule(
+          approver,
+          `${path}.approvers[${approverIndex}]`,
+          errors,
+          warnings,
+        );
       });
     }
 
     // Conditional step must have conditions
-    if (step.type === "conditional" && (!step.conditions || step.conditions.length === 0)) {
+    if (
+      step.type === "conditional" &&
+      (!step.conditions || step.conditions.length === 0)
+    ) {
       errors.push({
         code: "CONDITIONAL_STEP_NO_CONDITIONS",
         message: "Conditional step must have conditions defined",
@@ -477,21 +501,36 @@ function validateSteps(
     // Validate conditions
     if (step.conditions) {
       step.conditions.forEach((condition, condIndex) => {
-        validateCondition(condition, `${path}.conditions[${condIndex}]`, errors, warnings);
+        validateCondition(
+          condition,
+          `${path}.conditions[${condIndex}]`,
+          errors,
+          warnings,
+        );
       });
     }
 
     // Validate skip conditions
     if (step.skipConditions) {
       step.skipConditions.forEach((condition, condIndex) => {
-        validateCondition(condition, `${path}.skipConditions[${condIndex}]`, errors, warnings);
+        validateCondition(
+          condition,
+          `${path}.skipConditions[${condIndex}]`,
+          errors,
+          warnings,
+        );
       });
     }
 
     // Validate auto-approve conditions
     if (step.autoApproveConditions) {
       step.autoApproveConditions.forEach((condition, condIndex) => {
-        validateCondition(condition, `${path}.autoApproveConditions[${condIndex}]`, errors, warnings);
+        validateCondition(
+          condition,
+          `${path}.autoApproveConditions[${condIndex}]`,
+          errors,
+          warnings,
+        );
       });
     }
 
@@ -531,7 +570,7 @@ function validateSteps(
 function validateStepDependencies(
   steps: ApprovalStep[],
   errors: TemplateValidationError[],
-  _warnings: TemplateValidationWarning[]
+  _warnings: TemplateValidationWarning[],
 ): void {
   if (!steps) return;
 
@@ -604,7 +643,7 @@ function validateApproverRule(
   rule: ApproverRule,
   path: string,
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   // ID validation
   if (!rule.id) {
@@ -684,10 +723,14 @@ function validateApproverRule(
             severity: "error",
           });
         }
-        if (rule.dynamic.strategy === "custom_field" && !rule.dynamic.sourceField) {
+        if (
+          rule.dynamic.strategy === "custom_field" &&
+          !rule.dynamic.sourceField
+        ) {
           errors.push({
             code: "CUSTOM_FIELD_NO_SOURCE",
-            message: "Custom field strategy requires sourceField to be specified",
+            message:
+              "Custom field strategy requires sourceField to be specified",
             path: `${path}.dynamic.sourceField`,
             severity: "error",
           });
@@ -718,7 +761,8 @@ function validateApproverRule(
       if (rule.expression && !rule.expression.language) {
         warnings.push({
           code: "EXPRESSION_NO_LANGUAGE",
-          message: "Expression language not specified; defaulting to 'jsonpath'",
+          message:
+            "Expression language not specified; defaulting to 'jsonpath'",
           path: `${path}.expression.language`,
           severity: "warning",
         });
@@ -730,7 +774,8 @@ function validateApproverRule(
   if (rule.isFallback && rule.fallbackRuleId) {
     warnings.push({
       code: "FALLBACK_HAS_FALLBACK",
-      message: "Fallback rule has its own fallback; this may cause unexpected behavior",
+      message:
+        "Fallback rule has its own fallback; this may cause unexpected behavior",
       path: `${path}.fallbackRuleId`,
       severity: "warning",
     });
@@ -739,7 +784,12 @@ function validateApproverRule(
   // Validate conditions
   if (rule.conditions) {
     rule.conditions.forEach((condition, condIndex) => {
-      validateCondition(condition, `${path}.conditions[${condIndex}]`, errors, warnings);
+      validateCondition(
+        condition,
+        `${path}.conditions[${condIndex}]`,
+        errors,
+        warnings,
+      );
     });
   }
 }
@@ -751,7 +801,7 @@ function validateCondition(
   condition: ApprovalCondition,
   path: string,
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   // Logic operator validation
   if (!condition.logic || !["and", "or"].includes(condition.logic)) {
@@ -764,8 +814,10 @@ function validateCondition(
   }
 
   // Must have rules or nested conditions
-  if ((!condition.rules || condition.rules.length === 0) &&
-      (!condition.conditions || condition.conditions.length === 0)) {
+  if (
+    (!condition.rules || condition.rules.length === 0) &&
+    (!condition.conditions || condition.conditions.length === 0)
+  ) {
     errors.push({
       code: "EMPTY_CONDITION",
       message: "Condition must have rules or nested conditions",
@@ -777,9 +829,23 @@ function validateCondition(
   // Validate rules
   if (condition.rules) {
     const validOperators = [
-      "eq", "neq", "gt", "gte", "lt", "lte", "in", "nin",
-      "contains", "startsWith", "endsWith", "matches",
-      "exists", "notExists", "between", "empty", "notEmpty"
+      "eq",
+      "neq",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "in",
+      "nin",
+      "contains",
+      "startsWith",
+      "endsWith",
+      "matches",
+      "exists",
+      "notExists",
+      "between",
+      "empty",
+      "notEmpty",
     ];
 
     condition.rules.forEach((rule, ruleIndex) => {
@@ -805,7 +871,10 @@ function validateCondition(
 
       // Value required for most operators
       const noValueOperators = ["exists", "notExists", "empty", "notEmpty"];
-      if (!noValueOperators.includes(rule.operator) && rule.value === undefined) {
+      if (
+        !noValueOperators.includes(rule.operator) &&
+        rule.value === undefined
+      ) {
         errors.push({
           code: "MISSING_CONDITION_VALUE",
           message: "Condition value is required for this operator",
@@ -825,7 +894,10 @@ function validateCondition(
       }
 
       // In/nin require array value
-      if ((rule.operator === "in" || rule.operator === "nin") && !Array.isArray(rule.value)) {
+      if (
+        (rule.operator === "in" || rule.operator === "nin") &&
+        !Array.isArray(rule.value)
+      ) {
         errors.push({
           code: "IN_OPERATOR_NOT_ARRAY",
           message: "Value must be an array for 'in' or 'nin' operators",
@@ -839,7 +911,12 @@ function validateCondition(
   // Validate nested conditions
   if (condition.conditions) {
     condition.conditions.forEach((nested, nestedIndex) => {
-      validateCondition(nested, `${path}.conditions[${nestedIndex}]`, errors, warnings);
+      validateCondition(
+        nested,
+        `${path}.conditions[${nestedIndex}]`,
+        errors,
+        warnings,
+      );
     });
   }
 }
@@ -851,7 +928,7 @@ function validateSlaConfiguration(
   sla: SlaConfiguration,
   path: string,
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   // Validate durations
   if (sla.responseTime) {
@@ -899,7 +976,13 @@ function validateSlaConfiguration(
         validateDuration(escalation.delay, `${escPath}.delay`, errors);
       }
 
-      const validActions = ["notify", "reassign", "add_approver", "auto_approve", "auto_reject"];
+      const validActions = [
+        "notify",
+        "reassign",
+        "add_approver",
+        "auto_approve",
+        "auto_reject",
+      ];
       if (!escalation.action || !validActions.includes(escalation.action)) {
         errors.push({
           code: "INVALID_ESCALATION_ACTION",
@@ -923,7 +1006,11 @@ function validateSlaConfiguration(
 
       // Validate repeat configuration
       if (escalation.repeat) {
-        validateDuration(escalation.repeat.interval, `${escPath}.repeat.interval`, errors);
+        validateDuration(
+          escalation.repeat.interval,
+          `${escPath}.repeat.interval`,
+          errors,
+        );
         if (escalation.repeat.maxRepeats <= 0) {
           errors.push({
             code: "INVALID_MAX_REPEATS",
@@ -937,7 +1024,10 @@ function validateSlaConfiguration(
   }
 
   // Validate reminders
-  if (sla.reminders?.enabled && (!sla.reminders.intervals || sla.reminders.intervals.length === 0)) {
+  if (
+    sla.reminders?.enabled &&
+    (!sla.reminders.intervals || sla.reminders.intervals.length === 0)
+  ) {
     warnings.push({
       code: "REMINDERS_NO_INTERVALS",
       message: "Reminders enabled but no intervals specified",
@@ -949,7 +1039,12 @@ function validateSlaConfiguration(
   // Validate business hours
   if (sla.businessHours) {
     const bh = sla.businessHours;
-    if (bh.startHour < 0 || bh.startHour > 23 || bh.endHour < 0 || bh.endHour > 23) {
+    if (
+      bh.startHour < 0 ||
+      bh.startHour > 23 ||
+      bh.endHour < 0 ||
+      bh.endHour > 23
+    ) {
       errors.push({
         code: "INVALID_BUSINESS_HOURS",
         message: "Business hours must be between 0 and 23",
@@ -960,7 +1055,8 @@ function validateSlaConfiguration(
     if (bh.startHour >= bh.endHour) {
       warnings.push({
         code: "BUSINESS_HOURS_OVERLAP",
-        message: "Business hours start time is >= end time; this may indicate overnight hours or an error",
+        message:
+          "Business hours start time is >= end time; this may indicate overnight hours or an error",
         path: `${path}.businessHours`,
         severity: "warning",
       });
@@ -990,7 +1086,7 @@ function validateSlaConfiguration(
 function validateDuration(
   duration: { value: number; unit: string },
   path: string,
-  errors: TemplateValidationError[]
+  errors: TemplateValidationError[],
 ): void {
   if (duration.value === undefined || duration.value <= 0) {
     errors.push({
@@ -1018,7 +1114,7 @@ function validateDuration(
 function validateAllowedActions(
   actions: ApprovalActionType[],
   errors: TemplateValidationError[],
-  warnings: TemplateValidationWarning[]
+  warnings: TemplateValidationWarning[],
 ): void {
   if (!actions || actions.length === 0) return;
 

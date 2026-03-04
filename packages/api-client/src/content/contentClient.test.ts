@@ -18,7 +18,9 @@ describe("contentClient", () => {
 
       // SHA-256 of "Hello, World!" is:
       // dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
-      expect(hash).toBe("dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f");
+      expect(hash).toBe(
+        "dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f",
+      );
     });
 
     it("should produce consistent hashes for same content", async () => {
@@ -47,7 +49,9 @@ describe("contentClient", () => {
       const hash = await computeFileHash(file);
 
       // SHA-256 of empty string
-      expect(hash).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+      expect(hash).toBe(
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      );
     });
 
     it("should handle binary data", async () => {

@@ -20,7 +20,12 @@ function createMockCompiledPolicy(ruleCount: number): CompiledPolicy {
 
   // Create rules spread across different scopes and subjects
   const scopes = ["global:*", "module:crm", "entity:users", "entity:orders"];
-  const subjects = ["kc_role:admin", "kc_role:editor", "kc_group:engineering", "user:*"];
+  const subjects = [
+    "kc_role:admin",
+    "kc_role:editor",
+    "kc_group:engineering",
+    "user:*",
+  ];
   const operations = ["op-read", "op-create", "op-update", "op-delete"];
 
   let ruleId = 0;
@@ -66,8 +71,16 @@ function createMockConditions(): ConditionGroup {
   return {
     operator: "and",
     conditions: [
-      { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-      { field: "subject.attributes.level", operator: "in", value: ["senior", "lead"] },
+      {
+        field: "subject.attributes.department",
+        operator: "eq",
+        value: "engineering",
+      },
+      {
+        field: "subject.attributes.level",
+        operator: "in",
+        value: ["senior", "lead"],
+      },
     ],
   };
 }
@@ -94,7 +107,7 @@ function findMatchingRules(
   compiled: CompiledPolicy,
   subjectKeys: Array<{ type: string; key: string }>,
   operationId: string,
-  scopeKey: string
+  scopeKey: string,
 ): CompiledRule[] {
   const matchedRules: CompiledRule[] = [];
 
@@ -162,7 +175,9 @@ describe("Policy Gate Performance", () => {
       const p95 = sorted[Math.floor(sorted.length * 0.95)];
       const p99 = sorted[Math.floor(sorted.length * 0.99)];
 
-      console.log(`Rule matching (100 rules): avg=${avg.toFixed(3)}ms, p95=${p95.toFixed(3)}ms, p99=${p99.toFixed(3)}ms`);
+      console.log(
+        `Rule matching (100 rules): avg=${avg.toFixed(3)}ms, p95=${p95.toFixed(3)}ms, p99=${p99.toFixed(3)}ms`,
+      );
 
       expect(p95).toBeLessThan(1); // p95 < 1ms
     });
@@ -186,7 +201,9 @@ describe("Policy Gate Performance", () => {
       const sorted = times.sort((a, b) => a - b);
       const p95 = sorted[Math.floor(sorted.length * 0.95)];
 
-      console.log(`Rule matching (1000 rules): avg=${avg.toFixed(3)}ms, p95=${p95.toFixed(3)}ms`);
+      console.log(
+        `Rule matching (1000 rules): avg=${avg.toFixed(3)}ms, p95=${p95.toFixed(3)}ms`,
+      );
 
       expect(p95).toBeLessThan(5);
     });
@@ -209,7 +226,9 @@ describe("Policy Gate Performance", () => {
       const sorted = times.sort((a, b) => a - b);
       const p95 = sorted[Math.floor(sorted.length * 0.95)];
 
-      console.log(`Subject key building: avg=${avg.toFixed(4)}ms, p95=${p95.toFixed(4)}ms`);
+      console.log(
+        `Subject key building: avg=${avg.toFixed(4)}ms, p95=${p95.toFixed(4)}ms`,
+      );
 
       expect(p95).toBeLessThan(0.1);
     });
@@ -234,7 +253,9 @@ describe("Policy Gate Performance", () => {
       const sorted = times.sort((a, b) => a - b);
       const p95 = sorted[Math.floor(sorted.length * 0.95)];
 
-      console.log(`Condition evaluation: avg=${avg.toFixed(4)}ms, p95=${p95.toFixed(4)}ms`);
+      console.log(
+        `Condition evaluation: avg=${avg.toFixed(4)}ms, p95=${p95.toFixed(4)}ms`,
+      );
 
       expect(p95).toBeLessThan(0.5);
     });
@@ -258,7 +279,12 @@ describe("Policy Gate Performance", () => {
         const scopes = ["global:*", "module:crm", "entity:users"];
         const allRules: CompiledRule[] = [];
         for (const scope of scopes) {
-          const rules = findMatchingRules(policy, subjectKeys, "op-read", scope);
+          const rules = findMatchingRules(
+            policy,
+            subjectKeys,
+            "op-read",
+            scope,
+          );
           allRules.push(...rules);
         }
 
@@ -285,7 +311,9 @@ describe("Policy Gate Performance", () => {
       const p99 = sorted[Math.floor(sorted.length * 0.99)];
 
       console.log(`Full authorization flow (500 rules):`);
-      console.log(`  avg=${avg.toFixed(3)}ms, p50=${p50.toFixed(3)}ms, p95=${p95.toFixed(3)}ms, p99=${p99.toFixed(3)}ms`);
+      console.log(
+        `  avg=${avg.toFixed(3)}ms, p50=${p50.toFixed(3)}ms, p95=${p95.toFixed(3)}ms, p99=${p99.toFixed(3)}ms`,
+      );
 
       // Target: p95 < 50ms (without database)
       // In-memory operations should be much faster
@@ -302,7 +330,9 @@ describe("Policy Gate Performance", () => {
       const jsonStr = JSON.stringify(policy);
       const sizeKB = jsonStr.length / 1024;
 
-      console.log(`Policy with 10000 rules: ~${sizeKB.toFixed(0)}KB serialized`);
+      console.log(
+        `Policy with 10000 rules: ~${sizeKB.toFixed(0)}KB serialized`,
+      );
 
       // Should be under 10MB for 10k rules
       expect(sizeKB).toBeLessThan(10 * 1024);
@@ -311,7 +341,10 @@ describe("Policy Gate Performance", () => {
 });
 
 // Helper function for condition evaluation
-function evaluateConditionGroup(group: ConditionGroup, subject: SubjectSnapshot): boolean {
+function evaluateConditionGroup(
+  group: ConditionGroup,
+  subject: SubjectSnapshot,
+): boolean {
   const operator = group.operator ?? "and";
 
   if (operator === "and") {
@@ -321,7 +354,11 @@ function evaluateConditionGroup(group: ConditionGroup, subject: SubjectSnapshot)
           return false;
         }
       } else {
-        const cond = condition as { field: string; operator: string; value: unknown };
+        const cond = condition as {
+          field: string;
+          operator: string;
+          value: unknown;
+        };
         const value = resolveField(cond.field, subject);
         if (!evaluate(value, cond.operator, cond.value)) {
           return false;
@@ -336,7 +373,11 @@ function evaluateConditionGroup(group: ConditionGroup, subject: SubjectSnapshot)
           return true;
         }
       } else {
-        const cond = condition as { field: string; operator: string; value: unknown };
+        const cond = condition as {
+          field: string;
+          operator: string;
+          value: unknown;
+        };
         const value = resolveField(cond.field, subject);
         if (evaluate(value, cond.operator, cond.value)) {
           return true;
@@ -351,7 +392,8 @@ function resolveField(field: string, subject: SubjectSnapshot): unknown {
   const parts = field.split(".");
   let value: unknown = subject;
 
-  for (const part of parts.slice(1)) { // Skip "subject" prefix
+  for (const part of parts.slice(1)) {
+    // Skip "subject" prefix
     if (value === null || value === undefined) return undefined;
     value = (value as Record<string, unknown>)[part];
   }
@@ -359,7 +401,11 @@ function resolveField(field: string, subject: SubjectSnapshot): unknown {
   return value;
 }
 
-function evaluate(fieldValue: unknown, operator: string, compareValue: unknown): boolean {
+function evaluate(
+  fieldValue: unknown,
+  operator: string,
+  compareValue: unknown,
+): boolean {
   switch (operator) {
     case "eq":
       return fieldValue === compareValue;
@@ -368,8 +414,11 @@ function evaluate(fieldValue: unknown, operator: string, compareValue: unknown):
     case "in":
       return Array.isArray(compareValue) && compareValue.includes(fieldValue);
     case "contains":
-      return typeof fieldValue === "string" && typeof compareValue === "string" &&
-        fieldValue.includes(compareValue);
+      return (
+        typeof fieldValue === "string" &&
+        typeof compareValue === "string" &&
+        fieldValue.includes(compareValue)
+      );
     default:
       return false;
   }

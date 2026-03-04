@@ -8,7 +8,10 @@ import { AuditDlqManager } from "../domain/AuditDlqManager.js";
 import type { AuditHashChainService } from "../domain/hash-chain.service.js";
 import type { AuditDlqEntry } from "../domain/models/AuditDlqEntry.js";
 import type { AuditDlqRepo } from "../persistence/AuditDlqRepo.js";
-import type { AuditOutboxRepo, AuditOutboxEntry } from "../persistence/AuditOutboxRepo.js";
+import type {
+  AuditOutboxRepo,
+  AuditOutboxEntry,
+} from "../persistence/AuditOutboxRepo.js";
 
 function createMockDlqRepo(): AuditDlqRepo {
   return {
@@ -57,7 +60,9 @@ function createMockLogger() {
   } as any;
 }
 
-function createOutboxEntry(overrides: Partial<AuditOutboxEntry> = {}): AuditOutboxEntry {
+function createOutboxEntry(
+  overrides: Partial<AuditOutboxEntry> = {},
+): AuditOutboxEntry {
   return {
     id: "outbox-1",
     tenantId: "t-1",
@@ -93,7 +98,11 @@ describe("AuditDlqManager", () => {
   describe("moveToDlq", () => {
     it("should create a DLQ entry from outbox entry", async () => {
       const entry = createOutboxEntry();
-      const result = await manager.moveToDlq(entry, "DB error", "persist_failure");
+      const result = await manager.moveToDlq(
+        entry,
+        "DB error",
+        "persist_failure",
+      );
 
       expect(dlqRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -155,8 +164,16 @@ describe("AuditDlqManager", () => {
       const result = await manager.retry("t-1", "dlq-1", "admin@test.com");
 
       expect(result).toBe(true);
-      expect(outboxRepo.enqueue).toHaveBeenCalledWith("t-1", "workflow.created", { instanceId: "inst-1" });
-      expect(dlqRepo.markReplayed).toHaveBeenCalledWith("t-1", "dlq-1", "admin@test.com");
+      expect(outboxRepo.enqueue).toHaveBeenCalledWith(
+        "t-1",
+        "workflow.created",
+        { instanceId: "inst-1" },
+      );
+      expect(dlqRepo.markReplayed).toHaveBeenCalledWith(
+        "t-1",
+        "dlq-1",
+        "admin@test.com",
+      );
     });
 
     it("should reset hash chain for tenant after replay", async () => {
@@ -195,16 +212,36 @@ describe("AuditDlqManager", () => {
     it("should replay all unreplayed entries up to limit", async () => {
       const entries: AuditDlqEntry[] = [
         {
-          id: "dlq-1", tenantId: "t-1", outboxId: "ob-1", eventType: "workflow.created",
-          payload: {}, lastError: null, errorCategory: null, attemptCount: 3,
-          deadAt: new Date(), replayedAt: null, replayedBy: null, replayCount: 0,
-          correlationId: null, createdAt: new Date(),
+          id: "dlq-1",
+          tenantId: "t-1",
+          outboxId: "ob-1",
+          eventType: "workflow.created",
+          payload: {},
+          lastError: null,
+          errorCategory: null,
+          attemptCount: 3,
+          deadAt: new Date(),
+          replayedAt: null,
+          replayedBy: null,
+          replayCount: 0,
+          correlationId: null,
+          createdAt: new Date(),
         },
         {
-          id: "dlq-2", tenantId: "t-1", outboxId: "ob-2", eventType: "workflow.started",
-          payload: {}, lastError: null, errorCategory: null, attemptCount: 5,
-          deadAt: new Date(), replayedAt: null, replayedBy: null, replayCount: 0,
-          correlationId: null, createdAt: new Date(),
+          id: "dlq-2",
+          tenantId: "t-1",
+          outboxId: "ob-2",
+          eventType: "workflow.started",
+          payload: {},
+          lastError: null,
+          errorCategory: null,
+          attemptCount: 5,
+          deadAt: new Date(),
+          replayedAt: null,
+          replayedBy: null,
+          replayCount: 0,
+          correlationId: null,
+          createdAt: new Date(),
         },
       ];
       (dlqRepo.list as any).mockResolvedValue(entries);
@@ -221,10 +258,20 @@ describe("AuditDlqManager", () => {
     it("should count errors for failed replays", async () => {
       const entries: AuditDlqEntry[] = [
         {
-          id: "dlq-1", tenantId: "t-1", outboxId: "ob-1", eventType: "wf.created",
-          payload: {}, lastError: null, errorCategory: null, attemptCount: 3,
-          deadAt: new Date(), replayedAt: null, replayedBy: null, replayCount: 0,
-          correlationId: null, createdAt: new Date(),
+          id: "dlq-1",
+          tenantId: "t-1",
+          outboxId: "ob-1",
+          eventType: "wf.created",
+          payload: {},
+          lastError: null,
+          errorCategory: null,
+          attemptCount: 3,
+          deadAt: new Date(),
+          replayedAt: null,
+          replayedBy: null,
+          replayCount: 0,
+          correlationId: null,
+          createdAt: new Date(),
         },
       ];
       (dlqRepo.list as any).mockResolvedValue(entries);
@@ -240,7 +287,9 @@ describe("AuditDlqManager", () => {
   describe("list", () => {
     it("should delegate to repo", async () => {
       await manager.list("t-1", { unreplayedOnly: true });
-      expect(dlqRepo.list).toHaveBeenCalledWith("t-1", { unreplayedOnly: true });
+      expect(dlqRepo.list).toHaveBeenCalledWith("t-1", {
+        unreplayedOnly: true,
+      });
     });
   });
 

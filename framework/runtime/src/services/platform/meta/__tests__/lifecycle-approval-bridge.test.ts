@@ -201,7 +201,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
     service = new LifecycleManagerService(
       mockDb,
       mockRouteCompiler,
-      mockPolicyGate
+      mockPolicyGate,
     );
     service.setApprovalService(mockApprovalService);
   });
@@ -242,7 +242,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(false);
@@ -252,7 +252,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
       expect(mockApprovalService.getInstanceForEntity).toHaveBeenCalledWith(
         "TravelRequest",
         "req-456",
-        "tenant-456"
+        "tenant-456",
       );
 
       expect(mockApprovalService.createApprovalInstance).toHaveBeenCalledWith({
@@ -290,7 +290,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(false);
@@ -326,7 +326,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(true);
@@ -359,7 +359,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(false);
@@ -386,7 +386,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         ctxWithBypass,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(true);
@@ -420,7 +420,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(false);
@@ -458,7 +458,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(false);
@@ -500,7 +500,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         transitionId,
         testCtx,
         undefined,
-        entityContext
+        entityContext,
       );
 
       expect(result.allowed).toBe(true);
@@ -510,7 +510,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
         "travel.approve",
         "TravelRequest",
         testCtx,
-        undefined
+        undefined,
       );
       expect(mockApprovalService.getInstanceForEntity).toHaveBeenCalled();
     });
@@ -561,9 +561,13 @@ describe("LifecycleManagerService - Approval Bridge", () => {
       expect(result).toBe("approval-template-1");
 
       expect(mocks.selectFrom).toHaveBeenCalledWith(
-        "meta.lifecycle_transition_gate"
+        "meta.lifecycle_transition_gate",
       );
-      expect(mocks.where).toHaveBeenCalledWith("transition_id", "=", "trans-123");
+      expect(mocks.where).toHaveBeenCalledWith(
+        "transition_id",
+        "=",
+        "trans-123",
+      );
     });
 
     it("should return undefined when no approval is required", async () => {
@@ -652,7 +656,7 @@ describe("LifecycleManagerService - Approval Bridge", () => {
 
       // Instance should not be updated
       expect(mocks.updateTable).not.toHaveBeenCalledWith(
-        "core.entity_lifecycle_instance"
+        "core.entity_lifecycle_instance",
       );
     });
   });

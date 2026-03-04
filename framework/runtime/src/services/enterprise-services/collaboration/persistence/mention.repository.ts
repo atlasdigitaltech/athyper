@@ -84,7 +84,10 @@ export class MentionRepository {
   /**
    * Get mention by ID
    */
-  async getById(tenantId: string, mentionId: string): Promise<CommentMention | undefined> {
+  async getById(
+    tenantId: string,
+    mentionId: string,
+  ): Promise<CommentMention | undefined> {
     const row = await this.db
       .selectFrom("collab.comment_mention")
       .selectAll()
@@ -101,7 +104,7 @@ export class MentionRepository {
   async listByComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<CommentMention[]> {
     const rows = await this.db
       .selectFrom("collab.comment_mention")
@@ -123,7 +126,7 @@ export class MentionRepository {
   async listByUser(
     tenantId: string,
     userId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<CommentMention[]> {
     const { limit = 50, offset = 0 } = options ?? {};
 
@@ -160,7 +163,7 @@ export class MentionRepository {
   async deleteByComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await this.db
       .deleteFrom("collab.comment_mention")
@@ -182,7 +185,10 @@ export class MentionRepository {
       mentionedUserId: row.mentioned_user_id,
       mentionText: row.mention_text,
       position: row.position,
-      createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+      createdAt:
+        row.created_at instanceof Date
+          ? row.created_at.toISOString()
+          : String(row.created_at),
     };
   }
 }

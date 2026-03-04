@@ -175,7 +175,7 @@ export class ApprovalActionApiController {
     private readonly stepCompletionService: IStepCompletionService,
     private readonly slaService: ISlaMonitoringService,
     private readonly escalationService: IEscalationService,
-    private readonly completionService: IWorkflowCompletionService
+    private readonly completionService: IWorkflowCompletionService,
   ) {}
 
   /**
@@ -235,7 +235,9 @@ export class ApprovalActionApiController {
   /**
    * Execute request changes action
    */
-  async requestChanges(request: RequestChangesRequest): Promise<ActionResponse> {
+  async requestChanges(
+    request: RequestChangesRequest,
+  ): Promise<ActionResponse> {
     const input: RequestChangesInput = {
       action: "request_changes",
       tenantId: request.tenantId,
@@ -406,13 +408,13 @@ export class ApprovalActionApiController {
     tenantId: string,
     instanceId: string,
     stepInstanceId: string,
-    userId: string
+    userId: string,
   ): Promise<GetAvailableActionsResponse> {
     const actions = await this.actionService.getAvailableActions(
       tenantId,
       instanceId,
       stepInstanceId,
-      userId
+      userId,
     );
 
     return {
@@ -429,14 +431,14 @@ export class ApprovalActionApiController {
     instanceId: string,
     stepInstanceId: string,
     userId: string,
-    action: ApprovalActionType
+    action: ApprovalActionType,
   ): Promise<{ success: boolean; allowed: boolean; reason?: string }> {
     const result = await this.actionService.canPerformAction(
       tenantId,
       instanceId,
       stepInstanceId,
       userId,
-      action
+      action,
     );
 
     return {
@@ -450,7 +452,7 @@ export class ApprovalActionApiController {
    */
   async getSlaStatus(
     _tenantId: string,
-    _instanceId: string
+    _instanceId: string,
   ): Promise<GetSlaStatusResponse> {
     // Get instance first (would normally be passed in)
     // For now, return empty array if we can't get instance
@@ -611,13 +613,13 @@ export function createApprovalActionApiController(
   stepCompletionService: IStepCompletionService,
   slaService: ISlaMonitoringService,
   escalationService: IEscalationService,
-  completionService: IWorkflowCompletionService
+  completionService: IWorkflowCompletionService,
 ): ApprovalActionApiController {
   return new ApprovalActionApiController(
     actionService,
     stepCompletionService,
     slaService,
     escalationService,
-    completionService
+    completionService,
   );
 }

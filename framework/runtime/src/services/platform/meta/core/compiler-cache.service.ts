@@ -186,7 +186,7 @@ export class CompilerCacheService implements MetaCompiler {
 
   constructor(
     private readonly compiler: MetaCompiler,
-    config: CompilerCacheConfig = {}
+    config: CompilerCacheConfig = {},
   ) {
     this.config = {
       redis: config.redis,
@@ -207,7 +207,12 @@ export class CompilerCacheService implements MetaCompiler {
     // TODO: Accept overlaySet as parameter
     const overlaySet: string[] = [];
 
-    const cacheKey = this.getCacheKey(tenantId, entityName, version, overlaySet);
+    const cacheKey = this.getCacheKey(
+      tenantId,
+      entityName,
+      version,
+      overlaySet,
+    );
 
     // L1: Check in-memory cache first
     const l1Result = await this.checkL1Cache(tenantId, cacheKey);
@@ -219,7 +224,7 @@ export class CompilerCacheService implements MetaCompiler {
           entityName,
           version,
           tenantId,
-        })
+        }),
       );
       return l1Result;
     }
@@ -235,7 +240,7 @@ export class CompilerCacheService implements MetaCompiler {
             entityName,
             version,
             tenantId,
-          })
+          }),
         );
         // Promote to L1
         this.setL1Cache(tenantId, cacheKey, l2Result);
@@ -247,7 +252,12 @@ export class CompilerCacheService implements MetaCompiler {
     this.metrics.misses++;
 
     // Cache miss: Compile with stampede protection
-    return this.compileWithStampedeProtection(tenantId, entityName, version, cacheKey);
+    return this.compileWithStampedeProtection(
+      tenantId,
+      entityName,
+      version,
+      cacheKey,
+    );
   }
 
   /**
@@ -258,7 +268,7 @@ export class CompilerCacheService implements MetaCompiler {
     tenantId: string,
     entityName: string,
     version: string,
-    cacheKey: string
+    cacheKey: string,
   ): Promise<CompiledModel> {
     // Check if compilation already in flight
     const inFlightPromise = this.inFlight.get(cacheKey);
@@ -271,7 +281,7 @@ export class CompilerCacheService implements MetaCompiler {
           version,
           tenantId,
           stampedeSaves: this.metrics.stampedeSaves,
-        })
+        }),
       );
       return inFlightPromise;
     }
@@ -283,7 +293,7 @@ export class CompilerCacheService implements MetaCompiler {
         entityName,
         version,
         tenantId,
-      })
+      }),
     );
 
     const compilationPromise = this.compiler.compile(entityName, version);
@@ -328,11 +338,16 @@ export class CompilerCacheService implements MetaCompiler {
    */
   async getCached(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<CompiledModel | undefined> {
     const tenantId = "default";
     const overlaySet: string[] = [];
-    const cacheKey = this.getCacheKey(tenantId, entityName, version, overlaySet);
+    const cacheKey = this.getCacheKey(
+      tenantId,
+      entityName,
+      version,
+      overlaySet,
+    );
 
     // Check L1
     const l1Result = await this.checkL1Cache(tenantId, cacheKey);
@@ -365,7 +380,12 @@ export class CompilerCacheService implements MetaCompiler {
     const tenantId = "default";
     const overlaySet: string[] = [];
     for (const model of results) {
-      const cacheKey = this.getCacheKey(tenantId, model.entityName, model.version, overlaySet);
+      const cacheKey = this.getCacheKey(
+        tenantId,
+        model.entityName,
+        model.version,
+        overlaySet,
+      );
       this.setL1Cache(tenantId, cacheKey, model);
 
       if (this.config.enableL2 && this.config.redis) {
@@ -377,7 +397,7 @@ export class CompilerCacheService implements MetaCompiler {
       JSON.stringify({
         msg: "compiler_precompile_all_complete",
         count: results.length,
-      })
+      }),
     );
 
     return results;
@@ -390,7 +410,12 @@ export class CompilerCacheService implements MetaCompiler {
     // For now, clear entire cache (should be tenant-specific)
     const tenantId = "default";
     const overlaySet: string[] = [];
-    const cacheKey = this.getCacheKey(tenantId, entityName, version, overlaySet);
+    const cacheKey = this.getCacheKey(
+      tenantId,
+      entityName,
+      version,
+      overlaySet,
+    );
 
     // Clear L1
     const l1 = this.l1Cache.get(tenantId);
@@ -412,7 +437,7 @@ export class CompilerCacheService implements MetaCompiler {
         entityName,
         version,
         tenantId,
-      })
+      }),
     );
   }
 
@@ -445,7 +470,8 @@ export class CompilerCacheService implements MetaCompiler {
    * Get cache hit ratio
    */
   getCacheHitRatio(): number {
-    const totalRequests = this.metrics.l1Hits + this.metrics.l2Hits + this.metrics.misses;
+    const totalRequests =
+      this.metrics.l1Hits + this.metrics.l2Hits + this.metrics.misses;
     if (totalRequests === 0) return 0;
 
     const hits = this.metrics.l1Hits + this.metrics.l2Hits;
@@ -493,16 +519,14 @@ export class CompilerCacheService implements MetaCompiler {
     tenantId: string,
     entityName: string,
     version: string,
-    overlaySet: string[] = []
+    overlaySet: string[] = [],
   ): string {
     // Sort overlay set for deterministic hash
     const sortedOverlays = [...overlaySet].sort();
 
     // Hash overlay set if present
     const overlayHash =
-      sortedOverlays.length > 0
-        ? this.hashOverlaySet(sortedOverlays)
-        : "none";
+      sortedOverlays.length > 0 ? this.hashOverlaySet(sortedOverlays) : "none";
 
     return `${tenantId}:${entityName}:${version}:${overlayHash}`;
   }
@@ -517,12 +541,19 @@ export class CompilerCacheService implements MetaCompiler {
     return hash.substring(0, 16); // Use first 16 chars for brevity
   }
 
-  private checkL1Cache(tenantId: string, cacheKey: string): CompiledModel | undefined {
+  private checkL1Cache(
+    tenantId: string,
+    cacheKey: string,
+  ): CompiledModel | undefined {
     const cache = this.l1Cache.get(tenantId);
     return cache?.get(cacheKey);
   }
 
-  private setL1Cache(tenantId: string, cacheKey: string, model: CompiledModel): void {
+  private setL1Cache(
+    tenantId: string,
+    cacheKey: string,
+    model: CompiledModel,
+  ): void {
     let cache = this.l1Cache.get(tenantId);
     if (!cache) {
       cache = new LRUCache<CompiledModel>(this.config.l1MaxSize);
@@ -531,7 +562,9 @@ export class CompilerCacheService implements MetaCompiler {
     cache.set(cacheKey, model);
   }
 
-  private async checkL2Cache(cacheKey: string): Promise<CompiledModel | undefined> {
+  private async checkL2Cache(
+    cacheKey: string,
+  ): Promise<CompiledModel | undefined> {
     if (!this.config.redis) return undefined;
 
     try {
@@ -544,27 +577,30 @@ export class CompilerCacheService implements MetaCompiler {
         JSON.stringify({
           msg: "compiler_cache_l2_read_error",
           error: String(error),
-        })
+        }),
       );
       return undefined;
     }
   }
 
-  private async setL2Cache(cacheKey: string, model: CompiledModel): Promise<void> {
+  private async setL2Cache(
+    cacheKey: string,
+    model: CompiledModel,
+  ): Promise<void> {
     if (!this.config.redis) return;
 
     try {
       await this.config.redis.setex(
         `compiler:${cacheKey}`,
         this.config.l2TTL,
-        JSON.stringify(model)
+        JSON.stringify(model),
       );
     } catch (error) {
       console.error(
         JSON.stringify({
           msg: "compiler_cache_l2_write_error",
           error: String(error),
-        })
+        }),
       );
     }
   }

@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "IAM",
-    "name":  "Identity \u0026 Access Management",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "IAM",
+  "name": "Identity \u0026 Access Management",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

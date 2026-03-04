@@ -22,8 +22,8 @@ interface UseCommentDraftOptions {
 export function useCommentDraft(
   text: string,
   setText: (text: string) => void,
-  visibility: 'public' | 'internal' | 'private',
-  options: UseCommentDraftOptions
+  visibility: "public" | "internal" | "private",
+  options: UseCommentDraftOptions,
 ) {
   const {
     entityType,
@@ -109,7 +109,15 @@ export function useCommentDraft(
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [enabled, text, visibility, entityType, entityId, parentCommentId, autoSaveDelay]);
+  }, [
+    enabled,
+    text,
+    visibility,
+    entityType,
+    entityId,
+    parentCommentId,
+    autoSaveDelay,
+  ]);
 
   /**
    * Clear draft

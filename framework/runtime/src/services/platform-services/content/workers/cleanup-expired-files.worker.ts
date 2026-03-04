@@ -19,13 +19,16 @@ export interface CleanupExpiredFilesJobData {
 export function createCleanupExpiredFilesHandler(container: Container) {
   return async (job: any) => {
     const logger = await container.resolve<Logger>(TOKENS.logger);
-    const expiryService = await container.resolve<ExpiryService>(TOKENS.expiryService);
+    const expiryService = await container.resolve<ExpiryService>(
+      TOKENS.expiryService,
+    );
 
-    const { tenantId, batchSize = 100 } = job.data as CleanupExpiredFilesJobData;
+    const { tenantId, batchSize = 100 } =
+      job.data as CleanupExpiredFilesJobData;
 
     logger.info(
       { tenantId, batchSize },
-      "[worker:cleanup-expired-files] Starting expired files cleanup job"
+      "[worker:cleanup-expired-files] Starting expired files cleanup job",
     );
 
     try {
@@ -41,7 +44,7 @@ export function createCleanupExpiredFilesHandler(container: Container) {
           deleted: result.deleted,
           failed: result.failed,
         },
-        "[worker:cleanup-expired-files] Expired files cleanup complete"
+        "[worker:cleanup-expired-files] Expired files cleanup complete",
       );
 
       return {
@@ -53,7 +56,7 @@ export function createCleanupExpiredFilesHandler(container: Container) {
     } catch (error: any) {
       logger.error(
         { tenantId, error: error.message },
-        "[worker:cleanup-expired-files] Expired files cleanup failed"
+        "[worker:cleanup-expired-files] Expired files cleanup failed",
       );
 
       throw error;

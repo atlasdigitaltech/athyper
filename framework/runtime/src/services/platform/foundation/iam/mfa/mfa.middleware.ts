@@ -37,7 +37,7 @@ export interface MfaMiddlewareOptions {
       principalId: string;
       tenantId: string;
       reason: string;
-    }
+    },
   ) => void;
   /** Custom handler for MFA not verified response */
   onMfaNotVerified?: (
@@ -47,7 +47,7 @@ export interface MfaMiddlewareOptions {
       principalId: string;
       tenantId: string;
       challengeRequired: boolean;
-    }
+    },
   ) => void;
 }
 
@@ -83,7 +83,7 @@ export interface MfaVerificationState {
  * ```
  */
 export function createMfaMiddleware(
-  options: MfaMiddlewareOptions
+  options: MfaMiddlewareOptions,
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   const {
     mfaService,
@@ -98,7 +98,11 @@ export function createMfaMiddleware(
     onMfaNotVerified,
   } = options;
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       // Skip for certain methods (e.g., OPTIONS for CORS)
       if (skipMethods.includes(req.method)) {
@@ -114,7 +118,9 @@ export function createMfaMiddleware(
       const principalId = getPrincipalId(req);
 
       // Check if user has a valid MFA verification in session
-      const mfaState = (req as any).mfaState as MfaVerificationState | undefined;
+      const mfaState = (req as any).mfaState as
+        | MfaVerificationState
+        | undefined;
       if (mfaState?.verified) {
         return next();
       }
@@ -128,7 +134,7 @@ export function createMfaMiddleware(
           const isTrusted = await mfaService.isTrustedDevice(
             principalId,
             tenantId,
-            trustToken
+            trustToken,
           );
 
           if (isTrusted) {
@@ -148,7 +154,10 @@ export function createMfaMiddleware(
 
         if (policy.isRequired) {
           // Check grace period
-          if (policy.gracePeriodEndsAt && new Date() < policy.gracePeriodEndsAt) {
+          if (
+            policy.gracePeriodEndsAt &&
+            new Date() < policy.gracePeriodEndsAt
+          ) {
             // Still in grace period, allow access but warn
             logger.warn("MFA required but in grace period", {
               principalId,
@@ -169,7 +178,8 @@ export function createMfaMiddleware(
 
           res.status(403).json({
             error: "MFA_REQUIRED",
-            message: "MFA is required for your account. Please set up MFA to continue.",
+            message:
+              "MFA is required for your account. Please set up MFA to continue.",
             setupRequired: true,
           });
           return;
@@ -209,7 +219,7 @@ export function createMfaMiddleware(
 export function createMfaSessionMiddleware(): (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => void {
   return (req: Request, res: Response, next: NextFunction): void => {
     const session = (req as any).session;
@@ -287,9 +297,13 @@ export function getMfaVerifiedAt(req: Request): Date | undefined {
  */
 export function requireMfa(
   mfaService: IMfaService,
-  logger: Logger
+  logger: Logger,
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     if (isMfaVerified(req)) {
       return next();
     }
@@ -306,7 +320,7 @@ export function requireMfa(
           const isTrusted = await mfaService.isTrustedDevice(
             principalId,
             tenantId,
-            trustToken
+            trustToken,
           );
 
           if (isTrusted) {

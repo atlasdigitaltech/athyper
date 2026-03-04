@@ -3,7 +3,10 @@
  */
 import { describe, it, expect } from "vitest";
 
-import { AuditRedactionPipeline, REDACTION_VERSION } from "../domain/redaction-pipeline.js";
+import {
+  AuditRedactionPipeline,
+  REDACTION_VERSION,
+} from "../domain/redaction-pipeline.js";
 
 import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 
@@ -18,14 +21,26 @@ const stubMasking = {
   },
 } as any;
 
-function makeEvent(overrides: Partial<Omit<AuditEvent, "id">> = {}): Omit<AuditEvent, "id"> {
+function makeEvent(
+  overrides: Partial<Omit<AuditEvent, "id">> = {},
+): Omit<AuditEvent, "id"> {
   return {
     tenantId: "t-1",
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date(),
     ...overrides,

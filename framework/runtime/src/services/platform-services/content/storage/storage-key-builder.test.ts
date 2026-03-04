@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { calculateShard, storageKeyForDocument, parseStorageKey, type DocumentKind } from "./storage-key-builder.js";
+import {
+  calculateShard,
+  storageKeyForDocument,
+  parseStorageKey,
+  type DocumentKind,
+} from "./storage-key-builder.js";
 
 describe("storage-key-builder", () => {
   describe("calculateShard", () => {
@@ -75,7 +80,14 @@ describe("storage-key-builder", () => {
     });
 
     it("handles different document kinds correctly", () => {
-      const kinds: DocumentKind[] = ["attachment", "generated", "export", "template", "letterhead", "avatar"];
+      const kinds: DocumentKind[] = [
+        "attachment",
+        "generated",
+        "export",
+        "template",
+        "letterhead",
+        "avatar",
+      ];
 
       kinds.forEach((kind) => {
         const key = storageKeyForDocument({
@@ -152,14 +164,16 @@ describe("storage-key-builder", () => {
     });
 
     it("returns null for key not starting with 'tenants'", () => {
-      const invalidKey = "files/tenant-123/invoice/inv-123/attachment/2026/02/123/file-id";
+      const invalidKey =
+        "files/tenant-123/invoice/inv-123/attachment/2026/02/123/file-id";
       const parsed = parseStorageKey(invalidKey);
 
       expect(parsed).toBeNull();
     });
 
     it("returns null for invalid document kind", () => {
-      const invalidKey = "tenants/tenant-123/invoice/inv-123/invalid_kind/2026/02/123/file-id";
+      const invalidKey =
+        "tenants/tenant-123/invoice/inv-123/invalid_kind/2026/02/123/file-id";
       const parsed = parseStorageKey(invalidKey);
 
       expect(parsed).toBeNull();

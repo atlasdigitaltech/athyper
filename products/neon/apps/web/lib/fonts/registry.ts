@@ -140,14 +140,18 @@ export const fontRegistry = {
 
 export type FontKey = keyof typeof fontRegistry;
 
-export const fontVars = (Object.values(fontRegistry) as Array<(typeof fontRegistry)[FontKey]>)
+export const fontVars = (
+  Object.values(fontRegistry) as Array<(typeof fontRegistry)[FontKey]>
+)
   .map((f) => f.font.variable)
   .join(" ");
 
-export const fontOptions = (Object.entries(fontRegistry) as Array<[FontKey, (typeof fontRegistry)[FontKey]]>).map(
-  ([key, f]) => ({
-    key,
-    label: f.label,
-    variable: f.font.variable,
-  }),
-);
+export const fontOptions = (
+  Object.entries(fontRegistry) as Array<
+    [FontKey, (typeof fontRegistry)[FontKey]]
+  >
+).map(([key, f]) => ({
+  key,
+  label: f.label,
+  variable: f.font.variable,
+}));

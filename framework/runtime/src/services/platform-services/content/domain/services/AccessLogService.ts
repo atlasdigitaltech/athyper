@@ -132,9 +132,11 @@ export class AccessLogService {
   ): Promise<AccessStatsResult> {
     const stats = await this.accessLogRepo.getStats(tenantId, attachmentId);
 
-    const downloadCount = stats.find((s) => s.action === "download")?.count ?? 0;
+    const downloadCount =
+      stats.find((s) => s.action === "download")?.count ?? 0;
     const previewCount = stats.find((s) => s.action === "preview")?.count ?? 0;
-    const metadataCount = stats.find((s) => s.action === "metadata")?.count ?? 0;
+    const metadataCount =
+      stats.find((s) => s.action === "metadata")?.count ?? 0;
 
     // Get last access time
     const history = await this.accessLogRepo.query({
@@ -156,11 +158,7 @@ export class AccessLogService {
   /**
    * Get recent access by actor
    */
-  async getRecentAccessByActor(
-    tenantId: string,
-    actorId: string,
-    limit = 50,
-  ) {
+  async getRecentAccessByActor(tenantId: string, actorId: string, limit = 50) {
     return this.accessLogRepo.getRecentByActor(tenantId, actorId, limit);
   }
 
@@ -171,7 +169,9 @@ export class AccessLogService {
     tenantId: string,
     retentionDays: number,
   ): Promise<number> {
-    const beforeDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const beforeDate = new Date(
+      Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+    );
 
     this.logger.info(
       { tenantId, retentionDays, beforeDate },
@@ -200,10 +200,7 @@ export class AccessLogService {
       }
     } while (batchDeleted > 0);
 
-    this.logger.info(
-      { totalDeleted },
-      "[access-log] Cleanup complete",
-    );
+    this.logger.info({ totalDeleted }, "[access-log] Cleanup complete");
 
     return totalDeleted;
   }

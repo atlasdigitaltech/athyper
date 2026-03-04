@@ -41,7 +41,7 @@ export class MentionService {
     private readonly logger: Logger,
     private readonly config?: {
       maxMentionsPerComment?: number;
-    }
+    },
   ) {}
 
   /**
@@ -102,7 +102,10 @@ export class MentionService {
    * @param username - Username to resolve
    * @returns User ID or undefined if not found
    */
-  async resolveUsername(tenantId: string, username: string): Promise<string | undefined> {
+  async resolveUsername(
+    tenantId: string,
+    username: string,
+  ): Promise<string | undefined> {
     const result = await this.db
       .selectFrom("core.principal")
       .select("id")
@@ -129,7 +132,7 @@ export class MentionService {
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
-    commentText: string
+    commentText: string,
   ): Promise<MentionProcessingResult> {
     const maxMentions = this.config?.maxMentionsPerComment ?? 20;
 
@@ -153,7 +156,7 @@ export class MentionService {
           count: parsed.length,
           max: maxMentions,
         },
-        "[collab] Too many mentions in comment, truncating"
+        "[collab] Too many mentions in comment, truncating",
       );
       parsed.splice(maxMentions);
     }
@@ -178,7 +181,7 @@ export class MentionService {
               tenantId,
               username: mention.username,
             },
-            "[collab] Could not resolve username"
+            "[collab] Could not resolve username",
           );
           continue;
         }
@@ -231,7 +234,7 @@ export class MentionService {
               commentId,
               error: String(err),
             },
-            "[collab] Failed to queue mention notification"
+            "[collab] Failed to queue mention notification",
           );
         }
       }
@@ -246,7 +249,7 @@ export class MentionService {
         unresolved: unresolved.length,
         mentionedUsers: Array.from(mentionedUserIds),
       },
-      "[collab] Processed mentions"
+      "[collab] Processed mentions",
     );
 
     return {
@@ -262,7 +265,7 @@ export class MentionService {
   async getByComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ) {
     return this.repo.listByComment(tenantId, commentType, commentId);
   }
@@ -273,7 +276,7 @@ export class MentionService {
   async getByUser(
     tenantId: string,
     userId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ) {
     return this.repo.listByUser(tenantId, userId, options);
   }

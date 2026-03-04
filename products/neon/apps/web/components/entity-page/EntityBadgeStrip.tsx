@@ -7,7 +7,10 @@ import type { BadgeDescriptor } from "@/lib/entity-page/types";
 // Map descriptor badge variants to actual Badge component variants.
 // The Badge primitive supports: default, secondary, destructive, outline, ghost, link.
 // The descriptor may emit "warning" or "success" which we map to the closest match.
-const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const variantMap: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   default: "default",
   secondary: "secondary",
   destructive: "destructive",

@@ -11,7 +11,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import { createPartitionLifecycleHandler } from "../jobs/workers/auditPartitionLifecycle.worker.js";
 
-
 // ─── Test Helpers ──────────────────────────────────────────────────
 
 function createMockLogger() {
@@ -96,12 +95,12 @@ describe("Retention Calculation", () => {
       { name: "workflow_event_log_2025_04", date: new Date(2025, 3, 1) }, // Apr → KEEP
     ];
 
-    const toDrop = partitions.filter(p => p.date < cutoffMonth);
-    const toKeep = partitions.filter(p => p.date >= cutoffMonth);
+    const toDrop = partitions.filter((p) => p.date < cutoffMonth);
+    const toKeep = partitions.filter((p) => p.date >= cutoffMonth);
 
     expect(toDrop).toHaveLength(2);
     expect(toKeep).toHaveLength(2);
-    expect(toDrop.map(p => p.name)).toEqual([
+    expect(toDrop.map((p) => p.name)).toEqual([
       "workflow_event_log_2025_01",
       "workflow_event_log_2025_02",
     ]);
@@ -121,7 +120,13 @@ describe("SQL Function Specifications", () => {
   });
 
   it("spec: list_audit_partitions returns name, row_count, size_bytes", () => {
-    const expectedColumns = ["partition_name", "range_start", "range_end", "row_count", "size_bytes"];
+    const expectedColumns = [
+      "partition_name",
+      "range_start",
+      "range_end",
+      "row_count",
+      "size_bytes",
+    ];
     expect(expectedColumns).toContain("partition_name");
     expect(expectedColumns).toContain("row_count");
     expect(expectedColumns).toContain("size_bytes");

@@ -91,7 +91,9 @@ export class ActivityTimelineService {
   /**
    * Set the slow query callback for observability.
    */
-  setSlowQueryHandler(handler: (durationMs: number, query: TimelineQuery) => void): void {
+  setSlowQueryHandler(
+    handler: (durationMs: number, query: TimelineQuery) => void,
+  ): void {
     this.onSlowQuery = handler;
   }
 
@@ -150,19 +152,62 @@ export class ActivityTimelineService {
     const fragments: ReturnType<typeof sql>[] = [];
 
     if (enabledSources.includes("workflow_audit")) {
-      fragments.push(this.buildWorkflowAuditFragment(tenantId, entityType, entityId, actorUserId, startDate, endDate));
+      fragments.push(
+        this.buildWorkflowAuditFragment(
+          tenantId,
+          entityType,
+          entityId,
+          actorUserId,
+          startDate,
+          endDate,
+        ),
+      );
     }
     if (enabledSources.includes("permission_decision")) {
-      fragments.push(this.buildPermissionDecisionFragment(tenantId, entityType, entityId, actorUserId, startDate, endDate));
+      fragments.push(
+        this.buildPermissionDecisionFragment(
+          tenantId,
+          entityType,
+          entityId,
+          actorUserId,
+          startDate,
+          endDate,
+        ),
+      );
     }
     if (enabledSources.includes("field_access")) {
-      fragments.push(this.buildFieldAccessFragment(tenantId, entityType, entityId, actorUserId, startDate, endDate));
+      fragments.push(
+        this.buildFieldAccessFragment(
+          tenantId,
+          entityType,
+          entityId,
+          actorUserId,
+          startDate,
+          endDate,
+        ),
+      );
     }
     if (enabledSources.includes("security_event")) {
-      fragments.push(this.buildSecurityEventFragment(tenantId, actorUserId, startDate, endDate));
+      fragments.push(
+        this.buildSecurityEventFragment(
+          tenantId,
+          actorUserId,
+          startDate,
+          endDate,
+        ),
+      );
     }
     if (enabledSources.includes("audit_log")) {
-      fragments.push(this.buildAuditLogFragment(tenantId, entityType, entityId, actorUserId, startDate, endDate));
+      fragments.push(
+        this.buildAuditLogFragment(
+          tenantId,
+          entityType,
+          entityId,
+          actorUserId,
+          startDate,
+          endDate,
+        ),
+      );
     }
 
     if (fragments.length === 0) {
@@ -185,7 +230,9 @@ export class ActivityTimelineService {
 
     // Record latency for ALL queries
     const durationMs = Date.now() - startTime;
-    this.metricsCollector?.timelineQueryLatency(durationMs, { tenant: tenantId });
+    this.metricsCollector?.timelineQueryLatency(durationMs, {
+      tenant: tenantId,
+    });
 
     // Timeout guard: warn on slow queries
     if (durationMs > this.timeoutWarnMs && this.onSlowQuery) {
@@ -212,14 +259,18 @@ export class ActivityTimelineService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const conditions = [
-      sql`tenant_id = ${tenantId}::uuid`,
-    ];
+    const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (entityType) conditions.push(sql`entity_type = ${entityType}`);
     if (entityId) conditions.push(sql`entity_id = ${entityId}`);
     if (actorUserId) conditions.push(sql`actor_user_id = ${actorUserId}`);
-    if (startDate) conditions.push(sql`event_timestamp >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`event_timestamp <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`event_timestamp >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(
+        sql`event_timestamp <= ${endDate.toISOString()}::timestamptz`,
+      );
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -250,14 +301,16 @@ export class ActivityTimelineService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const conditions = [
-      sql`tenant_id = ${tenantId}::uuid`,
-    ];
+    const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (entityType) conditions.push(sql`resource_type = ${entityType}`);
     if (entityId) conditions.push(sql`resource_id = ${entityId}`);
     if (actorUserId) conditions.push(sql`principal_id::text = ${actorUserId}`);
-    if (startDate) conditions.push(sql`decided_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`decided_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`decided_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(sql`decided_at <= ${endDate.toISOString()}::timestamptz`);
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -288,14 +341,18 @@ export class ActivityTimelineService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const conditions = [
-      sql`tenant_id = ${tenantId}::uuid`,
-    ];
+    const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (entityType) conditions.push(sql`entity_type = ${entityType}`);
     if (entityId) conditions.push(sql`entity_id = ${entityId}`);
     if (actorUserId) conditions.push(sql`principal_id::text = ${actorUserId}`);
-    if (startDate) conditions.push(sql`accessed_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`accessed_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`accessed_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(
+        sql`accessed_at <= ${endDate.toISOString()}::timestamptz`,
+      );
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -324,12 +381,16 @@ export class ActivityTimelineService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const conditions = [
-      sql`tenant_id = ${tenantId}::uuid`,
-    ];
+    const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (actorUserId) conditions.push(sql`principal_id::text = ${actorUserId}`);
-    if (startDate) conditions.push(sql`occurred_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`occurred_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`occurred_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(
+        sql`occurred_at <= ${endDate.toISOString()}::timestamptz`,
+      );
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -360,14 +421,18 @@ export class ActivityTimelineService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const conditions = [
-      sql`tenant_id = ${tenantId}::uuid`,
-    ];
+    const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (entityType) conditions.push(sql`entity_type = ${entityType}`);
     if (entityId) conditions.push(sql`entity_id = ${entityId}`);
     if (actorUserId) conditions.push(sql`performed_by = ${actorUserId}`);
-    if (startDate) conditions.push(sql`performed_at >= ${startDate.toISOString()}::timestamptz`);
-    if (endDate) conditions.push(sql`performed_at <= ${endDate.toISOString()}::timestamptz`);
+    if (startDate)
+      conditions.push(
+        sql`performed_at >= ${startDate.toISOString()}::timestamptz`,
+      );
+    if (endDate)
+      conditions.push(
+        sql`performed_at <= ${endDate.toISOString()}::timestamptz`,
+      );
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
 
@@ -406,12 +471,14 @@ export class ActivityTimelineService {
       actorUserId: row.actor_user_id ?? undefined,
       actorDisplayName: row.actor_display_name ?? undefined,
       summary: row.summary ?? row.event_type,
-      details: typeof row.details === "string"
-        ? JSON.parse(row.details)
-        : row.details ?? undefined,
-      occurredAt: row.occurred_at instanceof Date
-        ? row.occurred_at
-        : new Date(row.occurred_at),
+      details:
+        typeof row.details === "string"
+          ? JSON.parse(row.details)
+          : (row.details ?? undefined),
+      occurredAt:
+        row.occurred_at instanceof Date
+          ? row.occurred_at
+          : new Date(row.occurred_at),
     };
   }
 }

@@ -4,35 +4,35 @@ import type { Container } from "../../../../kernel/container.js";
 import type { RuntimeModule } from "../../../types.js";
 
 export const budgetEngineModule: RuntimeModule = {
-    name: "engine.budget",
+  name: "engine.budget",
 
-    register(c: Container) {
-        // Register budget repositories and services
-    },
+  register(c: Container) {
+    // Register budget repositories and services
+  },
 
-    contribute(c: Container) {
-        // Register health checks, event consumers, background jobs
-    },
+  contribute(c: Container) {
+    // Register health checks, event consumers, background jobs
+  },
 };
 
 // Re-export domain types
 export type {
-    FundingProfile,
-    CreateFundingProfileInput,
-    FPLevel,
-    FPStatus,
-    HealthStatus,
-    Trend,
-    FundAction,
-    FundActionInput,
-    FundingTransaction,
-    FPStateSnapshot,
-    AvailableBalance,
-    FundingTransfer,
-    CreateTransferInput,
-    TransferStatus,
-    CarryForwardRule,
-    HealthThresholds,
+  FundingProfile,
+  CreateFundingProfileInput,
+  FPLevel,
+  FPStatus,
+  HealthStatus,
+  Trend,
+  FundAction,
+  FundActionInput,
+  FundingTransaction,
+  FPStateSnapshot,
+  AvailableBalance,
+  FundingTransfer,
+  CreateTransferInput,
+  TransferStatus,
+  CarryForwardRule,
+  HealthThresholds,
 } from "./domain/types.js";
 export { DEFAULT_HEALTH_THRESHOLDS } from "./domain/types.js";
 
@@ -46,5 +46,14 @@ export type { FundingTransactionRepo } from "./persistence/funding-transaction-r
 export type { FundingTransferRepo } from "./persistence/funding-transfer-repo.js";
 
 // Re-export domain logic
-export { calculateHealthStatus, calculateAvailableBalance, determineTrend, wouldBreach } from "./domain/health-calculator.js";
-export { validateChildLimits, isParentBlocked, canAcceptAction } from "./domain/hierarchy-validator.js";
+export {
+  calculateHealthStatus,
+  calculateAvailableBalance,
+  determineTrend,
+  wouldBreach,
+} from "./domain/health-calculator.js";
+export {
+  validateChildLimits,
+  isParentBlocked,
+  canAcceptAction,
+} from "./domain/hierarchy-validator.js";

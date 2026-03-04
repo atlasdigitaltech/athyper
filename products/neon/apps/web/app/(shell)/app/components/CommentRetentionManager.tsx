@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 /**
  * Retention Action Type
  */
-type RetentionAction = 'archive' | 'hard_delete' | 'keep';
+type RetentionAction = "archive" | "hard_delete" | "keep";
 
 /**
  * Retention Policy Type
@@ -50,53 +50,61 @@ interface CommentRetentionManagerProps {
  *
  * Manage retention policies and view archived comments.
  */
-export function CommentRetentionManager({ tenantId }: CommentRetentionManagerProps) {
+export function CommentRetentionManager({
+  tenantId,
+}: CommentRetentionManagerProps) {
   const [policies, setPolicies] = useState<RetentionPolicy[]>([]);
-  const [archivedComments, setArchivedComments] = useState<ArchivedComment[]>([]);
-  const [activeTab, setActiveTab] = useState<'policies' | 'archived'>('policies');
+  const [archivedComments, setArchivedComments] = useState<ArchivedComment[]>(
+    [],
+  );
+  const [activeTab, setActiveTab] = useState<"policies" | "archived">(
+    "policies",
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
-    policyName: '',
-    entityType: '',
+    policyName: "",
+    entityType: "",
     retentionDays: 365,
-    action: 'archive' as RetentionAction,
+    action: "archive" as RetentionAction,
   });
 
   const fetchPolicies = async () => {
     try {
-      const res = await fetch('/api/collab/retention/policies', {
-        credentials: 'same-origin',
+      const res = await fetch("/api/collab/retention/policies", {
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to fetch policies');
+        throw new Error("Failed to fetch policies");
       }
 
       const data = await res.json();
       setPolicies(data.data || []);
     } catch (err) {
-      console.error('Error fetching policies:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load policies');
+      console.error("Error fetching policies:", err);
+      setError(err instanceof Error ? err.message : "Failed to load policies");
     }
   };
 
   const fetchArchivedComments = async () => {
     try {
-      const res = await fetch('/api/collab/retention/archived?limit=50', {
-        credentials: 'same-origin',
+      const res = await fetch("/api/collab/retention/archived?limit=50", {
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to fetch archived comments');
+        throw new Error("Failed to fetch archived comments");
       }
 
       const data = await res.json();
       setArchivedComments(data.data || []);
     } catch (err) {
-      console.error('Error fetching archived comments:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load archived comments');
+      console.error("Error fetching archived comments:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load archived comments",
+      );
     }
   };
 
@@ -106,7 +114,7 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
       setError(null);
 
       try {
-        if (activeTab === 'policies') {
+        if (activeTab === "policies") {
           await fetchPolicies();
         } else {
           await fetchArchivedComments();
@@ -123,105 +131,119 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
     e.preventDefault();
 
     try {
-      const res = await fetch('/api/collab/retention/policies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+      const res = await fetch("/api/collab/retention/policies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(formData),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to create policy');
+        throw new Error("Failed to create policy");
       }
 
       setShowCreateForm(false);
       setFormData({
-        policyName: '',
-        entityType: '',
+        policyName: "",
+        entityType: "",
         retentionDays: 365,
-        action: 'archive',
+        action: "archive",
       });
       await fetchPolicies();
     } catch (err) {
-      console.error('Error creating policy:', err);
-      alert('Failed to create retention policy');
+      console.error("Error creating policy:", err);
+      alert("Failed to create retention policy");
     }
   };
 
   const handleTogglePolicy = async (policyId: string, enabled: boolean) => {
     try {
       const res = await fetch(`/api/collab/retention/policies/${policyId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ enabled }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update policy');
+        throw new Error("Failed to update policy");
       }
 
       await fetchPolicies();
     } catch (err) {
-      console.error('Error updating policy:', err);
-      alert('Failed to update retention policy');
+      console.error("Error updating policy:", err);
+      alert("Failed to update retention policy");
     }
   };
 
   const handleDeletePolicy = async (policyId: string) => {
-    if (!confirm('Are you sure you want to delete this retention policy?')) {
+    if (!confirm("Are you sure you want to delete this retention policy?")) {
       return;
     }
 
     try {
       const res = await fetch(`/api/collab/retention/policies/${policyId}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
+        method: "DELETE",
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to delete policy');
+        throw new Error("Failed to delete policy");
       }
 
       await fetchPolicies();
     } catch (err) {
-      console.error('Error deleting policy:', err);
-      alert('Failed to delete retention policy');
+      console.error("Error deleting policy:", err);
+      alert("Failed to delete retention policy");
     }
   };
 
   const handleRestoreComment = async (commentId: string) => {
-    if (!confirm('Are you sure you want to restore this archived comment?')) {
+    if (!confirm("Are you sure you want to restore this archived comment?")) {
       return;
     }
 
     try {
-      const res = await fetch(`/api/collab/retention/archived/${commentId}/restore`, {
-        method: 'POST',
-        credentials: 'same-origin',
-      });
+      const res = await fetch(
+        `/api/collab/retention/archived/${commentId}/restore`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+        },
+      );
 
       if (!res.ok) {
-        throw new Error('Failed to restore comment');
+        throw new Error("Failed to restore comment");
       }
 
       await fetchArchivedComments();
     } catch (err) {
-      console.error('Error restoring comment:', err);
-      alert('Failed to restore comment');
+      console.error("Error restoring comment:", err);
+      alert("Failed to restore comment");
     }
   };
 
-  const actionLabels: Record<RetentionAction, { label: string; color: string }> = {
-    archive: { label: 'Archive (Soft Delete)', color: 'bg-yellow-100 text-yellow-800' },
-    hard_delete: { label: 'Hard Delete (Permanent)', color: 'bg-red-100 text-red-800' },
-    keep: { label: 'Keep Forever', color: 'bg-green-100 text-green-800' },
+  const actionLabels: Record<
+    RetentionAction,
+    { label: string; color: string }
+  > = {
+    archive: {
+      label: "Archive (Soft Delete)",
+      color: "bg-yellow-100 text-yellow-800",
+    },
+    hard_delete: {
+      label: "Hard Delete (Permanent)",
+      color: "bg-red-100 text-red-800",
+    },
+    keep: { label: "Keep Forever", color: "bg-green-100 text-green-800" },
   };
 
   if (loading) {
     return (
       <div className="p-8 text-center">
-        <div className="animate-pulse text-gray-500">Loading retention data...</div>
+        <div className="animate-pulse text-gray-500">
+          Loading retention data...
+        </div>
       </div>
     );
   }
@@ -230,7 +252,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Comment Retention Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Comment Retention Management
+        </h1>
         <p className="text-sm text-gray-600">
           Configure automated retention policies and manage archived comments
         </p>
@@ -240,22 +264,22 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
       <div className="flex gap-2 mb-6 border-b border-gray-200">
         <button
           type="button"
-          onClick={() => setActiveTab('policies')}
+          onClick={() => setActiveTab("policies")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'policies'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            activeTab === "policies"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
           Retention Policies
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('archived')}
+          onClick={() => setActiveTab("archived")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'archived'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            activeTab === "archived"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
           }`}
         >
           Archived Comments ({archivedComments.length})
@@ -269,7 +293,7 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
       )}
 
       {/* Policies Tab */}
-      {activeTab === 'policies' && (
+      {activeTab === "policies" && (
         <div className="space-y-6">
           {/* Create Policy Button */}
           {!showCreateForm && (
@@ -287,7 +311,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
           {/* Create Policy Form */}
           {showCreateForm && (
             <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Retention Policy</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Create Retention Policy
+              </h3>
               <form onSubmit={handleCreatePolicy} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -297,7 +323,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                     type="text"
                     required
                     value={formData.policyName}
-                    onChange={(e) => setFormData({ ...formData, policyName: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, policyName: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., Archive old comments after 1 year"
                   />
@@ -310,12 +338,15 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                   <input
                     type="text"
                     value={formData.entityType}
-                    onChange={(e) => setFormData({ ...formData, entityType: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, entityType: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Leave empty to apply to all entity types"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Specify an entity type to limit this policy (e.g., "task", "document")
+                    Specify an entity type to limit this policy (e.g., "task",
+                    "document")
                   </p>
                 </div>
 
@@ -328,11 +359,17 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                     required
                     min="1"
                     value={formData.retentionDays}
-                    onChange={(e) => setFormData({ ...formData, retentionDays: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        retentionDays: parseInt(e.target.value),
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Comments older than this will be processed according to the action below
+                    Comments older than this will be processed according to the
+                    action below
                   </p>
                 </div>
 
@@ -343,11 +380,20 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                   <select
                     required
                     value={formData.action}
-                    onChange={(e) => setFormData({ ...formData, action: e.target.value as RetentionAction })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        action: e.target.value as RetentionAction,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="archive">Archive (Soft Delete - Can be restored)</option>
-                    <option value="hard_delete">Hard Delete (Permanent - Cannot be restored)</option>
+                    <option value="archive">
+                      Archive (Soft Delete - Can be restored)
+                    </option>
+                    <option value="hard_delete">
+                      Hard Delete (Permanent - Cannot be restored)
+                    </option>
                     <option value="keep">Keep Forever (No expiration)</option>
                   </select>
                 </div>
@@ -375,10 +421,22 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
           <div className="space-y-3">
             {policies.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="w-16 h-16 mx-auto text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
-                <p className="text-gray-600">No retention policies configured</p>
+                <p className="text-gray-600">
+                  No retention policies configured
+                </p>
               </div>
             ) : (
               policies.map((policy) => (
@@ -392,7 +450,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                         <h3 className="text-lg font-semibold text-gray-900">
                           {policy.policyName}
                         </h3>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${actionLabels[policy.action].color}`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${actionLabels[policy.action].color}`}
+                        >
                           {actionLabels[policy.action].label}
                         </span>
                         {!policy.enabled && (
@@ -404,25 +464,27 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-600">Entity Type:</span>{' '}
+                          <span className="text-gray-600">Entity Type:</span>{" "}
                           <span className="font-medium text-gray-900">
-                            {policy.entityType || 'All types'}
+                            {policy.entityType || "All types"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Retention Period:</span>{' '}
+                          <span className="text-gray-600">
+                            Retention Period:
+                          </span>{" "}
                           <span className="font-medium text-gray-900">
                             {policy.retentionDays} days
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Created:</span>{' '}
+                          <span className="text-gray-600">Created:</span>{" "}
                           <span className="font-medium text-gray-900">
                             {new Date(policy.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Updated:</span>{' '}
+                          <span className="text-gray-600">Updated:</span>{" "}
                           <span className="font-medium text-gray-900">
                             {new Date(policy.updatedAt).toLocaleDateString()}
                           </span>
@@ -434,14 +496,16 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                     <div className="flex gap-2 ml-4">
                       <button
                         type="button"
-                        onClick={() => handleTogglePolicy(policy.id, !policy.enabled)}
+                        onClick={() =>
+                          handleTogglePolicy(policy.id, !policy.enabled)
+                        }
                         className={`px-3 py-1 text-xs font-medium rounded-lg ${
                           policy.enabled
-                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200"
                         }`}
                       >
-                        {policy.enabled ? 'Disable' : 'Enable'}
+                        {policy.enabled ? "Disable" : "Enable"}
                       </button>
                       <button
                         type="button"
@@ -460,12 +524,22 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
       )}
 
       {/* Archived Comments Tab */}
-      {activeTab === 'archived' && (
+      {activeTab === "archived" && (
         <div className="space-y-3">
           {archivedComments.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              <svg
+                className="w-16 h-16 mx-auto text-gray-400 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                />
               </svg>
               <p className="text-gray-600">No archived comments</p>
             </div>
@@ -479,7 +553,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-gray-600">
-                        {(comment.commenterDisplayName || comment.commenterId).charAt(0).toUpperCase()}
+                        {(comment.commenterDisplayName || comment.commenterId)
+                          .charAt(0)
+                          .toUpperCase()}
                       </span>
                     </div>
                     <div>
@@ -487,7 +563,9 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                         {comment.commenterDisplayName || comment.commenterId}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Archived on {new Date(comment.archivedAt).toLocaleString()} by {comment.archivedBy}
+                        Archived on{" "}
+                        {new Date(comment.archivedAt).toLocaleString()} by{" "}
+                        {comment.archivedBy}
                       </div>
                     </div>
                   </div>
@@ -508,7 +586,8 @@ export function CommentRetentionManager({ tenantId }: CommentRetentionManagerPro
                   <span>{comment.entityType}</span>
                   {comment.retentionUntil && (
                     <span>
-                      Expires: {new Date(comment.retentionUntil).toLocaleDateString()}
+                      Expires:{" "}
+                      {new Date(comment.retentionUntil).toLocaleDateString()}
                     </span>
                   )}
                 </div>

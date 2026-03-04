@@ -12,7 +12,6 @@
  * - GenericDataAPI (generic read operations)
  */
 
-
 import type {
   ActionExecutionRequest,
   ActionExecutionResult,
@@ -90,7 +89,7 @@ export interface MetaRegistry {
       tableName?: string;
       governanceLevel?: string;
       engineTag?: string;
-    }
+    },
   ): Promise<Entity>;
 
   /**
@@ -109,7 +108,7 @@ export interface MetaRegistry {
   updateEntity(
     name: string,
     updates: Partial<Pick<Entity, "description" | "activeVersion">>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<Entity>;
 
   /**
@@ -126,7 +125,7 @@ export interface MetaRegistry {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityVersion>;
 
   /**
@@ -134,7 +133,7 @@ export interface MetaRegistry {
    */
   getVersion(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<EntityVersion | undefined>;
 
   /**
@@ -147,7 +146,7 @@ export interface MetaRegistry {
    */
   listVersions(
     entityName: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<EntityVersion>>;
 
   /**
@@ -156,7 +155,7 @@ export interface MetaRegistry {
   activateVersion(
     entityName: string,
     version: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityVersion>;
 
   /**
@@ -165,7 +164,7 @@ export interface MetaRegistry {
   deactivateVersion(
     entityName: string,
     version: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityVersion>;
 
   /**
@@ -175,7 +174,7 @@ export interface MetaRegistry {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityVersion>;
 
   /**
@@ -184,7 +183,7 @@ export interface MetaRegistry {
   deleteVersion(
     entityName: string,
     version: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<void>;
 }
 
@@ -203,18 +202,12 @@ export interface MetaCompiler {
    * Compile entity version to Compiled Model IR
    * Uses cache if available and valid
    */
-  compile(
-    entityName: string,
-    version: string
-  ): Promise<CompiledModel>;
+  compile(entityName: string, version: string): Promise<CompiledModel>;
 
   /**
    * Force recompilation (bypass cache)
    */
-  recompile(
-    entityName: string,
-    version: string
-  ): Promise<CompiledModel>;
+  recompile(entityName: string, version: string): Promise<CompiledModel>;
 
   /**
    * Validate entity schema
@@ -232,7 +225,7 @@ export interface MetaCompiler {
    */
   getCached(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<CompiledModel | undefined>;
 
   /**
@@ -270,7 +263,7 @@ export interface PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<boolean>;
 
   /**
@@ -283,7 +276,7 @@ export interface PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<PolicyDecision>;
 
   /**
@@ -294,7 +287,7 @@ export interface PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<void>;
 
   /**
@@ -302,7 +295,7 @@ export interface PolicyGate {
    */
   getPolicies(
     action: string,
-    resource: string
+    resource: string,
   ): Promise<Array<{ name: string; effect: string }>>;
 
   /**
@@ -311,7 +304,7 @@ export interface PolicyGate {
   evaluatePolicy(
     policyName: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<boolean>;
 
   /**
@@ -324,7 +317,7 @@ export interface PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<string[] | null>;
 
   /**
@@ -338,7 +331,7 @@ export interface PolicyGate {
   authorizeMany(
     checks: Array<{ action: string; resource: string }>,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<Map<string, PolicyDecision>>;
 
   /**
@@ -418,7 +411,7 @@ export interface AuditLogger {
    */
   getResourceAudit(
     resource: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<AuditEvent>>;
 
   /**
@@ -426,7 +419,7 @@ export interface AuditLogger {
    */
   getUserAudit(
     userId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<AuditEvent>>;
 
   /**
@@ -434,7 +427,7 @@ export interface AuditLogger {
    */
   getTenantAudit(
     tenantId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<AuditEvent>>;
 
   /**
@@ -489,7 +482,7 @@ export interface GenericDataAPI {
   list<T = unknown>(
     entityName: string,
     ctx: RequestContext,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<T>>;
 
   /**
@@ -499,7 +492,7 @@ export interface GenericDataAPI {
   get<T = unknown>(
     entityName: string,
     id: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<T | undefined>;
 
   /**
@@ -509,7 +502,7 @@ export interface GenericDataAPI {
   count(
     entityName: string,
     ctx: RequestContext,
-    filters?: Record<string, unknown>
+    filters?: Record<string, unknown>,
   ): Promise<number>;
 
   // ===== Write Operations =====
@@ -521,7 +514,7 @@ export interface GenericDataAPI {
   create<T = unknown>(
     entityName: string,
     data: unknown,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<T>;
 
   /**
@@ -532,7 +525,7 @@ export interface GenericDataAPI {
     entityName: string,
     id: string,
     data: Partial<unknown>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<T>;
 
   /**
@@ -540,22 +533,14 @@ export interface GenericDataAPI {
    * Sets deleted_at timestamp instead of removing the record
    * Checks delete policy and logs audit event
    */
-  delete(
-    entityName: string,
-    id: string,
-    ctx: RequestContext
-  ): Promise<void>;
+  delete(entityName: string, id: string, ctx: RequestContext): Promise<void>;
 
   /**
    * Restore a soft-deleted record
    * Clears the deleted_at timestamp
    * Checks update policy and logs audit event
    */
-  restore(
-    entityName: string,
-    id: string,
-    ctx: RequestContext
-  ): Promise<void>;
+  restore(entityName: string, id: string, ctx: RequestContext): Promise<void>;
 
   /**
    * Permanently delete a record
@@ -566,7 +551,7 @@ export interface GenericDataAPI {
   permanentDelete(
     entityName: string,
     id: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<void>;
 
   // ===== Bulk Operations =====
@@ -580,7 +565,7 @@ export interface GenericDataAPI {
   bulkCreate<T = unknown>(
     entityName: string,
     data: unknown[],
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<BulkOperationResult<T>>;
 
   /**
@@ -593,7 +578,7 @@ export interface GenericDataAPI {
   bulkUpdate<T = unknown>(
     entityName: string,
     updates: Array<{ id: string; data: Partial<unknown> }>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<BulkOperationResult<T>>;
 
   /**
@@ -605,7 +590,7 @@ export interface GenericDataAPI {
   bulkDelete(
     entityName: string,
     ids: string[],
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<BulkOperationResult<void>>;
 
   /**
@@ -631,14 +616,14 @@ export interface MetaStore {
    */
   getCompiledModel(
     entityName: string,
-    version?: string // If omitted, uses active version
+    version?: string, // If omitted, uses active version
   ): Promise<CompiledModel>;
 
   /**
    * Get entity with active version compiled
    */
   getEntityWithCompiledModel(
-    entityName: string
+    entityName: string,
   ): Promise<{ entity: Entity; compiledModel: CompiledModel }>;
 
   /**
@@ -649,7 +634,7 @@ export interface MetaStore {
     name: string,
     description: string | undefined,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{ entity: Entity; version: EntityVersion }>;
 
   /**
@@ -660,7 +645,7 @@ export interface MetaStore {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{ version: EntityVersion; compiledModel: CompiledModel }>;
 
   /**
@@ -695,7 +680,7 @@ export interface LifecycleRouteCompiler {
    */
   compile(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute>;
 
   /**
@@ -703,7 +688,7 @@ export interface LifecycleRouteCompiler {
    */
   recompile(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute>;
 
   /**
@@ -714,7 +699,7 @@ export interface LifecycleRouteCompiler {
   resolveLifecycle(
     entityName: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<string | undefined>;
 
   /**
@@ -722,7 +707,7 @@ export interface LifecycleRouteCompiler {
    */
   getCached(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledLifecycleRoute | undefined>;
 
   /**
@@ -802,7 +787,7 @@ export interface LifecycleManager {
   createInstance(
     entityName: string,
     entityId: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityLifecycleInstance>;
 
   /**
@@ -812,7 +797,7 @@ export interface LifecycleManager {
   getInstance(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityLifecycleInstance | undefined>;
 
   /**
@@ -821,7 +806,7 @@ export interface LifecycleManager {
   getInstanceOrFail(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityLifecycleInstance>;
 
   // ===== Transition Execution =====
@@ -839,7 +824,7 @@ export interface LifecycleManager {
    * - Current state is terminal (cannot transition)
    */
   transition(
-    request: LifecycleTransitionRequest
+    request: LifecycleTransitionRequest,
   ): Promise<LifecycleTransitionResult>;
 
   /**
@@ -848,7 +833,7 @@ export interface LifecycleManager {
    * Returns result with success flag and error/reason if not allowed
    */
   canTransition(
-    request: LifecycleTransitionRequest
+    request: LifecycleTransitionRequest,
   ): Promise<LifecycleTransitionResult>;
 
   /**
@@ -859,7 +844,7 @@ export interface LifecycleManager {
   getAvailableTransitions(
     entityName: string,
     entityId: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<AvailableTransition[]>;
 
   // ===== Gate Validation =====
@@ -874,7 +859,7 @@ export interface LifecycleManager {
   validateGates(
     transitionId: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<{ allowed: boolean; reason?: string }>;
 
   /**
@@ -892,7 +877,7 @@ export interface LifecycleManager {
   getHistory(
     entityName: string,
     entityId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<EntityLifecycleEvent>>;
 
   /**
@@ -902,7 +887,7 @@ export interface LifecycleManager {
   getCurrentState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     instance: EntityLifecycleInstance;
     state: LifecycleState;
@@ -918,7 +903,7 @@ export interface LifecycleManager {
   isTerminalState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<boolean>;
 
   /**
@@ -928,7 +913,7 @@ export interface LifecycleManager {
   enforceTerminalState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<void>;
 
   /**
@@ -978,7 +963,7 @@ export interface LifecycleTimerService {
     entityName: string,
     entityId: string,
     ctx: RequestContext,
-    triggerData?: Record<string, unknown>
+    triggerData?: Record<string, unknown>,
   ): Promise<LifecycleTimerSchedule | undefined>;
 
   // ===== Timer Cancellation =====
@@ -997,7 +982,7 @@ export interface LifecycleTimerService {
     entityName: string,
     entityId: string,
     tenantId: string,
-    reason: string
+    reason: string,
   ): Promise<number>;
 
   /**
@@ -1013,7 +998,7 @@ export interface LifecycleTimerService {
     entityName: string,
     entityId: string,
     tenantId: string,
-    timerType: LifecycleTimerType
+    timerType: LifecycleTimerType,
   ): Promise<number>;
 
   // ===== Timer Execution =====
@@ -1065,7 +1050,7 @@ export interface LifecycleTimerService {
   getActiveTimers(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTimerSchedule[]>;
 
   // ===== Dependency Injection =====
@@ -1128,7 +1113,7 @@ export interface ApprovalService {
    * Schedules SLA timers for reminders and escalations
    */
   createApprovalInstance(
-    request: ApprovalCreationRequest
+    request: ApprovalCreationRequest,
   ): Promise<ApprovalCreationResult>;
 
   /**
@@ -1136,7 +1121,7 @@ export interface ApprovalService {
    */
   getInstance(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalInstance | undefined>;
 
   /**
@@ -1146,7 +1131,7 @@ export interface ApprovalService {
   getInstanceForEntity(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalInstance | undefined>;
 
   // ===== Task Management =====
@@ -1154,17 +1139,14 @@ export interface ApprovalService {
   /**
    * Get approval task by ID
    */
-  getTask(
-    taskId: string,
-    tenantId: string
-  ): Promise<ApprovalTask | undefined>;
+  getTask(taskId: string, tenantId: string): Promise<ApprovalTask | undefined>;
 
   /**
    * Get all tasks for an approval instance
    */
   getTasksForInstance(
     instanceId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTask[]>;
 
   /**
@@ -1174,7 +1156,7 @@ export interface ApprovalService {
   getTasksForUser(
     userId: string,
     tenantId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalTask>>;
 
   /**
@@ -1183,7 +1165,7 @@ export interface ApprovalService {
    */
   getAssignmentSnapshot(
     taskId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalAssignmentSnapshot | undefined>;
 
   // ===== Approval Decisions (Phase 13.3) =====
@@ -1194,26 +1176,20 @@ export interface ApprovalService {
    * Triggers lifecycle transition if all approvals are complete
    */
   makeDecision(
-    request: ApprovalDecisionRequest
+    request: ApprovalDecisionRequest,
   ): Promise<ApprovalDecisionResult>;
 
   /**
    * Check if approval instance is complete
    * Returns true if all required tasks are approved
    */
-  isInstanceComplete(
-    instanceId: string,
-    tenantId: string
-  ): Promise<boolean>;
+  isInstanceComplete(instanceId: string, tenantId: string): Promise<boolean>;
 
   /**
    * Check if stage is complete
    * Returns true if stage quorum is met
    */
-  isStageComplete(
-    stageId: string,
-    tenantId: string
-  ): Promise<boolean>;
+  isStageComplete(stageId: string, tenantId: string): Promise<boolean>;
 
   // ===== SLA Timers and Escalations (Phase 13.2) =====
 
@@ -1224,7 +1200,7 @@ export interface ApprovalService {
   scheduleReminder(
     taskId: string,
     fireAt: Date,
-    tenantId: string
+    tenantId: string,
   ): Promise<void>;
 
   /**
@@ -1235,7 +1211,7 @@ export interface ApprovalService {
     taskId: string,
     fireAt: Date,
     escalationPayload: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<void>;
 
   /**
@@ -1251,7 +1227,7 @@ export interface ApprovalService {
   processEscalation(
     taskId: string,
     escalationPayload: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<void>;
 
   /**
@@ -1268,7 +1244,7 @@ export interface ApprovalService {
    */
   getEvents(
     instanceId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalEvent>>;
 
   /**
@@ -1276,7 +1252,7 @@ export interface ApprovalService {
    */
   getEscalations(
     instanceId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalEscalation>>;
 
   /**
@@ -1345,7 +1321,7 @@ export interface DdlGenerator {
    */
   generateDdl(
     model: CompiledModel,
-    options?: DdlGenerationOptions
+    options?: DdlGenerationOptions,
   ): DdlGenerationResult;
 
   /**
@@ -1354,7 +1330,7 @@ export interface DdlGenerator {
    */
   generateBatch(
     models: CompiledModel[],
-    options?: DdlGenerationOptions
+    options?: DdlGenerationOptions,
   ): DdlGenerationResult[];
 
   /**
@@ -1363,7 +1339,7 @@ export interface DdlGenerator {
    */
   generateMigrationScript(
     models: CompiledModel[],
-    options?: DdlGenerationOptions
+    options?: DdlGenerationOptions,
   ): string;
 }
 
@@ -1388,7 +1364,7 @@ export interface EntityClassificationService {
    */
   resolveClass(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityClass | undefined>;
 
   /**
@@ -1398,7 +1374,7 @@ export interface EntityClassificationService {
    */
   resolveFeatureFlags(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityFeatureFlags>;
 
   /**
@@ -1406,7 +1382,7 @@ export interface EntityClassificationService {
    */
   getClassification(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     entityClass: EntityClass | undefined;
     featureFlags: EntityFeatureFlags;
@@ -1437,7 +1413,7 @@ export interface NumberingEngine {
   generateNumber(
     entityName: string,
     tenantId: string,
-    referenceDate?: Date
+    referenceDate?: Date,
   ): Promise<string>;
 
   /**
@@ -1447,7 +1423,7 @@ export interface NumberingEngine {
   previewNextNumber(
     entityName: string,
     tenantId: string,
-    referenceDate?: Date
+    referenceDate?: Date,
   ): Promise<string | undefined>;
 
   /**
@@ -1456,7 +1432,7 @@ export interface NumberingEngine {
    */
   getRule(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<NumberingRule | undefined>;
 
   /**
@@ -1486,7 +1462,7 @@ export interface EntityPageDescriptorService {
    */
   describeStatic(
     entityName: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityPageStaticDescriptor>;
 
   /**
@@ -1498,7 +1474,7 @@ export interface EntityPageDescriptorService {
     entityName: string,
     entityId: string,
     ctx: RequestContext,
-    requestedViewMode?: ViewMode
+    requestedViewMode?: ViewMode,
   ): Promise<EntityPageDynamicDescriptor>;
 }
 
@@ -1513,14 +1489,64 @@ export interface EntityPageDescriptorService {
  * audit logging, cache invalidation, telemetry, UI refresh hints.
  */
 export type MetaEvent =
-  | { type: "lifecycle.transitioned"; entityName: string; entityId: string; operationCode: string; fromStateCode: string; toStateCode: string; userId: string; tenantId: string }
-  | { type: "approval.decision_made"; entityName: string; entityId: string; instanceId: string; decision: string; userId: string; tenantId: string }
-  | { type: "approval.instance_created"; entityName: string; entityId: string; instanceId: string; tenantId: string }
-  | { type: "entity.created"; entityName: string; entityId: string; userId: string; tenantId: string }
-  | { type: "entity.updated"; entityName: string; entityId: string; userId: string; tenantId: string }
-  | { type: "entity.deleted"; entityName: string; entityId: string; userId: string; tenantId: string }
-  | { type: "schema.published"; entityName: string; version: string; tenantId: string }
-  | { type: "descriptor.cache_invalidated"; entityName: string; tenantId: string };
+  | {
+      type: "lifecycle.transitioned";
+      entityName: string;
+      entityId: string;
+      operationCode: string;
+      fromStateCode: string;
+      toStateCode: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "approval.decision_made";
+      entityName: string;
+      entityId: string;
+      instanceId: string;
+      decision: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "approval.instance_created";
+      entityName: string;
+      entityId: string;
+      instanceId: string;
+      tenantId: string;
+    }
+  | {
+      type: "entity.created";
+      entityName: string;
+      entityId: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "entity.updated";
+      entityName: string;
+      entityId: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "entity.deleted";
+      entityName: string;
+      entityId: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "schema.published";
+      entityName: string;
+      version: string;
+      tenantId: string;
+    }
+  | {
+      type: "descriptor.cache_invalidated";
+      entityName: string;
+      tenantId: string;
+    };
 
 export type MetaEventType = MetaEvent["type"];
 
@@ -1570,7 +1596,7 @@ export interface ActionDispatcher {
    */
   execute(
     request: ActionExecutionRequest,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<ActionExecutionResult>;
 }
 
@@ -1593,7 +1619,7 @@ export interface ApprovalTemplateService {
   create(
     input: ApprovalTemplateCreateInput,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate>;
 
   /**
@@ -1601,7 +1627,7 @@ export interface ApprovalTemplateService {
    */
   get(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplate | undefined>;
 
   /**
@@ -1609,7 +1635,7 @@ export interface ApprovalTemplateService {
    */
   list(
     tenantId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalTemplate>>;
 
   /**
@@ -1619,7 +1645,7 @@ export interface ApprovalTemplateService {
     idOrCode: string,
     input: ApprovalTemplateUpdateInput,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate>;
 
   /**
@@ -1634,7 +1660,7 @@ export interface ApprovalTemplateService {
    */
   getStages(
     templateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplateStage[]>;
 
   /**
@@ -1642,7 +1668,7 @@ export interface ApprovalTemplateService {
    */
   getRules(
     templateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplateRule[]>;
 
   // ===== Validation & Compilation (G2) =====
@@ -1653,7 +1679,7 @@ export interface ApprovalTemplateService {
    */
   validate(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<TemplateValidationResult>;
 
   /**
@@ -1662,7 +1688,7 @@ export interface ApprovalTemplateService {
    */
   compile(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledApprovalTemplate>;
 
   // ===== Version Management (G3) =====
@@ -1670,10 +1696,7 @@ export interface ApprovalTemplateService {
   /**
    * List all versions of a template by code
    */
-  listVersions(
-    code: string,
-    tenantId: string
-  ): Promise<ApprovalTemplate[]>;
+  listVersions(code: string, tenantId: string): Promise<ApprovalTemplate[]>;
 
   /**
    * Rollback to a previous version (creates new version as copy)
@@ -1682,7 +1705,7 @@ export interface ApprovalTemplateService {
     code: string,
     targetVersion: number,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate>;
 
   /**
@@ -1692,7 +1715,7 @@ export interface ApprovalTemplateService {
     code: string,
     v1: number,
     v2: number,
-    tenantId: string
+    tenantId: string,
   ): Promise<Record<string, unknown>>;
 
   /**
@@ -1701,7 +1724,7 @@ export interface ApprovalTemplateService {
    */
   impactAnalysis(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     affectedTransitions: Array<{
       transitionId: string;
@@ -1719,7 +1742,7 @@ export interface ApprovalTemplateService {
   testResolution(
     idOrCode: string,
     context: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     resolvedAssignees: Array<{
       principalId?: string;

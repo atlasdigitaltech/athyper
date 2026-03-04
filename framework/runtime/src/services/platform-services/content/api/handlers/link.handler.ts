@@ -4,18 +4,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../../../platform/foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../../../platform/foundation/http/types.js";
 import type { LinkService } from "../../domain/services/LinkService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * POST /api/content/link
  * Link document to entity
  */
 export class LinkDocumentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const linkService = await ctx.container.resolve<LinkService>(TOKENS.linkService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const linkService = await ctx.container.resolve<LinkService>(
+      TOKENS.linkService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -56,11 +64,17 @@ export class LinkDocumentHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else if (message.includes("already linked")) {
-        res.status(409).json({ success: false, error: { code: "ALREADY_LINKED", message } });
+        res
+          .status(409)
+          .json({ success: false, error: { code: "ALREADY_LINKED", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "LINK_ERROR", message } });
+        res
+          .status(500)
+          .json({ success: false, error: { code: "LINK_ERROR", message } });
       }
     }
   }
@@ -71,8 +85,14 @@ export class LinkDocumentHandler implements RouteHandler {
  * Unlink document from entity
  */
 export class UnlinkDocumentHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const linkService = await ctx.container.resolve<LinkService>(TOKENS.linkService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const linkService = await ctx.container.resolve<LinkService>(
+      TOKENS.linkService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -97,9 +117,13 @@ export class UnlinkDocumentHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "UNLINK_ERROR", message } });
+        res
+          .status(500)
+          .json({ success: false, error: { code: "UNLINK_ERROR", message } });
       }
     }
   }
@@ -110,8 +134,14 @@ export class UnlinkDocumentHandler implements RouteHandler {
  * Get entities linked to a document
  */
 export class GetLinkedEntitiesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const linkService = await ctx.container.resolve<LinkService>(TOKENS.linkService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const linkService = await ctx.container.resolve<LinkService>(
+      TOKENS.linkService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const attachmentId = req.params.id;
@@ -129,7 +159,9 @@ export class GetLinkedEntitiesHandler implements RouteHandler {
       res.status(200).json({ success: true, data: links });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "LINK_LIST_ERROR", message } });
+      res
+        .status(500)
+        .json({ success: false, error: { code: "LINK_LIST_ERROR", message } });
     }
   }
 }

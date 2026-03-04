@@ -153,7 +153,7 @@ export class PolicyTestRunner {
   constructor(
     private readonly simulator: IPolicySimulator,
     private readonly repository?: ITestCaseRepository,
-    config?: Partial<TestRunnerConfig>
+    config?: Partial<TestRunnerConfig>,
   ) {
     this.config = { ...DEFAULT_TEST_RUNNER_CONFIG, ...config };
   }
@@ -217,7 +217,9 @@ export class PolicyTestRunner {
   /**
    * Run a specific golden test pack by name
    */
-  async runGoldenTestPack(packName: string): Promise<TestSuiteResult | undefined> {
+  async runGoldenTestPack(
+    packName: string,
+  ): Promise<TestSuiteResult | undefined> {
     const pack = getGoldenTestPack(packName);
     if (!pack) return undefined;
     return this.runTestPack(pack);
@@ -282,7 +284,7 @@ export class PolicyTestRunner {
     options?: {
       policyId?: string;
       tags?: string[];
-    }
+    },
   ): Promise<TestRunReport> {
     if (!this.repository) {
       throw new Error("Test case repository not configured");
@@ -302,7 +304,11 @@ export class PolicyTestRunner {
       this.evaluationTimes.push(result.durationMs);
 
       // Update repository with result
-      await this.repository.updateRunResult(tenantId, storedTestCase.id, result);
+      await this.repository.updateRunResult(
+        tenantId,
+        storedTestCase.id,
+        result,
+      );
 
       if (!result.passed) {
         failures.push({
@@ -316,7 +322,9 @@ export class PolicyTestRunner {
     }
 
     const passedCount = results.filter((r) => r.passed).length;
-    const failedCount = results.filter((r) => !r.passed && r.simulatorResult.success).length;
+    const failedCount = results.filter(
+      (r) => !r.passed && r.simulatorResult.success,
+    ).length;
     const errorCount = results.filter((r) => !r.simulatorResult.success).length;
 
     const suiteResult: TestSuiteResult = {
@@ -376,7 +384,9 @@ export class PolicyTestRunner {
     }
 
     const passedCount = results.filter((r) => r.passed).length;
-    const failedCount = results.filter((r) => !r.passed && r.simulatorResult.success).length;
+    const failedCount = results.filter(
+      (r) => !r.passed && r.simulatorResult.success,
+    ).length;
     const errorCount = results.filter((r) => !r.simulatorResult.success).length;
 
     return {
@@ -438,7 +448,9 @@ export class PolicyTestRunner {
   /**
    * Check for budget violations
    */
-  private checkBudgetViolations(metrics: PerformanceMetrics): BudgetViolation[] {
+  private checkBudgetViolations(
+    metrics: PerformanceMetrics,
+  ): BudgetViolation[] {
     const violations: BudgetViolation[] = [];
     const budget = this.config.performanceBudget;
 
@@ -478,7 +490,9 @@ export class PolicyTestRunner {
   /**
    * Calculate coverage report
    */
-  private calculateCoverage(packResults: Map<string, TestSuiteResult>): CoverageReport {
+  private calculateCoverage(
+    packResults: Map<string, TestSuiteResult>,
+  ): CoverageReport {
     let totalTestCases = 0;
     let passed = 0;
     let failed = 0;
@@ -572,7 +586,7 @@ export function formatReportAsText(report: TestRunReport): string {
     for (const violation of report.budgetViolations) {
       const icon = violation.severity === "error" ? "✗" : "⚠";
       lines.push(
-        `${icon} ${violation.testName}: ${violation.metric} = ${violation.actual.toFixed(2)}ms (budget: ${violation.budget}ms)`
+        `${icon} ${violation.testName}: ${violation.metric} = ${violation.actual.toFixed(2)}ms (budget: ${violation.budget}ms)`,
       );
     }
     lines.push("");
@@ -600,7 +614,9 @@ export function formatReportAsText(report: TestRunReport): string {
   lines.push("─".repeat(60));
   for (const [packName, result] of report.packResults) {
     const status = result.failedTests === 0 ? "✓" : "✗";
-    lines.push(`${status} ${packName}: ${result.passedTests}/${result.totalTests} (${result.durationMs}ms)`);
+    lines.push(
+      `${status} ${packName}: ${result.passedTests}/${result.totalTests} (${result.durationMs}ms)`,
+    );
   }
 
   lines.push("");
@@ -628,12 +644,12 @@ export function formatReportAsJUnit(report: TestRunReport): string {
 
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push(
-    `<testsuites name="Policy Tests" tests="${report.coverage.totalTestCases}" failures="${report.coverage.failed}" errors="${report.coverage.errors}" time="${(report.durationMs / 1000).toFixed(3)}">`
+    `<testsuites name="Policy Tests" tests="${report.coverage.totalTestCases}" failures="${report.coverage.failed}" errors="${report.coverage.errors}" time="${(report.durationMs / 1000).toFixed(3)}">`,
   );
 
   for (const [packName, result] of report.packResults) {
     lines.push(
-      `  <testsuite name="${escapeXml(packName)}" tests="${result.totalTests}" failures="${result.failedTests}" errors="${result.errorTests}" time="${(result.durationMs / 1000).toFixed(3)}">`
+      `  <testsuite name="${escapeXml(packName)}" tests="${result.totalTests}" failures="${result.failedTests}" errors="${result.errorTests}" time="${(result.durationMs / 1000).toFixed(3)}">`,
     );
 
     for (const testResult of result.testResults) {
@@ -645,10 +661,10 @@ export function formatReportAsJUnit(report: TestRunReport): string {
       } else {
         lines.push(`    <testcase name="${testName}" time="${time}">`);
         lines.push(
-          `      <failure message="${escapeXml(testResult.failureReason || "Assertion failed")}" type="AssertionError">`
+          `      <failure message="${escapeXml(testResult.failureReason || "Assertion failed")}" type="AssertionError">`,
         );
         lines.push(
-          `Effect: ${escapeXml(testResult.simulatorResult.decision.effect)}, Allowed: ${testResult.simulatorResult.decision.allowed}`
+          `Effect: ${escapeXml(testResult.simulatorResult.decision.effect)}, Allowed: ${testResult.simulatorResult.decision.allowed}`,
         );
         lines.push(`      </failure>`);
         lines.push(`    </testcase>`);
@@ -682,7 +698,7 @@ function escapeXml(str: string): string {
 export function createPolicyTestRunner(
   simulator: IPolicySimulator,
   repository?: ITestCaseRepository,
-  config?: Partial<TestRunnerConfig>
+  config?: Partial<TestRunnerConfig>,
 ): PolicyTestRunner {
   return new PolicyTestRunner(simulator, repository, config);
 }

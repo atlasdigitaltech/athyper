@@ -5,7 +5,10 @@
  * Requires "security_admin" role for all operations.
  */
 
-import type { AuditExportService, AuditExportResult } from "../../domain/audit-export.service.js";
+import type {
+  AuditExportService,
+  AuditExportResult,
+} from "../../domain/audit-export.service.js";
 
 // ============================================================================
 // Types
@@ -36,18 +39,24 @@ export interface HandlerResponse {
 export class ExportAuditHandler {
   constructor(private readonly exportService: AuditExportService) {}
 
-  async handle(req: HandlerRequest, res: HandlerResponse, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: HandlerRequest,
+    res: HandlerResponse,
+    ctx: HandlerContext,
+  ): Promise<void> {
     // Auth check
     if (!ctx.auth.roles.includes("security_admin")) {
       res.status(403).json({ error: "Requires security_admin role" });
       return;
     }
 
-    const body = req.body as {
-      startDate?: string;
-      endDate?: string;
-      limit?: number;
-    } | undefined;
+    const body = req.body as
+      | {
+          startDate?: string;
+          endDate?: string;
+          limit?: number;
+        }
+      | undefined;
 
     if (!body?.startDate || !body?.endDate) {
       res.status(400).json({ error: "startDate and endDate are required" });
@@ -79,11 +88,17 @@ export class ExportAuditHandler {
 export class ListAuditExportsHandler {
   constructor(
     private readonly objectStorage: {
-      list(prefix?: string): Promise<Array<{ key: string; size: number; lastModified: Date }>>;
+      list(
+        prefix?: string,
+      ): Promise<Array<{ key: string; size: number; lastModified: Date }>>;
     } | null,
   ) {}
 
-  async handle(req: HandlerRequest, res: HandlerResponse, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: HandlerRequest,
+    res: HandlerResponse,
+    ctx: HandlerContext,
+  ): Promise<void> {
     // Auth check
     if (!ctx.auth.roles.includes("security_admin")) {
       res.status(403).json({ error: "Requires security_admin role" });

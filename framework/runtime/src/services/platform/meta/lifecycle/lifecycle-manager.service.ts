@@ -45,7 +45,6 @@ import type {
   ThresholdRule,
 } from "@athyper/core/meta";
 
-
 export class LifecycleManagerService implements LifecycleManager {
   private approvalService?: ApprovalService;
   private timerService?: LifecycleTimerService;
@@ -89,17 +88,17 @@ export class LifecycleManagerService implements LifecycleManager {
   async createInstance(
     entityName: string,
     entityId: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityLifecycleInstance> {
     // Resolve which lifecycle applies
     const lifecycleId = await this.routeCompiler.resolveLifecycle(
       entityName,
-      ctx
+      ctx,
     );
 
     if (!lifecycleId) {
       throw new Error(
-        `No lifecycle defined for entity '${entityName}' in tenant ${ctx.tenantId}`
+        `No lifecycle defined for entity '${entityName}' in tenant ${ctx.tenantId}`,
       );
     }
 
@@ -108,7 +107,7 @@ export class LifecycleManagerService implements LifecycleManager {
 
     if (!initialState) {
       throw new Error(
-        `No initial state defined for lifecycle '${lifecycleId}'`
+        `No initial state defined for lifecycle '${lifecycleId}'`,
       );
     }
 
@@ -131,7 +130,7 @@ export class LifecycleManagerService implements LifecycleManager {
           state_id: (eb) => eb.ref("excluded.state_id"),
           updated_at: now(),
           updated_by: (eb) => eb.ref("excluded.updated_by"),
-        })
+        }),
       )
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -152,15 +151,17 @@ export class LifecycleManagerService implements LifecycleManager {
       correlationId: undefined,
     });
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_instance_created",
-      entityName,
-      entityId,
-      tenantId: ctx.tenantId,
-      lifecycleId,
-      stateId: initialState.id,
-      stateCode: initialState.code,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_instance_created",
+        entityName,
+        entityId,
+        tenantId: ctx.tenantId,
+        lifecycleId,
+        stateId: initialState.id,
+        stateCode: initialState.code,
+      }),
+    );
 
     return instance;
   }
@@ -172,7 +173,7 @@ export class LifecycleManagerService implements LifecycleManager {
   async getInstance(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityLifecycleInstance | undefined> {
     const result = await this.db
       .selectFrom("core.entity_lifecycle_instance")
@@ -195,13 +196,13 @@ export class LifecycleManagerService implements LifecycleManager {
   async getInstanceOrFail(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityLifecycleInstance> {
     const instance = await this.getInstance(entityName, entityId, tenantId);
 
     if (!instance) {
       throw new Error(
-        `Lifecycle instance not found for ${entityName}/${entityId} in tenant ${tenantId}`
+        `Lifecycle instance not found for ${entityName}/${entityId} in tenant ${tenantId}`,
       );
     }
 
@@ -218,13 +219,18 @@ export class LifecycleManagerService implements LifecycleManager {
    * Creates lifecycle event and updates instance
    */
   async transition(
-    request: LifecycleTransitionRequest
+    request: LifecycleTransitionRequest,
   ): Promise<LifecycleTransitionResult> {
     const { entityName, entityId, operationCode, ctx } = request;
 
     return withSpan(
       META_SPANS.LIFECYCLE_TRANSITION,
-      { "meta.entity": entityName, "meta.operation": operationCode, "meta.tenant_id": ctx.tenantId, "meta.record_id": entityId },
+      {
+        "meta.entity": entityName,
+        "meta.operation": operationCode,
+        "meta.tenant_id": ctx.tenantId,
+        "meta.record_id": entityId,
+      },
       async (span) => {
         const start = Date.now();
         try {
@@ -232,18 +238,22 @@ export class LifecycleManagerService implements LifecycleManager {
           const instance = await this.getInstanceOrFail(
             entityName,
             entityId,
-            ctx.tenantId
+            ctx.tenantId,
           );
 
           // Get current state
           const currentState = await this.getState(
             instance.stateId,
-            ctx.tenantId
+            ctx.tenantId,
           );
 
           // Check if current state is terminal
           if (currentState.isTerminal) {
-            this.metrics?.transitionFailed({ entity: entityName, operation: operationCode, reason: "terminal_state" });
+            this.metrics?.transitionFailed({
+              entity: entityName,
+              operation: operationCode,
+              reason: "terminal_state",
+            });
             return {
               success: false,
               error: "Cannot transition from terminal state",
@@ -256,11 +266,15 @@ export class LifecycleManagerService implements LifecycleManager {
             instance.lifecycleId,
             instance.stateId,
             operationCode,
-            ctx.tenantId
+            ctx.tenantId,
           );
 
           if (!transition) {
-            this.metrics?.transitionFailed({ entity: entityName, operation: operationCode, reason: "not_found" });
+            this.metrics?.transitionFailed({
+              entity: entityName,
+              operation: operationCode,
+              reason: "not_found",
+            });
             return {
               success: false,
               error: "Transition not found",
@@ -273,11 +287,15 @@ export class LifecycleManagerService implements LifecycleManager {
             transition.id,
             ctx,
             request.payload,
-            { entityName, entityId }
+            { entityName, entityId },
           );
 
           if (!gateResult.allowed) {
-            this.metrics?.transitionFailed({ entity: entityName, operation: operationCode, reason: "gate_denied" });
+            this.metrics?.transitionFailed({
+              entity: entityName,
+              operation: operationCode,
+              reason: "gate_denied",
+            });
             return {
               success: false,
               error: "Gate validation failed",
@@ -288,7 +306,7 @@ export class LifecycleManagerService implements LifecycleManager {
           // Get target state
           const targetState = await this.getState(
             transition.toStateId,
-            ctx.tenantId
+            ctx.tenantId,
           );
 
           // Execute transition
@@ -318,18 +336,23 @@ export class LifecycleManagerService implements LifecycleManager {
             correlationId: undefined,
           });
 
-          this.metrics?.transitionLatency(Date.now() - start, { entity: entityName, operation: operationCode });
+          this.metrics?.transitionLatency(Date.now() - start, {
+            entity: entityName,
+            operation: operationCode,
+          });
 
-          console.log(JSON.stringify({
-            msg: "lifecycle_transition_success",
-            entityName,
-            entityId,
-            tenantId: ctx.tenantId,
-            operationCode,
-            fromState: currentState.code,
-            toState: targetState.code,
-            eventId: event.id,
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_transition_success",
+              entityName,
+              entityId,
+              tenantId: ctx.tenantId,
+              operationCode,
+              fromState: currentState.code,
+              toState: targetState.code,
+              eventId: event.id,
+            }),
+          );
 
           // Timer lifecycle management (H4: Auto-transitions)
           if (this.timerService) {
@@ -338,7 +361,7 @@ export class LifecycleManagerService implements LifecycleManager {
               entityName,
               entityId,
               ctx.tenantId,
-              `transitioned_to_${targetState.code}`
+              `transitioned_to_${targetState.code}`,
             );
 
             // Schedule new timers for target state (if policies exist)
@@ -347,7 +370,7 @@ export class LifecycleManagerService implements LifecycleManager {
               entityId,
               transition.toStateId,
               ctx,
-              request.payload
+              request.payload,
             );
           }
 
@@ -358,16 +381,22 @@ export class LifecycleManagerService implements LifecycleManager {
             eventId: event.id,
           };
         } catch (error) {
-          this.metrics?.transitionFailed({ entity: entityName, operation: operationCode, reason: "error" });
+          this.metrics?.transitionFailed({
+            entity: entityName,
+            operation: operationCode,
+            reason: "error",
+          });
 
-          console.error(JSON.stringify({
-            msg: "lifecycle_transition_error",
-            entityName,
-            entityId,
-            tenantId: ctx.tenantId,
-            operationCode,
-            error: String(error),
-          }));
+          console.error(
+            JSON.stringify({
+              msg: "lifecycle_transition_error",
+              entityName,
+              entityId,
+              tenantId: ctx.tenantId,
+              operationCode,
+              error: String(error),
+            }),
+          );
 
           return {
             success: false,
@@ -383,7 +412,7 @@ export class LifecycleManagerService implements LifecycleManager {
    * Does not execute the transition, only validates
    */
   async canTransition(
-    request: LifecycleTransitionRequest
+    request: LifecycleTransitionRequest,
   ): Promise<LifecycleTransitionResult> {
     const { entityName, entityId, operationCode, ctx } = request;
 
@@ -392,14 +421,11 @@ export class LifecycleManagerService implements LifecycleManager {
       const instance = await this.getInstanceOrFail(
         entityName,
         entityId,
-        ctx.tenantId
+        ctx.tenantId,
       );
 
       // Get current state
-      const currentState = await this.getState(
-        instance.stateId,
-        ctx.tenantId
-      );
+      const currentState = await this.getState(instance.stateId, ctx.tenantId);
 
       // Check if current state is terminal
       if (currentState.isTerminal) {
@@ -414,7 +440,7 @@ export class LifecycleManagerService implements LifecycleManager {
         instance.lifecycleId,
         instance.stateId,
         operationCode,
-        ctx.tenantId
+        ctx.tenantId,
       );
 
       if (!transition) {
@@ -429,7 +455,7 @@ export class LifecycleManagerService implements LifecycleManager {
         transition.id,
         ctx,
         request.payload,
-        { entityName, entityId }
+        { entityName, entityId },
       );
 
       if (!gateResult.allowed) {
@@ -442,7 +468,7 @@ export class LifecycleManagerService implements LifecycleManager {
       // Get target state
       const targetState = await this.getState(
         transition.toStateId,
-        ctx.tenantId
+        ctx.tenantId,
       );
 
       return {
@@ -465,20 +491,20 @@ export class LifecycleManagerService implements LifecycleManager {
   async getAvailableTransitions(
     entityName: string,
     entityId: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<AvailableTransition[]> {
     // Get current instance
     const instance = await this.getInstanceOrFail(
       entityName,
       entityId,
-      ctx.tenantId
+      ctx.tenantId,
     );
 
     // Get all transitions from current state
     const transitions = await this.getTransitionsFromState(
       instance.lifecycleId,
       instance.stateId,
-      ctx.tenantId
+      ctx.tenantId,
     );
 
     const available: AvailableTransition[] = [];
@@ -487,14 +513,14 @@ export class LifecycleManagerService implements LifecycleManager {
       // Get target state
       const targetState = await this.getState(
         transition.toStateId,
-        ctx.tenantId
+        ctx.tenantId,
       );
 
       // Validate gates
       const gateResult = await this.validateGates(
         transition.id,
         ctx,
-        undefined
+        undefined,
       );
 
       // Check for approval requirement
@@ -528,10 +554,12 @@ export class LifecycleManagerService implements LifecycleManager {
     transitionId: string,
     ctx: RequestContext,
     record?: unknown,
-    entityContext?: { entityName: string; entityId: string }
+    entityContext?: { entityName: string; entityId: string },
   ): Promise<{ allowed: boolean; reason?: string }> {
     // Bypass check: if _approvalBypass is set, skip all approval gate checks (loop protection)
-    const bypassApproval = (ctx.metadata as Record<string, unknown> | undefined)?._approvalBypass === true;
+    const bypassApproval =
+      (ctx.metadata as Record<string, unknown> | undefined)?._approvalBypass ===
+      true;
 
     // Load gates for transition
     const gates = await this.getGatesForTransition(transitionId, ctx.tenantId);
@@ -550,7 +578,7 @@ export class LifecycleManagerService implements LifecycleManager {
             operation,
             entityContext?.entityName ?? "unknown",
             ctx,
-            record
+            record,
           );
 
           if (!decision.allowed) {
@@ -566,11 +594,13 @@ export class LifecycleManagerService implements LifecycleManager {
       if (gate.approvalTemplateId && !bypassApproval) {
         if (!this.approvalService || !entityContext) {
           // No approval service wired or no entity context — log and skip
-          console.log(JSON.stringify({
-            msg: "lifecycle_gate_approval_required_but_no_service",
-            transitionId,
-            approvalTemplateId: gate.approvalTemplateId,
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_gate_approval_required_but_no_service",
+              transitionId,
+              approvalTemplateId: gate.approvalTemplateId,
+            }),
+          );
           continue;
         }
 
@@ -578,18 +608,19 @@ export class LifecycleManagerService implements LifecycleManager {
         const existing = await this.approvalService.getInstanceForEntity(
           entityContext.entityName,
           entityContext.entityId,
-          ctx.tenantId
+          ctx.tenantId,
         );
 
         if (!existing) {
           // No approval instance — create one and block the transition
-          const createResult = await this.approvalService.createApprovalInstance({
-            entityName: entityContext.entityName,
-            entityId: entityContext.entityId,
-            transitionId,
-            approvalTemplateId: gate.approvalTemplateId,
-            ctx,
-          });
+          const createResult =
+            await this.approvalService.createApprovalInstance({
+              entityName: entityContext.entityName,
+              entityId: entityContext.entityId,
+              transitionId,
+              approvalTemplateId: gate.approvalTemplateId,
+              ctx,
+            });
 
           if (createResult.success) {
             return {
@@ -615,9 +646,10 @@ export class LifecycleManagerService implements LifecycleManager {
         if (existing.status === "rejected" || existing.status === "canceled") {
           return {
             allowed: false,
-            reason: existing.status === "rejected"
-              ? "Approval was rejected"
-              : "Approval was canceled",
+            reason:
+              existing.status === "rejected"
+                ? "Approval was rejected"
+                : "Approval was canceled",
           };
         }
 
@@ -628,16 +660,18 @@ export class LifecycleManagerService implements LifecycleManager {
       if (gate.thresholdRules && record) {
         const thresholdResult = this.evaluateThresholds(
           gate.thresholdRules as { rules: ThresholdRule[] },
-          record as Record<string, unknown>
+          record as Record<string, unknown>,
         );
         if (!thresholdResult.allowed) {
-          console.log(JSON.stringify({
-            msg: "lifecycle_gate_threshold_blocked",
-            transitionId,
-            tenantId: ctx.tenantId,
-            userId: ctx.userId,
-            reason: thresholdResult.reason,
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_gate_threshold_blocked",
+              transitionId,
+              tenantId: ctx.tenantId,
+              userId: ctx.userId,
+              reason: thresholdResult.reason,
+            }),
+          );
           return {
             allowed: false,
             reason: thresholdResult.reason ?? "Threshold gate blocked",
@@ -650,15 +684,17 @@ export class LifecycleManagerService implements LifecycleManager {
         const conditionResult = this.evaluateGateConditions(
           gate.conditions as ConditionGroup,
           record as Record<string, unknown>,
-          ctx
+          ctx,
         );
         if (!conditionResult) {
-          console.log(JSON.stringify({
-            msg: "lifecycle_gate_condition_blocked",
-            transitionId,
-            tenantId: ctx.tenantId,
-            userId: ctx.userId,
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_gate_condition_blocked",
+              transitionId,
+              tenantId: ctx.tenantId,
+              userId: ctx.userId,
+            }),
+          );
           return {
             allowed: false,
             reason: "Gate condition not met",
@@ -668,14 +704,16 @@ export class LifecycleManagerService implements LifecycleManager {
     }
 
     // Log successful gate evaluation
-    console.log(JSON.stringify({
-      msg: "lifecycle_gate_evaluated",
-      transitionId,
-      gateCount: gates.length,
-      allowed: true,
-      tenantId: ctx.tenantId,
-      userId: ctx.userId,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_gate_evaluated",
+        transitionId,
+        gateCount: gates.length,
+        allowed: true,
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+      }),
+    );
 
     return { allowed: true };
   }
@@ -686,7 +724,7 @@ export class LifecycleManagerService implements LifecycleManager {
    */
   private evaluateThresholds(
     thresholdConfig: { rules: ThresholdRule[] },
-    record: Record<string, unknown>
+    record: Record<string, unknown>,
   ): { allowed: boolean; reason?: string } {
     for (const rule of thresholdConfig.rules ?? []) {
       const actual = resolveFieldValue(rule.field, record);
@@ -723,7 +761,8 @@ export class LifecycleManagerService implements LifecycleManager {
       if (!passed && rule.action === "block") {
         return {
           allowed: false,
-          reason: rule.reason ??
+          reason:
+            rule.reason ??
             `Threshold blocked: ${rule.field} ${rule.operator} ${rule.value} (actual: ${numVal})`,
         };
       }
@@ -739,7 +778,7 @@ export class LifecycleManagerService implements LifecycleManager {
   private evaluateGateConditions(
     conditions: ConditionGroup,
     record: Record<string, unknown>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): boolean {
     // Build evaluation context merging record fields with request context
     const evalCtx: Record<string, unknown> = {
@@ -781,7 +820,7 @@ export class LifecycleManagerService implements LifecycleManager {
   async getHistory(
     entityName: string,
     entityId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<EntityLifecycleEvent>> {
     const page = options?.page || 1;
     const pageSize = options?.pageSize || 50;
@@ -831,7 +870,7 @@ export class LifecycleManagerService implements LifecycleManager {
   async getCurrentState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     instance: EntityLifecycleInstance;
     state: LifecycleState;
@@ -840,7 +879,7 @@ export class LifecycleManagerService implements LifecycleManager {
     const instance = await this.getInstanceOrFail(
       entityName,
       entityId,
-      tenantId
+      tenantId,
     );
 
     const state = await this.getState(instance.stateId, tenantId);
@@ -863,7 +902,7 @@ export class LifecycleManagerService implements LifecycleManager {
   async isTerminalState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<boolean> {
     const instance = await this.getInstance(entityName, entityId, tenantId);
 
@@ -883,17 +922,17 @@ export class LifecycleManagerService implements LifecycleManager {
   async enforceTerminalState(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<void> {
     const isTerminal = await this.isTerminalState(
       entityName,
       entityId,
-      tenantId
+      tenantId,
     );
 
     if (isTerminal) {
       throw new Error(
-        `Cannot update ${entityName}/${entityId}: record is in terminal state`
+        `Cannot update ${entityName}/${entityId}: record is in terminal state`,
       );
     }
   }
@@ -917,7 +956,7 @@ export class LifecycleManagerService implements LifecycleManager {
     entityId: string,
     stateId: string,
     ctx: RequestContext,
-    triggerData?: Record<string, unknown>
+    triggerData?: Record<string, unknown>,
   ): Promise<void> {
     if (!this.timerService) {
       return;
@@ -942,18 +981,20 @@ export class LifecycleManagerService implements LifecycleManager {
             entityName,
             entityId,
             ctx,
-            triggerData
+            triggerData,
           );
         }
       } catch (error) {
-        console.error(JSON.stringify({
-          msg: "lifecycle_timer_scheduling_failed",
-          policyId: policyRow.id,
-          entityName,
-          entityId,
-          stateId,
-          error: String(error),
-        }));
+        console.error(
+          JSON.stringify({
+            msg: "lifecycle_timer_scheduling_failed",
+            policyId: policyRow.id,
+            entityName,
+            entityId,
+            stateId,
+            error: String(error),
+          }),
+        );
       }
     }
   }
@@ -991,7 +1032,7 @@ export class LifecycleManagerService implements LifecycleManager {
    */
   private async getInitialState(
     lifecycleId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleState | undefined> {
     const result = await this.db
       .selectFrom("meta.lifecycle_state")
@@ -1014,7 +1055,7 @@ export class LifecycleManagerService implements LifecycleManager {
    */
   private async getState(
     stateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleState> {
     const result = await this.db
       .selectFrom("meta.lifecycle_state")
@@ -1037,7 +1078,7 @@ export class LifecycleManagerService implements LifecycleManager {
     lifecycleId: string,
     fromStateId: string,
     operationCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTransition | undefined> {
     const result = await this.db
       .selectFrom("meta.lifecycle_transition")
@@ -1063,7 +1104,7 @@ export class LifecycleManagerService implements LifecycleManager {
   private async getTransitionsFromState(
     lifecycleId: string,
     fromStateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTransition[]> {
     const rows = await this.db
       .selectFrom("meta.lifecycle_transition")
@@ -1083,7 +1124,7 @@ export class LifecycleManagerService implements LifecycleManager {
    */
   private async getGatesForTransition(
     transitionId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTransitionGate[]> {
     const rows = await this.db
       .selectFrom("meta.lifecycle_transition_gate")

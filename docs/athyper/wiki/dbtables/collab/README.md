@@ -55,27 +55,27 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Type key identifying the entity this comment belongs to |
-| `entity_id` | `uuid` | NOT NULL | -- | ID of the entity record being commented on |
-| `commenter_id` | `uuid` | NOT NULL | -- | The principal who authored the comment; FK to `core.principal(id)` |
-| `comment_text` | `text` | NOT NULL | -- | Comment body text (max 5000 characters) |
-| `parent_comment_id` | `uuid` | NULL | -- | Self-referencing FK for threaded replies; NULL for top-level comments |
-| `thread_depth` | `int` | NOT NULL | `0` | Nesting depth of this comment in the thread (0 = top-level, max 5) |
-| `visibility` | `text` | NOT NULL | `'public'` | Visibility level: `public`, `internal`, or `private` |
-| `deleted_at` | `timestamptz` | NULL | -- | Soft delete timestamp |
-| `deleted_by` | `text` | NULL | -- | Identifier of the actor who soft-deleted the comment |
-| `archived_at` | `timestamptz` | NULL | -- | Timestamp when the comment was archived (can be restored) |
-| `archived_by` | `text` | NULL | -- | Identifier of the actor who archived the comment |
-| `retention_until` | `timestamptz` | NULL | -- | Date when the comment becomes eligible for archival/deletion per retention policy |
-| `retention_policy_id` | `uuid` | NULL | -- | FK to the retention policy governing this comment's lifecycle |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `created_by` | `text` | NOT NULL | -- | Identifier of the actor who created the comment |
-| `updated_at` | `timestamptz` | NULL | -- | Last update timestamp |
-| `updated_by` | `text` | NULL | -- | Identifier of the actor who last updated the comment |
+| Column                | Type          | Nullable | Default             | Description                                                                       |
+| --------------------- | ------------- | -------- | ------------------- | --------------------------------------------------------------------------------- |
+| `id`                  | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                                       |
+| `tenant_id`           | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                                         |
+| `entity_type`         | `text`        | NOT NULL | --                  | Type key identifying the entity this comment belongs to                           |
+| `entity_id`           | `uuid`        | NOT NULL | --                  | ID of the entity record being commented on                                        |
+| `commenter_id`        | `uuid`        | NOT NULL | --                  | The principal who authored the comment; FK to `core.principal(id)`                |
+| `comment_text`        | `text`        | NOT NULL | --                  | Comment body text (max 5000 characters)                                           |
+| `parent_comment_id`   | `uuid`        | NULL     | --                  | Self-referencing FK for threaded replies; NULL for top-level comments             |
+| `thread_depth`        | `int`         | NOT NULL | `0`                 | Nesting depth of this comment in the thread (0 = top-level, max 5)                |
+| `visibility`          | `text`        | NOT NULL | `'public'`          | Visibility level: `public`, `internal`, or `private`                              |
+| `deleted_at`          | `timestamptz` | NULL     | --                  | Soft delete timestamp                                                             |
+| `deleted_by`          | `text`        | NULL     | --                  | Identifier of the actor who soft-deleted the comment                              |
+| `archived_at`         | `timestamptz` | NULL     | --                  | Timestamp when the comment was archived (can be restored)                         |
+| `archived_by`         | `text`        | NULL     | --                  | Identifier of the actor who archived the comment                                  |
+| `retention_until`     | `timestamptz` | NULL     | --                  | Date when the comment becomes eligible for archival/deletion per retention policy |
+| `retention_policy_id` | `uuid`        | NULL     | --                  | FK to the retention policy governing this comment's lifecycle                     |
+| `created_at`          | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                                |
+| `created_by`          | `text`        | NOT NULL | --                  | Identifier of the actor who created the comment                                   |
+| `updated_at`          | `timestamptz` | NULL     | --                  | Last update timestamp                                                             |
+| `updated_by`          | `text`        | NULL     | --                  | Identifier of the actor who last updated the comment                              |
 
 #### Primary Key
 
@@ -83,30 +83,30 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `commenter_id` | `core.principal(id)` | SET NULL |
-| (implicit) | `parent_comment_id` | `collab.entity_comment(id)` | CASCADE |
+| Constraint | Column(s)           | References                  | On Delete |
+| ---------- | ------------------- | --------------------------- | --------- |
+| (implicit) | `tenant_id`         | `core.tenant(id)`           | CASCADE   |
+| (implicit) | `commenter_id`      | `core.principal(id)`        | SET NULL  |
+| (implicit) | `parent_comment_id` | `collab.entity_comment(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `entity_comment_text_len_chk` | CHECK | `char_length(comment_text) <= 5000` |
-| `entity_comment_depth_chk` | CHECK | `thread_depth between 0 and 5` |
+| Name                            | Type  | Definition                                      |
+| ------------------------------- | ----- | ----------------------------------------------- |
+| `entity_comment_text_len_chk`   | CHECK | `char_length(comment_text) <= 5000`             |
+| `entity_comment_depth_chk`      | CHECK | `thread_depth between 0 and 5`                  |
 | `entity_comment_visibility_chk` | CHECK | `visibility in ('public','internal','private')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_entity_comment_entity` | `(tenant_id, entity_type, entity_id, created_at DESC)` | `deleted_at IS NULL` | Main query path: comments for an entity |
-| `idx_entity_comment_commenter` | `(commenter_id, created_at DESC)` | `deleted_at IS NULL` | User's comment history |
-| `idx_entity_comment_parent` | `(parent_comment_id, created_at ASC)` | `parent_comment_id IS NOT NULL AND deleted_at IS NULL` | Thread child traversal |
-| `idx_entity_comment_visibility` | `(tenant_id, entity_type, entity_id, visibility, created_at DESC)` | `deleted_at IS NULL` | Visibility-filtered queries |
-| `idx_entity_comment_archived` | `(tenant_id, archived_at)` | `archived_at IS NOT NULL` | Archived comment queries |
-| `idx_entity_comment_retention` | `(tenant_id, retention_until)` | `retention_until IS NOT NULL AND deleted_at IS NULL` | Retention batch processing |
+| Name                            | Columns                                                            | Partial Filter                                         | Notes                                   |
+| ------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------- |
+| `idx_entity_comment_entity`     | `(tenant_id, entity_type, entity_id, created_at DESC)`             | `deleted_at IS NULL`                                   | Main query path: comments for an entity |
+| `idx_entity_comment_commenter`  | `(commenter_id, created_at DESC)`                                  | `deleted_at IS NULL`                                   | User's comment history                  |
+| `idx_entity_comment_parent`     | `(parent_comment_id, created_at ASC)`                              | `parent_comment_id IS NOT NULL AND deleted_at IS NULL` | Thread child traversal                  |
+| `idx_entity_comment_visibility` | `(tenant_id, entity_type, entity_id, visibility, created_at DESC)` | `deleted_at IS NULL`                                   | Visibility-filtered queries             |
+| `idx_entity_comment_archived`   | `(tenant_id, archived_at)`                                         | `archived_at IS NOT NULL`                              | Archived comment queries                |
+| `idx_entity_comment_retention`  | `(tenant_id, retention_until)`                                     | `retention_until IS NOT NULL AND deleted_at IS NULL`   | Retention batch processing              |
 
 #### Relationships
 
@@ -122,16 +122,16 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the comment containing the mention |
-| `mentioned_user_id` | `uuid` | NOT NULL | -- | The principal who was mentioned; FK to `core.principal(id)` |
-| `mention_text` | `text` | NOT NULL | -- | The raw mention text as it appeared (e.g., `@john.doe`) |
-| `position` | `int` | NOT NULL | -- | Character offset position of the mention in the comment text |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column              | Type          | Nullable | Default             | Description                                                       |
+| ------------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`                | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`         | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                         |
+| `comment_type`      | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment` |
+| `comment_id`        | `uuid`        | NOT NULL | --                  | ID of the comment containing the mention                          |
+| `mentioned_user_id` | `uuid`        | NOT NULL | --                  | The principal who was mentioned; FK to `core.principal(id)`       |
+| `mention_text`      | `text`        | NOT NULL | --                  | The raw mention text as it appeared (e.g., `@john.doe`)           |
+| `position`          | `int`         | NOT NULL | --                  | Character offset position of the mention in the comment text      |
+| `created_at`        | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                |
 
 #### Primary Key
 
@@ -139,23 +139,23 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `mentioned_user_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)           | References           | On Delete |
+| ---------- | ------------------- | -------------------- | --------- |
+| (implicit) | `tenant_id`         | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `mentioned_user_id` | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                       | Type  | Definition                                              |
+| -------------------------- | ----- | ------------------------------------------------------- |
 | `comment_mention_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
-| `idx_comment_mention_comment` | `(comment_type, comment_id)` | Lookup mentions within a comment |
-| `idx_comment_mention_user` | `(mentioned_user_id, created_at DESC)` | User's incoming mentions feed |
+| Name                          | Columns                                | Notes                            |
+| ----------------------------- | -------------------------------------- | -------------------------------- |
+| `idx_comment_mention_comment` | `(comment_type, comment_id)`           | Lookup mentions within a comment |
+| `idx_comment_mention_user`    | `(mentioned_user_id, created_at DESC)` | User's incoming mentions feed    |
 
 #### Relationships
 
@@ -170,15 +170,15 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the comment being reacted to |
-| `user_id` | `uuid` | NOT NULL | -- | The principal who reacted; FK to `core.principal(id)` |
-| `reaction_type` | `text` | NOT NULL | -- | Emoji character (one of 8 supported types) |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column          | Type          | Nullable | Default             | Description                                                       |
+| --------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`            | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`     | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                         |
+| `comment_type`  | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment` |
+| `comment_id`    | `uuid`        | NOT NULL | --                  | ID of the comment being reacted to                                |
+| `user_id`       | `uuid`        | NOT NULL | --                  | The principal who reacted; FK to `core.principal(id)`             |
+| `reaction_type` | `text`        | NOT NULL | --                  | Emoji character (one of 8 supported types)                        |
+| `created_at`    | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                |
 
 #### Primary Key
 
@@ -186,25 +186,25 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `user_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)   | References           | On Delete |
+| ---------- | ----------- | -------------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `user_id`   | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_reaction_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
-| `comment_reaction_emoji_chk` | CHECK | `reaction_type in ('thumbs_up','heart','party','eyes','thumbs_down','rocket','bulb','thinking')` (stored as emoji characters) |
-| `comment_reaction_uniq` | UNIQUE | `(tenant_id, comment_type, comment_id, user_id, reaction_type)` -- one reaction type per user per comment |
+| Name                         | Type   | Definition                                                                                                                    |
+| ---------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `comment_reaction_type_chk`  | CHECK  | `comment_type in ('entity_comment','approval_comment')`                                                                       |
+| `comment_reaction_emoji_chk` | CHECK  | `reaction_type in ('thumbs_up','heart','party','eyes','thumbs_down','rocket','bulb','thinking')` (stored as emoji characters) |
+| `comment_reaction_uniq`      | UNIQUE | `(tenant_id, comment_type, comment_id, user_id, reaction_type)` -- one reaction type per user per comment                     |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
+| Name                           | Columns                                 | Notes                             |
+| ------------------------------ | --------------------------------------- | --------------------------------- |
 | `idx_comment_reaction_comment` | `(tenant_id, comment_type, comment_id)` | Aggregate reactions for a comment |
-| `idx_comment_reaction_user` | `(tenant_id, user_id, created_at DESC)` | User's reaction history |
+| `idx_comment_reaction_user`    | `(tenant_id, user_id, created_at DESC)` | User's reaction history           |
 
 #### Relationships
 
@@ -219,14 +219,14 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the comment that was read |
-| `user_id` | `uuid` | NOT NULL | -- | The principal who read the comment; FK to `core.principal(id)` |
-| `read_at` | `timestamptz` | NOT NULL | `now()` | Timestamp when the comment was read |
+| Column         | Type          | Nullable | Default             | Description                                                       |
+| -------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`           | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`    | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                         |
+| `comment_type` | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment` |
+| `comment_id`   | `uuid`        | NOT NULL | --                  | ID of the comment that was read                                   |
+| `user_id`      | `uuid`        | NOT NULL | --                  | The principal who read the comment; FK to `core.principal(id)`    |
+| `read_at`      | `timestamptz` | NOT NULL | `now()`             | Timestamp when the comment was read                               |
 
 #### Primary Key
 
@@ -234,23 +234,23 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `user_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)   | References           | On Delete |
+| ---------- | ----------- | -------------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `user_id`   | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_read_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
-| `comment_read_uniq` | UNIQUE | `(tenant_id, comment_type, comment_id, user_id)` -- one read record per user per comment |
+| Name                    | Type   | Definition                                                                               |
+| ----------------------- | ------ | ---------------------------------------------------------------------------------------- |
+| `comment_read_type_chk` | CHECK  | `comment_type in ('entity_comment','approval_comment')`                                  |
+| `comment_read_uniq`     | UNIQUE | `(tenant_id, comment_type, comment_id, user_id)` -- one read record per user per comment |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
-| `idx_comment_read_user` | `(tenant_id, user_id, comment_type)` | User's read history by type |
+| Name                       | Columns                                 | Notes                           |
+| -------------------------- | --------------------------------------- | ------------------------------- |
+| `idx_comment_read_user`    | `(tenant_id, user_id, comment_type)`    | User's read history by type     |
 | `idx_comment_read_comment` | `(tenant_id, comment_type, comment_id)` | Who has read a specific comment |
 
 #### Relationships
@@ -266,18 +266,18 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `user_id` | `uuid` | NOT NULL | -- | The principal who owns the draft; FK to `core.principal(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Type key of the entity the draft is attached to |
-| `entity_id` | `uuid` | NOT NULL | -- | ID of the entity the draft is attached to |
-| `parent_comment_id` | `uuid` | NULL | -- | FK to `collab.entity_comment(id)`; NULL for top-level comment drafts, set for reply drafts |
-| `draft_text` | `text` | NOT NULL | -- | The draft comment body text |
-| `visibility` | `text` | NOT NULL | `'public'` | Intended visibility level: `public`, `internal`, or `private` |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last auto-save timestamp |
+| Column              | Type          | Nullable | Default             | Description                                                                                |
+| ------------------- | ------------- | -------- | ------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                                                |
+| `tenant_id`         | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                                                  |
+| `user_id`           | `uuid`        | NOT NULL | --                  | The principal who owns the draft; FK to `core.principal(id)`                               |
+| `entity_type`       | `text`        | NOT NULL | --                  | Type key of the entity the draft is attached to                                            |
+| `entity_id`         | `uuid`        | NOT NULL | --                  | ID of the entity the draft is attached to                                                  |
+| `parent_comment_id` | `uuid`        | NULL     | --                  | FK to `collab.entity_comment(id)`; NULL for top-level comment drafts, set for reply drafts |
+| `draft_text`        | `text`        | NOT NULL | --                  | The draft comment body text                                                                |
+| `visibility`        | `text`        | NOT NULL | `'public'`          | Intended visibility level: `public`, `internal`, or `private`                              |
+| `created_at`        | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                                         |
+| `updated_at`        | `timestamptz` | NOT NULL | `now()`             | Last auto-save timestamp                                                                   |
 
 #### Primary Key
 
@@ -285,25 +285,25 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `user_id` | `core.principal(id)` | CASCADE |
-| (implicit) | `parent_comment_id` | `collab.entity_comment(id)` | CASCADE |
+| Constraint | Column(s)           | References                  | On Delete |
+| ---------- | ------------------- | --------------------------- | --------- |
+| (implicit) | `tenant_id`         | `core.tenant(id)`           | CASCADE   |
+| (implicit) | `user_id`           | `core.principal(id)`        | CASCADE   |
+| (implicit) | `parent_comment_id` | `collab.entity_comment(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_draft_visibility_chk` | CHECK | `visibility in ('public','internal','private')` |
-| `comment_draft_uniq` | UNIQUE | `(tenant_id, user_id, entity_type, entity_id, parent_comment_id)` -- one draft per user per entity per reply slot |
+| Name                           | Type   | Definition                                                                                                        |
+| ------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| `comment_draft_visibility_chk` | CHECK  | `visibility in ('public','internal','private')`                                                                   |
+| `comment_draft_uniq`           | UNIQUE | `(tenant_id, user_id, entity_type, entity_id, parent_comment_id)` -- one draft per user per entity per reply slot |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
-| `idx_comment_draft_user` | `(tenant_id, user_id, updated_at DESC)` | User's most recently edited drafts |
-| `idx_comment_draft_entity` | `(tenant_id, entity_type, entity_id)` | Drafts for a specific entity |
+| Name                       | Columns                                 | Notes                              |
+| -------------------------- | --------------------------------------- | ---------------------------------- |
+| `idx_comment_draft_user`   | `(tenant_id, user_id, updated_at DESC)` | User's most recently edited drafts |
+| `idx_comment_draft_entity` | `(tenant_id, entity_type, entity_id)`   | Drafts for a specific entity       |
 
 #### Relationships
 
@@ -317,20 +317,20 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the flagged comment |
-| `flagger_user_id` | `uuid` | NOT NULL | -- | The principal who submitted the flag; FK to `core.principal(id)` |
-| `flag_reason` | `text` | NOT NULL | -- | Reason category: `spam`, `offensive`, `harassment`, `misinformation`, or `other` |
-| `flag_details` | `text` | NULL | -- | Free-text details provided by the flagger |
-| `status` | `text` | NOT NULL | `'pending'` | Moderation status: `pending`, `reviewed`, `dismissed`, or `actioned` |
-| `reviewed_by` | `uuid` | NULL | -- | Principal who reviewed the flag; FK to `core.principal(id)` |
-| `reviewed_at` | `timestamptz` | NULL | -- | Timestamp of review |
-| `resolution` | `text` | NULL | -- | Free-text resolution note from the reviewer |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column            | Type          | Nullable | Default             | Description                                                                      |
+| ----------------- | ------------- | -------- | ------------------- | -------------------------------------------------------------------------------- |
+| `id`              | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                                      |
+| `tenant_id`       | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                                        |
+| `comment_type`    | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment`                |
+| `comment_id`      | `uuid`        | NOT NULL | --                  | ID of the flagged comment                                                        |
+| `flagger_user_id` | `uuid`        | NOT NULL | --                  | The principal who submitted the flag; FK to `core.principal(id)`                 |
+| `flag_reason`     | `text`        | NOT NULL | --                  | Reason category: `spam`, `offensive`, `harassment`, `misinformation`, or `other` |
+| `flag_details`    | `text`        | NULL     | --                  | Free-text details provided by the flagger                                        |
+| `status`          | `text`        | NOT NULL | `'pending'`         | Moderation status: `pending`, `reviewed`, `dismissed`, or `actioned`             |
+| `reviewed_by`     | `uuid`        | NULL     | --                  | Principal who reviewed the flag; FK to `core.principal(id)`                      |
+| `reviewed_at`     | `timestamptz` | NULL     | --                  | Timestamp of review                                                              |
+| `resolution`      | `text`        | NULL     | --                  | Free-text resolution note from the reviewer                                      |
+| `created_at`      | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                               |
 
 #### Primary Key
 
@@ -338,27 +338,27 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `flagger_user_id` | `core.principal(id)` | CASCADE |
-| (implicit) | `reviewed_by` | `core.principal(id)` | SET NULL |
+| Constraint | Column(s)         | References           | On Delete |
+| ---------- | ----------------- | -------------------- | --------- |
+| (implicit) | `tenant_id`       | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `flagger_user_id` | `core.principal(id)` | CASCADE   |
+| (implicit) | `reviewed_by`     | `core.principal(id)` | SET NULL  |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_flag_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
-| `comment_flag_reason_chk` | CHECK | `flag_reason in ('spam','offensive','harassment','misinformation','other')` |
-| `comment_flag_status_chk` | CHECK | `status in ('pending','reviewed','dismissed','actioned')` |
-| `comment_flag_uniq` | UNIQUE | `(tenant_id, comment_type, comment_id, flagger_user_id)` -- one flag per user per comment |
+| Name                      | Type   | Definition                                                                                |
+| ------------------------- | ------ | ----------------------------------------------------------------------------------------- |
+| `comment_flag_type_chk`   | CHECK  | `comment_type in ('entity_comment','approval_comment')`                                   |
+| `comment_flag_reason_chk` | CHECK  | `flag_reason in ('spam','offensive','harassment','misinformation','other')`               |
+| `comment_flag_status_chk` | CHECK  | `status in ('pending','reviewed','dismissed','actioned')`                                 |
+| `comment_flag_uniq`       | UNIQUE | `(tenant_id, comment_type, comment_id, flagger_user_id)` -- one flag per user per comment |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_comment_flag_pending` | `(tenant_id, status, created_at DESC)` | `status = 'pending'` | Moderation queue: pending flags |
-| `idx_comment_flag_comment` | `(tenant_id, comment_type, comment_id, status)` | -- | Flag status per comment |
+| Name                       | Columns                                         | Partial Filter       | Notes                           |
+| -------------------------- | ----------------------------------------------- | -------------------- | ------------------------------- |
+| `idx_comment_flag_pending` | `(tenant_id, status, created_at DESC)`          | `status = 'pending'` | Moderation queue: pending flags |
+| `idx_comment_flag_comment` | `(tenant_id, comment_type, comment_id, status)` | --                   | Flag status per comment         |
 
 #### Relationships
 
@@ -374,20 +374,20 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the moderated comment |
-| `is_hidden` | `boolean` | NOT NULL | `false` | Whether the comment is currently hidden from display |
-| `hidden_reason` | `text` | NULL | -- | Free-text reason for hiding |
-| `hidden_at` | `timestamptz` | NULL | -- | When the comment was hidden |
-| `hidden_by` | `uuid` | NULL | -- | Principal who hid the comment; FK to `core.principal(id)` |
-| `flag_count` | `int` | NOT NULL | `0` | Total number of flags received |
-| `last_flagged_at` | `timestamptz` | NULL | -- | Timestamp of most recent flag |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Row creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column            | Type          | Nullable | Default             | Description                                                       |
+| ----------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`              | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`       | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                         |
+| `comment_type`    | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment` |
+| `comment_id`      | `uuid`        | NOT NULL | --                  | ID of the moderated comment                                       |
+| `is_hidden`       | `boolean`     | NOT NULL | `false`             | Whether the comment is currently hidden from display              |
+| `hidden_reason`   | `text`        | NULL     | --                  | Free-text reason for hiding                                       |
+| `hidden_at`       | `timestamptz` | NULL     | --                  | When the comment was hidden                                       |
+| `hidden_by`       | `uuid`        | NULL     | --                  | Principal who hid the comment; FK to `core.principal(id)`         |
+| `flag_count`      | `int`         | NOT NULL | `0`                 | Total number of flags received                                    |
+| `last_flagged_at` | `timestamptz` | NULL     | --                  | Timestamp of most recent flag                                     |
+| `created_at`      | `timestamptz` | NOT NULL | `now()`             | Row creation timestamp                                            |
+| `updated_at`      | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                                             |
 
 #### Primary Key
 
@@ -395,24 +395,24 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `hidden_by` | `core.principal(id)` | SET NULL |
+| Constraint | Column(s)   | References           | On Delete |
+| ---------- | ----------- | -------------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `hidden_by` | `core.principal(id)` | SET NULL  |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_moderation_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
-| `comment_moderation_uniq` | UNIQUE | `(tenant_id, comment_type, comment_id)` -- one moderation record per comment |
+| Name                          | Type   | Definition                                                                   |
+| ----------------------------- | ------ | ---------------------------------------------------------------------------- |
+| `comment_moderation_type_chk` | CHECK  | `comment_type in ('entity_comment','approval_comment')`                      |
+| `comment_moderation_uniq`     | UNIQUE | `(tenant_id, comment_type, comment_id)` -- one moderation record per comment |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_comment_moderation_hidden` | `(tenant_id, is_hidden, updated_at DESC)` | `is_hidden = true` | List hidden comments |
-| `idx_comment_moderation_flags` | `(tenant_id, flag_count DESC, last_flagged_at DESC)` | `flag_count > 0` | Most-flagged comments |
+| Name                            | Columns                                              | Partial Filter     | Notes                 |
+| ------------------------------- | ---------------------------------------------------- | ------------------ | --------------------- |
+| `idx_comment_moderation_hidden` | `(tenant_id, is_hidden, updated_at DESC)`            | `is_hidden = true` | List hidden comments  |
+| `idx_comment_moderation_flags`  | `(tenant_id, flag_count DESC, last_flagged_at DESC)` | `flag_count > 0`   | Most-flagged comments |
 
 #### Relationships
 
@@ -430,17 +430,17 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Entity type this SLA applies to |
-| `sla_target_seconds` | `int` | NOT NULL | -- | Target response time in seconds (must be > 0) |
-| `business_hours_only` | `boolean` | NOT NULL | `false` | Whether SLA clock ticks only during business hours |
-| `enabled` | `boolean` | NOT NULL | `true` | Whether this SLA policy is currently active |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
-| `created_by` | `text` | NOT NULL | -- | Identifier of the actor who created the config |
+| Column                | Type          | Nullable | Default             | Description                                        |
+| --------------------- | ------------- | -------- | ------------------- | -------------------------------------------------- |
+| `id`                  | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                        |
+| `tenant_id`           | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`          |
+| `entity_type`         | `text`        | NOT NULL | --                  | Entity type this SLA applies to                    |
+| `sla_target_seconds`  | `int`         | NOT NULL | --                  | Target response time in seconds (must be > 0)      |
+| `business_hours_only` | `boolean`     | NOT NULL | `false`             | Whether SLA clock ticks only during business hours |
+| `enabled`             | `boolean`     | NOT NULL | `true`              | Whether this SLA policy is currently active        |
+| `created_at`          | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                 |
+| `updated_at`          | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                              |
+| `created_by`          | `text`        | NOT NULL | --                  | Identifier of the actor who created the config     |
 
 #### Primary Key
 
@@ -448,21 +448,21 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
+| Constraint | Column(s)   | References        | On Delete |
+| ---------- | ----------- | ----------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_sla_config_target_chk` | CHECK | `sla_target_seconds > 0` |
-| `comment_sla_config_uniq` | UNIQUE | `(tenant_id, entity_type)` -- one SLA config per entity type per tenant |
+| Name                            | Type   | Definition                                                              |
+| ------------------------------- | ------ | ----------------------------------------------------------------------- |
+| `comment_sla_config_target_chk` | CHECK  | `sla_target_seconds > 0`                                                |
+| `comment_sla_config_uniq`       | UNIQUE | `(tenant_id, entity_type)` -- one SLA config per entity type per tenant |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
+| Name                            | Columns                | Partial Filter   | Notes               |
+| ------------------------------- | ---------------------- | ---------------- | ------------------- |
 | `idx_comment_sla_config_active` | `(tenant_id, enabled)` | `enabled = true` | Active SLA policies |
 
 #### Relationships
@@ -478,25 +478,25 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Entity type being tracked |
-| `entity_id` | `uuid` | NOT NULL | -- | Entity ID being tracked |
-| `first_comment_at` | `timestamptz` | NOT NULL | -- | Timestamp of the first comment on this entity |
-| `first_comment_by` | `uuid` | NOT NULL | -- | Principal who posted the first comment; FK to `core.principal(id)` |
-| `first_response_at` | `timestamptz` | NULL | -- | Timestamp of the first response (NULL if awaiting response) |
-| `first_response_by` | `uuid` | NULL | -- | Principal who posted the first response; FK to `core.principal(id)` |
-| `first_response_time_seconds` | `int` | NULL | -- | Seconds from first comment to first response |
-| `total_comments` | `int` | NOT NULL | `1` | Total number of comments on this entity |
-| `total_responses` | `int` | NOT NULL | `0` | Total number of responses (replies) on this entity |
-| `avg_response_time_seconds` | `int` | NULL | -- | Average response time across all responses |
-| `max_response_time_seconds` | `int` | NULL | -- | Maximum response time across all responses |
-| `sla_target_seconds` | `int` | NULL | -- | Snapshot of the SLA target at time of first comment |
-| `is_sla_breached` | `boolean` | NOT NULL | `false` | Whether the SLA target was breached |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Row creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column                        | Type          | Nullable | Default             | Description                                                         |
+| ----------------------------- | ------------- | -------- | ------------------- | ------------------------------------------------------------------- |
+| `id`                          | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                         |
+| `tenant_id`                   | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                           |
+| `entity_type`                 | `text`        | NOT NULL | --                  | Entity type being tracked                                           |
+| `entity_id`                   | `uuid`        | NOT NULL | --                  | Entity ID being tracked                                             |
+| `first_comment_at`            | `timestamptz` | NOT NULL | --                  | Timestamp of the first comment on this entity                       |
+| `first_comment_by`            | `uuid`        | NOT NULL | --                  | Principal who posted the first comment; FK to `core.principal(id)`  |
+| `first_response_at`           | `timestamptz` | NULL     | --                  | Timestamp of the first response (NULL if awaiting response)         |
+| `first_response_by`           | `uuid`        | NULL     | --                  | Principal who posted the first response; FK to `core.principal(id)` |
+| `first_response_time_seconds` | `int`         | NULL     | --                  | Seconds from first comment to first response                        |
+| `total_comments`              | `int`         | NOT NULL | `1`                 | Total number of comments on this entity                             |
+| `total_responses`             | `int`         | NOT NULL | `0`                 | Total number of responses (replies) on this entity                  |
+| `avg_response_time_seconds`   | `int`         | NULL     | --                  | Average response time across all responses                          |
+| `max_response_time_seconds`   | `int`         | NULL     | --                  | Maximum response time across all responses                          |
+| `sla_target_seconds`          | `int`         | NULL     | --                  | Snapshot of the SLA target at time of first comment                 |
+| `is_sla_breached`             | `boolean`     | NOT NULL | `false`             | Whether the SLA target was breached                                 |
+| `created_at`                  | `timestamptz` | NOT NULL | `now()`             | Row creation timestamp                                              |
+| `updated_at`                  | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                                               |
 
 #### Primary Key
 
@@ -504,25 +504,25 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `first_comment_by` | `core.principal(id)` | CASCADE |
-| (implicit) | `first_response_by` | `core.principal(id)` | SET NULL |
+| Constraint | Column(s)           | References           | On Delete |
+| ---------- | ------------------- | -------------------- | --------- |
+| (implicit) | `tenant_id`         | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `first_comment_by`  | `core.principal(id)` | CASCADE   |
+| (implicit) | `first_response_by` | `core.principal(id)` | SET NULL  |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                       | Type   | Definition                                                          |
+| -------------------------- | ------ | ------------------------------------------------------------------- |
 | `comment_sla_metrics_uniq` | UNIQUE | `(tenant_id, entity_type, entity_id)` -- one metrics row per entity |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_comment_sla_breached` | `(tenant_id, is_sla_breached, first_comment_at DESC)` | `is_sla_breached = true` | Breached SLA queries |
-| `idx_comment_sla_pending` | `(tenant_id, first_comment_at DESC)` | `first_response_at IS NULL` | Awaiting first response |
-| `idx_comment_sla_response_time` | `(tenant_id, first_response_time_seconds)` | -- | Response time distribution queries |
+| Name                            | Columns                                               | Partial Filter              | Notes                              |
+| ------------------------------- | ----------------------------------------------------- | --------------------------- | ---------------------------------- |
+| `idx_comment_sla_breached`      | `(tenant_id, is_sla_breached, first_comment_at DESC)` | `is_sla_breached = true`    | Breached SLA queries               |
+| `idx_comment_sla_pending`       | `(tenant_id, first_comment_at DESC)`                  | `first_response_at IS NULL` | Awaiting first response            |
+| `idx_comment_sla_response_time` | `(tenant_id, first_response_time_seconds)`            | --                          | Response time distribution queries |
 
 #### Relationships
 
@@ -537,17 +537,17 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Entity type of the commented record |
-| `entity_id` | `uuid` | NOT NULL | -- | Entity ID of the commented record |
-| `comment_id` | `uuid` | NOT NULL | -- | The reply comment that constitutes this response |
-| `parent_comment_id` | `uuid` | NULL | -- | The parent comment being responded to |
-| `commenter_id` | `uuid` | NOT NULL | -- | Principal who made the response; FK to `core.principal(id)` |
-| `response_time_seconds` | `int` | NULL | -- | Time elapsed (in seconds) from parent comment to this response |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column                  | Type          | Nullable | Default             | Description                                                    |
+| ----------------------- | ------------- | -------- | ------------------- | -------------------------------------------------------------- |
+| `id`                    | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                    |
+| `tenant_id`             | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                      |
+| `entity_type`           | `text`        | NOT NULL | --                  | Entity type of the commented record                            |
+| `entity_id`             | `uuid`        | NOT NULL | --                  | Entity ID of the commented record                              |
+| `comment_id`            | `uuid`        | NOT NULL | --                  | The reply comment that constitutes this response               |
+| `parent_comment_id`     | `uuid`        | NULL     | --                  | The parent comment being responded to                          |
+| `commenter_id`          | `uuid`        | NOT NULL | --                  | Principal who made the response; FK to `core.principal(id)`    |
+| `response_time_seconds` | `int`         | NULL     | --                  | Time elapsed (in seconds) from parent comment to this response |
+| `created_at`            | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                             |
 
 #### Primary Key
 
@@ -555,21 +555,21 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `commenter_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)      | References           | On Delete |
+| ---------- | -------------- | -------------------- | --------- |
+| (implicit) | `tenant_id`    | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `commenter_id` | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                    | Type   | Definition                                                   |
+| ----------------------- | ------ | ------------------------------------------------------------ |
 | `comment_response_uniq` | UNIQUE | `(tenant_id, comment_id)` -- one response record per comment |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
+| Name                          | Columns                                                | Notes                        |
+| ----------------------------- | ------------------------------------------------------ | ---------------------------- |
 | `idx_comment_response_entity` | `(tenant_id, entity_type, entity_id, created_at DESC)` | Response timeline per entity |
 
 #### Relationships
@@ -585,21 +585,21 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `date` | `date` | NOT NULL | -- | The calendar date for these metrics |
-| `entity_type` | `text` | NULL | -- | Entity type filter (NULL for tenant-wide aggregate) |
-| `total_comments` | `int` | NOT NULL | `0` | Number of new comments posted on this date |
-| `total_replies` | `int` | NOT NULL | `0` | Number of reply comments posted on this date |
-| `unique_commenters` | `int` | NOT NULL | `0` | Count of distinct users who commented on this date |
-| `total_reactions` | `int` | NOT NULL | `0` | Number of reactions added on this date |
-| `total_flags` | `int` | NOT NULL | `0` | Number of moderation flags submitted on this date |
-| `avg_comment_length` | `numeric(10,2)` | NULL | -- | Average character length of comments posted on this date |
-| `avg_thread_depth` | `numeric(5,2)` | NULL | -- | Average thread depth of comments posted on this date |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Row creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column               | Type            | Nullable | Default             | Description                                              |
+| -------------------- | --------------- | -------- | ------------------- | -------------------------------------------------------- |
+| `id`                 | `uuid`          | NOT NULL | `gen_random_uuid()` | Primary key                                              |
+| `tenant_id`          | `uuid`          | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                |
+| `date`               | `date`          | NOT NULL | --                  | The calendar date for these metrics                      |
+| `entity_type`        | `text`          | NULL     | --                  | Entity type filter (NULL for tenant-wide aggregate)      |
+| `total_comments`     | `int`           | NOT NULL | `0`                 | Number of new comments posted on this date               |
+| `total_replies`      | `int`           | NOT NULL | `0`                 | Number of reply comments posted on this date             |
+| `unique_commenters`  | `int`           | NOT NULL | `0`                 | Count of distinct users who commented on this date       |
+| `total_reactions`    | `int`           | NOT NULL | `0`                 | Number of reactions added on this date                   |
+| `total_flags`        | `int`           | NOT NULL | `0`                 | Number of moderation flags submitted on this date        |
+| `avg_comment_length` | `numeric(10,2)` | NULL     | --                  | Average character length of comments posted on this date |
+| `avg_thread_depth`   | `numeric(5,2)`  | NULL     | --                  | Average thread depth of comments posted on this date     |
+| `created_at`         | `timestamptz`   | NOT NULL | `now()`             | Row creation timestamp                                   |
+| `updated_at`         | `timestamptz`   | NOT NULL | `now()`             | Last update timestamp                                    |
 
 #### Primary Key
 
@@ -607,20 +607,20 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
+| Constraint | Column(s)   | References        | On Delete |
+| ---------- | ----------- | ----------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                           | Type   | Definition                                                                      |
+| ------------------------------ | ------ | ------------------------------------------------------------------------------- |
 | `comment_analytics_daily_uniq` | UNIQUE | `(tenant_id, date, entity_type)` -- one row per tenant per date per entity type |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
+| Name                               | Columns                  | Notes                             |
+| ---------------------------------- | ------------------------ | --------------------------------- |
 | `idx_comment_analytics_daily_date` | `(tenant_id, date DESC)` | Date range queries for dashboards |
 
 #### Relationships
@@ -635,22 +635,22 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `user_id` | `uuid` | NOT NULL | -- | The principal being tracked; FK to `core.principal(id)` |
-| `period_start` | `date` | NOT NULL | -- | Start of the analytics period |
-| `period_end` | `date` | NOT NULL | -- | End of the analytics period |
-| `total_comments` | `int` | NOT NULL | `0` | Number of comments authored during this period |
-| `total_replies` | `int` | NOT NULL | `0` | Number of reply comments authored during this period |
-| `total_reactions_given` | `int` | NOT NULL | `0` | Number of reactions this user gave during this period |
-| `total_reactions_received` | `int` | NOT NULL | `0` | Number of reactions this user's comments received during this period |
-| `total_mentions_received` | `int` | NOT NULL | `0` | Number of times this user was @mentioned during this period |
-| `avg_response_time_seconds` | `int` | NULL | -- | Average time to respond to comments during this period |
-| `engagement_score` | `int` | NULL | -- | Calculated engagement score (0-100) |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Row creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column                      | Type          | Nullable | Default             | Description                                                          |
+| --------------------------- | ------------- | -------- | ------------------- | -------------------------------------------------------------------- |
+| `id`                        | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                          |
+| `tenant_id`                 | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                            |
+| `user_id`                   | `uuid`        | NOT NULL | --                  | The principal being tracked; FK to `core.principal(id)`              |
+| `period_start`              | `date`        | NOT NULL | --                  | Start of the analytics period                                        |
+| `period_end`                | `date`        | NOT NULL | --                  | End of the analytics period                                          |
+| `total_comments`            | `int`         | NOT NULL | `0`                 | Number of comments authored during this period                       |
+| `total_replies`             | `int`         | NOT NULL | `0`                 | Number of reply comments authored during this period                 |
+| `total_reactions_given`     | `int`         | NOT NULL | `0`                 | Number of reactions this user gave during this period                |
+| `total_reactions_received`  | `int`         | NOT NULL | `0`                 | Number of reactions this user's comments received during this period |
+| `total_mentions_received`   | `int`         | NOT NULL | `0`                 | Number of times this user was @mentioned during this period          |
+| `avg_response_time_seconds` | `int`         | NULL     | --                  | Average time to respond to comments during this period               |
+| `engagement_score`          | `int`         | NULL     | --                  | Calculated engagement score (0-100)                                  |
+| `created_at`                | `timestamptz` | NOT NULL | `now()`             | Row creation timestamp                                               |
+| `updated_at`                | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                                                |
 
 #### Primary Key
 
@@ -658,21 +658,21 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `user_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)   | References           | On Delete |
+| ---------- | ----------- | -------------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `user_id`   | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                          | Type   | Definition                                                                      |
+| ----------------------------- | ------ | ------------------------------------------------------------------------------- |
 | `comment_user_analytics_uniq` | UNIQUE | `(tenant_id, user_id, period_start, period_end)` -- one row per user per period |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
+| Name                               | Columns                                                            | Notes               |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------------- |
 | `idx_comment_user_analytics_score` | `(tenant_id, engagement_score DESC NULLS LAST, period_start DESC)` | Leaderboard queries |
 
 #### Relationships
@@ -687,21 +687,21 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `entity_type` | `text` | NOT NULL | -- | Entity type of the record with comments |
-| `entity_id` | `uuid` | NOT NULL | -- | Entity ID of the record with comments |
-| `total_comments` | `int` | NOT NULL | `0` | Total number of comments on this entity |
-| `unique_participants` | `int` | NOT NULL | `0` | Count of distinct users who commented |
-| `total_reactions` | `int` | NOT NULL | `0` | Total reactions across all comments |
-| `thread_depth` | `int` | NOT NULL | `0` | Maximum nesting depth reached |
-| `first_comment_at` | `timestamptz` | NOT NULL | -- | Timestamp of the earliest comment |
-| `last_comment_at` | `timestamptz` | NOT NULL | -- | Timestamp of the most recent comment |
-| `is_active` | `boolean` | NOT NULL | `true` | Whether the thread is currently active |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Row creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column                | Type          | Nullable | Default             | Description                               |
+| --------------------- | ------------- | -------- | ------------------- | ----------------------------------------- |
+| `id`                  | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                               |
+| `tenant_id`           | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)` |
+| `entity_type`         | `text`        | NOT NULL | --                  | Entity type of the record with comments   |
+| `entity_id`           | `uuid`        | NOT NULL | --                  | Entity ID of the record with comments     |
+| `total_comments`      | `int`         | NOT NULL | `0`                 | Total number of comments on this entity   |
+| `unique_participants` | `int`         | NOT NULL | `0`                 | Count of distinct users who commented     |
+| `total_reactions`     | `int`         | NOT NULL | `0`                 | Total reactions across all comments       |
+| `thread_depth`        | `int`         | NOT NULL | `0`                 | Maximum nesting depth reached             |
+| `first_comment_at`    | `timestamptz` | NOT NULL | --                  | Timestamp of the earliest comment         |
+| `last_comment_at`     | `timestamptz` | NOT NULL | --                  | Timestamp of the most recent comment      |
+| `is_active`           | `boolean`     | NOT NULL | `true`              | Whether the thread is currently active    |
+| `created_at`          | `timestamptz` | NOT NULL | `now()`             | Row creation timestamp                    |
+| `updated_at`          | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                     |
 
 #### Primary Key
 
@@ -709,22 +709,22 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
+| Constraint | Column(s)   | References        | On Delete |
+| ---------- | ----------- | ----------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                            | Type   | Definition                                                  |
+| ------------------------------- | ------ | ----------------------------------------------------------- |
 | `comment_thread_analytics_uniq` | UNIQUE | `(tenant_id, entity_type, entity_id)` -- one row per entity |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
+| Name                                  | Columns                                       | Partial Filter     | Notes                                     |
+| ------------------------------------- | --------------------------------------------- | ------------------ | ----------------------------------------- |
 | `idx_comment_thread_analytics_active` | `(tenant_id, is_active, total_comments DESC)` | `is_active = true` | Hot topics: most-commented active threads |
-| `idx_comment_thread_analytics_recent` | `(tenant_id, last_comment_at DESC)` | -- | Recently active threads |
+| `idx_comment_thread_analytics_recent` | `(tenant_id, last_comment_at DESC)`           | --                 | Recently active threads                   |
 
 #### Relationships
 
@@ -740,19 +740,19 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `policy_name` | `text` | NOT NULL | -- | Human-readable name for the retention policy |
-| `entity_type` | `text` | NULL | -- | Entity type this policy applies to (NULL for tenant-wide default) |
-| `retention_days` | `int` | NOT NULL | -- | Number of days to retain comments (must be > 0) |
-| `action` | `text` | NOT NULL | `'archive'` | Action at expiry: `archive`, `hard_delete`, or `keep` |
-| `enabled` | `boolean` | NOT NULL | `true` | Whether this policy is currently active |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `created_by` | `text` | NOT NULL | -- | Identifier of the actor who created the policy |
-| `updated_at` | `timestamptz` | NULL | -- | Last update timestamp |
-| `updated_by` | `text` | NULL | -- | Identifier of the actor who last updated the policy |
+| Column           | Type          | Nullable | Default             | Description                                                       |
+| ---------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`             | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`      | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                         |
+| `policy_name`    | `text`        | NOT NULL | --                  | Human-readable name for the retention policy                      |
+| `entity_type`    | `text`        | NULL     | --                  | Entity type this policy applies to (NULL for tenant-wide default) |
+| `retention_days` | `int`         | NOT NULL | --                  | Number of days to retain comments (must be > 0)                   |
+| `action`         | `text`        | NOT NULL | `'archive'`         | Action at expiry: `archive`, `hard_delete`, or `keep`             |
+| `enabled`        | `boolean`     | NOT NULL | `true`              | Whether this policy is currently active                           |
+| `created_at`     | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                |
+| `created_by`     | `text`        | NOT NULL | --                  | Identifier of the actor who created the policy                    |
+| `updated_at`     | `timestamptz` | NULL     | --                  | Last update timestamp                                             |
+| `updated_by`     | `text`        | NULL     | --                  | Identifier of the actor who last updated the policy               |
 
 #### Primary Key
 
@@ -760,22 +760,22 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
+| Constraint | Column(s)   | References        | On Delete |
+| ---------- | ----------- | ----------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_retention_policy_days_chk` | CHECK | `retention_days > 0` |
-| `comment_retention_policy_action_chk` | CHECK | `action in ('archive','hard_delete','keep')` |
-| `comment_retention_policy_uniq` | UNIQUE | `(tenant_id, entity_type)` -- one policy per entity type per tenant |
+| Name                                  | Type   | Definition                                                          |
+| ------------------------------------- | ------ | ------------------------------------------------------------------- |
+| `comment_retention_policy_days_chk`   | CHECK  | `retention_days > 0`                                                |
+| `comment_retention_policy_action_chk` | CHECK  | `action in ('archive','hard_delete','keep')`                        |
+| `comment_retention_policy_uniq`       | UNIQUE | `(tenant_id, entity_type)` -- one policy per entity type per tenant |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
+| Name                                  | Columns                | Partial Filter   | Notes                  |
+| ------------------------------------- | ---------------------- | ---------------- | ---------------------- |
 | `idx_comment_retention_policy_active` | `(tenant_id, enabled)` | `enabled = true` | Active policies lookup |
 
 #### Relationships
@@ -792,17 +792,17 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `comment_type` | `text` | NOT NULL | -- | Polymorphic discriminator: `entity_comment` or `approval_comment` |
-| `comment_id` | `uuid` | NOT NULL | -- | ID of the comment that was acted upon |
-| `action` | `text` | NOT NULL | -- | Action taken: `archived`, `hard_deleted`, or `restored` |
-| `policy_id` | `uuid` | NULL | -- | FK to `collab.comment_retention_policy(id)`; NULL for manual actions |
-| `executed_by` | `text` | NOT NULL | -- | Identifier of the actor or system that executed the action |
-| `executed_at` | `timestamptz` | NOT NULL | `now()` | Timestamp of execution |
-| `comment_snapshot` | `jsonb` | NULL | -- | JSONB snapshot of the comment at time of action |
+| Column             | Type          | Nullable | Default             | Description                                                          |
+| ------------------ | ------------- | -------- | ------------------- | -------------------------------------------------------------------- |
+| `id`               | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                          |
+| `tenant_id`        | `uuid`        | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                            |
+| `comment_type`     | `text`        | NOT NULL | --                  | Polymorphic discriminator: `entity_comment` or `approval_comment`    |
+| `comment_id`       | `uuid`        | NOT NULL | --                  | ID of the comment that was acted upon                                |
+| `action`           | `text`        | NOT NULL | --                  | Action taken: `archived`, `hard_deleted`, or `restored`              |
+| `policy_id`        | `uuid`        | NULL     | --                  | FK to `collab.comment_retention_policy(id)`; NULL for manual actions |
+| `executed_by`      | `text`        | NOT NULL | --                  | Identifier of the actor or system that executed the action           |
+| `executed_at`      | `timestamptz` | NOT NULL | `now()`             | Timestamp of execution                                               |
+| `comment_snapshot` | `jsonb`       | NULL     | --                  | JSONB snapshot of the comment at time of action                      |
 
 #### Primary Key
 
@@ -810,24 +810,24 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `policy_id` | `collab.comment_retention_policy(id)` | SET NULL |
+| Constraint | Column(s)   | References                            | On Delete |
+| ---------- | ----------- | ------------------------------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)`                     | CASCADE   |
+| (implicit) | `policy_id` | `collab.comment_retention_policy(id)` | SET NULL  |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| `comment_retention_log_type_chk` | CHECK | `comment_type in ('entity_comment','approval_comment')` |
-| `comment_retention_log_action_chk` | CHECK | `action in ('archived','hard_deleted','restored')` |
+| Name                               | Type  | Definition                                              |
+| ---------------------------------- | ----- | ------------------------------------------------------- |
+| `comment_retention_log_type_chk`   | CHECK | `comment_type in ('entity_comment','approval_comment')` |
+| `comment_retention_log_action_chk` | CHECK | `action in ('archived','hard_deleted','restored')`      |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_comment_retention_log_comment` | `(tenant_id, comment_type, comment_id, executed_at DESC)` | -- | History for a specific comment |
-| `idx_comment_retention_log_policy` | `(tenant_id, policy_id, executed_at DESC)` | `policy_id IS NOT NULL` | Executions under a specific policy |
+| Name                                | Columns                                                   | Partial Filter          | Notes                              |
+| ----------------------------------- | --------------------------------------------------------- | ----------------------- | ---------------------------------- |
+| `idx_comment_retention_log_comment` | `(tenant_id, comment_type, comment_id, executed_at DESC)` | --                      | History for a specific comment     |
+| `idx_comment_retention_log_policy`  | `(tenant_id, policy_id, executed_at DESC)`                | `policy_id IS NOT NULL` | Executions under a specific policy |
 
 #### Relationships
 
@@ -843,16 +843,16 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `type` | `text` | NOT NULL | -- | Conversation type: `direct` or `group` |
-| `title` | `text` | NULL | -- | Conversation title (nullable for direct conversations) |
-| `created_at` | `timestamptz(6)` | NOT NULL | `now()` | Creation timestamp (microsecond precision) |
-| `created_by` | `text` | NOT NULL | -- | Identifier of the actor who created the conversation |
-| `updated_at` | `timestamptz(6)` | NULL | -- | Last update timestamp (microsecond precision) |
-| `updated_by` | `text` | NULL | -- | Identifier of the actor who last updated the conversation |
+| Column       | Type             | Nullable | Default             | Description                                               |
+| ------------ | ---------------- | -------- | ------------------- | --------------------------------------------------------- |
+| `id`         | `uuid`           | NOT NULL | `gen_random_uuid()` | Primary key                                               |
+| `tenant_id`  | `uuid`           | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                 |
+| `type`       | `text`           | NOT NULL | --                  | Conversation type: `direct` or `group`                    |
+| `title`      | `text`           | NULL     | --                  | Conversation title (nullable for direct conversations)    |
+| `created_at` | `timestamptz(6)` | NOT NULL | `now()`             | Creation timestamp (microsecond precision)                |
+| `created_by` | `text`           | NOT NULL | --                  | Identifier of the actor who created the conversation      |
+| `updated_at` | `timestamptz(6)` | NULL     | --                  | Last update timestamp (microsecond precision)             |
+| `updated_by` | `text`           | NULL     | --                  | Identifier of the actor who last updated the conversation |
 
 #### Primary Key
 
@@ -860,16 +860,16 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
+| Constraint | Column(s)   | References        | On Delete |
+| ---------- | ----------- | ----------------- | --------- |
+| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE   |
 
 #### Indexes
 
-| Name | Columns | Notes |
-|------|---------|-------|
-| `idx_conversation_tenant_type` | `(tenant_id, type, created_at DESC)` | Conversations by type |
-| `idx_conversation_tenant_time` | `(tenant_id, created_at DESC)` | All conversations in chronological order |
+| Name                           | Columns                              | Notes                                    |
+| ------------------------------ | ------------------------------------ | ---------------------------------------- |
+| `idx_conversation_tenant_type` | `(tenant_id, type, created_at DESC)` | Conversations by type                    |
+| `idx_conversation_tenant_time` | `(tenant_id, created_at DESC)`       | All conversations in chronological order |
 
 #### Relationships
 
@@ -884,17 +884,17 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `conversation_id` | `uuid` | NOT NULL | -- | FK to `collab.conversation(id)` |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `user_id` | `uuid` | NOT NULL | -- | The participating principal; FK to `core.principal(id)` |
-| `role` | `text` | NOT NULL | `'member'` | Participant role: `member` or `admin` |
-| `joined_at` | `timestamptz(6)` | NOT NULL | `now()` | When the participant joined (microsecond precision) |
-| `left_at` | `timestamptz(6)` | NULL | -- | When the participant left (soft delete; NULL if still active) |
-| `last_read_message_id` | `uuid` | NULL | -- | Pointer to the last message read by this participant; FK to `collab.message(id)` |
-| `last_read_at` | `timestamptz(6)` | NULL | -- | Timestamp of last read action |
+| Column                 | Type             | Nullable | Default             | Description                                                                      |
+| ---------------------- | ---------------- | -------- | ------------------- | -------------------------------------------------------------------------------- |
+| `id`                   | `uuid`           | NOT NULL | `gen_random_uuid()` | Primary key                                                                      |
+| `conversation_id`      | `uuid`           | NOT NULL | --                  | FK to `collab.conversation(id)`                                                  |
+| `tenant_id`            | `uuid`           | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                                        |
+| `user_id`              | `uuid`           | NOT NULL | --                  | The participating principal; FK to `core.principal(id)`                          |
+| `role`                 | `text`           | NOT NULL | `'member'`          | Participant role: `member` or `admin`                                            |
+| `joined_at`            | `timestamptz(6)` | NOT NULL | `now()`             | When the participant joined (microsecond precision)                              |
+| `left_at`              | `timestamptz(6)` | NULL     | --                  | When the participant left (soft delete; NULL if still active)                    |
+| `last_read_message_id` | `uuid`           | NULL     | --                  | Pointer to the last message read by this participant; FK to `collab.message(id)` |
+| `last_read_at`         | `timestamptz(6)` | NULL     | --                  | Timestamp of last read action                                                    |
 
 #### Primary Key
 
@@ -902,27 +902,27 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `conversation_id` | `collab.conversation(id)` | CASCADE |
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `user_id` | `core.principal(id)` | CASCADE |
-| `conversation_participant_last_read_message_id_fkey` | `last_read_message_id` | `collab.message(id)` | NO ACTION (deferred FK) |
+| Constraint                                           | Column(s)              | References                | On Delete               |
+| ---------------------------------------------------- | ---------------------- | ------------------------- | ----------------------- |
+| (implicit)                                           | `conversation_id`      | `collab.conversation(id)` | CASCADE                 |
+| (implicit)                                           | `tenant_id`            | `core.tenant(id)`         | CASCADE                 |
+| (implicit)                                           | `user_id`              | `core.principal(id)`      | CASCADE                 |
+| `conversation_participant_last_read_message_id_fkey` | `last_read_message_id` | `collab.message(id)`      | NO ACTION (deferred FK) |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                                             | Type           | Definition                                                                             |
+| ------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------- |
 | `conversation_participant_tenant_conv_user_uniq` | UNIQUE (index) | `(tenant_id, conversation_id, user_id)` -- one participation per user per conversation |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `conversation_participant_tenant_conv_user_uniq` | `(tenant_id, conversation_id, user_id)` | -- | Uniqueness + lookup |
-| `idx_conversation_participant_user` | `(tenant_id, user_id, left_at)` | `left_at IS NULL` | Active participants by user |
-| `idx_conversation_participant_conv` | `(conversation_id, left_at)` | `left_at IS NULL` | Active participants in a conversation |
-| `idx_conversation_participant_unread` | `(tenant_id, user_id, last_read_at DESC)` | -- | Unread conversations ordering |
+| Name                                             | Columns                                   | Partial Filter    | Notes                                 |
+| ------------------------------------------------ | ----------------------------------------- | ----------------- | ------------------------------------- |
+| `conversation_participant_tenant_conv_user_uniq` | `(tenant_id, conversation_id, user_id)`   | --                | Uniqueness + lookup                   |
+| `idx_conversation_participant_user`              | `(tenant_id, user_id, left_at)`           | `left_at IS NULL` | Active participants by user           |
+| `idx_conversation_participant_conv`              | `(conversation_id, left_at)`              | `left_at IS NULL` | Active participants in a conversation |
+| `idx_conversation_participant_unread`            | `(tenant_id, user_id, last_read_at DESC)` | --                | Unread conversations ordering         |
 
 #### Relationships
 
@@ -937,20 +937,20 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `conversation_id` | `uuid` | NOT NULL | -- | FK to `collab.conversation(id)` |
-| `sender_id` | `uuid` | NOT NULL | -- | The principal who sent the message; FK to `core.principal(id)` |
-| `body` | `text` | NOT NULL | -- | Message body text |
-| `body_format` | `text` | NOT NULL | `'plain'` | Message format: `plain` or `markdown` |
-| `client_message_id` | `text` | NULL | -- | Idempotency key from the client for safe retries |
-| `parent_message_id` | `uuid` | NULL | -- | Parent message ID for threaded replies (NULL for root messages) |
-| `body_tsv` | `tsvector` | NULL | -- | Auto-populated full-text search vector (English configuration) |
-| `created_at` | `timestamptz(6)` | NOT NULL | `now()` | Creation timestamp (microsecond precision) |
-| `edited_at` | `timestamptz(6)` | NULL | -- | Last edit timestamp |
-| `deleted_at` | `timestamptz(6)` | NULL | -- | Soft delete timestamp |
+| Column              | Type             | Nullable | Default             | Description                                                     |
+| ------------------- | ---------------- | -------- | ------------------- | --------------------------------------------------------------- |
+| `id`                | `uuid`           | NOT NULL | `gen_random_uuid()` | Primary key                                                     |
+| `tenant_id`         | `uuid`           | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                       |
+| `conversation_id`   | `uuid`           | NOT NULL | --                  | FK to `collab.conversation(id)`                                 |
+| `sender_id`         | `uuid`           | NOT NULL | --                  | The principal who sent the message; FK to `core.principal(id)`  |
+| `body`              | `text`           | NOT NULL | --                  | Message body text                                               |
+| `body_format`       | `text`           | NOT NULL | `'plain'`           | Message format: `plain` or `markdown`                           |
+| `client_message_id` | `text`           | NULL     | --                  | Idempotency key from the client for safe retries                |
+| `parent_message_id` | `uuid`           | NULL     | --                  | Parent message ID for threaded replies (NULL for root messages) |
+| `body_tsv`          | `tsvector`       | NULL     | --                  | Auto-populated full-text search vector (English configuration)  |
+| `created_at`        | `timestamptz(6)` | NOT NULL | `now()`             | Creation timestamp (microsecond precision)                      |
+| `edited_at`         | `timestamptz(6)` | NULL     | --                  | Last edit timestamp                                             |
+| `deleted_at`        | `timestamptz(6)` | NULL     | --                  | Soft delete timestamp                                           |
 
 #### Primary Key
 
@@ -958,25 +958,25 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `conversation_id` | `collab.conversation(id)` | CASCADE |
-| (implicit) | `sender_id` | `core.principal(id)` | CASCADE |
-| `message_parent_message_id_fkey` | `parent_message_id` | `collab.message(id)` | SET NULL |
+| Constraint                       | Column(s)           | References                | On Delete |
+| -------------------------------- | ------------------- | ------------------------- | --------- |
+| (implicit)                       | `tenant_id`         | `core.tenant(id)`         | CASCADE   |
+| (implicit)                       | `conversation_id`   | `collab.conversation(id)` | CASCADE   |
+| (implicit)                       | `sender_id`         | `core.principal(id)`      | CASCADE   |
+| `message_parent_message_id_fkey` | `parent_message_id` | `collab.message(id)`      | SET NULL  |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `message_tenant_client_id_uniq` | `(tenant_id, client_message_id)` | `client_message_id IS NOT NULL` | Idempotency dedup (unique) |
-| `idx_message_conversation_time` | `(tenant_id, conversation_id, created_at DESC)` | `deleted_at IS NULL` | Main message feed |
-| `idx_message_sender_time` | `(tenant_id, sender_id, created_at DESC)` | `deleted_at IS NULL` | User's sent messages |
-| `idx_message_client_id` | `(client_message_id)` | `client_message_id IS NOT NULL` | Client ID lookup |
-| `idx_message_parent_thread` | `(tenant_id, parent_message_id, created_at DESC)` | `deleted_at IS NULL AND parent_message_id IS NOT NULL` | Thread replies |
-| `idx_message_root` | `(tenant_id, conversation_id, created_at DESC)` | `deleted_at IS NULL AND parent_message_id IS NULL` | Root-level messages only |
-| `idx_message_fts` | GIN on `body_tsv` | -- | Full-text search |
-| `idx_message_tenant_fts` | `(tenant_id, body_tsv)` | `deleted_at IS NULL` | Tenant-scoped FTS |
+| Name                            | Columns                                           | Partial Filter                                         | Notes                      |
+| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------ | -------------------------- |
+| `message_tenant_client_id_uniq` | `(tenant_id, client_message_id)`                  | `client_message_id IS NOT NULL`                        | Idempotency dedup (unique) |
+| `idx_message_conversation_time` | `(tenant_id, conversation_id, created_at DESC)`   | `deleted_at IS NULL`                                   | Main message feed          |
+| `idx_message_sender_time`       | `(tenant_id, sender_id, created_at DESC)`         | `deleted_at IS NULL`                                   | User's sent messages       |
+| `idx_message_client_id`         | `(client_message_id)`                             | `client_message_id IS NOT NULL`                        | Client ID lookup           |
+| `idx_message_parent_thread`     | `(tenant_id, parent_message_id, created_at DESC)` | `deleted_at IS NULL AND parent_message_id IS NOT NULL` | Thread replies             |
+| `idx_message_root`              | `(tenant_id, conversation_id, created_at DESC)`   | `deleted_at IS NULL AND parent_message_id IS NULL`     | Root-level messages only   |
+| `idx_message_fts`               | GIN on `body_tsv`                                 | --                                                     | Full-text search           |
+| `idx_message_tenant_fts`        | `(tenant_id, body_tsv)`                           | `deleted_at IS NULL`                                   | Tenant-scoped FTS          |
 
 #### Relationships
 
@@ -993,14 +993,14 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `message_id` | `uuid` | NOT NULL | -- | FK to `collab.message(id)` |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant reference; FK to `core.tenant(id)` |
-| `recipient_id` | `uuid` | NOT NULL | -- | The recipient principal; FK to `core.principal(id)` |
-| `delivered_at` | `timestamptz(6)` | NOT NULL | `now()` | When the message was delivered to this recipient |
-| `read_at` | `timestamptz(6)` | NULL | -- | When the message was read by this recipient (NULL if unread) |
+| Column         | Type             | Nullable | Default             | Description                                                  |
+| -------------- | ---------------- | -------- | ------------------- | ------------------------------------------------------------ |
+| `id`           | `uuid`           | NOT NULL | `gen_random_uuid()` | Primary key                                                  |
+| `message_id`   | `uuid`           | NOT NULL | --                  | FK to `collab.message(id)`                                   |
+| `tenant_id`    | `uuid`           | NOT NULL | --                  | Tenant reference; FK to `core.tenant(id)`                    |
+| `recipient_id` | `uuid`           | NOT NULL | --                  | The recipient principal; FK to `core.principal(id)`          |
+| `delivered_at` | `timestamptz(6)` | NOT NULL | `now()`             | When the message was delivered to this recipient             |
+| `read_at`      | `timestamptz(6)` | NULL     | --                  | When the message was read by this recipient (NULL if unread) |
 
 #### Primary Key
 
@@ -1008,26 +1008,26 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Foreign Keys
 
-| Constraint | Column(s) | References | On Delete |
-|------------|-----------|------------|-----------|
-| (implicit) | `message_id` | `collab.message(id)` | CASCADE |
-| (implicit) | `tenant_id` | `core.tenant(id)` | CASCADE |
-| (implicit) | `recipient_id` | `core.principal(id)` | CASCADE |
+| Constraint | Column(s)      | References           | On Delete |
+| ---------- | -------------- | -------------------- | --------- |
+| (implicit) | `message_id`   | `collab.message(id)` | CASCADE   |
+| (implicit) | `tenant_id`    | `core.tenant(id)`    | CASCADE   |
+| (implicit) | `recipient_id` | `core.principal(id)` | CASCADE   |
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name                                      | Type           | Definition                                                             |
+| ----------------------------------------- | -------------- | ---------------------------------------------------------------------- |
 | `message_delivery_message_recipient_uniq` | UNIQUE (index) | `(message_id, recipient_id)` -- one delivery per recipient per message |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `message_delivery_message_recipient_uniq` | `(message_id, recipient_id)` | -- | Uniqueness + lookup |
-| `idx_message_delivery_recipient_unread` | `(tenant_id, recipient_id, read_at)` | `read_at IS NULL` | Unread messages for a user |
-| `idx_message_delivery_recipient_time` | `(tenant_id, recipient_id, delivered_at DESC)` | -- | Delivery timeline per user |
-| `idx_message_delivery_message` | `(message_id)` | -- | All deliveries for a message |
+| Name                                      | Columns                                        | Partial Filter    | Notes                        |
+| ----------------------------------------- | ---------------------------------------------- | ----------------- | ---------------------------- |
+| `message_delivery_message_recipient_uniq` | `(message_id, recipient_id)`                   | --                | Uniqueness + lookup          |
+| `idx_message_delivery_recipient_unread`   | `(tenant_id, recipient_id, read_at)`           | `read_at IS NULL` | Unread messages for a user   |
+| `idx_message_delivery_recipient_time`     | `(tenant_id, recipient_id, delivered_at DESC)` | --                | Delivery timeline per user   |
+| `idx_message_delivery_message`            | `(message_id)`                                 | --                | All deliveries for a message |
 
 #### Relationships
 
@@ -1043,22 +1043,22 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant identifier |
-| `delegator_id` | `text` | NOT NULL | -- | Identifier of the principal granting the delegation |
-| `delegate_id` | `text` | NOT NULL | -- | Identifier of the principal receiving the delegation |
-| `scope_type` | `text` | NOT NULL | -- | Scope of delegation: `task`, `entity`, `workflow`, or `module` |
-| `scope_ref` | `text` | NULL | -- | Reference to the specific scoped resource (e.g., task ID, entity key) |
-| `permissions` | `text[]` | NOT NULL | `'{}'` | Array of permission strings granted |
-| `reason` | `text` | NULL | -- | Free-text reason for the delegation |
-| `expires_at` | `timestamptz` | NULL | -- | Expiration timestamp (NULL for no expiry) |
-| `is_revoked` | `boolean` | NOT NULL | `false` | Whether this delegation has been revoked |
-| `revoked_at` | `timestamptz` | NULL | -- | When the delegation was revoked |
-| `revoked_by` | `text` | NULL | -- | Who revoked the delegation |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column         | Type          | Nullable | Default             | Description                                                           |
+| -------------- | ------------- | -------- | ------------------- | --------------------------------------------------------------------- |
+| `id`           | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                           |
+| `tenant_id`    | `uuid`        | NOT NULL | --                  | Tenant identifier                                                     |
+| `delegator_id` | `text`        | NOT NULL | --                  | Identifier of the principal granting the delegation                   |
+| `delegate_id`  | `text`        | NOT NULL | --                  | Identifier of the principal receiving the delegation                  |
+| `scope_type`   | `text`        | NOT NULL | --                  | Scope of delegation: `task`, `entity`, `workflow`, or `module`        |
+| `scope_ref`    | `text`        | NULL     | --                  | Reference to the specific scoped resource (e.g., task ID, entity key) |
+| `permissions`  | `text[]`      | NOT NULL | `'{}'`              | Array of permission strings granted                                   |
+| `reason`       | `text`        | NULL     | --                  | Free-text reason for the delegation                                   |
+| `expires_at`   | `timestamptz` | NULL     | --                  | Expiration timestamp (NULL for no expiry)                             |
+| `is_revoked`   | `boolean`     | NOT NULL | `false`             | Whether this delegation has been revoked                              |
+| `revoked_at`   | `timestamptz` | NULL     | --                  | When the delegation was revoked                                       |
+| `revoked_by`   | `text`        | NULL     | --                  | Who revoked the delegation                                            |
+| `created_at`   | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                    |
+| `updated_at`   | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                                                 |
 
 #### Primary Key
 
@@ -1066,17 +1066,17 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name     | Type  | Definition                                            |
+| -------- | ----- | ----------------------------------------------------- |
 | (inline) | CHECK | `scope_type in ('task','entity','workflow','module')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_delegation_grant_tenant_delegator` | `(tenant_id, delegator_id)` | `is_revoked = false` | Active delegations by delegator |
-| `idx_delegation_grant_tenant_delegate` | `(tenant_id, delegate_id)` | `is_revoked = false` | Active delegations by delegate |
-| `idx_delegation_grant_expires` | `(expires_at)` | `is_revoked = false AND expires_at IS NOT NULL` | Expiring delegations batch processing |
+| Name                                    | Columns                     | Partial Filter                                  | Notes                                 |
+| --------------------------------------- | --------------------------- | ----------------------------------------------- | ------------------------------------- |
+| `idx_delegation_grant_tenant_delegator` | `(tenant_id, delegator_id)` | `is_revoked = false`                            | Active delegations by delegator       |
+| `idx_delegation_grant_tenant_delegate`  | `(tenant_id, delegate_id)`  | `is_revoked = false`                            | Active delegations by delegate        |
+| `idx_delegation_grant_expires`          | `(expires_at)`              | `is_revoked = false AND expires_at IS NOT NULL` | Expiring delegations batch processing |
 
 #### Relationships
 
@@ -1090,20 +1090,20 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant identifier |
-| `requester_id` | `text` | NOT NULL | -- | Identifier of the principal requesting the delegation |
-| `target_id` | `text` | NOT NULL | -- | Identifier of the intended delegate |
-| `scope_type` | `text` | NOT NULL | -- | Scope of the requested delegation |
-| `scope_ref` | `text` | NULL | -- | Reference to the specific scoped resource |
-| `permissions` | `text[]` | NOT NULL | `'{}'` | Array of permission strings requested |
-| `reason` | `text` | NULL | -- | Free-text justification for the request |
-| `status` | `text` | NOT NULL | `'pending'` | Request status: `pending`, `approved`, `rejected`, or `cancelled` |
-| `decided_by` | `text` | NULL | -- | Identifier of the approver/rejecter |
-| `decided_at` | `timestamptz` | NULL | -- | Timestamp of the decision |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column         | Type          | Nullable | Default             | Description                                                       |
+| -------------- | ------------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| `id`           | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                       |
+| `tenant_id`    | `uuid`        | NOT NULL | --                  | Tenant identifier                                                 |
+| `requester_id` | `text`        | NOT NULL | --                  | Identifier of the principal requesting the delegation             |
+| `target_id`    | `text`        | NOT NULL | --                  | Identifier of the intended delegate                               |
+| `scope_type`   | `text`        | NOT NULL | --                  | Scope of the requested delegation                                 |
+| `scope_ref`    | `text`        | NULL     | --                  | Reference to the specific scoped resource                         |
+| `permissions`  | `text[]`      | NOT NULL | `'{}'`              | Array of permission strings requested                             |
+| `reason`       | `text`        | NULL     | --                  | Free-text justification for the request                           |
+| `status`       | `text`        | NOT NULL | `'pending'`         | Request status: `pending`, `approved`, `rejected`, or `cancelled` |
+| `decided_by`   | `text`        | NULL     | --                  | Identifier of the approver/rejecter                               |
+| `decided_at`   | `timestamptz` | NULL     | --                  | Timestamp of the decision                                         |
+| `created_at`   | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                |
 
 #### Primary Key
 
@@ -1111,14 +1111,14 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
+| Name     | Type  | Definition                                                |
+| -------- | ----- | --------------------------------------------------------- |
 | (inline) | CHECK | `status in ('pending','approved','rejected','cancelled')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
+| Name                                   | Columns               | Partial Filter       | Notes                  |
+| -------------------------------------- | --------------------- | -------------------- | ---------------------- |
 | `idx_delegation_request_tenant_status` | `(tenant_id, status)` | `status = 'pending'` | Pending requests queue |
 
 #### Relationships
@@ -1133,22 +1133,22 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant identifier |
-| `entity_type` | `text` | NOT NULL | -- | Type key of the shared entity |
-| `entity_id` | `text` | NOT NULL | -- | ID of the shared entity |
-| `shared_with_id` | `text` | NOT NULL | -- | Identifier of the recipient (user, group, or OU) |
-| `shared_with_type` | `text` | NOT NULL | `'user'` | Recipient type: `user`, `group`, or `ou` |
-| `permission_level` | `text` | NOT NULL | `'view'` | Permission level: `view`, `edit`, or `admin` |
-| `shared_by` | `text` | NOT NULL | -- | Identifier of the principal who created the share |
-| `reason` | `text` | NULL | -- | Free-text reason for sharing |
-| `expires_at` | `timestamptz` | NULL | -- | Expiration timestamp (NULL for no expiry) |
-| `is_revoked` | `boolean` | NOT NULL | `false` | Whether this share has been revoked |
-| `revoked_at` | `timestamptz` | NULL | -- | When the share was revoked |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
-| `updated_at` | `timestamptz` | NOT NULL | `now()` | Last update timestamp |
+| Column             | Type          | Nullable | Default             | Description                                       |
+| ------------------ | ------------- | -------- | ------------------- | ------------------------------------------------- |
+| `id`               | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                       |
+| `tenant_id`        | `uuid`        | NOT NULL | --                  | Tenant identifier                                 |
+| `entity_type`      | `text`        | NOT NULL | --                  | Type key of the shared entity                     |
+| `entity_id`        | `text`        | NOT NULL | --                  | ID of the shared entity                           |
+| `shared_with_id`   | `text`        | NOT NULL | --                  | Identifier of the recipient (user, group, or OU)  |
+| `shared_with_type` | `text`        | NOT NULL | `'user'`            | Recipient type: `user`, `group`, or `ou`          |
+| `permission_level` | `text`        | NOT NULL | `'view'`            | Permission level: `view`, `edit`, or `admin`      |
+| `shared_by`        | `text`        | NOT NULL | --                  | Identifier of the principal who created the share |
+| `reason`           | `text`        | NULL     | --                  | Free-text reason for sharing                      |
+| `expires_at`       | `timestamptz` | NULL     | --                  | Expiration timestamp (NULL for no expiry)         |
+| `is_revoked`       | `boolean`     | NOT NULL | `false`             | Whether this share has been revoked               |
+| `revoked_at`       | `timestamptz` | NULL     | --                  | When the share was revoked                        |
+| `created_at`       | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                |
+| `updated_at`       | `timestamptz` | NOT NULL | `now()`             | Last update timestamp                             |
 
 #### Primary Key
 
@@ -1156,19 +1156,19 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| (inline) | CHECK | `shared_with_type in ('user','group','ou')` |
+| Name     | Type  | Definition                                    |
+| -------- | ----- | --------------------------------------------- |
+| (inline) | CHECK | `shared_with_type in ('user','group','ou')`   |
 | (inline) | CHECK | `permission_level in ('view','edit','admin')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_record_share_entity` | `(tenant_id, entity_type, entity_id)` | `is_revoked = false` | Active shares for an entity |
-| `idx_record_share_recipient` | `(tenant_id, shared_with_id)` | `is_revoked = false` | Active shares for a recipient |
-| `idx_record_share_expires` | `(expires_at)` | `is_revoked = false AND expires_at IS NOT NULL` | Expiring shares batch processing |
-| `record_share_unique_active` | `(tenant_id, entity_type, entity_id, shared_with_id, shared_with_type)` | `is_revoked = false` | Unique active share per recipient per entity (unique index) |
+| Name                         | Columns                                                                 | Partial Filter                                  | Notes                                                       |
+| ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| `idx_record_share_entity`    | `(tenant_id, entity_type, entity_id)`                                   | `is_revoked = false`                            | Active shares for an entity                                 |
+| `idx_record_share_recipient` | `(tenant_id, shared_with_id)`                                           | `is_revoked = false`                            | Active shares for a recipient                               |
+| `idx_record_share_expires`   | `(expires_at)`                                                          | `is_revoked = false AND expires_at IS NOT NULL` | Expiring shares batch processing                            |
+| `record_share_unique_active` | `(tenant_id, entity_type, entity_id, shared_with_id, shared_with_type)` | `is_revoked = false`                            | Unique active share per recipient per entity (unique index) |
 
 #### Relationships
 
@@ -1182,19 +1182,19 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant identifier |
-| `grant_id` | `uuid` | NULL | -- | FK to the specific grant being audited (nullable for system events) |
-| `grant_type` | `text` | NOT NULL | -- | Type of grant: `delegation`, `record_share`, or `external_share` |
-| `action` | `text` | NOT NULL | -- | Action: `grant_created`, `grant_revoked`, `grant_expired`, `access_via_share`, `share_modified`, `delegation_created`, or `delegation_revoked` |
-| `actor_id` | `text` | NOT NULL | -- | Identifier of the actor who performed the action |
-| `target_id` | `text` | NULL | -- | Identifier of the target principal (if applicable) |
-| `entity_type` | `text` | NULL | -- | Entity type involved (if applicable) |
-| `entity_id` | `text` | NULL | -- | Entity ID involved (if applicable) |
-| `details` | `jsonb` | NULL | -- | Freeform details about the action |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column        | Type          | Nullable | Default             | Description                                                                                                                                    |
+| ------------- | ------------- | -------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                                                                                                                    |
+| `tenant_id`   | `uuid`        | NOT NULL | --                  | Tenant identifier                                                                                                                              |
+| `grant_id`    | `uuid`        | NULL     | --                  | FK to the specific grant being audited (nullable for system events)                                                                            |
+| `grant_type`  | `text`        | NOT NULL | --                  | Type of grant: `delegation`, `record_share`, or `external_share`                                                                               |
+| `action`      | `text`        | NOT NULL | --                  | Action: `grant_created`, `grant_revoked`, `grant_expired`, `access_via_share`, `share_modified`, `delegation_created`, or `delegation_revoked` |
+| `actor_id`    | `text`        | NOT NULL | --                  | Identifier of the actor who performed the action                                                                                               |
+| `target_id`   | `text`        | NULL     | --                  | Identifier of the target principal (if applicable)                                                                                             |
+| `entity_type` | `text`        | NULL     | --                  | Entity type involved (if applicable)                                                                                                           |
+| `entity_id`   | `text`        | NULL     | --                  | Entity ID involved (if applicable)                                                                                                             |
+| `details`     | `jsonb`       | NULL     | --                  | Freeform details about the action                                                                                                              |
+| `created_at`  | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                                                                                                                             |
 
 #### Primary Key
 
@@ -1202,19 +1202,19 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| (inline) | CHECK | `grant_type in ('delegation','record_share','external_share')` |
+| Name     | Type  | Definition                                                                                                                                  |
+| -------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| (inline) | CHECK | `grant_type in ('delegation','record_share','external_share')`                                                                              |
 | (inline) | CHECK | `action in ('grant_created','grant_revoked','grant_expired','access_via_share','share_modified','delegation_created','delegation_revoked')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_share_audit_tenant_time` | `(tenant_id, created_at DESC)` | -- | Chronological audit feed |
-| `idx_share_audit_actor` | `(tenant_id, actor_id, created_at DESC)` | -- | Audit by actor |
-| `idx_share_audit_entity` | `(tenant_id, entity_type, entity_id, created_at DESC)` | -- | Audit by entity |
-| `idx_share_audit_grant` | `(grant_id)` | `grant_id IS NOT NULL` | Audit history for a specific grant |
+| Name                          | Columns                                                | Partial Filter         | Notes                              |
+| ----------------------------- | ------------------------------------------------------ | ---------------------- | ---------------------------------- |
+| `idx_share_audit_tenant_time` | `(tenant_id, created_at DESC)`                         | --                     | Chronological audit feed           |
+| `idx_share_audit_actor`       | `(tenant_id, actor_id, created_at DESC)`               | --                     | Audit by actor                     |
+| `idx_share_audit_entity`      | `(tenant_id, entity_type, entity_id, created_at DESC)` | --                     | Audit by entity                    |
+| `idx_share_audit_grant`       | `(grant_id)`                                           | `grant_id IS NOT NULL` | Audit history for a specific grant |
 
 #### Relationships
 
@@ -1228,23 +1228,23 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Columns
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | `uuid` | NOT NULL | `gen_random_uuid()` | Primary key |
-| `tenant_id` | `uuid` | NOT NULL | -- | Tenant identifier |
-| `token_hash` | `text` | NOT NULL | -- | SHA-256 hash of the share token (unique) |
-| `issuer_tenant_id` | `uuid` | NOT NULL | -- | Tenant that issued the share |
-| `issued_by` | `text` | NOT NULL | -- | Identifier of the principal who issued the token |
-| `target_email` | `text` | NOT NULL | -- | Email address of the intended external recipient |
-| `entity_type` | `text` | NOT NULL | -- | Type key of the shared entity |
-| `entity_id` | `text` | NOT NULL | -- | ID of the shared entity |
-| `permission_level` | `text` | NOT NULL | `'view'` | Permission level: `view` or `edit` |
-| `expires_at` | `timestamptz` | NOT NULL | -- | Mandatory expiration timestamp |
-| `is_revoked` | `boolean` | NOT NULL | `false` | Whether this token has been revoked |
-| `revoked_at` | `timestamptz` | NULL | -- | When the token was revoked |
-| `last_accessed_at` | `timestamptz` | NULL | -- | Timestamp of most recent access |
-| `access_count` | `integer` | NOT NULL | `0` | Total number of times this token has been used |
-| `created_at` | `timestamptz` | NOT NULL | `now()` | Creation timestamp |
+| Column             | Type          | Nullable | Default             | Description                                      |
+| ------------------ | ------------- | -------- | ------------------- | ------------------------------------------------ |
+| `id`               | `uuid`        | NOT NULL | `gen_random_uuid()` | Primary key                                      |
+| `tenant_id`        | `uuid`        | NOT NULL | --                  | Tenant identifier                                |
+| `token_hash`       | `text`        | NOT NULL | --                  | SHA-256 hash of the share token (unique)         |
+| `issuer_tenant_id` | `uuid`        | NOT NULL | --                  | Tenant that issued the share                     |
+| `issued_by`        | `text`        | NOT NULL | --                  | Identifier of the principal who issued the token |
+| `target_email`     | `text`        | NOT NULL | --                  | Email address of the intended external recipient |
+| `entity_type`      | `text`        | NOT NULL | --                  | Type key of the shared entity                    |
+| `entity_id`        | `text`        | NOT NULL | --                  | ID of the shared entity                          |
+| `permission_level` | `text`        | NOT NULL | `'view'`            | Permission level: `view` or `edit`               |
+| `expires_at`       | `timestamptz` | NOT NULL | --                  | Mandatory expiration timestamp                   |
+| `is_revoked`       | `boolean`     | NOT NULL | `false`             | Whether this token has been revoked              |
+| `revoked_at`       | `timestamptz` | NULL     | --                  | When the token was revoked                       |
+| `last_accessed_at` | `timestamptz` | NULL     | --                  | Timestamp of most recent access                  |
+| `access_count`     | `integer`     | NOT NULL | `0`                 | Total number of times this token has been used   |
+| `created_at`       | `timestamptz` | NOT NULL | `now()`             | Creation timestamp                               |
 
 #### Primary Key
 
@@ -1252,18 +1252,18 @@ The `collab` schema implements the collaboration subsystem of the Athyper platfo
 
 #### Constraints
 
-| Name | Type | Definition |
-|------|------|------------|
-| (implicit) | UNIQUE | `token_hash` |
-| (inline) | CHECK | `permission_level in ('view','edit')` |
+| Name       | Type   | Definition                            |
+| ---------- | ------ | ------------------------------------- |
+| (implicit) | UNIQUE | `token_hash`                          |
+| (inline)   | CHECK  | `permission_level in ('view','edit')` |
 
 #### Indexes
 
-| Name | Columns | Partial Filter | Notes |
-|------|---------|----------------|-------|
-| `idx_external_share_token_hash` | `(token_hash)` | `is_revoked = false` | Token lookup on validation |
-| `idx_external_share_token_entity` | `(tenant_id, entity_type, entity_id)` | `is_revoked = false` | Active tokens per entity |
-| `idx_external_share_token_expires` | `(expires_at)` | `is_revoked = false` | Expiring tokens batch processing |
+| Name                               | Columns                               | Partial Filter       | Notes                            |
+| ---------------------------------- | ------------------------------------- | -------------------- | -------------------------------- |
+| `idx_external_share_token_hash`    | `(token_hash)`                        | `is_revoked = false` | Token lookup on validation       |
+| `idx_external_share_token_entity`  | `(tenant_id, entity_type, entity_id)` | `is_revoked = false` | Active tokens per entity         |
+| `idx_external_share_token_expires` | `(expires_at)`                        | `is_revoked = false` | Expiring tokens batch processing |
 
 #### Relationships
 
@@ -1290,6 +1290,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 **Trigger**: `message_body_tsv_update`
+
 - **Table**: `collab.message`
 - **Timing**: `BEFORE INSERT OR UPDATE OF body`
 - **Granularity**: `FOR EACH ROW`
@@ -1304,10 +1305,10 @@ The collab SQL file also extends two tables in other schemas to support collab c
 
 Two columns are added to `doc.attachment` to allow attachments to be linked to comments:
 
-| Column | Type | Description |
-|--------|------|-------------|
+| Column         | Type   | Description                                                                                   |
+| -------------- | ------ | --------------------------------------------------------------------------------------------- |
 | `comment_type` | `text` | Optional: type of comment this attachment belongs to (`entity_comment` or `approval_comment`) |
-| `comment_id` | `uuid` | Optional: ID of comment this attachment belongs to |
+| `comment_id`   | `uuid` | Optional: ID of comment this attachment belongs to                                            |
 
 **Constraint**: `attachment_comment_type_chk` -- `comment_type IS NULL OR comment_type IN ('entity_comment','approval_comment')`
 
@@ -1317,19 +1318,20 @@ Two columns are added to `doc.attachment` to allow attachments to be linked to c
 
 Six columns are added to `wf.approval_comment` to bring it in line with the `collab.entity_comment` feature set:
 
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `visibility` | `text` | `'public'` | Visibility level: `public`, `internal`, or `private` |
-| `deleted_at` | `timestamptz` | -- | Soft delete timestamp |
-| `deleted_by` | `text` | -- | Identifier of the deleting actor |
-| `archived_at` | `timestamptz` | -- | Archival timestamp |
-| `archived_by` | `text` | -- | Identifier of the archiving actor |
-| `retention_until` | `timestamptz` | -- | Date when eligible for retention action |
-| `retention_policy_id` | `uuid` | -- | FK to retention policy |
+| Column                | Type          | Default    | Description                                          |
+| --------------------- | ------------- | ---------- | ---------------------------------------------------- |
+| `visibility`          | `text`        | `'public'` | Visibility level: `public`, `internal`, or `private` |
+| `deleted_at`          | `timestamptz` | --         | Soft delete timestamp                                |
+| `deleted_by`          | `text`        | --         | Identifier of the deleting actor                     |
+| `archived_at`         | `timestamptz` | --         | Archival timestamp                                   |
+| `archived_by`         | `text`        | --         | Identifier of the archiving actor                    |
+| `retention_until`     | `timestamptz` | --         | Date when eligible for retention action              |
+| `retention_policy_id` | `uuid`        | --         | FK to retention policy                               |
 
 **Constraint**: `approval_comment_visibility_chk` -- `visibility IN ('public','internal','private')`
 
 **Indexes**:
+
 - `idx_approval_comment_visibility` on `(tenant_id, approval_instance_id, visibility, created_at DESC)` where `deleted_at IS NULL`
 - `idx_approval_comment_archived` on `(tenant_id, archived_at)` where `archived_at IS NOT NULL`
 - `idx_approval_comment_retention` on `(tenant_id, retention_until)` where `retention_until IS NOT NULL AND deleted_at IS NULL`

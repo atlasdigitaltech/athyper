@@ -7,42 +7,49 @@
 
 import { EventEmitter } from "events";
 
-export type NotificationEventType = "notification.new" | "notification.read" | "notification.dismissed";
+export type NotificationEventType =
+  | "notification.new"
+  | "notification.read"
+  | "notification.dismissed";
 
 export interface NotificationEvent {
-    type: NotificationEventType;
-    tenantId: string;
-    userId: string;
-    notificationId?: string;
-    timestamp: string;
+  type: NotificationEventType;
+  tenantId: string;
+  userId: string;
+  notificationId?: string;
+  timestamp: string;
 }
 
 class NotificationEventEmitter extends EventEmitter {
-    /**
-     * Broadcast a notification event to all listeners
-     */
-    broadcast(event: NotificationEvent): void {
-        // Emit to specific user channel
-        const userChannel = `${event.tenantId}:${event.userId}`;
-        this.emit(userChannel, event);
+  /**
+   * Broadcast a notification event to all listeners
+   */
+  broadcast(event: NotificationEvent): void {
+    // Emit to specific user channel
+    const userChannel = `${event.tenantId}:${event.userId}`;
+    this.emit(userChannel, event);
 
-        // Also emit to tenant channel for admin dashboards (future use)
-        const tenantChannel = `tenant:${event.tenantId}`;
-        this.emit(tenantChannel, event);
-    }
+    // Also emit to tenant channel for admin dashboards (future use)
+    const tenantChannel = `tenant:${event.tenantId}`;
+    this.emit(tenantChannel, event);
+  }
 
-    /**
-     * Subscribe to events for a specific user
-     */
-    subscribeUser(tenantId: string, userId: string, handler: (event: NotificationEvent) => void): () => void {
-        const channel = `${tenantId}:${userId}`;
-        this.on(channel, handler);
+  /**
+   * Subscribe to events for a specific user
+   */
+  subscribeUser(
+    tenantId: string,
+    userId: string,
+    handler: (event: NotificationEvent) => void,
+  ): () => void {
+    const channel = `${tenantId}:${userId}`;
+    this.on(channel, handler);
 
-        // Return unsubscribe function
-        return () => {
-            this.off(channel, handler);
-        };
-    }
+    // Return unsubscribe function
+    return () => {
+      this.off(channel, handler);
+    };
+  }
 }
 
 // Singleton instance

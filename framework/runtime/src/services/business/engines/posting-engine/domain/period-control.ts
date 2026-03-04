@@ -9,8 +9,11 @@ import type { PeriodStatus, FiscalPeriod } from "./types.js";
 /**
  * Validate a period status transition.
  */
-export function isValidPeriodTransition(current: PeriodStatus, target: PeriodStatus): boolean {
-    return validateTransition(current, target, PERIOD_TRANSITIONS);
+export function isValidPeriodTransition(
+  current: PeriodStatus,
+  target: PeriodStatus,
+): boolean {
+  return validateTransition(current, target, PERIOD_TRANSITIONS);
 }
 
 /**
@@ -18,49 +21,63 @@ export function isValidPeriodTransition(current: PeriodStatus, target: PeriodSta
  * MC-8: HARD_CLOSE is ABSOLUTE — no exceptions.
  */
 export function canPostToPeriod(period: FiscalPeriod): {
-    allowed: boolean;
-    reason: string | null;
+  allowed: boolean;
+  reason: string | null;
 } {
-    switch (period.status) {
-        case "OPEN":
-            return { allowed: true, reason: null };
-        case "SOFT_CLOSE":
-            // Soft-close allows adjusting entries (with elevated permissions)
-            return { allowed: true, reason: "Period is soft-closed, only adjusting entries allowed" };
-        case "HARD_CLOSE":
-            return { allowed: false, reason: "Period is HARD_CLOSED — posting is absolutely prohibited (MC-8)" };
-        case "FUTURE":
-            return { allowed: false, reason: "Period is not yet open" };
-        default:
-            return { allowed: false, reason: `Unknown period status: ${period.status}` };
-    }
+  switch (period.status) {
+    case "OPEN":
+      return { allowed: true, reason: null };
+    case "SOFT_CLOSE":
+      // Soft-close allows adjusting entries (with elevated permissions)
+      return {
+        allowed: true,
+        reason: "Period is soft-closed, only adjusting entries allowed",
+      };
+    case "HARD_CLOSE":
+      return {
+        allowed: false,
+        reason:
+          "Period is HARD_CLOSED — posting is absolutely prohibited (MC-8)",
+      };
+    case "FUTURE":
+      return { allowed: false, reason: "Period is not yet open" };
+    default:
+      return {
+        allowed: false,
+        reason: `Unknown period status: ${period.status}`,
+      };
+  }
 }
 
 /**
  * Find the correct fiscal period for a posting date.
  */
 export function findPeriodForDate(
-    periods: FiscalPeriod[],
-    postingDate: Date,
+  periods: FiscalPeriod[],
+  postingDate: Date,
 ): FiscalPeriod | null {
-    return periods.find((p) => {
-        return postingDate >= p.startDate && postingDate <= p.endDate;
-    }) ?? null;
+  return (
+    periods.find((p) => {
+      return postingDate >= p.startDate && postingDate <= p.endDate;
+    }) ?? null
+  );
 }
 
 /**
  * Get timestamps for period transition.
  */
-export function getPeriodTimestamps(target: PeriodStatus): Record<string, Date | null> {
-    const now = new Date();
-    switch (target) {
-        case "OPEN":
-            return { openedAt: now };
-        case "SOFT_CLOSE":
-            return { softClosedAt: now };
-        case "HARD_CLOSE":
-            return { hardClosedAt: now };
-        default:
-            return {};
-    }
+export function getPeriodTimestamps(
+  target: PeriodStatus,
+): Record<string, Date | null> {
+  const now = new Date();
+  switch (target) {
+    case "OPEN":
+      return { openedAt: now };
+    case "SOFT_CLOSE":
+      return { softClosedAt: now };
+    case "HARD_CLOSE":
+      return { hardClosedAt: now };
+    default:
+      return {};
+  }
 }

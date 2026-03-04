@@ -7,7 +7,11 @@
 
 "use client";
 
-import { listByEntity, type Attachment, type DocumentKind } from "@athyper/api-client/content";
+import {
+  listByEntity,
+  type Attachment,
+  type DocumentKind,
+} from "@athyper/api-client/content";
 import { useEffect, useState, useCallback } from "react";
 
 import { AttachmentCard } from "./AttachmentCard";
@@ -46,8 +50,10 @@ export function AttachmentList({
       });
 
       setAttachments(result);
-    } catch (err: any) {
-      setError(err.message || "Failed to load attachments");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load attachments",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -82,14 +88,17 @@ export function AttachmentList({
   /**
    * Group attachments by kind
    */
-  const groupedAttachments = attachments.reduce((acc, attachment) => {
-    const key = attachment.kind || "attachment";
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(attachment);
-    return acc;
-  }, {} as Record<string, Attachment[]>);
+  const groupedAttachments = attachments.reduce(
+    (acc, attachment) => {
+      const key = attachment.kind || "attachment";
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(attachment);
+      return acc;
+    },
+    {} as Record<string, Attachment[]>,
+  );
 
   const kindLabels: Record<DocumentKind, string> = {
     attachment: "Attachments",
@@ -153,9 +162,13 @@ export function AttachmentList({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No attachments</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">
+          No attachments
+        </h3>
         <p className="mt-1 text-sm text-gray-500">
-          {readonly ? "No files have been uploaded yet" : "Upload files to get started"}
+          {readonly
+            ? "No files have been uploaded yet"
+            : "Upload files to get started"}
         </p>
       </div>
     );

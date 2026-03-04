@@ -10,10 +10,12 @@ export function createApiClient(opts: ApiClientOptions) {
   return {
     async ping() {
       const res = await f(`${opts.baseUrl}/ping`, {
-        headers: opts.token ? { Authorization: `Bearer ${opts.token}` } : undefined
+        headers: opts.token
+          ? { Authorization: `Bearer ${opts.token}` }
+          : undefined,
       });
       return res.ok;
-    }
+    },
   };
 }
 

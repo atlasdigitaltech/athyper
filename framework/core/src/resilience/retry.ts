@@ -54,23 +54,20 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
 /**
  * Calculate delay for next retry attempt
  */
-export function calculateDelay(
-  attempt: number,
-  policy: RetryPolicy
-): number {
+export function calculateDelay(attempt: number, policy: RetryPolicy): number {
   let delay: number;
 
   switch (policy.strategy) {
     case "exponential":
       delay = Math.min(
         policy.initialDelay * Math.pow(policy.multiplier, attempt),
-        policy.maxDelay
+        policy.maxDelay,
       );
       break;
     case "linear":
       delay = Math.min(
         policy.initialDelay + policy.initialDelay * attempt,
-        policy.maxDelay
+        policy.maxDelay,
       );
       break;
     case "fixed":
@@ -100,7 +97,7 @@ function sleep(ms: number): Promise<void> {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  policy: Partial<RetryPolicy> = {}
+  policy: Partial<RetryPolicy> = {},
 ): Promise<T> {
   const fullPolicy: RetryPolicy = { ...DEFAULT_RETRY_POLICY, ...policy };
   let lastError: Error | undefined;
@@ -135,13 +132,13 @@ export async function withRetry<T>(
  */
 export function Retry(policy: Partial<RetryPolicy> = {}) {
   return function (
-    target: any,
+    target: object,
     propertyKey: string,
-    descriptor: PropertyDescriptor
+    descriptor: PropertyDescriptor,
   ) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return withRetry(() => originalMethod.apply(this, args), policy);
     };
 
@@ -163,7 +160,7 @@ export function isTransientError(error: Error): boolean {
 
   const errorMessage = error.message.toLowerCase();
   const isNetworkError = transientCodes.some((code) =>
-    errorMessage.includes(code.toLowerCase())
+    errorMessage.includes(code.toLowerCase()),
   );
 
   const isTimeoutError =

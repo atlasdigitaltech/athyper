@@ -11,8 +11,14 @@
 
 import { randomUUID } from "node:crypto";
 
-import { validateFileSize, validateContentType } from "../../domain/content-taxonomy.js";
-import { storageKeyForDocument, calculateShard } from "../../storage/storage-key-builder.js";
+import {
+  validateFileSize,
+  validateContentType,
+} from "../../domain/content-taxonomy.js";
+import {
+  storageKeyForDocument,
+  calculateShard,
+} from "../../storage/storage-key-builder.js";
 
 import type { ContentAuditEmitter } from "./ContentAuditEmitter.js";
 import type { Logger } from "../../../../../kernel/logger.js";
@@ -80,9 +86,15 @@ export class ContentService {
    * 4. Generate presigned PUT URL
    * 5. Emit audit event
    */
-  async initiateUpload(params: InitiateUploadParams): Promise<InitiateUploadResult> {
+  async initiateUpload(
+    params: InitiateUploadParams,
+  ): Promise<InitiateUploadResult> {
     this.logger.debug(
-      { fileName: params.fileName, kind: params.kind, sizeBytes: params.sizeBytes },
+      {
+        fileName: params.fileName,
+        kind: params.kind,
+        sizeBytes: params.sizeBytes,
+      },
       "[content:service] Initiating upload",
     );
 
@@ -187,18 +199,27 @@ export class ContentService {
     );
 
     // 1. Get attachment (uploadId === attachmentId)
-    const attachment = await this.attachmentRepo.getById(params.uploadId, params.tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      params.uploadId,
+      params.tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment ${params.uploadId} not found`);
     }
 
     if (attachment.sha256) {
-      this.logger.warn({ uploadId: params.uploadId }, "Upload already completed");
+      this.logger.warn(
+        { uploadId: params.uploadId },
+        "Upload already completed",
+      );
       return;
     }
 
     // 2. Check for duplicate file by SHA-256 (deduplication)
-    const existingResult = await this.attachmentRepo.findBySha256(params.sha256, params.tenantId);
+    const existingResult = await this.attachmentRepo.findBySha256(
+      params.sha256,
+      params.tenantId,
+    );
     const existing = existingResult ? [existingResult] : [];
 
     let deduplicated = false;
@@ -209,8 +230,12 @@ export class ContentService {
       const original = existing[0]; // Use first matching file
 
       this.logger.info(
-        { uploadId: params.uploadId, existingId: original.id, sha256: params.sha256 },
-        "[content:service] Duplicate file detected - deduplicating"
+        {
+          uploadId: params.uploadId,
+          existingId: original.id,
+          sha256: params.sha256,
+        },
+        "[content:service] Duplicate file detected - deduplicating",
       );
 
       try {
@@ -219,12 +244,12 @@ export class ContentService {
 
         this.logger.debug(
           { uploadId: params.uploadId, storageKey: attachment.storageKey },
-          "[content:service] Deleted duplicate upload from S3"
+          "[content:service] Deleted duplicate upload from S3",
         );
       } catch (error) {
         this.logger.warn(
           { uploadId: params.uploadId, error: String(error) },
-          "[content:service] Failed to delete duplicate from S3"
+          "[content:service] Failed to delete duplicate from S3",
         );
       }
 
@@ -241,7 +266,7 @@ export class ContentService {
 
       this.logger.info(
         { uploadId: params.uploadId, originalId: original.id },
-        "[content:service] Deduplication complete - reference count incremented"
+        "[content:service] Deduplication complete - reference count incremented",
       );
     } else {
       // No duplicate - this is the original file
@@ -251,7 +276,7 @@ export class ContentService {
 
       this.logger.debug(
         { uploadId: params.uploadId, sha256: params.sha256 },
-        "[content:service] No duplicate found - file is unique"
+        "[content:service] No duplicate found - file is unique",
       );
     }
 
@@ -292,10 +317,16 @@ export class ContentService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<{ url: string; expiresAt: Date }> {
-    this.logger.debug({ attachmentId }, "[content:service] Generating download URL");
+    this.logger.debug(
+      { attachmentId },
+      "[content:service] Generating download URL",
+    );
 
     // 1. Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment ${attachmentId} not found`);
     }
@@ -329,7 +360,10 @@ export class ContentService {
       userAgent,
     });
 
-    this.logger.info({ attachmentId }, "[content:service] Download URL generated");
+    this.logger.info(
+      { attachmentId },
+      "[content:service] Download URL generated",
+    );
 
     return { url, expiresAt };
   }
@@ -352,14 +386,20 @@ export class ContentService {
     );
 
     // 1. Get attachment
-    const attachment = await this.attachmentRepo.getById(params.attachmentId, params.tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      params.attachmentId,
+      params.tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment ${params.attachmentId} not found`);
     }
 
     // 2. Check for deduplication - find all attachments sharing the same storage_key
     const sharingResult = attachment.sha256
-      ? await this.attachmentRepo.findBySha256(attachment.sha256, params.tenantId)
+      ? await this.attachmentRepo.findBySha256(
+          attachment.sha256,
+          params.tenantId,
+        )
       : null;
     const sharingAttachments = sharingResult ? [sharingResult] : [];
 
@@ -369,7 +409,9 @@ export class ContentService {
     if (isDeduplicated && attachment.sha256) {
       // Find the "original" attachment (the one that actually owns the storage)
       const original = sharingAttachments.find(
-        (a: any) => a.storageKey === attachment.storageKey && a.id !== params.attachmentId
+        (a: any) =>
+          a.storageKey === attachment.storageKey &&
+          a.id !== params.attachmentId,
       );
 
       if (original) {
@@ -378,7 +420,7 @@ export class ContentService {
             attachmentId: params.attachmentId,
             originalId: original.id,
           },
-          "[content:service] Found deduplicated file - checking if S3 delete needed"
+          "[content:service] Found deduplicated file - checking if S3 delete needed",
         );
 
         // Skip S3 delete if other attachments still reference the storage
@@ -386,7 +428,7 @@ export class ContentService {
 
         this.logger.info(
           { attachmentId: params.attachmentId },
-          "[content:service] Skipping S3 delete - file still referenced by other attachments"
+          "[content:service] Skipping S3 delete - file still referenced by other attachments",
         );
       }
     }
@@ -398,8 +440,11 @@ export class ContentService {
           await this.storage.delete(attachment.storageKey);
 
           this.logger.debug(
-            { attachmentId: params.attachmentId, storageKey: attachment.storageKey },
-            "[content:service] Deleted file from S3"
+            {
+              attachmentId: params.attachmentId,
+              storageKey: attachment.storageKey,
+            },
+            "[content:service] Deleted file from S3",
           );
         } catch (error) {
           this.logger.warn(
@@ -409,10 +454,17 @@ export class ContentService {
         }
       }
 
-      await this.attachmentRepo.hardDelete(params.attachmentId, params.tenantId);
+      await this.attachmentRepo.hardDelete(
+        params.attachmentId,
+        params.tenantId,
+      );
     } else {
       // Soft delete: mark as replaced
-      await this.attachmentRepo.delete(params.attachmentId, params.tenantId, params.actorId);
+      await this.attachmentRepo.delete(
+        params.attachmentId,
+        params.tenantId,
+        params.actorId,
+      );
     }
 
     // 4. Emit audit event
@@ -444,7 +496,12 @@ export class ContentService {
     entityId: string,
     options?: { kind?: string; currentOnly?: boolean },
   ) {
-    return this.attachmentRepo.listByEntity(tenantId, entityType, entityId, options);
+    return this.attachmentRepo.listByEntity(
+      tenantId,
+      entityType,
+      entityId,
+      options,
+    );
   }
 
   /**

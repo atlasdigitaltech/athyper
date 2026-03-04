@@ -20,13 +20,7 @@
  *   pnpm db:publish:dry-run
  */
 
-import {
-  DB_DIR,
-  MIGRATIONS_DIR,
-  SCHEMA_PATH,
-  run,
-  runCapture,
-} from "./lib.js";
+import { DB_DIR, MIGRATIONS_DIR, SCHEMA_PATH, run, runCapture } from "./lib.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,8 +75,10 @@ function log(data: Record<string, unknown>): void {
  */
 function prismaOfflineEnv(): Record<string, string> {
   return {
-    ...process.env as Record<string, string>,
-    DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://offline:offline@localhost:5432/offline",
+    ...(process.env as Record<string, string>),
+    DATABASE_URL:
+      process.env.DATABASE_URL ??
+      "postgresql://offline:offline@localhost:5432/offline",
   };
 }
 
@@ -105,7 +101,12 @@ async function stepValidate(): Promise<StepResult> {
     env: prismaOfflineEnv(),
   });
 
-  return { step: 1, name: "validate", status: "ok", durationMs: Date.now() - t0 };
+  return {
+    step: 1,
+    name: "validate",
+    status: "ok",
+    durationMs: Date.now() - t0,
+  };
 }
 
 async function stepDiff(): Promise<StepResult> {
@@ -113,12 +114,20 @@ async function stepDiff(): Promise<StepResult> {
   const t0 = Date.now();
 
   try {
-    const diffSql = await runCapture("pnpm", [
-      "prisma", "migrate", "diff",
-      "--from-migrations", MIGRATIONS_DIR,
-      "--to-schema", SCHEMA_PATH,
-      "--script",
-    ], { cwd: DB_DIR, env: prismaOfflineEnv() });
+    const diffSql = await runCapture(
+      "pnpm",
+      [
+        "prisma",
+        "migrate",
+        "diff",
+        "--from-migrations",
+        MIGRATIONS_DIR,
+        "--to-schema",
+        SCHEMA_PATH,
+        "--script",
+      ],
+      { cwd: DB_DIR, env: prismaOfflineEnv() },
+    );
 
     if (diffSql.trim()) {
       console.log("Pending migration SQL:\n");
@@ -138,7 +147,13 @@ async function stepDiff(): Promise<StepResult> {
     // prisma migrate diff exits non-zero when there ARE changes in some modes.
     // We treat this as informational, not a failure.
     console.log("Diff completed (changes pending).");
-    return { step: 2, name: "diff", status: "ok", durationMs: Date.now() - t0, detail: "changes_detected" };
+    return {
+      step: 2,
+      name: "diff",
+      status: "ok",
+      durationMs: Date.now() - t0,
+      detail: "changes_detected",
+    };
   }
 }
 
@@ -158,19 +173,23 @@ async function stepMigrate(opts: PublishOptions): Promise<StepResult> {
   if (!adminUrl) {
     throw new Error(
       "DATABASE_ADMIN_URL or DATABASE_URL is required for migrate step.\n" +
-      "Must be a direct Postgres connection (not PgBouncer).\n" +
-      "Example: DATABASE_ADMIN_URL=postgres://user:pass@localhost:5432/athyper\n" +
-      "Or use --skip-migrate to skip this step.",
+        "Must be a direct Postgres connection (not PgBouncer).\n" +
+        "Example: DATABASE_ADMIN_URL=postgres://user:pass@localhost:5432/athyper\n" +
+        "Or use --skip-migrate to skip this step.",
     );
   }
 
-  await run("pnpm", [
-    "prisma", "migrate", "dev",
-    "--name", opts.migrationName,
-  ], {
-    cwd: DB_DIR,
-    env: { ...process.env as Record<string, string>, DATABASE_URL: adminUrl },
-  });
+  await run(
+    "pnpm",
+    ["prisma", "migrate", "dev", "--name", opts.migrationName],
+    {
+      cwd: DB_DIR,
+      env: {
+        ...(process.env as Record<string, string>),
+        DATABASE_URL: adminUrl,
+      },
+    },
+  );
 
   return {
     step: 3,
@@ -190,7 +209,12 @@ async function stepGenerate(): Promise<StepResult> {
     env: prismaOfflineEnv(),
   });
 
-  return { step: 4, name: "generate", status: "ok", durationMs: Date.now() - t0 };
+  return {
+    step: 4,
+    name: "generate",
+    status: "ok",
+    durationMs: Date.now() - t0,
+  };
 }
 
 function stepReport(results: StepResult[]): void {
@@ -202,7 +226,9 @@ function stepReport(results: StepResult[]): void {
   for (const r of results) {
     const dur = r.durationMs > 0 ? `${r.durationMs}ms` : "-";
     const detail = r.detail ? ` (${r.detail})` : "";
-    console.log(`  ${r.step}. ${r.name.padEnd(10)} ${r.status.padEnd(8)} ${dur}${detail}`);
+    console.log(
+      `  ${r.step}. ${r.name.padEnd(10)} ${r.status.padEnd(8)} ${dur}${detail}`,
+    );
   }
 
   console.log(`\n  Total: ${totalMs}ms`);
@@ -210,7 +236,11 @@ function stepReport(results: StepResult[]): void {
 
   log({
     msg: "publish_complete",
-    steps: results.map((r) => ({ step: r.name, status: r.status, ms: r.durationMs })),
+    steps: results.map((r) => ({
+      step: r.name,
+      status: r.status,
+      ms: r.durationMs,
+    })),
     totalMs,
   });
 }

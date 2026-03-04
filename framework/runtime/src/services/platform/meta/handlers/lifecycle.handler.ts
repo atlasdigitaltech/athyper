@@ -41,7 +41,11 @@ function toMetaRequestContext(ctx: HttpHandlerContext): RequestContext {
  * Validates gates (RBAC, approval, threshold, conditions) before executing.
  */
 export class TransitionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id, operationCode } = req.params as {
       entity: string;
       id: string;
@@ -49,9 +53,11 @@ export class TransitionHandler implements RouteHandler {
     };
 
     const lifecycleManager = await ctx.container.resolve<LifecycleManager>(
-      META_TOKENS.lifecycleManager
+      META_TOKENS.lifecycleManager,
     );
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -87,13 +93,15 @@ export class TransitionHandler implements RouteHandler {
         });
       }
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "lifecycle_transition_handler_error",
-        entity,
-        id,
-        operationCode,
-        error: String(error),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "lifecycle_transition_handler_error",
+          entity,
+          id,
+          operationCode,
+          error: String(error),
+        }),
+      );
 
       res.status(500).json({
         success: false,
@@ -117,11 +125,15 @@ export class TransitionHandler implements RouteHandler {
  * Returns current lifecycle state and available transitions for an entity record.
  */
 export class StateQueryHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
 
     const lifecycleManager = await ctx.container.resolve<LifecycleManager>(
-      META_TOKENS.lifecycleManager
+      META_TOKENS.lifecycleManager,
     );
     const metaCtx = toMetaRequestContext(ctx);
 
@@ -130,15 +142,12 @@ export class StateQueryHandler implements RouteHandler {
       const currentState = await lifecycleManager.getCurrentState(
         entity,
         id,
-        metaCtx.tenantId
+        metaCtx.tenantId,
       );
 
       // Get available transitions
-      const availableTransitions = await lifecycleManager.getAvailableTransitions(
-        entity,
-        id,
-        metaCtx
-      );
+      const availableTransitions =
+        await lifecycleManager.getAvailableTransitions(entity, id, metaCtx);
 
       res.status(200).json({
         success: true,
@@ -170,12 +179,14 @@ export class StateQueryHandler implements RouteHandler {
         },
       });
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "lifecycle_state_query_handler_error",
-        entity,
-        id,
-        error: String(error),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "lifecycle_state_query_handler_error",
+          entity,
+          id,
+          error: String(error),
+        }),
+      );
 
       res.status(500).json({
         success: false,
@@ -199,7 +210,11 @@ export class StateQueryHandler implements RouteHandler {
  * Returns paginated lifecycle event history for an entity record.
  */
 export class HistoryHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
     const { page, pageSize } = req.query as {
       page?: string;
@@ -207,7 +222,7 @@ export class HistoryHandler implements RouteHandler {
     };
 
     const lifecycleManager = await ctx.container.resolve<LifecycleManager>(
-      META_TOKENS.lifecycleManager
+      META_TOKENS.lifecycleManager,
     );
     const metaCtx = toMetaRequestContext(ctx);
 
@@ -250,12 +265,14 @@ export class HistoryHandler implements RouteHandler {
         meta: history.meta,
       });
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "lifecycle_history_handler_error",
-        entity,
-        id,
-        error: String(error),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "lifecycle_history_handler_error",
+          entity,
+          id,
+          error: String(error),
+        }),
+      );
 
       res.status(500).json({
         success: false,

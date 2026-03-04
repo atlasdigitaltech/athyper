@@ -10,7 +10,10 @@ import { Badge, Card } from "@neon/ui";
 
 import type { TabPluginProps } from "@/lib/entity-page/plugin-registry";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const statusVariantMap: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   open: "secondary",
   completed: "default",
   rejected: "destructive",
@@ -57,7 +60,9 @@ export function ApprovalsTab({ dynamicDescriptor }: TabPluginProps) {
                 className="flex items-center justify-between rounded-md border px-3 py-2"
               >
                 <span className="text-sm">Task {task.id.slice(0, 8)}</span>
-                <Badge variant={task.status === "pending" ? "secondary" : "outline"}>
+                <Badge
+                  variant={task.status === "pending" ? "secondary" : "outline"}
+                >
                   {task.status}
                 </Badge>
               </div>

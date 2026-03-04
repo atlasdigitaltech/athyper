@@ -16,41 +16,44 @@ import type { Container } from "../../../../kernel/container.js";
  * Idempotency key: `inventory:{docId}:{lineId}:RECEIPT`
  */
 export class InventoryReceiptHandler implements PostActionHandler {
-    readonly name = "inventory-receipt";
+  readonly name = "inventory-receipt";
 
-    constructor(private readonly container: Container) {}
+  constructor(private readonly container: Container) {}
 
-    async handle(event: PostActionEvent): Promise<boolean> {
-        const linesWithItems = event.lines.filter((l) => l.itemId != null);
-        if (linesWithItems.length === 0) return false;
+  async handle(event: PostActionEvent): Promise<boolean> {
+    const linesWithItems = event.lines.filter((l) => l.itemId != null);
+    if (linesWithItems.length === 0) return false;
 
-        const inventoryOps = await this.container.resolve<any>("fin.engines.inventoryOps");
-        let processed = false;
+    const inventoryOps = await this.container.resolve<any>(
+      "fin.engines.inventoryOps",
+    );
+    let processed = false;
 
-        for (const line of linesWithItems) {
-            const idempotencyKey = `inventory:${event.docId}:${line.lineId}:RECEIPT`;
+    for (const line of linesWithItems) {
+      const idempotencyKey = `inventory:${event.docId}:${line.lineId}:RECEIPT`;
 
-            try {
-                await inventoryOps.receiveStock({
-                    tenantId: event.tenantId,
-                    entityCode: event.entityCode,
-                    itemId: line.itemId,
-                    warehouseId: line.warehouseId,
-                    quantity: line.amount, // Simplified — real impl uses line quantity
-                    sourceDocId: event.docId,
-                    sourceDocLineId: line.lineId,
-                    idempotencyKey,
-                });
-                processed = true;
-            } catch (err: any) {
-                // If idempotency duplicate, skip silently
-                if (err?.code === "IDEMPOTENT_DUPLICATE") continue;
-                throw err;
-            }
-        }
-
-        return processed;
+      try {
+        await inventoryOps.receiveStock({
+          tenantId: event.tenantId,
+          entityCode: event.entityCode,
+          itemId: line.itemId,
+          warehouseId: line.warehouseId,
+          quantity: line.amount, // Simplified — real impl uses line quantity
+          sourceDocId: event.docId,
+          sourceDocLineId: line.lineId,
+          idempotencyKey,
+        });
+        processed = true;
+      } catch (err: unknown) {
+        // If idempotency duplicate, skip silently
+        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+          continue;
+        throw err;
+      }
     }
+
+    return processed;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -62,39 +65,40 @@ export class InventoryReceiptHandler implements PostActionHandler {
  * Idempotency key: `asset:{docId}:{lineId}:WIP`
  */
 export class AssetWIPHandler implements PostActionHandler {
-    readonly name = "asset-wip";
+  readonly name = "asset-wip";
 
-    constructor(private readonly container: Container) {}
+  constructor(private readonly container: Container) {}
 
-    async handle(event: PostActionEvent): Promise<boolean> {
-        const capexLines = event.lines.filter((l) => l.intentDomain === "CAPEX");
-        if (capexLines.length === 0) return false;
+  async handle(event: PostActionEvent): Promise<boolean> {
+    const capexLines = event.lines.filter((l) => l.intentDomain === "CAPEX");
+    if (capexLines.length === 0) return false;
 
-        const assetOps = await this.container.resolve<any>("fin.engines.assetOps");
-        let processed = false;
+    const assetOps = await this.container.resolve<any>("fin.engines.assetOps");
+    let processed = false;
 
-        for (const line of capexLines) {
-            const idempotencyKey = `asset:${event.docId}:${line.lineId}:WIP`;
+    for (const line of capexLines) {
+      const idempotencyKey = `asset:${event.docId}:${line.lineId}:WIP`;
 
-            try {
-                await assetOps.createAsset({
-                    tenantId: event.tenantId,
-                    entityCode: event.entityCode,
-                    sourceDocId: event.docId,
-                    sourceDocLineId: line.lineId,
-                    amount: line.amount,
-                    accountId: line.accountId,
-                    idempotencyKey,
-                });
-                processed = true;
-            } catch (err: any) {
-                if (err?.code === "IDEMPOTENT_DUPLICATE") continue;
-                throw err;
-            }
-        }
-
-        return processed;
+      try {
+        await assetOps.createAsset({
+          tenantId: event.tenantId,
+          entityCode: event.entityCode,
+          sourceDocId: event.docId,
+          sourceDocLineId: line.lineId,
+          amount: line.amount,
+          accountId: line.accountId,
+          idempotencyKey,
+        });
+        processed = true;
+      } catch (err: unknown) {
+        if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+          continue;
+        throw err;
+      }
     }
+
+    return processed;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -106,29 +110,32 @@ export class AssetWIPHandler implements PostActionHandler {
  * Idempotency key: `commission:{docId}:CALC`
  */
 export class CommissionCalcHandler implements PostActionHandler {
-    readonly name = "commission-calc";
+  readonly name = "commission-calc";
 
-    constructor(private readonly container: Container) {}
+  constructor(private readonly container: Container) {}
 
-    async handle(event: PostActionEvent): Promise<boolean> {
-        const commissionOps = await this.container.resolve<any>("fin.engines.commissionOps");
-        const idempotencyKey = `commission:${event.docId}:CALC`;
+  async handle(event: PostActionEvent): Promise<boolean> {
+    const commissionOps = await this.container.resolve<any>(
+      "fin.engines.commissionOps",
+    );
+    const idempotencyKey = `commission:${event.docId}:CALC`;
 
-        try {
-            await commissionOps.calculateCommission({
-                tenantId: event.tenantId,
-                entityCode: event.entityCode,
-                docId: event.docId,
-                docType: event.docType,
-                supplierId: event.supplierId,
-                idempotencyKey,
-            });
-            return true;
-        } catch (err: any) {
-            if (err?.code === "IDEMPOTENT_DUPLICATE") return false;
-            throw err;
-        }
+    try {
+      await commissionOps.calculateCommission({
+        tenantId: event.tenantId,
+        entityCode: event.entityCode,
+        docId: event.docId,
+        docType: event.docType,
+        supplierId: event.supplierId,
+        idempotencyKey,
+      });
+      return true;
+    } catch (err: unknown) {
+      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+        return false;
+      throw err;
     }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -140,28 +147,31 @@ export class CommissionCalcHandler implements PostActionHandler {
  * Idempotency key: `federation:{docId}:IC`
  */
 export class FederationICHandler implements PostActionHandler {
-    readonly name = "federation-ic";
+  readonly name = "federation-ic";
 
-    constructor(private readonly container: Container) {}
+  constructor(private readonly container: Container) {}
 
-    async handle(event: PostActionEvent): Promise<boolean> {
-        const federationOps = await this.container.resolve<any>("fin.engines.federationOps");
-        const idempotencyKey = `federation:${event.docId}:IC`;
+  async handle(event: PostActionEvent): Promise<boolean> {
+    const federationOps = await this.container.resolve<any>(
+      "fin.engines.federationOps",
+    );
+    const idempotencyKey = `federation:${event.docId}:IC`;
 
-        try {
-            await federationOps.createICTransaction({
-                tenantId: event.tenantId,
-                entityCode: event.entityCode,
-                docId: event.docId,
-                docType: event.docType,
-                jeId: event.jeId,
-                supplierId: event.supplierId,
-                idempotencyKey,
-            });
-            return true;
-        } catch (err: any) {
-            if (err?.code === "IDEMPOTENT_DUPLICATE") return false;
-            throw err;
-        }
+    try {
+      await federationOps.createICTransaction({
+        tenantId: event.tenantId,
+        entityCode: event.entityCode,
+        docId: event.docId,
+        docType: event.docType,
+        jeId: event.jeId,
+        supplierId: event.supplierId,
+        idempotencyKey,
+      });
+      return true;
+    } catch (err: unknown) {
+      if ((err as Record<string, unknown>)?.code === "IDEMPOTENT_DUPLICATE")
+        return false;
+      throw err;
     }
+  }
 }

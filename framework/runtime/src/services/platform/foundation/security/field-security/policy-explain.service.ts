@@ -131,7 +131,7 @@ export interface BatchExplainResult {
 export class PolicyExplainService {
   constructor(
     private repo: IFieldSecurityRepository,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   /**
@@ -142,7 +142,7 @@ export class PolicyExplainService {
     fieldPath: string,
     action: "read" | "write",
     subject: SubjectSnapshot,
-    context: FieldAccessContext
+    context: FieldAccessContext,
   ): Promise<PolicyExplainResult> {
     const startTime = Date.now();
 
@@ -169,7 +169,10 @@ export class PolicyExplainService {
     });
 
     // Load applicable policies
-    const allPolicies = await this.repo.findPoliciesForEntity(entityId, context.tenantId);
+    const allPolicies = await this.repo.findPoliciesForEntity(
+      entityId,
+      context.tenantId,
+    );
 
     const applicablePolicies = allPolicies.filter((p) => {
       // Match field path
@@ -196,7 +199,13 @@ export class PolicyExplainService {
     });
 
     // Sort by scope specificity and priority
-    const scopeOrder = { record: 0, entity_version: 1, entity: 2, module: 3, global: 4 };
+    const scopeOrder = {
+      record: 0,
+      entity_version: 1,
+      entity: 2,
+      module: 3,
+      global: 4,
+    };
     applicablePolicies.sort((a, b) => {
       const aScopeOrder = scopeOrder[a.scope] ?? 99;
       const bScopeOrder = scopeOrder[b.scope] ?? 99;
@@ -232,7 +241,8 @@ export class PolicyExplainService {
       };
 
       // Evaluate conditions
-      const { matched, reason, conditionNodes } = this.evaluatePolicyWithExplain(policy, subject);
+      const { matched, reason, conditionNodes } =
+        this.evaluatePolicyWithExplain(policy, subject);
 
       policyNode.children = conditionNodes;
       policyNode.matched = matched;
@@ -303,12 +313,18 @@ export class PolicyExplainService {
     fieldPaths: string[],
     action: "read" | "write",
     subject: SubjectSnapshot,
-    context: FieldAccessContext
+    context: FieldAccessContext,
   ): Promise<BatchExplainResult> {
     const results: BatchExplainResult["fields"] = [];
 
     for (const fieldPath of fieldPaths) {
-      const explain = await this.explainFieldAccess(entityId, fieldPath, action, subject, context);
+      const explain = await this.explainFieldAccess(
+        entityId,
+        fieldPath,
+        action,
+        subject,
+        context,
+      );
       results.push({
         fieldPath,
         allowed: explain.decision.allowed,
@@ -344,13 +360,15 @@ export class PolicyExplainService {
    */
   private evaluatePolicyWithExplain(
     policy: FieldSecurityPolicy,
-    subject: SubjectSnapshot
+    subject: SubjectSnapshot,
   ): { matched: boolean; reason: string; conditionNodes: ExplainNode[] } {
     const conditionNodes: ExplainNode[] = [];
 
     // Check role-based access
     if (policy.roleList && policy.roleList.length > 0) {
-      const matchedRoles = policy.roleList.filter((role) => subject.roles.includes(role));
+      const matchedRoles = policy.roleList.filter((role) =>
+        subject.roles.includes(role),
+      );
       const roleMatched = matchedRoles.length > 0;
 
       conditionNodes.push({
@@ -376,10 +394,8 @@ export class PolicyExplainService {
 
     // Check ABAC condition
     if (policy.abacCondition) {
-      const { matched: abacMatched, nodes: abacNodes } = this.evaluateAbacWithExplain(
-        policy.abacCondition,
-        subject
-      );
+      const { matched: abacMatched, nodes: abacNodes } =
+        this.evaluateAbacWithExplain(policy.abacCondition, subject);
 
       conditionNodes.push({
         type: "condition",
@@ -418,7 +434,7 @@ export class PolicyExplainService {
    */
   private evaluateAbacWithExplain(
     condition: AbacCondition,
-    subject: SubjectSnapshot
+    subject: SubjectSnapshot,
   ): { matched: boolean; nodes: ExplainNode[] } {
     const nodes: ExplainNode[] = [];
 
@@ -463,8 +479,15 @@ export class PolicyExplainService {
 
     // Handle attribute comparison
     if (condition.attribute && condition.comparison) {
-      const subjectValue = this.getSubjectAttribute(subject, condition.attribute);
-      const matched = this.compareValues(subjectValue, condition.comparison, condition.value);
+      const subjectValue = this.getSubjectAttribute(
+        subject,
+        condition.attribute,
+      );
+      const matched = this.compareValues(
+        subjectValue,
+        condition.comparison,
+        condition.value,
+      );
 
       nodes.push({
         type: "condition",
@@ -488,7 +511,10 @@ export class PolicyExplainService {
   /**
    * Get attribute value from subject
    */
-  private getSubjectAttribute(subject: SubjectSnapshot, attributePath: string): unknown {
+  private getSubjectAttribute(
+    subject: SubjectSnapshot,
+    attributePath: string,
+  ): unknown {
     if (attributePath === "roles") return subject.roles;
     if (attributePath === "groups") return subject.groups;
     if (attributePath === "tenantId") return subject.tenantId;
@@ -511,25 +537,37 @@ export class PolicyExplainService {
   /**
    * Compare values
    */
-  private compareValues(subjectValue: unknown, comparison: string, conditionValue: unknown): boolean {
+  private compareValues(
+    subjectValue: unknown,
+    comparison: string,
+    conditionValue: unknown,
+  ): boolean {
     switch (comparison) {
       case "eq":
         return subjectValue === conditionValue;
       case "neq":
         return subjectValue !== conditionValue;
       case "in":
-        if (Array.isArray(conditionValue)) return conditionValue.includes(subjectValue);
-        if (Array.isArray(subjectValue)) return subjectValue.some((v) => v === conditionValue);
+        if (Array.isArray(conditionValue))
+          return conditionValue.includes(subjectValue);
+        if (Array.isArray(subjectValue))
+          return subjectValue.some((v) => v === conditionValue);
         return false;
       case "nin":
-        if (Array.isArray(conditionValue)) return !conditionValue.includes(subjectValue);
-        if (Array.isArray(subjectValue)) return !subjectValue.some((v) => v === conditionValue);
+        if (Array.isArray(conditionValue))
+          return !conditionValue.includes(subjectValue);
+        if (Array.isArray(subjectValue))
+          return !subjectValue.some((v) => v === conditionValue);
         return true;
       case "contains":
-        if (typeof subjectValue === "string" && typeof conditionValue === "string") {
+        if (
+          typeof subjectValue === "string" &&
+          typeof conditionValue === "string"
+        ) {
           return subjectValue.includes(conditionValue);
         }
-        if (Array.isArray(subjectValue)) return subjectValue.includes(conditionValue);
+        if (Array.isArray(subjectValue))
+          return subjectValue.includes(conditionValue);
         return false;
       default:
         return false;

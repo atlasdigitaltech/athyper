@@ -14,7 +14,8 @@ import type {
   DateRangeRule,
   ReferentialIntegrityRule,
   UniqueRule,
- RequestContext } from "@athyper/core/meta";
+  RequestContext,
+} from "@athyper/core/meta";
 
 // ============================================================================
 // Helpers
@@ -98,7 +99,9 @@ function createMockDb(queryResult: { cnt: number } = { cnt: 0 }) {
   return {
     selectFrom: vi.fn().mockReturnValue(mockQuery),
     fn: {
-      count: vi.fn().mockReturnValue({ as: vi.fn().mockReturnValue("cnt_col") }),
+      count: vi
+        .fn()
+        .mockReturnValue({ as: vi.fn().mockReturnValue("cnt_col") }),
     },
     _mockQuery: mockQuery,
   };
@@ -135,7 +138,10 @@ describe("ValidationEngineService", () => {
   describe("required rule", () => {
     it("fails when value is undefined", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RequiredRule>({ kind: "required", fieldPath: "name" });
+      const rule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "name",
+      });
       const result = await engine.testRules("e1", {}, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(1);
@@ -145,21 +151,30 @@ describe("ValidationEngineService", () => {
 
     it("fails when value is null", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RequiredRule>({ kind: "required", fieldPath: "name" });
+      const rule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "name",
+      });
       const result = await engine.testRules("e1", { name: null }, [rule]);
       expect(result.valid).toBe(false);
     });
 
     it("fails when value is empty string", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RequiredRule>({ kind: "required", fieldPath: "name" });
+      const rule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "name",
+      });
       const result = await engine.testRules("e1", { name: "" }, [rule]);
       expect(result.valid).toBe(false);
     });
 
     it("passes when value is present", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RequiredRule>({ kind: "required", fieldPath: "name" });
+      const rule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "name",
+      });
       const result = await engine.testRules("e1", { name: "Alice" }, [rule]);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -167,7 +182,10 @@ describe("ValidationEngineService", () => {
 
     it("passes when value is 0 (falsy but present)", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RequiredRule>({ kind: "required", fieldPath: "count" });
+      const rule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "count",
+      });
       const result = await engine.testRules("e1", { count: 0 }, [rule]);
       expect(result.valid).toBe(true);
     });
@@ -180,7 +198,11 @@ describe("ValidationEngineService", () => {
   describe("min_max rule", () => {
     it("fails when value is below min", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+      });
       const result = await engine.testRules("e1", { amount: 5 }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("at least 10");
@@ -188,7 +210,11 @@ describe("ValidationEngineService", () => {
 
     it("fails when value is above max", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", max: 100 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        max: 100,
+      });
       const result = await engine.testRules("e1", { amount: 150 }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("at most 100");
@@ -196,28 +222,45 @@ describe("ValidationEngineService", () => {
 
     it("passes when value is within range", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10, max: 100 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+        max: 100,
+      });
       const result = await engine.testRules("e1", { amount: 50 }, [rule]);
       expect(result.valid).toBe(true);
     });
 
     it("passes at boundary (min=10, value=10)", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+      });
       const result = await engine.testRules("e1", { amount: 10 }, [rule]);
       expect(result.valid).toBe(true);
     });
 
     it("skips null values", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+      });
       const result = await engine.testRules("e1", { amount: null }, [rule]);
       expect(result.valid).toBe(true);
     });
 
     it("fails for non-numeric values", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+      });
       const result = await engine.testRules("e1", { amount: "abc" }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("must be a number");
@@ -225,7 +268,11 @@ describe("ValidationEngineService", () => {
 
     it("coerces string-number values", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 10 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "amount",
+        min: 10,
+      });
       const result = await engine.testRules("e1", { amount: "42" }, [rule]);
       expect(result.valid).toBe(true);
     });
@@ -238,7 +285,11 @@ describe("ValidationEngineService", () => {
   describe("length rule", () => {
     it("fails when string is too short", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<LengthRule>({ kind: "length", fieldPath: "code", minLength: 3 });
+      const rule = makeRule<LengthRule>({
+        kind: "length",
+        fieldPath: "code",
+        minLength: 3,
+      });
       const result = await engine.testRules("e1", { code: "AB" }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("at least 3 characters");
@@ -246,7 +297,11 @@ describe("ValidationEngineService", () => {
 
     it("fails when string is too long", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<LengthRule>({ kind: "length", fieldPath: "code", maxLength: 5 });
+      const rule = makeRule<LengthRule>({
+        kind: "length",
+        fieldPath: "code",
+        maxLength: 5,
+      });
       const result = await engine.testRules("e1", { code: "ABCDEF" }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("at most 5 characters");
@@ -254,14 +309,23 @@ describe("ValidationEngineService", () => {
 
     it("passes when within bounds", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<LengthRule>({ kind: "length", fieldPath: "code", minLength: 2, maxLength: 5 });
+      const rule = makeRule<LengthRule>({
+        kind: "length",
+        fieldPath: "code",
+        minLength: 2,
+        maxLength: 5,
+      });
       const result = await engine.testRules("e1", { code: "ABC" }, [rule]);
       expect(result.valid).toBe(true);
     });
 
     it("skips null values", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<LengthRule>({ kind: "length", fieldPath: "code", minLength: 3 });
+      const rule = makeRule<LengthRule>({
+        kind: "length",
+        fieldPath: "code",
+        minLength: 3,
+      });
       const result = await engine.testRules("e1", {}, [rule]);
       expect(result.valid).toBe(true);
     });
@@ -274,28 +338,51 @@ describe("ValidationEngineService", () => {
   describe("regex rule", () => {
     it("fails when value does not match pattern", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RegexRule>({ kind: "regex", fieldPath: "email", pattern: "^[\\w.]+@[\\w.]+$" });
-      const result = await engine.testRules("e1", { email: "not-an-email" }, [rule]);
+      const rule = makeRule<RegexRule>({
+        kind: "regex",
+        fieldPath: "email",
+        pattern: "^[\\w.]+@[\\w.]+$",
+      });
+      const result = await engine.testRules("e1", { email: "not-an-email" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
     });
 
     it("passes when value matches pattern", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RegexRule>({ kind: "regex", fieldPath: "email", pattern: "^[\\w.]+@[\\w.]+$" });
-      const result = await engine.testRules("e1", { email: "test@example.com" }, [rule]);
+      const rule = makeRule<RegexRule>({
+        kind: "regex",
+        fieldPath: "email",
+        pattern: "^[\\w.]+@[\\w.]+$",
+      });
+      const result = await engine.testRules(
+        "e1",
+        { email: "test@example.com" },
+        [rule],
+      );
       expect(result.valid).toBe(true);
     });
 
     it("supports regex flags", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RegexRule>({ kind: "regex", fieldPath: "code", pattern: "^abc$", flags: "i" });
+      const rule = makeRule<RegexRule>({
+        kind: "regex",
+        fieldPath: "code",
+        pattern: "^abc$",
+        flags: "i",
+      });
       const result = await engine.testRules("e1", { code: "ABC" }, [rule]);
       expect(result.valid).toBe(true);
     });
 
     it("handles invalid regex gracefully", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<RegexRule>({ kind: "regex", fieldPath: "val", pattern: "[invalid(" });
+      const rule = makeRule<RegexRule>({
+        kind: "regex",
+        fieldPath: "val",
+        pattern: "[invalid(",
+      });
       const result = await engine.testRules("e1", { val: "test" }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("Invalid regex");
@@ -310,7 +397,9 @@ describe("ValidationEngineService", () => {
         message: "{field} must be uppercase letters only",
       });
       const result = await engine.testRules("e1", { code: "abc" }, [rule]);
-      expect(result.errors[0].message).toBe("code must be uppercase letters only");
+      expect(result.errors[0].message).toBe(
+        "code must be uppercase letters only",
+      );
     });
   });
 
@@ -326,7 +415,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "status",
         allowedValues: ["active", "inactive"],
       });
-      const result = await engine.testRules("e1", { status: "deleted" }, [rule]);
+      const result = await engine.testRules("e1", { status: "deleted" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("must be one of");
     });
@@ -395,7 +486,9 @@ describe("ValidationEngineService", () => {
         compareField: "startDate",
         operator: "gt",
       });
-      const result = await engine.testRules("e1", { endDate: "2024-06-01" }, [rule]);
+      const result = await engine.testRules("e1", { endDate: "2024-06-01" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(true);
     });
 
@@ -431,11 +524,7 @@ describe("ValidationEngineService", () => {
           makeRule<RequiredRule>({ kind: "required", fieldPath: "assignee" }),
         ],
       });
-      const result = await engine.testRules(
-        "e1",
-        { status: "active" },
-        [rule],
-      );
+      const result = await engine.testRules("e1", { status: "active" }, [rule]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].fieldPath).toBe("assignee");
     });
@@ -453,11 +542,7 @@ describe("ValidationEngineService", () => {
           makeRule<RequiredRule>({ kind: "required", fieldPath: "assignee" }),
         ],
       });
-      const result = await engine.testRules(
-        "e1",
-        { status: "draft" },
-        [rule],
-      );
+      const result = await engine.testRules("e1", { status: "draft" }, [rule]);
       expect(result.valid).toBe(true);
     });
 
@@ -478,11 +563,7 @@ describe("ValidationEngineService", () => {
           }),
         ],
       });
-      const result = await engine.testRules(
-        "e1",
-        { type: "premium" },
-        [rule],
-      );
+      const result = await engine.testRules("e1", { type: "premium" }, [rule]);
       // Parent severity "error" overrides child "warning"
       expect(result.errors).toHaveLength(1);
       expect(result.warnings).toHaveLength(0);
@@ -501,7 +582,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "startDate",
         minDate: "2024-01-01",
       });
-      const result = await engine.testRules("e1", { startDate: "2023-06-15" }, [rule]);
+      const result = await engine.testRules("e1", { startDate: "2023-06-15" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("on or after");
     });
@@ -513,7 +596,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "endDate",
         maxDate: "2025-12-31",
       });
-      const result = await engine.testRules("e1", { endDate: "2026-06-01" }, [rule]);
+      const result = await engine.testRules("e1", { endDate: "2026-06-01" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("on or before");
     });
@@ -558,7 +643,9 @@ describe("ValidationEngineService", () => {
         minDate: "2024-01-01",
         maxDate: "2025-12-31",
       });
-      const result = await engine.testRules("e1", { eventDate: "2024-06-15" }, [rule]);
+      const result = await engine.testRules("e1", { eventDate: "2024-06-15" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(true);
     });
 
@@ -569,7 +656,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "date",
         minDate: "2024-01-01",
       });
-      const result = await engine.testRules("e1", { date: "not-a-date" }, [rule]);
+      const result = await engine.testRules("e1", { date: "not-a-date" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("valid date");
     });
@@ -598,7 +687,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "categoryId",
         targetEntity: "Category",
       });
-      const result = await engine.testRules("e1", { categoryId: "cat-999" }, [rule]);
+      const result = await engine.testRules("e1", { categoryId: "cat-999" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("non-existent");
     });
@@ -610,7 +701,9 @@ describe("ValidationEngineService", () => {
         fieldPath: "categoryId",
         targetEntity: "Category",
       });
-      const result = await engine.testRules("e1", { categoryId: "cat-1" }, [rule]);
+      const result = await engine.testRules("e1", { categoryId: "cat-1" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(true);
     });
 
@@ -637,7 +730,9 @@ describe("ValidationEngineService", () => {
         kind: "unique",
         fieldPath: "email",
       });
-      const result = await engine.testRules("e1", { email: "dup@test.com" }, [rule]);
+      const result = await engine.testRules("e1", { email: "dup@test.com" }, [
+        rule,
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain("must be unique");
     });
@@ -648,7 +743,11 @@ describe("ValidationEngineService", () => {
         kind: "unique",
         fieldPath: "email",
       });
-      const result = await engine.testRules("e1", { email: "unique@test.com" }, [rule]);
+      const result = await engine.testRules(
+        "e1",
+        { email: "unique@test.com" },
+        [rule],
+      );
       expect(result.valid).toBe(true);
     });
 
@@ -684,7 +783,12 @@ describe("ValidationEngineService", () => {
       });
 
       // On "create" trigger, only createRule should fire
-      const result = await engine.testRules("e1", {}, [createRule, updateRule], "create");
+      const result = await engine.testRules(
+        "e1",
+        {},
+        [createRule, updateRule],
+        "create",
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].ruleId).toBe("r-create");
     });
@@ -784,7 +888,9 @@ describe("ValidationEngineService", () => {
         message: "{field} value {value} is below minimum age",
       });
       const result = await engine.testRules("e1", { age: 12 }, [rule]);
-      expect(result.errors[0].message).toBe("age value 12 is below minimum age");
+      expect(result.errors[0].message).toBe(
+        "age value 12 is below minimum age",
+      );
     });
 
     it("uses default message when no custom message", async () => {
@@ -836,21 +942,45 @@ describe("ValidationEngineService", () => {
     it("collects all failures", async () => {
       const { engine } = createEngine();
       const rules: ValidationRule[] = [
-        makeRule<RequiredRule>({ kind: "required", id: "r1", fieldPath: "name" }),
-        makeRule<RequiredRule>({ kind: "required", id: "r2", fieldPath: "email" }),
-        makeRule<MinMaxRule>({ kind: "min_max", id: "r3", fieldPath: "age", min: 18, severity: "warning" }),
+        makeRule<RequiredRule>({
+          kind: "required",
+          id: "r1",
+          fieldPath: "name",
+        }),
+        makeRule<RequiredRule>({
+          kind: "required",
+          id: "r2",
+          fieldPath: "email",
+        }),
+        makeRule<MinMaxRule>({
+          kind: "min_max",
+          id: "r3",
+          fieldPath: "age",
+          min: 18,
+          severity: "warning",
+        }),
       ];
       const result = await engine.testRules("e1", { age: 10 }, rules);
       expect(result.valid).toBe(false);
-      expect(result.errors).toHaveLength(2);   // name + email required
-      expect(result.warnings).toHaveLength(1);  // age below min
+      expect(result.errors).toHaveLength(2); // name + email required
+      expect(result.warnings).toHaveLength(1); // age below min
     });
 
     it("returns valid when all rules pass", async () => {
       const { engine } = createEngine();
       const rules: ValidationRule[] = [
-        makeRule<RequiredRule>({ kind: "required", id: "r1", fieldPath: "name" }),
-        makeRule<LengthRule>({ kind: "length", id: "r2", fieldPath: "name", minLength: 2, maxLength: 50 }),
+        makeRule<RequiredRule>({
+          kind: "required",
+          id: "r1",
+          fieldPath: "name",
+        }),
+        makeRule<LengthRule>({
+          kind: "length",
+          id: "r2",
+          fieldPath: "name",
+          minLength: 2,
+          maxLength: 50,
+        }),
       ];
       const result = await engine.testRules("e1", { name: "Alice" }, rules);
       expect(result.valid).toBe(true);
@@ -882,7 +1012,15 @@ describe("ValidationEngineService", () => {
   describe("caching", () => {
     it("caches compiled rules in L1 (in-memory)", async () => {
       const fields = [
-        { name: "name", validationRules: { version: 1, rules: [makeRule<RequiredRule>({ kind: "required", fieldPath: "name" })] } },
+        {
+          name: "name",
+          validationRules: {
+            version: 1,
+            rules: [
+              makeRule<RequiredRule>({ kind: "required", fieldPath: "name" }),
+            ],
+          },
+        },
       ];
       const { engine, compiler } = createEngine(fields);
 
@@ -941,7 +1079,10 @@ describe("ValidationEngineService", () => {
 
   describe("rule extraction from model", () => {
     it("extracts rules from field validationRules", async () => {
-      const requiredRule = makeRule<RequiredRule>({ kind: "required", fieldPath: "name" });
+      const requiredRule = makeRule<RequiredRule>({
+        kind: "required",
+        fieldPath: "name",
+      });
       const fields = [
         {
           name: "name",
@@ -969,14 +1110,27 @@ describe("ValidationEngineService", () => {
           name: "name",
           validationRules: {
             version: 1,
-            rules: [makeRule<RequiredRule>({ kind: "required", id: "r1", fieldPath: "name" })],
+            rules: [
+              makeRule<RequiredRule>({
+                kind: "required",
+                id: "r1",
+                fieldPath: "name",
+              }),
+            ],
           },
         },
         {
           name: "email",
           validationRules: {
             version: 1,
-            rules: [makeRule<RegexRule>({ kind: "regex", id: "r2", fieldPath: "email", pattern: "@" })],
+            rules: [
+              makeRule<RegexRule>({
+                kind: "regex",
+                id: "r2",
+                fieldPath: "email",
+                pattern: "@",
+              }),
+            ],
           },
         },
       ];
@@ -998,7 +1152,9 @@ describe("ValidationEngineService", () => {
           name: "name",
           validationRules: {
             version: 1,
-            rules: [makeRule<RequiredRule>({ kind: "required", fieldPath: "name" })],
+            rules: [
+              makeRule<RequiredRule>({ kind: "required", fieldPath: "name" }),
+            ],
           },
         },
       ];
@@ -1015,7 +1171,13 @@ describe("ValidationEngineService", () => {
           name: "amount",
           validationRules: {
             version: 1,
-            rules: [makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "amount", min: 0 })],
+            rules: [
+              makeRule<MinMaxRule>({
+                kind: "min_max",
+                fieldPath: "amount",
+                min: 0,
+              }),
+            ],
           },
         },
       ];
@@ -1080,7 +1242,11 @@ describe("ValidationEngineService", () => {
 
     it("empty payload with no required rules returns valid", async () => {
       const { engine } = createEngine();
-      const rule = makeRule<MinMaxRule>({ kind: "min_max", fieldPath: "age", min: 0 });
+      const rule = makeRule<MinMaxRule>({
+        kind: "min_max",
+        fieldPath: "age",
+        min: 0,
+      });
       const result = await engine.testRules("e1", {}, [rule]);
       expect(result.valid).toBe(true);
     });

@@ -4,7 +4,12 @@
  * Manages comment flags and moderation status.
  */
 
-import type { CommentFlag, CommentModerationStatus, CreateFlagRequest, ReviewFlagRequest } from "../types.js";
+import type {
+  CommentFlag,
+  CommentModerationStatus,
+  CreateFlagRequest,
+  ReviewFlagRequest,
+} from "../types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -79,7 +84,7 @@ export class CommentFlagRepository {
         flagger_user_id: req.flaggerUserId,
         flag_reason: req.flagReason,
         flag_details: req.flagDetails ?? null,
-        status: 'pending',
+        status: "pending",
         created_at: now,
       })
       .returningAll()
@@ -97,7 +102,7 @@ export class CommentFlagRepository {
   async getFlagsForComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<CommentFlag[]> {
     const rows = await this.db
       .selectFrom("collab.comment_flag")
@@ -117,7 +122,7 @@ export class CommentFlagRepository {
   async getPendingFlags(
     tenantId: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<CommentFlag[]> {
     const rows = await this.db
       .selectFrom("collab.comment_flag")
@@ -152,14 +157,14 @@ export class CommentFlagRepository {
   async reviewFlag(
     tenantId: string,
     flagId: string,
-    req: ReviewFlagRequest
+    req: ReviewFlagRequest,
   ): Promise<void> {
     const now = new Date();
 
     await this.db
       .updateTable("collab.comment_flag")
       .set({
-        status: req.action === 'dismiss' ? 'dismissed' : 'actioned',
+        status: req.action === "dismiss" ? "dismissed" : "actioned",
         reviewed_by: req.reviewedBy,
         reviewed_at: now,
         resolution: req.resolution,
@@ -175,7 +180,7 @@ export class CommentFlagRepository {
   async getModerationStatus(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<CommentModerationStatus | undefined> {
     const row = await this.db
       .selectFrom("collab.comment_moderation")
@@ -198,7 +203,7 @@ export class CommentFlagRepository {
     commentType: "entity_comment" | "approval_comment",
     commentId: string,
     hiddenBy: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -218,13 +223,13 @@ export class CommentFlagRepository {
         updated_at: now,
       })
       .onConflict((oc) =>
-        oc.columns(['tenant_id', 'comment_type', 'comment_id']).doUpdateSet({
+        oc.columns(["tenant_id", "comment_type", "comment_id"]).doUpdateSet({
           is_hidden: true,
           hidden_reason: reason,
           hidden_at: now,
           hidden_by: hiddenBy,
           updated_at: now,
-        })
+        }),
       )
       .execute();
   }
@@ -235,7 +240,7 @@ export class CommentFlagRepository {
   async unhideComment(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await this.db
       .updateTable("collab.comment_moderation")
@@ -258,7 +263,7 @@ export class CommentFlagRepository {
   private async incrementFlagCount(
     tenantId: string,
     commentType: "entity_comment" | "approval_comment",
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -276,11 +281,12 @@ export class CommentFlagRepository {
         updated_at: now,
       })
       .onConflict((oc) =>
-        oc.columns(['tenant_id', 'comment_type', 'comment_id']).doUpdateSet({
-          flag_count: (eb: any) => eb.raw('collab.comment_moderation.flag_count + 1'),
+        oc.columns(["tenant_id", "comment_type", "comment_id"]).doUpdateSet({
+          flag_count: (eb: any) =>
+            eb.raw("collab.comment_moderation.flag_count + 1"),
           last_flagged_at: now,
           updated_at: now,
-        } as any)
+        } as any),
       )
       .execute();
   }
@@ -305,7 +311,9 @@ export class CommentFlagRepository {
     };
   }
 
-  private mapModerationStatusRow(row: CommentModerationStatusRow): CommentModerationStatus {
+  private mapModerationStatusRow(
+    row: CommentModerationStatusRow,
+  ): CommentModerationStatus {
     return {
       id: row.id,
       tenantId: row.tenant_id,

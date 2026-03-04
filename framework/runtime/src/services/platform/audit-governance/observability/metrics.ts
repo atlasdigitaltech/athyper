@@ -10,7 +10,11 @@
 import type { ResilientAuditWriter } from "../domain/resilient-audit-writer.js";
 import type { AuditDlqRepo } from "../persistence/AuditDlqRepo.js";
 import type { AuditOutboxRepo } from "../persistence/AuditOutboxRepo.js";
-import type { MetricsRegistry, MetricLabels , HealthCheckResult } from "@athyper/core";
+import type {
+  MetricsRegistry,
+  MetricLabels,
+  HealthCheckResult,
+} from "@athyper/core";
 
 // ============================================================================
 // Metric names (constants to prevent typos)
@@ -48,23 +52,43 @@ export class AuditMetrics {
   constructor(private readonly registry: MetricsRegistry) {}
 
   /** Audit event accepted into the pipeline (outbox or buffer). */
-  eventIngested(labels: { tenant: string; event_type: string; severity: string }): void {
-    this.registry.incrementCounter(METRIC.eventsIngested, 1, labels as MetricLabels);
+  eventIngested(labels: {
+    tenant: string;
+    event_type: string;
+    severity: string;
+  }): void {
+    this.registry.incrementCounter(
+      METRIC.eventsIngested,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Audit event persisted to core.workflow_event_log by drain worker. */
   eventPersisted(labels: { tenant: string; event_type: string }): void {
-    this.registry.incrementCounter(METRIC.eventsPersisted, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.eventsPersisted,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Audit event dropped (buffer overflow, dead-letter, feature_flag_off, etc.). */
   eventDropped(labels: { tenant: string; reason: string }): void {
-    this.registry.incrementCounter(METRIC.eventsDropped, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.eventsDropped,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Audit event pushed to in-memory buffer (outbox unavailable). */
   eventBuffered(labels: { tenant: string }): void {
-    this.registry.incrementCounter(METRIC.eventsBuffered, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.eventsBuffered,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Set current outbox pending row count (gauge). */
@@ -79,22 +103,38 @@ export class AuditMetrics {
 
   /** Record audit INSERT latency (histogram). */
   insertLatency(durationMs: number, labels: { table: string }): void {
-    this.registry.recordHistogram(METRIC.insertLatency, durationMs, labels as MetricLabels);
+    this.registry.recordHistogram(
+      METRIC.insertLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
   }
 
   /** Record hash chain verification result. */
   hashChainVerified(labels: { tenant: string; valid: string }): void {
-    this.registry.incrementCounter(METRIC.hashChainVerified, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.hashChainVerified,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record hash chain discontinuity detected (alert-worthy). */
   chainDiscontinuity(labels: { tenant: string }): void {
-    this.registry.incrementCounter(METRIC.hashChainDiscontinuity, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.hashChainDiscontinuity,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Record an audit query execution. */
   queryExecuted(labels: { tenant: string; query_type: string }): void {
-    this.registry.incrementCounter(METRIC.queryExecuted, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.queryExecuted,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Set current in-memory buffer depth (gauge). */
@@ -115,38 +155,77 @@ export class AuditMetrics {
   // -- Phase 5 metrics -------------------------------------------------------
 
   /** Audit event shed by load shedding policy. */
-  eventLoadShed(labels: { tenant: string; reason: string; event_category: string }): void {
-    this.registry.incrementCounter(METRIC.eventsLoadShed, 1, labels as MetricLabels);
+  eventLoadShed(labels: {
+    tenant: string;
+    reason: string;
+    event_category: string;
+  }): void {
+    this.registry.incrementCounter(
+      METRIC.eventsLoadShed,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Slow timeline query detected. */
   querySlowDetected(labels: { tenant: string }): void {
-    this.registry.incrementCounter(METRIC.querySlowDetected, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.querySlowDetected,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Timeline query latency histogram (all queries). */
   timelineQueryLatency(durationMs: number, labels: { tenant: string }): void {
-    this.registry.recordHistogram(METRIC.timelineQueryLatency, durationMs, labels as MetricLabels);
+    this.registry.recordHistogram(
+      METRIC.timelineQueryLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
   }
 
   /** Integrity verification completed. */
-  integrityVerificationCompleted(labels: { tenant: string; type: string; result: string }): void {
-    this.registry.incrementCounter(METRIC.integrityVerificationRun, 1, labels as MetricLabels);
+  integrityVerificationCompleted(labels: {
+    tenant: string;
+    type: string;
+    result: string;
+  }): void {
+    this.registry.incrementCounter(
+      METRIC.integrityVerificationRun,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Integrity verification duration. */
-  integrityVerificationDuration(durationMs: number, labels: { tenant: string; type: string }): void {
-    this.registry.recordHistogram(METRIC.integrityVerificationDuration, durationMs, labels as MetricLabels);
+  integrityVerificationDuration(
+    durationMs: number,
+    labels: { tenant: string; type: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.integrityVerificationDuration,
+      durationMs,
+      labels as MetricLabels,
+    );
   }
 
   /** Partition archived to cold storage. */
   partitionArchived(labels: { partition: string }): void {
-    this.registry.incrementCounter(METRIC.partitionArchived, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.partitionArchived,
+      1,
+      labels as MetricLabels,
+    );
   }
 
   /** Query blocked because data is in cold storage. */
   coldQueryBlocked(labels: { tenant: string }): void {
-    this.registry.incrementCounter(METRIC.coldQueryBlocked, 1, labels as MetricLabels);
+    this.registry.incrementCounter(
+      METRIC.coldQueryBlocked,
+      1,
+      labels as MetricLabels,
+    );
   }
 }
 
@@ -199,7 +278,12 @@ export function createAuditHealthChecker(
 
       if (pending >= 50_000 || dlqUnreplayed > 100) {
         status = "unhealthy";
-      } else if (pending >= 10_000 || bufferDepth > 0 || dead > 100 || dlqUnreplayed > 0) {
+      } else if (
+        pending >= 10_000 ||
+        bufferDepth > 0 ||
+        dead > 100 ||
+        dlqUnreplayed > 0
+      ) {
         status = "degraded";
       }
 

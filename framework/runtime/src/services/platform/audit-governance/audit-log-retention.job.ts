@@ -65,7 +65,7 @@ export type AuditLogRetentionResult = {
  */
 export async function processAuditLogRetention(
   job: Job<AuditLogRetentionJobData>,
-  db: Kysely<DB>
+  db: Kysely<DB>,
 ): Promise<AuditLogRetentionResult> {
   const { tenantId, retentionDays = 90, dryRun = false } = job.data;
 
@@ -76,7 +76,7 @@ export async function processAuditLogRetention(
       tenantId,
       retentionDays,
       dryRun,
-    })
+    }),
   );
 
   // Calculate cutoff date
@@ -97,11 +97,17 @@ export async function processAuditLogRetention(
 
       // Protected tables use SECURITY DEFINER function for bypass
       decisionLogsDeleted = await callRetentionDelete(
-        db, "permission_decision_log", cutoffDate, tenantId,
+        db,
+        "permission_decision_log",
+        cutoffDate,
+        tenantId,
       );
 
       workflowAuditEventsDeleted = await callRetentionDelete(
-        db, "workflow_event_log", cutoffDate, tenantId,
+        db,
+        "workflow_event_log",
+        cutoffDate,
+        tenantId,
       );
 
       const outboxResult = await deleteOldOutboxItems(db, cutoffDate);
@@ -111,10 +117,18 @@ export async function processAuditLogRetention(
       const auditCount = await countOldAuditLogs(db, cutoffDate, tenantId);
       auditLogsDeleted = auditCount;
 
-      const decisionCount = await countOldDecisionLogs(db, cutoffDate, tenantId);
+      const decisionCount = await countOldDecisionLogs(
+        db,
+        cutoffDate,
+        tenantId,
+      );
       decisionLogsDeleted = decisionCount;
 
-      const workflowCount = await countOldWorkflowAuditEvents(db, cutoffDate, tenantId);
+      const workflowCount = await countOldWorkflowAuditEvents(
+        db,
+        cutoffDate,
+        tenantId,
+      );
       workflowAuditEventsDeleted = workflowCount;
 
       const outboxCount = await countOldOutboxItems(db, cutoffDate);
@@ -131,7 +145,7 @@ export async function processAuditLogRetention(
         deadOutboxItemsDeleted,
         cutoffDate: cutoffDate.toISOString(),
         dryRun,
-      })
+      }),
     );
 
     return {
@@ -149,7 +163,7 @@ export async function processAuditLogRetention(
         msg: "audit_log_retention_error",
         jobId: job.id,
         error: String(error),
-      })
+      }),
     );
     throw error;
   }
@@ -161,7 +175,7 @@ export async function processAuditLogRetention(
 async function deleteOldAuditLogs(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<{ deletedCount: number }> {
   // Build DELETE query with tenant filter if specified
   const query = sql<{ count: number }>`
@@ -186,7 +200,7 @@ async function deleteOldAuditLogs(
 async function deleteOldDecisionLogs(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<{ deletedCount: number }> {
   // Build DELETE query with tenant filter if specified
   const query = sql<{ count: number }>`
@@ -211,7 +225,7 @@ async function deleteOldDecisionLogs(
 async function countOldAuditLogs(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<number> {
   const query = sql<{ count: number }>`
     SELECT COUNT(*) as count
@@ -230,7 +244,7 @@ async function countOldAuditLogs(
 async function countOldDecisionLogs(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<number> {
   const query = sql<{ count: number }>`
     SELECT COUNT(*) as count
@@ -250,7 +264,7 @@ async function countOldDecisionLogs(
 async function deleteOldWorkflowAuditEvents(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<{ deletedCount: number }> {
   const query = sql<{ count: number }>`
     WITH deleted AS (
@@ -293,7 +307,7 @@ async function deleteOldOutboxItems(
 async function countOldWorkflowAuditEvents(
   db: Kysely<DB>,
   cutoffDate: Date,
-  tenantId?: string
+  tenantId?: string,
 ): Promise<number> {
   const query = sql<{ count: number }>`
     SELECT COUNT(*) as count

@@ -8,20 +8,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { HttpHandlerContext, RouteHandler } from "../../../../platform/foundation/http/types.js";
+import type {
+  HttpHandlerContext,
+  RouteHandler,
+} from "../../../../platform/foundation/http/types.js";
 import type { AccessLogService } from "../../domain/services/AccessLogService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * Get access history for attachment
  * GET /api/content/access/:attachmentId?limit=100
  */
 export class GetAccessHistoryHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const accessLogService = await ctx.container.resolve<AccessLogService>(
-        TOKENS.accessLogService
+        TOKENS.accessLogService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -36,7 +42,11 @@ export class GetAccessHistoryHandler implements RouteHandler {
         return;
       }
 
-      const logs = await accessLogService.getAccessHistory(tenantId, attachmentId, { limit });
+      const logs = await accessLogService.getAccessHistory(
+        tenantId,
+        attachmentId,
+        { limit },
+      );
 
       res.status(200).json({
         success: true,
@@ -56,10 +66,14 @@ export class GetAccessHistoryHandler implements RouteHandler {
  * GET /api/content/access/:attachmentId/stats?days=30
  */
 export class GetAccessStatsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const accessLogService = await ctx.container.resolve<AccessLogService>(
-        TOKENS.accessLogService
+        TOKENS.accessLogService,
       );
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -74,7 +88,10 @@ export class GetAccessStatsHandler implements RouteHandler {
         return;
       }
 
-      const stats = await accessLogService.getAccessStats(tenantId, attachmentId);
+      const stats = await accessLogService.getAccessStats(
+        tenantId,
+        attachmentId,
+      );
 
       res.status(200).json({
         success: true,

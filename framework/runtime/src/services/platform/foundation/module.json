@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "CORE",
-    "name":  "Foundation Runtime",
-    "dependsOn":  [
-
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "CORE",
+  "name": "Foundation Runtime",
+  "dependsOn": [],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

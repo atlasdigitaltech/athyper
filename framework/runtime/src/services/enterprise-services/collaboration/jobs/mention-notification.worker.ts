@@ -35,9 +35,11 @@ export async function registerMentionNotificationWorker(container: Container) {
 
   try {
     // Check if job queue is available
-    const jobQueue = await container.resolve(TOKENS.jobQueue) as any;
+    const jobQueue = (await container.resolve(TOKENS.jobQueue)) as any;
     if (!jobQueue) {
-      logger.warn("[collab] Job queue not available, mention notifications will not be sent");
+      logger.warn(
+        "[collab] Job queue not available, mention notifications will not be sent",
+      );
       return;
     }
 
@@ -50,12 +52,14 @@ export async function registerMentionNotificationWorker(container: Container) {
           mentionedUserId: payload.mentionedUserId,
           commentId: payload.commentId,
         },
-        "[collab] Processing mention notification"
+        "[collab] Processing mention notification",
       );
 
       try {
         // Get notification orchestrator
-        const notificationOrchestrator = await container.resolve(TOKENS.notificationOrchestrator) as any;
+        const notificationOrchestrator = (await container.resolve(
+          TOKENS.notificationOrchestrator,
+        )) as any;
 
         // Prepare notification payload
         const notificationPayload: any = {
@@ -90,7 +94,7 @@ export async function registerMentionNotificationWorker(container: Container) {
             mentionedUserId: payload.mentionedUserId,
             commentId: payload.commentId,
           },
-          "[collab] Mention notification sent successfully"
+          "[collab] Mention notification sent successfully",
         );
       } catch (err) {
         logger.error(
@@ -99,7 +103,7 @@ export async function registerMentionNotificationWorker(container: Container) {
             mentionedUserId: payload.mentionedUserId,
             commentId: payload.commentId,
           },
-          "[collab] Failed to send mention notification"
+          "[collab] Failed to send mention notification",
         );
         throw err; // Rethrow to trigger job retry
       }
@@ -112,7 +116,7 @@ export async function registerMentionNotificationWorker(container: Container) {
       {
         error: err instanceof Error ? err.message : String(err),
       },
-      "[collab] Mention notification worker registration failed (non-fatal)"
+      "[collab] Mention notification worker registration failed (non-fatal)",
     );
   }
 }

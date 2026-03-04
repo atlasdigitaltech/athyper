@@ -57,7 +57,7 @@ if not exist "%ENV_FILE%" (
     exit /b 1
   )
 
-  echo ✅ Created: "%ENV_FILE%"
+  echo Created: "%ENV_FILE%"
   echo.
 )
 

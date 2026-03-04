@@ -68,7 +68,7 @@ export class MaskingService {
   maskMany(
     values: unknown[],
     strategy: MaskStrategy,
-    config?: MaskConfig
+    config?: MaskConfig,
   ): unknown[] {
     return values.map((v) => this.mask(v, strategy, config));
   }

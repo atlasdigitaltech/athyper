@@ -47,8 +47,14 @@ export class ExplainEventHandler {
     context: HandlerContext,
     params: { correlationId: string },
   ): Promise<HandlerResult> {
-    if (!context.roles.includes("view_tenant_events") && !context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires view_tenant_events role" } };
+    if (
+      !context.roles.includes("view_tenant_events") &&
+      !context.roles.includes("security_admin")
+    ) {
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires view_tenant_events role" },
+      };
     }
 
     if (!params.correlationId) {
@@ -77,11 +83,17 @@ export class WhoSawWhatHandler {
     query?: { startDate?: string; endDate?: string; limit?: number },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     if (!params.entityType || !params.entityId) {
-      return { status: 400, body: { error: "entityType and entityId are required" } };
+      return {
+        status: 400,
+        body: { error: "entityType and entityId are required" },
+      };
     }
 
     const report = await this.deps.accessReport.generateWhoSawWhat(
@@ -111,7 +123,10 @@ export class DsarHandler {
     params: { subjectUserId: string },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     if (!params.subjectUserId) {

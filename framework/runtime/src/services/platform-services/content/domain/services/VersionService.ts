@@ -9,7 +9,10 @@
 
 import { randomUUID } from "node:crypto";
 
-import { storageKeyForDocument, calculateShard } from "../../storage/storage-key-builder.js";
+import {
+  storageKeyForDocument,
+  calculateShard,
+} from "../../storage/storage-key-builder.js";
 
 import type { ContentAuditEmitter } from "./ContentAuditEmitter.js";
 import type { Logger } from "../../../../../kernel/logger.js";
@@ -69,7 +72,10 @@ export class VersionService {
     );
 
     // 1. Get current version
-    const currentVersion = await this.attachmentRepo.getById(params.documentId, params.tenantId);
+    const currentVersion = await this.attachmentRepo.getById(
+      params.documentId,
+      params.tenantId,
+    );
     if (!currentVersion) {
       throw new Error(`Document ${params.documentId} not found`);
     }
@@ -121,7 +127,11 @@ export class VersionService {
     });
 
     // 4. Mark old version as not current
-    await this.attachmentRepo.markNotCurrent(currentVersion.id, params.tenantId, params.actorId);
+    await this.attachmentRepo.markNotCurrent(
+      currentVersion.id,
+      params.tenantId,
+      params.actorId,
+    );
 
     // 5. Generate presigned URL
     const presignedUrl = await (this.storage as any).generatePresignedPutUrl(
@@ -163,9 +173,15 @@ export class VersionService {
    * Get version history for a document
    */
   async getVersionHistory(documentId: string, tenantId: string) {
-    this.logger.debug({ documentId }, "[version:service] Getting version history");
+    this.logger.debug(
+      { documentId },
+      "[version:service] Getting version history",
+    );
 
-    const versions = await this.attachmentRepo.getVersionChain(documentId, tenantId);
+    const versions = await this.attachmentRepo.getVersionChain(
+      documentId,
+      tenantId,
+    );
 
     return versions.map((v) => ({
       id: v.id,
@@ -200,13 +216,18 @@ export class VersionService {
     );
 
     // 1. Get version chain
-    const versions = await this.attachmentRepo.getVersionChain(params.documentId, params.tenantId);
+    const versions = await this.attachmentRepo.getVersionChain(
+      params.documentId,
+      params.tenantId,
+    );
     if (versions.length === 0) {
       throw new Error(`Document ${params.documentId} not found`);
     }
 
     // 2. Find version to restore
-    const versionToRestore = versions.find((v) => v.versionNo === params.versionNo);
+    const versionToRestore = versions.find(
+      (v) => v.versionNo === params.versionNo,
+    );
     if (!versionToRestore) {
       throw new Error(`Version ${params.versionNo} not found`);
     }
@@ -270,7 +291,11 @@ export class VersionService {
     });
 
     // 6. Mark old current as not current
-    await this.attachmentRepo.markNotCurrent(currentVersion.id, params.tenantId, params.actorId);
+    await this.attachmentRepo.markNotCurrent(
+      currentVersion.id,
+      params.tenantId,
+      params.actorId,
+    );
 
     // 7. Emit audit event
     await this.audit.versionRestored({
@@ -300,7 +325,12 @@ export class VersionService {
   /**
    * Complete version upload (update SHA-256)
    */
-  async completeVersionUpload(uploadId: string, tenantId: string, sha256: string, actorId: string) {
+  async completeVersionUpload(
+    uploadId: string,
+    tenantId: string,
+    sha256: string,
+    actorId: string,
+  ) {
     const attachment = await this.attachmentRepo.getById(uploadId, tenantId);
     if (!attachment) {
       throw new Error(`Attachment ${uploadId} not found`);
@@ -313,6 +343,9 @@ export class VersionService {
 
     await this.attachmentRepo.update(uploadId, tenantId, { sha256 });
 
-    this.logger.info({ uploadId, sha256 }, "[version:service] Version upload completed");
+    this.logger.info(
+      { uploadId, sha256 },
+      "[version:service] Version upload completed",
+    );
   }
 }

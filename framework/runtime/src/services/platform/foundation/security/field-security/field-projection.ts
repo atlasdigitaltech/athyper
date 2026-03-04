@@ -6,7 +6,11 @@
  */
 
 import type { FieldAccessService } from "./field-access.service.js";
-import type { FieldAccessContext, MaskStrategy, SubjectSnapshot } from "./types.js";
+import type {
+  FieldAccessContext,
+  MaskStrategy,
+  SubjectSnapshot,
+} from "./types.js";
 import type { Logger } from "../../../../../kernel/logger.js";
 
 // ============================================================================
@@ -109,7 +113,7 @@ export interface ProjectionOptions {
 export class FieldProjectionBuilder {
   constructor(
     private fieldAccessService: FieldAccessService,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   /**
@@ -121,7 +125,7 @@ export class FieldProjectionBuilder {
     subject: SubjectSnapshot,
     context: FieldAccessContext,
     tableAlias: string = "t",
-    options: ProjectionOptions = {}
+    options: ProjectionOptions = {},
   ): Promise<EntityProjection> {
     const {
       requestedFields,
@@ -138,7 +142,13 @@ export class FieldProjectionBuilder {
 
     // Add audit fields if requested
     if (includeAuditFields) {
-      const auditFields = ["id", "created_at", "updated_at", "created_by", "updated_by"];
+      const auditFields = [
+        "id",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+      ];
       for (const af of auditFields) {
         if (availableFields.includes(af) && !fieldsToCheck.includes(af)) {
           fieldsToCheck.push(af);
@@ -166,7 +176,7 @@ export class FieldProjectionBuilder {
         entityId,
         field,
         subject,
-        context
+        context,
       );
 
       if (!decision.allowed) {
@@ -198,7 +208,9 @@ export class FieldProjectionBuilder {
             tableAlias,
             field,
             decision.maskStrategy,
-            decision.maskConfig as unknown as Record<string, unknown> | undefined
+            decision.maskConfig as unknown as
+              | Record<string, unknown>
+              | undefined,
           );
         }
       }
@@ -242,7 +254,7 @@ export class FieldProjectionBuilder {
     }>,
     subject: SubjectSnapshot,
     context: FieldAccessContext,
-    options: ProjectionOptions = {}
+    options: ProjectionOptions = {},
   ): Promise<QueryProjection> {
     // Build main entity projection
     const main = await this.buildEntityProjection(
@@ -251,7 +263,7 @@ export class FieldProjectionBuilder {
       subject,
       context,
       mainEntity.tableAlias ?? "t",
-      options
+      options,
     );
 
     // Build joined entity projections
@@ -263,7 +275,7 @@ export class FieldProjectionBuilder {
         subject,
         context,
         joined.tableAlias,
-        options
+        options,
       );
       joins.push(projection);
     }
@@ -277,7 +289,10 @@ export class FieldProjectionBuilder {
     // Calculate totals
     const totalAllowed =
       main.fields.filter((f) => f.allowed).length +
-      joins.reduce((sum, j) => sum + j.fields.filter((f) => f.allowed).length, 0);
+      joins.reduce(
+        (sum, j) => sum + j.fields.filter((f) => f.allowed).length,
+        0,
+      );
 
     const totalDenied =
       main.deniedFields.length +
@@ -299,7 +314,7 @@ export class FieldProjectionBuilder {
     tableAlias: string,
     field: string,
     strategy: MaskStrategy,
-    config?: Record<string, unknown>
+    config?: Record<string, unknown>,
   ): string {
     const column = `"${tableAlias}"."${field}"`;
 
@@ -357,12 +372,17 @@ export class FieldProjectionBuilder {
     entityId: string,
     availableFields: string[],
     subject: SubjectSnapshot,
-    tenantId: string
+    tenantId: string,
   ): Promise<string[]> {
     const allowed: string[] = [];
 
     for (const field of availableFields) {
-      const decision = await this.fieldAccessService.canRead(entityId, field, subject, { tenantId });
+      const decision = await this.fieldAccessService.canRead(
+        entityId,
+        field,
+        subject,
+        { tenantId },
+      );
       if (decision.allowed) {
         allowed.push(field);
       }
@@ -379,10 +399,15 @@ export class FieldProjectionBuilder {
     entityId: string,
     fields: string[],
     subject: SubjectSnapshot,
-    tenantId: string
+    tenantId: string,
   ): Promise<boolean> {
     for (const field of fields) {
-      const decision = await this.fieldAccessService.canRead(entityId, field, subject, { tenantId });
+      const decision = await this.fieldAccessService.canRead(
+        entityId,
+        field,
+        subject,
+        { tenantId },
+      );
       if (decision.allowed && decision.maskStrategy) {
         return true;
       }
@@ -407,7 +432,9 @@ export class FieldProjectionBuilder {
  * query = applyProjectionToQuery(query, projection);
  * ```
  */
-export function buildProjectedSelectExpression(projection: EntityProjection): string {
+export function buildProjectedSelectExpression(
+  projection: EntityProjection,
+): string {
   if (projection.selectColumns.length === 0) {
     // If no columns allowed, select NULL to avoid syntax error
     return "NULL as _no_access";

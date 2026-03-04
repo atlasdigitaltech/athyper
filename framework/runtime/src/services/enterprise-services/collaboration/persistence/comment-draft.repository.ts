@@ -5,7 +5,11 @@
  * Handles auto-save draft operations.
  */
 
-import type { CommentDraft, SaveDraftRequest, LoadDraftRequest } from "../types.js";
+import type {
+  CommentDraft,
+  SaveDraftRequest,
+  LoadDraftRequest,
+} from "../types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -50,18 +54,24 @@ export class CommentDraftRepository {
         entity_id: req.entityId,
         parent_comment_id: req.parentCommentId ?? null,
         draft_text: req.draftText,
-        visibility: req.visibility ?? 'public',
+        visibility: req.visibility ?? "public",
         created_at: now,
         updated_at: now,
       })
       .onConflict((oc) =>
         oc
-          .columns(['tenant_id', 'user_id', 'entity_type', 'entity_id', 'parent_comment_id'])
+          .columns([
+            "tenant_id",
+            "user_id",
+            "entity_type",
+            "entity_id",
+            "parent_comment_id",
+          ])
           .doUpdateSet({
             draft_text: req.draftText,
-            visibility: req.visibility ?? 'public',
+            visibility: req.visibility ?? "public",
             updated_at: now,
-          })
+          }),
       )
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -83,7 +93,7 @@ export class CommentDraftRepository {
       .where((eb) =>
         req.parentCommentId
           ? eb("parent_comment_id", "=", req.parentCommentId)
-          : eb("parent_comment_id", "is", null)
+          : eb("parent_comment_id", "is", null),
       )
       .executeTakeFirst();
 
@@ -105,7 +115,7 @@ export class CommentDraftRepository {
       .where((eb) =>
         req.parentCommentId
           ? eb("parent_comment_id", "=", req.parentCommentId)
-          : eb("parent_comment_id", "is", null)
+          : eb("parent_comment_id", "is", null),
       )
       .execute();
   }
@@ -116,7 +126,7 @@ export class CommentDraftRepository {
   async listByUser(
     tenantId: string,
     userId: string,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<CommentDraft[]> {
     const rows = await this.db
       .selectFrom("collab.comment_draft")
@@ -160,7 +170,7 @@ export class CommentDraftRepository {
       entityId: row.entity_id,
       parentCommentId: row.parent_comment_id ?? undefined,
       draftText: row.draft_text,
-      visibility: row.visibility as 'public' | 'internal' | 'private',
+      visibility: row.visibility as "public" | "internal" | "private",
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

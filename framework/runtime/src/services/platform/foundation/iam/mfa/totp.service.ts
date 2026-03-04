@@ -7,7 +7,12 @@
 
 import { createHmac, randomBytes } from "crypto";
 
-import type { ITotpService, TotpConfig, TotpSetupData, TotpVerifyResult } from "./types.js";
+import type {
+  ITotpService,
+  TotpConfig,
+  TotpSetupData,
+  TotpVerifyResult,
+} from "./types.js";
 
 // ============================================================================
 // Constants
@@ -150,7 +155,7 @@ export class TotpService implements ITotpService {
   async generateSetupData(
     secret: string,
     accountName: string,
-    issuer?: string
+    issuer?: string,
   ): Promise<TotpSetupData> {
     const effectiveIssuer = issuer ?? this.config.issuer;
 
@@ -201,7 +206,11 @@ export class TotpService implements ITotpService {
     const timeStep = Math.floor(now / this.config.period);
 
     // Check current and adjacent time windows
-    for (let delta = -this.config.window; delta <= this.config.window; delta++) {
+    for (
+      let delta = -this.config.window;
+      delta <= this.config.window;
+      delta++
+    ) {
       const counter = intToBuffer(timeStep + delta);
       const hash = hmac(secretBuffer, counter, this.config.algorithm);
       const expectedCode = truncate(hash, this.config.digits);

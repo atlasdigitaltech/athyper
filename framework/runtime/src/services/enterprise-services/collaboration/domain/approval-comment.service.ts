@@ -8,8 +8,14 @@
 import type { MentionService } from "./mention.service.js";
 import type { AuditWriter } from "../../../../kernel/audit.js";
 import type { Logger } from "../../../../kernel/logger.js";
-import type { ApprovalCommentRepository, ListApprovalCommentOptions } from "../persistence/approval-comment.repository.js";
-import type { ApprovalComment, CreateApprovalCommentRequest } from "../types.js";
+import type {
+  ApprovalCommentRepository,
+  ListApprovalCommentOptions,
+} from "../persistence/approval-comment.repository.js";
+import type {
+  ApprovalComment,
+  CreateApprovalCommentRequest,
+} from "../types.js";
 
 /**
  * Approval Comment Service
@@ -22,7 +28,7 @@ export class ApprovalCommentService {
     private readonly config?: {
       maxCommentLength?: number;
     },
-    private readonly mentionService?: MentionService
+    private readonly mentionService?: MentionService,
   ) {}
 
   /**
@@ -33,7 +39,9 @@ export class ApprovalCommentService {
 
     // Validate comment length
     if (req.commentText.length > maxLength) {
-      throw new Error(`Comment text exceeds maximum length of ${maxLength} characters`);
+      throw new Error(
+        `Comment text exceeds maximum length of ${maxLength} characters`,
+      );
     }
 
     if (req.commentText.trim().length === 0) {
@@ -50,7 +58,7 @@ export class ApprovalCommentService {
           req.tenantId,
           "approval_comment",
           comment.id,
-          req.commentText
+          req.commentText,
         );
 
         if (mentionResult.mentionsCreated > 0) {
@@ -60,7 +68,7 @@ export class ApprovalCommentService {
               mentionsCreated: mentionResult.mentionsCreated,
               mentionedUsers: mentionResult.mentionedUserIds,
             },
-            "[collab] Processed mentions for approval comment"
+            "[collab] Processed mentions for approval comment",
           );
         }
       } catch (err) {
@@ -69,7 +77,7 @@ export class ApprovalCommentService {
             commentId: comment.id,
             error: err instanceof Error ? err.message : String(err),
           },
-          "[collab] Failed to process mentions (non-fatal)"
+          "[collab] Failed to process mentions (non-fatal)",
         );
       }
     }
@@ -97,7 +105,7 @@ export class ApprovalCommentService {
         approvalTaskId: req.approvalTaskId,
         commenterId: req.commenterId,
       },
-      "[collab] Approval comment created"
+      "[collab] Approval comment created",
     );
 
     return comment;
@@ -106,7 +114,10 @@ export class ApprovalCommentService {
   /**
    * Get comment by ID
    */
-  async getById(tenantId: string, commentId: string): Promise<ApprovalComment | undefined> {
+  async getById(
+    tenantId: string,
+    commentId: string,
+  ): Promise<ApprovalComment | undefined> {
     return this.repo.getById(tenantId, commentId);
   }
 
@@ -116,7 +127,7 @@ export class ApprovalCommentService {
   async listByInstance(
     tenantId: string,
     approvalInstanceId: string,
-    options?: ListApprovalCommentOptions
+    options?: ListApprovalCommentOptions,
   ): Promise<ApprovalComment[]> {
     return this.repo.listByInstance(tenantId, approvalInstanceId, options);
   }
@@ -126,7 +137,7 @@ export class ApprovalCommentService {
    */
   async countByInstance(
     tenantId: string,
-    approvalInstanceId: string
+    approvalInstanceId: string,
   ): Promise<number> {
     return this.repo.countByInstance(tenantId, approvalInstanceId);
   }
@@ -137,7 +148,7 @@ export class ApprovalCommentService {
   async listByCommenter(
     tenantId: string,
     commenterId: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number },
   ): Promise<ApprovalComment[]> {
     return this.repo.listByCommenter(tenantId, commenterId, options);
   }

@@ -45,7 +45,7 @@ export function generateSpanId(): string {
  * Format: traceparent: 00-<trace-id>-<parent-span-id>-<trace-flags>
  */
 export function parseTraceContext(
-  traceparent?: string
+  traceparent?: string,
 ): TraceContext | undefined {
   if (!traceparent) return undefined;
 
@@ -153,7 +153,9 @@ export const CorrelationHeaders = {
 /**
  * Extract correlation IDs from headers
  */
-export function extractCorrelationIds(headers: Record<string, string | string[] | undefined>): {
+export function extractCorrelationIds(
+  headers: Record<string, string | string[] | undefined>,
+): {
   requestId?: string;
   traceContext?: TraceContext;
 } {
@@ -173,13 +175,17 @@ export function extractCorrelationIds(headers: Record<string, string | string[] 
 /**
  * Create correlation headers for outgoing requests
  */
-export function createCorrelationHeaders(context: RequestContext): Record<string, string> {
+export function createCorrelationHeaders(
+  context: RequestContext,
+): Record<string, string> {
   const headers: Record<string, string> = {
     [CorrelationHeaders.REQUEST_ID]: context.requestId,
   };
 
   if (context.traceContext) {
-    headers[CorrelationHeaders.TRACE_PARENT] = createTraceparent(context.traceContext);
+    headers[CorrelationHeaders.TRACE_PARENT] = createTraceparent(
+      context.traceContext,
+    );
   }
 
   return headers;
@@ -219,7 +225,7 @@ export function createPercentageSampler(percentage: number): SamplingStrategy {
  * Sample based on route patterns
  */
 export function createRouteSampler(
-  routes: Array<{ pattern: RegExp; sample: boolean }>
+  routes: Array<{ pattern: RegExp; sample: boolean }>,
 ): SamplingStrategy {
   return {
     shouldSample: (context) => {

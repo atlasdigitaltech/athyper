@@ -6,12 +6,12 @@ Guide for new developers joining the project. Covers setup, conventions, archite
 
 ### 1. Prerequisites
 
-| Tool | Version | Install |
-| ------ | --------- | --------- |
-| Node.js | 20.20.0 | `nvm install` (reads `.nvmrc`) |
-| pnpm | 10.28.2 | `corepack enable` (reads `packageManager` in `package.json`) |
-| Docker | Latest stable | [docker.com](https://www.docker.com/products/docker-desktop) |
-| Git | >= 2.30 | |
+| Tool    | Version       | Install                                                      |
+| ------- | ------------- | ------------------------------------------------------------ |
+| Node.js | 20.20.0       | `nvm install` (reads `.nvmrc`)                               |
+| pnpm    | 10.28.2       | `corepack enable` (reads `packageManager` in `package.json`) |
+| Docker  | Latest stable | [docker.com](https://www.docker.com/products/docker-desktop) |
+| Git     | >= 2.30       |                                                              |
 
 ### 2. Clone and Install
 
@@ -118,15 +118,15 @@ The codebase enforces strict dependency boundaries via [dependency-cruiser](.dep
 
 ### Rules
 
-| Rule | Description |
-| ---- | ----------- |
-| **core-no-infra** | `framework/core` cannot import runtime, adapters, or infra packages (pg, ioredis, etc.) |
-| **runtime-no-direct-infra** | `framework/runtime` cannot import pg, ioredis, etc. directly (use adapters) |
-| **adapter-no-cross-talk** | Each adapter is isolated — auth cannot import db, db cannot import cache, etc. |
-| **adapters-no-packages** | Adapters may only use `packages/contracts`, not other shared packages |
-| **packages-no-framework** | `packages/*` cannot import anything from `framework/` |
-| **products-no-framework** | `products/*` cannot import anything from `framework/` |
-| **no-circular** | No circular dependencies anywhere in the codebase |
+| Rule                        | Description                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| **core-no-infra**           | `framework/core` cannot import runtime, adapters, or infra packages (pg, ioredis, etc.) |
+| **runtime-no-direct-infra** | `framework/runtime` cannot import pg, ioredis, etc. directly (use adapters)             |
+| **adapter-no-cross-talk**   | Each adapter is isolated — auth cannot import db, db cannot import cache, etc.          |
+| **adapters-no-packages**    | Adapters may only use `packages/contracts`, not other shared packages                   |
+| **packages-no-framework**   | `packages/*` cannot import anything from `framework/`                                   |
+| **products-no-framework**   | `products/*` cannot import anything from `framework/`                                   |
+| **no-circular**             | No circular dependencies anywhere in the codebase                                       |
 
 Run `pnpm depcheck` to validate all rules.
 
@@ -138,7 +138,7 @@ Services are registered and resolved via tokens in `framework/runtime/src/kernel
 
 ```typescript
 // Register
-container.register(TOKENS.db, async () => createDbAdapter(config), 'singleton');
+container.register(TOKENS.db, async () => createDbAdapter(config), "singleton");
 
 // Resolve
 const db = await container.resolve(TOKENS.db);
@@ -150,8 +150,12 @@ Modules follow a two-phase lifecycle: `register()` (DI bindings) then `contribut
 
 ```typescript
 class MyModule implements RuntimeModule {
-  register(container: Container) { /* bind tokens */ }
-  contribute(container: Container) { /* wire cross-module deps */ }
+  register(container: Container) {
+    /* bind tokens */
+  }
+  contribute(container: Container) {
+    /* wire cross-module deps */
+  }
 }
 ```
 
@@ -281,26 +285,26 @@ pnpm check
 
 ## Common Pitfalls
 
-| Issue | Solution |
-| ----- | -------- |
-| Cross-workspace imports fail in vitest | Inline test utilities instead of importing from other packages |
-| `res.json()` returns `{}` in TypeScript | Cast: `(await res.json()) as { keys?: unknown[] }` |
-| Types not updating after adapter changes | Rebuild the adapter: `cd framework/adapters/<name> && npx tsup ...` |
-| `pnpm install` uses wrong pnpm version | Run `corepack enable` to use the version from `packageManager` field |
-| Shell scripts don't work on Windows | Use WSL2, Git Bash, or pnpm scripts (`pnpm mesh:up` instead of `./up.sh`) |
+| Issue                                    | Solution                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| Cross-workspace imports fail in vitest   | Inline test utilities instead of importing from other packages            |
+| `res.json()` returns `{}` in TypeScript  | Cast: `(await res.json()) as { keys?: unknown[] }`                        |
+| Types not updating after adapter changes | Rebuild the adapter: `cd framework/adapters/<name> && npx tsup ...`       |
+| `pnpm install` uses wrong pnpm version   | Run `corepack enable` to use the version from `packageManager` field      |
+| Shell scripts don't work on Windows      | Use WSL2, Git Bash, or pnpm scripts (`pnpm mesh:up` instead of `./up.sh`) |
 
 ## Documentation
 
 All platform docs are in [docs/athyper/](docs/athyper/README.md). Business process docs are in [docs/neon/](docs/neon/).
 
-| Area | Entry Point |
-| ---- | ----------- |
-| Documentation index | [docs/athyper/README.md](docs/athyper/README.md) |
-| Deployment & setup | [docs/athyper/deployment/README.md](docs/athyper/deployment/README.md) |
-| Architecture | [docs/athyper/architecture/README.md](docs/athyper/architecture/README.md) |
-| Auth system | [docs/athyper/iam/README.md](docs/athyper/iam/README.md) |
-| Framework | [docs/athyper/framework/README.md](docs/athyper/framework/README.md) |
-| Security | [docs/athyper/security/README.md](docs/athyper/security/README.md) |
-| Meta engine | [docs/athyper/meta-engine/README.md](docs/athyper/meta-engine/README.md) |
-| Runbooks | [docs/athyper/runbooks/README.md](docs/athyper/runbooks/README.md) |
-| Finance spec | [docs/neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md](docs/neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md) |
+| Area                | Entry Point                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Documentation index | [docs/athyper/README.md](docs/athyper/README.md)                                                               |
+| Deployment & setup  | [docs/athyper/deployment/README.md](docs/athyper/deployment/README.md)                                         |
+| Architecture        | [docs/athyper/architecture/README.md](docs/athyper/architecture/README.md)                                     |
+| Auth system         | [docs/athyper/iam/README.md](docs/athyper/iam/README.md)                                                       |
+| Framework           | [docs/athyper/framework/README.md](docs/athyper/framework/README.md)                                           |
+| Security            | [docs/athyper/security/README.md](docs/athyper/security/README.md)                                             |
+| Meta engine         | [docs/athyper/meta-engine/README.md](docs/athyper/meta-engine/README.md)                                       |
+| Runbooks            | [docs/athyper/runbooks/README.md](docs/athyper/runbooks/README.md)                                             |
+| Finance spec        | [docs/neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md](docs/neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md) |

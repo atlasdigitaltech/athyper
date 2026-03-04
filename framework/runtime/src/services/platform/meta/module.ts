@@ -106,7 +106,10 @@ import type { RuntimeModule } from "../../types.js";
 import type { HttpHandlerContext } from "../foundation/http/types.js";
 import type { RouteRegistry } from "../foundation/registries/routes.registry.js";
 import type { JobQueue } from "@athyper/core";
-import type { ApprovalService, LifecycleTimerService } from "@athyper/core/meta";
+import type {
+  ApprovalService,
+  LifecycleTimerService,
+} from "@athyper/core/meta";
 
 // ============================================================================
 // RBAC Policy for Data API Routes
@@ -121,39 +124,57 @@ const META_DATA_RBAC_TOKEN = "meta.policy.dataRbac";
  * Throws with code "FORBIDDEN" on denial — handled by Express error middleware.
  */
 class MetaDataRbacPolicy {
-    async assertAllowed(ctx: HttpHandlerContext): Promise<void> {
-        try {
-            const gate = await ctx.container.resolve<{
-                authorizeWithPersona(id: string, t: string, op: string, c?: { entityKey?: string }): Promise<{ allowed: boolean; reason?: string }>;
-            }>(TOKENS.policyGate);
-            const principalId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
-            const tenantId = ctx.tenant.tenantKey ?? "default";
+  async assertAllowed(ctx: HttpHandlerContext): Promise<void> {
+    try {
+      const gate = await ctx.container.resolve<{
+        authorizeWithPersona(
+          id: string,
+          t: string,
+          op: string,
+          c?: { entityKey?: string },
+        ): Promise<{ allowed: boolean; reason?: string }>;
+      }>(TOKENS.policyGate);
+      const principalId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
+      const tenantId = ctx.tenant.tenantKey ?? "default";
 
-            // Extract entity from path: /api/data/:entity/...
-            const pathParts = ctx.request.path.split("/");
-            const entity = pathParts[3]; // ["", "api", "data", "entity_name", ...]
+      // Extract entity from path: /api/data/:entity/...
+      const pathParts = ctx.request.path.split("/");
+      const entity = pathParts[3]; // ["", "api", "data", "entity_name", ...]
 
-            // Derive operation from HTTP method + path context
-            const method = ctx.request.method.toUpperCase();
-            const path = ctx.request.path;
-            const operation = method === "GET" ? "read"
-                : method === "DELETE" ? "delete"
-                : path.includes("/restore") ? "update"
-                : method === "POST" ? "create"
+      // Derive operation from HTTP method + path context
+      const method = ctx.request.method.toUpperCase();
+      const path = ctx.request.path;
+      const operation =
+        method === "GET"
+          ? "read"
+          : method === "DELETE"
+            ? "delete"
+            : path.includes("/restore")
+              ? "update"
+              : method === "POST"
+                ? "create"
                 : "update"; // PUT, PATCH
 
-            const decision = await gate.authorizeWithPersona(principalId, tenantId, operation, { entityKey: entity });
-            if (!decision.allowed) {
-                const e = new Error(decision.reason ?? "Access denied by RBAC policy") as Error & { code?: string };
-                e.code = "FORBIDDEN";
-                throw e;
-            }
-        } catch (err) {
-            // Re-throw FORBIDDEN (our own denial) so Express error middleware returns 403
-            if (err && typeof err === "object" && (err as any).code === "FORBIDDEN") throw err;
-            // PolicyGateService not registered or failed — graceful degradation (allow)
-        }
+      const decision = await gate.authorizeWithPersona(
+        principalId,
+        tenantId,
+        operation,
+        { entityKey: entity },
+      );
+      if (!decision.allowed) {
+        const e = new Error(
+          decision.reason ?? "Access denied by RBAC policy",
+        ) as Error & { code?: string };
+        e.code = "FORBIDDEN";
+        throw e;
+      }
+    } catch (err) {
+      // Re-throw FORBIDDEN (our own denial) so Express error middleware returns 403
+      if (err && typeof err === "object" && (err as any).code === "FORBIDDEN")
+        throw err;
+      // PolicyGateService not registered or failed — graceful degradation (allow)
     }
+  }
 }
 
 // Entity handlers
@@ -260,90 +281,354 @@ export const module: RuntimeModule = {
 
   async register(c: Container) {
     // Register entity handlers
-    c.register(META_HANDLER_TOKENS.createEntity, async () => new CreateEntityHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listEntities, async () => new ListEntitiesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getEntity, async () => new GetEntityHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.updateEntity, async () => new UpdateEntityHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteEntity, async () => new DeleteEntityHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.createEntity,
+      async () => new CreateEntityHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listEntities,
+      async () => new ListEntitiesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getEntity,
+      async () => new GetEntityHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.updateEntity,
+      async () => new UpdateEntityHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteEntity,
+      async () => new DeleteEntityHandler(),
+      "singleton",
+    );
 
     // Register version handlers
-    c.register(META_HANDLER_TOKENS.createVersion, async () => new CreateVersionHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listVersions, async () => new ListVersionsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getVersion, async () => new GetVersionHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.activateVersion, async () => new ActivateVersionHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteVersion, async () => new DeleteVersionHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.createVersion,
+      async () => new CreateVersionHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listVersions,
+      async () => new ListVersionsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getVersion,
+      async () => new GetVersionHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.activateVersion,
+      async () => new ActivateVersionHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteVersion,
+      async () => new DeleteVersionHandler(),
+      "singleton",
+    );
 
     // Register data API handlers
-    c.register(META_HANDLER_TOKENS.listRecords, async () => new ListRecordsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getRecord, async () => new GetRecordHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.countRecords, async () => new CountRecordsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.createRecord, async () => new CreateRecordHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.updateRecord, async () => new UpdateRecordHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteRecord, async () => new DeleteRecordHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.restoreRecord, async () => new RestoreRecordHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.permanentDeleteRecord, async () => new PermanentDeleteRecordHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.listRecords,
+      async () => new ListRecordsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getRecord,
+      async () => new GetRecordHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.countRecords,
+      async () => new CountRecordsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.createRecord,
+      async () => new CreateRecordHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.updateRecord,
+      async () => new UpdateRecordHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteRecord,
+      async () => new DeleteRecordHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.restoreRecord,
+      async () => new RestoreRecordHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.permanentDeleteRecord,
+      async () => new PermanentDeleteRecordHandler(),
+      "singleton",
+    );
 
     // Register bulk operation handlers
-    c.register(META_HANDLER_TOKENS.bulkCreateRecords, async () => new BulkCreateRecordsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.bulkUpdateRecords, async () => new BulkUpdateRecordsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.bulkDeleteRecords, async () => new BulkDeleteRecordsHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.bulkCreateRecords,
+      async () => new BulkCreateRecordsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.bulkUpdateRecords,
+      async () => new BulkUpdateRecordsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.bulkDeleteRecords,
+      async () => new BulkDeleteRecordsHandler(),
+      "singleton",
+    );
 
     // Register entity page descriptor handlers
-    c.register(META_HANDLER_TOKENS.staticDescriptor, async () => new StaticDescriptorHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.dynamicDescriptor, async () => new DynamicDescriptorHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.actionExecution, async () => new ActionExecutionHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.staticDescriptor,
+      async () => new StaticDescriptorHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.dynamicDescriptor,
+      async () => new DynamicDescriptorHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.actionExecution,
+      async () => new ActionExecutionHandler(),
+      "singleton",
+    );
 
     // Register lifecycle handlers
-    c.register(META_HANDLER_TOKENS.transition, async () => new TransitionHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.stateQuery, async () => new StateQueryHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.lifecycleHistory, async () => new HistoryHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.transition,
+      async () => new TransitionHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.stateQuery,
+      async () => new StateQueryHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.lifecycleHistory,
+      async () => new HistoryHandler(),
+      "singleton",
+    );
 
     // Register approval template handlers
-    c.register(META_HANDLER_TOKENS.listTemplates, async () => new ListTemplatesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.createTemplate, async () => new CreateTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getTemplate, async () => new GetTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.updateTemplate, async () => new UpdateTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteTemplate, async () => new DeleteTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getStages, async () => new GetStagesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getRules, async () => new GetRulesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.validateTemplate, async () => new ValidateTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.compileTemplate, async () => new CompileTemplateHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listTemplateVersions, async () => new ListTemplateVersionsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.rollbackTemplate, async () => new RollbackHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.diffTemplate, async () => new DiffHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.impactAnalysis, async () => new ImpactAnalysisHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.testResolution, async () => new TestResolutionHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.listTemplates,
+      async () => new ListTemplatesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.createTemplate,
+      async () => new CreateTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getTemplate,
+      async () => new GetTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.updateTemplate,
+      async () => new UpdateTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteTemplate,
+      async () => new DeleteTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getStages,
+      async () => new GetStagesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getRules,
+      async () => new GetRulesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.validateTemplate,
+      async () => new ValidateTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.compileTemplate,
+      async () => new CompileTemplateHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listTemplateVersions,
+      async () => new ListTemplateVersionsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.rollbackTemplate,
+      async () => new RollbackHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.diffTemplate,
+      async () => new DiffHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.impactAnalysis,
+      async () => new ImpactAnalysisHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.testResolution,
+      async () => new TestResolutionHandler(),
+      "singleton",
+    );
 
     // Register overlay handlers (EPIC I)
-    c.register(META_HANDLER_TOKENS.listOverlays, async () => new ListOverlaysHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.createOverlay, async () => new CreateOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getOverlay, async () => new GetOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.updateOverlay, async () => new UpdateOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteOverlay, async () => new DeleteOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.previewOverlay, async () => new PreviewOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.validateOverlay, async () => new ValidateOverlayHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getChanges, async () => new GetChangesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.addChange, async () => new AddChangeHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.removeChange, async () => new RemoveChangeHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.reorderChanges, async () => new ReorderChangesHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.listOverlays,
+      async () => new ListOverlaysHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.createOverlay,
+      async () => new CreateOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getOverlay,
+      async () => new GetOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.updateOverlay,
+      async () => new UpdateOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteOverlay,
+      async () => new DeleteOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.previewOverlay,
+      async () => new PreviewOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.validateOverlay,
+      async () => new ValidateOverlayHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getChanges,
+      async () => new GetChangesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.addChange,
+      async () => new AddChangeHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.removeChange,
+      async () => new RemoveChangeHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.reorderChanges,
+      async () => new ReorderChangesHandler(),
+      "singleton",
+    );
 
     // Register entity sub-resource handlers (Schema Explorer)
-    c.register(META_HANDLER_TOKENS.listFields, async () => new ListFieldsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listRelations, async () => new ListRelationsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listIndexes, async () => new ListIndexesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getEntityPolicies, async () => new GetEntityPoliciesHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getCompiled, async () => new GetCompiledHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getLifecycleBindings, async () => new GetLifecycleBindingsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getValidation, async () => new GetValidationHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.listEntityVersionsSub, async () => new ListEntityVersionsSubHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.getDiff, async () => new GetDiffHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.compileEntity, async () => new CompileEntityHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.mutateFields, async () => new MutateFieldsHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.deleteField, async () => new DeleteFieldHandler(), "singleton");
-    c.register(META_HANDLER_TOKENS.mutateRelations, async () => new MutateRelationsHandler(), "singleton");
+    c.register(
+      META_HANDLER_TOKENS.listFields,
+      async () => new ListFieldsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listRelations,
+      async () => new ListRelationsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listIndexes,
+      async () => new ListIndexesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getEntityPolicies,
+      async () => new GetEntityPoliciesHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getCompiled,
+      async () => new GetCompiledHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getLifecycleBindings,
+      async () => new GetLifecycleBindingsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getValidation,
+      async () => new GetValidationHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.listEntityVersionsSub,
+      async () => new ListEntityVersionsSubHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.getDiff,
+      async () => new GetDiffHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.compileEntity,
+      async () => new CompileEntityHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.mutateFields,
+      async () => new MutateFieldsHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.deleteField,
+      async () => new DeleteFieldHandler(),
+      "singleton",
+    );
+    c.register(
+      META_HANDLER_TOKENS.mutateRelations,
+      async () => new MutateRelationsHandler(),
+      "singleton",
+    );
 
     // RBAC policy for Generic Data API routes
-    c.register(META_DATA_RBAC_TOKEN, async () => new MetaDataRbacPolicy(), "singleton");
+    c.register(
+      META_DATA_RBAC_TOKEN,
+      async () => new MetaDataRbacPolicy(),
+      "singleton",
+    );
   },
 
   async contribute(c: Container) {
@@ -924,7 +1209,9 @@ export const module: RuntimeModule = {
 
     try {
       const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
-      const approvalService = await c.resolve<ApprovalService>(META_TOKENS.approvalService);
+      const approvalService = await c.resolve<ApprovalService>(
+        META_TOKENS.approvalService,
+      );
 
       // Wire job queue into approval service for scheduling
       if (approvalService instanceof ApprovalServiceImpl) {
@@ -953,7 +1240,9 @@ export const module: RuntimeModule = {
 
     try {
       const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
-      const timerService = await c.resolve<LifecycleTimerService>(META_TOKENS.lifecycleTimerService);
+      const timerService = await c.resolve<LifecycleTimerService>(
+        META_TOKENS.lifecycleTimerService,
+      );
 
       // Wire job queue into timer service for scheduling
       if (timerService instanceof LifecycleTimerServiceImpl) {

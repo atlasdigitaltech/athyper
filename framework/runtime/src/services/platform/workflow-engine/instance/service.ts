@@ -76,7 +76,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   constructor(
     private readonly repository: IApprovalInstanceRepository,
     private readonly workflowService: IApprovalWorkflowService,
-    private readonly entityStateHandler: IEntityStateHandler = new DefaultEntityStateHandler()
+    private readonly entityStateHandler: IEntityStateHandler = new DefaultEntityStateHandler(),
   ) {}
 
   // ==========================================================================
@@ -88,7 +88,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   async createInstance(
     tenantId: string,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<CreateApprovalInstanceResult> {
     const warnings: string[] = [];
 
@@ -107,10 +107,10 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       const existingInstances = await this.repository.getByEntityId(
         tenantId,
         input.entity.type,
-        input.entity.id
+        input.entity.id,
       );
       const activeInstance = existingInstances.find(
-        (i) => !this.isCompletedStatus(i.status)
+        (i) => !this.isCompletedStatus(i.status),
       );
       if (activeInstance) {
         return {
@@ -172,18 +172,23 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
         tenantId,
         instance,
         template,
-        input
+        input,
       );
 
       // 5. Determine initial active steps
-      const initialActiveSteps = this.determineInitialActiveSteps(stepInstances);
+      const initialActiveSteps =
+        this.determineInitialActiveSteps(stepInstances);
 
       // 6. Update instance with active steps
-      const updatedInstance = await this.repository.update(tenantId, instance.id, {
-        status: "in_progress",
-        activeStepIds: initialActiveSteps.map((s) => s.id),
-        updatedBy: input.requester.userId,
-      });
+      const updatedInstance = await this.repository.update(
+        tenantId,
+        instance.id,
+        {
+          status: "in_progress",
+          activeStepIds: initialActiveSteps.map((s) => s.id),
+          updatedBy: input.requester.userId,
+        },
+      );
 
       // 7. Activate the initial steps
       for (const step of initialActiveSteps) {
@@ -197,7 +202,11 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       let entityLock: EntityLock | undefined;
       if (updatedInstance.lockMode !== "none") {
         try {
-          entityLock = await this.lockEntity(tenantId, updatedInstance, input.requester.userId);
+          entityLock = await this.lockEntity(
+            tenantId,
+            updatedInstance,
+            input.requester.userId,
+          );
         } catch (lockError) {
           warnings.push(`Failed to acquire entity lock: ${String(lockError)}`);
         }
@@ -210,7 +219,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
           input.entity.type,
           input.entity.id,
           "pending_approval",
-          { instanceId: instance.id, reason: "Approval workflow initiated" }
+          { instanceId: instance.id, reason: "Approval workflow initiated" },
         );
 
         // Record state transition
@@ -233,7 +242,10 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       return {
         success: true,
         instance: updatedInstance,
-        stepInstances: await this.repository.getStepInstances(tenantId, instance.id),
+        stepInstances: await this.repository.getStepInstances(
+          tenantId,
+          instance.id,
+        ),
         entityLock,
         warnings: warnings.length > 0 ? warnings : undefined,
       };
@@ -251,11 +263,14 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   private async findMatchingTemplate(
     tenantId: string,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<ApprovalWorkflowTemplate | undefined> {
     // If template code is specified, use that
     if (input.templateCode) {
-      return this.workflowService.getActiveTemplate(tenantId, input.templateCode);
+      return this.workflowService.getActiveTemplate(
+        tenantId,
+        input.templateCode,
+      );
     }
 
     // Otherwise, find matching templates
@@ -263,7 +278,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       tenantId,
       input.entity.type as ApprovalEntityType,
       input.triggerEvent as ApprovalTriggerEvent,
-      input.entity.data
+      input.entity.data,
     );
 
     // Return first matching template (sorted by priority)
@@ -277,7 +292,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     tenantId: string,
     instance: ApprovalInstance,
     template: ApprovalWorkflowTemplate,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<ApprovalStepInstance[]> {
     const stepInstances: Omit<ApprovalStepInstance, "id">[] = [];
     const now = new Date();
@@ -296,20 +311,28 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
           tenantId,
           stepDef,
           instance,
-          input
+          input,
         );
-        approvers = resolvedApprovers.map((ra) => this.toAssignedApprover(ra, now));
+        approvers = resolvedApprovers.map((ra) =>
+          this.toAssignedApprover(ra, now),
+        );
       }
 
       // Check auto-approve conditions
-      const autoApproveResult = await this.evaluateAutoApproveConditions(stepDef, input);
+      const autoApproveResult = await this.evaluateAutoApproveConditions(
+        stepDef,
+        input,
+      );
 
       // Calculate quorum if needed - create instance quorum with requiredCount
-      let stepQuorum: { type: "count" | "percentage"; value: number; requiredCount: number } | undefined;
+      let stepQuorum:
+        | { type: "count" | "percentage"; value: number; requiredCount: number }
+        | undefined;
       if (stepDef.quorum) {
-        const requiredCount = stepDef.quorum.type === "percentage"
-          ? Math.ceil((stepDef.quorum.value / 100) * approvers.length)
-          : stepDef.quorum.value;
+        const requiredCount =
+          stepDef.quorum.type === "percentage"
+            ? Math.ceil((stepDef.quorum.value / 100) * approvers.length)
+            : stepDef.quorum.value;
         stepQuorum = {
           type: stepDef.quorum.type,
           value: stepDef.quorum.value,
@@ -336,7 +359,9 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       }
 
       // Calculate step SLA
-      const sla = stepDef.sla ? this.calculateInitialSla(stepDef.sla, now) : undefined;
+      const sla = stepDef.sla
+        ? this.calculateInitialSla(stepDef.sla, now)
+        : undefined;
 
       // Create step instance
       stepInstances.push({
@@ -351,7 +376,8 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
         status,
         approvers,
         dependsOn: stepDef.dependsOn || [],
-        dependenciesSatisfied: !stepDef.dependsOn || stepDef.dependsOn.length === 0,
+        dependenciesSatisfied:
+          !stepDef.dependsOn || stepDef.dependsOn.length === 0,
         conditions: stepDef.conditions,
         conditionsMet,
         skipReason,
@@ -374,12 +400,14 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   /**
    * Determine initial active steps
    */
-  private determineInitialActiveSteps(stepInstances: ApprovalStepInstance[]): ApprovalStepInstance[] {
+  private determineInitialActiveSteps(
+    stepInstances: ApprovalStepInstance[],
+  ): ApprovalStepInstance[] {
     const activeSteps: ApprovalStepInstance[] = [];
 
     // Get level 1 steps that are pending and have satisfied dependencies
     const level1Steps = stepInstances.filter(
-      (s) => s.level === 1 && s.status === "pending" && s.dependenciesSatisfied
+      (s) => s.level === 1 && s.status === "pending" && s.dependenciesSatisfied,
     );
 
     for (const step of level1Steps) {
@@ -407,7 +435,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     tenantId: string,
     stepDef: ApprovalStep,
     instance: ApprovalInstance,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<ResolvedApprover[]> {
     const context: ApproverResolutionContext = {
       entity: input.entity.data || {},
@@ -428,7 +456,10 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   /**
    * Convert resolved approver to assigned approver
    */
-  private toAssignedApprover(resolved: ResolvedApprover, assignedAt: Date): AssignedApprover {
+  private toAssignedApprover(
+    resolved: ResolvedApprover,
+    assignedAt: Date,
+  ): AssignedApprover {
     return {
       id: `aa-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       userId: resolved.userId,
@@ -448,7 +479,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   private async evaluateStepConditions(
     stepDef: ApprovalStep,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<boolean> {
     if (!stepDef.conditions || stepDef.conditions.length === 0) {
       return true;
@@ -461,7 +492,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     };
 
     return stepDef.conditions.every((condition) =>
-      this.evaluateCondition(condition, data)
+      this.evaluateCondition(condition, data),
     );
   }
 
@@ -470,9 +501,13 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   private async evaluateSkipConditions(
     stepDef: ApprovalStep,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<boolean> {
-    if (!stepDef.canSkip || !stepDef.skipConditions || stepDef.skipConditions.length === 0) {
+    if (
+      !stepDef.canSkip ||
+      !stepDef.skipConditions ||
+      stepDef.skipConditions.length === 0
+    ) {
       return false;
     }
 
@@ -483,7 +518,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     };
 
     return stepDef.skipConditions.some((condition) =>
-      this.evaluateCondition(condition, data)
+      this.evaluateCondition(condition, data),
     );
   }
 
@@ -492,9 +527,12 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   private async evaluateAutoApproveConditions(
     stepDef: ApprovalStep,
-    input: CreateApprovalInstanceInput
+    input: CreateApprovalInstanceInput,
   ): Promise<{ autoApprove: boolean; reason?: string }> {
-    if (!stepDef.autoApproveConditions || stepDef.autoApproveConditions.length === 0) {
+    if (
+      !stepDef.autoApproveConditions ||
+      stepDef.autoApproveConditions.length === 0
+    ) {
       return { autoApprove: false };
     }
 
@@ -505,7 +543,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     };
 
     const autoApprove = stepDef.autoApproveConditions.some((condition) =>
-      this.evaluateCondition(condition, data)
+      this.evaluateCondition(condition, data),
     );
 
     return {
@@ -517,13 +555,21 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   /**
    * Evaluate a condition
    */
-  private evaluateCondition(condition: ApprovalCondition, data: Record<string, unknown>): boolean {
+  private evaluateCondition(
+    condition: ApprovalCondition,
+    data: Record<string, unknown>,
+  ): boolean {
     const results: boolean[] = [];
 
     if (condition.rules) {
       for (const rule of condition.rules) {
         const fieldValue = this.getFieldValue(data, rule.field);
-        const result = this.evaluateConditionRule(fieldValue, rule.operator, rule.value, rule.upperValue);
+        const result = this.evaluateConditionRule(
+          fieldValue,
+          rule.operator,
+          rule.value,
+          rule.upperValue,
+        );
         results.push(result);
       }
     }
@@ -547,7 +593,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     fieldValue: unknown,
     operator: string,
     value?: unknown,
-    upperValue?: unknown
+    upperValue?: unknown,
   ): boolean {
     switch (operator) {
       case "eq":
@@ -571,7 +617,10 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       case "notExists":
         return fieldValue === undefined || fieldValue === null;
       case "between":
-        return Number(fieldValue) >= Number(value) && Number(fieldValue) <= Number(upperValue);
+        return (
+          Number(fieldValue) >= Number(value) &&
+          Number(fieldValue) <= Number(upperValue)
+        );
       default:
         return false;
     }
@@ -585,7 +634,11 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     let current: unknown = obj;
 
     for (const part of parts) {
-      if (current === null || current === undefined || typeof current !== "object") {
+      if (
+        current === null ||
+        current === undefined ||
+        typeof current !== "object"
+      ) {
         return undefined;
       }
       current = (current as Record<string, unknown>)[part];
@@ -597,7 +650,9 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   /**
    * Determine lock mode from template
    */
-  private determineLockMode(_template: ApprovalWorkflowTemplate): "none" | "soft" | "hard" {
+  private determineLockMode(
+    _template: ApprovalWorkflowTemplate,
+  ): "none" | "soft" | "hard" {
     // Default to soft lock for approval workflows
     return "soft";
   }
@@ -607,7 +662,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    */
   private calculateInitialSla(
     slaConfig: SlaConfiguration | undefined,
-    startTime: Date
+    startTime: Date,
   ): ApprovalInstance["sla"] | undefined {
     if (!slaConfig) return undefined;
 
@@ -652,7 +707,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   private async lockEntity(
     tenantId: string,
     instance: ApprovalInstance,
-    userId: string
+    userId: string,
   ): Promise<EntityLock> {
     const lock = await this.repository.acquireLock(tenantId, {
       entityType: instance.entity.type,
@@ -670,7 +725,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       instance.entity.type,
       instance.entity.id,
       instance.lockMode,
-      { instanceId: instance.id }
+      { instanceId: instance.id },
     );
 
     // Update instance
@@ -683,37 +738,52 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
    * Check if status is a completed status
    */
   private isCompletedStatus(status: ApprovalInstanceStatus): boolean {
-    return ["approved", "rejected", "cancelled", "expired", "withdrawn"].includes(status);
+    return [
+      "approved",
+      "rejected",
+      "cancelled",
+      "expired",
+      "withdrawn",
+    ].includes(status);
   }
 
   // ==========================================================================
   // Instance Retrieval
   // ==========================================================================
 
-  async getInstance(tenantId: string, instanceId: string): Promise<ApprovalInstance | undefined> {
+  async getInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalInstance | undefined> {
     return this.repository.getById(tenantId, instanceId);
   }
 
   async getInstancesForEntity(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<ApprovalInstance[]> {
     return this.repository.getByEntityId(tenantId, entityType, entityId);
   }
 
   async listInstances(
     tenantId: string,
-    options?: ApprovalInstanceQueryOptions
+    options?: ApprovalInstanceQueryOptions,
   ): Promise<ApprovalInstance[]> {
     return this.repository.list(tenantId, options);
   }
 
-  async getStepInstances(tenantId: string, instanceId: string): Promise<ApprovalStepInstance[]> {
+  async getStepInstances(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalStepInstance[]> {
     return this.repository.getStepInstances(tenantId, instanceId);
   }
 
-  async getPendingForUser(tenantId: string, userId: string): Promise<ApprovalInstance[]> {
+  async getPendingForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<ApprovalInstance[]> {
     return this.repository.getPendingForUser(tenantId, userId);
   }
 
@@ -725,15 +795,21 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     tenantId: string,
     instanceId: string,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<ApprovalInstance> {
     const instance = await this.repository.getById(tenantId, instanceId);
     if (!instance) {
-      throw new ApprovalInstanceError("NOT_FOUND", `Instance not found: ${instanceId}`);
+      throw new ApprovalInstanceError(
+        "NOT_FOUND",
+        `Instance not found: ${instanceId}`,
+      );
     }
 
     if (this.isCompletedStatus(instance.status)) {
-      throw new ApprovalInstanceError("INVALID_STATE", "Cannot cancel a completed instance");
+      throw new ApprovalInstanceError(
+        "INVALID_STATE",
+        "Cannot cancel a completed instance",
+      );
     }
 
     const now = new Date();
@@ -757,7 +833,13 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     }
 
     // Update entity state
-    await this.updateEntityState(tenantId, instance, "cancelled", userId, reason || "Cancelled");
+    await this.updateEntityState(
+      tenantId,
+      instance,
+      "cancelled",
+      userId,
+      reason || "Cancelled",
+    );
 
     return updated;
   }
@@ -766,20 +848,29 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     tenantId: string,
     instanceId: string,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<ApprovalInstance> {
     const instance = await this.repository.getById(tenantId, instanceId);
     if (!instance) {
-      throw new ApprovalInstanceError("NOT_FOUND", `Instance not found: ${instanceId}`);
+      throw new ApprovalInstanceError(
+        "NOT_FOUND",
+        `Instance not found: ${instanceId}`,
+      );
     }
 
     // Only requester can withdraw
     if (instance.requester.userId !== userId) {
-      throw new ApprovalInstanceError("UNAUTHORIZED", "Only the requester can withdraw");
+      throw new ApprovalInstanceError(
+        "UNAUTHORIZED",
+        "Only the requester can withdraw",
+      );
     }
 
     if (this.isCompletedStatus(instance.status)) {
-      throw new ApprovalInstanceError("INVALID_STATE", "Cannot withdraw a completed instance");
+      throw new ApprovalInstanceError(
+        "INVALID_STATE",
+        "Cannot withdraw a completed instance",
+      );
     }
 
     const now = new Date();
@@ -803,7 +894,13 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     }
 
     // Update entity state
-    await this.updateEntityState(tenantId, instance, "draft", userId, reason || "Withdrawn by requester");
+    await this.updateEntityState(
+      tenantId,
+      instance,
+      "draft",
+      userId,
+      reason || "Withdrawn by requester",
+    );
 
     return updated;
   }
@@ -812,15 +909,21 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     tenantId: string,
     instanceId: string,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<ApprovalInstance> {
     const instance = await this.repository.getById(tenantId, instanceId);
     if (!instance) {
-      throw new ApprovalInstanceError("NOT_FOUND", `Instance not found: ${instanceId}`);
+      throw new ApprovalInstanceError(
+        "NOT_FOUND",
+        `Instance not found: ${instanceId}`,
+      );
     }
 
     if (instance.status !== "in_progress") {
-      throw new ApprovalInstanceError("INVALID_STATE", "Can only hold in-progress instances");
+      throw new ApprovalInstanceError(
+        "INVALID_STATE",
+        "Can only hold in-progress instances",
+      );
     }
 
     const updated = await this.repository.update(tenantId, instanceId, {
@@ -837,14 +940,24 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     return updated;
   }
 
-  async releaseInstance(tenantId: string, instanceId: string, userId: string): Promise<ApprovalInstance> {
+  async releaseInstance(
+    tenantId: string,
+    instanceId: string,
+    userId: string,
+  ): Promise<ApprovalInstance> {
     const instance = await this.repository.getById(tenantId, instanceId);
     if (!instance) {
-      throw new ApprovalInstanceError("NOT_FOUND", `Instance not found: ${instanceId}`);
+      throw new ApprovalInstanceError(
+        "NOT_FOUND",
+        `Instance not found: ${instanceId}`,
+      );
     }
 
     if (instance.status !== "on_hold") {
-      throw new ApprovalInstanceError("INVALID_STATE", "Instance is not on hold");
+      throw new ApprovalInstanceError(
+        "INVALID_STATE",
+        "Instance is not on hold",
+      );
     }
 
     const updated = await this.repository.update(tenantId, instanceId, {
@@ -870,7 +983,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   async checkEntityLock(
     tenantId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<EntityLock | undefined> {
     return this.repository.getLock(tenantId, entityType, entityId);
   }
@@ -878,16 +991,23 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   private async releaseLock(
     tenantId: string,
     instance: ApprovalInstance,
-    userId: string
+    userId: string,
   ): Promise<void> {
-    await this.repository.releaseLock(tenantId, instance.entity.type, instance.entity.id);
+    await this.repository.releaseLock(
+      tenantId,
+      instance.entity.type,
+      instance.entity.id,
+    );
     await this.entityStateHandler.unlockEntity(
       tenantId,
       instance.entity.type,
       instance.entity.id,
-      { instanceId: instance.id }
+      { instanceId: instance.id },
     );
-    await this.repository.update(tenantId, instance.id, { isLocked: false, updatedBy: userId });
+    await this.repository.update(tenantId, instance.id, {
+      isLocked: false,
+      updatedBy: userId,
+    });
   }
 
   private async updateEntityState(
@@ -895,7 +1015,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
     instance: ApprovalInstance,
     newState: EntityApprovalState,
     userId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const now = new Date();
 
@@ -904,7 +1024,7 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
       instance.entity.type,
       instance.entity.id,
       newState,
-      { instanceId: instance.id, reason }
+      { instanceId: instance.id, reason },
     );
 
     await this.repository.recordStateTransition(tenantId, {
@@ -924,7 +1044,10 @@ export class ApprovalInstanceService implements IApprovalInstanceService {
   // Action History
   // ==========================================================================
 
-  async getActionHistory(tenantId: string, instanceId: string): Promise<ApprovalActionRecord[]> {
+  async getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalActionRecord[]> {
     return this.repository.getActionHistory(tenantId, instanceId);
   }
 }
@@ -940,7 +1063,7 @@ export class ApprovalInstanceError extends Error {
   constructor(
     public readonly code: string,
     message: string,
-    public readonly details?: unknown
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApprovalInstanceError";
@@ -957,7 +1080,11 @@ export class ApprovalInstanceError extends Error {
 export function createApprovalInstanceService(
   repository: IApprovalInstanceRepository,
   workflowService: IApprovalWorkflowService,
-  entityStateHandler?: IEntityStateHandler
+  entityStateHandler?: IEntityStateHandler,
 ): ApprovalInstanceService {
-  return new ApprovalInstanceService(repository, workflowService, entityStateHandler);
+  return new ApprovalInstanceService(
+    repository,
+    workflowService,
+    entityStateHandler,
+  );
 }

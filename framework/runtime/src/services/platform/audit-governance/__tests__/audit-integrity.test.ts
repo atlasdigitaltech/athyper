@@ -13,7 +13,10 @@ import {
   ListIntegrityReportsHandler,
   GetIntegrityReportHandler,
 } from "../api/handlers/audit-integrity.handler.js";
-import { AuditHashChainService, GENESIS_HASH } from "../domain/hash-chain.service.js";
+import {
+  AuditHashChainService,
+  GENESIS_HASH,
+} from "../domain/hash-chain.service.js";
 
 import type { IntegrityObjectStorage } from "../domain/audit-integrity.service.js";
 import type { AuditMetrics } from "../observability/metrics.js";
@@ -22,12 +25,14 @@ import type { AuditMetrics } from "../observability/metrics.js";
 // Mock DB helpers
 // ============================================================================
 
-function createMockDb(options: {
-  events?: any[];
-  anchors?: any[];
-  partitions?: any[];
-  reports?: any[];
-} = {}) {
+function createMockDb(
+  options: {
+    events?: any[];
+    anchors?: any[];
+    partitions?: any[];
+    reports?: any[];
+  } = {},
+) {
   const insertedReports: any[] = [];
   const updatedReports: any[] = [];
   const insertedSecurityEvents: any[] = [];
@@ -53,11 +58,13 @@ function createMockDb(options: {
   return db;
 }
 
-function createMockSqlDb(options: {
-  events?: any[];
-  anchors?: any[];
-  partitions?: any[];
-} = {}) {
+function createMockSqlDb(
+  options: {
+    events?: any[];
+    anchors?: any[];
+    partitions?: any[];
+  } = {},
+) {
   const calls: { query: string; values: any[] }[] = [];
 
   // We'll mock at the service level since sql`` template tags are harder to intercept
@@ -108,7 +115,9 @@ describe("AuditIntegrityService", () => {
       const metrics = createMockMetrics();
 
       // Mock db.execute to return appropriate results for different queries
-      const mockExecute = vi.fn().mockImplementation(async () => ({ rows: [] }));
+      const mockExecute = vi
+        .fn()
+        .mockImplementation(async () => ({ rows: [] }));
       const db = { execute: mockExecute } as any;
 
       // Use the hash chain service directly since we're testing logic
@@ -163,7 +172,12 @@ describe("AuditIntegrityService", () => {
       hashChain.resetTenant(TENANT);
 
       const events = [
-        { id: "evt-1", hash_prev: hash1.hash_prev, hash_curr: hash1.hash_curr, ...event1Data },
+        {
+          id: "evt-1",
+          hash_prev: hash1.hash_prev,
+          hash_curr: hash1.hash_curr,
+          ...event1Data,
+        },
         {
           id: "evt-2",
           hash_prev: "wrong_prev_hash",
@@ -211,8 +225,18 @@ describe("AuditIntegrityService", () => {
       const hash2 = await hashChain.computeHash(TENANT, event2Data);
 
       const events = [
-        { id: "evt-1", hash_prev: hash1.hash_prev, hash_curr: hash1.hash_curr, ...event1Data },
-        { id: "evt-2", hash_prev: hash2.hash_prev, hash_curr: hash2.hash_curr, ...event2Data },
+        {
+          id: "evt-1",
+          hash_prev: hash1.hash_prev,
+          hash_curr: hash1.hash_curr,
+          ...event1Data,
+        },
+        {
+          id: "evt-2",
+          hash_prev: hash2.hash_prev,
+          hash_curr: hash2.hash_curr,
+          ...event2Data,
+        },
       ];
 
       // Reset so verify doesn't rely on cached state
@@ -240,7 +264,12 @@ describe("AuditIntegrityService", () => {
 
       // Tamper with the hash
       const events = [
-        { id: "evt-1", hash_prev: hash1.hash_prev, hash_curr: "tampered_hash_value", ...event1Data },
+        {
+          id: "evt-1",
+          hash_prev: hash1.hash_prev,
+          hash_curr: "tampered_hash_value",
+          ...event1Data,
+        },
       ];
 
       hashChain.resetTenant(TENANT);
@@ -256,8 +285,11 @@ describe("AuditIntegrityService", () => {
     it("should pass when SHA-256 matches", async () => {
       const { createHash } = await import("crypto");
 
-      const ndjsonContent = '{"id":"evt-1","type":"started"}\n{"id":"evt-2","type":"approved"}\n';
-      const sha256 = createHash("sha256").update(ndjsonContent, "utf8").digest("hex");
+      const ndjsonContent =
+        '{"id":"evt-1","type":"started"}\n{"id":"evt-2","type":"approved"}\n';
+      const sha256 = createHash("sha256")
+        .update(ndjsonContent, "utf8")
+        .digest("hex");
 
       const manifest = {
         sha256,
@@ -278,7 +310,9 @@ describe("AuditIntegrityService", () => {
       };
 
       // Verify SHA-256 logic directly
-      const computedHash = createHash("sha256").update(ndjsonContent, "utf8").digest("hex");
+      const computedHash = createHash("sha256")
+        .update(ndjsonContent, "utf8")
+        .digest("hex");
       expect(computedHash).toBe(sha256);
     });
 
@@ -286,9 +320,12 @@ describe("AuditIntegrityService", () => {
       const { createHash } = await import("crypto");
 
       const ndjsonContent = '{"id":"evt-1","type":"started"}\n';
-      const wrongHash = "0000000000000000000000000000000000000000000000000000000000000000";
+      const wrongHash =
+        "0000000000000000000000000000000000000000000000000000000000000000";
 
-      const computedHash = createHash("sha256").update(ndjsonContent, "utf8").digest("hex");
+      const computedHash = createHash("sha256")
+        .update(ndjsonContent, "utf8")
+        .digest("hex");
       expect(computedHash).not.toBe(wrongHash);
     });
 
@@ -324,7 +361,9 @@ describe("Integrity API Handlers", () => {
   describe("TriggerIntegrityVerificationHandler", () => {
     it("should reject unauthorized callers", async () => {
       const mockService = { verifyTenantRange: vi.fn() } as any;
-      const handler = new TriggerIntegrityVerificationHandler({ integrityService: mockService });
+      const handler = new TriggerIntegrityVerificationHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(regularContext, {
         startDate: "2025-01-01",
@@ -337,7 +376,9 @@ describe("Integrity API Handlers", () => {
 
     it("should require startDate and endDate", async () => {
       const mockService = { verifyTenantRange: vi.fn() } as any;
-      const handler = new TriggerIntegrityVerificationHandler({ integrityService: mockService });
+      const handler = new TriggerIntegrityVerificationHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, {
         startDate: "",
@@ -352,7 +393,9 @@ describe("Integrity API Handlers", () => {
       const mockService = {
         verifyTenantRange: vi.fn().mockResolvedValue(mockReport),
       } as any;
-      const handler = new TriggerIntegrityVerificationHandler({ integrityService: mockService });
+      const handler = new TriggerIntegrityVerificationHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, {
         startDate: "2025-01-01",
@@ -373,7 +416,9 @@ describe("Integrity API Handlers", () => {
   describe("TriggerExportVerificationHandler", () => {
     it("should reject unauthorized callers", async () => {
       const mockService = { verifyExport: vi.fn() } as any;
-      const handler = new TriggerExportVerificationHandler({ integrityService: mockService });
+      const handler = new TriggerExportVerificationHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(regularContext, {
         manifestKey: "some-key",
@@ -384,7 +429,9 @@ describe("Integrity API Handlers", () => {
 
     it("should require manifestKey", async () => {
       const mockService = { verifyExport: vi.fn() } as any;
-      const handler = new TriggerExportVerificationHandler({ integrityService: mockService });
+      const handler = new TriggerExportVerificationHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, {
         manifestKey: "",
@@ -397,7 +444,9 @@ describe("Integrity API Handlers", () => {
   describe("ListIntegrityReportsHandler", () => {
     it("should reject unauthorized callers", async () => {
       const mockService = { listReports: vi.fn() } as any;
-      const handler = new ListIntegrityReportsHandler({ integrityService: mockService });
+      const handler = new ListIntegrityReportsHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(regularContext, {});
 
@@ -406,21 +455,30 @@ describe("Integrity API Handlers", () => {
 
     it("should return reports for authorized caller", async () => {
       const mockReports = [{ id: "rpt-1" }, { id: "rpt-2" }];
-      const mockService = { listReports: vi.fn().mockResolvedValue(mockReports) } as any;
-      const handler = new ListIntegrityReportsHandler({ integrityService: mockService });
+      const mockService = {
+        listReports: vi.fn().mockResolvedValue(mockReports),
+      } as any;
+      const handler = new ListIntegrityReportsHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, { limit: 10 });
 
       expect(result.status).toBe(200);
       expect(result.body).toBe(mockReports);
-      expect(mockService.listReports).toHaveBeenCalledWith(adminContext.tenantId, 10);
+      expect(mockService.listReports).toHaveBeenCalledWith(
+        adminContext.tenantId,
+        10,
+      );
     });
   });
 
   describe("GetIntegrityReportHandler", () => {
     it("should reject unauthorized callers", async () => {
       const mockService = { getReport: vi.fn() } as any;
-      const handler = new GetIntegrityReportHandler({ integrityService: mockService });
+      const handler = new GetIntegrityReportHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(regularContext, { id: "rpt-1" });
 
@@ -428,8 +486,12 @@ describe("Integrity API Handlers", () => {
     });
 
     it("should return 404 for missing report", async () => {
-      const mockService = { getReport: vi.fn().mockResolvedValue(undefined) } as any;
-      const handler = new GetIntegrityReportHandler({ integrityService: mockService });
+      const mockService = {
+        getReport: vi.fn().mockResolvedValue(undefined),
+      } as any;
+      const handler = new GetIntegrityReportHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, { id: "nonexistent" });
 
@@ -438,8 +500,12 @@ describe("Integrity API Handlers", () => {
 
     it("should return report for authorized caller", async () => {
       const mockReport = { id: "rpt-1", status: "passed" };
-      const mockService = { getReport: vi.fn().mockResolvedValue(mockReport) } as any;
-      const handler = new GetIntegrityReportHandler({ integrityService: mockService });
+      const mockService = {
+        getReport: vi.fn().mockResolvedValue(mockReport),
+      } as any;
+      const handler = new GetIntegrityReportHandler({
+        integrityService: mockService,
+      });
 
       const result = await handler.handle(adminContext, { id: "rpt-1" });
 
@@ -456,7 +522,11 @@ describe("Integrity API Handlers", () => {
 describe("Integrity metrics contracts", () => {
   it("should increment verification run metric", () => {
     const metrics = createMockMetrics();
-    metrics.integrityVerificationCompleted({ tenant: "t1", type: "range", result: "passed" });
+    metrics.integrityVerificationCompleted({
+      tenant: "t1",
+      type: "range",
+      result: "passed",
+    });
 
     expect(metrics.integrityVerificationCompleted).toHaveBeenCalledWith({
       tenant: "t1",
@@ -467,7 +537,10 @@ describe("Integrity metrics contracts", () => {
 
   it("should record verification duration", () => {
     const metrics = createMockMetrics();
-    metrics.integrityVerificationDuration(1234, { tenant: "t1", type: "export" });
+    metrics.integrityVerificationDuration(1234, {
+      tenant: "t1",
+      type: "export",
+    });
 
     expect(metrics.integrityVerificationDuration).toHaveBeenCalledWith(1234, {
       tenant: "t1",

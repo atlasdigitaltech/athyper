@@ -23,9 +23,7 @@ import type { Kysely } from "kysely";
 export class AuditLoggerService implements AuditLogger {
   constructor(private readonly db: Kysely<DB>) {}
 
-  async log(
-    event: Omit<AuditEvent, "eventId" | "timestamp">
-  ): Promise<void> {
+  async log(event: Omit<AuditEvent, "eventId" | "timestamp">): Promise<void> {
     await this.db
       .insertInto("audit.audit_log")
       .values({
@@ -42,7 +40,7 @@ export class AuditLoggerService implements AuditLogger {
   }
 
   async query(
-    filters: AuditQueryFilters
+    filters: AuditQueryFilters,
   ): Promise<PaginatedResponse<AuditEvent>> {
     const page = filters.page ?? 1;
     const pageSize = Math.min(filters.pageSize ?? 20, 100);
@@ -131,7 +129,7 @@ export class AuditLoggerService implements AuditLogger {
 
   async getResourceAudit(
     resource: string,
-    options: ListOptions = {}
+    options: ListOptions = {},
   ): Promise<PaginatedResponse<AuditEvent>> {
     return this.query({
       resource,
@@ -142,7 +140,7 @@ export class AuditLoggerService implements AuditLogger {
 
   async getUserAudit(
     userId: string,
-    options: ListOptions = {}
+    options: ListOptions = {},
   ): Promise<PaginatedResponse<AuditEvent>> {
     return this.query({
       userId,
@@ -153,7 +151,7 @@ export class AuditLoggerService implements AuditLogger {
 
   async getTenantAudit(
     tenantId: string,
-    options: ListOptions = {}
+    options: ListOptions = {},
   ): Promise<PaginatedResponse<AuditEvent>> {
     return this.query({
       tenantId,

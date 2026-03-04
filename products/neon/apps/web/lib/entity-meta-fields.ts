@@ -12,17 +12,18 @@
 import { sql, type Kysely } from "kysely";
 
 import type { CacheMetrics } from "@/lib/redis-cache";
+
 import {
-    getNamespaceVersion,
-    fieldsKey,
-    colsKey,
-    fkMapKey,
-    cacheGet,
-    cacheSet,
-    acquireComputeLock,
-    waitForLock,
-    bumpNamespaceVersion,
-    REDIS_TTL,
+  getNamespaceVersion,
+  fieldsKey,
+  colsKey,
+  fkMapKey,
+  cacheGet,
+  cacheSet,
+  acquireComputeLock,
+  waitForLock,
+  bumpNamespaceVersion,
+  REDIS_TTL,
 } from "@/lib/redis-cache";
 
 // ============================================================================
@@ -30,21 +31,21 @@ import {
 // ============================================================================
 
 export interface ServerFieldMeta {
-    name: string;
-    columnName: string;
-    dataType: string;
-    uiType: string | null;
-    isRequired: boolean;
-    isSearchable: boolean;
-    isFilterable: boolean;
-    sortOrder: number;
-    validation: Record<string, unknown> | null;
-    lookupConfig: Record<string, unknown> | null;
+  name: string;
+  columnName: string;
+  dataType: string;
+  uiType: string | null;
+  isRequired: boolean;
+  isSearchable: boolean;
+  isFilterable: boolean;
+  sortOrder: number;
+  validation: Record<string, unknown> | null;
+  lookupConfig: Record<string, unknown> | null;
 }
 
 export interface ForeignKeyInfo {
-    refSchema: string;
-    refTable: string;
+  refSchema: string;
+  refTable: string;
 }
 
 // ============================================================================
@@ -52,40 +53,47 @@ export interface ForeignKeyInfo {
 // ============================================================================
 
 const SYSTEM_COLUMNS = new Set([
-    "id", "tenant_id", "realm_id",
-    "created_at", "created_by", "updated_at", "updated_by",
-    "deleted_at", "deleted_by", "version",
+  "id",
+  "tenant_id",
+  "realm_id",
+  "created_at",
+  "created_by",
+  "updated_at",
+  "updated_by",
+  "deleted_at",
+  "deleted_by",
+  "version",
 ]);
 
 const PG_TYPE_MAP: Record<string, string> = {
-    uuid: "string",
-    text: "string",
-    varchar: "string",
-    char: "string",
-    character: "string",
-    bpchar: "string",
-    "character varying": "string",
-    integer: "number",
-    int4: "number",
-    bigint: "number",
-    int8: "number",
-    numeric: "number",
-    decimal: "number",
-    real: "number",
-    float4: "number",
-    "double precision": "number",
-    float8: "number",
-    boolean: "boolean",
-    bool: "boolean",
-    date: "date",
-    timestamp: "date",
-    "timestamp with time zone": "date",
-    "timestamp without time zone": "date",
-    timestamptz: "date",
-    jsonb: "json",
-    json: "json",
-    "text[]": "string",
-    "USER-DEFINED": "enum",
+  uuid: "string",
+  text: "string",
+  varchar: "string",
+  char: "string",
+  character: "string",
+  bpchar: "string",
+  "character varying": "string",
+  integer: "number",
+  int4: "number",
+  bigint: "number",
+  int8: "number",
+  numeric: "number",
+  decimal: "number",
+  real: "number",
+  float4: "number",
+  "double precision": "number",
+  float8: "number",
+  boolean: "boolean",
+  bool: "boolean",
+  date: "date",
+  timestamp: "date",
+  "timestamp with time zone": "date",
+  "timestamp without time zone": "date",
+  timestamptz: "date",
+  jsonb: "json",
+  json: "json",
+  "text[]": "string",
+  "USER-DEFINED": "enum",
 };
 
 // ============================================================================
@@ -93,8 +101,8 @@ const PG_TYPE_MAP: Record<string, string> = {
 // ============================================================================
 
 interface CacheEntry<T> {
-    data: T;
-    expiresAt: number;
+  data: T;
+  expiresAt: number;
 }
 
 const CACHE_TTL_MS = 600_000; // 10 minutes
@@ -112,18 +120,18 @@ const fkMapCache = new Map<string, CacheEntry<Map<string, ForeignKeyInfo>>>();
  * L1: per (tenantId:entityName), 10 min.  L2: per (tenantId:entityName:versionId), 24h.
  */
 export async function getMetaFields(
-    db: Kysely<any>,
-    entityName: string,
-    tenantId: string,
-    metrics?: CacheMetrics,
+  db: Kysely<any>,
+  entityName: string,
+  tenantId: string,
+  metrics?: CacheMetrics,
 ): Promise<ServerFieldMeta[]> {
-    // ── L1 check ──
-    const l1Key = `${tenantId}:${entityName}`;
-    const cached = metaFieldsCache.get(l1Key);
-    if (cached && cached.expiresAt > Date.now()) return cached.data;
+  // ── L1 check ──
+  const l1Key = `${tenantId}:${entityName}`;
+  const cached = metaFieldsCache.get(l1Key);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-    // Find the latest published entity_version (needed for version-pinned L2 key)
-    const versionResult = await sql<{ id: string }>`
+  // Find the latest published entity_version (needed for version-pinned L2 key)
+  const versionResult = await sql<{ id: string }>`
         SELECT ev.id
         FROM meta.entity_version ev
         JOIN meta.entity e ON e.id = ev.entity_id AND e.tenant_id = ev.tenant_id
@@ -134,53 +142,62 @@ export async function getMetaFields(
         LIMIT 1
     `.execute(db);
 
-    if (versionResult.rows.length === 0) {
-        metaFieldsCache.set(l1Key, { data: [], expiresAt: Date.now() + CACHE_TTL_MS });
-        return [];
+  if (versionResult.rows.length === 0) {
+    metaFieldsCache.set(l1Key, {
+      data: [],
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+    return [];
+  }
+
+  const versionId = versionResult.rows[0].id;
+
+  // ── L2 check ──
+  try {
+    const ns = await getNamespaceVersion();
+    const redisKey = fieldsKey(ns, tenantId, entityName, versionId);
+    const l2 = await cacheGet<ServerFieldMeta[]>(redisKey);
+    if (l2) {
+      metaFieldsCache.set(l1Key, {
+        data: l2,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      });
+      if (metrics) metrics.fields = "hit";
+      return l2;
     }
+    if (metrics) metrics.fields = "miss";
 
-    const versionId = versionResult.rows[0].id;
-
-    // ── L2 check ──
-    try {
-        const ns = await getNamespaceVersion();
-        const redisKey = fieldsKey(ns, tenantId, entityName, versionId);
-        const l2 = await cacheGet<ServerFieldMeta[]>(redisKey);
-        if (l2) {
-            metaFieldsCache.set(l1Key, { data: l2, expiresAt: Date.now() + CACHE_TTL_MS });
-            if (metrics) metrics.fields = "hit";
-            return l2;
-        }
-        if (metrics) metrics.fields = "miss";
-
-        // Lock-lite: prevent cross-worker stampede
-        const lockKey = `ep:lock:fields:${tenantId}:${entityName}:${versionId}`;
-        const acquired = await acquireComputeLock(lockKey, 5);
-        if (!acquired) {
-            await waitForLock("fields");
-            const retry = await cacheGet<ServerFieldMeta[]>(redisKey);
-            if (retry) {
-                metaFieldsCache.set(l1Key, { data: retry, expiresAt: Date.now() + CACHE_TTL_MS });
-                return retry;
-            }
-        }
-    } catch {
-        if (metrics) metrics.redis_errors++;
+    // Lock-lite: prevent cross-worker stampede
+    const lockKey = `ep:lock:fields:${tenantId}:${entityName}:${versionId}`;
+    const acquired = await acquireComputeLock(lockKey, 5);
+    if (!acquired) {
+      await waitForLock("fields");
+      const retry = await cacheGet<ServerFieldMeta[]>(redisKey);
+      if (retry) {
+        metaFieldsCache.set(l1Key, {
+          data: retry,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        return retry;
+      }
     }
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
 
-    // ── Compute from DB ──
-    const fieldResult = await sql<{
-        name: string;
-        column_name: string | null;
-        data_type: string;
-        ui_type: string | null;
-        is_required: boolean;
-        is_searchable: boolean;
-        is_filterable: boolean;
-        sort_order: number;
-        validation: Record<string, unknown> | null;
-        lookup_config: Record<string, unknown> | null;
-    }>`
+  // ── Compute from DB ──
+  const fieldResult = await sql<{
+    name: string;
+    column_name: string | null;
+    data_type: string;
+    ui_type: string | null;
+    is_required: boolean;
+    is_searchable: boolean;
+    is_filterable: boolean;
+    sort_order: number;
+    validation: Record<string, unknown> | null;
+    lookup_config: Record<string, unknown> | null;
+  }>`
         SELECT name, column_name, data_type, ui_type,
                is_required, is_searchable, is_filterable,
                sort_order, validation, lookup_config
@@ -191,35 +208,43 @@ export async function getMetaFields(
         ORDER BY sort_order ASC, name ASC
     `.execute(db);
 
-    const fields = fieldResult.rows
-        .filter((r) => !SYSTEM_COLUMNS.has(r.column_name ?? r.name))
-        .map((r) => ({
-            name: r.name,
-            columnName: r.column_name ?? r.name,
-            // Normalize to logical types (same as getColumnsFromSchema) so downstream
-            // code (buildFilterClauses, buildSearchClause) works consistently.
-            dataType: PG_TYPE_MAP[r.data_type] ?? r.data_type,
-            uiType: r.ui_type,
-            isRequired: r.is_required,
-            isSearchable: r.is_searchable,
-            isFilterable: r.is_filterable,
-            sortOrder: r.sort_order,
-            validation: r.validation,
-            lookupConfig: r.lookup_config,
-        }));
+  const fields = fieldResult.rows
+    .filter((r) => !SYSTEM_COLUMNS.has(r.column_name ?? r.name))
+    .map((r) => ({
+      name: r.name,
+      columnName: r.column_name ?? r.name,
+      // Normalize to logical types (same as getColumnsFromSchema) so downstream
+      // code (buildFilterClauses, buildSearchClause) works consistently.
+      dataType: PG_TYPE_MAP[r.data_type] ?? r.data_type,
+      uiType: r.ui_type,
+      isRequired: r.is_required,
+      isSearchable: r.is_searchable,
+      isFilterable: r.is_filterable,
+      sortOrder: r.sort_order,
+      validation: r.validation,
+      lookupConfig: r.lookup_config,
+    }));
 
-    // ── Write L1 + L2 ──
-    metaFieldsCache.set(l1Key, { data: fields, expiresAt: Date.now() + CACHE_TTL_MS });
+  // ── Write L1 + L2 ──
+  metaFieldsCache.set(l1Key, {
+    data: fields,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
 
-    try {
-        const ns = await getNamespaceVersion();
-        const bytes = await cacheSet(fieldsKey(ns, tenantId, entityName, versionId), fields, REDIS_TTL.entityFields);
-        if (metrics) metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
-    } catch {
-        if (metrics) metrics.redis_errors++;
-    }
+  try {
+    const ns = await getNamespaceVersion();
+    const bytes = await cacheSet(
+      fieldsKey(ns, tenantId, entityName, versionId),
+      fields,
+      REDIS_TTL.entityFields,
+    );
+    if (metrics)
+      metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
 
-    return fields;
+  return fields;
 }
 
 // ============================================================================
@@ -231,51 +256,57 @@ export async function getMetaFields(
  * L1: per (schema.table), 10 min.  L2: per (schema.table), 24h.
  */
 export async function getColumnsFromSchema(
-    db: Kysely<any>,
-    tableSchema: string,
-    tableName: string,
-    metrics?: CacheMetrics,
+  db: Kysely<any>,
+  tableSchema: string,
+  tableName: string,
+  metrics?: CacheMetrics,
 ): Promise<ServerFieldMeta[]> {
-    // ── L1 check ──
-    const l1Key = `${tableSchema}.${tableName}`;
-    const cached = schemaColumnsCache.get(l1Key);
-    if (cached && cached.expiresAt > Date.now()) return cached.data;
+  // ── L1 check ──
+  const l1Key = `${tableSchema}.${tableName}`;
+  const cached = schemaColumnsCache.get(l1Key);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-    // ── L2 check ──
-    try {
-        const ns = await getNamespaceVersion();
-        const redisKey = colsKey(ns, tableSchema, tableName);
-        const l2 = await cacheGet<ServerFieldMeta[]>(redisKey);
-        if (l2) {
-            schemaColumnsCache.set(l1Key, { data: l2, expiresAt: Date.now() + CACHE_TTL_MS });
-            if (metrics) metrics.cols = "hit";
-            return l2;
-        }
-        if (metrics) metrics.cols = "miss";
-
-        // Lock-lite
-        const lockKey = `ep:lock:cols:${tableSchema}.${tableName}`;
-        const acquired = await acquireComputeLock(lockKey, 10);
-        if (!acquired) {
-            await waitForLock("cols");
-            const retry = await cacheGet<ServerFieldMeta[]>(redisKey);
-            if (retry) {
-                schemaColumnsCache.set(l1Key, { data: retry, expiresAt: Date.now() + CACHE_TTL_MS });
-                return retry;
-            }
-        }
-    } catch {
-        if (metrics) metrics.redis_errors++;
+  // ── L2 check ──
+  try {
+    const ns = await getNamespaceVersion();
+    const redisKey = colsKey(ns, tableSchema, tableName);
+    const l2 = await cacheGet<ServerFieldMeta[]>(redisKey);
+    if (l2) {
+      schemaColumnsCache.set(l1Key, {
+        data: l2,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      });
+      if (metrics) metrics.cols = "hit";
+      return l2;
     }
+    if (metrics) metrics.cols = "miss";
 
-    // ── Compute from DB ──
-    const result = await sql<{
-        column_name: string;
-        data_type: string;
-        is_nullable: string;
-        ordinal_position: number;
-        udt_name: string;
-    }>`
+    // Lock-lite
+    const lockKey = `ep:lock:cols:${tableSchema}.${tableName}`;
+    const acquired = await acquireComputeLock(lockKey, 10);
+    if (!acquired) {
+      await waitForLock("cols");
+      const retry = await cacheGet<ServerFieldMeta[]>(redisKey);
+      if (retry) {
+        schemaColumnsCache.set(l1Key, {
+          data: retry,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        return retry;
+      }
+    }
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
+
+  // ── Compute from DB ──
+  const result = await sql<{
+    column_name: string;
+    data_type: string;
+    is_nullable: string;
+    ordinal_position: number;
+    udt_name: string;
+  }>`
         SELECT column_name, data_type, is_nullable, ordinal_position, udt_name
         FROM information_schema.columns
         WHERE table_schema = ${tableSchema}
@@ -283,33 +314,41 @@ export async function getColumnsFromSchema(
         ORDER BY ordinal_position ASC
     `.execute(db);
 
-    const fields = result.rows
-        .filter((r) => !SYSTEM_COLUMNS.has(r.column_name))
-        .map((r) => ({
-            name: r.column_name,
-            columnName: r.column_name,
-            dataType: PG_TYPE_MAP[r.data_type] ?? PG_TYPE_MAP[r.udt_name] ?? "string",
-            uiType: null,
-            isRequired: r.is_nullable === "NO",
-            isSearchable: (PG_TYPE_MAP[r.data_type] ?? "string") === "string",
-            isFilterable: false,
-            sortOrder: r.ordinal_position,
-            validation: null,
-            lookupConfig: null,
-        }));
+  const fields = result.rows
+    .filter((r) => !SYSTEM_COLUMNS.has(r.column_name))
+    .map((r) => ({
+      name: r.column_name,
+      columnName: r.column_name,
+      dataType: PG_TYPE_MAP[r.data_type] ?? PG_TYPE_MAP[r.udt_name] ?? "string",
+      uiType: null,
+      isRequired: r.is_nullable === "NO",
+      isSearchable: (PG_TYPE_MAP[r.data_type] ?? "string") === "string",
+      isFilterable: false,
+      sortOrder: r.ordinal_position,
+      validation: null,
+      lookupConfig: null,
+    }));
 
-    // ── Write L1 + L2 ──
-    schemaColumnsCache.set(l1Key, { data: fields, expiresAt: Date.now() + CACHE_TTL_MS });
+  // ── Write L1 + L2 ──
+  schemaColumnsCache.set(l1Key, {
+    data: fields,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
 
-    try {
-        const ns = await getNamespaceVersion();
-        const bytes = await cacheSet(colsKey(ns, tableSchema, tableName), fields, REDIS_TTL.schemaColumns);
-        if (metrics) metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
-    } catch {
-        if (metrics) metrics.redis_errors++;
-    }
+  try {
+    const ns = await getNamespaceVersion();
+    const bytes = await cacheSet(
+      colsKey(ns, tableSchema, tableName),
+      fields,
+      REDIS_TTL.schemaColumns,
+    );
+    if (metrics)
+      metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
 
-    return fields;
+  return fields;
 }
 
 // ============================================================================
@@ -322,51 +361,57 @@ export async function getColumnsFromSchema(
  * Skips system FK columns (tenant_id, realm_id).
  */
 export async function getForeignKeyMap(
-    db: Kysely<any>,
-    tableSchema: string,
-    tableName: string,
-    metrics?: CacheMetrics,
+  db: Kysely<any>,
+  tableSchema: string,
+  tableName: string,
+  metrics?: CacheMetrics,
 ): Promise<Map<string, ForeignKeyInfo>> {
-    // ── L1 check ──
-    const l1Key = `${tableSchema}.${tableName}`;
-    const cached = fkMapCache.get(l1Key);
-    if (cached && cached.expiresAt > Date.now()) return cached.data;
+  // ── L1 check ──
+  const l1Key = `${tableSchema}.${tableName}`;
+  const cached = fkMapCache.get(l1Key);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-    // ── L2 check (Map stored as Record for JSON serialization) ──
-    try {
-        const ns = await getNamespaceVersion();
-        const redisKey = fkMapKey(ns, tableSchema, tableName);
-        const l2 = await cacheGet<Record<string, ForeignKeyInfo>>(redisKey);
-        if (l2) {
-            const map = new Map(Object.entries(l2));
-            fkMapCache.set(l1Key, { data: map, expiresAt: Date.now() + CACHE_TTL_MS });
-            if (metrics) metrics.fkmap = "hit";
-            return map;
-        }
-        if (metrics) metrics.fkmap = "miss";
-
-        // Lock-lite
-        const lockKey = `ep:lock:fkmap:${tableSchema}.${tableName}`;
-        const acquired = await acquireComputeLock(lockKey, 10);
-        if (!acquired) {
-            await waitForLock("fkmap");
-            const retry = await cacheGet<Record<string, ForeignKeyInfo>>(redisKey);
-            if (retry) {
-                const map = new Map(Object.entries(retry));
-                fkMapCache.set(l1Key, { data: map, expiresAt: Date.now() + CACHE_TTL_MS });
-                return map;
-            }
-        }
-    } catch {
-        if (metrics) metrics.redis_errors++;
+  // ── L2 check (Map stored as Record for JSON serialization) ──
+  try {
+    const ns = await getNamespaceVersion();
+    const redisKey = fkMapKey(ns, tableSchema, tableName);
+    const l2 = await cacheGet<Record<string, ForeignKeyInfo>>(redisKey);
+    if (l2) {
+      const map = new Map(Object.entries(l2));
+      fkMapCache.set(l1Key, {
+        data: map,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      });
+      if (metrics) metrics.fkmap = "hit";
+      return map;
     }
+    if (metrics) metrics.fkmap = "miss";
 
-    // ── Compute from DB ──
-    const result = await sql<{
-        column_name: string;
-        ref_schema: string;
-        ref_table: string;
-    }>`
+    // Lock-lite
+    const lockKey = `ep:lock:fkmap:${tableSchema}.${tableName}`;
+    const acquired = await acquireComputeLock(lockKey, 10);
+    if (!acquired) {
+      await waitForLock("fkmap");
+      const retry = await cacheGet<Record<string, ForeignKeyInfo>>(redisKey);
+      if (retry) {
+        const map = new Map(Object.entries(retry));
+        fkMapCache.set(l1Key, {
+          data: map,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        return map;
+      }
+    }
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
+
+  // ── Compute from DB ──
+  const result = await sql<{
+    column_name: string;
+    ref_schema: string;
+    ref_table: string;
+  }>`
         SELECT kcu.column_name,
                ccu.table_schema AS ref_schema,
                ccu.table_name   AS ref_table
@@ -382,31 +427,32 @@ export async function getForeignKeyMap(
           AND tc.table_name = ${tableName}
     `.execute(db);
 
-    const map = new Map<string, ForeignKeyInfo>();
-    for (const row of result.rows) {
-        if (SYSTEM_COLUMNS.has(row.column_name)) continue;
-        map.set(row.column_name, {
-            refSchema: row.ref_schema,
-            refTable: row.ref_table,
-        });
-    }
+  const map = new Map<string, ForeignKeyInfo>();
+  for (const row of result.rows) {
+    if (SYSTEM_COLUMNS.has(row.column_name)) continue;
+    map.set(row.column_name, {
+      refSchema: row.ref_schema,
+      refTable: row.ref_table,
+    });
+  }
 
-    // ── Write L1 + L2 ──
-    fkMapCache.set(l1Key, { data: map, expiresAt: Date.now() + CACHE_TTL_MS });
+  // ── Write L1 + L2 ──
+  fkMapCache.set(l1Key, { data: map, expiresAt: Date.now() + CACHE_TTL_MS });
 
-    try {
-        const ns = await getNamespaceVersion();
-        const bytes = await cacheSet(
-            fkMapKey(ns, tableSchema, tableName),
-            Object.fromEntries(map),
-            REDIS_TTL.fkMap,
-        );
-        if (metrics) metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
-    } catch {
-        if (metrics) metrics.redis_errors++;
-    }
+  try {
+    const ns = await getNamespaceVersion();
+    const bytes = await cacheSet(
+      fkMapKey(ns, tableSchema, tableName),
+      Object.fromEntries(map),
+      REDIS_TTL.fkMap,
+    );
+    if (metrics)
+      metrics.payload_bytes = Math.max(metrics.payload_bytes ?? 0, bytes);
+  } catch {
+    if (metrics) metrics.redis_errors++;
+  }
 
-    return map;
+  return map;
 }
 
 // ============================================================================
@@ -422,40 +468,40 @@ export async function getForeignKeyMap(
  *   2. DB constraints (fallback) — only for fields without lookupConfig
  */
 export async function resolveFieldsWithFKs(
-    db: Kysely<any>,
-    entityName: string,
-    tenantId: string,
-    tableSchema: string,
-    tableName: string,
-    metrics?: CacheMetrics,
+  db: Kysely<any>,
+  entityName: string,
+  tenantId: string,
+  tableSchema: string,
+  tableName: string,
+  metrics?: CacheMetrics,
 ): Promise<ServerFieldMeta[]> {
-    // Try meta.field first
-    let fields = await getMetaFields(db, entityName, tenantId, metrics);
+  // Try meta.field first
+  let fields = await getMetaFields(db, entityName, tenantId, metrics);
 
-    // Fallback to information_schema
-    if (fields.length === 0) {
-        fields = await getColumnsFromSchema(db, tableSchema, tableName, metrics);
-    }
+  // Fallback to information_schema
+  if (fields.length === 0) {
+    fields = await getColumnsFromSchema(db, tableSchema, tableName, metrics);
+  }
 
-    // Enrich with FK lookups — DB constraints as fallback only
-    const fkMap = await getForeignKeyMap(db, tableSchema, tableName, metrics);
-    if (fkMap.size > 0) {
-        fields = fields.map((f) => {
-            // Priority: explicit lookupConfig > DB constraints
-            if (f.lookupConfig) return f;
+  // Enrich with FK lookups — DB constraints as fallback only
+  const fkMap = await getForeignKeyMap(db, tableSchema, tableName, metrics);
+  if (fkMap.size > 0) {
+    fields = fields.map((f) => {
+      // Priority: explicit lookupConfig > DB constraints
+      if (f.lookupConfig) return f;
 
-            const fk = fkMap.get(f.columnName);
-            if (fk) {
-                return {
-                    ...f,
-                    lookupConfig: { refSchema: fk.refSchema, refTable: fk.refTable },
-                };
-            }
-            return f;
-        });
-    }
+      const fk = fkMap.get(f.columnName);
+      if (fk) {
+        return {
+          ...f,
+          lookupConfig: { refSchema: fk.refSchema, refTable: fk.refTable },
+        };
+      }
+      return f;
+    });
+  }
 
-    return fields;
+  return fields;
 }
 
 // ============================================================================
@@ -466,13 +512,16 @@ export async function resolveFieldsWithFKs(
  * Invalidate entity meta field caches.
  * Clears L1 in-process caches directly, and bumps namespace version for L2.
  */
-export async function invalidateMetaFieldsCache(entityName?: string, tenantId?: string): Promise<void> {
-    if (entityName && tenantId) {
-        metaFieldsCache.delete(`${tenantId}:${entityName}`);
-    } else {
-        metaFieldsCache.clear();
-    }
-    schemaColumnsCache.clear();
-    fkMapCache.clear();
-    await bumpNamespaceVersion();
+export async function invalidateMetaFieldsCache(
+  entityName?: string,
+  tenantId?: string,
+): Promise<void> {
+  if (entityName && tenantId) {
+    metaFieldsCache.delete(`${tenantId}:${entityName}`);
+  } else {
+    metaFieldsCache.clear();
+  }
+  schemaColumnsCache.clear();
+  fkMapCache.clear();
+  await bumpNamespaceVersion();
 }

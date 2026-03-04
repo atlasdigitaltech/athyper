@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { withRetry, calculateDelay, isTransientError, DB_RETRY_POLICY, API_RETRY_POLICY } from "./retry.js";
+import {
+  withRetry,
+  calculateDelay,
+  isTransientError,
+  DB_RETRY_POLICY,
+  API_RETRY_POLICY,
+} from "./retry.js";
 
 describe("Retry Logic", () => {
   describe("calculateDelay", () => {
@@ -90,7 +96,7 @@ describe("Retry Logic", () => {
       const fn = vi.fn().mockRejectedValue(new Error("always fails"));
 
       await expect(
-        withRetry(fn, { maxAttempts: 3, initialDelay: 10 })
+        withRetry(fn, { maxAttempts: 3, initialDelay: 10 }),
       ).rejects.toThrow("always fails");
 
       expect(fn).toHaveBeenCalledTimes(3);

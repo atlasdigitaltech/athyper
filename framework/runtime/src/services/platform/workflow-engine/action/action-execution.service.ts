@@ -55,71 +55,133 @@ interface ValidationResult {
 function validateActionInput(input: ActionInput): ValidationResult {
   // Common validation
   if (!input.tenantId) {
-    return { valid: false, error: "tenantId is required", errorCode: "MISSING_TENANT_ID" };
+    return {
+      valid: false,
+      error: "tenantId is required",
+      errorCode: "MISSING_TENANT_ID",
+    };
   }
   if (!input.instanceId) {
-    return { valid: false, error: "instanceId is required", errorCode: "MISSING_INSTANCE_ID" };
+    return {
+      valid: false,
+      error: "instanceId is required",
+      errorCode: "MISSING_INSTANCE_ID",
+    };
   }
   if (!input.stepInstanceId) {
-    return { valid: false, error: "stepInstanceId is required", errorCode: "MISSING_STEP_ID" };
+    return {
+      valid: false,
+      error: "stepInstanceId is required",
+      errorCode: "MISSING_STEP_ID",
+    };
   }
   if (!input.userId) {
-    return { valid: false, error: "userId is required", errorCode: "MISSING_USER_ID" };
+    return {
+      valid: false,
+      error: "userId is required",
+      errorCode: "MISSING_USER_ID",
+    };
   }
 
   // Action-specific validation
   switch (input.action) {
     case "reject":
       if (!input.reason || input.reason.trim().length === 0) {
-        return { valid: false, error: "Rejection reason is required", errorCode: "MISSING_REASON" };
+        return {
+          valid: false,
+          error: "Rejection reason is required",
+          errorCode: "MISSING_REASON",
+        };
       }
       break;
 
     case "request_changes":
-      if (!input.requestedChanges || input.requestedChanges.trim().length === 0) {
-        return { valid: false, error: "Requested changes description is required", errorCode: "MISSING_CHANGES" };
+      if (
+        !input.requestedChanges ||
+        input.requestedChanges.trim().length === 0
+      ) {
+        return {
+          valid: false,
+          error: "Requested changes description is required",
+          errorCode: "MISSING_CHANGES",
+        };
       }
       break;
 
     case "delegate":
       if (!input.delegateToUserId) {
-        return { valid: false, error: "Delegate target user is required", errorCode: "MISSING_DELEGATE" };
+        return {
+          valid: false,
+          error: "Delegate target user is required",
+          errorCode: "MISSING_DELEGATE",
+        };
       }
       break;
 
     case "escalate":
-      if (!input.escalationReason || input.escalationReason.trim().length === 0) {
-        return { valid: false, error: "Escalation reason is required", errorCode: "MISSING_REASON" };
+      if (
+        !input.escalationReason ||
+        input.escalationReason.trim().length === 0
+      ) {
+        return {
+          valid: false,
+          error: "Escalation reason is required",
+          errorCode: "MISSING_REASON",
+        };
       }
       break;
 
     case "hold":
       if (!input.holdReason || input.holdReason.trim().length === 0) {
-        return { valid: false, error: "Hold reason is required", errorCode: "MISSING_REASON" };
+        return {
+          valid: false,
+          error: "Hold reason is required",
+          errorCode: "MISSING_REASON",
+        };
       }
       break;
 
     case "bypass":
       if (!input.reason || input.reason.trim().length === 0) {
-        return { valid: false, error: "Bypass reason is required (mandatory for admin override)", errorCode: "MISSING_REASON" };
+        return {
+          valid: false,
+          error: "Bypass reason is required (mandatory for admin override)",
+          errorCode: "MISSING_REASON",
+        };
       }
       if (!input.decision || !["approve", "reject"].includes(input.decision)) {
-        return { valid: false, error: "Bypass decision (approve/reject) is required", errorCode: "MISSING_DECISION" };
+        return {
+          valid: false,
+          error: "Bypass decision (approve/reject) is required",
+          errorCode: "MISSING_DECISION",
+        };
       }
       break;
 
     case "reassign":
       if (!input.toApprover || !input.toApprover.userId) {
-        return { valid: false, error: "New approver is required for reassignment", errorCode: "MISSING_APPROVER" };
+        return {
+          valid: false,
+          error: "New approver is required for reassignment",
+          errorCode: "MISSING_APPROVER",
+        };
       }
       if (!input.reason || input.reason.trim().length === 0) {
-        return { valid: false, error: "Reassignment reason is required", errorCode: "MISSING_REASON" };
+        return {
+          valid: false,
+          error: "Reassignment reason is required",
+          errorCode: "MISSING_REASON",
+        };
       }
       break;
 
     case "comment":
       if (!input.commentText || input.commentText.trim().length === 0) {
-        return { valid: false, error: "Comment text is required", errorCode: "MISSING_COMMENT" };
+        return {
+          valid: false,
+          error: "Comment text is required",
+          errorCode: "MISSING_COMMENT",
+        };
       }
       break;
   }
@@ -134,7 +196,9 @@ export class ActionExecutionService implements IActionExecutionService {
   constructor(
     private readonly instanceRepository: IApprovalInstanceRepository,
     private readonly taskService?: IApprovalTaskService,
-    private readonly eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+    private readonly eventHandlers?: Array<
+      (event: WorkflowEvent) => Promise<void>
+    >,
   ) {}
 
   /**
@@ -154,7 +218,10 @@ export class ActionExecutionService implements IActionExecutionService {
     const { tenantId, instanceId, stepInstanceId, userId } = input;
 
     // Get instance and step
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
     if (!instance) {
       return {
         success: false,
@@ -164,7 +231,13 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Validate instance status allows action
-    const terminalStatuses = ["approved", "rejected", "cancelled", "withdrawn", "expired"];
+    const terminalStatuses = [
+      "approved",
+      "rejected",
+      "cancelled",
+      "withdrawn",
+      "expired",
+    ];
     if (terminalStatuses.includes(instance.status)) {
       return {
         success: false,
@@ -182,12 +255,13 @@ export class ActionExecutionService implements IActionExecutionService {
         tenantId,
         instanceId,
         userId,
-        5000 // 5 second timeout
+        5000, // 5 second timeout
       );
       if (!lock) {
         return {
           success: false,
-          error: "Could not acquire lock on instance - another action may be in progress",
+          error:
+            "Could not acquire lock on instance - another action may be in progress",
           errorCode: "LOCK_UNAVAILABLE",
         };
       }
@@ -196,7 +270,10 @@ export class ActionExecutionService implements IActionExecutionService {
 
     try {
       // Re-check instance after lock to ensure it hasn't changed
-      const lockedInstance = await this.instanceRepository.getById(tenantId, instanceId);
+      const lockedInstance = await this.instanceRepository.getById(
+        tenantId,
+        instanceId,
+      );
       if (lockedInstance && lockedInstance.version !== expectedVersion) {
         return {
           success: false,
@@ -205,7 +282,10 @@ export class ActionExecutionService implements IActionExecutionService {
         };
       }
 
-      const stepInstances = await this.instanceRepository.getStepInstances(tenantId, instanceId);
+      const stepInstances = await this.instanceRepository.getStepInstances(
+        tenantId,
+        instanceId,
+      );
       const stepInstance = stepInstances.find((s) => s.id === stepInstanceId);
       if (!stepInstance) {
         return {
@@ -216,38 +296,55 @@ export class ActionExecutionService implements IActionExecutionService {
       }
 
       // Actions that bypass standard approver validation
-    const specialActions = ["resume", "recall", "withdraw", "bypass", "reassign", "comment", "release"];
-    if (!specialActions.includes(input.action)) {
-      // Map to valid ApprovalActionType for validation
-      const actionForValidation = input.action as ApprovalActionType;
-      const canPerform = await this.canPerformAction(
-        tenantId,
-        instanceId,
-        stepInstanceId,
-        userId,
-        actionForValidation
-      );
+      const specialActions = [
+        "resume",
+        "recall",
+        "withdraw",
+        "bypass",
+        "reassign",
+        "comment",
+        "release",
+      ];
+      if (!specialActions.includes(input.action)) {
+        // Map to valid ApprovalActionType for validation
+        const actionForValidation = input.action as ApprovalActionType;
+        const canPerform = await this.canPerformAction(
+          tenantId,
+          instanceId,
+          stepInstanceId,
+          userId,
+          actionForValidation,
+        );
 
-      if (!canPerform.allowed) {
-        return {
-          success: false,
-          error: canPerform.reason || "Action not allowed",
-          errorCode: "ACTION_NOT_ALLOWED",
-        };
+        if (!canPerform.allowed) {
+          return {
+            success: false,
+            error: canPerform.reason || "Action not allowed",
+            errorCode: "ACTION_NOT_ALLOWED",
+          };
+        }
       }
-    }
 
       // Execute based on action type
       let result: ActionResult;
       switch (input.action) {
         case "approve":
-          result = await this.executeApprove(instance, stepInstance, stepInstances, input);
+          result = await this.executeApprove(
+            instance,
+            stepInstance,
+            stepInstances,
+            input,
+          );
           break;
         case "reject":
           result = await this.executeReject(instance, stepInstance, input);
           break;
         case "request_changes":
-          result = await this.executeRequestChanges(instance, stepInstance, input);
+          result = await this.executeRequestChanges(
+            instance,
+            stepInstance,
+            input,
+          );
           break;
         case "delegate":
           result = await this.executeDelegate(instance, stepInstance, input);
@@ -268,7 +365,12 @@ export class ActionExecutionService implements IActionExecutionService {
           result = await this.executeWithdraw(instance, stepInstance, input);
           break;
         case "bypass":
-          result = await this.executeBypass(instance, stepInstance, stepInstances, input);
+          result = await this.executeBypass(
+            instance,
+            stepInstance,
+            stepInstances,
+            input,
+          );
           break;
         case "reassign":
           result = await this.executeReassign(instance, stepInstance, input);
@@ -290,7 +392,11 @@ export class ActionExecutionService implements IActionExecutionService {
     } finally {
       // Always release the lock
       if (lockToken && this.instanceRepository.releaseInstanceLock) {
-        await this.instanceRepository.releaseInstanceLock(tenantId, instanceId, lockToken);
+        await this.instanceRepository.releaseInstanceLock(
+          tenantId,
+          instanceId,
+          lockToken,
+        );
       }
     }
   }
@@ -302,14 +408,14 @@ export class ActionExecutionService implements IActionExecutionService {
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
     allSteps: ApprovalStepInstance[],
-    input: ApproveActionInput
+    input: ApproveActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, comment, attachments } = input;
     const now = new Date();
 
     // Find the approver assignment
     const approverIndex = stepInstance.approvers.findIndex(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     if (approverIndex === -1) {
@@ -339,19 +445,26 @@ export class ActionExecutionService implements IActionExecutionService {
 
     // Check if step is now complete
     const stepComplete = this.isStepComplete(stepInstance, approvalCounts);
-    const stepOutcome = stepComplete ? this.determineStepOutcome(stepInstance, approvalCounts) : undefined;
+    const stepOutcome = stepComplete
+      ? this.determineStepOutcome(stepInstance, approvalCounts)
+      : undefined;
 
     // Update step instance
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        approvers: updatedApprovers,
-        approvalCounts,
-        status: stepComplete ? (stepOutcome === "approved" ? "approved" : "rejected") : "active",
-        completedAt: stepComplete ? now : undefined,
-      }
-    );
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          approvers: updatedApprovers,
+          approvalCounts,
+          status: stepComplete
+            ? stepOutcome === "approved"
+              ? "approved"
+              : "rejected"
+            : "active",
+          completedAt: stepComplete ? now : undefined,
+        },
+      );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -375,9 +488,18 @@ export class ActionExecutionService implements IActionExecutionService {
     // Complete the task
     if (this.taskService) {
       try {
-        const task = await this.findTaskForApprover(tenantId, stepInstance.id, userId);
+        const task = await this.findTaskForApprover(
+          tenantId,
+          stepInstance.id,
+          userId,
+        );
         if (task) {
-          await this.taskService.completeTask(tenantId, task.id, "approve", userId);
+          await this.taskService.completeTask(
+            tenantId,
+            task.id,
+            "approve",
+            userId,
+          );
         }
       } catch (err) {
         // Log but don't fail
@@ -402,7 +524,7 @@ export class ActionExecutionService implements IActionExecutionService {
         updatedStepInstance,
         allSteps,
         stepOutcome!,
-        result
+        result,
       );
     }
 
@@ -428,14 +550,14 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeReject(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: RejectActionInput
+    input: RejectActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, reason, comment, targetEntityState } = input;
     const now = new Date();
 
     // Find the approver assignment
     const approverIndex = stepInstance.approvers.findIndex(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     if (approverIndex === -1) {
@@ -464,32 +586,37 @@ export class ActionExecutionService implements IActionExecutionService {
     };
 
     // Mark step as rejected
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        approvers: updatedApprovers,
-        approvalCounts,
-        status: "rejected",
-        completedAt: now,
-      }
-    );
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          approvers: updatedApprovers,
+          approvalCounts,
+          status: "rejected",
+          completedAt: now,
+        },
+      );
 
     // Mark workflow as rejected
     const targetState = targetEntityState || "rejected";
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "rejected",
-      entityState: targetState as any,
-      decision: {
-        outcome: "rejected",
-        decidedAt: now,
-        decidedBy: userId,
-        reason: reason || comment,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "rejected",
+        entityState: targetState as any,
+        decision: {
+          outcome: "rejected",
+          decidedAt: now,
+          decidedBy: userId,
+          reason: reason || comment,
+        },
+        completedAt: now,
+        updatedAt: now,
+        updatedBy: userId,
       },
-      completedAt: now,
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -515,7 +642,7 @@ export class ActionExecutionService implements IActionExecutionService {
     await this.instanceRepository.releaseLock(
       tenantId,
       instance.entity.type,
-      instance.entity.id
+      instance.entity.id,
     );
 
     // Fire events
@@ -559,14 +686,21 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeRequestChanges(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: RequestChangesInput
+    input: RequestChangesInput,
   ): Promise<ActionResult> {
-    const { tenantId, userId, requestedChanges, fieldsToChange, resubmissionDeadline, comment } = input;
+    const {
+      tenantId,
+      userId,
+      requestedChanges,
+      fieldsToChange,
+      resubmissionDeadline,
+      comment,
+    } = input;
     const now = new Date();
 
     // Find the approver assignment
     const approverIndex = stepInstance.approvers.findIndex(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     if (approverIndex === -1) {
@@ -587,35 +721,41 @@ export class ActionExecutionService implements IActionExecutionService {
     };
 
     // Update step - paused for changes
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        approvers: updatedApprovers,
-        status: "active", // Keep active but paused
-      }
-    );
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          approvers: updatedApprovers,
+          status: "active", // Keep active but paused
+        },
+      );
 
     // Get current revision count
-    const currentRevisionCount = (instance.metadata?.revisionCount as number) || 0;
+    const currentRevisionCount =
+      (instance.metadata?.revisionCount as number) || 0;
 
     // Update instance - mark as changes requested
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      entityState: "changes_requested",
-      metadata: {
-        ...instance.metadata,
-        revisionCount: currentRevisionCount + 1,
-        lastChangeRequest: {
-          requestedBy: userId,
-          requestedAt: now,
-          requestedChanges,
-          fieldsToChange,
-          resubmissionDeadline,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        entityState: "changes_requested",
+        metadata: {
+          ...instance.metadata,
+          revisionCount: currentRevisionCount + 1,
+          lastChangeRequest: {
+            requestedBy: userId,
+            requestedAt: now,
+            requestedChanges,
+            fieldsToChange,
+            resubmissionDeadline,
+          },
         },
+        updatedAt: now,
+        updatedBy: userId,
       },
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -669,14 +809,21 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeDelegate(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: DelegateActionInput
+    input: DelegateActionInput,
   ): Promise<ActionResult> {
-    const { tenantId, userId, delegateToUserId, delegateToDisplayName, delegationReason, comment } = input;
+    const {
+      tenantId,
+      userId,
+      delegateToUserId,
+      delegateToDisplayName,
+      delegationReason,
+      comment,
+    } = input;
     const now = new Date();
 
     // Find the approver assignment
     const approverIndex = stepInstance.approvers.findIndex(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     if (approverIndex === -1) {
@@ -726,14 +873,15 @@ export class ActionExecutionService implements IActionExecutionService {
     };
 
     // Update step instance
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        approvers: updatedApprovers,
-        approvalCounts,
-      }
-    );
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          approvers: updatedApprovers,
+          approvalCounts,
+        },
+      );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -757,14 +905,18 @@ export class ActionExecutionService implements IActionExecutionService {
     // Delegate the task
     if (this.taskService) {
       try {
-        const task = await this.findTaskForApprover(tenantId, stepInstance.id, userId);
+        const task = await this.findTaskForApprover(
+          tenantId,
+          stepInstance.id,
+          userId,
+        );
         if (task) {
           await this.taskService.delegateTask(
             tenantId,
             task.id,
             delegateToUserId,
             userId,
-            delegationReason
+            delegationReason,
           );
         }
       } catch (err) {
@@ -804,7 +956,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeEscalate(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: EscalateActionInput
+    input: EscalateActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, escalationReason, targetLevel } = input;
     const now = new Date();
@@ -813,17 +965,18 @@ export class ActionExecutionService implements IActionExecutionService {
     const newLevel = targetLevel ?? currentLevel + 1;
 
     // Update step with escalation
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        status: "active",
-        sla: {
-          ...stepInstance.sla,
-          escalationCount: newLevel,
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          status: "active",
+          sla: {
+            ...stepInstance.sla,
+            escalationCount: newLevel,
+          },
         },
-      }
-    );
+      );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -892,26 +1045,30 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeHold(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: HoldActionInput
+    input: HoldActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, holdReason, expectedResumeDate, comment } = input;
     const now = new Date();
 
     // Update instance to on_hold
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "on_hold",
-      metadata: {
-        ...instance.metadata,
-        holdInfo: {
-          heldBy: userId,
-          heldAt: now,
-          reason: holdReason,
-          expectedResumeDate,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "on_hold",
+        metadata: {
+          ...instance.metadata,
+          holdInfo: {
+            heldBy: userId,
+            heldAt: now,
+            reason: holdReason,
+            expectedResumeDate,
+          },
         },
+        updatedAt: now,
+        updatedBy: userId,
       },
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -941,7 +1098,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeResume(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: ResumeActionInput
+    input: ResumeActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, resumeComment, comment } = input;
     const now = new Date();
@@ -955,20 +1112,24 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Update instance to resume
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "in_progress",
-      metadata: {
-        ...instance.metadata,
-        holdInfo: undefined,
-        lastResumed: {
-          resumedBy: userId,
-          resumedAt: now,
-          comment: resumeComment,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "in_progress",
+        metadata: {
+          ...instance.metadata,
+          holdInfo: undefined,
+          lastResumed: {
+            resumedBy: userId,
+            resumedAt: now,
+            comment: resumeComment,
+          },
         },
+        updatedAt: now,
+        updatedBy: userId,
       },
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -997,7 +1158,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeRecall(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: RecallActionInput
+    input: RecallActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, recallReason, comment } = input;
     const now = new Date();
@@ -1012,19 +1173,23 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Update instance to withdrawn
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "withdrawn",
-      entityState: "draft",
-      decision: {
-        outcome: "withdrawn",
-        decidedAt: now,
-        decidedBy: userId,
-        reason: recallReason || "Recalled by requester",
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "withdrawn",
+        entityState: "draft",
+        decision: {
+          outcome: "withdrawn",
+          decidedAt: now,
+          decidedBy: userId,
+          reason: recallReason || "Recalled by requester",
+        },
+        completedAt: now,
+        updatedAt: now,
+        updatedBy: userId,
       },
-      completedAt: now,
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -1048,7 +1213,7 @@ export class ActionExecutionService implements IActionExecutionService {
     await this.instanceRepository.releaseLock(
       tenantId,
       instance.entity.type,
-      instance.entity.id
+      instance.entity.id,
     );
 
     return {
@@ -1070,7 +1235,7 @@ export class ActionExecutionService implements IActionExecutionService {
     completedStep: ApprovalStepInstance,
     allSteps: ApprovalStepInstance[],
     outcome: "approved" | "rejected",
-    result: ActionResult
+    result: ActionResult,
   ): Promise<void> {
     const now = new Date();
 
@@ -1079,7 +1244,7 @@ export class ActionExecutionService implements IActionExecutionService {
 
     // Find next steps to activate
     const pendingSteps = allSteps.filter(
-      (s) => s.status === "pending" && !completedStepIds.includes(s.id)
+      (s) => s.status === "pending" && !completedStepIds.includes(s.id),
     );
 
     // Check dependencies
@@ -1107,13 +1272,17 @@ export class ActionExecutionService implements IActionExecutionService {
             status: "active",
             activatedAt: now,
             dependenciesSatisfied: true,
-          }
+          },
         );
         activatedSteps.push(activated);
 
         // Create tasks for the step
         if (this.taskService) {
-          await (this.taskService as any).createTasksForStep(tenantId, instance, activated);
+          await (this.taskService as any).createTasksForStep(
+            tenantId,
+            instance,
+            activated,
+          );
         }
 
         // Fire step activated event
@@ -1141,18 +1310,22 @@ export class ActionExecutionService implements IActionExecutionService {
       // No more steps - workflow is complete
       const finalOutcome = outcome;
 
-      const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-        status: finalOutcome,
-        entityState: finalOutcome,
-        completedStepIds,
-        activeStepIds: [],
-        decision: {
-          outcome: finalOutcome,
-          decidedAt: now,
+      const updatedInstance = await this.instanceRepository.update(
+        tenantId,
+        instance.id,
+        {
+          status: finalOutcome,
+          entityState: finalOutcome,
+          completedStepIds,
+          activeStepIds: [],
+          decision: {
+            outcome: finalOutcome,
+            decidedAt: now,
+          },
+          completedAt: now,
+          updatedAt: now,
         },
-        completedAt: now,
-        updatedAt: now,
-      });
+      );
 
       result.instance = updatedInstance;
       result.workflowComplete = true;
@@ -1162,13 +1335,16 @@ export class ActionExecutionService implements IActionExecutionService {
       await this.instanceRepository.releaseLock(
         tenantId,
         instance.entity.type,
-        instance.entity.id
+        instance.entity.id,
       );
 
       // Fire workflow completed event
       await this.fireEvent({
         id: generateId("evt"),
-        type: finalOutcome === "approved" ? "workflow.approved" : "workflow.rejected",
+        type:
+          finalOutcome === "approved"
+            ? "workflow.approved"
+            : "workflow.rejected",
         tenantId,
         instanceId: instance.id,
         entity: { type: instance.entity.type, id: instance.entity.id },
@@ -1195,7 +1371,7 @@ export class ActionExecutionService implements IActionExecutionService {
    */
   private isStepComplete(
     step: ApprovalStepInstance,
-    counts: ApprovalStepInstance["approvalCounts"]
+    counts: ApprovalStepInstance["approvalCounts"],
   ): boolean {
     switch (step.requirement) {
       case "any":
@@ -1209,13 +1385,18 @@ export class ActionExecutionService implements IActionExecutionService {
       case "majority": {
         // Complete if majority approved or rejected
         const majorityNeeded = Math.floor(counts.total / 2) + 1;
-        return counts.approved >= majorityNeeded || counts.rejected >= majorityNeeded;
+        return (
+          counts.approved >= majorityNeeded || counts.rejected >= majorityNeeded
+        );
       }
 
       case "quorum": {
         // Complete if quorum reached
-        const requiredCount = step.quorum?.requiredCount || Math.ceil(counts.total / 2);
-        return counts.approved >= requiredCount || counts.rejected >= requiredCount;
+        const requiredCount =
+          step.quorum?.requiredCount || Math.ceil(counts.total / 2);
+        return (
+          counts.approved >= requiredCount || counts.rejected >= requiredCount
+        );
       }
 
       default:
@@ -1228,7 +1409,7 @@ export class ActionExecutionService implements IActionExecutionService {
    */
   private determineStepOutcome(
     step: ApprovalStepInstance,
-    counts: ApprovalStepInstance["approvalCounts"]
+    counts: ApprovalStepInstance["approvalCounts"],
   ): "approved" | "rejected" {
     switch (step.requirement) {
       case "any":
@@ -1257,16 +1438,23 @@ export class ActionExecutionService implements IActionExecutionService {
     instanceId: string,
     stepInstanceId: string,
     userId: string,
-    action: ApprovalActionType
+    action: ApprovalActionType,
   ): Promise<{ allowed: boolean; reason?: string }> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
     if (!instance) {
       return { allowed: false, reason: "Instance not found" };
     }
 
     // Check instance status
-    if (instance.status === "approved" || instance.status === "rejected" ||
-        instance.status === "cancelled" || instance.status === "withdrawn") {
+    if (
+      instance.status === "approved" ||
+      instance.status === "rejected" ||
+      instance.status === "cancelled" ||
+      instance.status === "withdrawn"
+    ) {
       return { allowed: false, reason: "Workflow is already completed" };
     }
 
@@ -1275,7 +1463,10 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Get step instance
-    const stepInstances = await this.instanceRepository.getStepInstances(tenantId, instanceId);
+    const stepInstances = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instanceId,
+    );
     const stepInstance = stepInstances.find((s) => s.id === stepInstanceId);
 
     if (!stepInstance) {
@@ -1288,7 +1479,7 @@ export class ActionExecutionService implements IActionExecutionService {
 
     // Check if user has pending approval
     const approver = stepInstance.approvers.find(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     // Actions that don't require the user to be an approver
@@ -1299,11 +1490,17 @@ export class ActionExecutionService implements IActionExecutionService {
 
     // Check allowed actions from template
     const template = instance.workflowSnapshot.definition;
-    const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
-    const allowedActions = stepDef?.allowedActions || template.allowedActions || [];
+    const stepDef = template.steps.find(
+      (s) => s.id === stepInstance.stepDefinitionId,
+    );
+    const allowedActions =
+      stepDef?.allowedActions || template.allowedActions || [];
 
     if (allowedActions.length > 0 && !allowedActions.includes(action)) {
-      return { allowed: false, reason: `Action '${action}' is not allowed for this step` };
+      return {
+        allowed: false,
+        reason: `Action '${action}' is not allowed for this step`,
+      };
     }
 
     return { allowed: true };
@@ -1316,28 +1513,37 @@ export class ActionExecutionService implements IActionExecutionService {
     tenantId: string,
     instanceId: string,
     stepInstanceId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalActionType[]> {
-    const instance = await this.instanceRepository.getById(tenantId, instanceId);
+    const instance = await this.instanceRepository.getById(
+      tenantId,
+      instanceId,
+    );
     if (!instance) return [];
 
-    const stepInstances = await this.instanceRepository.getStepInstances(tenantId, instanceId);
+    const stepInstances = await this.instanceRepository.getStepInstances(
+      tenantId,
+      instanceId,
+    );
     const stepInstance = stepInstances.find((s) => s.id === stepInstanceId);
     if (!stepInstance) return [];
 
     // Get allowed actions from template
     const template = instance.workflowSnapshot.definition;
-    const stepDef = template.steps.find((s) => s.id === stepInstance.stepDefinitionId);
-    const allowedActions = stepDef?.allowedActions || template.allowedActions || [
-      "approve",
-      "reject",
-      "delegate",
-      "request_changes",
-    ];
+    const stepDef = template.steps.find(
+      (s) => s.id === stepInstance.stepDefinitionId,
+    );
+    const allowedActions = stepDef?.allowedActions ||
+      template.allowedActions || [
+        "approve",
+        "reject",
+        "delegate",
+        "request_changes",
+      ];
 
     // Filter based on user's assignment
     const approver = stepInstance.approvers.find(
-      (a) => a.userId === userId && a.status === "pending"
+      (a) => a.userId === userId && a.status === "pending",
     );
 
     if (!approver) {
@@ -1354,7 +1560,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeWithdraw(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: WithdrawActionInput
+    input: WithdrawActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, reason, comment } = input;
     const now = new Date();
@@ -1370,7 +1576,13 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Check if instance can be withdrawn
-    const terminalStatuses = ["approved", "rejected", "cancelled", "withdrawn", "expired"];
+    const terminalStatuses = [
+      "approved",
+      "rejected",
+      "cancelled",
+      "withdrawn",
+      "expired",
+    ];
     if (terminalStatuses.includes(instance.status)) {
       return {
         success: false,
@@ -1380,19 +1592,23 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Update instance to withdrawn
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "withdrawn",
-      entityState: "draft",
-      decision: {
-        outcome: "withdrawn",
-        decidedAt: now,
-        decidedBy: userId,
-        reason: reason || "Withdrawn by requester",
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "withdrawn",
+        entityState: "draft",
+        decision: {
+          outcome: "withdrawn",
+          decidedAt: now,
+          decidedBy: userId,
+          reason: reason || "Withdrawn by requester",
+        },
+        completedAt: now,
+        updatedAt: now,
+        updatedBy: userId,
       },
-      completedAt: now,
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -1416,7 +1632,7 @@ export class ActionExecutionService implements IActionExecutionService {
     await this.instanceRepository.releaseLock(
       tenantId,
       instance.entity.type,
-      instance.entity.id
+      instance.entity.id,
     );
 
     // Fire events
@@ -1428,7 +1644,10 @@ export class ActionExecutionService implements IActionExecutionService {
       entity: { type: instance.entity.type, id: instance.entity.id },
       timestamp: now,
       actor: { userId },
-      payload: { reason: reason || "Withdrawn by requester", withdrawnBy: userId },
+      payload: {
+        reason: reason || "Withdrawn by requester",
+        withdrawnBy: userId,
+      },
     });
 
     return {
@@ -1448,16 +1667,23 @@ export class ActionExecutionService implements IActionExecutionService {
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
     allSteps: ApprovalStepInstance[],
-    input: BypassActionInput
+    input: BypassActionInput,
   ): Promise<ActionResult> {
-    const { tenantId, userId, decision, reason, completeRemainingSteps } = input;
+    const { tenantId, userId, decision, reason, completeRemainingSteps } =
+      input;
     const now = new Date();
 
     // TODO: Validate admin privileges
     // For now, allow bypass (in production, check roles/permissions)
 
     // Check if instance can be bypassed
-    const terminalStatuses = ["approved", "rejected", "cancelled", "withdrawn", "expired"];
+    const terminalStatuses = [
+      "approved",
+      "rejected",
+      "cancelled",
+      "withdrawn",
+      "expired",
+    ];
     if (terminalStatuses.includes(instance.status)) {
       return {
         success: false,
@@ -1467,38 +1693,53 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Mark all pending approvers in current step as bypassed
-    const updatedApprovers: AssignedApprover[] = stepInstance.approvers.map((a) => {
-      if (a.status === "pending") {
-        return {
-          ...a,
-          status: decision === "approve" ? "approved" : "rejected",
-          actionTaken: decision === "approve" ? "approve" : "reject",
-          respondedAt: now,
-          comment: `Admin bypass: ${reason}`,
-        };
-      }
-      return a;
-    });
+    const updatedApprovers: AssignedApprover[] = stepInstance.approvers.map(
+      (a) => {
+        if (a.status === "pending") {
+          return {
+            ...a,
+            status: decision === "approve" ? "approved" : "rejected",
+            actionTaken: decision === "approve" ? "approve" : "reject",
+            respondedAt: now,
+            comment: `Admin bypass: ${reason}`,
+          };
+        }
+        return a;
+      },
+    );
 
     // Update step
-    await this.instanceRepository.updateStepInstance(tenantId, stepInstance.id, {
-      status: decision === "approve" ? "approved" : "rejected",
-      approvers: updatedApprovers,
-      approvalCounts: {
-        ...stepInstance.approvalCounts,
-        approved: decision === "approve" ? stepInstance.approvalCounts.total : stepInstance.approvalCounts.approved,
-        rejected: decision === "reject" ? stepInstance.approvalCounts.total : stepInstance.approvalCounts.rejected,
-        pending: 0,
+    await this.instanceRepository.updateStepInstance(
+      tenantId,
+      stepInstance.id,
+      {
+        status: decision === "approve" ? "approved" : "rejected",
+        approvers: updatedApprovers,
+        approvalCounts: {
+          ...stepInstance.approvalCounts,
+          approved:
+            decision === "approve"
+              ? stepInstance.approvalCounts.total
+              : stepInstance.approvalCounts.approved,
+          rejected:
+            decision === "reject"
+              ? stepInstance.approvalCounts.total
+              : stepInstance.approvalCounts.rejected,
+          pending: 0,
+        },
+        completedAt: now,
+        autoApproved: true,
+        autoApproveReason: `Admin bypass by ${userId}: ${reason}`,
       },
-      completedAt: now,
-      autoApproved: true,
-      autoApproveReason: `Admin bypass by ${userId}: ${reason}`,
-    });
+    );
 
     // If completing remaining steps, mark them all
     if (completeRemainingSteps) {
       for (const step of allSteps) {
-        if (step.id !== stepInstance.id && (step.status === "pending" || step.status === "active")) {
+        if (
+          step.id !== stepInstance.id &&
+          (step.status === "pending" || step.status === "active")
+        ) {
           await this.instanceRepository.updateStepInstance(tenantId, step.id, {
             status: "skipped",
             skipReason: `Skipped due to admin bypass: ${reason}`,
@@ -1509,19 +1750,23 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Update instance
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: decision === "approve" ? "approved" : "rejected",
-      entityState: decision === "approve" ? "approved" : "rejected",
-      decision: {
-        outcome: decision === "approve" ? "approved" : "rejected",
-        decidedAt: now,
-        decidedBy: userId,
-        reason: `Admin bypass: ${reason}`,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: decision === "approve" ? "approved" : "rejected",
+        entityState: decision === "approve" ? "approved" : "rejected",
+        decision: {
+          outcome: decision === "approve" ? "approved" : "rejected",
+          decidedAt: now,
+          decidedBy: userId,
+          reason: `Admin bypass: ${reason}`,
+        },
+        completedAt: now,
+        updatedAt: now,
+        updatedBy: userId,
       },
-      completedAt: now,
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -1550,7 +1795,7 @@ export class ActionExecutionService implements IActionExecutionService {
     await this.instanceRepository.releaseLock(
       tenantId,
       instance.entity.type,
-      instance.entity.id
+      instance.entity.id,
     );
 
     // Fire events
@@ -1585,7 +1830,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeReassign(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: ReassignActionInput
+    input: ReassignActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, fromApproverId, toApprover, reason } = input;
     const now = new Date();
@@ -1607,7 +1852,7 @@ export class ActionExecutionService implements IActionExecutionService {
     if (fromApproverId) {
       // Find and update the original approver
       const fromApproverIndex = updatedApprovers.findIndex(
-        (a) => a.userId === fromApproverId && a.status === "pending"
+        (a) => a.userId === fromApproverId && a.status === "pending",
       );
 
       if (fromApproverIndex === -1) {
@@ -1656,14 +1901,15 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Update step instance
-    const updatedStepInstance = await this.instanceRepository.updateStepInstance(
-      tenantId,
-      stepInstance.id,
-      {
-        approvers: updatedApprovers,
-        approvalCounts,
-      }
-    );
+    const updatedStepInstance =
+      await this.instanceRepository.updateStepInstance(
+        tenantId,
+        stepInstance.id,
+        {
+          approvers: updatedApprovers,
+          approvalCounts,
+        },
+      );
 
     // Record the action
     const actionRecord = await this.instanceRepository.recordAction(tenantId, {
@@ -1690,7 +1936,11 @@ export class ActionExecutionService implements IActionExecutionService {
         // Task service should handle cancellation
       }
       // Create task for new approver
-      await (this.taskService as any).createTasksForStep?.(tenantId, instance, updatedStepInstance);
+      await (this.taskService as any).createTasksForStep?.(
+        tenantId,
+        instance,
+        updatedStepInstance,
+      );
     }
 
     // Fire event
@@ -1726,7 +1976,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeComment(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: CommentActionInput
+    input: CommentActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, commentText, isInternal } = input;
     const now = new Date();
@@ -1763,7 +2013,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async executeRelease(
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    input: ReleaseActionInput
+    input: ReleaseActionInput,
   ): Promise<ActionResult> {
     const { tenantId, userId, releaseComment, renotifyApprovers } = input;
     const now = new Date();
@@ -1777,39 +2027,52 @@ export class ActionExecutionService implements IActionExecutionService {
     }
 
     // Calculate hold duration for SLA adjustment
-    const holdInfo = instance.metadata?.holdInfo as { heldAt?: string } | undefined;
+    const holdInfo = instance.metadata?.holdInfo as
+      | { heldAt?: string }
+      | undefined;
     const holdStartTime = holdInfo?.heldAt ? new Date(holdInfo.heldAt) : now;
     const holdDurationMs = now.getTime() - holdStartTime.getTime();
 
     // Update instance to resume
-    const updatedInstance = await this.instanceRepository.update(tenantId, instance.id, {
-      status: "in_progress",
-      metadata: {
-        ...instance.metadata,
-        holdInfo: undefined,
-        lastRelease: {
-          releasedBy: userId,
-          releasedAt: now,
-          comment: releaseComment,
-          holdDurationMs,
+    const updatedInstance = await this.instanceRepository.update(
+      tenantId,
+      instance.id,
+      {
+        status: "in_progress",
+        metadata: {
+          ...instance.metadata,
+          holdInfo: undefined,
+          lastRelease: {
+            releasedBy: userId,
+            releasedAt: now,
+            comment: releaseComment,
+            holdDurationMs,
+          },
         },
+        updatedAt: now,
+        updatedBy: userId,
       },
-      updatedAt: now,
-      updatedBy: userId,
-    });
+    );
 
     // Extend SLA deadlines by hold duration
     if (holdDurationMs > 0) {
-      const steps = await this.instanceRepository.getStepInstances(tenantId, instance.id);
+      const steps = await this.instanceRepository.getStepInstances(
+        tenantId,
+        instance.id,
+      );
       for (const step of steps) {
         if (step.status === "active" && step.sla?.completionDueAt) {
-          const newDueAt = new Date(new Date(step.sla.completionDueAt).getTime() + holdDurationMs);
+          const newDueAt = new Date(
+            new Date(step.sla.completionDueAt).getTime() + holdDurationMs,
+          );
           await this.instanceRepository.updateStepInstance(tenantId, step.id, {
             sla: {
               ...step.sla,
               completionDueAt: newDueAt,
               responseDueAt: step.sla.responseDueAt
-                ? new Date(new Date(step.sla.responseDueAt).getTime() + holdDurationMs)
+                ? new Date(
+                    new Date(step.sla.responseDueAt).getTime() + holdDurationMs,
+                  )
                 : undefined,
             },
           });
@@ -1869,7 +2132,7 @@ export class ActionExecutionService implements IActionExecutionService {
   private async findTaskForApprover(
     _tenantId: string,
     _stepInstanceId: string,
-    _userId: string
+    _userId: string,
   ): Promise<{ id: string } | undefined> {
     // This would query the task repository
     // For now, return undefined - the task service will handle this internally
@@ -1898,7 +2161,11 @@ export class ActionExecutionService implements IActionExecutionService {
 export function createActionExecutionService(
   instanceRepository: IApprovalInstanceRepository,
   taskService?: IApprovalTaskService,
-  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>
+  eventHandlers?: Array<(event: WorkflowEvent) => Promise<void>>,
 ): IActionExecutionService {
-  return new ActionExecutionService(instanceRepository, taskService, eventHandlers);
+  return new ActionExecutionService(
+    instanceRepository,
+    taskService,
+    eventHandlers,
+  );
 }

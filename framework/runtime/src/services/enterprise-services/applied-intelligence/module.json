@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "AI",
-    "name":  "Applied Intelligence",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Enterprise"
+  "code": "AI",
+  "name": "Applied Intelligence",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Enterprise"
 }

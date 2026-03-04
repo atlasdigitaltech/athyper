@@ -10,15 +10,20 @@ import type { CommitmentStatus } from "./types.js";
 /**
  * Validate a commitment status transition.
  */
-export function isValidCommitmentTransition(current: CommitmentStatus, target: CommitmentStatus): boolean {
-    return validateTransition(current, target, COMMITMENT_TRANSITIONS);
+export function isValidCommitmentTransition(
+  current: CommitmentStatus,
+  target: CommitmentStatus,
+): boolean {
+  return validateTransition(current, target, COMMITMENT_TRANSITIONS);
 }
 
 /**
  * Get allowed next statuses.
  */
-export function getAllowedCommitmentTransitions(current: CommitmentStatus): CommitmentStatus[] {
-    return COMMITMENT_TRANSITIONS[current] ?? [];
+export function getAllowedCommitmentTransitions(
+  current: CommitmentStatus,
+): CommitmentStatus[] {
+  return COMMITMENT_TRANSITIONS[current] ?? [];
 }
 
 /**
@@ -26,10 +31,10 @@ export function getAllowedCommitmentTransitions(current: CommitmentStatus): Comm
  * MC-4 compliance: Uses compareAmounts. NO FLOAT.
  */
 export function determineStatusFromFulfillment(
-    totalAmount: string,
-    fulfilledAmount: string,
+  totalAmount: string,
+  fulfilledAmount: string,
 ): CommitmentStatus {
-    if (compareAmounts(fulfilledAmount, "0") <= 0) return "ACTIVE";
-    if (compareAmounts(fulfilledAmount, totalAmount) >= 0) return "FULFILLED";
-    return "PARTIALLY_FULFILLED";
+  if (compareAmounts(fulfilledAmount, "0") <= 0) return "ACTIVE";
+  if (compareAmounts(fulfilledAmount, totalAmount) >= 0) return "FULFILLED";
+  return "PARTIALLY_FULFILLED";
 }

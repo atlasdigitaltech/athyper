@@ -34,7 +34,9 @@ function createService(masterKey = MASTER_KEY): AuditColumnEncryptionService {
 
 describe("ConfigBasedKeyProvider", () => {
   it("should reject master keys shorter than 32 characters", () => {
-    expect(() => new ConfigBasedKeyProvider("short")).toThrow("at least 32 characters");
+    expect(() => new ConfigBasedKeyProvider("short")).toThrow(
+      "at least 32 characters",
+    );
   });
 
   it("should derive deterministic keys for the same tenant+version", async () => {

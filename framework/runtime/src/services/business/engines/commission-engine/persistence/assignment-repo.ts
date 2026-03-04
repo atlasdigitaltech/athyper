@@ -17,7 +17,10 @@ import type {
 
 export interface CommissionAssignmentRepo {
   findById(id: string): Promise<CommissionAssignment | null>;
-  findByPartner(tenantId: string, partnerId: string): Promise<CommissionAssignment[]>;
+  findByPartner(
+    tenantId: string,
+    partnerId: string,
+  ): Promise<CommissionAssignment[]>;
   findEffectiveAssignments(
     tenantId: string,
     partnerId: string,
@@ -25,7 +28,10 @@ export interface CommissionAssignmentRepo {
   ): Promise<CommissionAssignment[]>;
   findByPlan(planId: string): Promise<CommissionAssignment[]>;
   create(input: CreateAssignmentInput): Promise<CommissionAssignment>;
-  update(id: string, input: UpdateAssignmentInput): Promise<CommissionAssignment>;
+  update(
+    id: string,
+    input: UpdateAssignmentInput,
+  ): Promise<CommissionAssignment>;
   delete(id: string): Promise<void>;
 }
 
@@ -141,10 +147,7 @@ export class DefaultCommissionAssignmentRepo implements CommissionAssignmentRepo
 
   async delete(id: string): Promise<void> {
     const db = await this.container.resolve<any>("db");
-    await db.query(
-      `DELETE FROM fin.commission_assignment WHERE id = $1`,
-      [id],
-    );
+    await db.query(`DELETE FROM fin.commission_assignment WHERE id = $1`, [id]);
   }
 }
 

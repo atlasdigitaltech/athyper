@@ -20,18 +20,24 @@ import { getDefaultSeverity } from "./event-taxonomy.js";
 import type { AuditFeatureFlagResolver } from "./audit-feature-flags.js";
 import type { AuditLoadSheddingService } from "./audit-load-shedding.service.js";
 import type { AuditHashChainService } from "./hash-chain.service.js";
-import type { AuditRedactionPipeline, RedactionResult } from "./redaction-pipeline.js";
+import type {
+  AuditRedactionPipeline,
+  RedactionResult,
+} from "./redaction-pipeline.js";
 import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 import type { AuditOutboxRepo } from "../persistence/AuditOutboxRepo.js";
 import type { CircuitBreaker } from "@athyper/core";
-
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface AuditMetricsCollector {
-  eventIngested(labels: { tenant: string; event_type: string; severity: string }): void;
+  eventIngested(labels: {
+    tenant: string;
+    event_type: string;
+    severity: string;
+  }): void;
   eventDropped(labels: { tenant: string; reason: string }): void;
   eventBuffered(labels: { tenant: string }): void;
 }
@@ -47,7 +53,10 @@ export interface AuditWriterLogger {
  * Implemented by WorkflowAuditRepository.
  */
 export interface AuditSyncWriter {
-  recordEvent(tenantId: string, event: Omit<AuditEvent, "id">): Promise<string | { id: string }>;
+  recordEvent(
+    tenantId: string,
+    event: Omit<AuditEvent, "id">,
+  ): Promise<string | { id: string }>;
 }
 
 export interface ResilientAuditWriterOptions {
@@ -97,15 +106,30 @@ export class ResilientAuditWriter {
    * Buffer full: drop oldest + increment drop metric.
    */
   async write(tenantId: string, event: Omit<AuditEvent, "id">): Promise<void> {
-    const { redaction, hashChain, metrics, logger, flagResolver, loadShedding, syncWriter } = this.options;
+    const {
+      redaction,
+      hashChain,
+      metrics,
+      logger,
+      flagResolver,
+      loadShedding,
+      syncWriter,
+    } = this.options;
 
     try {
       // 0a. Load shedding policy check (before feature flags)
       if (loadShedding) {
         const severity = event.severity ?? getDefaultSeverity(event.eventType);
-        const decision = await loadShedding.evaluate(tenantId, event.eventType, severity);
+        const decision = await loadShedding.evaluate(
+          tenantId,
+          event.eventType,
+          severity,
+        );
         if (!decision.accepted) {
-          metrics?.eventDropped({ tenant: tenantId, reason: `load_shed_${decision.reason}` });
+          metrics?.eventDropped({
+            tenant: tenantId,
+            reason: `load_shed_${decision.reason}`,
+          });
           logger?.debug(
             { tenantId, eventType: event.eventType, reason: decision.reason },
             "[audit:writer] Event shed by load shedding policy",
@@ -135,7 +159,7 @@ export class ResilientAuditWriter {
       // 2. Compute hash chain (skip if disabled via feature flag)
       let hashPrev: string | undefined;
       let hashCurr: string | undefined;
-      if (hashChain && (flags?.hashChainEnabled !== false)) {
+      if (hashChain && flags?.hashChainEnabled !== false) {
         const hash = await hashChain.computeHash(tenantId, processedEvent);
         hashPrev = hash.hash_prev;
         hashCurr = hash.hash_curr;
@@ -143,7 +167,8 @@ export class ResilientAuditWriter {
 
       // 3. Build serializable payload
       const eventType = processedEvent.eventType;
-      const severity = processedEvent.severity ?? getDefaultSeverity(processedEvent.eventType);
+      const severity =
+        processedEvent.severity ?? getDefaultSeverity(processedEvent.eventType);
       const payload: Record<string, unknown> = {
         ...processedEvent,
         severity,
@@ -166,7 +191,11 @@ export class ResilientAuditWriter {
       }
 
       // 5. Success metrics
-      metrics?.eventIngested({ tenant: tenantId, event_type: eventType, severity });
+      metrics?.eventIngested({
+        tenant: tenantId,
+        event_type: eventType,
+        severity,
+      });
     } catch (err) {
       // Outbox unavailable — fall back to memory buffer
       this.bufferEvent(tenantId, event, err, metrics, logger);
@@ -187,7 +216,11 @@ export class ResilientAuditWriter {
       const entry = this.memoryBuffer[0];
 
       try {
-        await this.outboxRepo.enqueue(entry.tenantId, entry.eventType, entry.payload);
+        await this.outboxRepo.enqueue(
+          entry.tenantId,
+          entry.eventType,
+          entry.payload,
+        );
         this.memoryBuffer.shift();
         flushed++;
       } catch {

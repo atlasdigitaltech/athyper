@@ -6,15 +6,15 @@ Step-by-step procedures for common operational tasks.
 
 ## Index
 
-| Runbook | Purpose |
-|---------|---------|
-| [Infrastructure Setup](#infrastructure-setup) | First-time local environment setup |
-| [Auth Operations](#auth-operations) | Authentication troubleshooting and management |
-| [Audit Go-Live](#audit-go-live) | Enabling audit governance in production |
-| [Database Operations](#database-operations) | Schema management, backups, recovery |
-| [Keycloak Administration](#keycloak-administration) | Realm and user management |
-| [Monitoring & Alerts](#monitoring--alerts) | Telemetry stack operations |
-| [Incident Response](#incident-response) | Common incident resolution procedures |
+| Runbook                                             | Purpose                                       |
+| --------------------------------------------------- | --------------------------------------------- |
+| [Infrastructure Setup](#infrastructure-setup)       | First-time local environment setup            |
+| [Auth Operations](#auth-operations)                 | Authentication troubleshooting and management |
+| [Audit Go-Live](#audit-go-live)                     | Enabling audit governance in production       |
+| [Database Operations](#database-operations)         | Schema management, backups, recovery          |
+| [Keycloak Administration](#keycloak-administration) | Realm and user management                     |
+| [Monitoring & Alerts](#monitoring--alerts)          | Telemetry stack operations                    |
+| [Incident Response](#incident-response)             | Common incident resolution procedures         |
 
 ---
 
@@ -122,13 +122,13 @@ curl http://localhost:8080/realms/<realm>/protocol/openid-connect/certs | jq .
 
 ### Common Auth Issues
 
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| 401 on all requests | Keycloak down or unreachable | `pnpm mesh:ps` → restart Keycloak |
-| CSRF 403 errors | Cookie/header mismatch | Clear cookies, check `__csrf` cookie exists |
-| Session not persisting | Redis connection lost | Check Redis connectivity |
-| MFA loop | MFA policy mismatch | Check Keycloak authentication flow config |
-| Token refresh failures | Refresh token expired | User must re-login |
+| Symptom                | Likely Cause                 | Fix                                         |
+| ---------------------- | ---------------------------- | ------------------------------------------- |
+| 401 on all requests    | Keycloak down or unreachable | `pnpm mesh:ps` → restart Keycloak           |
+| CSRF 403 errors        | Cookie/header mismatch       | Clear cookies, check `__csrf` cookie exists |
+| Session not persisting | Redis connection lost        | Check Redis connectivity                    |
+| MFA loop               | MFA policy mismatch          | Check Keycloak authentication flow config   |
+| Token refresh failures | Refresh token expired        | User must re-login                          |
 
 ---
 
@@ -253,6 +253,7 @@ docker exec mesh-dbpool-auth psql -p 6433 -U postgres pgbouncer -c "SHOW POOLS;"
 Realm is auto-imported on first Keycloak startup from `mesh/config/iam/realm-export.json`.
 
 To force re-import:
+
 ```bash
 # Stop Keycloak
 docker compose -f mesh/compose/compose.yml stop mesh-iam
@@ -285,24 +286,24 @@ docker exec mesh-iam /opt/keycloak/bin/kcadm.sh set-password \
 
 ### Access Dashboards
 
-| Dashboard | URL | Purpose |
-|-----------|-----|---------|
-| Grafana | `http://localhost:3001` | Metrics, traces, logs |
-| Prometheus | `http://localhost:9090` | Raw metrics queries |
-| MinIO Console | `http://localhost:9001` | Object storage management |
-| Keycloak Admin | `http://localhost:8080/admin` | IAM management |
+| Dashboard      | URL                           | Purpose                   |
+| -------------- | ----------------------------- | ------------------------- |
+| Grafana        | `http://localhost:3001`       | Metrics, traces, logs     |
+| Prometheus     | `http://localhost:9090`       | Raw metrics queries       |
+| MinIO Console  | `http://localhost:9001`       | Object storage management |
+| Keycloak Admin | `http://localhost:8080/admin` | IAM management            |
 
 ### Key Metrics to Watch
 
-| Metric | Normal Range | Alert Threshold |
-|--------|-------------|----------------|
-| HTTP request latency (p99) | < 500ms | > 2000ms |
-| Error rate (5xx) | < 0.1% | > 1% |
-| DB connection pool usage | < 70% | > 90% |
-| Redis memory usage | < 80% | > 90% |
-| Audit outbox depth | < 100 | > 1000 |
-| Audit DLQ depth | 0 | > 0 |
-| Job queue depth | < 50 | > 500 |
+| Metric                     | Normal Range | Alert Threshold |
+| -------------------------- | ------------ | --------------- |
+| HTTP request latency (p99) | < 500ms      | > 2000ms        |
+| Error rate (5xx)           | < 0.1%       | > 1%            |
+| DB connection pool usage   | < 70%        | > 90%           |
+| Redis memory usage         | < 80%        | > 90%           |
+| Audit outbox depth         | < 100        | > 1000          |
+| Audit DLQ depth            | 0            | > 0             |
+| Job queue depth            | < 50         | > 500           |
 
 ### Log Queries (Grafana/Loki)
 

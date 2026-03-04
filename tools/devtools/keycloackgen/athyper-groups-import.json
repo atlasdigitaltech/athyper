@@ -2,9 +2,7 @@
   "groups": [
     {
       "name": "global",
-      "subGroups": [
-        { "name": "tenants", "subGroups": [ { "name": "all" } ] }
-      ]
+      "subGroups": [{ "name": "tenants", "subGroups": [{ "name": "all" }] }]
     },
     {
       "name": "tenants",

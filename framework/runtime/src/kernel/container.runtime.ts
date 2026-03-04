@@ -22,95 +22,106 @@ import type { JobQueue } from "@athyper/core";
  * but BEFORE loadServices() — because modules resolve TOKENS.jobQueue during
  * their register() phase.
  */
-export async function registerRuntimeServices(container: Container, config: RuntimeConfig) {
-    const healthRegistry = await container.resolve<any>(TOKENS.healthRegistry);
-    const logger = await container.resolve<Logger>(TOKENS.logger);
+export async function registerRuntimeServices(
+  container: Container,
+  config: RuntimeConfig,
+) {
+  const healthRegistry = await container.resolve<any>(TOKENS.healthRegistry);
+  const logger = await container.resolve<Logger>(TOKENS.logger);
 
-    // ── Job Queue (BullMQ via dedicated ioredis connection) ──────────────
-    //
-    // BullMQ requires maxRetriesPerRequest: null on ioredis.
-    // We create a dedicated connection here rather than reusing the cache adapter's client.
-    container.register(
-        TOKENS.jobQueue,
+  // ── Job Queue (BullMQ via dedicated ioredis connection) ──────────────
+  //
+  // BullMQ requires maxRetriesPerRequest: null on ioredis.
+  // We create a dedicated connection here rather than reusing the cache adapter's client.
+  container.register(
+    TOKENS.jobQueue,
+    async () => {
+      const { default: Redis } = await import("ioredis");
+      const redis = new Redis(config.redis.url, {
+        maxRetriesPerRequest: null, // Required by BullMQ
+        enableReadyCheck: false,
+      });
+
+      const queue = new RedisJobQueue({
+        redis,
+        queueName: config.jobQueue?.queueName ?? "athyper-jobs",
+        defaultJobOptions: {
+          attempts: config.jobQueue?.defaultRetries ?? 3,
+          backoff: { type: "exponential", delay: 1000 },
+          removeOnComplete: false,
+          removeOnFail: false,
+        },
+      });
+
+      // Health check
+      healthRegistry.register(
+        "job-queue",
         async () => {
-            const { default: Redis } = await import("ioredis");
-            const redis = new Redis(config.redis.url, {
-                maxRetriesPerRequest: null, // Required by BullMQ
-                enableReadyCheck: false,
-            });
-
-            const queue = new RedisJobQueue({
-                redis,
-                queueName: config.jobQueue?.queueName ?? "athyper-jobs",
-                defaultJobOptions: {
-                    attempts: config.jobQueue?.defaultRetries ?? 3,
-                    backoff: { type: "exponential", delay: 1000 },
-                    removeOnComplete: false,
-                    removeOnFail: false,
-                },
-            });
-
-            // Health check
-            healthRegistry.register(
-                "job-queue",
-                async () => {
-                    try {
-                        const metrics = await queue.getMetrics();
-                        return {
-                            status: "healthy" as const,
-                            message: `Queue: waiting=${metrics.waiting} active=${metrics.active} failed=${metrics.failed}`,
-                            timestamp: new Date(),
-                        };
-                    } catch (error) {
-                        return {
-                            status: "unhealthy" as const,
-                            message: error instanceof Error ? error.message : "Queue unreachable",
-                            timestamp: new Date(),
-                        };
-                    }
-                },
-                { type: "queue", required: config.mode !== "api" },
-            );
-
-            logger.info({ queueName: config.jobQueue?.queueName ?? "athyper-jobs" }, "[runtime] job queue registered");
-
-            return queue;
+          try {
+            const metrics = await queue.getMetrics();
+            return {
+              status: "healthy" as const,
+              message: `Queue: waiting=${metrics.waiting} active=${metrics.active} failed=${metrics.failed}`,
+              timestamp: new Date(),
+            };
+          } catch (error) {
+            return {
+              status: "unhealthy" as const,
+              message:
+                error instanceof Error ? error.message : "Queue unreachable",
+              timestamp: new Date(),
+            };
+          }
         },
-        "singleton",
-    );
+        { type: "queue", required: config.mode !== "api" },
+      );
 
-    // ── Worker Pool (lifecycle wrapper) ──────────────────────────────────
-    //
-    // Modules register workers directly on jobQueue via jobQueue.process() during contribute().
-    // WorkerPool manages lifecycle (event logging, start/stop) with an empty workers array.
-    container.register(
-        TOKENS.workerPool,
-        async (c) => {
-            const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
-            const poolLogger = await c.resolve<Logger>(TOKENS.logger);
+      logger.info(
+        { queueName: config.jobQueue?.queueName ?? "athyper-jobs" },
+        "[runtime] job queue registered",
+      );
 
-            return new WorkerPool({
-                queue: jobQueue,
-                logger: poolLogger,
-                workers: [], // Workers are registered by modules during contribute()
-            });
-        },
-        "singleton",
-    );
+      return queue;
+    },
+    "singleton",
+  );
 
-    // ── Scheduler (BullMQ repeatable jobs) ───────────────────────────────
-    //
-    // Reads ScheduleDef entries from JobRegistry (contributed by modules during contribute())
-    // and creates BullMQ repeatable jobs at start() time.
-    container.register(
-        TOKENS.scheduler,
-        async (c) => {
-            const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
-            const jobRegistry = await c.resolve<JobRegistry>(TOKENS.jobRegistry);
-            const schedulerLogger = await c.resolve<Logger>(TOKENS.logger);
+  // ── Worker Pool (lifecycle wrapper) ──────────────────────────────────
+  //
+  // Modules register workers directly on jobQueue via jobQueue.process() during contribute().
+  // WorkerPool manages lifecycle (event logging, start/stop) with an empty workers array.
+  container.register(
+    TOKENS.workerPool,
+    async (c) => {
+      const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
+      const poolLogger = await c.resolve<Logger>(TOKENS.logger);
 
-            return new CronScheduler({ jobQueue, jobRegistry, logger: schedulerLogger });
-        },
-        "singleton",
-    );
+      return new WorkerPool({
+        queue: jobQueue,
+        logger: poolLogger,
+        workers: [], // Workers are registered by modules during contribute()
+      });
+    },
+    "singleton",
+  );
+
+  // ── Scheduler (BullMQ repeatable jobs) ───────────────────────────────
+  //
+  // Reads ScheduleDef entries from JobRegistry (contributed by modules during contribute())
+  // and creates BullMQ repeatable jobs at start() time.
+  container.register(
+    TOKENS.scheduler,
+    async (c) => {
+      const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
+      const jobRegistry = await c.resolve<JobRegistry>(TOKENS.jobRegistry);
+      const schedulerLogger = await c.resolve<Logger>(TOKENS.logger);
+
+      return new CronScheduler({
+        jobQueue,
+        jobRegistry,
+        logger: schedulerLogger,
+      });
+    },
+    "singleton",
+  );
 }

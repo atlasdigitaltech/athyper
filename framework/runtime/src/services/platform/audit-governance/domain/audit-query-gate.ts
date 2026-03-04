@@ -12,7 +12,10 @@
  * Audit-of-audit: every query is logged to core.security_event as AUDIT_VIEWED.
  */
 
-import type { AuditEvent, AuditEventQueryOptions } from "../../workflow-engine/audit/types.js";
+import type {
+  AuditEvent,
+  AuditEventQueryOptions,
+} from "../../workflow-engine/audit/types.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -56,7 +59,10 @@ export class AuditQueryPolicyGate {
   /**
    * Authorize an audit query and return enforced constraints.
    */
-  authorize(caller: AuditCaller, query: AuditEventQueryOptions): AuditQueryPermission {
+  authorize(
+    caller: AuditCaller,
+    query: AuditEventQueryOptions,
+  ): AuditQueryPermission {
     // Security admin gets full access
     if (caller.roles.includes("security_admin")) {
       return {
@@ -111,7 +117,10 @@ export class AuditQueryPolicyGate {
   /**
    * Strip redacted fields from audit event results.
    */
-  redactResults(events: AuditEvent[], permission: AuditQueryPermission): AuditEvent[] {
+  redactResults(
+    events: AuditEvent[],
+    permission: AuditQueryPermission,
+  ): AuditEvent[] {
     if (permission.redactedFields.length === 0) return events;
 
     return events.map((event) => {
@@ -131,7 +140,10 @@ export class AuditQueryPolicyGate {
   /**
    * Log audit query access to core.security_event (audit-of-audit).
    */
-  async logAccess(caller: AuditCaller, query: AuditEventQueryOptions): Promise<void> {
+  async logAccess(
+    caller: AuditCaller,
+    query: AuditEventQueryOptions,
+  ): Promise<void> {
     if (!this.db) return;
 
     try {

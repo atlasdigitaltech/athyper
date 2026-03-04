@@ -37,7 +37,13 @@ export interface Attachment {
 export interface UploadProgress {
   fileId: string;
   fileName: string;
-  status: "queued" | "initiating" | "uploading" | "completing" | "done" | "failed";
+  status:
+    | "queued"
+    | "initiating"
+    | "uploading"
+    | "completing"
+    | "done"
+    | "failed";
   progress: number; // 0-100
   error?: string;
 }

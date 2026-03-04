@@ -7,7 +7,7 @@
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import type { NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * POST /api/content/upload
@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { error: "Missing required field: file" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!kind) {
       return NextResponse.json(
         { error: "Missing required field: kind" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,7 +54,11 @@ export async function POST(req: NextRequest) {
 
     // Prepare multipart form data for backend
     const backendFormData = new FormData();
-    backendFormData.append("file", new Blob([buffer], { type: file.type }), file.name);
+    backendFormData.append(
+      "file",
+      new Blob([buffer], { type: file.type }),
+      file.name,
+    );
     backendFormData.append("kind", kind);
     if (ownerEntity) backendFormData.append("ownerEntity", ownerEntity);
     if (ownerEntityId) backendFormData.append("ownerEntityId", ownerEntityId);
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
       console.error("Upload error:", error);
       return NextResponse.json(
         { error: "Failed to upload file", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -85,7 +89,7 @@ export async function POST(req: NextRequest) {
     console.error("Upload route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -108,27 +112,24 @@ export async function GET(req: NextRequest) {
     if (!id) {
       return NextResponse.json(
         { error: "Missing required parameter: id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Call backend service
     const backendUrl = process.env.API_MESH_URL || "http://localhost:3000";
-    const response = await fetch(
-      `${backendUrl}/api/content/download/${id}`,
-      {
-        headers: {
-          Cookie: req.headers.get("cookie") || "",
-          "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
-        },
-      }
-    );
+    const response = await fetch(`${backendUrl}/api/content/download/${id}`, {
+      headers: {
+        Cookie: req.headers.get("cookie") || "",
+        "x-tenant-id": process.env.DEFAULT_TENANT_ID || "default",
+      },
+    });
 
     if (!response.ok) {
       const error = await response.text();
       return NextResponse.json(
         { error: "Failed to get download URL", details: error },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -138,7 +139,7 @@ export async function GET(req: NextRequest) {
     console.error("Download URL route error:", err);
     return NextResponse.json(
       { error: "Internal server error", message: String(err) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

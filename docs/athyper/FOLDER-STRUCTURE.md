@@ -380,11 +380,11 @@ docs/
 
 ## File Count Summary
 
-| Area | .ts files | .tsx files | .test.ts | SQL | JSON configs |
-|------|-----------|------------|----------|-----|-------------|
-| framework/core | 43 | — | 7 | — | — |
-| framework/adapters | 37 | — | 2 | 47 | — |
-| framework/runtime | 829 | — | 80+ | — | 29 dashboard.contribution.json |
-| packages | 45 | 35 | 5 | — | 7 locale bundles |
-| products/neon | 260 | 293 | 3 | — | — |
-| **Total** | **~1,214** | **~328** | **~97** | **47** | **36+** |
+| Area               | .ts files  | .tsx files | .test.ts | SQL    | JSON configs                   |
+| ------------------ | ---------- | ---------- | -------- | ------ | ------------------------------ |
+| framework/core     | 43         | —          | 7        | —      | —                              |
+| framework/adapters | 37         | —          | 2        | 47     | —                              |
+| framework/runtime  | 829        | —          | 80+      | —      | 29 dashboard.contribution.json |
+| packages           | 45         | 35         | 5        | —      | 7 locale bundles               |
+| products/neon      | 260        | 293        | 3        | —      | —                              |
+| **Total**          | **~1,214** | **~328**   | **~97**  | **47** | **36+**                        |

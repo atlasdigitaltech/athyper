@@ -41,7 +41,10 @@ export async function GET(
     }
   }
 
-  return proxyGet(auth, `/api/meta/entities/${encodeURIComponent(entity)}/validation`);
+  return proxyGet(
+    auth,
+    `/api/meta/entities/${encodeURIComponent(entity)}/validation`,
+  );
 }
 
 /**

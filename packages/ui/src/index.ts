@@ -15,5 +15,11 @@ export * from "./primitives/Tabs";
 export * from "./primitives/Textarea";
 export * from "./primitives/Tooltip";
 
+// Async state
+export * from "./lib/async-state";
+
+// Data components
+export * from "./data/index";
+
 // Domain components
 export * from "./notifications/index";

@@ -4,18 +4,26 @@
 
 import { TOKENS } from "../../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../../../platform/foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../../../platform/foundation/http/types.js";
 import type { AclService } from "../../domain/services/AclService.js";
 import type { Request, Response } from "express";
-
 
 /**
  * POST /api/content/acl/grant
  * Grant or revoke permission
  */
 export class GrantPermissionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const aclService = await ctx.container.resolve<AclService>(TOKENS.aclService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const aclService = await ctx.container.resolve<AclService>(
+      TOKENS.aclService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -78,9 +86,14 @@ export class GrantPermissionHandler implements RouteHandler {
       const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes("not found")) {
-        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message } });
+        res
+          .status(404)
+          .json({ success: false, error: { code: "NOT_FOUND", message } });
       } else {
-        res.status(500).json({ success: false, error: { code: "ACL_GRANT_ERROR", message } });
+        res.status(500).json({
+          success: false,
+          error: { code: "ACL_GRANT_ERROR", message },
+        });
       }
     }
   }
@@ -91,8 +104,14 @@ export class GrantPermissionHandler implements RouteHandler {
  * Revoke all permissions for a principal
  */
 export class RevokePermissionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const aclService = await ctx.container.resolve<AclService>(TOKENS.aclService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const aclService = await ctx.container.resolve<AclService>(
+      TOKENS.aclService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
     const actorId = ctx.auth.userId ?? "anonymous";
 
@@ -104,7 +123,10 @@ export class RevokePermissionHandler implements RouteHandler {
     if (!body.attachmentId || !body.principalId) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_FIELDS", message: "attachmentId and principalId are required" },
+        error: {
+          code: "MISSING_FIELDS",
+          message: "attachmentId and principalId are required",
+        },
       });
       return;
     }
@@ -119,11 +141,16 @@ export class RevokePermissionHandler implements RouteHandler {
 
       res.status(200).json({
         success: true,
-        data: { attachmentId: body.attachmentId, principalId: body.principalId },
+        data: {
+          attachmentId: body.attachmentId,
+          principalId: body.principalId,
+        },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "ACL_REVOKE_ERROR", message } });
+      res
+        .status(500)
+        .json({ success: false, error: { code: "ACL_REVOKE_ERROR", message } });
     }
   }
 }
@@ -133,8 +160,14 @@ export class RevokePermissionHandler implements RouteHandler {
  * List ACL entries for document
  */
 export class ListAclsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const aclService = await ctx.container.resolve<AclService>(TOKENS.aclService);
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const aclService = await ctx.container.resolve<AclService>(
+      TOKENS.aclService,
+    );
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const attachmentId = req.params.id;
@@ -149,12 +182,18 @@ export class ListAclsHandler implements RouteHandler {
     const activeOnly = req.query.activeOnly !== "false";
 
     try {
-      const acls = await aclService.listDocumentAcls(tenantId, attachmentId, activeOnly);
+      const acls = await aclService.listDocumentAcls(
+        tenantId,
+        attachmentId,
+        activeOnly,
+      );
 
       res.status(200).json({ success: true, data: acls });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ success: false, error: { code: "ACL_LIST_ERROR", message } });
+      res
+        .status(500)
+        .json({ success: false, error: { code: "ACL_LIST_ERROR", message } });
     }
   }
 }

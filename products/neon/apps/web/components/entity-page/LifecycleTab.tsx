@@ -14,7 +14,9 @@ export function LifecycleTab({ dynamicDescriptor }: TabPluginProps) {
   const { currentState, actions } = dynamicDescriptor;
 
   // Filter lifecycle actions from the full action list
-  const lifecycleActions = actions.filter((a) => a.code.startsWith("lifecycle."));
+  const lifecycleActions = actions.filter((a) =>
+    a.code.startsWith("lifecycle."),
+  );
 
   return (
     <div className="space-y-6 py-4">

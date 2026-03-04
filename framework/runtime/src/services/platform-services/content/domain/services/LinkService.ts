@@ -58,7 +58,10 @@ export class LinkService {
     );
 
     // 1. Verify attachment exists
-    const attachment = await this.attachmentRepo.getById(params.attachmentId, params.tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      params.attachmentId,
+      params.tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment ${params.attachmentId} not found`);
     }
@@ -116,7 +119,10 @@ export class LinkService {
    * 3. Emit audit event
    */
   async unlinkDocument(params: UnlinkDocumentParams) {
-    this.logger.debug({ linkId: params.linkId }, "[link:service] Unlinking document");
+    this.logger.debug(
+      { linkId: params.linkId },
+      "[link:service] Unlinking document",
+    );
 
     // 1. Get link
     const link = await this.linkRepo.getById(params.linkId, params.tenantId);
@@ -146,7 +152,10 @@ export class LinkService {
    * List entities linked to a document
    */
   async getLinkedEntities(attachmentId: string, tenantId: string) {
-    this.logger.debug({ attachmentId }, "[link:service] Getting linked entities");
+    this.logger.debug(
+      { attachmentId },
+      "[link:service] Getting linked entities",
+    );
 
     return this.linkRepo.listByAttachment(tenantId, attachmentId);
   }
@@ -160,7 +169,10 @@ export class LinkService {
     entityId: string,
     options?: { linkKind?: string },
   ) {
-    this.logger.debug({ entityType, entityId }, "[link:service] Getting linked documents");
+    this.logger.debug(
+      { entityType, entityId },
+      "[link:service] Getting linked documents",
+    );
 
     return this.linkRepo.listByEntity(tenantId, entityType, entityId, options);
   }
@@ -179,7 +191,11 @@ export class LinkService {
   /**
    * Count linked documents for an entity
    */
-  async countLinkedDocuments(tenantId: string, entityType: string, entityId: string) {
+  async countLinkedDocuments(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ) {
     return this.linkRepo.countByEntity(tenantId, entityType, entityId);
   }
 }

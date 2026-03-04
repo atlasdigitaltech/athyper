@@ -14,7 +14,10 @@ import { createHash } from "crypto";
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { ExportAuditHandler, ListAuditExportsHandler } from "../api/handlers/audit-export.handler.js";
+import {
+  ExportAuditHandler,
+  ListAuditExportsHandler,
+} from "../api/handlers/audit-export.handler.js";
 import { AuditExportService } from "../domain/audit-export.service.js";
 
 import type { AuditEvent } from "../../workflow-engine/audit/types.js";
@@ -28,8 +31,18 @@ function makeEvent(id: string, eventType = "workflow.created"): AuditEvent {
     eventType: eventType as any,
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date("2025-06-15T10:00:00Z"),
   } as AuditEvent;
@@ -73,7 +86,10 @@ describe("AuditExportService", () => {
   let service: AuditExportService;
 
   beforeEach(() => {
-    repo = createMockAuditRepo([makeEvent("e1"), makeEvent("e2", "workflow.started")]);
+    repo = createMockAuditRepo([
+      makeEvent("e1"),
+      makeEvent("e2", "workflow.started"),
+    ]);
     storage = createMockObjectStorage();
     db = createMockDb();
     service = new AuditExportService(repo, storage, db);
@@ -129,7 +145,9 @@ describe("AuditExportService", () => {
     });
 
     const ndjsonBody = storage.put.mock.calls[0][1] as string;
-    const expectedHash = createHash("sha256").update(ndjsonBody, "utf8").digest("hex");
+    const expectedHash = createHash("sha256")
+      .update(ndjsonBody, "utf8")
+      .digest("hex");
 
     expect(result.manifest.sha256).toBe(expectedHash);
     expect(result.manifest.sha256).toHaveLength(64);
@@ -220,7 +238,11 @@ describe("ExportAuditHandler", () => {
     await handler.handle(
       { body: { startDate: "2025-06-01", endDate: "2025-06-30" } },
       res as any,
-      { container: {} as any, tenant: { id: "t-1" }, auth: { userId: "u-1", roles: ["view_tenant_events"] } },
+      {
+        container: {} as any,
+        tenant: { id: "t-1" },
+        auth: { userId: "u-1", roles: ["view_tenant_events"] },
+      },
     );
 
     expect(res.status).toHaveBeenCalledWith(403);
@@ -231,11 +253,11 @@ describe("ExportAuditHandler", () => {
     const handler = new ExportAuditHandler(exportService);
 
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-    await handler.handle(
-      { body: {} },
-      res as any,
-      { container: {} as any, tenant: { id: "t-1" }, auth: { userId: "u-1", roles: ["security_admin"] } },
-    );
+    await handler.handle({ body: {} }, res as any, {
+      container: {} as any,
+      tenant: { id: "t-1" },
+      auth: { userId: "u-1", roles: ["security_admin"] },
+    });
 
     expect(res.status).toHaveBeenCalledWith(400);
   });
@@ -248,11 +270,11 @@ describe("ListAuditExportsHandler", () => {
     const handler = new ListAuditExportsHandler(createMockObjectStorage());
 
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-    await handler.handle(
-      { query: {} },
-      res as any,
-      { container: {} as any, tenant: { id: "t-1" }, auth: { userId: "u-1", roles: [] } },
-    );
+    await handler.handle({ query: {} }, res as any, {
+      container: {} as any,
+      tenant: { id: "t-1" },
+      auth: { userId: "u-1", roles: [] },
+    });
 
     expect(res.status).toHaveBeenCalledWith(403);
   });
@@ -261,11 +283,11 @@ describe("ListAuditExportsHandler", () => {
     const handler = new ListAuditExportsHandler(null);
 
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-    await handler.handle(
-      { query: {} },
-      res as any,
-      { container: {} as any, tenant: { id: "t-1" }, auth: { userId: "u-1", roles: ["security_admin"] } },
-    );
+    await handler.handle({ query: {} }, res as any, {
+      container: {} as any,
+      tenant: { id: "t-1" },
+      auth: { userId: "u-1", roles: ["security_admin"] },
+    });
 
     expect(res.status).toHaveBeenCalledWith(503);
   });
@@ -273,24 +295,42 @@ describe("ListAuditExportsHandler", () => {
   it("should filter manifests from listed objects", async () => {
     const storage = createMockObjectStorage();
     storage.list.mockResolvedValue([
-      { key: "audit-exports/t-1/2025-06-15/abc.ndjson", size: 1024, lastModified: new Date() },
-      { key: "audit-exports/t-1/2025-06-15/abc.manifest.json", size: 256, lastModified: new Date() },
-      { key: "audit-exports/t-1/2025-06-15/def.ndjson", size: 2048, lastModified: new Date() },
-      { key: "audit-exports/t-1/2025-06-15/def.manifest.json", size: 512, lastModified: new Date() },
+      {
+        key: "audit-exports/t-1/2025-06-15/abc.ndjson",
+        size: 1024,
+        lastModified: new Date(),
+      },
+      {
+        key: "audit-exports/t-1/2025-06-15/abc.manifest.json",
+        size: 256,
+        lastModified: new Date(),
+      },
+      {
+        key: "audit-exports/t-1/2025-06-15/def.ndjson",
+        size: 2048,
+        lastModified: new Date(),
+      },
+      {
+        key: "audit-exports/t-1/2025-06-15/def.manifest.json",
+        size: 512,
+        lastModified: new Date(),
+      },
     ]);
 
     const handler = new ListAuditExportsHandler(storage);
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
 
-    await handler.handle(
-      { query: {} },
-      res as any,
-      { container: {} as any, tenant: { id: "t-1" }, auth: { userId: "u-1", roles: ["security_admin"] } },
-    );
+    await handler.handle({ query: {} }, res as any, {
+      container: {} as any,
+      tenant: { id: "t-1" },
+      auth: { userId: "u-1", roles: ["security_admin"] },
+    });
 
     expect(res.status).toHaveBeenCalledWith(200);
     const responseData = res.json.mock.calls[0][0];
     expect(responseData.total).toBe(2);
-    expect(responseData.exports.every((e: any) => e.key.endsWith(".manifest.json"))).toBe(true);
+    expect(
+      responseData.exports.every((e: any) => e.key.endsWith(".manifest.json")),
+    ).toBe(true);
   });
 });

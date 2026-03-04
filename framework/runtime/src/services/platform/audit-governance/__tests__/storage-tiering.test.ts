@@ -10,7 +10,10 @@ import { describe, it, expect, vi } from "vitest";
 import { AuditStorageTieringService } from "../domain/audit-storage-tiering.service.js";
 import { createAuditArchiveHandler } from "../jobs/workers/auditArchive.worker.js";
 
-import type { AuditArchiveMarkerRepo, AuditArchiveMarker } from "../persistence/AuditArchiveMarkerRepo.js";
+import type {
+  AuditArchiveMarkerRepo,
+  AuditArchiveMarker,
+} from "../persistence/AuditArchiveMarkerRepo.js";
 
 // ============================================================================
 // Helpers
@@ -30,10 +33,18 @@ function createKyselyMockDb(executeImpl: (...args: any[]) => Promise<any>) {
     transformQuery: (node: any) => node,
     compileQuery: () => ({ sql: "", parameters: [] }),
     executeQuery: executeImpl,
-    withConnectionProvider: function() { return this; },
-    withPlugin: function() { return this; },
-    withPluginAtFront: function() { return this; },
-    withoutPlugins: function() { return this; },
+    withConnectionProvider: function () {
+      return this;
+    },
+    withPlugin: function () {
+      return this;
+    },
+    withPluginAtFront: function () {
+      return this;
+    },
+    withoutPlugins: function () {
+      return this;
+    },
   };
 
   return {
@@ -48,31 +59,47 @@ function createMockArchiveMarkerRepo(
 
   return {
     create: vi.fn().mockImplementation(async (input: any) => {
-      const marker = { id: crypto.randomUUID(), ...input, detachedAt: null, createdAt: new Date() };
+      const marker = {
+        id: crypto.randomUUID(),
+        ...input,
+        detachedAt: null,
+        createdAt: new Date(),
+      };
       created.push(marker);
       return marker;
     }),
     getByMonth: vi.fn().mockImplementation(async (month: Date) => {
-      return existing.find((m) => {
-        if (!m.partitionMonth) return false;
-        // Compare year + month only
-        return m.partitionMonth.getFullYear() === month.getFullYear()
-            && m.partitionMonth.getMonth() === month.getMonth();
-      }) ?? undefined;
+      return (
+        existing.find((m) => {
+          if (!m.partitionMonth) return false;
+          // Compare year + month only
+          return (
+            m.partitionMonth.getFullYear() === month.getFullYear() &&
+            m.partitionMonth.getMonth() === month.getMonth()
+          );
+        }) ?? undefined
+      );
     }),
     isMonthArchived: vi.fn().mockImplementation(async (month: Date) => {
       return existing.some((m) => {
         if (!m.partitionMonth) return false;
-        return m.partitionMonth.getFullYear() === month.getFullYear()
-            && m.partitionMonth.getMonth() === month.getMonth();
+        return (
+          m.partitionMonth.getFullYear() === month.getFullYear() &&
+          m.partitionMonth.getMonth() === month.getMonth()
+        );
       });
     }),
     listArchived: vi.fn().mockResolvedValue(existing),
-    getArchivedMonthsInRange: vi.fn().mockImplementation(async (start: Date, end: Date) => {
-      return existing.filter((m) =>
-        m.partitionMonth && m.partitionMonth >= start && m.partitionMonth <= end,
-      );
-    }),
+    getArchivedMonthsInRange: vi
+      .fn()
+      .mockImplementation(async (start: Date, end: Date) => {
+        return existing.filter(
+          (m) =>
+            m.partitionMonth &&
+            m.partitionMonth >= start &&
+            m.partitionMonth <= end,
+        );
+      }),
     markDetached: vi.fn().mockResolvedValue(undefined),
     __created: created,
   } as unknown as AuditArchiveMarkerRepo & { __created: any[] };
@@ -164,9 +191,7 @@ describe("AuditStorageTieringService", () => {
     it("should work without archive marker repo", async () => {
       const service = new AuditStorageTieringService(null, DEFAULT_CONFIG);
 
-      const partitions = [
-        { name: "wae_2025_01", month: daysAgo(30) },
-      ];
+      const partitions = [{ name: "wae_2025_01", month: daysAgo(30) }];
 
       const assignments = await service.assessPartitions(partitions);
 
@@ -222,7 +247,12 @@ describe("auditArchive.worker", () => {
     const repo = createMockArchiveMarkerRepo([existingMarker]);
 
     const db = {} as any;
-    const handler = createAuditArchiveHandler(db, repo as any, null, logger as any);
+    const handler = createAuditArchiveHandler(
+      db,
+      repo as any,
+      null,
+      logger as any,
+    );
 
     const result = await handler({
       partitionName: "wae_2024_01",
@@ -239,7 +269,12 @@ describe("auditArchive.worker", () => {
 
     const db = createKyselyMockDb(async () => ({ rows: [{ count: "0" }] }));
 
-    const handler = createAuditArchiveHandler(db, repo as any, null, logger as any);
+    const handler = createAuditArchiveHandler(
+      db,
+      repo as any,
+      null,
+      logger as any,
+    );
 
     const result = await handler({
       partitionName: "wae_2024_01",
@@ -264,7 +299,12 @@ describe("auditArchive.worker", () => {
 
     const objectStorage = { put: vi.fn() };
 
-    const handler = createAuditArchiveHandler(db, repo as any, objectStorage as any, logger as any);
+    const handler = createAuditArchiveHandler(
+      db,
+      repo as any,
+      objectStorage as any,
+      logger as any,
+    );
 
     const result = await handler({
       partitionName: "wae_2024_01",

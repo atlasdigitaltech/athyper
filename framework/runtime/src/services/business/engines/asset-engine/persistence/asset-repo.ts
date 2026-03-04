@@ -57,9 +57,7 @@ export interface AssetRepository {
   ): Promise<AssetTransaction>;
 
   /** List transactions for an asset, optionally filtered. */
-  findTransactions(
-    filter: AssetTransactionFilter,
-  ): Promise<AssetTransaction[]>;
+  findTransactions(filter: AssetTransactionFilter): Promise<AssetTransaction[]>;
 
   /** Find a single transaction by ID. */
   findTransactionById(

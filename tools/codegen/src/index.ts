@@ -10,11 +10,7 @@
  *   pnpm codegen:watch   - Watch schema.prisma for changes
  */
 
-import {
-  DB_DIR,
-  SCHEMA_PATH,
-  run,
-} from "./lib.js";
+import { DB_DIR, SCHEMA_PATH, run } from "./lib.js";
 
 const args = new Set(process.argv.slice(2));
 const WATCH = args.has("--watch");

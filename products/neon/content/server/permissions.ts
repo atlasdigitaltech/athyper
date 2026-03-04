@@ -34,7 +34,8 @@ export const CONTENT_PERMISSIONS = {
   DOCUMENT_ACL_MANAGE: "document.acl.manage",
 } as const;
 
-export type ContentPermission = typeof CONTENT_PERMISSIONS[keyof typeof CONTENT_PERMISSIONS];
+export type ContentPermission =
+  (typeof CONTENT_PERMISSIONS)[keyof typeof CONTENT_PERMISSIONS];
 
 /**
  * Permission context for content operations
@@ -119,13 +120,18 @@ export async function checkContentPermissions(
   context?: ContentPermissionContext,
 ): Promise<Record<string, boolean>> {
   const results = await Promise.all(
-    permissions.map((perm) => checkContentPermission(actorId, tenantId, perm, context)),
+    permissions.map((perm) =>
+      checkContentPermission(actorId, tenantId, perm, context),
+    ),
   );
 
-  return permissions.reduce((acc, perm, idx) => {
-    acc[perm] = results[idx];
-    return acc;
-  }, {} as Record<string, boolean>);
+  return permissions.reduce(
+    (acc, perm, idx) => {
+      acc[perm] = results[idx];
+      return acc;
+    },
+    {} as Record<string, boolean>,
+  );
 }
 
 /**
@@ -143,7 +149,12 @@ export async function requireContentPermission(
   permission: ContentPermission,
   context?: ContentPermissionContext,
 ): Promise<void> {
-  const allowed = await checkContentPermission(actorId, tenantId, permission, context);
+  const allowed = await checkContentPermission(
+    actorId,
+    tenantId,
+    permission,
+    context,
+  );
 
   if (!allowed) {
     throw new Error(`Permission denied: ${permission}`);

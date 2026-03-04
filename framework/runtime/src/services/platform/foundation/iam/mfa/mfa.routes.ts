@@ -61,7 +61,7 @@ export interface MfaRoutesDependencies {
  */
 export function createMfaRoutes(
   router: Router,
-  deps: MfaRoutesDependencies
+  deps: MfaRoutesDependencies,
 ): Router {
   const { mfaService, logger, getTenantId, getPrincipalId } = deps;
 
@@ -87,7 +87,7 @@ export function createMfaRoutes(
         logger.error("Failed to get MFA status", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -108,7 +108,7 @@ export function createMfaRoutes(
         logger.error("Failed to check MFA requirement", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -140,7 +140,7 @@ export function createMfaRoutes(
         const result = await mfaService.startEnrollment(
           principalId,
           tenantId,
-          method as MfaMethod
+          method as MfaMethod,
         );
 
         // Don't expose secret directly, only via setupData
@@ -162,7 +162,7 @@ export function createMfaRoutes(
         logger.error("Failed to start MFA enrollment", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -212,7 +212,7 @@ export function createMfaRoutes(
         logger.error("Failed to verify MFA enrollment", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -233,7 +233,7 @@ export function createMfaRoutes(
         logger.error("Failed to cancel MFA enrollment", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -278,7 +278,7 @@ export function createMfaRoutes(
         logger.error("Failed to create MFA challenge", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -301,8 +301,13 @@ export function createMfaRoutes(
           });
         }
 
-        const { challengeToken, code, isBackupCode, rememberDevice, deviceName } =
-          parseResult.data;
+        const {
+          challengeToken,
+          code,
+          isBackupCode,
+          rememberDevice,
+          deviceName,
+        } = parseResult.data;
 
         const deviceId = req.get("x-device-id") || req.cookies?.deviceId;
 
@@ -315,13 +320,15 @@ export function createMfaRoutes(
             userAgent: req.get("user-agent"),
             deviceId,
             rememberDevice,
-          }
+          },
         );
 
         if (!result.success) {
           const status = result.lockedUntil ? 423 : 401;
           return res.status(status).json({
-            error: result.lockedUntil ? "ACCOUNT_LOCKED" : "VERIFICATION_FAILED",
+            error: result.lockedUntil
+              ? "ACCOUNT_LOCKED"
+              : "VERIFICATION_FAILED",
             message: result.reason,
             remainingAttempts: result.remainingAttempts,
             lockedUntil: result.lockedUntil,
@@ -347,7 +354,7 @@ export function createMfaRoutes(
         logger.error("Failed to verify MFA challenge", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -393,7 +400,7 @@ export function createMfaRoutes(
         logger.error("Failed to disable MFA", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -411,7 +418,10 @@ export function createMfaRoutes(
         const tenantId = getTenantId(req);
         const principalId = getPrincipalId(req);
 
-        const result = await mfaService.regenerateBackupCodes(principalId, tenantId);
+        const result = await mfaService.regenerateBackupCodes(
+          principalId,
+          tenantId,
+        );
 
         return res.json({
           backupCodes: result.codes,
@@ -422,7 +432,7 @@ export function createMfaRoutes(
         logger.error("Failed to regenerate backup codes", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -440,7 +450,10 @@ export function createMfaRoutes(
         const tenantId = getTenantId(req);
         const principalId = getPrincipalId(req);
 
-        const devices = await mfaService.getTrustedDevices(principalId, tenantId);
+        const devices = await mfaService.getTrustedDevices(
+          principalId,
+          tenantId,
+        );
 
         return res.json({
           devices: devices.map((d) => ({
@@ -458,7 +471,7 @@ export function createMfaRoutes(
         logger.error("Failed to list trusted devices", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -480,7 +493,7 @@ export function createMfaRoutes(
         logger.error("Failed to revoke trusted device", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -504,7 +517,7 @@ export function createMfaRoutes(
         logger.error("Failed to revoke all trusted devices", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -529,7 +542,7 @@ export function createMfaRoutes(
         const trusted = await mfaService.isTrustedDevice(
           principalId,
           tenantId,
-          trustToken
+          trustToken,
         );
 
         return res.json({ trusted });
@@ -537,7 +550,7 @@ export function createMfaRoutes(
         logger.error("Failed to check trusted device", { error });
         return next(error);
       }
-    }
+    },
   );
 
   // ==========================================================================
@@ -575,7 +588,7 @@ export function createMfaRoutes(
         logger.error("Failed to start WebAuthn registration", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -586,18 +599,20 @@ export function createMfaRoutes(
     "/mfa/webauthn/register-verify",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const body = z.object({
-          challenge: z.string().min(1),
-          response: z.object({
-            id: z.string(),
-            rawId: z.string(),
-            type: z.literal("public-key"),
+        const body = z
+          .object({
+            challenge: z.string().min(1),
             response: z.object({
-              clientDataJSON: z.string(),
-              attestationObject: z.string(),
+              id: z.string(),
+              rawId: z.string(),
+              type: z.literal("public-key"),
+              response: z.object({
+                clientDataJSON: z.string(),
+                attestationObject: z.string(),
+              }),
             }),
-          }),
-        }).parse(req.body);
+          })
+          .parse(req.body);
 
         const webauthnService = (req as any).webauthnService;
         if (!webauthnService) {
@@ -618,7 +633,7 @@ export function createMfaRoutes(
         logger.error("Failed to verify WebAuthn registration", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -647,7 +662,7 @@ export function createMfaRoutes(
         logger.error("Failed to start WebAuthn authentication", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -658,20 +673,22 @@ export function createMfaRoutes(
     "/mfa/webauthn/auth-verify",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const body = z.object({
-          challenge: z.string().min(1),
-          response: z.object({
-            id: z.string(),
-            rawId: z.string(),
-            type: z.literal("public-key"),
+        const body = z
+          .object({
+            challenge: z.string().min(1),
             response: z.object({
-              clientDataJSON: z.string(),
-              authenticatorData: z.string(),
-              signature: z.string(),
-              userHandle: z.string().optional(),
+              id: z.string(),
+              rawId: z.string(),
+              type: z.literal("public-key"),
+              response: z.object({
+                clientDataJSON: z.string(),
+                authenticatorData: z.string(),
+                signature: z.string(),
+                userHandle: z.string().optional(),
+              }),
             }),
-          }),
-        }).parse(req.body);
+          })
+          .parse(req.body);
 
         const webauthnService = (req as any).webauthnService;
         if (!webauthnService) {
@@ -692,7 +709,7 @@ export function createMfaRoutes(
         logger.error("Failed to verify WebAuthn authentication", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

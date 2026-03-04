@@ -75,10 +75,7 @@ export interface AssetBookRepository {
   createRun(input: CreateDepreciationRunInput): Promise<DepreciationRun>;
 
   /** Find a depreciation run by ID. */
-  findRunById(
-    tenantId: string,
-    runId: string,
-  ): Promise<DepreciationRun | null>;
+  findRunById(tenantId: string, runId: string): Promise<DepreciationRun | null>;
 
   /** List depreciation runs matching filter criteria. */
   findRuns(filter: DepreciationRunFilter): Promise<DepreciationRun[]>;

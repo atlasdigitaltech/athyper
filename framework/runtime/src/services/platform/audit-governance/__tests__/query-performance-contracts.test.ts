@@ -108,8 +108,14 @@ describe("Timeline Index Specification (from 156_timeline_indexes.sql)", () => {
   // must have a covering index optimized for the UNION ALL query.
 
   const expectedIndexes = [
-    { table: "workflow_event_log", indexPattern: "idx_timeline_workflow_audit" },
-    { table: "permission_decision_log", indexPattern: "idx_timeline_permission_decision" },
+    {
+      table: "workflow_event_log",
+      indexPattern: "idx_timeline_workflow_audit",
+    },
+    {
+      table: "permission_decision_log",
+      indexPattern: "idx_timeline_permission_decision",
+    },
     { table: "field_access_log", indexPattern: "idx_timeline_field_access" },
     { table: "security_event", indexPattern: "idx_timeline_security_event" },
     { table: "audit_log", indexPattern: "idx_timeline_audit_log" },

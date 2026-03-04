@@ -74,7 +74,10 @@ export class CommentRepo {
   /**
    * Get comment by ID
    */
-  async getById(id: string, tenantId: string): Promise<AttachmentComment | null> {
+  async getById(
+    id: string,
+    tenantId: string,
+  ): Promise<AttachmentComment | null> {
     const result = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -206,11 +209,7 @@ export class CommentRepo {
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .where("deleted_at", "is", null)
-      .where((eb) =>
-        eb.or([
-          eb("mentions", "@>", JSON.stringify([userId])),
-        ]),
-      )
+      .where((eb) => eb.or([eb("mentions", "@>", JSON.stringify([userId]))]))
       .orderBy("created_at", "desc")
       .limit(limit)
       .execute();
@@ -221,7 +220,10 @@ export class CommentRepo {
   /**
    * Count comments for attachment
    */
-  async countByAttachment(tenantId: string, attachmentId: string): Promise<number> {
+  async countByAttachment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<number> {
     const result = await this.db
       .selectFrom(TABLE as any)
       .select((eb) => eb.fn.count<number>("id").as("count"))
@@ -236,7 +238,10 @@ export class CommentRepo {
   /**
    * Hard delete comments for attachment (cascade on attachment delete)
    */
-  async hardDeleteByAttachment(tenantId: string, attachmentId: string): Promise<void> {
+  async hardDeleteByAttachment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom(TABLE as any)
       .where("tenant_id", "=", tenantId)

@@ -32,20 +32,20 @@ The `mesh/` directory contains the complete Docker Compose infrastructure for ru
 
 ## Service Components
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| **PostgreSQL** | postgres:16 | 5432 | Primary database (12 schemas) |
-| **PgBouncer (Apps)** | pgbouncer | 6432 | Connection pool for application queries |
-| **PgBouncer (Auth)** | pgbouncer | 6433 | Connection pool for Keycloak |
-| **Redis** | redis:7 | 6379 | Session store, cache, job queues, rate limiting |
-| **Keycloak** | keycloak:25 | 8080 | Identity provider (OIDC/PKCE) |
-| **Traefik** | traefik:3 | 80, 443 | Reverse proxy, TLS termination, routing |
-| **MinIO** | minio | 9000, 9001 | S3-compatible object storage |
-| **Prometheus** | prometheus | 9090 | Metrics collection |
-| **Grafana** | grafana | 3001 | Metrics dashboards |
-| **Tempo** | grafana/tempo | 3200 | Distributed tracing |
-| **Loki** | grafana/loki | 3100 | Log aggregation |
-| **Alloy** | grafana/alloy | 12345 | Log shipper |
+| Service              | Image         | Port       | Purpose                                         |
+| -------------------- | ------------- | ---------- | ----------------------------------------------- |
+| **PostgreSQL**       | postgres:16   | 5432       | Primary database (12 schemas)                   |
+| **PgBouncer (Apps)** | pgbouncer     | 6432       | Connection pool for application queries         |
+| **PgBouncer (Auth)** | pgbouncer     | 6433       | Connection pool for Keycloak                    |
+| **Redis**            | redis:7       | 6379       | Session store, cache, job queues, rate limiting |
+| **Keycloak**         | keycloak:25   | 8080       | Identity provider (OIDC/PKCE)                   |
+| **Traefik**          | traefik:3     | 80, 443    | Reverse proxy, TLS termination, routing         |
+| **MinIO**            | minio         | 9000, 9001 | S3-compatible object storage                    |
+| **Prometheus**       | prometheus    | 9090       | Metrics collection                              |
+| **Grafana**          | grafana       | 3001       | Metrics dashboards                              |
+| **Tempo**            | grafana/tempo | 3200       | Distributed tracing                             |
+| **Loki**             | grafana/loki  | 3100       | Log aggregation                                 |
+| **Alloy**            | grafana/alloy | 12345      | Log shipper                                     |
 
 ## Directory Structure
 
@@ -147,33 +147,33 @@ docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env up -d
 
 Three environment profiles with different settings:
 
-| Setting | Local | Staging | Production |
-|---------|-------|---------|------------|
-| TLS | Self-signed certs | Let's Encrypt | Managed certs |
-| DB pooling | Minimal | Moderate | Aggressive |
-| Log level | debug | info | warn |
-| Keycloak | Dev mode | Standard | HA cluster |
-| Telemetry | Full stack | Full stack | Metrics + tracing only |
-| Realm safety | Accepts localhost | Rejects localhost | Rejects localhost |
+| Setting      | Local             | Staging           | Production             |
+| ------------ | ----------------- | ----------------- | ---------------------- |
+| TLS          | Self-signed certs | Let's Encrypt     | Managed certs          |
+| DB pooling   | Minimal           | Moderate          | Aggressive             |
+| Log level    | debug             | info              | warn                   |
+| Keycloak     | Dev mode          | Standard          | HA cluster             |
+| Telemetry    | Full stack        | Full stack        | Metrics + tracing only |
+| Realm safety | Accepts localhost | Rejects localhost | Rejects localhost      |
 
 ## Database Schemas
 
 PostgreSQL hosts 12+ schemas, provisioned by `framework/adapters/db/src/sql/`:
 
-| Schema | Purpose | DDL Files |
-|--------|---------|-----------|
-| `public` | Schema provisioning tracking (`schema_provisions` table) | 001 |
-| `core` | Core configuration, tenants | 010 |
-| `meta` | Entity definitions, fields, relations, overlays | 020 |
-| `ref` | Reference data (currencies, countries, UOM) | 030 |
-| `sec` | Security (field access, rate limits) | 040 |
-| `wf` | Workflow definitions, instances, tasks | 050 |
-| `ent` | Business entity data (dynamic, from meta-engine) | 060 |
-| `doc` | Document templates, outputs, render jobs | 070 |
-| `collab` | Comments, reactions, mentions, read tracking | 080 |
-| `audit` | Audit events, outbox, DLQ, archive markers | 090 |
-| `notify` | Notifications, deliveries, preferences, templates | 100 |
-| `ui` | Dashboards, saved views | 110 |
+| Schema   | Purpose                                                  | DDL Files |
+| -------- | -------------------------------------------------------- | --------- |
+| `public` | Schema provisioning tracking (`schema_provisions` table) | 001       |
+| `core`   | Core configuration, tenants                              | 010       |
+| `meta`   | Entity definitions, fields, relations, overlays          | 020       |
+| `ref`    | Reference data (currencies, countries, UOM)              | 030       |
+| `sec`    | Security (field access, rate limits)                     | 040       |
+| `wf`     | Workflow definitions, instances, tasks                   | 050       |
+| `ent`    | Business entity data (dynamic, from meta-engine)         | 060       |
+| `doc`    | Document templates, outputs, render jobs                 | 070       |
+| `collab` | Comments, reactions, mentions, read tracking             | 080       |
+| `audit`  | Audit events, outbox, DLQ, archive markers               | 090       |
+| `notify` | Notifications, deliveries, preferences, templates        | 100       |
+| `ui`     | Dashboards, saved views                                  | 110       |
 
 ## Keycloak Configuration
 
@@ -194,11 +194,11 @@ To export current realm state:
 
 ## Telemetry Stack
 
-| Component | Collects | Dashboard |
-|-----------|----------|-----------|
-| **Prometheus** | Metrics from all services (HTTP, DB, cache, jobs) | Grafana at `:3001` |
-| **Tempo** | Distributed traces (OpenTelemetry) | Grafana Tempo datasource |
-| **Loki** | Aggregated logs from all containers | Grafana Loki datasource |
-| **Alloy** | Ships container logs to Loki | — |
+| Component      | Collects                                          | Dashboard                |
+| -------------- | ------------------------------------------------- | ------------------------ |
+| **Prometheus** | Metrics from all services (HTTP, DB, cache, jobs) | Grafana at `:3001`       |
+| **Tempo**      | Distributed traces (OpenTelemetry)                | Grafana Tempo datasource |
+| **Loki**       | Aggregated logs from all containers               | Grafana Loki datasource  |
+| **Alloy**      | Ships container logs to Loki                      | —                        |
 
 The telemetry adapter (`framework/adapters/telemetry/`) instruments the runtime with OpenTelemetry, which feeds into this stack.

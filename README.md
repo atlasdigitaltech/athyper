@@ -83,28 +83,28 @@ See [Deployment Guide](docs/athyper/deployment/README.md) for full setup.
 
 ## Technology Stack
 
-| Layer | Technologies |
-|-------|-------------|
-| Backend | Node.js 20, TypeScript 5.9, Express 4, BullMQ |
-| Frontend | Next.js 14, React 19, Tailwind CSS 4, Radix UI, Zustand 5 |
-| Data | PostgreSQL 16, Kysely, Redis/ioredis, Prisma 6 |
-| Auth | Keycloak, JOSE (JWT), PKCE, Redis sessions |
-| Infra | Docker, Traefik, PgBouncer, MinIO (S3) |
-| Observability | OpenTelemetry, Pino, Grafana, Prometheus, Tempo, Loki |
-| Build | pnpm 10, Turbo 2.8, Vitest 4, tsup, ESLint 9 |
+| Layer         | Technologies                                              |
+| ------------- | --------------------------------------------------------- |
+| Backend       | Node.js 20, TypeScript 5.9, Express 4, BullMQ             |
+| Frontend      | Next.js 14, React 19, Tailwind CSS 4, Radix UI, Zustand 5 |
+| Data          | PostgreSQL 16, Kysely, Redis/ioredis, Prisma 6            |
+| Auth          | Keycloak, JOSE (JWT), PKCE, Redis sessions                |
+| Infra         | Docker, Traefik, PgBouncer, MinIO (S3)                    |
+| Observability | OpenTelemetry, Pino, Grafana, Prometheus, Tempo, Loki     |
+| Build         | pnpm 10, Turbo 2.8, Vitest 4, tsup, ESLint 9              |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start all services in dev mode |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run tests (Vitest) |
-| `pnpm lint` | Lint all packages |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm check` | Lint + typecheck + test + depcheck |
-| `pnpm mesh:up` | Start Docker infrastructure |
-| `pnpm mesh:down` | Stop Docker infrastructure |
-| `pnpm db:provision` | Provision database (DDL + seed) |
-| `pnpm db:studio` | Open Prisma Studio |
-| `pnpm kysely:codegen` | Generate Kysely types from DB |
+| Command               | Description                        |
+| --------------------- | ---------------------------------- |
+| `pnpm dev`            | Start all services in dev mode     |
+| `pnpm build`          | Build all packages                 |
+| `pnpm test`           | Run tests (Vitest)                 |
+| `pnpm lint`           | Lint all packages                  |
+| `pnpm typecheck`      | TypeScript type checking           |
+| `pnpm check`          | Lint + typecheck + test + depcheck |
+| `pnpm mesh:up`        | Start Docker infrastructure        |
+| `pnpm mesh:down`      | Stop Docker infrastructure         |
+| `pnpm db:provision`   | Provision database (DDL + seed)    |
+| `pnpm db:studio`      | Open Prisma Studio                 |
+| `pnpm kysely:codegen` | Generate Kysely types from DB      |

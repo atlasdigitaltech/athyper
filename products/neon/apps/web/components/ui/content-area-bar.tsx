@@ -36,11 +36,11 @@ export function ContentAreaBar({
       <div className="flex items-center gap-2">
         <h2 className="shrink-0 text-base font-semibold">{title}</h2>
         {summary && (
-          <span className="shrink-0 text-sm text-muted-foreground">{summary}</span>
+          <span className="shrink-0 text-sm text-muted-foreground">
+            {summary}
+          </span>
         )}
-        {search && (
-          <div className="min-w-0 flex-1 max-w-xs">{search}</div>
-        )}
+        {search && <div className="min-w-0 flex-1 max-w-xs">{search}</div>}
         {actions && (
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {actions}

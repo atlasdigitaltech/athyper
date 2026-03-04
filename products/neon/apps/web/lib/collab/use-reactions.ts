@@ -10,67 +10,69 @@ import useSWR from "swr";
 import { collabFetcher, collabMutate } from "./fetcher";
 
 export interface ReactionSummary {
-    reactionType: string;
-    count: number;
-    reacted: boolean; // current user reacted?
+  reactionType: string;
+  count: number;
+  reacted: boolean; // current user reacted?
 }
 
 interface ReactionsResponse {
-    ok: boolean;
-    data: ReactionSummary[];
+  ok: boolean;
+  data: ReactionSummary[];
 }
 
 export function useReactions(commentId: string | null) {
-    const key = commentId ? `/api/collab/comments/${commentId}/reactions` : null;
+  const key = commentId ? `/api/collab/comments/${commentId}/reactions` : null;
 
-    const { data, error, isLoading, mutate } = useSWR<ReactionsResponse>(
-        key,
-        collabFetcher,
-    );
+  const { data, error, isLoading, mutate } = useSWR<ReactionsResponse>(
+    key,
+    collabFetcher,
+  );
 
-    const toggleReaction = useCallback(
-        async (reactionType: string) => {
-            if (!commentId) return;
+  const toggleReaction = useCallback(
+    async (reactionType: string) => {
+      if (!commentId) return;
 
-            // Optimistic update
-            const prev = data?.data ?? [];
-            const existing = prev.find((r) => r.reactionType === reactionType);
+      // Optimistic update
+      const prev = data?.data ?? [];
+      const existing = prev.find((r) => r.reactionType === reactionType);
 
-            const optimistic: ReactionSummary[] = existing?.reacted
-                ? prev.map((r) =>
-                    r.reactionType === reactionType
-                        ? { ...r, count: r.count - 1, reacted: false }
-                        : r,
-                ).filter((r) => r.count > 0)
-                : [
-                    ...prev.filter((r) => r.reactionType !== reactionType),
-                    {
-                        reactionType,
-                        count: (existing?.count ?? 0) + 1,
-                        reacted: true,
-                    },
-                ];
+      const optimistic: ReactionSummary[] = existing?.reacted
+        ? prev
+            .map((r) =>
+              r.reactionType === reactionType
+                ? { ...r, count: r.count - 1, reacted: false }
+                : r,
+            )
+            .filter((r) => r.count > 0)
+        : [
+            ...prev.filter((r) => r.reactionType !== reactionType),
+            {
+              reactionType,
+              count: (existing?.count ?? 0) + 1,
+              reacted: true,
+            },
+          ];
 
-            await mutate({ ok: true, data: optimistic }, false);
+      await mutate({ ok: true, data: optimistic }, false);
 
-            try {
-                await collabMutate(
-                    `/api/collab/comments/${commentId}/reactions`,
-                    "POST",
-                    { reactionType },
-                );
-                await mutate();
-            } catch {
-                await mutate();
-            }
-        },
-        [commentId, data, mutate],
-    );
+      try {
+        await collabMutate(
+          `/api/collab/comments/${commentId}/reactions`,
+          "POST",
+          { reactionType },
+        );
+        await mutate();
+      } catch {
+        await mutate();
+      }
+    },
+    [commentId, data, mutate],
+  );
 
-    return {
-        reactions: data?.data ?? [],
-        isLoading,
-        error,
-        toggleReaction,
-    };
+  return {
+    reactions: data?.data ?? [],
+    isLoading,
+    error,
+    toggleReaction,
+  };
 }

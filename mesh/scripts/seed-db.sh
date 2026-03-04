@@ -22,7 +22,11 @@ export MSYS2_ARG_CONV_EXCL="*"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MESH_DIR="$(dirname "$SCRIPT_DIR")"
 SEED_DIR="$(cd "$MESH_DIR/../framework/adapters/db" && pwd)"
-ENV_FILE="${MESH_DIR}/env/.env"
+if [ -f "${MESH_DIR}/env/.env" ]; then
+  ENV_FILE="${MESH_DIR}/env/.env"
+else
+  ENV_FILE="${MESH_DIR}/env/.env.example"
+fi
 
 # Colors
 GREEN='\033[0;32m'

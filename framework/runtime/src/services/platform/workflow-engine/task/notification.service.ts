@@ -53,73 +53,115 @@ export class NotificationService implements INotificationService {
    * @deprecated Use registerSender on channel adapters instead.
    */
   registerSender(_sender: INotificationSender): void {
-    this.logger.warn("registerSender() is deprecated — use channel adapters in the notification framework");
+    this.logger.warn(
+      "registerSender() is deprecated — use channel adapters in the notification framework",
+    );
   }
 
   async sendTaskAssigned(tenantId: string, task: ApprovalTask): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.task.assigned", task.id, "approval_task", {
-      taskId: task.id,
-      instanceId: task.instanceId,
-      assigneeId: task.assigneeId,
-      assigneeDisplayName: task.assigneeDisplayName,
-      entityType: task.entity.type,
-      entityDisplayName: task.entity.displayName || task.entity.id,
-      workflowName: task.workflow.templateName,
-      stepName: task.workflow.stepName,
-      requesterName: task.requester.displayName || task.requester.userId,
-      dueDate: task.sla.dueAt.toISOString(),
-      priority: task.priority,
-    });
+    await this.publishEvent(
+      tenantId,
+      "workflow.task.assigned",
+      task.id,
+      "approval_task",
+      {
+        taskId: task.id,
+        instanceId: task.instanceId,
+        assigneeId: task.assigneeId,
+        assigneeDisplayName: task.assigneeDisplayName,
+        entityType: task.entity.type,
+        entityDisplayName: task.entity.displayName || task.entity.id,
+        workflowName: task.workflow.templateName,
+        stepName: task.workflow.stepName,
+        requesterName: task.requester.displayName || task.requester.userId,
+        dueDate: task.sla.dueAt.toISOString(),
+        priority: task.priority,
+      },
+    );
   }
 
-  async sendReminder(tenantId: string, task: ApprovalTask, reminderNumber: number): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.task.reminder", task.id, "approval_task", {
-      taskId: task.id,
-      instanceId: task.instanceId,
-      assigneeId: task.assigneeId,
-      reminderNumber,
-      entityType: task.entity.type,
-      entityDisplayName: task.entity.displayName || task.entity.id,
-      dueDate: task.sla.dueAt.toISOString(),
-      timeRemainingMs: task.sla.timeRemainingMs,
-    });
+  async sendReminder(
+    tenantId: string,
+    task: ApprovalTask,
+    reminderNumber: number,
+  ): Promise<void> {
+    await this.publishEvent(
+      tenantId,
+      "workflow.task.reminder",
+      task.id,
+      "approval_task",
+      {
+        taskId: task.id,
+        instanceId: task.instanceId,
+        assigneeId: task.assigneeId,
+        reminderNumber,
+        entityType: task.entity.type,
+        entityDisplayName: task.entity.displayName || task.entity.id,
+        dueDate: task.sla.dueAt.toISOString(),
+        timeRemainingMs: task.sla.timeRemainingMs,
+      },
+    );
   }
 
   async sendSlaWarning(tenantId: string, task: ApprovalTask): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.task.sla_warning", task.id, "approval_task", {
-      taskId: task.id,
-      instanceId: task.instanceId,
-      assigneeId: task.assigneeId,
-      entityType: task.entity.type,
-      entityDisplayName: task.entity.displayName || task.entity.id,
-      dueDate: task.sla.dueAt.toISOString(),
-      timeRemainingMs: task.sla.timeRemainingMs,
-    });
+    await this.publishEvent(
+      tenantId,
+      "workflow.task.sla_warning",
+      task.id,
+      "approval_task",
+      {
+        taskId: task.id,
+        instanceId: task.instanceId,
+        assigneeId: task.assigneeId,
+        entityType: task.entity.type,
+        entityDisplayName: task.entity.displayName || task.entity.id,
+        dueDate: task.sla.dueAt.toISOString(),
+        timeRemainingMs: task.sla.timeRemainingMs,
+      },
+    );
   }
 
   async sendSlaBreach(tenantId: string, task: ApprovalTask): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.task.sla_breached", task.id, "approval_task", {
-      taskId: task.id,
-      instanceId: task.instanceId,
-      assigneeId: task.assigneeId,
-      entityType: task.entity.type,
-      entityDisplayName: task.entity.displayName || task.entity.id,
-      dueDate: task.sla.dueAt.toISOString(),
-      timeRemainingMs: task.sla.timeRemainingMs,
-    });
+    await this.publishEvent(
+      tenantId,
+      "workflow.task.sla_breached",
+      task.id,
+      "approval_task",
+      {
+        taskId: task.id,
+        instanceId: task.instanceId,
+        assigneeId: task.assigneeId,
+        entityType: task.entity.type,
+        entityDisplayName: task.entity.displayName || task.entity.id,
+        dueDate: task.sla.dueAt.toISOString(),
+        timeRemainingMs: task.sla.timeRemainingMs,
+      },
+    );
   }
 
-  async sendEscalation(tenantId: string, task: ApprovalTask, escalatedTo: NotificationRecipient): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.task.escalated", task.id, "approval_task", {
-      taskId: task.id,
-      instanceId: task.instanceId,
-      assigneeId: escalatedTo.userId,
-      originalAssignee: task.delegation?.originalAssigneeDisplayName || task.assigneeDisplayName,
-      escalationReason: task.escalation?.reason || "SLA breach",
-      entityType: task.entity.type,
-      entityDisplayName: task.entity.displayName || task.entity.id,
-      dueDate: task.sla.dueAt.toISOString(),
-    });
+  async sendEscalation(
+    tenantId: string,
+    task: ApprovalTask,
+    escalatedTo: NotificationRecipient,
+  ): Promise<void> {
+    await this.publishEvent(
+      tenantId,
+      "workflow.task.escalated",
+      task.id,
+      "approval_task",
+      {
+        taskId: task.id,
+        instanceId: task.instanceId,
+        assigneeId: escalatedTo.userId,
+        originalAssignee:
+          task.delegation?.originalAssigneeDisplayName ||
+          task.assigneeDisplayName,
+        escalationReason: task.escalation?.reason || "SLA breach",
+        entityType: task.entity.type,
+        entityDisplayName: task.entity.displayName || task.entity.id,
+        dueDate: task.sla.dueAt.toISOString(),
+      },
+    );
   }
 
   async sendApprovalComplete(
@@ -127,17 +169,26 @@ export class NotificationService implements INotificationService {
     instance: ApprovalInstance,
     outcome: "approved" | "rejected",
   ): Promise<void> {
-    await this.publishEvent(tenantId, "workflow.approval.completed", instance.id, "approval_instance", {
-      instanceId: instance.id,
-      requesterId: instance.requester.userId,
-      outcome,
-      entityType: instance.entity.type,
-      entityDisplayName: instance.entity.displayName || instance.entity.id,
-      completedAt: new Date().toISOString(),
-    });
+    await this.publishEvent(
+      tenantId,
+      "workflow.approval.completed",
+      instance.id,
+      "approval_instance",
+      {
+        instanceId: instance.id,
+        requesterId: instance.requester.userId,
+        outcome,
+        entityType: instance.entity.type,
+        entityDisplayName: instance.entity.displayName || instance.entity.id,
+        completedAt: new Date().toISOString(),
+      },
+    );
   }
 
-  async sendBulkReminders(tenantId: string, tasks: ApprovalTask[]): Promise<void> {
+  async sendBulkReminders(
+    tenantId: string,
+    tasks: ApprovalTask[],
+  ): Promise<void> {
     for (const task of tasks) {
       await this.sendReminder(tenantId, task, 1);
     }
@@ -148,27 +199,40 @@ export class NotificationService implements INotificationService {
   async getNotifications(
     _tenantId: string,
     _userId: string,
-    _options?: { unreadOnly?: boolean; type?: NotificationType; limit?: number; offset?: number },
+    _options?: {
+      unreadOnly?: boolean;
+      type?: NotificationType;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<NotificationRecord[]> {
     // Notification inbox is now served by the notification framework's REST API.
     // This method is kept for backward compat — callers should migrate to the API.
-    this.logger.warn("getNotifications() via service is deprecated — use /api/notifications REST API");
+    this.logger.warn(
+      "getNotifications() via service is deprecated — use /api/notifications REST API",
+    );
     return [];
   }
 
   async markAsRead(_tenantId: string, _notificationId: string): Promise<void> {
-    this.logger.warn("markAsRead() via service is deprecated — use /api/notifications/:id/read REST API");
+    this.logger.warn(
+      "markAsRead() via service is deprecated — use /api/notifications/:id/read REST API",
+    );
   }
 
   async markAllAsRead(_tenantId: string, _userId: string): Promise<void> {
-    this.logger.warn("markAllAsRead() via service is deprecated — use /api/notifications/mark-all-read REST API");
+    this.logger.warn(
+      "markAllAsRead() via service is deprecated — use /api/notifications/mark-all-read REST API",
+    );
   }
 
   async getPreferences(
     _tenantId: string,
     _userId: string,
   ): Promise<NotificationPreferences | undefined> {
-    this.logger.warn("getPreferences() via service is deprecated — use /api/notifications/preferences REST API");
+    this.logger.warn(
+      "getPreferences() via service is deprecated — use /api/notifications/preferences REST API",
+    );
     return undefined;
   }
 
@@ -177,7 +241,9 @@ export class NotificationService implements INotificationService {
     _userId: string,
     _preferences: Partial<NotificationPreferences>,
   ): Promise<NotificationPreferences> {
-    this.logger.warn("updatePreferences() via service is deprecated — use PUT /api/notifications/preferences REST API");
+    this.logger.warn(
+      "updatePreferences() via service is deprecated — use PUT /api/notifications/preferences REST API",
+    );
     return _preferences as NotificationPreferences;
   }
 
@@ -187,7 +253,9 @@ export class NotificationService implements INotificationService {
     _channel: NotificationChannel,
     _locale?: string,
   ): Promise<NotificationTemplate | undefined> {
-    this.logger.warn("getTemplate() via service is deprecated — use /api/admin/notifications/templates REST API");
+    this.logger.warn(
+      "getTemplate() via service is deprecated — use /api/admin/notifications/templates REST API",
+    );
     return undefined;
   }
 

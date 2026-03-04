@@ -26,7 +26,11 @@ import {
   DELETE_ACTION,
 } from "../golden-tests.js";
 import { PolicySimulatorService } from "../simulator.service.js";
-import { PolicyTestRunner, DEFAULT_PERFORMANCE_BUDGET, formatReportAsText } from "../test-runner.js";
+import {
+  PolicyTestRunner,
+  DEFAULT_PERFORMANCE_BUDGET,
+  formatReportAsText,
+} from "../test-runner.js";
 import { InMemoryTestCaseRepository } from "../testcase-repository.js";
 
 import type { PolicyTestCase } from "../types.js";
@@ -57,7 +61,11 @@ class MockFactsProvider {
     };
   }
 
-  async resolveResource(_tenantId: string, resourceType: string, resourceId?: string) {
+  async resolveResource(
+    _tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ) {
     return {
       type: resourceType,
       id: resourceId,
@@ -121,7 +129,13 @@ class MockPolicyStore {
           actions: ["*"],
           resources: ["document"],
           conditions: {
-            all: [{ field: "resource.classification", operator: "equals", value: "confidential" }],
+            all: [
+              {
+                field: "resource.classification",
+                operator: "equals",
+                value: "confidential",
+              },
+            ],
           },
         },
       ],
@@ -144,7 +158,9 @@ class MockPolicyStore {
         {
           id: "child-ou-allow",
           effect: "allow",
-          subjects: [{ attributes: { ou: { startsWith: "${resource.owner_ou}" } } }],
+          subjects: [
+            { attributes: { ou: { startsWith: "${resource.owner_ou}" } } },
+          ],
           actions: ["read"],
           resources: ["document"],
         },
@@ -165,7 +181,9 @@ class MockPolicyStore {
           actions: ["submit"],
           resources: ["document"],
           conditions: {
-            all: [{ field: "resource.state", operator: "equals", value: "draft" }],
+            all: [
+              { field: "resource.state", operator: "equals", value: "draft" },
+            ],
           },
         },
         {
@@ -175,7 +193,9 @@ class MockPolicyStore {
           actions: ["approve", "reject"],
           resources: ["document"],
           conditions: {
-            all: [{ field: "resource.state", operator: "equals", value: "pending" }],
+            all: [
+              { field: "resource.state", operator: "equals", value: "pending" },
+            ],
           },
         },
         {
@@ -185,7 +205,13 @@ class MockPolicyStore {
           actions: ["publish"],
           resources: ["document"],
           conditions: {
-            all: [{ field: "resource.state", operator: "equals", value: "approved" }],
+            all: [
+              {
+                field: "resource.state",
+                operator: "equals",
+                value: "approved",
+              },
+            ],
           },
         },
       ],
@@ -208,7 +234,11 @@ class MockPolicyStore {
             all: [
               { field: "context.hour", operator: "gte", value: 9 },
               { field: "context.hour", operator: "lt", value: 17 },
-              { field: "context.dayOfWeek", operator: "in", value: [1, 2, 3, 4, 5] },
+              {
+                field: "context.dayOfWeek",
+                operator: "in",
+                value: [1, 2, 3, 4, 5],
+              },
             ],
           },
         },
@@ -255,7 +285,10 @@ class MockPolicyStore {
           actions: ["export"],
           resources: ["employee_record"],
           obligations: [
-            { type: "approval", params: { requiredRole: "compliance_officer" } },
+            {
+              type: "approval",
+              params: { requiredRole: "compliance_officer" },
+            },
             { type: "audit", params: { detail: "high" } },
           ],
         },
@@ -300,13 +333,11 @@ class MockPolicyEvaluator {
    * Evaluate policy input and return PolicyDecision
    * This mock implements the IPolicyEvaluator interface
    */
-  async evaluate(
-    input: any,
-    _options?: any
-  ): Promise<any> {
+  async evaluate(input: any, _options?: any): Promise<any> {
     const startTime = performance.now();
     const tenantId = input.context?.tenantId ?? "test-tenant";
-    const policies = await this.policyStore.getActivePoliciesForTenant(tenantId);
+    const policies =
+      await this.policyStore.getActivePoliciesForTenant(tenantId);
 
     const matchedRules: any[] = [];
     const obligations: any[] = [];
@@ -324,7 +355,9 @@ class MockPolicyEvaluator {
             effect: rule.effect as "allow" | "deny",
             priority: rule.priority ?? 100,
             scopeType: "global",
-            conditions: rule.conditions ? { expression: rule.conditions } : undefined,
+            conditions: rule.conditions
+              ? { expression: rule.conditions }
+              : undefined,
           };
           matchedRules.push(matchedRule);
 
@@ -371,7 +404,7 @@ class MockPolicyEvaluator {
 
   private ruleMatches(
     rule: any,
-    input: { subject: any; resource: any; action: any; context?: any }
+    input: { subject: any; resource: any; action: any; context?: any },
   ): boolean {
     // Check action - use .code property (PolicyAction has code, not name)
     const actionCode = input.action?.code || input.action?.name || input.action;
@@ -380,14 +413,19 @@ class MockPolicyEvaluator {
     }
 
     // Check resource type
-    if (rule.resources[0] !== "*" && !rule.resources.includes(input.resource.type)) {
+    if (
+      rule.resources[0] !== "*" &&
+      !rule.resources.includes(input.resource.type)
+    ) {
       return false;
     }
 
     // Check subjects (roles)
     const subjectMatches = rule.subjects.some((s: any) => {
       if (s.roles) {
-        return s.roles.some((role: string) => input.subject.roles?.includes(role));
+        return s.roles.some((role: string) =>
+          input.subject.roles?.includes(role),
+        );
       }
       if (s.attributes) {
         // Simplified attribute matching
@@ -410,20 +448,24 @@ class MockPolicyEvaluator {
 
   private evaluateConditions(
     conditions: any,
-    input: { subject: any; resource: any; action: any; context?: any }
+    input: { subject: any; resource: any; action: any; context?: any },
   ): boolean {
     if (conditions.all) {
-      return conditions.all.every((cond: any) => this.evaluateSingleCondition(cond, input));
+      return conditions.all.every((cond: any) =>
+        this.evaluateSingleCondition(cond, input),
+      );
     }
     if (conditions.any) {
-      return conditions.any.some((cond: any) => this.evaluateSingleCondition(cond, input));
+      return conditions.any.some((cond: any) =>
+        this.evaluateSingleCondition(cond, input),
+      );
     }
     return true;
   }
 
   private evaluateSingleCondition(
     cond: any,
-    input: { subject: any; resource: any; action: any; context?: any }
+    input: { subject: any; resource: any; action: any; context?: any },
   ): boolean {
     const fieldParts = cond.field.split(".");
     let value: any;
@@ -488,7 +530,7 @@ describe("Policy Simulator", () => {
     simulator = new PolicySimulatorService(
       mockDb,
       evaluator as any,
-      factsProvider as any
+      factsProvider as any,
     );
     testRunner = new PolicyTestRunner(simulator, repository, {
       verbose: false,
@@ -547,7 +589,7 @@ describe("Policy Simulator", () => {
           action: READ_ACTION,
           context: {},
         },
-        { includeExplain: true }
+        { includeExplain: true },
       );
 
       expect(result.success).toBe(true);
@@ -567,7 +609,7 @@ describe("Policy Simulator", () => {
           action: READ_ACTION,
           context: {},
         },
-        { includeExplain: true }
+        { includeExplain: true },
       );
 
       expect(result.success).toBe(true);
@@ -628,7 +670,9 @@ describe("Policy Simulator", () => {
       });
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.message.includes("effect"))).toBe(true);
+      expect(result.errors.some((e) => e.message.includes("effect"))).toBe(
+        true,
+      );
     });
   });
 
@@ -732,7 +776,11 @@ describe("Policy Simulator", () => {
         },
       ];
 
-      const result = await simulator.runTestSuite(TEST_TENANT_ID, testCases, "Basic Suite");
+      const result = await simulator.runTestSuite(
+        TEST_TENANT_ID,
+        testCases,
+        "Basic Suite",
+      );
 
       expect(result.totalTests).toBe(2);
       expect(result.passedTests).toBe(2);
@@ -900,7 +948,7 @@ describe("Policy Simulator", () => {
           enabled: true,
           createdBy: "test-user",
         },
-        "test-user"
+        "test-user",
       );
 
       expect(testCase.id).toBeDefined();
@@ -930,7 +978,7 @@ describe("Policy Simulator", () => {
           enabled: true,
           createdBy: "test-user",
         },
-        "test-user"
+        "test-user",
       );
 
       await repository.create(
@@ -950,13 +998,17 @@ describe("Policy Simulator", () => {
           enabled: true,
           createdBy: "test-user",
         },
-        "test-user"
+        "test-user",
       );
 
-      const rbacTests = await repository.list(TEST_TENANT_ID, { policyId: "rbac-basic" });
+      const rbacTests = await repository.list(TEST_TENANT_ID, {
+        policyId: "rbac-basic",
+      });
       expect(rbacTests.length).toBeGreaterThanOrEqual(1);
 
-      const taggedTests = await repository.list(TEST_TENANT_ID, { tags: ["workflow"] });
+      const taggedTests = await repository.list(TEST_TENANT_ID, {
+        tags: ["workflow"],
+      });
       expect(taggedTests.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -978,7 +1030,7 @@ describe("Policy Simulator", () => {
           enabled: true,
           createdBy: "test-user",
         },
-        "test-user"
+        "test-user",
       );
 
       await repository.updateRunResult(TEST_TENANT_ID, testCase.id, {
@@ -1038,7 +1090,11 @@ describe("Regression Test Suite", () => {
     evaluator = new MockPolicyEvaluator(policyStore);
     factsProvider = new MockFactsProvider();
     // Constructor: (db, evaluator, factsProvider)
-    simulator = new PolicySimulatorService(mockDb, evaluator as any, factsProvider as any);
+    simulator = new PolicySimulatorService(
+      mockDb,
+      evaluator as any,
+      factsProvider as any,
+    );
     testRunner = new PolicyTestRunner(simulator, undefined, {
       verbose: false,
       failOnBudgetViolation: false,

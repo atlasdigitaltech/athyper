@@ -17,7 +17,7 @@ import type { Redis } from "ioredis";
 export class RedisRateLimiter implements RateLimiter {
   constructor(
     private redis: Redis,
-    private config: RateLimitConfig
+    private config: RateLimitConfig,
   ) {}
 
   async consume(key: string, cost: number = 1): Promise<RateLimitResult> {
@@ -35,7 +35,7 @@ export class RedisRateLimiter implements RateLimiter {
         now.toString(),
         windowMs.toString(),
         maxRequests.toString(),
-        cost.toString()
+        cost.toString(),
       );
 
       const [allowed, tokens, resetTime] = result as [number, number, number];
@@ -45,7 +45,8 @@ export class RedisRateLimiter implements RateLimiter {
         remaining: Math.floor(tokens),
         limit: maxRequests,
         resetMs: resetTime - now,
-        retryAfter: allowed === 1 ? undefined : Math.ceil((resetTime - now) / 1000),
+        retryAfter:
+          allowed === 1 ? undefined : Math.ceil((resetTime - now) / 1000),
       };
     } catch (error) {
       // On Redis error, fail open (allow request) but log
@@ -54,7 +55,7 @@ export class RedisRateLimiter implements RateLimiter {
           msg: "rate_limiter_error",
           key: fullKey,
           err: String(error),
-        })
+        }),
       );
 
       return {
@@ -71,14 +72,14 @@ export class RedisRateLimiter implements RateLimiter {
     const now = Date.now();
 
     try {
-      const [tokens, resetTime] = await this.redis.eval(
+      const [tokens, resetTime] = (await this.redis.eval(
         this.getCheckScript(),
         1,
         fullKey,
         now.toString(),
         this.config.windowMs.toString(),
-        this.config.maxRequests.toString()
-      ) as [number, number];
+        this.config.maxRequests.toString(),
+      )) as [number, number];
 
       return {
         allowed: tokens >= 1,
@@ -92,7 +93,7 @@ export class RedisRateLimiter implements RateLimiter {
           msg: "rate_limiter_check_error",
           key: fullKey,
           err: String(error),
-        })
+        }),
       );
 
       return {
@@ -213,7 +214,7 @@ export class RedisRateLimiter implements RateLimiter {
 export class RedisSlidingWindowRateLimiter implements RateLimiter {
   constructor(
     private redis: Redis,
-    private config: RateLimitConfig
+    private config: RateLimitConfig,
   ) {}
 
   async consume(key: string, cost: number = 1): Promise<RateLimitResult> {
@@ -231,7 +232,7 @@ export class RedisSlidingWindowRateLimiter implements RateLimiter {
         windowStart.toString(),
         this.config.maxRequests.toString(),
         cost.toString(),
-        this.config.windowMs.toString()
+        this.config.windowMs.toString(),
       );
 
       const [allowed, count] = result as [number, number];
@@ -242,7 +243,8 @@ export class RedisSlidingWindowRateLimiter implements RateLimiter {
         remaining,
         limit: this.config.maxRequests,
         resetMs: this.config.windowMs,
-        retryAfter: allowed === 1 ? undefined : Math.ceil(this.config.windowMs / 1000),
+        retryAfter:
+          allowed === 1 ? undefined : Math.ceil(this.config.windowMs / 1000),
       };
     } catch (error) {
       console.error(
@@ -250,7 +252,7 @@ export class RedisSlidingWindowRateLimiter implements RateLimiter {
           msg: "sliding_window_rate_limiter_error",
           key: fullKey,
           err: String(error),
-        })
+        }),
       );
 
       return {
@@ -284,7 +286,7 @@ export class RedisSlidingWindowRateLimiter implements RateLimiter {
           msg: "sliding_window_check_error",
           key: fullKey,
           err: String(error),
-        })
+        }),
       );
 
       return {

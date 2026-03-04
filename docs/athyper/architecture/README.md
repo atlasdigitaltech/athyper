@@ -54,10 +54,10 @@ The DI container (`framework/runtime/src/kernel/container.ts`) is token-based:
 ```typescript
 // Tokens are string constants grouped in a TOKENS object
 export const TOKENS = {
-    config: "kernel.config",
-    logger: "kernel.logger",
-    db:     "adapter.db",
-    // ... 150+ tokens organized by domain
+  config: "kernel.config",
+  logger: "kernel.logger",
+  db: "adapter.db",
+  // ... 150+ tokens organized by domain
 };
 
 // Registration
@@ -69,11 +69,11 @@ const db = await container.resolve(TOKENS.db);
 
 ### Cache Modes
 
-| Mode | Lifetime | Use Case |
-|------|----------|----------|
-| `singleton` | Application lifetime | DB pool, config, logger |
-| `scoped` | Per-request | Tenant context, request context |
-| `transient` | Every resolve | Stateless utilities |
+| Mode        | Lifetime             | Use Case                        |
+| ----------- | -------------------- | ------------------------------- |
+| `singleton` | Application lifetime | DB pool, config, logger         |
+| `scoped`    | Per-request          | Tenant context, request context |
+| `transient` | Every resolve        | Stateless utilities             |
 
 ### Scope Hierarchy
 
@@ -91,28 +91,28 @@ Every service module implements the `RuntimeModule` interface:
 
 ```typescript
 type RuntimeModule = {
-    name: string;
-    register?: (c: Container) => void | Promise<void>;   // Phase 1: bind services
-    contribute?: (c: Container) => void | Promise<void>;  // Phase 2: wire routes/jobs
+  name: string;
+  register?: (c: Container) => void | Promise<void>; // Phase 1: bind services
+  contribute?: (c: Container) => void | Promise<void>; // Phase 2: wire routes/jobs
 };
 ```
 
 The 12 registered modules (loaded in order via `services/registry.ts`):
 
-| # | Module | Tier | Purpose |
-|---|--------|------|---------|
-| 1 | httpFoundation | 1 | HTTP server, health, readiness, liveness |
-| 2 | metaModule | 1 | Meta-engine (entity definitions, lifecycle, validation) |
-| 3 | iamModule | 1 | IAM, MFA, principal search |
-| 4 | dashboardModule | 1 | Dashboard and saved view services |
-| 5 | documentModule | 2 | Document rendering (templates, PDF, brands) |
-| 6 | contentModule | 2 | Content management (upload, versioning, ACL) |
-| 7 | notificationModule | 2 | Multi-channel notifications (7 adapters) |
-| 8 | auditGovernanceModule | 1 | Audit trail, hash chain, DLQ, compliance |
-| 9 | collaborationModule | 3 | Comments, reactions, mentions, read tracking |
-| 10 | integrationHubModule | 2 | External integrations, webhooks, flows |
-| 11 | messagingModule | 3 | In-app direct/group messaging |
-| 12 | sharingDelegationModule | 3 | Record sharing, task delegation, temporary access |
+| #   | Module                  | Tier | Purpose                                                 |
+| --- | ----------------------- | ---- | ------------------------------------------------------- |
+| 1   | httpFoundation          | 1    | HTTP server, health, readiness, liveness                |
+| 2   | metaModule              | 1    | Meta-engine (entity definitions, lifecycle, validation) |
+| 3   | iamModule               | 1    | IAM, MFA, principal search                              |
+| 4   | dashboardModule         | 1    | Dashboard and saved view services                       |
+| 5   | documentModule          | 2    | Document rendering (templates, PDF, brands)             |
+| 6   | contentModule           | 2    | Content management (upload, versioning, ACL)            |
+| 7   | notificationModule      | 2    | Multi-channel notifications (7 adapters)                |
+| 8   | auditGovernanceModule   | 1    | Audit trail, hash chain, DLQ, compliance                |
+| 9   | collaborationModule     | 3    | Comments, reactions, mentions, read tracking            |
+| 10  | integrationHubModule    | 2    | External integrations, webhooks, flows                  |
+| 11  | messagingModule         | 3    | In-app direct/group messaging                           |
+| 12  | sharingDelegationModule | 3    | Record sharing, task delegation, temporary access       |
 
 Each module load is audit-logged with a `module.loaded` event.
 
@@ -154,14 +154,14 @@ Runtime HTTP Server (Express)
 
 ### Isolation Points
 
-| Layer | Mechanism |
-|-------|-----------|
-| **Session** | Redis session keyed by `neon_sid` cookie; tenant ID bound at login |
-| **Request** | `tenantContext` scoped in DI container per request |
+| Layer        | Mechanism                                                              |
+| ------------ | ---------------------------------------------------------------------- |
+| **Session**  | Redis session keyed by `neon_sid` cookie; tenant ID bound at login     |
+| **Request**  | `tenantContext` scoped in DI container per request                     |
 | **Database** | Row-level isolation via `tenant_id` column on all tenant-scoped tables |
-| **Cache** | Redis keys namespaced by tenant ID |
-| **Auth** | Per-realm Keycloak configuration; realm safety assertions at boot |
-| **Config** | Tenant IAM profiles with per-tenant feature flags |
+| **Cache**    | Redis keys namespaced by tenant ID                                     |
+| **Auth**     | Per-realm Keycloak configuration; realm safety assertions at boot      |
+| **Config**   | Tenant IAM profiles with per-tenant feature flags                      |
 
 ### Cross-Tenant Protection
 
@@ -179,22 +179,23 @@ Defined in `framework/core/src/events/`:
 
 ```typescript
 interface DomainEvent {
-    type: string;
-    aggregateId: string;
-    aggregateType: string;
-    payload: Record<string, unknown>;
-    metadata: {
-        tenantId: string;
-        userId: string;
-        timestamp: string;
-        correlationId: string;
-    };
+  type: string;
+  aggregateId: string;
+  aggregateType: string;
+  payload: Record<string, unknown>;
+  metadata: {
+    tenantId: string;
+    userId: string;
+    timestamp: string;
+    correlationId: string;
+  };
 }
 ```
 
 ### Event Store Engine
 
 The event store (`services/business/engines/event-store/`) provides:
+
 - **Event publishing** with sequence ordering
 - **Event consumption** with checkpoint tracking
 - **Projection management** for read models
@@ -206,20 +207,20 @@ The event store (`services/business/engines/event-store/`) provides:
 
 12 PostgreSQL schemas, provisioned by SQL files in `framework/adapters/db/src/sql/`:
 
-| Schema | Tier | Tables | Purpose |
-|--------|------|--------|---------|
-| `public` | -- | 1 | Provisioning checksum tracking |
-| `core` | 1 | ~10 | Tenants, config, bootstrap |
-| `meta` | 1 | ~20 | Entity definitions, fields, relations, overlays |
-| `ref` | 1 | ~15 | Reference data (currencies, countries, UOM) |
-| `sec` | 1 | ~8 | Field access policies, rate limits |
-| `wf` | 1 | ~12 | Workflow definitions, instances, tasks |
-| `ent` | 4 | Dynamic | Business entity data (generated from meta) |
-| `doc` | 2 | ~10 | Document templates, outputs, render jobs |
-| `collab` | 3 | ~12 | Comments, reactions, mentions, read tracking |
-| `audit` | 1 | ~8 | Audit events, outbox, DLQ, archive markers |
-| `notify` | 2 | ~15 | Notifications, deliveries, preferences, templates |
-| `ui` | 1 | ~4 | Dashboards, saved views |
+| Schema   | Tier | Tables  | Purpose                                           |
+| -------- | ---- | ------- | ------------------------------------------------- |
+| `public` | --   | 1       | Provisioning checksum tracking                    |
+| `core`   | 1    | ~10     | Tenants, config, bootstrap                        |
+| `meta`   | 1    | ~20     | Entity definitions, fields, relations, overlays   |
+| `ref`    | 1    | ~15     | Reference data (currencies, countries, UOM)       |
+| `sec`    | 1    | ~8      | Field access policies, rate limits                |
+| `wf`     | 1    | ~12     | Workflow definitions, instances, tasks            |
+| `ent`    | 4    | Dynamic | Business entity data (generated from meta)        |
+| `doc`    | 2    | ~10     | Document templates, outputs, render jobs          |
+| `collab` | 3    | ~12     | Comments, reactions, mentions, read tracking      |
+| `audit`  | 1    | ~8      | Audit events, outbox, DLQ, archive markers        |
+| `notify` | 2    | ~15     | Notifications, deliveries, preferences, templates |
+| `ui`     | 1    | ~4      | Dashboards, saved views                           |
 
 Provisioning is checksum-tracked via `public.schema_provisions` — files are re-run only when their content hash changes.
 
@@ -244,6 +245,7 @@ Defined in `framework/core/src/resilience/retry.ts` — exponential backoff with
 ### Rate Limiting
 
 Redis-based rate limiting at multiple levels:
+
 - Per-tenant API rate limits
 - Per-user collaboration rate limits
 - Per-endpoint integration rate limits
@@ -251,6 +253,7 @@ Redis-based rate limiting at multiple levels:
 ### Graceful Shutdown
 
 The lifecycle manager (`kernel/lifecycle.ts`) ensures:
+
 1. Stop accepting new requests
 2. Drain in-flight requests
 3. Flush audit outbox

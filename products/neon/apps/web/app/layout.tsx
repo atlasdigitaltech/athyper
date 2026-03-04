@@ -14,67 +14,73 @@ import { getSessionBootstrap } from "@/lib/session-bootstrap";
 import { ThemeBootScript } from "@/scripts/theme-boot";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 
-
 export const metadata: Metadata = {
-    title: APP_CONFIG.meta.title,
-    description: APP_CONFIG.meta.description,
+  title: APP_CONFIG.meta.title,
+  description: APP_CONFIG.meta.description,
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-    const bootstrap = await getSessionBootstrap();
-    const cookieStore = await cookies();
-    const rawLocale = cookieStore.get("neon_locale")?.value ?? "en";
-    const locale = isValidLocale(rawLocale) ? rawLocale : ("en" as Locale);
-    const dir = locale === "ar" ? "rtl" : "ltr";
-    const intl = await getIntl(locale);
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const bootstrap = await getSessionBootstrap();
+  const cookieStore = await cookies();
+  const rawLocale = cookieStore.get("neon_locale")?.value ?? "en";
+  const locale = isValidLocale(rawLocale) ? rawLocale : ("en" as Locale);
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const intl = await getIntl(locale);
 
-    const {
-        theme_mode,
-        theme_preset,
-        content_layout,
-        navbar_style,
-        sidebar_variant,
-        sidebar_collapsible,
-        font,
-    } = PREFERENCE_DEFAULTS;
+  const {
+    theme_mode,
+    theme_preset,
+    content_layout,
+    navbar_style,
+    sidebar_variant,
+    sidebar_collapsible,
+    font,
+  } = PREFERENCE_DEFAULTS;
 
-    return (
-        <html
-            lang={locale}
-            dir={dir}
-            data-theme-mode={theme_mode}
-            data-theme-preset={theme_preset}
-            data-content-layout={content_layout}
-            data-navbar-style={navbar_style}
-            data-sidebar-variant={sidebar_variant}
-            data-sidebar-collapsible={sidebar_collapsible}
-            data-font={font}
-            suppressHydrationWarning
+  return (
+    <html
+      lang={locale}
+      dir={dir}
+      data-theme-mode={theme_mode}
+      data-theme-preset={theme_preset}
+      data-content-layout={content_layout}
+      data-navbar-style={navbar_style}
+      data-sidebar-variant={sidebar_variant}
+      data-sidebar-collapsible={sidebar_collapsible}
+      data-font={font}
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeBootScript />
+      </head>
+      <body className={`${fontVars} min-h-screen antialiased`}>
+        {bootstrap && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.__SESSION_BOOTSTRAP__=${JSON.stringify(bootstrap)}`,
+            }}
+          />
+        )}
+        <MessagesProvider
+          messages={intl.messages as Record<string, string>}
+          locale={locale}
         >
-            <head>
-                <ThemeBootScript />
-            </head>
-            <body className={`${fontVars} min-h-screen antialiased`}>
-                {bootstrap && (
-                    <script
-                        dangerouslySetInnerHTML={{
-                            __html: `window.__SESSION_BOOTSTRAP__=${JSON.stringify(bootstrap)}`,
-                        }}
-                    />
-                )}
-                <MessagesProvider messages={intl.messages as Record<string, string>} locale={locale}>
-                    <PreferencesStoreProvider
-                        themeMode={theme_mode}
-                        themePreset={theme_preset}
-                        contentLayout={content_layout}
-                        navbarStyle={navbar_style}
-                        font={font}
-                    >
-                        {children}
-                        <Toaster />
-                    </PreferencesStoreProvider>
-                </MessagesProvider>
-            </body>
-        </html>
-    );
+          <PreferencesStoreProvider
+            themeMode={theme_mode}
+            themePreset={theme_preset}
+            contentLayout={content_layout}
+            navbarStyle={navbar_style}
+            font={font}
+          >
+            {children}
+            <Toaster />
+          </PreferencesStoreProvider>
+        </MessagesProvider>
+      </body>
+    </html>
+  );
 }

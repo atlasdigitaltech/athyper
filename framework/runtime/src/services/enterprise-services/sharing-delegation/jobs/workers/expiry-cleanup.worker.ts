@@ -11,46 +11,43 @@ import type { TemporaryAccessService } from "../../domain/services/TemporaryAcce
 import type { Job } from "@athyper/core";
 
 export interface ExpiryCleanupPayload {
-    triggeredBy?: string;
+  triggeredBy?: string;
 }
 
 export interface ExpiryCleanupResult {
-    delegationsRevoked: number;
-    sharesRevoked: number;
-    executedAt: string;
+  delegationsRevoked: number;
+  sharesRevoked: number;
+  executedAt: string;
 }
 
 /**
  * Factory: creates the expiry cleanup job handler.
  */
 export function createExpiryCleanupHandler(
-    temporaryAccessService: TemporaryAccessService,
-    auditService: ShareAuditService,
-    logger: Logger,
+  temporaryAccessService: TemporaryAccessService,
+  auditService: ShareAuditService,
+  logger: Logger,
 ) {
-    return async function expiryCleanupHandler(
-        job: Job<ExpiryCleanupPayload>,
-    ): Promise<ExpiryCleanupResult> {
-        logger.info("[share:expiry-cleanup] Starting expiry cleanup job");
+  return async function expiryCleanupHandler(
+    job: Job<ExpiryCleanupPayload>,
+  ): Promise<ExpiryCleanupResult> {
+    logger.info("[share:expiry-cleanup] Starting expiry cleanup job");
 
-        const { delegationsRevoked, sharesRevoked } =
-            await temporaryAccessService.revokeAllExpired();
+    const { delegationsRevoked, sharesRevoked } =
+      await temporaryAccessService.revokeAllExpired();
 
-        const result: ExpiryCleanupResult = {
-            delegationsRevoked,
-            sharesRevoked,
-            executedAt: new Date().toISOString(),
-        };
-
-        if (delegationsRevoked > 0 || sharesRevoked > 0) {
-            logger.info(
-                result,
-                "[share:expiry-cleanup] Cleanup complete",
-            );
-        } else {
-            logger.debug("[share:expiry-cleanup] No expired grants found");
-        }
-
-        return result;
+    const result: ExpiryCleanupResult = {
+      delegationsRevoked,
+      sharesRevoked,
+      executedAt: new Date().toISOString(),
     };
+
+    if (delegationsRevoked > 0 || sharesRevoked > 0) {
+      logger.info(result, "[share:expiry-cleanup] Cleanup complete");
+    } else {
+      logger.debug("[share:expiry-cleanup] No expired grants found");
+    }
+
+    return result;
+  };
 }

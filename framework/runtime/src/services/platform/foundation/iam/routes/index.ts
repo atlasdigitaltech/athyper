@@ -7,10 +7,7 @@
 import { createMfaRoutes } from "../mfa/mfa.routes.js";
 import { MfaService } from "../mfa/mfa.service.js";
 import { DatabasePersonaCapabilityRepository } from "../persona-model/persona-capability.repository.js";
-import {
-  PersonaCapabilityService,
-} from "../persona-model/persona-capability.service.js";
-
+import { PersonaCapabilityService } from "../persona-model/persona-capability.service.js";
 
 // Route creators
 import { createCapabilitiesRoutes } from "./capabilities.routes.js";
@@ -63,13 +60,16 @@ export interface IamRoutesDependencies {
  */
 export function registerIamRoutes(
   router: Router,
-  deps: IamRoutesDependencies
+  deps: IamRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId, getPrincipalId } = deps;
 
   // Initialize persona capability service
   const capabilityRepository = new DatabasePersonaCapabilityRepository(db);
-  const capabilityService = new PersonaCapabilityService(capabilityRepository, logger);
+  const capabilityService = new PersonaCapabilityService(
+    capabilityRepository,
+    logger,
+  );
 
   // Initialize MFA service
   const mfaService = new MfaService(db, logger);
@@ -100,11 +100,31 @@ export const IAM_ROUTES_METADATA = {
       description: "Manage principals (users, services, external identities)",
       endpoints: [
         { method: "GET", path: "/principals", description: "List principals" },
-        { method: "GET", path: "/principals/:id", description: "Get principal by ID" },
-        { method: "GET", path: "/principals/:id/entitlements", description: "Get effective entitlements" },
-        { method: "GET", path: "/principals/:id/roles", description: "Get role bindings" },
-        { method: "GET", path: "/principals/:id/groups", description: "Get group memberships" },
-        { method: "POST", path: "/principals/:id/attributes", description: "Set ABAC attributes" },
+        {
+          method: "GET",
+          path: "/principals/:id",
+          description: "Get principal by ID",
+        },
+        {
+          method: "GET",
+          path: "/principals/:id/entitlements",
+          description: "Get effective entitlements",
+        },
+        {
+          method: "GET",
+          path: "/principals/:id/roles",
+          description: "Get role bindings",
+        },
+        {
+          method: "GET",
+          path: "/principals/:id/groups",
+          description: "Get group memberships",
+        },
+        {
+          method: "POST",
+          path: "/principals/:id/attributes",
+          description: "Set ABAC attributes",
+        },
       ],
     },
     {
@@ -117,9 +137,21 @@ export const IAM_ROUTES_METADATA = {
         { method: "GET", path: "/groups/:id", description: "Get group" },
         { method: "PATCH", path: "/groups/:id", description: "Update group" },
         { method: "DELETE", path: "/groups/:id", description: "Delete group" },
-        { method: "GET", path: "/groups/:id/members", description: "List members" },
-        { method: "POST", path: "/groups/:id/members", description: "Add member" },
-        { method: "DELETE", path: "/groups/:id/members/:principalId", description: "Remove member" },
+        {
+          method: "GET",
+          path: "/groups/:id/members",
+          description: "List members",
+        },
+        {
+          method: "POST",
+          path: "/groups/:id/members",
+          description: "Add member",
+        },
+        {
+          method: "DELETE",
+          path: "/groups/:id/members/:principalId",
+          description: "Remove member",
+        },
       ],
     },
     {
@@ -132,7 +164,11 @@ export const IAM_ROUTES_METADATA = {
         { method: "GET", path: "/roles/:id", description: "Get role" },
         { method: "PATCH", path: "/roles/:id", description: "Update role" },
         { method: "DELETE", path: "/roles/:id", description: "Delete role" },
-        { method: "GET", path: "/roles/:id/capabilities", description: "Get role capabilities" },
+        {
+          method: "GET",
+          path: "/roles/:id/capabilities",
+          description: "Get role capabilities",
+        },
       ],
     },
     {
@@ -141,11 +177,31 @@ export const IAM_ROUTES_METADATA = {
       description: "Manage role assignments to principals",
       endpoints: [
         { method: "GET", path: "/role-bindings", description: "List bindings" },
-        { method: "POST", path: "/role-bindings", description: "Create binding" },
-        { method: "GET", path: "/role-bindings/:id", description: "Get binding" },
-        { method: "DELETE", path: "/role-bindings/:id", description: "Remove binding" },
-        { method: "POST", path: "/role-bindings/:id/extend", description: "Extend validity" },
-        { method: "POST", path: "/role-bindings/:id/revoke", description: "Revoke binding" },
+        {
+          method: "POST",
+          path: "/role-bindings",
+          description: "Create binding",
+        },
+        {
+          method: "GET",
+          path: "/role-bindings/:id",
+          description: "Get binding",
+        },
+        {
+          method: "DELETE",
+          path: "/role-bindings/:id",
+          description: "Remove binding",
+        },
+        {
+          method: "POST",
+          path: "/role-bindings/:id/extend",
+          description: "Extend validity",
+        },
+        {
+          method: "POST",
+          path: "/role-bindings/:id/revoke",
+          description: "Revoke binding",
+        },
       ],
     },
     {
@@ -159,9 +215,21 @@ export const IAM_ROUTES_METADATA = {
         { method: "PATCH", path: "/ous/:id", description: "Update OU node" },
         { method: "POST", path: "/ous/:id/move", description: "Move OU node" },
         { method: "DELETE", path: "/ous/:id", description: "Delete OU node" },
-        { method: "GET", path: "/ous/:id/members", description: "List OU members" },
-        { method: "POST", path: "/ous/:id/members", description: "Assign member to OU" },
-        { method: "DELETE", path: "/ous/:id/members/:principalId", description: "Remove member from OU" },
+        {
+          method: "GET",
+          path: "/ous/:id/members",
+          description: "List OU members",
+        },
+        {
+          method: "POST",
+          path: "/ous/:id/members",
+          description: "Assign member to OU",
+        },
+        {
+          method: "DELETE",
+          path: "/ous/:id/members/:principalId",
+          description: "Remove member from OU",
+        },
       ],
     },
     {
@@ -169,12 +237,36 @@ export const IAM_ROUTES_METADATA = {
       prefix: "/capabilities",
       description: "View capability matrix and check permissions",
       endpoints: [
-        { method: "GET", path: "/capabilities/matrix", description: "Get full capability matrix" },
-        { method: "GET", path: "/capabilities/personas", description: "List personas" },
-        { method: "GET", path: "/capabilities/operations", description: "List operations" },
-        { method: "GET", path: "/capabilities/check", description: "Check capability" },
-        { method: "GET", path: "/capabilities/persona/:code", description: "Get persona capabilities" },
-        { method: "GET", path: "/capabilities/operation/:code/personas", description: "Get personas with operation" },
+        {
+          method: "GET",
+          path: "/capabilities/matrix",
+          description: "Get full capability matrix",
+        },
+        {
+          method: "GET",
+          path: "/capabilities/personas",
+          description: "List personas",
+        },
+        {
+          method: "GET",
+          path: "/capabilities/operations",
+          description: "List operations",
+        },
+        {
+          method: "GET",
+          path: "/capabilities/check",
+          description: "Check capability",
+        },
+        {
+          method: "GET",
+          path: "/capabilities/persona/:code",
+          description: "Get persona capabilities",
+        },
+        {
+          method: "GET",
+          path: "/capabilities/operation/:code/personas",
+          description: "Get personas with operation",
+        },
       ],
     },
     {
@@ -183,18 +275,62 @@ export const IAM_ROUTES_METADATA = {
       description: "Multi-Factor Authentication management",
       endpoints: [
         { method: "GET", path: "/mfa/status", description: "Get MFA status" },
-        { method: "GET", path: "/mfa/required", description: "Check if MFA required" },
-        { method: "POST", path: "/mfa/enroll", description: "Start MFA enrollment" },
-        { method: "POST", path: "/mfa/enroll/verify", description: "Verify enrollment" },
-        { method: "DELETE", path: "/mfa/enroll", description: "Cancel enrollment" },
-        { method: "POST", path: "/mfa/challenge", description: "Create MFA challenge" },
-        { method: "POST", path: "/mfa/verify", description: "Verify MFA challenge" },
+        {
+          method: "GET",
+          path: "/mfa/required",
+          description: "Check if MFA required",
+        },
+        {
+          method: "POST",
+          path: "/mfa/enroll",
+          description: "Start MFA enrollment",
+        },
+        {
+          method: "POST",
+          path: "/mfa/enroll/verify",
+          description: "Verify enrollment",
+        },
+        {
+          method: "DELETE",
+          path: "/mfa/enroll",
+          description: "Cancel enrollment",
+        },
+        {
+          method: "POST",
+          path: "/mfa/challenge",
+          description: "Create MFA challenge",
+        },
+        {
+          method: "POST",
+          path: "/mfa/verify",
+          description: "Verify MFA challenge",
+        },
         { method: "DELETE", path: "/mfa", description: "Disable MFA" },
-        { method: "POST", path: "/mfa/backup-codes/regenerate", description: "Regenerate backup codes" },
-        { method: "GET", path: "/mfa/devices", description: "List trusted devices" },
-        { method: "DELETE", path: "/mfa/devices/:deviceId", description: "Revoke device" },
-        { method: "DELETE", path: "/mfa/devices", description: "Revoke all devices" },
-        { method: "POST", path: "/mfa/devices/check", description: "Check if device trusted" },
+        {
+          method: "POST",
+          path: "/mfa/backup-codes/regenerate",
+          description: "Regenerate backup codes",
+        },
+        {
+          method: "GET",
+          path: "/mfa/devices",
+          description: "List trusted devices",
+        },
+        {
+          method: "DELETE",
+          path: "/mfa/devices/:deviceId",
+          description: "Revoke device",
+        },
+        {
+          method: "DELETE",
+          path: "/mfa/devices",
+          description: "Revoke all devices",
+        },
+        {
+          method: "POST",
+          path: "/mfa/devices/check",
+          description: "Check if device trusted",
+        },
       ],
     },
   ],

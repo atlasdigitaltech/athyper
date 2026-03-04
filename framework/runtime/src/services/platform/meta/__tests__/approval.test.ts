@@ -223,12 +223,12 @@ describe("ApprovalServiceImpl", () => {
       expect(mocks.values).toHaveBeenCalledWith(
         expect.objectContaining({
           tenant_id: "tenant-456",
-          entity_name: "TravelRequest",
+          entity_type: "TravelRequest",
           entity_id: "req-123",
-          transition_id: "trans-456",
-          approval_template_id: "template-1",
+          approval_definition_id: "template-1",
           status: "open",
-        })
+          requested_by: "user-123",
+        }),
       );
 
       // Verify stage insert
@@ -239,7 +239,7 @@ describe("ApprovalServiceImpl", () => {
 
       // Verify snapshot insert
       expect(mocks.insertInto).toHaveBeenCalledWith(
-        "wf.approval_assignment_snapshot"
+        "wf.approval_assignment_snapshot",
       );
 
       // Verify event insert
@@ -330,7 +330,7 @@ describe("ApprovalServiceImpl", () => {
       const instance = await service.getInstanceForEntity(
         "TravelRequest",
         "req-123",
-        "tenant-456"
+        "tenant-456",
       );
 
       expect(instance).toBeDefined();
@@ -424,7 +424,7 @@ describe("ApprovalServiceImpl", () => {
         expect.objectContaining({
           status: "approved",
           decided_by: "user-123",
-        })
+        }),
       );
 
       // Verify stage update
@@ -510,7 +510,7 @@ describe("ApprovalServiceImpl", () => {
           status: "rejected",
           decided_by: "user-123",
           decision_note: "Budget exceeds limit",
-        })
+        }),
       );
 
       // Verify stage update to canceled
@@ -651,7 +651,7 @@ describe("ApprovalServiceImpl", () => {
 
       const tasks = await service.getTasksForInstance(
         "instance-1",
-        "tenant-456"
+        "tenant-456",
       );
 
       expect(tasks).toHaveLength(2);

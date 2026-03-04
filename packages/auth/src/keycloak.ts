@@ -6,7 +6,7 @@ import type { Session, WorkbenchType } from "./types.js";
  */
 export async function keycloakPasswordGrant(params: {
   baseUrl: string; // e.g. http://keycloak.local
-  realm: string;   // e.g. neon-dev
+  realm: string; // e.g. neon-dev
   clientId: string; // neon-web
   username: string;
   password: string;
@@ -23,7 +23,7 @@ export async function keycloakPasswordGrant(params: {
   const res = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
+    body,
   });
 
   if (!res.ok) {
@@ -31,7 +31,7 @@ export async function keycloakPasswordGrant(params: {
     throw new Error(`Keycloak login failed (${res.status}): ${txt}`);
   }
 
-  const json = await res.json() as {
+  const json = (await res.json()) as {
     access_token: string;
     refresh_token: string;
     expires_in?: number;
@@ -42,12 +42,12 @@ export async function keycloakPasswordGrant(params: {
   // Fetch userinfo for roles (realm_access.roles)
   const userInfoUrl = `${params.baseUrl}/realms/${params.realm}/protocol/openid-connect/userinfo`;
   const uiRes = await fetch(userInfoUrl, {
-    headers: { Authorization: `Bearer ${json.access_token}` }
+    headers: { Authorization: `Bearer ${json.access_token}` },
   });
 
   let roles: string[] = [];
   if (uiRes.ok) {
-    const ui = await uiRes.json() as { realm_access?: { roles?: string[] } };
+    const ui = (await uiRes.json()) as { realm_access?: { roles?: string[] } };
     roles = ui?.realm_access?.roles ?? [];
   }
 
@@ -57,6 +57,6 @@ export async function keycloakPasswordGrant(params: {
     expiresAt: now + expiresIn,
     username: params.username,
     workbench: params.workbench,
-    roles
+    roles,
   };
 }

@@ -9,7 +9,7 @@ export async function setSession(session: Session) {
     httpOnly: true,
     sameSite: "lax",
     secure: false, // set true behind HTTPS
-    path: "/"
+    path: "/",
   });
 }
 

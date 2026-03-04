@@ -30,21 +30,21 @@ Represents an in-flight MFA authentication challenge. When a user initiates a lo
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | NOT NULL | -- | The principal being challenged. FK to `core.principal`. |
-| challenge_type | text | NOT NULL | -- | MFA method type for this challenge. |
-| challenge_data | jsonb | NOT NULL | -- | Method-specific challenge payload (e.g. masked phone, email hint). |
-| secret | text | NOT NULL | -- | Expected verification code or secret. |
-| attempts | int | NOT NULL | `0` | Number of verification attempts made so far. |
-| max_attempts | int | NOT NULL | `3` | Maximum allowed verification attempts. |
-| status | text | NOT NULL | `'pending'` | Challenge lifecycle status. |
-| verified_at | timestamptz | YES | -- | Timestamp when the challenge was successfully verified. |
-| expires_at | timestamptz | NOT NULL | `now() + interval '10 minutes'` | Expiration timestamp. Challenges expire automatically. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the challenge. |
+| Column         | Type        | Nullable | Default                         | Description                                                        |
+| -------------- | ----------- | -------- | ------------------------------- | ------------------------------------------------------------------ |
+| id             | uuid        | NOT NULL | `gen_random_uuid()`             | Surrogate primary key.                                             |
+| tenant_id      | uuid        | NOT NULL | --                              | Owning tenant. FK to `core.tenant`.                                |
+| principal_id   | uuid        | NOT NULL | --                              | The principal being challenged. FK to `core.principal`.            |
+| challenge_type | text        | NOT NULL | --                              | MFA method type for this challenge.                                |
+| challenge_data | jsonb       | NOT NULL | --                              | Method-specific challenge payload (e.g. masked phone, email hint). |
+| secret         | text        | NOT NULL | --                              | Expected verification code or secret.                              |
+| attempts       | int         | NOT NULL | `0`                             | Number of verification attempts made so far.                       |
+| max_attempts   | int         | NOT NULL | `3`                             | Maximum allowed verification attempts.                             |
+| status         | text        | NOT NULL | `'pending'`                     | Challenge lifecycle status.                                        |
+| verified_at    | timestamptz | YES      | --                              | Timestamp when the challenge was successfully verified.            |
+| expires_at     | timestamptz | NOT NULL | `now() + interval '10 minutes'` | Expiration timestamp. Challenges expire automatically.             |
+| created_at     | timestamptz | NOT NULL | `now()`                         | Row creation timestamp.                                            |
+| created_by     | text        | NOT NULL | --                              | Identity that created the challenge.                               |
 
 ### Primary Key
 
@@ -57,17 +57,17 @@ Represents an in-flight MFA authentication challenge. When a user initiates a lo
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | CASCADE |
+| FK Column    | References         | On Delete |
+| ------------ | ------------------ | --------- |
+| tenant_id    | core.tenant(id)    | CASCADE   |
+| principal_id | core.principal(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_mfa_challenge_principal | (tenant_id, principal_id, status) | Find active challenges for a principal. |
-| idx_mfa_challenge_expires | expires_at WHERE status = 'pending' | Partial index for cleanup of expired pending challenges. |
+| Index Name                  | Columns                             | Notes                                                    |
+| --------------------------- | ----------------------------------- | -------------------------------------------------------- |
+| idx_mfa_challenge_principal | (tenant_id, principal_id, status)   | Find active challenges for a principal.                  |
+| idx_mfa_challenge_expires   | expires_at WHERE status = 'pending' | Partial index for cleanup of expired pending challenges. |
 
 ### Relationships
 
@@ -84,27 +84,27 @@ Stores the MFA authenticator configuration for each principal. A principal may h
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | NOT NULL | -- | The principal this config belongs to. FK to `core.principal`. |
-| method_type | text | NOT NULL | -- | MFA method: `totp`, `email`, `sms`, `webauthn`. |
-| is_enabled | boolean | NOT NULL | `false` | Whether this method is currently enabled. |
-| is_verified | boolean | NOT NULL | `false` | Whether enrollment has been verified (setup complete). |
-| is_primary | boolean | NOT NULL | `false` | Whether this is the principal's primary MFA method. |
-| secret | text | YES | -- | Shared secret (method-dependent; may be NULL for WebAuthn). |
-| backup_codes | text[] | YES | -- | One-time backup/recovery codes (encrypted). |
-| device_name | text | YES | -- | User-assigned device name (e.g. `My iPhone`). |
-| device_id | text | YES | -- | Device identifier for device-bound authenticators. |
-| device_info | jsonb | YES | -- | Extended device metadata (OS, browser, etc.). |
-| last_used_at | timestamptz | YES | -- | When this method was last used for authentication. |
-| verified_at | timestamptz | YES | -- | When enrollment verification completed. |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the config. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the config. |
+| Column       | Type        | Nullable | Default             | Description                                                   |
+| ------------ | ----------- | -------- | ------------------- | ------------------------------------------------------------- |
+| id           | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                        |
+| tenant_id    | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                           |
+| principal_id | uuid        | NOT NULL | --                  | The principal this config belongs to. FK to `core.principal`. |
+| method_type  | text        | NOT NULL | --                  | MFA method: `totp`, `email`, `sms`, `webauthn`.               |
+| is_enabled   | boolean     | NOT NULL | `false`             | Whether this method is currently enabled.                     |
+| is_verified  | boolean     | NOT NULL | `false`             | Whether enrollment has been verified (setup complete).        |
+| is_primary   | boolean     | NOT NULL | `false`             | Whether this is the principal's primary MFA method.           |
+| secret       | text        | YES      | --                  | Shared secret (method-dependent; may be NULL for WebAuthn).   |
+| backup_codes | text[]      | YES      | --                  | One-time backup/recovery codes (encrypted).                   |
+| device_name  | text        | YES      | --                  | User-assigned device name (e.g. `My iPhone`).                 |
+| device_id    | text        | YES      | --                  | Device identifier for device-bound authenticators.            |
+| device_info  | jsonb       | YES      | --                  | Extended device metadata (OS, browser, etc.).                 |
+| last_used_at | timestamptz | YES      | --                  | When this method was last used for authentication.            |
+| verified_at  | timestamptz | YES      | --                  | When enrollment verification completed.                       |
+| metadata     | jsonb       | YES      | --                  | Extensible metadata.                                          |
+| created_at   | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                       |
+| created_by   | text        | NOT NULL | --                  | Identity that created the config.                             |
+| updated_at   | timestamptz | YES      | --                  | Last update timestamp.                                        |
+| updated_by   | text        | YES      | --                  | Identity that last updated the config.                        |
 
 ### Primary Key
 
@@ -120,18 +120,18 @@ Stores the MFA authenticator configuration for each principal. A principal may h
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | CASCADE |
+| FK Column    | References         | On Delete |
+| ------------ | ------------------ | --------- |
+| tenant_id    | core.tenant(id)    | CASCADE   |
+| principal_id | core.principal(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_mfa_config_principal | (tenant_id, principal_id) | All MFA configs for a principal. |
-| idx_mfa_config_enabled | (tenant_id, principal_id) WHERE is_enabled = true | Only enabled methods. |
-| idx_mfa_config_primary | principal_id WHERE is_primary = true | Quick lookup of the primary method. |
+| Index Name               | Columns                                           | Notes                               |
+| ------------------------ | ------------------------------------------------- | ----------------------------------- |
+| idx_mfa_config_principal | (tenant_id, principal_id)                         | All MFA configs for a principal.    |
+| idx_mfa_config_enabled   | (tenant_id, principal_id) WHERE is_enabled = true | Only enabled methods.               |
+| idx_mfa_config_primary   | principal_id WHERE is_primary = true              | Quick lookup of the primary method. |
 
 ### Relationships
 
@@ -148,21 +148,21 @@ Stores the TOTP (Time-based One-Time Password) secret and algorithm parameters f
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| mfa_config_id | uuid | NOT NULL | -- | Parent MFA configuration. FK to `sec.mfa_config`. |
-| secret | text | NOT NULL | -- | Base32-encoded TOTP shared secret. |
-| algorithm | text | NOT NULL | `'SHA1'` | Hash algorithm (SHA1, SHA256, SHA512). |
-| digits | int | NOT NULL | `6` | Number of digits in the OTP code. |
-| period | int | NOT NULL | `30` | Time step in seconds. |
-| qr_code_url | text | YES | -- | `otpauth://` URI for QR code enrollment. |
-| manual_entry_key | text | YES | -- | Human-readable key for manual entry in authenticator apps. |
-| last_counter | int | YES | -- | Last accepted TOTP time-step counter (replay prevention). |
-| last_verified_at | timestamptz | YES | -- | When the last successful verification occurred. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the instance. |
+| Column           | Type        | Nullable | Default             | Description                                                |
+| ---------------- | ----------- | -------- | ------------------- | ---------------------------------------------------------- |
+| id               | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                     |
+| tenant_id        | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                        |
+| mfa_config_id    | uuid        | NOT NULL | --                  | Parent MFA configuration. FK to `sec.mfa_config`.          |
+| secret           | text        | NOT NULL | --                  | Base32-encoded TOTP shared secret.                         |
+| algorithm        | text        | NOT NULL | `'SHA1'`            | Hash algorithm (SHA1, SHA256, SHA512).                     |
+| digits           | int         | NOT NULL | `6`                 | Number of digits in the OTP code.                          |
+| period           | int         | NOT NULL | `30`                | Time step in seconds.                                      |
+| qr_code_url      | text        | YES      | --                  | `otpauth://` URI for QR code enrollment.                   |
+| manual_entry_key | text        | YES      | --                  | Human-readable key for manual entry in authenticator apps. |
+| last_counter     | int         | YES      | --                  | Last accepted TOTP time-step counter (replay prevention).  |
+| last_verified_at | timestamptz | YES      | --                  | When the last successful verification occurred.            |
+| created_at       | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                    |
+| created_by       | text        | NOT NULL | --                  | Identity that created the instance.                        |
 
 ### Primary Key
 
@@ -170,15 +170,15 @@ Stores the TOTP (Time-based One-Time Password) secret and algorithm parameters f
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| mfa_config_id | sec.mfa_config(id) | CASCADE |
+| FK Column     | References         | On Delete |
+| ------------- | ------------------ | --------- |
+| tenant_id     | core.tenant(id)    | CASCADE   |
+| mfa_config_id | sec.mfa_config(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name                   | Columns       | Notes                                           |
+| ---------------------------- | ------------- | ----------------------------------------------- |
 | idx_totp_instance_mfa_config | mfa_config_id | Look up TOTP instance by its parent MFA config. |
 
 ### Relationships
@@ -195,17 +195,17 @@ Stores the email address configuration for email-based OTP delivery. Each instan
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| mfa_config_id | uuid | NOT NULL | -- | Parent MFA configuration. FK to `sec.mfa_config`. |
-| email_address | text | NOT NULL | -- | Email address for OTP delivery. |
-| verified_at | timestamptz | YES | -- | When the email address was verified during enrollment. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the instance. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the instance. |
+| Column        | Type        | Nullable | Default             | Description                                            |
+| ------------- | ----------- | -------- | ------------------- | ------------------------------------------------------ |
+| id            | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                 |
+| tenant_id     | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                    |
+| mfa_config_id | uuid        | NOT NULL | --                  | Parent MFA configuration. FK to `sec.mfa_config`.      |
+| email_address | text        | NOT NULL | --                  | Email address for OTP delivery.                        |
+| verified_at   | timestamptz | YES      | --                  | When the email address was verified during enrollment. |
+| created_at    | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                |
+| created_by    | text        | NOT NULL | --                  | Identity that created the instance.                    |
+| updated_at    | timestamptz | YES      | --                  | Last update timestamp.                                 |
+| updated_by    | text        | YES      | --                  | Identity that last updated the instance.               |
 
 ### Primary Key
 
@@ -213,17 +213,17 @@ Stores the email address configuration for email-based OTP delivery. Each instan
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| mfa_config_id | sec.mfa_config(id) | CASCADE |
+| FK Column     | References         | On Delete |
+| ------------- | ------------------ | --------- |
+| tenant_id     | core.tenant(id)    | CASCADE   |
+| mfa_config_id | sec.mfa_config(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_email_otp_instance_mfa_config | mfa_config_id | Look up email instance by its parent MFA config. |
-| idx_email_otp_instance_email | (tenant_id, email_address) | Find instances by email address within a tenant. |
+| Index Name                        | Columns                    | Notes                                            |
+| --------------------------------- | -------------------------- | ------------------------------------------------ |
+| idx_email_otp_instance_mfa_config | mfa_config_id              | Look up email instance by its parent MFA config. |
+| idx_email_otp_instance_email      | (tenant_id, email_address) | Find instances by email address within a tenant. |
 
 ### Relationships
 
@@ -239,17 +239,17 @@ Stores the phone number configuration for SMS-based OTP delivery. Structurally p
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| mfa_config_id | uuid | NOT NULL | -- | Parent MFA configuration. FK to `sec.mfa_config`. |
-| phone_number | text | NOT NULL | -- | Phone number for SMS OTP delivery (E.164 format recommended). |
-| verified_at | timestamptz | YES | -- | When the phone number was verified during enrollment. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the instance. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the instance. |
+| Column        | Type        | Nullable | Default             | Description                                                   |
+| ------------- | ----------- | -------- | ------------------- | ------------------------------------------------------------- |
+| id            | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                        |
+| tenant_id     | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                           |
+| mfa_config_id | uuid        | NOT NULL | --                  | Parent MFA configuration. FK to `sec.mfa_config`.             |
+| phone_number  | text        | NOT NULL | --                  | Phone number for SMS OTP delivery (E.164 format recommended). |
+| verified_at   | timestamptz | YES      | --                  | When the phone number was verified during enrollment.         |
+| created_at    | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                       |
+| created_by    | text        | NOT NULL | --                  | Identity that created the instance.                           |
+| updated_at    | timestamptz | YES      | --                  | Last update timestamp.                                        |
+| updated_by    | text        | YES      | --                  | Identity that last updated the instance.                      |
 
 ### Primary Key
 
@@ -257,17 +257,17 @@ Stores the phone number configuration for SMS-based OTP delivery. Structurally p
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| mfa_config_id | sec.mfa_config(id) | CASCADE |
+| FK Column     | References         | On Delete |
+| ------------- | ------------------ | --------- |
+| tenant_id     | core.tenant(id)    | CASCADE   |
+| mfa_config_id | sec.mfa_config(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_sms_otp_instance_mfa_config | mfa_config_id | Look up SMS instance by its parent MFA config. |
-| idx_sms_otp_instance_phone | (tenant_id, phone_number) | Find instances by phone number within a tenant. |
+| Index Name                      | Columns                   | Notes                                           |
+| ------------------------------- | ------------------------- | ----------------------------------------------- |
+| idx_sms_otp_instance_mfa_config | mfa_config_id             | Look up SMS instance by its parent MFA config.  |
+| idx_sms_otp_instance_phone      | (tenant_id, phone_number) | Find instances by phone number within a tenant. |
 
 ### Relationships
 
@@ -283,24 +283,24 @@ Stores WebAuthn/FIDO2 credentials (passkeys and hardware security keys) register
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| mfa_config_id | uuid | NOT NULL | -- | Parent MFA configuration. FK to `sec.mfa_config`. |
-| credential_id | bytea | NOT NULL | -- | Opaque credential identifier returned by the authenticator. |
-| public_key | text | NOT NULL | -- | COSE public key for signature verification (base64 or PEM). |
-| counter | bigint | YES | -- | Signature counter for clone detection. |
-| aaguid | uuid | YES | -- | Authenticator Attestation GUID identifying the authenticator model. |
-| attestation | text | YES | -- | Attestation statement format (e.g. `packed`, `tpm`, `none`). |
-| transports | text[] | YES | -- | Supported transports (e.g. `{'usb','nfc','ble','internal'}`). |
-| is_backup_eligible | boolean | YES | -- | Whether the credential can be backed up (FIDO2 BE flag). |
-| is_backup_state | boolean | YES | -- | Whether the credential is currently backed up (FIDO2 BS flag). |
-| is_discoverable_credential | boolean | YES | -- | Whether the credential supports resident key / conditional UI. |
-| last_used_at | timestamptz | YES | -- | When the credential was last used for authentication. |
-| verified_at | timestamptz | YES | -- | When the credential was verified during enrollment. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the credential. |
+| Column                     | Type        | Nullable | Default             | Description                                                         |
+| -------------------------- | ----------- | -------- | ------------------- | ------------------------------------------------------------------- |
+| id                         | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                              |
+| tenant_id                  | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                 |
+| mfa_config_id              | uuid        | NOT NULL | --                  | Parent MFA configuration. FK to `sec.mfa_config`.                   |
+| credential_id              | bytea       | NOT NULL | --                  | Opaque credential identifier returned by the authenticator.         |
+| public_key                 | text        | NOT NULL | --                  | COSE public key for signature verification (base64 or PEM).         |
+| counter                    | bigint      | YES      | --                  | Signature counter for clone detection.                              |
+| aaguid                     | uuid        | YES      | --                  | Authenticator Attestation GUID identifying the authenticator model. |
+| attestation                | text        | YES      | --                  | Attestation statement format (e.g. `packed`, `tpm`, `none`).        |
+| transports                 | text[]      | YES      | --                  | Supported transports (e.g. `{'usb','nfc','ble','internal'}`).       |
+| is_backup_eligible         | boolean     | YES      | --                  | Whether the credential can be backed up (FIDO2 BE flag).            |
+| is_backup_state            | boolean     | YES      | --                  | Whether the credential is currently backed up (FIDO2 BS flag).      |
+| is_discoverable_credential | boolean     | YES      | --                  | Whether the credential supports resident key / conditional UI.      |
+| last_used_at               | timestamptz | YES      | --                  | When the credential was last used for authentication.               |
+| verified_at                | timestamptz | YES      | --                  | When the credential was verified during enrollment.                 |
+| created_at                 | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                             |
+| created_by                 | text        | NOT NULL | --                  | Identity that created the credential.                               |
 
 ### Primary Key
 
@@ -312,15 +312,15 @@ Stores WebAuthn/FIDO2 credentials (passkeys and hardware security keys) register
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| mfa_config_id | sec.mfa_config(id) | CASCADE |
+| FK Column     | References         | On Delete |
+| ------------- | ------------------ | --------- |
+| tenant_id     | core.tenant(id)    | CASCADE   |
+| mfa_config_id | sec.mfa_config(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name                         | Columns       | Notes                                           |
+| ---------------------------------- | ------------- | ----------------------------------------------- |
 | idx_webauthn_credential_mfa_config | mfa_config_id | Look up credentials by their parent MFA config. |
 
 ### Relationships
@@ -337,19 +337,19 @@ An append-only security event log that records significant security-relevant act
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | YES | -- | The principal involved in the event (NULL for system events). FK to `core.principal`. |
-| event_type | text | NOT NULL | -- | Event type identifier (e.g. `login_success`, `mfa_failed`, `password_changed`). |
-| severity | text | NOT NULL | `'info'` | Event severity level. |
-| occurred_at | timestamptz | NOT NULL | `now()` | When the event occurred. |
-| ip_address | text | YES | -- | Source IP address. |
-| user_agent | text | YES | -- | Client user agent string. |
-| correlation_id | text | YES | -- | Distributed tracing correlation ID. |
-| details | jsonb | YES | -- | Event-specific structured payload. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp (typically equals `occurred_at`). |
+| Column         | Type        | Nullable | Default             | Description                                                                           |
+| -------------- | ----------- | -------- | ------------------- | ------------------------------------------------------------------------------------- |
+| id             | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                                |
+| tenant_id      | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                                   |
+| principal_id   | uuid        | YES      | --                  | The principal involved in the event (NULL for system events). FK to `core.principal`. |
+| event_type     | text        | NOT NULL | --                  | Event type identifier (e.g. `login_success`, `mfa_failed`, `password_changed`).       |
+| severity       | text        | NOT NULL | `'info'`            | Event severity level.                                                                 |
+| occurred_at    | timestamptz | NOT NULL | `now()`             | When the event occurred.                                                              |
+| ip_address     | text        | YES      | --                  | Source IP address.                                                                    |
+| user_agent     | text        | YES      | --                  | Client user agent string.                                                             |
+| correlation_id | text        | YES      | --                  | Distributed tracing correlation ID.                                                   |
+| details        | jsonb       | YES      | --                  | Event-specific structured payload.                                                    |
+| created_at     | timestamptz | NOT NULL | `now()`             | Row creation timestamp (typically equals `occurred_at`).                              |
 
 ### Primary Key
 
@@ -361,18 +361,18 @@ An append-only security event log that records significant security-relevant act
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | SET NULL |
+| FK Column    | References         | On Delete |
+| ------------ | ------------------ | --------- |
+| tenant_id    | core.tenant(id)    | CASCADE   |
+| principal_id | core.principal(id) | SET NULL  |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name                     | Columns                       | Notes                                                        |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------ |
 | idx_security_event_tenant_time | (tenant_id, occurred_at DESC) | Time-ordered event retrieval per tenant (most recent first). |
-| idx_security_event_principal | (tenant_id, principal_id) | Events for a specific principal. |
-| idx_security_event_type | (tenant_id, event_type) | Filter by event type within a tenant. |
+| idx_security_event_principal   | (tenant_id, principal_id)     | Events for a specific principal.                             |
+| idx_security_event_type        | (tenant_id, event_type)       | Filter by event type within a tenant.                        |
 
 ### Relationships
 
@@ -392,24 +392,24 @@ Maintains a registry of devices that a principal has explicitly trusted or that 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | NOT NULL | -- | The principal who owns this device. FK to `core.principal`. |
-| device_id | text | NOT NULL | -- | Stable device identifier (application-generated). |
-| device_fingerprint | text | YES | -- | Browser/device fingerprint hash. |
-| device_name | text | YES | -- | User-assigned device name (e.g. `Work Laptop`). |
-| device_type | text | YES | -- | Device classification (e.g. `desktop`, `mobile`, `tablet`). |
-| user_agent | text | YES | -- | User agent string at time of registration. |
-| ip_address | text | YES | -- | IP address at time of registration. |
-| is_trusted | boolean | NOT NULL | `false` | Whether this device currently has MFA bypass trust. |
-| last_seen_at | timestamptz | YES | -- | When the device was last seen in an authentication event. |
-| verified_at | timestamptz | YES | -- | When the device trust was established. |
-| expires_at | timestamptz | YES | -- | When the device trust expires (NULL = no expiry). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the record. |
+| Column             | Type        | Nullable | Default             | Description                                                 |
+| ------------------ | ----------- | -------- | ------------------- | ----------------------------------------------------------- |
+| id                 | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                      |
+| tenant_id          | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                         |
+| principal_id       | uuid        | NOT NULL | --                  | The principal who owns this device. FK to `core.principal`. |
+| device_id          | text        | NOT NULL | --                  | Stable device identifier (application-generated).           |
+| device_fingerprint | text        | YES      | --                  | Browser/device fingerprint hash.                            |
+| device_name        | text        | YES      | --                  | User-assigned device name (e.g. `Work Laptop`).             |
+| device_type        | text        | YES      | --                  | Device classification (e.g. `desktop`, `mobile`, `tablet`). |
+| user_agent         | text        | YES      | --                  | User agent string at time of registration.                  |
+| ip_address         | text        | YES      | --                  | IP address at time of registration.                         |
+| is_trusted         | boolean     | NOT NULL | `false`             | Whether this device currently has MFA bypass trust.         |
+| last_seen_at       | timestamptz | YES      | --                  | When the device was last seen in an authentication event.   |
+| verified_at        | timestamptz | YES      | --                  | When the device trust was established.                      |
+| expires_at         | timestamptz | YES      | --                  | When the device trust expires (NULL = no expiry).           |
+| metadata           | jsonb       | YES      | --                  | Extensible metadata.                                        |
+| created_at         | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                     |
+| created_by         | text        | NOT NULL | --                  | Identity that created the record.                           |
 
 ### Primary Key
 
@@ -421,18 +421,18 @@ Maintains a registry of devices that a principal has explicitly trusted or that 
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | CASCADE |
+| FK Column    | References         | On Delete |
+| ------------ | ------------------ | --------- |
+| tenant_id    | core.tenant(id)    | CASCADE   |
+| principal_id | core.principal(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_trusted_device_principal | (tenant_id, principal_id) | All devices for a principal. |
-| idx_trusted_device_fingerprint | (tenant_id, device_fingerprint) | Lookup by fingerprint hash. |
-| idx_trusted_device_trusted | (tenant_id, principal_id) WHERE is_trusted = true | Partial index for currently trusted devices only. |
+| Index Name                     | Columns                                           | Notes                                             |
+| ------------------------------ | ------------------------------------------------- | ------------------------------------------------- |
+| idx_trusted_device_principal   | (tenant_id, principal_id)                         | All devices for a principal.                      |
+| idx_trusted_device_fingerprint | (tenant_id, device_fingerprint)                   | Lookup by fingerprint hash.                       |
+| idx_trusted_device_trusted     | (tenant_id, principal_id) WHERE is_trusted = true | Partial index for currently trusted devices only. |
 
 ### Relationships
 
@@ -448,14 +448,14 @@ Records the hash of every password a principal has used, enabling password reuse
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | NOT NULL | -- | The principal whose password was changed. FK to `core.principal`. |
-| password_hash | text | NOT NULL | -- | Hashed password (bcrypt/argon2). |
-| changed_at | timestamptz | NOT NULL | `now()` | When the password was changed. |
-| changed_by | text | NOT NULL | -- | Identity that initiated the change (self or admin). |
+| Column        | Type        | Nullable | Default             | Description                                                       |
+| ------------- | ----------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| id            | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                            |
+| tenant_id     | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                               |
+| principal_id  | uuid        | NOT NULL | --                  | The principal whose password was changed. FK to `core.principal`. |
+| password_hash | text        | NOT NULL | --                  | Hashed password (bcrypt/argon2).                                  |
+| changed_at    | timestamptz | NOT NULL | `now()`             | When the password was changed.                                    |
+| changed_by    | text        | NOT NULL | --                  | Identity that initiated the change (self or admin).               |
 
 ### Primary Key
 
@@ -463,15 +463,15 @@ Records the hash of every password a principal has used, enabling password reuse
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | CASCADE |
+| FK Column    | References         | On Delete |
+| ------------ | ------------------ | --------- |
+| tenant_id    | core.tenant(id)    | CASCADE   |
+| principal_id | core.principal(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name                     | Columns                                    | Notes                                                  |
+| ------------------------------ | ------------------------------------------ | ------------------------------------------------------ |
 | idx_password_history_principal | (tenant_id, principal_id, changed_at DESC) | Retrieve the most recent N passwords for reuse checks. |
 
 ### Relationships
@@ -499,19 +499,19 @@ RETURNS TABLE (success boolean, message text, challenge_id uuid, verified_at tim
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter      | Type | Description                                    |
+| -------------- | ---- | ---------------------------------------------- |
 | p_challenge_id | uuid | The ID of the pending MFA challenge to verify. |
-| p_code | text | The verification code submitted by the user. |
+| p_code         | text | The verification code submitted by the user.   |
 
 ### Return Columns
 
-| Column | Type | Description |
-|--------|------|-------------|
-| success | boolean | Whether the verification succeeded. |
-| message | text | Human-readable result message. |
-| challenge_id | uuid | The challenge ID (returned on success, NULL on failure). |
-| verified_at | timestamptz | Verification timestamp (returned on success, NULL on failure). |
+| Column       | Type        | Description                                                    |
+| ------------ | ----------- | -------------------------------------------------------------- |
+| success      | boolean     | Whether the verification succeeded.                            |
+| message      | text        | Human-readable result message.                                 |
+| challenge_id | uuid        | The challenge ID (returned on success, NULL on failure).       |
+| verified_at  | timestamptz | Verification timestamp (returned on success, NULL on failure). |
 
 ### Behavior
 

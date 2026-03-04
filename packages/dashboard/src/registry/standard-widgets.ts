@@ -6,12 +6,12 @@
  */
 
 import {
-    chartParamsSchema,
-    headingParamsSchema,
-    kpiParamsSchema,
-    listParamsSchema,
-    shortcutParamsSchema,
-    spacerParamsSchema,
+  chartParamsSchema,
+  headingParamsSchema,
+  kpiParamsSchema,
+  listParamsSchema,
+  shortcutParamsSchema,
+  spacerParamsSchema,
 } from "../schemas/widget-params.schema.js";
 
 import { WidgetRegistry } from "./widget-registry.js";
@@ -23,57 +23,57 @@ import type { WidgetDefinition } from "../types/widget.types.js";
 // ─────────────────────────────────────────────
 
 const headingWidget: WidgetDefinition = {
-    type: "heading",
-    labelKey: "widget.heading.label",
-    descriptionKey: "widget.heading.description",
-    icon: "type",
-    paramsSchema: headingParamsSchema,
-    defaultGrid: { w: 12, h: 1 },
+  type: "heading",
+  labelKey: "widget.heading.label",
+  descriptionKey: "widget.heading.description",
+  icon: "type",
+  paramsSchema: headingParamsSchema,
+  defaultGrid: { w: 12, h: 1 },
 };
 
 const spacerWidget: WidgetDefinition = {
-    type: "spacer",
-    labelKey: "widget.spacer.label",
-    descriptionKey: "widget.spacer.description",
-    icon: "minus",
-    paramsSchema: spacerParamsSchema,
-    defaultGrid: { w: 12, h: 1 },
+  type: "spacer",
+  labelKey: "widget.spacer.label",
+  descriptionKey: "widget.spacer.description",
+  icon: "minus",
+  paramsSchema: spacerParamsSchema,
+  defaultGrid: { w: 12, h: 1 },
 };
 
 const shortcutWidget: WidgetDefinition = {
-    type: "shortcut",
-    labelKey: "widget.shortcut.label",
-    descriptionKey: "widget.shortcut.description",
-    icon: "external-link",
-    paramsSchema: shortcutParamsSchema,
-    defaultGrid: { w: 3, h: 2 },
+  type: "shortcut",
+  labelKey: "widget.shortcut.label",
+  descriptionKey: "widget.shortcut.description",
+  icon: "external-link",
+  paramsSchema: shortcutParamsSchema,
+  defaultGrid: { w: 3, h: 2 },
 };
 
 const kpiWidget: WidgetDefinition = {
-    type: "kpi",
-    labelKey: "widget.kpi.label",
-    descriptionKey: "widget.kpi.description",
-    icon: "hash",
-    paramsSchema: kpiParamsSchema,
-    defaultGrid: { w: 3, h: 2 },
+  type: "kpi",
+  labelKey: "widget.kpi.label",
+  descriptionKey: "widget.kpi.description",
+  icon: "hash",
+  paramsSchema: kpiParamsSchema,
+  defaultGrid: { w: 3, h: 2 },
 };
 
 const listWidget: WidgetDefinition = {
-    type: "list",
-    labelKey: "widget.list.label",
-    descriptionKey: "widget.list.description",
-    icon: "list",
-    paramsSchema: listParamsSchema,
-    defaultGrid: { w: 6, h: 4 },
+  type: "list",
+  labelKey: "widget.list.label",
+  descriptionKey: "widget.list.description",
+  icon: "list",
+  paramsSchema: listParamsSchema,
+  defaultGrid: { w: 6, h: 4 },
 };
 
 const chartWidget: WidgetDefinition = {
-    type: "chart",
-    labelKey: "widget.chart.label",
-    descriptionKey: "widget.chart.description",
-    icon: "bar-chart-2",
-    paramsSchema: chartParamsSchema,
-    defaultGrid: { w: 6, h: 4 },
+  type: "chart",
+  labelKey: "widget.chart.label",
+  descriptionKey: "widget.chart.description",
+  icon: "bar-chart-2",
+  paramsSchema: chartParamsSchema,
+  defaultGrid: { w: 6, h: 4 },
 };
 
 // ─────────────────────────────────────────────
@@ -81,21 +81,21 @@ const chartWidget: WidgetDefinition = {
 // ─────────────────────────────────────────────
 
 export function createStandardWidgetRegistry(): WidgetRegistry {
-    const registry = new WidgetRegistry();
-    registry.register(headingWidget);
-    registry.register(spacerWidget);
-    registry.register(shortcutWidget);
-    registry.register(kpiWidget);
-    registry.register(listWidget);
-    registry.register(chartWidget);
-    return registry;
+  const registry = new WidgetRegistry();
+  registry.register(headingWidget);
+  registry.register(spacerWidget);
+  registry.register(shortcutWidget);
+  registry.register(kpiWidget);
+  registry.register(listWidget);
+  registry.register(chartWidget);
+  return registry;
 }
 
 export const standardWidgets: WidgetDefinition[] = [
-    headingWidget,
-    spacerWidget,
-    shortcutWidget,
-    kpiWidget,
-    listWidget,
-    chartWidget,
+  headingWidget,
+  spacerWidget,
+  shortcutWidget,
+  kpiWidget,
+  listWidget,
+  chartWidget,
 ];

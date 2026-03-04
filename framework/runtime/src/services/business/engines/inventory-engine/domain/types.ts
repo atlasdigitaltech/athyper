@@ -216,7 +216,10 @@ export interface IssueStockInput {
   readonly itemId: string;
   readonly warehouseId: string;
   readonly quantity: number;
-  readonly movementType: MovementType.ISSUE_SALES | MovementType.ISSUE_PRODUCTION | MovementType.SCRAP;
+  readonly movementType:
+    | MovementType.ISSUE_SALES
+    | MovementType.ISSUE_PRODUCTION
+    | MovementType.SCRAP;
   readonly currencyCode: string;
   readonly lotNumber?: string | null;
   readonly serialNumber?: string | null;

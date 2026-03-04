@@ -79,7 +79,9 @@ export interface AttachmentMetadata {
  * @returns Upload ID and presigned URL
  * @throws Error if validation fails or runtime API errors
  */
-export async function initiateUpload(params: InitiateUploadParams): Promise<InitiateUploadResult> {
+export async function initiateUpload(
+  params: InitiateUploadParams,
+): Promise<InitiateUploadResult> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");
@@ -108,7 +110,9 @@ export async function initiateUpload(params: InitiateUploadParams): Promise<Init
  * @param params - Completion parameters
  * @throws Error if upload not found or S3 object missing
  */
-export async function completeUpload(params: CompleteUploadParams): Promise<void> {
+export async function completeUpload(
+  params: CompleteUploadParams,
+): Promise<void> {
   const runtimeApiUrl = process.env.RUNTIME_API_URL;
   if (!runtimeApiUrl) {
     throw new Error("RUNTIME_API_URL not configured");
@@ -147,15 +151,20 @@ export async function getDownloadUrl(
     throw new Error("RUNTIME_API_URL not configured");
   }
 
-  const res = await fetch(`${runtimeApiUrl}/api/content/download/${attachmentId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tenantId, actorId }),
-  });
+  const res = await fetch(
+    `${runtimeApiUrl}/api/content/download/${attachmentId}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId, actorId }),
+    },
+  );
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Download URL generation failed: ${res.status}`);
+    throw new Error(
+      error.message || `Download URL generation failed: ${res.status}`,
+    );
   }
 
   return res.json();
@@ -181,11 +190,14 @@ export async function deleteFile(
     throw new Error("RUNTIME_API_URL not configured");
   }
 
-  const res = await fetch(`${runtimeApiUrl}/api/content/delete/${attachmentId}`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tenantId, actorId }),
-  });
+  const res = await fetch(
+    `${runtimeApiUrl}/api/content/delete/${attachmentId}`,
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId, actorId }),
+    },
+  );
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
@@ -249,7 +261,9 @@ export async function getMetadata(
     throw new Error("RUNTIME_API_URL not configured");
   }
 
-  const res = await fetch(`${runtimeApiUrl}/api/content/meta/${attachmentId}?tenant=${tenantId}`);
+  const res = await fetch(
+    `${runtimeApiUrl}/api/content/meta/${attachmentId}?tenant=${tenantId}`,
+  );
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Unknown error" }));
