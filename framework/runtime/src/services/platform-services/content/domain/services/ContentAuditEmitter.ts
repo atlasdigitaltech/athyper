@@ -87,7 +87,9 @@ export class ContentAuditEmitter {
   /**
    * Upload failed
    */
-  async uploadFailed(context: AuditContext & { reason: string }): Promise<void> {
+  async uploadFailed(
+    context: AuditContext & { reason: string },
+  ): Promise<void> {
     await this.emit(CONTENT_AUDIT_EVENTS.UPLOAD_FAILED, context, {
       attachmentId: context.attachmentId,
       fileName: context.fileName,
@@ -133,7 +135,9 @@ export class ContentAuditEmitter {
   /**
    * Previous version restored
    */
-  async versionRestored(context: AuditContext & { fromVersionNo: number }): Promise<void> {
+  async versionRestored(
+    context: AuditContext & { fromVersionNo: number },
+  ): Promise<void> {
     await this.emit(CONTENT_AUDIT_EVENTS.VERSION_RESTORED, context, {
       attachmentId: context.attachmentId,
       fromVersionNo: (context as any).fromVersionNo,
@@ -144,7 +148,9 @@ export class ContentAuditEmitter {
   /**
    * Document linked to entity
    */
-  async linkCreated(context: AuditContext & { linkKind: string }): Promise<void> {
+  async linkCreated(
+    context: AuditContext & { linkKind: string },
+  ): Promise<void> {
     await this.emit(CONTENT_AUDIT_EVENTS.LINK_CREATED, context, {
       attachmentId: context.attachmentId,
       entityType: context.entityType,

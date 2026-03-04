@@ -10,34 +10,34 @@ import type { PreferenceFrequency } from "../../domain/types.js";
 import type { Job, JobHandler } from "@athyper/core";
 
 export interface DigestNotificationPayload {
-    frequency: PreferenceFrequency;
+  frequency: PreferenceFrequency;
 }
 
 export function createDigestNotificationHandler(
-    digestAggregator: DigestAggregator,
-    logger: Logger,
+  digestAggregator: DigestAggregator,
+  logger: Logger,
 ): JobHandler<DigestNotificationPayload, void> {
-    return async (job: Job<DigestNotificationPayload>): Promise<void> => {
-        const { frequency } = job.data.payload;
+  return async (job: Job<DigestNotificationPayload>): Promise<void> => {
+    const { frequency } = job.data.payload;
 
-        logger.info(
-            { jobId: job.id, frequency },
-            "[notify:worker:digest] Starting digest processing",
-        );
+    logger.info(
+      { jobId: job.id, frequency },
+      "[notify:worker:digest] Starting digest processing",
+    );
 
-        try {
-            const result = await digestAggregator.processDigest(frequency);
+    try {
+      const result = await digestAggregator.processDigest(frequency);
 
-            logger.info(
-                { jobId: job.id, frequency, sent: result.sent, errors: result.errors },
-                "[notify:worker:digest] Digest processing complete",
-            );
-        } catch (err) {
-            logger.error(
-                { jobId: job.id, frequency, error: String(err) },
-                "[notify:worker:digest] Digest processing failed",
-            );
-            throw err;
-        }
-    };
+      logger.info(
+        { jobId: job.id, frequency, sent: result.sent, errors: result.errors },
+        "[notify:worker:digest] Digest processing complete",
+      );
+    } catch (err) {
+      logger.error(
+        { jobId: job.id, frequency, error: String(err) },
+        "[notify:worker:digest] Digest processing failed",
+      );
+      throw err;
+    }
+  };
 }

@@ -118,9 +118,7 @@ export class AccessLogRepo {
       query = query.where("accessed_at", "<=", params.endDate);
     }
 
-    query = query
-      .orderBy("accessed_at", "desc")
-      .limit(params.limit ?? 100);
+    query = query.orderBy("accessed_at", "desc").limit(params.limit ?? 100);
 
     const results = await query.execute();
     return results.map((r) => this.mapToAccessLog(r));
@@ -135,10 +133,7 @@ export class AccessLogRepo {
   ): Promise<{ action: string; count: number }[]> {
     const results = await this.db
       .selectFrom(TABLE as any)
-      .select([
-        "action",
-        (eb) => eb.fn.count<number>("id").as("count"),
-      ])
+      .select(["action", (eb) => eb.fn.count<number>("id").as("count")])
       .where("tenant_id", "=", tenantId)
       .where("attachment_id", "=", attachmentId)
       .groupBy("action")
@@ -185,7 +180,7 @@ export class AccessLogRepo {
       .limit(batchSize)
       .execute();
 
-    return result.length > 0 ? (result[0] as any).numDeletedRows ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).numDeletedRows ?? 0) : 0;
   }
 
   /**

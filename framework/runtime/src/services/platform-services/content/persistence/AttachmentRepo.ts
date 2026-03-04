@@ -119,15 +119,22 @@ export class AttachmentRepo {
   /**
    * Update attachment (typically for completing upload or versioning)
    */
-  async update(id: string, tenantId: string, params: UpdateAttachmentParams): Promise<Attachment> {
+  async update(
+    id: string,
+    tenantId: string,
+    params: UpdateAttachmentParams,
+  ): Promise<Attachment> {
     const updateData: any = {
       updated_at: new Date(),
     };
 
     if (params.sha256 !== undefined) updateData.sha256 = params.sha256;
-    if (params.replacedAt !== undefined) updateData.replaced_at = params.replacedAt;
-    if (params.replacedBy !== undefined) updateData.replaced_by = params.replacedBy;
-    if (params.isCurrent !== undefined) updateData.is_current = params.isCurrent;
+    if (params.replacedAt !== undefined)
+      updateData.replaced_at = params.replacedAt;
+    if (params.replacedBy !== undefined)
+      updateData.replaced_by = params.replacedBy;
+    if (params.isCurrent !== undefined)
+      updateData.is_current = params.isCurrent;
 
     const result = await this.db
       .updateTable(TABLE as any)
@@ -202,7 +209,10 @@ export class AttachmentRepo {
    * Get version chain for an attachment
    * Returns all versions (parent and all children) sorted by version number
    */
-  async getVersionChain(documentId: string, tenantId: string): Promise<Attachment[]> {
+  async getVersionChain(
+    documentId: string,
+    tenantId: string,
+  ): Promise<Attachment[]> {
     // First, get the document to check if it's a parent or child
     const doc = await this.getById(documentId, tenantId);
     if (!doc) return [];
@@ -216,10 +226,7 @@ export class AttachmentRepo {
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .where((eb) =>
-        eb.or([
-          eb("id", "=", rootId),
-          eb("parent_attachment_id", "=", rootId),
-        ]),
+        eb.or([eb("id", "=", rootId), eb("parent_attachment_id", "=", rootId)]),
       )
       .orderBy("version_no", "asc")
       .execute();
@@ -230,7 +237,10 @@ export class AttachmentRepo {
   /**
    * Check if SHA-256 hash already exists (for deduplication)
    */
-  async findBySha256(sha256: string, tenantId: string): Promise<Attachment | null> {
+  async findBySha256(
+    sha256: string,
+    tenantId: string,
+  ): Promise<Attachment | null> {
     const result = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -245,7 +255,11 @@ export class AttachmentRepo {
   /**
    * Mark old version as not current
    */
-  async markNotCurrent(id: string, tenantId: string, replacedBy: string): Promise<void> {
+  async markNotCurrent(
+    id: string,
+    tenantId: string,
+    replacedBy: string,
+  ): Promise<void> {
     await this.db
       .updateTable(TABLE as any)
       .set({
@@ -262,7 +276,10 @@ export class AttachmentRepo {
   /**
    * Get current version of a document
    */
-  async getCurrentVersion(documentId: string, tenantId: string): Promise<Attachment | null> {
+  async getCurrentVersion(
+    documentId: string,
+    tenantId: string,
+  ): Promise<Attachment | null> {
     const doc = await this.getById(documentId, tenantId);
     if (!doc) return null;
 
@@ -278,10 +295,7 @@ export class AttachmentRepo {
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .where((eb) =>
-        eb.or([
-          eb("id", "=", rootId),
-          eb("parent_attachment_id", "=", rootId),
-        ]),
+        eb.or([eb("id", "=", rootId), eb("parent_attachment_id", "=", rootId)]),
       )
       .where("is_current", "=", true)
       .executeTakeFirst();

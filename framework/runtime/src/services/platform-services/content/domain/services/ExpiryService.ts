@@ -52,7 +52,10 @@ export class ExpiryService {
     const { tenantId, attachmentId, expiresAt, actorId } = params;
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
@@ -69,19 +72,21 @@ export class ExpiryService {
     } as any);
 
     // Emit audit event (best-effort)
-    await (this.audit as any).expirationSet?.({
-      tenantId,
-      actorId,
-      attachmentId,
-      metadata: {
-        expiresAt: expiresAt.toISOString(),
-        ttlSeconds: Math.floor((expiresAt.getTime() - now.getTime()) / 1000),
-      },
-    }).catch?.(() => {});
+    await (this.audit as any)
+      .expirationSet?.({
+        tenantId,
+        actorId,
+        attachmentId,
+        metadata: {
+          expiresAt: expiresAt.toISOString(),
+          ttlSeconds: Math.floor((expiresAt.getTime() - now.getTime()) / 1000),
+        },
+      })
+      .catch?.(() => {});
 
     this.logger.info(
       { attachmentId, expiresAt },
-      "[ExpiryService] Expiration set"
+      "[ExpiryService] Expiration set",
     );
 
     return {
@@ -97,7 +102,10 @@ export class ExpiryService {
     const { tenantId, attachmentId, actorId } = params;
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
@@ -108,19 +116,19 @@ export class ExpiryService {
     } as any);
 
     // Emit audit event (best-effort)
-    await (this.audit as any).expirationCleared?.({
-      tenantId,
-      actorId,
-      attachmentId,
-      metadata: {
-        previousExpiresAt: (attachment as any).expiresAt?.toISOString() ?? null,
-      },
-    }).catch?.(() => {});
+    await (this.audit as any)
+      .expirationCleared?.({
+        tenantId,
+        actorId,
+        attachmentId,
+        metadata: {
+          previousExpiresAt:
+            (attachment as any).expiresAt?.toISOString() ?? null,
+        },
+      })
+      .catch?.(() => {});
 
-    this.logger.info(
-      { attachmentId },
-      "[ExpiryService] Expiration cleared"
-    );
+    this.logger.info({ attachmentId }, "[ExpiryService] Expiration cleared");
 
     return {
       attachmentId,
@@ -131,7 +139,10 @@ export class ExpiryService {
    * Get expiration info for an attachment
    */
   async getExpiration(attachmentId: string, tenantId: string) {
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
@@ -177,11 +188,16 @@ export class ExpiryService {
 
     try {
       // Find expired attachments (using repo with as any for missing method)
-      const expiredAttachments: any[] = await (this.attachmentRepo as any).findExpired?.(tenantId, now, batchSize) ?? [];
+      const expiredAttachments: any[] =
+        (await (this.attachmentRepo as any).findExpired?.(
+          tenantId,
+          now,
+          batchSize,
+        )) ?? [];
 
       this.logger.info(
         { tenantId, expiredCount: expiredAttachments.length },
-        "[ExpiryService] Processing expired files"
+        "[ExpiryService] Processing expired files",
       );
 
       for (const attachment of expiredAttachments) {
@@ -203,45 +219,47 @@ export class ExpiryService {
           await this.attachmentRepo.delete(attachment.id, tenantId, "system");
 
           // Emit audit event (best-effort)
-          await (this.audit as any).fileExpired?.({
-            tenantId,
-            actorId: "system",
-            attachmentId: attachment.id,
-            metadata: {
-              fileName: attachment.fileName,
-              sizeBytes: attachment.sizeBytes,
-              expiresAt: attachment.expiresAt?.toISOString() ?? null,
-              ownerEntity: attachment.ownerEntity,
-              ownerEntityId: attachment.ownerEntityId,
-            },
-          }).catch?.(() => {});
+          await (this.audit as any)
+            .fileExpired?.({
+              tenantId,
+              actorId: "system",
+              attachmentId: attachment.id,
+              metadata: {
+                fileName: attachment.fileName,
+                sizeBytes: attachment.sizeBytes,
+                expiresAt: attachment.expiresAt?.toISOString() ?? null,
+                ownerEntity: attachment.ownerEntity,
+                ownerEntityId: attachment.ownerEntityId,
+              },
+            })
+            .catch?.(() => {});
 
           deleted++;
 
           this.logger.info(
             { attachmentId: attachment.id, fileName: attachment.fileName },
-            "[ExpiryService] Expired file deleted"
+            "[ExpiryService] Expired file deleted",
           );
         } catch (error: any) {
           failed++;
 
           this.logger.error(
             { attachmentId: attachment.id, error: error.message },
-            "[ExpiryService] Failed to delete expired file"
+            "[ExpiryService] Failed to delete expired file",
           );
         }
       }
 
       this.logger.info(
         { tenantId, processed, deleted, failed },
-        "[ExpiryService] Expired files processing completed"
+        "[ExpiryService] Expired files processing completed",
       );
 
       return { processed, deleted, failed };
     } catch (error: any) {
       this.logger.error(
         { tenantId, error: error.message },
-        "[ExpiryService] Failed to process expired files"
+        "[ExpiryService] Failed to process expired files",
       );
 
       throw error;
@@ -254,13 +272,21 @@ export class ExpiryService {
   async listExpiringFiles(
     tenantId: string,
     withinHours: number,
-    limit: number = 50
+    limit: number = 50,
   ) {
     const now = new Date();
-    const expiryThreshold = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
+    const expiryThreshold = new Date(
+      now.getTime() + withinHours * 60 * 60 * 1000,
+    );
 
     // Get all attachments with expiration set (using as any for missing method)
-    const attachments: any[] = await (this.attachmentRepo as any).listByOwner?.(tenantId, "any", "any", limit) ?? [];
+    const attachments: any[] =
+      (await (this.attachmentRepo as any).listByOwner?.(
+        tenantId,
+        "any",
+        "any",
+        limit,
+      )) ?? [];
 
     // Filter to those expiring soon
     const expiringSoon = attachments.filter((a: any) => {
@@ -285,7 +311,7 @@ export class ExpiryService {
     tenantId: string,
     attachmentId: string,
     ttlSeconds: number,
-    actorId: string
+    actorId: string,
   ) {
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
@@ -304,10 +330,13 @@ export class ExpiryService {
     tenantId: string,
     attachmentId: string,
     additionalSeconds: number,
-    actorId: string
+    actorId: string,
   ) {
     // Get current attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
@@ -318,7 +347,9 @@ export class ExpiryService {
     }
 
     // Calculate new expiration
-    const newExpiresAt = new Date(currentExpiresAt.getTime() + additionalSeconds * 1000);
+    const newExpiresAt = new Date(
+      currentExpiresAt.getTime() + additionalSeconds * 1000,
+    );
 
     return this.setExpiration({
       tenantId,
@@ -336,15 +367,23 @@ export class ExpiryService {
     const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const allAttachments: any[] = await (this.attachmentRepo as any).listByOwner?.(tenantId, "any", "any", 10000) ?? [];
+    const allAttachments: any[] =
+      (await (this.attachmentRepo as any).listByOwner?.(
+        tenantId,
+        "any",
+        "any",
+        10000,
+      )) ?? [];
 
-    const withExpiration = allAttachments.filter((a: any) => a.expiresAt !== null);
+    const withExpiration = allAttachments.filter(
+      (a: any) => a.expiresAt !== null,
+    );
     const expired = withExpiration.filter((a: any) => a.expiresAt! <= now);
     const expiringIn24h = withExpiration.filter(
-      (a: any) => a.expiresAt! > now && a.expiresAt! <= oneDayFromNow
+      (a: any) => a.expiresAt! > now && a.expiresAt! <= oneDayFromNow,
     );
     const expiringIn7d = withExpiration.filter(
-      (a: any) => a.expiresAt! > now && a.expiresAt! <= oneWeekFromNow
+      (a: any) => a.expiresAt! > now && a.expiresAt! <= oneWeekFromNow,
     );
 
     return {

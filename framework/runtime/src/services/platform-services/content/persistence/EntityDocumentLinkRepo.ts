@@ -63,7 +63,10 @@ export class EntityDocumentLinkRepo {
   /**
    * Get link by ID
    */
-  async getById(id: string, tenantId: string): Promise<EntityDocumentLink | null> {
+  async getById(
+    id: string,
+    tenantId: string,
+  ): Promise<EntityDocumentLink | null> {
     const result = await this.db
       .selectFrom("core.entity_document_link as link")
       .selectAll()
@@ -186,7 +189,10 @@ export class EntityDocumentLinkRepo {
   /**
    * Delete all links for an attachment (when deleting document)
    */
-  async deleteByAttachment(tenantId: string, attachmentId: string): Promise<void> {
+  async deleteByAttachment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom("core.entity_document_link as link")
       .where("link.tenant_id", "=", tenantId)

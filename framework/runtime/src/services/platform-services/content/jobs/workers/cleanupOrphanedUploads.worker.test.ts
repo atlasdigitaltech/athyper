@@ -66,7 +66,8 @@ describe("cleanupOrphanedUploads worker", () => {
         id: "upload-1",
         tenant_id: "tenant-123",
         storage_bucket: "athyper",
-        storage_key: "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
+        storage_key:
+          "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
         original_filename: "invoice.pdf",
         created_at: new Date("2026-01-01T00:00:00Z"),
       },
@@ -78,7 +79,8 @@ describe("cleanupOrphanedUploads worker", () => {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
-      execute: vi.fn()
+      execute: vi
+        .fn()
         .mockResolvedValueOnce(mockOrphanedUploads) // SELECT query
         .mockResolvedValueOnce([{ numDeletedRows: 1 }]), // DELETE query
       deleteFrom: vi.fn().mockReturnThis(),
@@ -97,9 +99,8 @@ describe("cleanupOrphanedUploads worker", () => {
 
     await handler();
 
-    // Verify S3 deletion
+    // Verify S3 deletion (adapter takes key only, bucket is configured at adapter level)
     expect(mockStorage.delete).toHaveBeenCalledWith(
-      "athyper",
       "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
     );
 
@@ -121,7 +122,8 @@ describe("cleanupOrphanedUploads worker", () => {
         id: "upload-1",
         tenant_id: "tenant-123",
         storage_bucket: "athyper",
-        storage_key: "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
+        storage_key:
+          "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
         original_filename: "invoice.pdf",
         created_at: new Date("2026-01-01T00:00:00Z"),
       },
@@ -132,7 +134,8 @@ describe("cleanupOrphanedUploads worker", () => {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
-      execute: vi.fn()
+      execute: vi
+        .fn()
         .mockResolvedValueOnce(mockOrphanedUploads)
         .mockResolvedValueOnce([{ numDeletedRows: 1 }]),
       deleteFrom: vi.fn().mockReturnThis(),
@@ -211,14 +214,16 @@ describe("cleanupOrphanedUploads worker", () => {
     // Verify threshold was applied in query
     const whereCalls = (mockDb.where as any).mock.calls;
     const timeFilter = whereCalls.find(
-      (call: any[]) => call[0] === "attachment.created_at" && call[1] === "<",
+      (call: any[]) => call[0] === "created_at" && call[1] === "<",
     );
 
     expect(timeFilter).toBeDefined();
     const actualCutoff = timeFilter?.[2] as Date;
 
     // Allow 1 second tolerance for test execution time
-    expect(Math.abs(actualCutoff.getTime() - expectedCutoff.getTime())).toBeLessThan(1000);
+    expect(
+      Math.abs(actualCutoff.getTime() - expectedCutoff.getTime()),
+    ).toBeLessThan(1000);
   });
 
   it("should skip S3 deletion when deleteFromStorage is false", async () => {
@@ -227,7 +232,8 @@ describe("cleanupOrphanedUploads worker", () => {
         id: "upload-1",
         tenant_id: "tenant-123",
         storage_bucket: "athyper",
-        storage_key: "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
+        storage_key:
+          "tenants/tenant-123/invoice/inv-1/attachment/2026/01/001/file-1",
         original_filename: "invoice.pdf",
         created_at: new Date("2026-01-01T00:00:00Z"),
       },
@@ -238,7 +244,8 @@ describe("cleanupOrphanedUploads worker", () => {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
-      execute: vi.fn()
+      execute: vi
+        .fn()
         .mockResolvedValueOnce(mockOrphanedUploads)
         .mockResolvedValueOnce([{ numDeletedRows: 1 }]),
       deleteFrom: vi.fn().mockReturnThis(),
@@ -285,7 +292,8 @@ describe("cleanupOrphanedUploads worker", () => {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
-      execute: vi.fn()
+      execute: vi
+        .fn()
         .mockResolvedValueOnce(mockOrphanedUploads)
         // All deletes fail
         .mockRejectedValue(new Error("DB error")),

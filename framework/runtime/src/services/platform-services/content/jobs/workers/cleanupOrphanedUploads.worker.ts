@@ -51,13 +51,16 @@ export function createCleanupOrphanedUploadsHandler(
     const cutoff = new Date(now.getTime() - thresholdMs);
 
     logger.info(
-      { cutoff: cutoff.toISOString(), threshold: config.orphanedThresholdHours },
+      {
+        cutoff: cutoff.toISOString(),
+        threshold: config.orphanedThresholdHours,
+      },
       "[content:worker:cleanup-orphaned] Starting cleanup",
     );
 
     try {
       // Find orphaned uploads
-      const orphanedUploads = await db
+      const orphanedUploads = (await db
         .selectFrom(TABLE as any)
         .select([
           "id",
@@ -70,10 +73,12 @@ export function createCleanupOrphanedUploadsHandler(
         .where("sha256", "is", null)
         .where("created_at", "<", cutoff)
         .limit(config.maxCleanupPerRun)
-        .execute() as any[];
+        .execute()) as any[];
 
       if (orphanedUploads.length === 0) {
-        logger.debug("[content:worker:cleanup-orphaned] No orphaned uploads found");
+        logger.debug(
+          "[content:worker:cleanup-orphaned] No orphaned uploads found",
+        );
         return;
       }
 
@@ -90,7 +95,11 @@ export function createCleanupOrphanedUploadsHandler(
       for (const upload of orphanedUploads) {
         try {
           // Delete from S3 if key exists
-          if (config.deleteFromStorage && upload.storage_bucket && upload.storage_key) {
+          if (
+            config.deleteFromStorage &&
+            upload.storage_bucket &&
+            upload.storage_key
+          ) {
             try {
               await storage.delete(upload.storage_key);
               deletedFromStorage++;
@@ -121,13 +130,19 @@ export function createCleanupOrphanedUploadsHandler(
             .where("id", "=", upload.id)
             .execute();
 
-          if (deleteResult.length > 0 && (deleteResult[0] as any).numDeletedRows > 0) {
+          if (
+            deleteResult.length > 0 &&
+            (deleteResult[0] as any).numDeletedRows > 0
+          ) {
             deletedFromDb++;
             logger.debug(
               {
                 id: upload.id,
                 filename: upload.original_filename,
-                age: Math.floor((now.getTime() - new Date(upload.created_at).getTime()) / 3600000),
+                age: Math.floor(
+                  (now.getTime() - new Date(upload.created_at).getTime()) /
+                    3600000,
+                ),
               },
               "[content:worker:cleanup-orphaned] Deleted orphaned upload",
             );

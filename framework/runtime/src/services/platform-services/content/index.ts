@@ -190,176 +190,339 @@ export const module: RuntimeModule = {
     logger.info("Registering content module");
 
     // ── Persistence ─────────────────────────────────────────────────
-    c.register(REPO_TOKENS.attachment, async () => new AttachmentRepo(db), "singleton");
+    c.register(
+      REPO_TOKENS.attachment,
+      async () => new AttachmentRepo(db),
+      "singleton",
+    );
     c.register(
       REPO_TOKENS.entityDocumentLink,
       async () => new EntityDocumentLinkRepo(db),
       "singleton",
     );
-    c.register(REPO_TOKENS.documentAcl, async () => new DocumentAclRepo(db), "singleton");
-    c.register(REPO_TOKENS.accessLog, async () => new AccessLogRepo(db), "singleton");
-    c.register(REPO_TOKENS.comment, async () => new CommentRepo(db), "singleton");
-    c.register(REPO_TOKENS.multipartUpload, async () => new MultipartUploadRepo(db), "singleton");
+    c.register(
+      REPO_TOKENS.documentAcl,
+      async () => new DocumentAclRepo(db),
+      "singleton",
+    );
+    c.register(
+      REPO_TOKENS.accessLog,
+      async () => new AccessLogRepo(db),
+      "singleton",
+    );
+    c.register(
+      REPO_TOKENS.comment,
+      async () => new CommentRepo(db),
+      "singleton",
+    );
+    c.register(
+      REPO_TOKENS.multipartUpload,
+      async () => new MultipartUploadRepo(db),
+      "singleton",
+    );
 
     // ── Audit Emitter ───────────────────────────────────────────────
-    c.register(TOKENS.contentAuditEmitter, async () => {
-      const auditWriter = await c.resolve<AuditWriter>(TOKENS.auditWriter);
-      return new ContentAuditEmitter(auditWriter, createContentLogger(baseLogger, "audit"));
-    }, "singleton");
+    c.register(
+      TOKENS.contentAuditEmitter,
+      async () => {
+        const auditWriter = await c.resolve<AuditWriter>(TOKENS.auditWriter);
+        return new ContentAuditEmitter(
+          auditWriter,
+          createContentLogger(baseLogger, "audit"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Content Service ─────────────────────────────────────────────
-    c.register(TOKENS.contentService, async () => {
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const storage = await c.resolve<ObjectStorageAdapter>(TOKENS.objectStorage);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.contentService,
+      async () => {
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const storage = await c.resolve<ObjectStorageAdapter>(
+          TOKENS.objectStorage,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new ContentService(
-        attachmentRepo,
-        storage,
-        audit,
-        createContentLogger(baseLogger, "service"),
-        {
-          bucket: (config as any).objectStorage?.defaultBucket ?? "athyper",
-          presignedUrlExpiry: (config as any).content?.presignedUrlExpiry ?? 3600,
-        },
-      );
-    }, "singleton");
+        return new ContentService(
+          attachmentRepo,
+          storage,
+          audit,
+          createContentLogger(baseLogger, "service"),
+          {
+            bucket: (config as any).objectStorage?.defaultBucket ?? "athyper",
+            presignedUrlExpiry:
+              (config as any).content?.presignedUrlExpiry ?? 3600,
+          },
+        );
+      },
+      "singleton",
+    );
 
     // ── Version Service ─────────────────────────────────────────────
-    c.register(TOKENS.versionService, async () => {
-      const config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const storage = await c.resolve<ObjectStorageAdapter>(TOKENS.objectStorage);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.versionService,
+      async () => {
+        const config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const storage = await c.resolve<ObjectStorageAdapter>(
+          TOKENS.objectStorage,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new VersionService(
-        attachmentRepo,
-        storage,
-        audit,
-        createContentLogger(baseLogger, "version"),
-        {
-          bucket: (config as any).objectStorage?.defaultBucket ?? "athyper",
-          presignedUrlExpiry: (config as any).content?.presignedUrlExpiry ?? 3600,
-        },
-      );
-    }, "singleton");
+        return new VersionService(
+          attachmentRepo,
+          storage,
+          audit,
+          createContentLogger(baseLogger, "version"),
+          {
+            bucket: (config as any).objectStorage?.defaultBucket ?? "athyper",
+            presignedUrlExpiry:
+              (config as any).content?.presignedUrlExpiry ?? 3600,
+          },
+        );
+      },
+      "singleton",
+    );
 
     // ── Link Service ────────────────────────────────────────────────
-    c.register(TOKENS.linkService, async () => {
-      const linkRepo = await c.resolve<EntityDocumentLinkRepo>(REPO_TOKENS.entityDocumentLink);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.linkService,
+      async () => {
+        const linkRepo = await c.resolve<EntityDocumentLinkRepo>(
+          REPO_TOKENS.entityDocumentLink,
+        );
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new LinkService(
-        linkRepo,
-        attachmentRepo,
-        audit,
-        createContentLogger(baseLogger, "link"),
-      );
-    }, "singleton");
+        return new LinkService(
+          linkRepo,
+          attachmentRepo,
+          audit,
+          createContentLogger(baseLogger, "link"),
+        );
+      },
+      "singleton",
+    );
 
     // ── ACL Service ─────────────────────────────────────────────────
-    c.register(TOKENS.aclService, async () => {
-      const aclRepo = await c.resolve<DocumentAclRepo>(REPO_TOKENS.documentAcl);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.aclService,
+      async () => {
+        const aclRepo = await c.resolve<DocumentAclRepo>(
+          REPO_TOKENS.documentAcl,
+        );
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new AclService(
-        aclRepo,
-        attachmentRepo,
-        audit,
-        createContentLogger(baseLogger, "acl"),
-      );
-    }, "singleton");
+        return new AclService(
+          aclRepo,
+          attachmentRepo,
+          audit,
+          createContentLogger(baseLogger, "acl"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Access Log Service ──────────────────────────────────────────
-    c.register(TOKENS.accessLogService, async () => {
-      const accessLogRepo = await c.resolve<AccessLogRepo>(REPO_TOKENS.accessLog);
+    c.register(
+      TOKENS.accessLogService,
+      async () => {
+        const accessLogRepo = await c.resolve<AccessLogRepo>(
+          REPO_TOKENS.accessLog,
+        );
 
-      return new AccessLogService(
-        accessLogRepo,
-        createContentLogger(baseLogger, "access-log"),
-      );
-    }, "singleton");
+        return new AccessLogService(
+          accessLogRepo,
+          createContentLogger(baseLogger, "access-log"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Comment Service ─────────────────────────────────────────────
-    c.register(TOKENS.commentService, async () => {
-      const commentRepo = await c.resolve<CommentRepo>(REPO_TOKENS.comment);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.commentService,
+      async () => {
+        const commentRepo = await c.resolve<CommentRepo>(REPO_TOKENS.comment);
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new CommentService(
-        commentRepo,
-        attachmentRepo,
-        audit,
-        createContentLogger(baseLogger, "comment"),
-      );
-    }, "singleton");
+        return new CommentService(
+          commentRepo,
+          attachmentRepo,
+          audit,
+          createContentLogger(baseLogger, "comment"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Multipart Upload Service ────────────────────────────────────
-    c.register(TOKENS.multipartUploadService, async () => {
-      const multipartRepo = await c.resolve<MultipartUploadRepo>(REPO_TOKENS.multipartUpload);
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const storage = await c.resolve<ObjectStorageAdapter>(TOKENS.objectStorage);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.multipartUploadService,
+      async () => {
+        const multipartRepo = await c.resolve<MultipartUploadRepo>(
+          REPO_TOKENS.multipartUpload,
+        );
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const storage = await c.resolve<ObjectStorageAdapter>(
+          TOKENS.objectStorage,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new MultipartUploadService(
-        multipartRepo,
-        attachmentRepo,
-        storage,
-        audit,
-        createContentLogger(baseLogger, "multipart"),
-      );
-    }, "singleton");
+        return new MultipartUploadService(
+          multipartRepo,
+          attachmentRepo,
+          storage,
+          audit,
+          createContentLogger(baseLogger, "multipart"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Preview Service ─────────────────────────────────────────────
-    c.register(TOKENS.previewService, async () => {
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const storage = await c.resolve<ObjectStorageAdapter>(TOKENS.objectStorage);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.previewService,
+      async () => {
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const storage = await c.resolve<ObjectStorageAdapter>(
+          TOKENS.objectStorage,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new PreviewService(
-        attachmentRepo,
-        storage,
-        audit,
-        createContentLogger(baseLogger, "preview"),
-      );
-    }, "singleton");
+        return new PreviewService(
+          attachmentRepo,
+          storage,
+          audit,
+          createContentLogger(baseLogger, "preview"),
+        );
+      },
+      "singleton",
+    );
 
     // ── Expiry Service ──────────────────────────────────────────────
-    c.register(TOKENS.expiryService, async () => {
-      const attachmentRepo = await c.resolve<AttachmentRepo>(REPO_TOKENS.attachment);
-      const storage = await c.resolve<ObjectStorageAdapter>(TOKENS.objectStorage);
-      const audit = await c.resolve<ContentAuditEmitter>(TOKENS.contentAuditEmitter);
+    c.register(
+      TOKENS.expiryService,
+      async () => {
+        const attachmentRepo = await c.resolve<AttachmentRepo>(
+          REPO_TOKENS.attachment,
+        );
+        const storage = await c.resolve<ObjectStorageAdapter>(
+          TOKENS.objectStorage,
+        );
+        const audit = await c.resolve<ContentAuditEmitter>(
+          TOKENS.contentAuditEmitter,
+        );
 
-      return new ExpiryService(
-        attachmentRepo,
-        storage,
-        audit,
-        createContentLogger(baseLogger, "expiry"),
-      );
-    }, "singleton");
+        return new ExpiryService(
+          attachmentRepo,
+          storage,
+          audit,
+          createContentLogger(baseLogger, "expiry"),
+        );
+      },
+      "singleton",
+    );
 
     // ── HTTP Handlers ───────────────────────────────────────────────
 
     // Upload handlers
-    c.register(HANDLER_TOKENS.initiateUpload, async () => new InitiateUploadHandler(), "singleton");
-    c.register(HANDLER_TOKENS.completeUpload, async () => new CompleteUploadHandler(), "singleton");
-    c.register(HANDLER_TOKENS.getDownloadUrl, async () => new GetDownloadUrlHandler(), "singleton");
-    c.register(HANDLER_TOKENS.deleteFile, async () => new DeleteFileHandler(), "singleton");
-    c.register(HANDLER_TOKENS.listByEntity, async () => new ListByEntityHandler(), "singleton");
-    c.register(HANDLER_TOKENS.getMetadata, async () => new GetMetadataHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.initiateUpload,
+      async () => new InitiateUploadHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.completeUpload,
+      async () => new CompleteUploadHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.getDownloadUrl,
+      async () => new GetDownloadUrlHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.deleteFile,
+      async () => new DeleteFileHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.listByEntity,
+      async () => new ListByEntityHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.getMetadata,
+      async () => new GetMetadataHandler(),
+      "singleton",
+    );
 
     // Version handlers
-    c.register(HANDLER_TOKENS.getVersions, async () => new GetVersionsHandler(), "singleton");
-    c.register(HANDLER_TOKENS.initiateVersion, async () => new InitiateVersionHandler(), "singleton");
-    c.register(HANDLER_TOKENS.completeVersion, async () => new CompleteVersionHandler(), "singleton");
-    c.register(HANDLER_TOKENS.restoreVersion, async () => new RestoreVersionHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.getVersions,
+      async () => new GetVersionsHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.initiateVersion,
+      async () => new InitiateVersionHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.completeVersion,
+      async () => new CompleteVersionHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.restoreVersion,
+      async () => new RestoreVersionHandler(),
+      "singleton",
+    );
 
     // Link handlers
-    c.register(HANDLER_TOKENS.linkDocument, async () => new LinkDocumentHandler(), "singleton");
-    c.register(HANDLER_TOKENS.unlinkDocument, async () => new UnlinkDocumentHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.linkDocument,
+      async () => new LinkDocumentHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.unlinkDocument,
+      async () => new UnlinkDocumentHandler(),
+      "singleton",
+    );
     c.register(
       HANDLER_TOKENS.getLinkedEntities,
       async () => new GetLinkedEntitiesHandler(),
@@ -367,34 +530,106 @@ export const module: RuntimeModule = {
     );
 
     // ACL handlers
-    c.register(HANDLER_TOKENS.grantPermission, async () => new GrantPermissionHandler(), "singleton");
-    c.register(HANDLER_TOKENS.revokePermission, async () => new RevokePermissionHandler(), "singleton");
-    c.register(HANDLER_TOKENS.listAcls, async () => new ListAclsHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.grantPermission,
+      async () => new GrantPermissionHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.revokePermission,
+      async () => new RevokePermissionHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.listAcls,
+      async () => new ListAclsHandler(),
+      "singleton",
+    );
 
     // Preview handlers
-    c.register(HANDLER_TOKENS.getPreviewUrl, async () => new GetPreviewUrlHandler(), "singleton");
-    c.register(HANDLER_TOKENS.generatePreview, async () => new GeneratePreviewHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.getPreviewUrl,
+      async () => new GetPreviewUrlHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.generatePreview,
+      async () => new GeneratePreviewHandler(),
+      "singleton",
+    );
 
     // Multipart handlers
-    c.register(HANDLER_TOKENS.initiateMultipart, async () => new InitiateMultipartHandler(), "singleton");
-    c.register(HANDLER_TOKENS.getPartUploadUrls, async () => new GetPartUploadUrlsHandler(), "singleton");
-    c.register(HANDLER_TOKENS.completeMultipart, async () => new CompleteMultipartHandler(), "singleton");
-    c.register(HANDLER_TOKENS.abortMultipart, async () => new AbortMultipartHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.initiateMultipart,
+      async () => new InitiateMultipartHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.getPartUploadUrls,
+      async () => new GetPartUploadUrlsHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.completeMultipart,
+      async () => new CompleteMultipartHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.abortMultipart,
+      async () => new AbortMultipartHandler(),
+      "singleton",
+    );
 
     // Expiry handlers
-    c.register(HANDLER_TOKENS.setExpiration, async () => new SetExpirationHandler(), "singleton");
-    c.register(HANDLER_TOKENS.clearExpiration, async () => new ClearExpirationHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.setExpiration,
+      async () => new SetExpirationHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.clearExpiration,
+      async () => new ClearExpirationHandler(),
+      "singleton",
+    );
 
     // Comment handlers
-    c.register(HANDLER_TOKENS.listComments, async () => new ListCommentsHandler(), "singleton");
-    c.register(HANDLER_TOKENS.createComment, async () => new CreateCommentHandler(), "singleton");
-    c.register(HANDLER_TOKENS.updateComment, async () => new UpdateCommentHandler(), "singleton");
-    c.register(HANDLER_TOKENS.deleteComment, async () => new DeleteCommentHandler(), "singleton");
-    c.register(HANDLER_TOKENS.replyToComment, async () => new ReplyToCommentHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.listComments,
+      async () => new ListCommentsHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.createComment,
+      async () => new CreateCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.updateComment,
+      async () => new UpdateCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.deleteComment,
+      async () => new DeleteCommentHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.replyToComment,
+      async () => new ReplyToCommentHandler(),
+      "singleton",
+    );
 
     // Access log handlers
-    c.register(HANDLER_TOKENS.getAccessHistory, async () => new GetAccessHistoryHandler(), "singleton");
-    c.register(HANDLER_TOKENS.getAccessStats, async () => new GetAccessStatsHandler(), "singleton");
+    c.register(
+      HANDLER_TOKENS.getAccessHistory,
+      async () => new GetAccessHistoryHandler(),
+      "singleton",
+    );
+    c.register(
+      HANDLER_TOKENS.getAccessStats,
+      async () => new GetAccessStatsHandler(),
+      "singleton",
+    );
   },
 
   async contribute(c: Container) {
@@ -704,9 +939,12 @@ export const module: RuntimeModule = {
           db,
           storage,
           {
-            orphanedThresholdHours: (config as any).content?.cleanup?.orphanedThresholdHours ?? 24,
-            maxCleanupPerRun: (config as any).content?.cleanup?.maxCleanupPerRun ?? 100,
-            deleteFromStorage: (config as any).content?.cleanup?.deleteFromStorage ?? true,
+            orphanedThresholdHours:
+              (config as any).content?.cleanup?.orphanedThresholdHours ?? 24,
+            maxCleanupPerRun:
+              (config as any).content?.cleanup?.maxCleanupPerRun ?? 100,
+            deleteFromStorage:
+              (config as any).content?.cleanup?.deleteFromStorage ?? true,
           },
           createContentLogger(baseLogger, "cleanup"),
         ),
@@ -777,7 +1015,9 @@ export const module: RuntimeModule = {
       jobName: "cleanup-access-logs",
     });
 
-    logger.info("Content module contributed — routes, workers, schedules registered");
+    logger.info(
+      "Content module contributed — routes, workers, schedules registered",
+    );
   },
 };
 

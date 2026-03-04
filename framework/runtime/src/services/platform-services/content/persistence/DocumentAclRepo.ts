@@ -113,10 +113,7 @@ export class DocumentAclRepo {
     if (options?.activeOnly) {
       const now = new Date();
       query = query.where((eb) =>
-        eb.or([
-          eb("expires_at", "is", null),
-          eb("expires_at", ">", now),
-        ]),
+        eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]),
       );
     }
 
@@ -148,10 +145,7 @@ export class DocumentAclRepo {
       .where("attachment_id", "=", attachmentId)
       .where("permission", "=", permission)
       .where((eb) =>
-        eb.or([
-          eb("expires_at", "is", null),
-          eb("expires_at", ">", now),
-        ]),
+        eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]),
       );
 
     // Check principal or their roles
@@ -247,13 +241,16 @@ export class DocumentAclRepo {
       .where("expires_at", "<", beforeDate)
       .execute();
 
-    return result.length > 0 ? (result[0] as any).numDeletedRows ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).numDeletedRows ?? 0) : 0;
   }
 
   /**
    * Delete all ACLs for an attachment (when deleting document)
    */
-  async deleteByAttachment(tenantId: string, attachmentId: string): Promise<void> {
+  async deleteByAttachment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom(TABLE as any)
       .where("tenant_id", "=", tenantId)

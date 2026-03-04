@@ -6,42 +6,42 @@
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface SmsSendParams {
-    from: string;
-    to: string;
-    body: string;
-    tenantId: string;
-    metadata?: Record<string, string>;
+  from: string;
+  to: string;
+  body: string;
+  tenantId: string;
+  metadata?: Record<string, string>;
 }
 
 export interface SmsSendResult {
-    messageRef: string;
-    provider: string;
-    status: string;
+  messageRef: string;
+  provider: string;
+  status: string;
 }
 
 export interface SmsInboundEvent {
-    messageRef: string;
-    from: string;
-    to: string;
-    body: string;
-    timestamp: string;
-    rawPayload?: Record<string, unknown>;
+  messageRef: string;
+  from: string;
+  to: string;
+  body: string;
+  timestamp: string;
+  rawPayload?: Record<string, unknown>;
 }
 
 // ── Interface ────────────────────────────────────────────────────────
 
 export interface ISmsProviderAdapter {
-    readonly provider: string;
+  readonly provider: string;
 
-    send(params: SmsSendParams): Promise<SmsSendResult>;
+  send(params: SmsSendParams): Promise<SmsSendResult>;
 
-    parseInboundWebhook(rawBody: Record<string, unknown>): SmsInboundEvent;
+  parseInboundWebhook(rawBody: Record<string, unknown>): SmsInboundEvent;
 
-    validateWebhookSignature(
-        rawBody: string,
-        signature: string,
-        url: string,
-    ): boolean;
+  validateWebhookSignature(
+    rawBody: string,
+    signature: string,
+    url: string,
+  ): boolean;
 
-    healthCheck(): Promise<{ healthy: boolean; message?: string }>;
+  healthCheck(): Promise<{ healthy: boolean; message?: string }>;
 }

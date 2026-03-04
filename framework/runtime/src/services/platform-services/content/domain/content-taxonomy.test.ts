@@ -79,7 +79,7 @@ describe("content-taxonomy", () => {
     it("should accept file at exact size limit", () => {
       const avatarMax = MAX_SIZE_BY_KIND.avatar;
       const result = validateFileSize("avatar", avatarMax);
-      expect(result.valid).toBe(false); // Exact limit is still over (>)
+      expect(result.valid).toBe(true); // Exact limit is allowed (implementation uses >)
     });
 
     it("should accept file one byte under limit", () => {
@@ -101,7 +101,10 @@ describe("content-taxonomy", () => {
       const result3 = validateContentType("attachment", "video/mp4");
       expect(result3.valid).toBe(true);
 
-      const result4 = validateContentType("attachment", "application/octet-stream");
+      const result4 = validateContentType(
+        "attachment",
+        "application/octet-stream",
+      );
       expect(result4.valid).toBe(true);
     });
 

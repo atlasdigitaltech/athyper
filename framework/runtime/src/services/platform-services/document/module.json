@@ -1,9 +1,7 @@
 ﻿{
-    "code":  "DOC",
-    "name":  "Document Services",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
+  "code": "DOC",
+  "name": "Document Services",
+  "dependsOn": ["CORE"],
+  "tenantScoped": true,
+  "subscription": "Base"
 }

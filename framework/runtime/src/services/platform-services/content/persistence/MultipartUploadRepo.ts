@@ -188,7 +188,11 @@ export class MultipartUploadRepo {
   /**
    * List expired uploads for cleanup
    */
-  async listExpired(tenantId: string, beforeDate: Date, limit = 100): Promise<MultipartUpload[]> {
+  async listExpired(
+    tenantId: string,
+    beforeDate: Date,
+    limit = 100,
+  ): Promise<MultipartUpload[]> {
     const results = await this.db
       .selectFrom(TABLE as any)
       .selectAll()
@@ -236,7 +240,11 @@ export class MultipartUploadRepo {
   /**
    * Delete old completed/aborted uploads (cleanup)
    */
-  async deleteOld(tenantId: string, beforeDate: Date, limit = 1000): Promise<number> {
+  async deleteOld(
+    tenantId: string,
+    beforeDate: Date,
+    limit = 1000,
+  ): Promise<number> {
     const result = await this.db
       .deleteFrom(TABLE as any)
       .where("tenant_id", "=", tenantId)
@@ -245,13 +253,16 @@ export class MultipartUploadRepo {
       .limit(limit)
       .execute();
 
-    return result.length > 0 ? (result[0] as any).numDeletedRows ?? 0 : 0;
+    return result.length > 0 ? ((result[0] as any).numDeletedRows ?? 0) : 0;
   }
 
   /**
    * Hard delete by attachment (cascade cleanup)
    */
-  async deleteByAttachment(tenantId: string, attachmentId: string): Promise<void> {
+  async deleteByAttachment(
+    tenantId: string,
+    attachmentId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom(TABLE as any)
       .where("tenant_id", "=", tenantId)

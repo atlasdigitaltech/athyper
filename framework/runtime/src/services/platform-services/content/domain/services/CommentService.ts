@@ -66,10 +66,14 @@ export class CommentService {
    * Create a comment on an attachment
    */
   async createComment(params: CreateCommentParams) {
-    const { tenantId, attachmentId, actorId, content, mentions, parentId } = params;
+    const { tenantId, attachmentId, actorId, content, mentions, parentId } =
+      params;
 
     // Validate attachment exists
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
@@ -96,21 +100,23 @@ export class CommentService {
     });
 
     // Emit audit event (best-effort)
-    await (this.audit as any).commentCreated?.({
-      tenantId,
-      actorId,
-      attachmentId,
-      commentId: comment.id,
-      metadata: {
-        contentLength: content.length,
-        mentionsCount: mentions?.length ?? 0,
-        isReply: !!parentId,
-      },
-    }).catch?.(() => {});
+    await (this.audit as any)
+      .commentCreated?.({
+        tenantId,
+        actorId,
+        attachmentId,
+        commentId: comment.id,
+        metadata: {
+          contentLength: content.length,
+          mentionsCount: mentions?.length ?? 0,
+          isReply: !!parentId,
+        },
+      })
+      .catch?.(() => {});
 
     this.logger.info(
       { commentId: comment.id, attachmentId, actorId, isReply: !!parentId },
-      "[CommentService] Comment created"
+      "[CommentService] Comment created",
     );
 
     return comment;
@@ -153,20 +159,22 @@ export class CommentService {
     });
 
     // Emit audit event (best-effort)
-    await (this.audit as any).commentUpdated?.({
-      tenantId,
-      actorId,
-      attachmentId: existing.attachmentId,
-      commentId,
-      metadata: {
-        oldContentLength: existing.content.length,
-        newContentLength: content.length,
-      },
-    }).catch?.(() => {});
+    await (this.audit as any)
+      .commentUpdated?.({
+        tenantId,
+        actorId,
+        attachmentId: existing.attachmentId,
+        commentId,
+        metadata: {
+          oldContentLength: existing.content.length,
+          newContentLength: content.length,
+        },
+      })
+      .catch?.(() => {});
 
     this.logger.info(
       { commentId, attachmentId: existing.attachmentId, actorId },
-      "[CommentService] Comment updated"
+      "[CommentService] Comment updated",
     );
 
     return updated;
@@ -198,19 +206,21 @@ export class CommentService {
     await this.commentRepo.delete(commentId, tenantId, actorId);
 
     // Emit audit event (best-effort)
-    await (this.audit as any).commentDeleted?.({
-      tenantId,
-      actorId,
-      attachmentId: existing.attachmentId,
-      commentId,
-      metadata: {
-        hadReplies: false, // Would need to check children
-      },
-    }).catch?.(() => {});
+    await (this.audit as any)
+      .commentDeleted?.({
+        tenantId,
+        actorId,
+        attachmentId: existing.attachmentId,
+        commentId,
+        metadata: {
+          hadReplies: false, // Would need to check children
+        },
+      })
+      .catch?.(() => {});
 
     this.logger.info(
       { commentId, attachmentId: existing.attachmentId, actorId },
-      "[CommentService] Comment deleted"
+      "[CommentService] Comment deleted",
     );
   }
 
@@ -220,7 +230,9 @@ export class CommentService {
   async listComments(params: ListCommentsParams) {
     const { tenantId, attachmentId, includeDeleted = false } = params;
 
-    return this.commentRepo.listByAttachment(tenantId, attachmentId, { includeDeleted });
+    return this.commentRepo.listByAttachment(tenantId, attachmentId, {
+      includeDeleted,
+    });
   }
 
   /**
@@ -270,15 +282,22 @@ export class CommentService {
   /**
    * Hard delete old soft-deleted comments (cleanup)
    */
-  async cleanupOldDeletedComments(tenantId: string, olderThanDays: number): Promise<number> {
+  async cleanupOldDeletedComments(
+    tenantId: string,
+    olderThanDays: number,
+  ): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    const deleted = await (this.commentRepo as any).hardDeleteOldSoftDeleted?.(tenantId, cutoffDate) ?? 0;
+    const deleted =
+      (await (this.commentRepo as any).hardDeleteOldSoftDeleted?.(
+        tenantId,
+        cutoffDate,
+      )) ?? 0;
 
     this.logger.info(
       { tenantId, olderThanDays, deletedCount: deleted },
-      "[CommentService] Cleaned up old deleted comments"
+      "[CommentService] Cleaned up old deleted comments",
     );
 
     return deleted;

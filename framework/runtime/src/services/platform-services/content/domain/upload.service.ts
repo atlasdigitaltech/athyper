@@ -11,7 +11,6 @@ import type { DB } from "@athyper/adapter-db";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
 import type { Kysely } from "kysely";
 
-
 const TABLE = "doc.attachment" as keyof DB & string;
 
 /**
@@ -53,7 +52,7 @@ export class FileUploadService {
     private readonly logger: Logger,
     private readonly config?: {
       defaultBucket?: string;
-    }
+    },
   ) {}
 
   /**
@@ -61,7 +60,11 @@ export class FileUploadService {
    */
   async upload(req: UploadRequest): Promise<UploadResult> {
     // Validate file
-    const validation = validateFile(req.kind, req.file.size, req.file.contentType);
+    const validation = validateFile(
+      req.kind,
+      req.file.size,
+      req.file.contentType,
+    );
     if (!validation.valid) {
       throw new Error(validation.error || "File validation failed");
     }
@@ -114,7 +117,7 @@ export class FileUploadService {
           size: req.file.size,
           kind: req.kind,
         },
-        "[content] File uploaded successfully"
+        "[content] File uploaded successfully",
       );
 
       return {
@@ -132,23 +135,29 @@ export class FileUploadService {
           fileName: req.file.name,
           tenantId: req.tenantId,
         },
-        "[content] File upload failed"
+        "[content] File upload failed",
       );
-      throw new Error(`File upload failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      throw new Error(
+        `File upload failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
     }
   }
 
   /**
    * Get download URL for an attachment
    */
-  async getDownloadUrl(tenantId: string, attachmentId: string, expirySeconds: number = 3600): Promise<string> {
+  async getDownloadUrl(
+    tenantId: string,
+    attachmentId: string,
+    expirySeconds: number = 3600,
+  ): Promise<string> {
     // Get attachment record
-    const attachment = await this.db
+    const attachment = (await this.db
       .selectFrom(TABLE as any)
       .select(["storage_bucket", "storage_key"] as any)
       .where("id", "=", attachmentId)
       .where("tenant_id", "=", tenantId)
-      .executeTakeFirst() as any;
+      .executeTakeFirst()) as any;
 
     if (!attachment) {
       throw new Error("Attachment not found");
@@ -168,12 +177,12 @@ export class FileUploadService {
    */
   async delete(tenantId: string, attachmentId: string): Promise<void> {
     // Get attachment record
-    const attachment = await this.db
+    const attachment = (await this.db
       .selectFrom(TABLE as any)
       .select(["storage_bucket", "storage_key"] as any)
       .where("id", "=", attachmentId)
       .where("tenant_id", "=", tenantId)
-      .executeTakeFirst() as any;
+      .executeTakeFirst()) as any;
 
     if (!attachment) {
       throw new Error("Attachment not found");
@@ -195,7 +204,7 @@ export class FileUploadService {
           attachmentId,
           tenantId,
         },
-        "[content] Attachment deleted"
+        "[content] Attachment deleted",
       );
     } catch (err) {
       this.logger.error(
@@ -203,9 +212,11 @@ export class FileUploadService {
           error: err instanceof Error ? err.message : String(err),
           attachmentId,
         },
-        "[content] Attachment deletion failed"
+        "[content] Attachment deletion failed",
       );
-      throw new Error(`Attachment deletion failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      throw new Error(
+        `Attachment deletion failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
     }
   }
 

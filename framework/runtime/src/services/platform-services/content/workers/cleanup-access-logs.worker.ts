@@ -20,18 +20,22 @@ export function createCleanupAccessLogsHandler(container: Container) {
   return async (job: any) => {
     const logger = await container.resolve<Logger>(TOKENS.logger);
     const accessLogService = await container.resolve<AccessLogService>(
-      TOKENS.accessLogService
+      TOKENS.accessLogService,
     );
 
-    const { tenantId, retentionDays = 90 } = job.data as CleanupAccessLogsJobData;
+    const { tenantId, retentionDays = 90 } =
+      job.data as CleanupAccessLogsJobData;
 
     logger.info(
       { tenantId, retentionDays },
-      "[worker:cleanup-access-logs] Starting access logs cleanup job"
+      "[worker:cleanup-access-logs] Starting access logs cleanup job",
     );
 
     try {
-      const count = await accessLogService.cleanupOldLogs(tenantId, retentionDays);
+      const count = await accessLogService.cleanupOldLogs(
+        tenantId,
+        retentionDays,
+      );
 
       logger.info(
         {
@@ -39,7 +43,7 @@ export function createCleanupAccessLogsHandler(container: Container) {
           retentionDays,
           deletedCount: count,
         },
-        "[worker:cleanup-access-logs] Access logs cleanup complete"
+        "[worker:cleanup-access-logs] Access logs cleanup complete",
       );
 
       return {
@@ -49,7 +53,7 @@ export function createCleanupAccessLogsHandler(container: Container) {
     } catch (error: any) {
       logger.error(
         { tenantId, error: error.message },
-        "[worker:cleanup-access-logs] Access logs cleanup failed"
+        "[worker:cleanup-access-logs] Access logs cleanup failed",
       );
 
       throw error;

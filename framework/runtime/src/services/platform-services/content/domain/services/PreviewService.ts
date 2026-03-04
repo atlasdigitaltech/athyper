@@ -69,7 +69,9 @@ export class PreviewService {
         // @ts-expect-error optional peer dependency
         this.pdfLib = await import("pdf-lib");
       } catch (error: any) {
-        throw new Error("pdf-lib library not installed. Run: npm install pdf-lib");
+        throw new Error(
+          "pdf-lib library not installed. Run: npm install pdf-lib",
+        );
       }
     }
     return this.pdfLib;
@@ -79,7 +81,13 @@ export class PreviewService {
    * Check if content type is supported for preview generation
    */
   isSupportedForPreview(contentType: string): boolean {
-    const imageTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
+    const imageTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/gif",
+      "image/webp",
+    ];
     const pdfTypes = ["application/pdf"];
 
     return imageTypes.includes(contentType) || pdfTypes.includes(contentType);
@@ -92,20 +100,28 @@ export class PreviewService {
     const { tenantId, attachmentId, actorId } = params;
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
 
     // Check if preview supported
     if (!this.isSupportedForPreview(attachment.contentType)) {
-      throw new Error(`Preview not supported for content type: ${attachment.contentType}`);
+      throw new Error(
+        `Preview not supported for content type: ${attachment.contentType}`,
+      );
     }
 
     try {
       // Download original file from S3
-      const originalBuffer = await (this.storage as any).getObject
-        ? await (this.storage as any).getObject(attachment.storageBucket, attachment.storageKey)
+      const originalBuffer = (await (this.storage as any).getObject)
+        ? await (this.storage as any).getObject(
+            attachment.storageBucket,
+            attachment.storageKey,
+          )
         : await this.storage.get(attachment.storageKey);
 
       let thumbnailBuffer: Buffer;
@@ -113,9 +129,11 @@ export class PreviewService {
 
       // Generate based on content type
       if (attachment.contentType.startsWith("image/")) {
-        ({ thumbnailBuffer, previewBuffer } = await this.generateImagePreviews(originalBuffer));
+        ({ thumbnailBuffer, previewBuffer } =
+          await this.generateImagePreviews(originalBuffer));
       } else if (attachment.contentType === "application/pdf") {
-        ({ thumbnailBuffer, previewBuffer } = await this.generatePdfPreviews(originalBuffer));
+        ({ thumbnailBuffer, previewBuffer } =
+          await this.generatePdfPreviews(originalBuffer));
       } else {
         throw new Error(`Unsupported content type: ${attachment.contentType}`);
       }
@@ -124,13 +142,31 @@ export class PreviewService {
       const thumbnailKey = `${attachment.storageKey}.thumbnail.png`;
       const previewKey = `${attachment.storageKey}.preview.png`;
 
-      await (this.storage as any).putObject
-        ? await (this.storage as any).putObject(attachment.storageBucket, thumbnailKey, thumbnailBuffer, "image/png")
-        : await this.storage.put(thumbnailKey, thumbnailBuffer, { contentType: "image/png" });
+      if ((this.storage as any).putObject) {
+        await (this.storage as any).putObject(
+          attachment.storageBucket,
+          thumbnailKey,
+          thumbnailBuffer,
+          "image/png",
+        );
+      } else {
+        await this.storage.put(thumbnailKey, thumbnailBuffer, {
+          contentType: "image/png",
+        });
+      }
 
-      await (this.storage as any).putObject
-        ? await (this.storage as any).putObject(attachment.storageBucket, previewKey, previewBuffer, "image/png")
-        : await this.storage.put(previewKey, previewBuffer, { contentType: "image/png" });
+      if ((this.storage as any).putObject) {
+        await (this.storage as any).putObject(
+          attachment.storageBucket,
+          previewKey,
+          previewBuffer,
+          "image/png",
+        );
+      } else {
+        await this.storage.put(previewKey, previewBuffer, {
+          contentType: "image/png",
+        });
+      }
 
       // Update attachment with preview keys
       await this.attachmentRepo.update(attachmentId, tenantId, {
@@ -139,16 +175,18 @@ export class PreviewService {
       } as any);
 
       // Emit audit event (best-effort)
-      await (this.audit as any).previewGenerated?.({
-        tenantId,
-        actorId,
-        attachmentId,
-        metadata: {
-          thumbnailSize: thumbnailBuffer.length,
-          previewSize: previewBuffer.length,
-          contentType: attachment.contentType,
-        },
-      }).catch?.(() => {});
+      await (this.audit as any)
+        .previewGenerated?.({
+          tenantId,
+          actorId,
+          attachmentId,
+          metadata: {
+            thumbnailSize: thumbnailBuffer.length,
+            previewSize: previewBuffer.length,
+            contentType: attachment.contentType,
+          },
+        })
+        .catch?.(() => {});
 
       this.logger.info(
         {
@@ -157,7 +195,7 @@ export class PreviewService {
           thumbnailSize: thumbnailBuffer.length,
           previewSize: previewBuffer.length,
         },
-        "[PreviewService] Preview generated"
+        "[PreviewService] Preview generated",
       );
 
       return {
@@ -169,7 +207,7 @@ export class PreviewService {
     } catch (error: any) {
       this.logger.error(
         { attachmentId, error: error.message },
-        "[PreviewService] Failed to generate preview"
+        "[PreviewService] Failed to generate preview",
       );
 
       throw error;
@@ -277,27 +315,37 @@ export class PreviewService {
     const { tenantId, attachmentId, type, actorId } = params;
 
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       throw new Error(`Attachment not found: ${attachmentId}`);
     }
 
     // Check if preview exists
-    const previewKey = type === "thumbnail" ? (attachment as any).thumbnailKey : (attachment as any).previewKey;
+    const previewKey =
+      type === "thumbnail"
+        ? (attachment as any).thumbnailKey
+        : (attachment as any).previewKey;
     if (!previewKey) {
       throw new Error(`${type} not generated for attachment: ${attachmentId}`);
     }
 
     // Generate presigned GET URL
-    const presignedUrl = await (this.storage as any).generatePresignedGetUrl
-      ? await (this.storage as any).generatePresignedGetUrl(attachment.storageBucket, previewKey, PREVIEW_EXPIRY_SECONDS)
+    const presignedUrl = (await (this.storage as any).generatePresignedGetUrl)
+      ? await (this.storage as any).generatePresignedGetUrl(
+          attachment.storageBucket,
+          previewKey,
+          PREVIEW_EXPIRY_SECONDS,
+        )
       : await this.storage.getPresignedUrl(previewKey, PREVIEW_EXPIRY_SECONDS);
 
     const expiresAt = new Date(Date.now() + PREVIEW_EXPIRY_SECONDS * 1000);
 
     this.logger.info(
       { attachmentId, type },
-      "[PreviewService] Generated preview URL"
+      "[PreviewService] Generated preview URL",
     );
 
     return {
@@ -311,7 +359,10 @@ export class PreviewService {
    */
   async deletePreview(attachmentId: string, tenantId: string) {
     // Get attachment
-    const attachment = await this.attachmentRepo.getById(attachmentId, tenantId);
+    const attachment = await this.attachmentRepo.getById(
+      attachmentId,
+      tenantId,
+    );
     if (!attachment) {
       return; // Already deleted
     }
@@ -327,11 +378,14 @@ export class PreviewService {
         await this.storage.delete((attachment as any).previewKey);
       }
 
-      this.logger.info({ attachmentId }, "[PreviewService] Deleted preview files");
+      this.logger.info(
+        { attachmentId },
+        "[PreviewService] Deleted preview files",
+      );
     } catch (error: any) {
       this.logger.error(
         { attachmentId, error: error.message },
-        "[PreviewService] Failed to delete preview files"
+        "[PreviewService] Failed to delete preview files",
       );
     }
   }
@@ -339,15 +393,27 @@ export class PreviewService {
   /**
    * Batch generate previews for attachments without previews (background job)
    */
-  async generateMissingPreviews(tenantId: string, limit: number = 10): Promise<number> {
+  async generateMissingPreviews(
+    tenantId: string,
+    limit: number = 10,
+  ): Promise<number> {
     // Find attachments without previews
-    const attachments: any[] = await (this.attachmentRepo as any).listByOwner?.(tenantId, "any", "any", limit) ?? [];
+    const attachments: any[] =
+      (await (this.attachmentRepo as any).listByOwner?.(
+        tenantId,
+        "any",
+        "any",
+        limit,
+      )) ?? [];
 
     let generatedCount = 0;
 
     for (const attachment of attachments) {
       // Skip if already has preview or not supported
-      if (attachment.previewKey || !this.isSupportedForPreview(attachment.contentType)) {
+      if (
+        attachment.previewKey ||
+        !this.isSupportedForPreview(attachment.contentType)
+      ) {
         continue;
       }
 
@@ -362,14 +428,14 @@ export class PreviewService {
       } catch (error: any) {
         this.logger.error(
           { attachmentId: attachment.id, error: error.message },
-          "[PreviewService] Failed to generate preview in batch"
+          "[PreviewService] Failed to generate preview in batch",
         );
       }
     }
 
     this.logger.info(
       { tenantId, generatedCount },
-      "[PreviewService] Batch preview generation completed"
+      "[PreviewService] Batch preview generation completed",
     );
 
     return generatedCount;
