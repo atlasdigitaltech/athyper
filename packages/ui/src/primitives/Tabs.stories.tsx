@@ -2,7 +2,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-
 const meta = {
   title: "Primitives/Tabs",
   component: Tabs,

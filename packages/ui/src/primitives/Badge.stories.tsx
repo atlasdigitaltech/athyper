@@ -2,7 +2,6 @@ import { Badge } from "./Badge";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-
 const meta = {
   title: "Primitives/Badge",
   component: Badge,

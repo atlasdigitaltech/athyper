@@ -2,7 +2,6 @@ import { Label } from "./Label";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-
 const meta = {
   title: "Primitives/Label",
   component: Label,
