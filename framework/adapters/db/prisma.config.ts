@@ -6,6 +6,8 @@ export default defineConfig({
     path: "src/prisma/migrations",
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? "postgresql://offline:offline@localhost:5432/offline",
+    url:
+      process.env.DATABASE_URL ??
+      "postgresql://offline:offline@localhost:5432/offline",
   },
 });

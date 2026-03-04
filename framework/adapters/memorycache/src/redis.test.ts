@@ -19,7 +19,7 @@ describe("createRedisClient", () => {
     const client = createRedisClient({
       host: "localhost",
       port: 6379,
-      maxRetriesPerRequest: 5
+      maxRetriesPerRequest: 5,
     });
 
     expect(client.options.maxRetriesPerRequest).toBe(5);

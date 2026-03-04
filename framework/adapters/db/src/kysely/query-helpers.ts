@@ -5,18 +5,18 @@ import type { ReferenceExpression, SelectQueryBuilder } from "kysely";
  * Supported filter operators for query building
  */
 export type FilterOperator =
-  | "eq"      // equals
-  | "ne"      // not equals
-  | "gt"      // greater than
-  | "gte"     // greater than or equal
-  | "lt"      // less than
-  | "lte"     // less than or equal
-  | "like"    // SQL LIKE (case-sensitive)
-  | "ilike"   // SQL ILIKE (case-insensitive)
-  | "in"      // IN array
-  | "nin"     // NOT IN array
-  | "null"    // IS NULL
-  | "nnull";  // IS NOT NULL
+  | "eq" // equals
+  | "ne" // not equals
+  | "gt" // greater than
+  | "gte" // greater than or equal
+  | "lt" // less than
+  | "lte" // less than or equal
+  | "like" // SQL LIKE (case-sensitive)
+  | "ilike" // SQL ILIKE (case-insensitive)
+  | "in" // IN array
+  | "nin" // NOT IN array
+  | "null" // IS NULL
+  | "nnull"; // IS NOT NULL
 
 /**
  * Filter condition for a single field
@@ -129,14 +129,10 @@ export type FieldWhitelist = Set<string>;
  * );
  * ```
  */
-export async function buildKyselyListQuery<
-  DB,
-  TB extends keyof DB & string,
-  O
->(
+export async function buildKyselyListQuery<DB, TB extends keyof DB & string, O>(
   baseQuery: SelectQueryBuilder<DB, TB, O>,
   params: ListQueryParams,
-  fieldWhitelist: FieldWhitelist
+  fieldWhitelist: FieldWhitelist,
 ): Promise<PaginatedResult<O>> {
   const { filters = [], sort = [], pagination = {} } = params;
   const { page = 1, limit = 20 } = pagination;
@@ -226,8 +222,10 @@ export async function buildKyselyListQuery<
   }
 
   // Get total count (before pagination)
-  const countQuery = query.clearSelect().select((eb) => eb.fn.countAll().as("count"));
-  const countResult = await countQuery.executeTakeFirst() as any;
+  const countQuery = query
+    .clearSelect()
+    .select((eb) => eb.fn.countAll().as("count"));
+  const countResult = (await countQuery.executeTakeFirst()) as any;
   const total = Number(countResult?.count ?? 0);
 
   // Apply pagination
@@ -301,6 +299,8 @@ export type MetaFieldMapping = {
  * const whitelist = createFieldWhitelistFromMeta(mappings);
  * ```
  */
-export function createFieldWhitelistFromMeta(mappings: MetaFieldMapping[]): FieldWhitelist {
+export function createFieldWhitelistFromMeta(
+  mappings: MetaFieldMapping[],
+): FieldWhitelist {
   return new Set(mappings.map((m) => m.dbColumnName));
 }

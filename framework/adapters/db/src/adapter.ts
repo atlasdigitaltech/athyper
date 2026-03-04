@@ -1,6 +1,10 @@
 // framework/adapters/db/src/adapter.ts
 
-import { DbClient, type DbClientConfig, type DbPoolStats } from "./kysely/db.js";
+import {
+  DbClient,
+  type DbClientConfig,
+  type DbPoolStats,
+} from "./kysely/db.js";
 import { withTx, withTxIsolation } from "./kysely/tx.js";
 
 import type { DB } from "./generated/kysely/types.js";
@@ -18,35 +22,35 @@ export type { DbPoolStats } from "./kysely/db.js";
  * - Health checks
  */
 export interface DbAdapter {
-    /**
-     * Kysely instance for type-safe queries
-     */
-    readonly kysely: Kysely<DB>;
+  /**
+   * Kysely instance for type-safe queries
+   */
+  readonly kysely: Kysely<DB>;
 
-    /**
-     * Execute function within a transaction
-     */
-    withTx: typeof withTx;
+  /**
+   * Execute function within a transaction
+   */
+  withTx: typeof withTx;
 
-    /**
-     * Execute function within a transaction with isolation level
-     */
-    withTxIsolation: typeof withTxIsolation;
+  /**
+   * Execute function within a transaction with isolation level
+   */
+  withTxIsolation: typeof withTxIsolation;
 
-    /**
-     * Close database connections
-     */
-    close(): Promise<void>;
+  /**
+   * Close database connections
+   */
+  close(): Promise<void>;
 
-    /**
-     * Health check
-     */
-    health(): Promise<{ healthy: boolean; message?: string }>;
+  /**
+   * Health check
+   */
+  health(): Promise<{ healthy: boolean; message?: string }>;
 
-    /**
-     * Pool statistics for health monitoring
-     */
-    getPoolStats(): DbPoolStats;
+  /**
+   * Pool statistics for health monitoring
+   */
+  getPoolStats(): DbPoolStats;
 }
 
 /**
@@ -74,14 +78,14 @@ export interface DbAdapter {
  * ```
  */
 export function createDbAdapter(config: DbClientConfig): DbAdapter {
-    const client = new DbClient(config);
+  const client = new DbClient(config);
 
-    return {
-        kysely: client.kysely,
-        withTx,
-        withTxIsolation,
-        close: () => client.close(),
-        health: () => client.health(),
-        getPoolStats: () => client.getPoolStats(),
-    };
+  return {
+    kysely: client.kysely,
+    withTx,
+    withTxIsolation,
+    close: () => client.close(),
+    health: () => client.health(),
+    getPoolStats: () => client.getPoolStats(),
+  };
 }

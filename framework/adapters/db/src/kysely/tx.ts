@@ -2,7 +2,6 @@
 import type { DB } from "../generated/kysely/types.js";
 import type { Kysely, Transaction } from "kysely";
 
-
 /**
  * Execute a function within a database transaction.
  *
@@ -23,10 +22,10 @@ import type { Kysely, Transaction } from "kysely";
  * @returns Result from the function
  */
 export async function withTx<T>(
-    db: Kysely<DB>,
-    fn: (trx: Transaction<DB>) => Promise<T>
+  db: Kysely<DB>,
+  fn: (trx: Transaction<DB>) => Promise<T>,
 ): Promise<T> {
-    return db.transaction().execute(fn);
+  return db.transaction().execute(fn);
 }
 
 /**
@@ -38,12 +37,13 @@ export async function withTx<T>(
  * @returns Result from the function
  */
 export async function withTxIsolation<T>(
-    db: Kysely<DB>,
-    isolationLevel: "read uncommitted" | "read committed" | "repeatable read" | "serializable",
-    fn: (trx: Transaction<DB>) => Promise<T>
+  db: Kysely<DB>,
+  isolationLevel:
+    | "read uncommitted"
+    | "read committed"
+    | "repeatable read"
+    | "serializable",
+  fn: (trx: Transaction<DB>) => Promise<T>,
 ): Promise<T> {
-    return db
-        .transaction()
-        .setIsolationLevel(isolationLevel)
-        .execute(fn);
+  return db.transaction().setIsolationLevel(isolationLevel).execute(fn);
 }

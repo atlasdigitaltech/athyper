@@ -8,14 +8,14 @@
  *
  * Output: SQL INSERT statements for ref.commodity_code with domain_code='unspsc'
  */
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const csvPath = path.join(__dirname, 'unspsc-codes.csv');
-const outPath = path.join(__dirname, '..', 'sql', '201_seed_unspsc.sql');
+const csvPath = path.join(__dirname, "unspsc-codes.csv");
+const outPath = path.join(__dirname, "..", "sql", "201_seed_unspsc.sql");
 
-const raw = fs.readFileSync(csvPath, 'utf-8');
-const lines = raw.split('\n').filter(l => l.trim());
+const raw = fs.readFileSync(csvPath, "utf-8");
+const lines = raw.split("\n").filter((l) => l.trim());
 
 // Skip header
 const dataLines = lines.slice(1);
@@ -31,7 +31,16 @@ for (const line of dataLines) {
   const fields = parseCSVLine(line);
   if (fields.length < 8) continue;
 
-  const [segCode, segName, famCode, famName, clsCode, clsName, comCode, comName] = fields;
+  const [
+    segCode,
+    segName,
+    famCode,
+    famName,
+    clsCode,
+    clsName,
+    comCode,
+    comName,
+  ] = fields;
 
   if (segCode && segName && !segments.has(segCode)) {
     segments.set(segCode, segName.trim());
@@ -51,7 +60,9 @@ console.log(`Segments: ${segments.size}`);
 console.log(`Families: ${families.size}`);
 console.log(`Classes: ${classes.size}`);
 console.log(`Commodities: ${commodities.size}`);
-console.log(`Total: ${segments.size + families.size + classes.size + commodities.size}`);
+console.log(
+  `Total: ${segments.size + families.size + classes.size + commodities.size}`,
+);
 
 // Generate SQL
 const sqlParts = [];
@@ -85,16 +96,18 @@ function generateInserts(label, rows) {
 
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    sqlParts.push(`INSERT INTO ref.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)`);
+    sqlParts.push(
+      `INSERT INTO ref.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)`,
+    );
     sqlParts.push(`VALUES`);
 
     const values = batch.map((r, idx) => {
-      const parentClause = r.parent ? `'${r.parent}'` : 'NULL';
-      const comma = idx < batch.length - 1 ? ',' : '';
+      const parentClause = r.parent ? `'${r.parent}'` : "NULL";
+      const comma = idx < batch.length - 1 ? "," : "";
       return `  ('unspsc', '${r.code}', '${esc(r.name)}', ${parentClause}, ${r.level}, ${r.isLeaf}, 'active', 'seed')${comma}`;
     });
 
-    sqlParts.push(values.join('\n'));
+    sqlParts.push(values.join("\n"));
     sqlParts.push(`ON CONFLICT (domain_code, code) DO UPDATE SET`);
     sqlParts.push(`  name = excluded.name,`);
     sqlParts.push(`  parent_code = excluded.parent_code,`);
@@ -106,36 +119,64 @@ function generateInserts(label, rows) {
 
 // Segments (level 1, not leaf)
 const segRows = [...segments.entries()].map(([code, name]) => ({
-  code, name, parent: null, level: 1, isLeaf: false
+  code,
+  name,
+  parent: null,
+  level: 1,
+  isLeaf: false,
 }));
-generateInserts(`UNSPSC Segments (Level 1) — ${segRows.length} entries`, segRows);
+generateInserts(
+  `UNSPSC Segments (Level 1) — ${segRows.length} entries`,
+  segRows,
+);
 
 // Families (level 2, not leaf)
 const famRows = [...families.entries()].map(([code, { name, parent }]) => ({
-  code, name, parent, level: 2, isLeaf: false
+  code,
+  name,
+  parent,
+  level: 2,
+  isLeaf: false,
 }));
-generateInserts(`UNSPSC Families (Level 2) — ${famRows.length} entries`, famRows);
+generateInserts(
+  `UNSPSC Families (Level 2) — ${famRows.length} entries`,
+  famRows,
+);
 
 // Classes (level 3, not leaf)
 const clsRows = [...classes.entries()].map(([code, { name, parent }]) => ({
-  code, name, parent, level: 3, isLeaf: false
+  code,
+  name,
+  parent,
+  level: 3,
+  isLeaf: false,
 }));
-generateInserts(`UNSPSC Classes (Level 3) — ${clsRows.length} entries`, clsRows);
+generateInserts(
+  `UNSPSC Classes (Level 3) — ${clsRows.length} entries`,
+  clsRows,
+);
 
 // Commodities (level 4, leaf)
 const comRows = [...commodities.entries()].map(([code, { name, parent }]) => ({
-  code, name, parent, level: 4, isLeaf: true
+  code,
+  name,
+  parent,
+  level: 4,
+  isLeaf: true,
 }));
-generateInserts(`UNSPSC Commodities (Level 4) — ${comRows.length} entries`, comRows);
+generateInserts(
+  `UNSPSC Commodities (Level 4) — ${comRows.length} entries`,
+  comRows,
+);
 
-const sql = sqlParts.join('\n');
-fs.writeFileSync(outPath, sql, 'utf-8');
+const sql = sqlParts.join("\n");
+fs.writeFileSync(outPath, sql, "utf-8");
 console.log(`\nWrote ${outPath} (${(sql.length / 1024 / 1024).toFixed(1)} MB)`);
 
 // Simple CSV parser that handles quoted fields
 function parseCSVLine(line) {
   const fields = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
 
   for (let i = 0; i < line.length; i++) {
@@ -147,9 +188,9 @@ function parseCSVLine(line) {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (ch === ',' && !inQuotes) {
+    } else if (ch === "," && !inQuotes) {
       fields.push(current);
-      current = '';
+      current = "";
     } else {
       current += ch;
     }
