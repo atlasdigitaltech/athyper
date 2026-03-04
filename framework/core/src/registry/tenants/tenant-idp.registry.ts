@@ -9,7 +9,7 @@ import type { TenantRegistry } from "../tenantRegistry.js";
 export class TenantIdpRegistry {
   constructor(
     private tenantRegistry: TenantRegistry,
-    private idpRegistry: IdentityProviderRegistry
+    private idpRegistry: IdentityProviderRegistry,
   ) {}
 
   /**

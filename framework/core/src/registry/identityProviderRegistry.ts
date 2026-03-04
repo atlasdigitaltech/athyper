@@ -36,7 +36,9 @@ export class InMemoryIdentityProviderRegistry implements IdentityProviderRegistr
     return this.providers.get(realmKey);
   }
 
-  async list(): Promise<Array<{ realmKey: string; config: IdentityProviderConfig }>> {
+  async list(): Promise<
+    Array<{ realmKey: string; config: IdentityProviderConfig }>
+  > {
     return Array.from(this.providers.entries()).map(([realmKey, config]) => ({
       realmKey,
       config,

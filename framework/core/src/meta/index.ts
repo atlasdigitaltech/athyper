@@ -336,7 +336,7 @@ export class MetadataRegistry {
 
   getFieldMetadata(
     entityName: string,
-    fieldName: string
+    fieldName: string,
   ): FieldMetadata | undefined {
     const entity = this.get(entityName);
     return entity?.fields.find((f) => f.name === fieldName);

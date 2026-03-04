@@ -15,7 +15,14 @@ export interface HealthCheckResult {
 
 export interface DependencyHealth {
   name: string;
-  type: "database" | "cache" | "storage" | "auth" | "queue" | "external" | "internal";
+  type:
+    | "database"
+    | "cache"
+    | "storage"
+    | "auth"
+    | "queue"
+    | "external"
+    | "internal";
   required: boolean;
   result: HealthCheckResult;
 }
@@ -34,11 +41,14 @@ export type HealthChecker = () => Promise<HealthCheckResult>;
  * Health check registry
  */
 export class HealthCheckRegistry {
-  private checkers = new Map<string, {
-    checker: HealthChecker;
-    type: DependencyHealth["type"];
-    required: boolean;
-  }>();
+  private checkers = new Map<
+    string,
+    {
+      checker: HealthChecker;
+      type: DependencyHealth["type"];
+      required: boolean;
+    }
+  >();
 
   /**
    * Register a health checker
@@ -49,7 +59,7 @@ export class HealthCheckRegistry {
     options: {
       type: DependencyHealth["type"];
       required?: boolean;
-    }
+    },
   ): void {
     this.checkers.set(name, {
       checker,
@@ -105,7 +115,7 @@ export class HealthCheckRegistry {
    */
   async checkAll(): Promise<DependencyHealth[]> {
     const checks = Array.from(this.checkers.keys()).map((name) =>
-      this.checkOne(name)
+      this.checkOne(name),
     );
 
     const results = await Promise.all(checks);
@@ -178,7 +188,7 @@ export function createHealthChecker(
   options?: {
     healthyMessage?: string;
     unhealthyMessage?: string;
-  }
+  },
 ): HealthChecker {
   return async () => {
     try {
@@ -203,9 +213,9 @@ export function createHealthChecker(
 /**
  * Create a database health checker
  */
-export function createDbHealthChecker(
-  db: { health: () => Promise<{ healthy: boolean; message?: string }> }
-): HealthChecker {
+export function createDbHealthChecker(db: {
+  health: () => Promise<{ healthy: boolean; message?: string }>;
+}): HealthChecker {
   return async () => {
     const result = await db.health();
     return {
@@ -219,9 +229,9 @@ export function createDbHealthChecker(
 /**
  * Create a cache health checker
  */
-export function createCacheHealthChecker(
-  cache: { get: (key: string) => Promise<string | null> }
-): HealthChecker {
+export function createCacheHealthChecker(cache: {
+  get: (key: string) => Promise<string | null>;
+}): HealthChecker {
   return async () => {
     try {
       // Try to get a non-existent key (should return null)

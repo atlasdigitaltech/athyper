@@ -113,9 +113,9 @@ export function sanitizeUrl(input: string): string {
 /**
  * Sanitize object by applying sanitizers to all string values
  */
-export function sanitizeObject<T extends Record<string, any>>(
+export function sanitizeObject<T extends Record<string, unknown>>(
   obj: T,
-  sanitizer: (value: string) => string = sanitizeHtml
+  sanitizer: (value: string) => string = sanitizeHtml,
 ): T {
   if (obj === null || typeof obj !== "object") {
     return obj;
@@ -123,29 +123,31 @@ export function sanitizeObject<T extends Record<string, any>>(
 
   if (Array.isArray(obj)) {
     return obj.map((item) =>
-      typeof item === "string" ? sanitizer(item) : sanitizeObject(item, sanitizer)
-    ) as any;
+      typeof item === "string"
+        ? sanitizer(item)
+        : sanitizeObject(item, sanitizer),
+    ) as unknown as T;
   }
 
-  const sanitized: any = {};
+  const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === "string") {
       sanitized[key] = sanitizer(value);
     } else if (typeof value === "object" && value !== null) {
-      sanitized[key] = sanitizeObject(value, sanitizer);
+      sanitized[key] = sanitizeObject(value as Record<string, unknown>, sanitizer);
     } else {
       sanitized[key] = value;
     }
   }
 
-  return sanitized;
+  return sanitized as T;
 }
 
 /**
  * Trim whitespace from all string values in object
  */
-export function trimObject<T extends Record<string, any>>(obj: T): T {
+export function trimObject<T extends Record<string, unknown>>(obj: T): T {
   return sanitizeObject(obj, (value) => value.trim());
 }
 
@@ -217,7 +219,7 @@ export function sanitizePhone(input: string): string {
  * Sanitize integer input
  * Converts to integer, returns 0 if invalid
  */
-export function sanitizeInteger(input: any, defaultValue: number = 0): number {
+export function sanitizeInteger(input: unknown, defaultValue: number = 0): number {
   const num = parseInt(String(input), 10);
   return isNaN(num) ? defaultValue : num;
 }
@@ -226,7 +228,7 @@ export function sanitizeInteger(input: any, defaultValue: number = 0): number {
  * Sanitize float input
  * Converts to float, returns 0 if invalid
  */
-export function sanitizeFloat(input: any, defaultValue: number = 0): number {
+export function sanitizeFloat(input: unknown, defaultValue: number = 0): number {
   const num = parseFloat(String(input));
   return isNaN(num) ? defaultValue : num;
 }
@@ -235,7 +237,7 @@ export function sanitizeFloat(input: any, defaultValue: number = 0): number {
  * Sanitize boolean input
  * Converts truthy/falsy strings to boolean
  */
-export function sanitizeBoolean(input: any): boolean {
+export function sanitizeBoolean(input: unknown): boolean {
   if (typeof input === "boolean") {
     return input;
   }
@@ -247,7 +249,11 @@ export function sanitizeBoolean(input: any): boolean {
 /**
  * Limit string length
  */
-export function limitLength(input: string, maxLength: number, suffix: string = "..."): string {
+export function limitLength(
+  input: string,
+  maxLength: number,
+  suffix: string = "...",
+): string {
   if (typeof input !== "string") {
     return "";
   }
@@ -274,10 +280,10 @@ export function sanitizeDeep<T>(obj: T): T {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizeDeep(item)) as any;
+    return obj.map((item: unknown) => sanitizeDeep(item)) as T;
   }
 
-  const sanitized: any = {};
+  const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
     // Skip dangerous keys
@@ -288,14 +294,17 @@ export function sanitizeDeep<T>(obj: T): T {
     sanitized[key] = sanitizeDeep(value);
   }
 
-  return sanitized;
+  return sanitized as T;
 }
 
 /**
  * Sanitize JSON input
  * Safely parses JSON and sanitizes the result
  */
-export function sanitizeJson<T = any>(input: string, defaultValue: T | null = null): T | null {
+export function sanitizeJson<T = unknown>(
+  input: string,
+  defaultValue: T | null = null,
+): T | null {
   if (typeof input !== "string") {
     return defaultValue;
   }
@@ -320,7 +329,8 @@ export const SanitizationProfiles = {
   /**
    * Strict sanitization: Strip HTML, normalize whitespace, limit length
    */
-  strict: (input: string) => limitLength(normalizeWhitespace(stripHtml(input)), 1000),
+  strict: (input: string) =>
+    limitLength(normalizeWhitespace(stripHtml(input)), 1000),
 
   /**
    * Username: Alphanumeric, lowercase, trim
@@ -346,14 +356,18 @@ export const SanitizationProfiles = {
   /**
    * Search query: Strip HTML, normalize whitespace, limit length
    */
-  searchQuery: (input: string) => limitLength(normalizeWhitespace(stripHtml(input)), 200),
+  searchQuery: (input: string) =>
+    limitLength(normalizeWhitespace(stripHtml(input)), 200),
 
   /**
    * Rich text: Allow limited HTML but escape dangerous content
    */
   richText: (input: string) => {
     // Strip script tags and event handlers
-    let safe = input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+    let safe = input.replace(
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      "",
+    );
     safe = safe.replace(/on\w+\s*=\s*["'][^"']*["']/gi, "");
     safe = safe.replace(/javascript:/gi, "");
     return safe;

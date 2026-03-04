@@ -19,7 +19,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "src", "assets", "generated"],
+  "files": [
+    "dist",
+    "src",
+    "assets",
+    "generated"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsup src/index.ts src/meta/index.ts --format esm --sourcemap --outDir dist && tsc --declaration --emitDeclarationOnly --outDir dist",

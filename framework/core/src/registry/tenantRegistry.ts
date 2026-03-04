@@ -25,7 +25,10 @@ export type TenantInfo = {
 
 export interface TenantRegistry {
   get(tenantKey: string): Promise<TenantInfo | undefined>;
-  getByRealmAndId(realmKey: string, tenantId: string): Promise<TenantInfo | undefined>;
+  getByRealmAndId(
+    realmKey: string,
+    tenantId: string,
+  ): Promise<TenantInfo | undefined>;
   list(realmKey?: string): Promise<TenantInfo[]>;
 }
 
@@ -45,9 +48,12 @@ export class InMemoryTenantRegistry implements TenantRegistry {
     return this.tenants.get(tenantKey);
   }
 
-  async getByRealmAndId(realmKey: string, tenantId: string): Promise<TenantInfo | undefined> {
+  async getByRealmAndId(
+    realmKey: string,
+    tenantId: string,
+  ): Promise<TenantInfo | undefined> {
     return Array.from(this.tenants.values()).find(
-      (t) => t.realmKey === realmKey && t.tenantId === tenantId
+      (t) => t.realmKey === realmKey && t.tenantId === tenantId,
     );
   }
 

@@ -26,7 +26,8 @@ export const DEFAULT_SHUTDOWN_OPTIONS: ShutdownOptions = {
  * Graceful shutdown manager
  */
 export class GracefulShutdown {
-  private hooks: Array<{ name: string; hook: ShutdownHook; priority: number }> = [];
+  private hooks: Array<{ name: string; hook: ShutdownHook; priority: number }> =
+    [];
   private isShuttingDown = false;
   private shutdownPromise?: Promise<void>;
 
@@ -52,14 +53,23 @@ export class GracefulShutdown {
   /**
    * Execute shutdown sequence
    */
-  async shutdown(reason: string, timeout: number = DEFAULT_SHUTDOWN_OPTIONS.timeout): Promise<void> {
+  async shutdown(
+    reason: string,
+    timeout: number = DEFAULT_SHUTDOWN_OPTIONS.timeout,
+  ): Promise<void> {
     if (this.isShuttingDown) {
       console.log(JSON.stringify({ msg: "shutdown_already_in_progress" }));
       return this.shutdownPromise;
     }
 
     this.isShuttingDown = true;
-    console.log(JSON.stringify({ msg: "shutdown_starting", reason, hooks: this.hooks.length }));
+    console.log(
+      JSON.stringify({
+        msg: "shutdown_starting",
+        reason,
+        hooks: this.hooks.length,
+      }),
+    );
 
     this.shutdownPromise = this.executeShutdown(timeout);
     return this.shutdownPromise;
@@ -71,9 +81,11 @@ export class GracefulShutdown {
   private async executeShutdown(timeout: number): Promise<void> {
     const timeoutPromise = new Promise<void>((resolve) =>
       setTimeout(() => {
-        console.error(JSON.stringify({ msg: "shutdown_timeout_exceeded", timeout }));
+        console.error(
+          JSON.stringify({ msg: "shutdown_timeout_exceeded", timeout }),
+        );
         resolve();
-      }, timeout)
+      }, timeout),
     );
 
     const shutdownPromise = (async () => {
@@ -85,14 +97,16 @@ export class GracefulShutdown {
           await hook();
 
           const duration = Date.now() - start;
-          console.log(JSON.stringify({ msg: "shutdown_hook_complete", name, duration }));
+          console.log(
+            JSON.stringify({ msg: "shutdown_hook_complete", name, duration }),
+          );
         } catch (error) {
           console.error(
             JSON.stringify({
               msg: "shutdown_hook_error",
               name,
               error: error instanceof Error ? error.message : String(error),
-            })
+            }),
           );
         }
       }
@@ -113,12 +127,16 @@ export class GracefulShutdown {
   /**
    * Install signal handlers
    */
-  installSignalHandlers(options: ShutdownOptions = DEFAULT_SHUTDOWN_OPTIONS): void {
+  installSignalHandlers(
+    options: ShutdownOptions = DEFAULT_SHUTDOWN_OPTIONS,
+  ): void {
     const signals = options.signals ?? DEFAULT_SHUTDOWN_OPTIONS.signals ?? [];
 
     for (const signal of signals) {
       process.once(signal, () => {
-        console.log(JSON.stringify({ msg: "shutdown_signal_received", signal }));
+        console.log(
+          JSON.stringify({ msg: "shutdown_signal_received", signal }),
+        );
         void this.shutdown(signal, options.timeout).then(() => {
           process.exit(0);
         });

@@ -10,15 +10,13 @@ export interface EventBus {
 }
 
 export class InMemoryEventBus implements EventBus {
-  private handlers = new Map<string, Set<EventHandler<any>>>();
+  private handlers = new Map<string, Set<EventHandler<unknown>>>();
 
   async publish<T>(event: DomainEvent<T>): Promise<void> {
     const handlers = this.handlers.get(event.eventType);
     if (!handlers) return;
 
-    await Promise.all(
-      Array.from(handlers).map((handler) => handler(event))
-    );
+    await Promise.all(Array.from(handlers).map((handler) => handler(event)));
   }
 
   subscribe<T>(eventType: string, handler: EventHandler<T>): () => void {
@@ -26,11 +24,11 @@ export class InMemoryEventBus implements EventBus {
       this.handlers.set(eventType, new Set());
     }
 
-    this.handlers.get(eventType)!.add(handler as EventHandler<any>);
+    this.handlers.get(eventType)!.add(handler as EventHandler<unknown>);
 
     // Return unsubscribe function
     return () => {
-      this.handlers.get(eventType)?.delete(handler as EventHandler<any>);
+      this.handlers.get(eventType)?.delete(handler as EventHandler<unknown>);
     };
   }
 }

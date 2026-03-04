@@ -73,7 +73,10 @@ export class LifecycleManager {
     }
   }
 
-  async healthCheck(): Promise<{ healthy: boolean; checks: Record<string, boolean> }> {
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    checks: Record<string, boolean>;
+  }> {
     const checks: Record<string, boolean> = {};
     let allHealthy = true;
 

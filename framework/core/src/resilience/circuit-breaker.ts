@@ -52,7 +52,7 @@ export interface CircuitBreakerMetrics {
 export class CircuitBreakerOpenError extends Error {
   constructor(public readonly nextAttemptTime: Date) {
     super(
-      `Circuit breaker is OPEN. Next attempt at ${nextAttemptTime.toISOString()}`
+      `Circuit breaker is OPEN. Next attempt at ${nextAttemptTime.toISOString()}`,
     );
     this.name = "CircuitBreakerOpenError";
   }
@@ -70,7 +70,7 @@ export class CircuitBreaker {
 
   constructor(
     private name: string,
-    private config: CircuitBreakerConfig = DEFAULT_CIRCUIT_CONFIG
+    private config: CircuitBreakerConfig = DEFAULT_CIRCUIT_CONFIG,
   ) {}
 
   /**
@@ -130,7 +130,7 @@ export class CircuitBreaker {
     // Remove old failure timestamps outside the window
     const windowStart = now - this.config.failureWindow;
     this.failureTimestamps = this.failureTimestamps.filter(
-      (timestamp) => timestamp > windowStart
+      (timestamp) => timestamp > windowStart,
     );
 
     if (this.state === "HALF_OPEN") {
@@ -157,7 +157,7 @@ export class CircuitBreaker {
       JSON.stringify({
         msg: "circuit_breaker_closed",
         name: this.name,
-      })
+      }),
     );
   }
 
@@ -174,7 +174,7 @@ export class CircuitBreaker {
         name: this.name,
         failures: this.failureTimestamps.length,
         nextAttemptTime: this.nextAttemptTime.toISOString(),
-      })
+      }),
     );
   }
 
@@ -188,7 +188,7 @@ export class CircuitBreaker {
       JSON.stringify({
         msg: "circuit_breaker_half_open",
         name: this.name,
-      })
+      }),
     );
   }
 
@@ -242,7 +242,7 @@ export class CircuitBreaker {
  */
 export function WithCircuitBreaker(
   name: string,
-  config: Partial<CircuitBreakerConfig> = {}
+  config: Partial<CircuitBreakerConfig> = {},
 ) {
   const circuitBreaker = new CircuitBreaker(name, {
     ...DEFAULT_CIRCUIT_CONFIG,
@@ -250,13 +250,13 @@ export function WithCircuitBreaker(
   });
 
   return function (
-    target: any,
+    target: object,
     propertyKey: string,
-    descriptor: PropertyDescriptor
+    descriptor: PropertyDescriptor,
   ) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return circuitBreaker.execute(() => originalMethod.apply(this, args));
     };
 

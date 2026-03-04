@@ -5,7 +5,11 @@
  * Factory functions for creating structured log envelopes.
  */
 
-import type { CreateLogEnvelopeInput, LogEnvelope, TelemetryTraceContext } from "./telemetry-types.js";
+import type {
+  CreateLogEnvelopeInput,
+  LogEnvelope,
+  TelemetryTraceContext,
+} from "./telemetry-types.js";
 
 // Trace/span injection is done by an injected getter to keep runtime contract clean.
 export type TraceContextProvider = () => TelemetryTraceContext | undefined;
@@ -22,9 +26,11 @@ function clamp01(n: number | undefined): number | undefined {
   return n;
 }
 
-function safeErrorStack(
-  err: unknown
-): { type?: string; message?: string; stacktrace?: string } {
+function safeErrorStack(err: unknown): {
+  type?: string;
+  message?: string;
+  stacktrace?: string;
+} {
   if (!err) return {};
 
   if (err instanceof Error) {
@@ -44,7 +50,7 @@ function safeErrorStack(
 
 export function createLogEnvelope(
   input: CreateLogEnvelopeInput,
-  getTraceContext?: TraceContextProvider
+  getTraceContext?: TraceContextProvider,
 ): LogEnvelope {
   const now = input.now ?? new Date();
 
@@ -54,7 +60,9 @@ export function createLogEnvelope(
   const parentSpanId = traceFromContext?.parentSpanId ?? null;
 
   const exception =
-    input.exception?.type || input.exception?.message || input.exception?.stacktrace
+    input.exception?.type ||
+    input.exception?.message ||
+    input.exception?.stacktrace
       ? input.exception
       : undefined;
 
@@ -139,7 +147,10 @@ export function createLogEnvelope(
 }
 
 // convenience: turn unknown err into exception fields
-export function withException(input: CreateLogEnvelopeInput, err: unknown): CreateLogEnvelopeInput {
+export function withException(
+  input: CreateLogEnvelopeInput,
+  err: unknown,
+): CreateLogEnvelopeInput {
   const e = safeErrorStack(err);
   return {
     ...input,

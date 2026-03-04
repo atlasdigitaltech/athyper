@@ -36,7 +36,7 @@ export class MetricsRegistry {
   incrementCounter(
     name: string,
     value: number = 1,
-    labels?: MetricLabels
+    labels?: MetricLabels,
   ): void {
     this.recordMetric(name, "counter", value, labels);
   }
@@ -62,7 +62,7 @@ export class MetricsRegistry {
     name: string,
     type: MetricType,
     value: number,
-    labels?: MetricLabels
+    labels?: MetricLabels,
   ): void {
     if (!this.metrics.has(name)) {
       this.metrics.set(name, {
@@ -181,7 +181,7 @@ export class MetricsRegistry {
    */
   setMetricMetadata(
     name: string,
-    metadata: { description?: string; unit?: string }
+    metadata: { description?: string; unit?: string },
   ): void {
     const metric = this.metrics.get(name);
     if (metric) {
@@ -222,7 +222,12 @@ export interface HttpMetrics {
  */
 export function createHttpMetrics(registry: MetricsRegistry) {
   return {
-    recordRequest(method: string, path: string, status: number, duration: number) {
+    recordRequest(
+      method: string,
+      path: string,
+      status: number,
+      duration: number,
+    ) {
       registry.incrementCounter("http_requests_total", 1, {
         method,
         path,

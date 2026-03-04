@@ -24,7 +24,7 @@ import {
 describe("sanitizeHtml", () => {
   it("should escape HTML special characters", () => {
     expect(sanitizeHtml("<script>alert('xss')</script>")).toBe(
-      "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;&#x2F;script&gt;"
+      "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;&#x2F;script&gt;",
     );
   });
 
@@ -33,8 +33,8 @@ describe("sanitizeHtml", () => {
   });
 
   it("should escape quotes", () => {
-    expect(sanitizeHtml('"Hello" and \'World\'')).toBe(
-      "&quot;Hello&quot; and &#x27;World&#x27;"
+    expect(sanitizeHtml("\"Hello\" and 'World'")).toBe(
+      "&quot;Hello&quot; and &#x27;World&#x27;",
     );
   });
 
@@ -43,6 +43,7 @@ describe("sanitizeHtml", () => {
   });
 
   it("should handle non-string input", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally testing runtime guard
     expect(sanitizeHtml(123 as any)).toBe("");
   });
 });
@@ -113,7 +114,9 @@ describe("sanitizeUrl", () => {
   });
 
   it("should block data: protocol", () => {
-    expect(sanitizeUrl("data:text/html,<script>alert('xss')</script>")).toBe("");
+    expect(sanitizeUrl("data:text/html,<script>alert('xss')</script>")).toBe(
+      "",
+    );
   });
 
   it("should allow http: protocol", () => {
@@ -388,6 +391,7 @@ describe("sanitizeJson", () => {
   });
 
   it("should handle non-string input", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally testing runtime guard
     expect(sanitizeJson(123 as any)).toBe(null);
   });
 });
@@ -416,13 +420,16 @@ describe("SanitizationProfiles", () => {
   });
 
   it("should have searchQuery profile", () => {
-    const result = SanitizationProfiles.searchQuery("<script>Multiple   spaces</script>");
+    const result = SanitizationProfiles.searchQuery(
+      "<script>Multiple   spaces</script>",
+    );
     expect(result).not.toContain("<script>");
     expect(result).not.toContain("   ");
   });
 
   it("should have richText profile", () => {
-    const html = '<p>Hello</p><script>alert("xss")</script><a href="javascript:void(0)">Link</a>';
+    const html =
+      '<p>Hello</p><script>alert("xss")</script><a href="javascript:void(0)">Link</a>';
     const result = SanitizationProfiles.richText(html);
 
     expect(result).toContain("<p>");

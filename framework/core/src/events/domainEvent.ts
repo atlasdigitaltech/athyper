@@ -15,4 +15,6 @@ export type DomainEvent<T = unknown> = {
 /**
  * Event handler function type
  */
-export type EventHandler<T = unknown> = (event: DomainEvent<T>) => void | Promise<void>;
+export type EventHandler<T = unknown> = (
+  event: DomainEvent<T>,
+) => void | Promise<void>;

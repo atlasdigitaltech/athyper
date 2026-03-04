@@ -10,9 +10,7 @@ import {
 describe("validate", () => {
   describe("required validation", () => {
     it("should fail when required field is missing", () => {
-      const rules: ValidationRule[] = [
-        { field: "email", required: true },
-      ];
+      const rules: ValidationRule[] = [{ field: "email", required: true }];
 
       const result = validate({}, rules);
 
@@ -23,9 +21,7 @@ describe("validate", () => {
     });
 
     it("should pass when required field is present", () => {
-      const rules: ValidationRule[] = [
-        { field: "email", required: true },
-      ];
+      const rules: ValidationRule[] = [{ field: "email", required: true }];
 
       const result = validate({ email: "test@example.com" }, rules);
 
@@ -34,9 +30,7 @@ describe("validate", () => {
     });
 
     it("should fail when required field is empty string", () => {
-      const rules: ValidationRule[] = [
-        { field: "name", required: true },
-      ];
+      const rules: ValidationRule[] = [{ field: "name", required: true }];
 
       const result = validate({ name: "" }, rules);
 
@@ -46,18 +40,14 @@ describe("validate", () => {
 
   describe("type validation", () => {
     it("should validate string type", () => {
-      const rules: ValidationRule[] = [
-        { field: "name", type: "string" },
-      ];
+      const rules: ValidationRule[] = [{ field: "name", type: "string" }];
 
       expect(validate({ name: "John" }, rules).valid).toBe(true);
       expect(validate({ name: 123 }, rules).valid).toBe(false);
     });
 
     it("should validate number type", () => {
-      const rules: ValidationRule[] = [
-        { field: "age", type: "number" },
-      ];
+      const rules: ValidationRule[] = [{ field: "age", type: "number" }];
 
       expect(validate({ age: 25 }, rules).valid).toBe(true);
       expect(validate({ age: "25" }, rules).valid).toBe(false);
@@ -65,9 +55,7 @@ describe("validate", () => {
     });
 
     it("should validate boolean type", () => {
-      const rules: ValidationRule[] = [
-        { field: "active", type: "boolean" },
-      ];
+      const rules: ValidationRule[] = [{ field: "active", type: "boolean" }];
 
       expect(validate({ active: true }, rules).valid).toBe(true);
       expect(validate({ active: false }, rules).valid).toBe(true);
@@ -75,9 +63,7 @@ describe("validate", () => {
     });
 
     it("should validate object type", () => {
-      const rules: ValidationRule[] = [
-        { field: "metadata", type: "object" },
-      ];
+      const rules: ValidationRule[] = [{ field: "metadata", type: "object" }];
 
       expect(validate({ metadata: {} }, rules).valid).toBe(true);
       expect(validate({ metadata: { key: "value" } }, rules).valid).toBe(true);
@@ -85,13 +71,15 @@ describe("validate", () => {
       // null is allowed for non-required fields
       expect(validate({ metadata: null }, rules).valid).toBe(true);
       // null should be rejected if field is required
-      expect(validate({ metadata: null }, [{ field: "metadata", type: "object", required: true }]).valid).toBe(false);
+      expect(
+        validate({ metadata: null }, [
+          { field: "metadata", type: "object", required: true },
+        ]).valid,
+      ).toBe(false);
     });
 
     it("should validate array type", () => {
-      const rules: ValidationRule[] = [
-        { field: "tags", type: "array" },
-      ];
+      const rules: ValidationRule[] = [{ field: "tags", type: "array" }];
 
       expect(validate({ tags: [] }, rules).valid).toBe(true);
       expect(validate({ tags: ["a", "b"] }, rules).valid).toBe(true);
@@ -99,9 +87,7 @@ describe("validate", () => {
     });
 
     it("should validate email type", () => {
-      const rules: ValidationRule[] = [
-        { field: "email", type: "email" },
-      ];
+      const rules: ValidationRule[] = [{ field: "email", type: "email" }];
 
       expect(validate({ email: "test@example.com" }, rules).valid).toBe(true);
       expect(validate({ email: "invalid-email" }, rules).valid).toBe(false);
@@ -109,22 +95,26 @@ describe("validate", () => {
     });
 
     it("should validate url type", () => {
-      const rules: ValidationRule[] = [
-        { field: "website", type: "url" },
-      ];
+      const rules: ValidationRule[] = [{ field: "website", type: "url" }];
 
-      expect(validate({ website: "https://example.com" }, rules).valid).toBe(true);
-      expect(validate({ website: "http://example.com" }, rules).valid).toBe(true);
+      expect(validate({ website: "https://example.com" }, rules).valid).toBe(
+        true,
+      );
+      expect(validate({ website: "http://example.com" }, rules).valid).toBe(
+        true,
+      );
       expect(validate({ website: "not-a-url" }, rules).valid).toBe(false);
-      expect(validate({ website: "ftp://example.com" }, rules).valid).toBe(false);
+      expect(validate({ website: "ftp://example.com" }, rules).valid).toBe(
+        false,
+      );
     });
 
     it("should validate uuid type", () => {
-      const rules: ValidationRule[] = [
-        { field: "id", type: "uuid" },
-      ];
+      const rules: ValidationRule[] = [{ field: "id", type: "uuid" }];
 
-      expect(validate({ id: "550e8400-e29b-41d4-a716-446655440000" }, rules).valid).toBe(true);
+      expect(
+        validate({ id: "550e8400-e29b-41d4-a716-446655440000" }, rules).valid,
+      ).toBe(true);
       expect(validate({ id: "invalid-uuid" }, rules).valid).toBe(false);
     });
   });
@@ -221,7 +211,9 @@ describe("validate", () => {
       const result = validate({ password: "lowercase" }, rules);
 
       expect(result.valid).toBe(false);
-      expect(result.errors[0].message).toBe("Password must contain uppercase letter");
+      expect(result.errors[0].message).toBe(
+        "Password must contain uppercase letter",
+      );
     });
   });
 
@@ -244,9 +236,7 @@ describe("validate", () => {
     });
 
     it("should handle missing nested fields", () => {
-      const rules: ValidationRule[] = [
-        { field: "user.email", required: true },
-      ];
+      const rules: ValidationRule[] = [{ field: "user.email", required: true }];
 
       const result = validate({}, rules);
 
@@ -262,10 +252,7 @@ describe("validate", () => {
         { field: "password", required: true, minLength: 8 },
       ];
 
-      const result = validate(
-        { email: "invalid", password: "short" },
-        rules
-      );
+      const result = validate({ email: "invalid", password: "short" }, rules);
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
@@ -321,7 +308,9 @@ describe("ValidationRulesets", () => {
     expect(ValidationRulesets.userRegistration).toBeDefined();
     expect(ValidationRulesets.userRegistration.length).toBeGreaterThan(0);
 
-    const hasEmail = ValidationRulesets.userRegistration.some((r) => r.field === "email");
+    const hasEmail = ValidationRulesets.userRegistration.some(
+      (r) => r.field === "email",
+    );
     expect(hasEmail).toBe(true);
   });
 
@@ -333,7 +322,9 @@ describe("ValidationRulesets", () => {
   it("should have pagination ruleset", () => {
     expect(ValidationRulesets.pagination).toBeDefined();
 
-    const pageRule = ValidationRulesets.pagination.find((r) => r.field === "page");
+    const pageRule = ValidationRulesets.pagination.find(
+      (r) => r.field === "page",
+    );
     expect(pageRule?.min).toBe(1);
   });
 });

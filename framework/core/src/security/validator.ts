@@ -6,20 +6,28 @@
 export type ValidationRule = {
   field: string;
   required?: boolean;
-  type?: "string" | "number" | "boolean" | "object" | "array" | "email" | "url" | "uuid";
+  type?:
+    | "string"
+    | "number"
+    | "boolean"
+    | "object"
+    | "array"
+    | "email"
+    | "url"
+    | "uuid";
   minLength?: number;
   maxLength?: number;
   min?: number;
   max?: number;
   pattern?: RegExp;
   enum?: readonly string[];
-  custom?: (value: any) => boolean | string;
+  custom?: (value: unknown) => boolean | string;
 };
 
 export type ValidationError = {
   field: string;
   message: string;
-  value?: any;
+  value?: unknown;
 };
 
 export type ValidationResult = {
@@ -30,7 +38,7 @@ export type ValidationResult = {
 /**
  * Validate request data against rules
  */
-export function validate(data: any, rules: ValidationRule[]): ValidationResult {
+export function validate(data: Record<string, unknown>, rules: ValidationRule[]): ValidationResult {
   const errors: ValidationError[] = [];
 
   for (const rule of rules) {
@@ -48,11 +56,18 @@ export function validate(data: any, rules: ValidationRule[]): ValidationResult {
 /**
  * Validate a single field
  */
-function validateField(field: string, value: any, rule: ValidationRule): ValidationError[] {
+function validateField(
+  field: string,
+  value: unknown,
+  rule: ValidationRule,
+): ValidationError[] {
   const errors: ValidationError[] = [];
 
   // Required check
-  if (rule.required && (value === undefined || value === null || value === "")) {
+  if (
+    rule.required &&
+    (value === undefined || value === null || value === "")
+  ) {
     errors.push({
       field,
       message: `${field} is required`,
@@ -148,8 +163,8 @@ function validateField(field: string, value: any, rule: ValidationRule): Validat
  */
 function validateType(
   field: string,
-  value: any,
-  type: ValidationRule["type"]
+  value: unknown,
+  type: ValidationRule["type"],
 ): ValidationError | null {
   switch (type) {
     case "string":
@@ -207,15 +222,15 @@ function validateType(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   const parts = path.split(".");
-  let current = obj;
+  let current: unknown = obj;
 
   for (const part of parts) {
     if (current === null || current === undefined) {
       return undefined;
     }
-    current = current[part];
+    current = (current as Record<string, unknown>)[part];
   }
 
   return current;
@@ -283,12 +298,14 @@ export const ValidationPatterns = {
   /**
    * ISO 8601 date
    */
-  ISO_DATE: /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?)?$/,
+  ISO_DATE:
+    /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?)?$/,
 
   /**
    * Semantic version (e.g., 1.0.0)
    */
-  SEMVER: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/,
+  SEMVER:
+    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/,
 } as const;
 
 /**
