@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
+
 - Core framework module definitions
 - Integration interfaces for neon, mesh, and atlas
 - Configuration schema
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-03-03
 
 ### Added
+
 - Base version — athyper Business Operating Framework
 - `framework/` — Core engine with adapters (auth, db, cache, storage, telemetry), core contracts, and runtime kernel
 - `mesh/` — Docker Compose infrastructure stack (Keycloak, Traefik, Redis, MinIO, PgBouncer, OpenTelemetry)

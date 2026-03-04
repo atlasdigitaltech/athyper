@@ -33,21 +33,21 @@ Stores sovereign countries and territories using the ISO 3166-1 standard. Each r
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code2 | char(2) | NOT NULL | -- | ISO 3166-1 alpha-2 country code (e.g. `US`, `DE`). Primary key. |
-| code3 | char(3) | YES | -- | ISO 3166-1 alpha-3 country code (e.g. `USA`, `DEU`). Unique. |
-| numeric3 | char(3) | YES | -- | ISO 3166-1 numeric code (e.g. `840`, `276`). Unique. |
-| name | text | NOT NULL | -- | Short English country name. |
-| official_name | text | YES | -- | Official English name (e.g. `United States of America`). |
-| region | text | YES | -- | Geographic region (e.g. `Americas`, `Europe`). |
-| subregion | text | YES | -- | Geographic subregion (e.g. `Northern America`, `Western Europe`). |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column        | Type        | Nullable | Default       | Description                                                       |
+| ------------- | ----------- | -------- | ------------- | ----------------------------------------------------------------- |
+| code2         | char(2)     | NOT NULL | --            | ISO 3166-1 alpha-2 country code (e.g. `US`, `DE`). Primary key.   |
+| code3         | char(3)     | YES      | --            | ISO 3166-1 alpha-3 country code (e.g. `USA`, `DEU`). Unique.      |
+| numeric3      | char(3)     | YES      | --            | ISO 3166-1 numeric code (e.g. `840`, `276`). Unique.              |
+| name          | text        | NOT NULL | --            | Short English country name.                                       |
+| official_name | text        | YES      | --            | Official English name (e.g. `United States of America`).          |
+| region        | text        | YES      | --            | Geographic region (e.g. `Americas`, `Europe`).                    |
+| subregion     | text        | YES      | --            | Geographic subregion (e.g. `Northern America`, `Western Europe`). |
+| status        | text        | NOT NULL | `'active'`    | Lifecycle status.                                                 |
+| metadata      | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                              |
+| created_at    | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                           |
+| created_by    | text        | NOT NULL | `'seed'`      | Identity that created the row.                                    |
+| updated_at    | timestamptz | YES      | --            | Last update timestamp.                                            |
+| updated_by    | text        | YES      | --            | Identity that last updated the row.                               |
 
 ### Primary Key
 
@@ -84,19 +84,19 @@ Stores administrative subdivisions of countries following the ISO 3166-2 standar
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | ISO 3166-2 subdivision code (e.g. `US-CA`, `DE-BY`). Primary key. |
-| country_code2 | char(2) | NOT NULL | -- | Parent country alpha-2 code. |
-| name | text | NOT NULL | -- | English name of the subdivision. |
-| category | text | YES | -- | Subdivision type (e.g. `state`, `province`, `territory`). |
-| parent_code | text | YES | -- | Parent subdivision code for hierarchical regions. Self-referencing FK. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column        | Type        | Nullable | Default       | Description                                                            |
+| ------------- | ----------- | -------- | ------------- | ---------------------------------------------------------------------- |
+| code          | text        | NOT NULL | --            | ISO 3166-2 subdivision code (e.g. `US-CA`, `DE-BY`). Primary key.      |
+| country_code2 | char(2)     | NOT NULL | --            | Parent country alpha-2 code.                                           |
+| name          | text        | NOT NULL | --            | English name of the subdivision.                                       |
+| category      | text        | YES      | --            | Subdivision type (e.g. `state`, `province`, `territory`).              |
+| parent_code   | text        | YES      | --            | Parent subdivision code for hierarchical regions. Self-referencing FK. |
+| status        | text        | NOT NULL | `'active'`    | Lifecycle status.                                                      |
+| metadata      | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                                   |
+| created_at    | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                                |
+| created_by    | text        | NOT NULL | `'seed'`      | Identity that created the row.                                         |
+| updated_at    | timestamptz | YES      | --            | Last update timestamp.                                                 |
+| updated_by    | text        | YES      | --            | Identity that last updated the row.                                    |
 
 ### Primary Key
 
@@ -108,18 +108,18 @@ Stores administrative subdivisions of countries following the ISO 3166-2 standar
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| country_code2 | ref.country(code2) | CASCADE |
-| parent_code | ref.state_region(code) | (default -- restrict) |
+| FK Column     | References             | On Delete             |
+| ------------- | ---------------------- | --------------------- |
+| country_code2 | ref.country(code2)     | CASCADE               |
+| parent_code   | ref.state_region(code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_state_region_country | country_code2 | Lookup by country. |
-| idx_state_region_parent | parent_code | Hierarchical traversal. |
-| idx_state_region_category | category | Filter by subdivision type. |
+| Index Name                | Columns       | Notes                       |
+| ------------------------- | ------------- | --------------------------- |
+| idx_state_region_country  | country_code2 | Lookup by country.          |
+| idx_state_region_parent   | parent_code   | Hierarchical traversal.     |
+| idx_state_region_category | category      | Filter by subdivision type. |
 
 ### Relationships
 
@@ -136,19 +136,19 @@ Stores world currencies following the ISO 4217 standard. Each row records the al
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | char(3) | NOT NULL | -- | ISO 4217 alphabetic currency code (e.g. `USD`, `EUR`). Primary key. |
-| name | text | NOT NULL | -- | English currency name (e.g. `US Dollar`). |
-| symbol | text | YES | -- | Currency symbol (e.g. `$`, `EUR`). |
-| minor_units | int | YES | -- | Number of decimal places (e.g. `2` for USD, `0` for JPY). |
-| numeric3 | char(3) | YES | -- | ISO 4217 numeric code. Unique. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column      | Type        | Nullable | Default       | Description                                                         |
+| ----------- | ----------- | -------- | ------------- | ------------------------------------------------------------------- |
+| code        | char(3)     | NOT NULL | --            | ISO 4217 alphabetic currency code (e.g. `USD`, `EUR`). Primary key. |
+| name        | text        | NOT NULL | --            | English currency name (e.g. `US Dollar`).                           |
+| symbol      | text        | YES      | --            | Currency symbol (e.g. `$`, `EUR`).                                  |
+| minor_units | int         | YES      | --            | Number of decimal places (e.g. `2` for USD, `0` for JPY).           |
+| numeric3    | char(3)     | YES      | --            | ISO 4217 numeric code. Unique.                                      |
+| status      | text        | NOT NULL | `'active'`    | Lifecycle status.                                                   |
+| metadata    | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                                |
+| created_at  | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                             |
+| created_by  | text        | NOT NULL | `'seed'`      | Identity that created the row.                                      |
+| updated_at  | timestamptz | YES      | --            | Last update timestamp.                                              |
+| updated_by  | text        | YES      | --            | Identity that last updated the row.                                 |
 
 ### Primary Key
 
@@ -184,19 +184,19 @@ Stores human languages following the ISO 639 standard (preferring ISO 639-1 two-
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | ISO 639 language code (prefer 639-1 two-letter). Primary key. |
-| name | text | NOT NULL | -- | English language name (e.g. `English`, `German`). |
-| native_name | text | YES | -- | Name in the language itself (e.g. `Deutsch`). |
-| iso639_2 | text | YES | -- | ISO 639-2 (three-letter) code. |
-| direction | text | NOT NULL | `'ltr'` | Text direction: `ltr` or `rtl`. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column      | Type        | Nullable | Default       | Description                                                   |
+| ----------- | ----------- | -------- | ------------- | ------------------------------------------------------------- |
+| code        | text        | NOT NULL | --            | ISO 639 language code (prefer 639-1 two-letter). Primary key. |
+| name        | text        | NOT NULL | --            | English language name (e.g. `English`, `German`).             |
+| native_name | text        | YES      | --            | Name in the language itself (e.g. `Deutsch`).                 |
+| iso639_2    | text        | YES      | --            | ISO 639-2 (three-letter) code.                                |
+| direction   | text        | NOT NULL | `'ltr'`       | Text direction: `ltr` or `rtl`.                               |
+| status      | text        | NOT NULL | `'active'`    | Lifecycle status.                                             |
+| metadata    | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                          |
+| created_at  | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                       |
+| created_by  | text        | NOT NULL | `'seed'`      | Identity that created the row.                                |
+| updated_at  | timestamptz | YES      | --            | Last update timestamp.                                        |
+| updated_by  | text        | YES      | --            | Identity that last updated the row.                           |
 
 ### Primary Key
 
@@ -229,20 +229,20 @@ Represents BCP 47 locale tags that combine a language, an optional country, and 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | BCP 47 locale tag (e.g. `en-US`, `de-DE`). Primary key. |
-| language_code | text | NOT NULL | -- | ISO 639 language code. |
-| country_code2 | char(2) | YES | -- | ISO 3166-1 alpha-2 country code (optional). |
-| script | text | YES | -- | Script subtag (e.g. `Hans`, `Latn`). |
-| name | text | NOT NULL | -- | Human-readable locale name (e.g. `English (United States)`). |
-| direction | text | YES | -- | Text direction override (`ltr` or `rtl`). NULL inherits from language. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column        | Type        | Nullable | Default       | Description                                                            |
+| ------------- | ----------- | -------- | ------------- | ---------------------------------------------------------------------- |
+| code          | text        | NOT NULL | --            | BCP 47 locale tag (e.g. `en-US`, `de-DE`). Primary key.                |
+| language_code | text        | NOT NULL | --            | ISO 639 language code.                                                 |
+| country_code2 | char(2)     | YES      | --            | ISO 3166-1 alpha-2 country code (optional).                            |
+| script        | text        | YES      | --            | Script subtag (e.g. `Hans`, `Latn`).                                   |
+| name          | text        | NOT NULL | --            | Human-readable locale name (e.g. `English (United States)`).           |
+| direction     | text        | YES      | --            | Text direction override (`ltr` or `rtl`). NULL inherits from language. |
+| status        | text        | NOT NULL | `'active'`    | Lifecycle status.                                                      |
+| metadata      | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                                   |
+| created_at    | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                                |
+| created_by    | text        | NOT NULL | `'seed'`      | Identity that created the row.                                         |
+| updated_at    | timestamptz | YES      | --            | Last update timestamp.                                                 |
+| updated_by    | text        | YES      | --            | Identity that last updated the row.                                    |
 
 ### Primary Key
 
@@ -255,17 +255,17 @@ Represents BCP 47 locale tags that combine a language, an optional country, and 
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
+| FK Column     | References         | On Delete             |
+| ------------- | ------------------ | --------------------- |
 | language_code | ref.language(code) | (default -- restrict) |
 | country_code2 | ref.country(code2) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name          | Columns       | Notes                        |
+| ------------------- | ------------- | ---------------------------- |
 | idx_locale_language | language_code | Look up locales by language. |
-| idx_locale_country | country_code2 | Look up locales by country. |
+| idx_locale_country  | country_code2 | Look up locales by country.  |
 
 ### Relationships
 
@@ -282,19 +282,19 @@ Stores IANA time zone database identifiers (e.g. `America/New_York`, `Europe/Ber
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| tzid | text | NOT NULL | -- | IANA time zone identifier. Primary key. |
-| display_name | text | YES | -- | Human-readable display name. |
-| utc_offset | text | YES | -- | Standard UTC offset string (e.g. `+05:30`, `-08:00`). |
-| is_alias | boolean | NOT NULL | `false` | Whether this is an alias for another canonical zone. |
-| canonical_tzid | text | YES | -- | Canonical zone this alias resolves to. Self-referencing FK. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column         | Type        | Nullable | Default       | Description                                                 |
+| -------------- | ----------- | -------- | ------------- | ----------------------------------------------------------- |
+| tzid           | text        | NOT NULL | --            | IANA time zone identifier. Primary key.                     |
+| display_name   | text        | YES      | --            | Human-readable display name.                                |
+| utc_offset     | text        | YES      | --            | Standard UTC offset string (e.g. `+05:30`, `-08:00`).       |
+| is_alias       | boolean     | NOT NULL | `false`       | Whether this is an alias for another canonical zone.        |
+| canonical_tzid | text        | YES      | --            | Canonical zone this alias resolves to. Self-referencing FK. |
+| status         | text        | NOT NULL | `'active'`    | Lifecycle status.                                           |
+| metadata       | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                        |
+| created_at     | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                     |
+| created_by     | text        | NOT NULL | `'seed'`      | Identity that created the row.                              |
+| updated_at     | timestamptz | YES      | --            | Last update timestamp.                                      |
+| updated_by     | text        | YES      | --            | Identity that last updated the row.                         |
 
 ### Primary Key
 
@@ -306,14 +306,14 @@ Stores IANA time zone database identifiers (e.g. `America/New_York`, `Europe/Ber
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
+| FK Column      | References         | On Delete             |
+| -------------- | ------------------ | --------------------- |
 | canonical_tzid | ref.timezone(tzid) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name             | Columns        | Notes                              |
+| ---------------------- | -------------- | ---------------------------------- |
 | idx_timezone_canonical | canonical_tzid | Resolve aliases to canonical zone. |
 
 ### Relationships
@@ -330,18 +330,18 @@ Stores units of measure following the UN/ECE Recommendation 20 standard. Each un
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | UN/ECE Rec 20 unit code (e.g. `KGM`, `MTR`). Primary key. |
-| name | text | NOT NULL | -- | Unit name (e.g. `kilogram`, `metre`). |
-| symbol | text | YES | -- | Display symbol (e.g. `kg`, `m`). |
-| quantity_type | text | YES | -- | Physical quantity category. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column        | Type        | Nullable | Default       | Description                                               |
+| ------------- | ----------- | -------- | ------------- | --------------------------------------------------------- |
+| code          | text        | NOT NULL | --            | UN/ECE Rec 20 unit code (e.g. `KGM`, `MTR`). Primary key. |
+| name          | text        | NOT NULL | --            | Unit name (e.g. `kilogram`, `metre`).                     |
+| symbol        | text        | YES      | --            | Display symbol (e.g. `kg`, `m`).                          |
+| quantity_type | text        | YES      | --            | Physical quantity category.                               |
+| status        | text        | NOT NULL | `'active'`    | Lifecycle status.                                         |
+| metadata      | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                      |
+| created_at    | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                   |
+| created_by    | text        | NOT NULL | `'seed'`      | Identity that created the row.                            |
+| updated_at    | timestamptz | YES      | --            | Last update timestamp.                                    |
+| updated_by    | text        | YES      | --            | Identity that last updated the row.                       |
 
 ### Primary Key
 
@@ -374,20 +374,20 @@ Defines commodity classification systems (domains) such as UNSPSC, Harmonized Sy
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | Domain identifier (e.g. `unspsc`, `hs`). Primary key. |
-| name | text | NOT NULL | -- | Human-readable domain name. |
-| standard | text | YES | -- | Governing standard body/name. |
-| version | text | YES | -- | Version of the standard in use. |
-| hierarchy_depth | smallint | YES | -- | Number of hierarchy levels (e.g. 4 for UNSPSC, 6 for HS). |
-| code_pattern | text | YES | -- | Validation regex for codes in this domain. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column          | Type        | Nullable | Default       | Description                                               |
+| --------------- | ----------- | -------- | ------------- | --------------------------------------------------------- |
+| code            | text        | NOT NULL | --            | Domain identifier (e.g. `unspsc`, `hs`). Primary key.     |
+| name            | text        | NOT NULL | --            | Human-readable domain name.                               |
+| standard        | text        | YES      | --            | Governing standard body/name.                             |
+| version         | text        | YES      | --            | Version of the standard in use.                           |
+| hierarchy_depth | smallint    | YES      | --            | Number of hierarchy levels (e.g. 4 for UNSPSC, 6 for HS). |
+| code_pattern    | text        | YES      | --            | Validation regex for codes in this domain.                |
+| status          | text        | NOT NULL | `'active'`    | Lifecycle status.                                         |
+| metadata        | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                      |
+| created_at      | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                   |
+| created_by      | text        | NOT NULL | `'seed'`      | Identity that created the row.                            |
+| updated_at      | timestamptz | YES      | --            | Last update timestamp.                                    |
+| updated_by      | text        | YES      | --            | Identity that last updated the row.                       |
 
 ### Primary Key
 
@@ -419,22 +419,22 @@ Stores hierarchical commodity classification codes within a given domain (UNSPSC
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| domain_code | text | NOT NULL | -- | Commodity domain this code belongs to. Composite PK part 1. |
-| code | text | NOT NULL | -- | Classification code within the domain. Composite PK part 2. |
-| name | text | NOT NULL | -- | Code description/name. |
-| description | text | YES | -- | Extended description. |
-| parent_code | text | YES | -- | Parent code within the same domain (self-referencing). |
-| level_no | int | YES | -- | Hierarchy level (1 = top segment, increasing downward). |
-| keywords | text[] | YES | -- | Type-ahead search keywords (e.g. `{'laptop','notebook','portable computer'}`). |
-| is_leaf | boolean | NOT NULL | `false` | True if this is the finest-grain postable level. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column      | Type        | Nullable | Default       | Description                                                                    |
+| ----------- | ----------- | -------- | ------------- | ------------------------------------------------------------------------------ |
+| domain_code | text        | NOT NULL | --            | Commodity domain this code belongs to. Composite PK part 1.                    |
+| code        | text        | NOT NULL | --            | Classification code within the domain. Composite PK part 2.                    |
+| name        | text        | NOT NULL | --            | Code description/name.                                                         |
+| description | text        | YES      | --            | Extended description.                                                          |
+| parent_code | text        | YES      | --            | Parent code within the same domain (self-referencing).                         |
+| level_no    | int         | YES      | --            | Hierarchy level (1 = top segment, increasing downward).                        |
+| keywords    | text[]      | YES      | --            | Type-ahead search keywords (e.g. `{'laptop','notebook','portable computer'}`). |
+| is_leaf     | boolean     | NOT NULL | `false`       | True if this is the finest-grain postable level.                               |
+| status      | text        | NOT NULL | `'active'`    | Lifecycle status.                                                              |
+| metadata    | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                                           |
+| created_at  | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                                        |
+| created_by  | text        | NOT NULL | `'seed'`      | Identity that created the row.                                                 |
+| updated_at  | timestamptz | YES      | --            | Last update timestamp.                                                         |
+| updated_by  | text        | YES      | --            | Identity that last updated the row.                                            |
 
 ### Primary Key
 
@@ -446,18 +446,18 @@ Stores hierarchical commodity classification codes within a given domain (UNSPSC
 
 ### Foreign Keys
 
-| FK Column(s) | References | On Delete |
-|--------------|-----------|-----------|
-| domain_code | ref.commodity_domain(code) | CASCADE |
+| FK Column(s)               | References                            | On Delete             |
+| -------------------------- | ------------------------------------- | --------------------- |
+| domain_code                | ref.commodity_domain(code)            | CASCADE               |
 | (domain_code, parent_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_commodity_code_parent | (domain_code, parent_code) | Hierarchical tree traversal. |
-| idx_commodity_code_level | (domain_code, level_no) | Filter by hierarchy level. |
-| idx_commodity_code_keywords | keywords (GIN) | Type-ahead / full-text search on keywords array. |
+| Index Name                  | Columns                    | Notes                                            |
+| --------------------------- | -------------------------- | ------------------------------------------------ |
+| idx_commodity_code_parent   | (domain_code, parent_code) | Hierarchical tree traversal.                     |
+| idx_commodity_code_level    | (domain_code, level_no)    | Filter by hierarchy level.                       |
+| idx_commodity_code_keywords | keywords (GIN)             | Type-ahead / full-text search on keywords array. |
 
 ### Relationships
 
@@ -475,20 +475,20 @@ Defines industry classification systems (domains) such as ISIC (International St
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| code | text | NOT NULL | -- | Domain identifier (e.g. `isic`, `naics`). Primary key. |
-| name | text | NOT NULL | -- | Human-readable domain name. |
-| standard | text | YES | -- | Governing standard body/name. |
-| version | text | YES | -- | Version of the standard in use. |
-| hierarchy_depth | smallint | YES | -- | Number of hierarchy levels (e.g. 4 for ISIC, 5 for NAICS). |
-| code_pattern | text | YES | -- | Validation regex for codes in this domain. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column          | Type        | Nullable | Default       | Description                                                |
+| --------------- | ----------- | -------- | ------------- | ---------------------------------------------------------- |
+| code            | text        | NOT NULL | --            | Domain identifier (e.g. `isic`, `naics`). Primary key.     |
+| name            | text        | NOT NULL | --            | Human-readable domain name.                                |
+| standard        | text        | YES      | --            | Governing standard body/name.                              |
+| version         | text        | YES      | --            | Version of the standard in use.                            |
+| hierarchy_depth | smallint    | YES      | --            | Number of hierarchy levels (e.g. 4 for ISIC, 5 for NAICS). |
+| code_pattern    | text        | YES      | --            | Validation regex for codes in this domain.                 |
+| status          | text        | NOT NULL | `'active'`    | Lifecycle status.                                          |
+| metadata        | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                       |
+| created_at      | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                    |
+| created_by      | text        | NOT NULL | `'seed'`      | Identity that created the row.                             |
+| updated_at      | timestamptz | YES      | --            | Last update timestamp.                                     |
+| updated_by      | text        | YES      | --            | Identity that last updated the row.                        |
 
 ### Primary Key
 
@@ -520,22 +520,22 @@ Stores hierarchical industry classification codes within a given domain (ISIC di
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| domain_code | text | NOT NULL | -- | Industry domain this code belongs to. Composite PK part 1. |
-| code | text | NOT NULL | -- | Classification code within the domain. Composite PK part 2. |
-| name | text | NOT NULL | -- | Code description/name. |
-| description | text | YES | -- | Extended description. |
-| parent_code | text | YES | -- | Parent code within the same domain (self-referencing). |
-| level_no | int | YES | -- | Hierarchy level (1 = top sector, increasing downward). |
-| keywords | text[] | YES | -- | Type-ahead search keywords. |
-| is_leaf | boolean | NOT NULL | `false` | True if this is the finest-grain postable level. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column      | Type        | Nullable | Default       | Description                                                 |
+| ----------- | ----------- | -------- | ------------- | ----------------------------------------------------------- |
+| domain_code | text        | NOT NULL | --            | Industry domain this code belongs to. Composite PK part 1.  |
+| code        | text        | NOT NULL | --            | Classification code within the domain. Composite PK part 2. |
+| name        | text        | NOT NULL | --            | Code description/name.                                      |
+| description | text        | YES      | --            | Extended description.                                       |
+| parent_code | text        | YES      | --            | Parent code within the same domain (self-referencing).      |
+| level_no    | int         | YES      | --            | Hierarchy level (1 = top sector, increasing downward).      |
+| keywords    | text[]      | YES      | --            | Type-ahead search keywords.                                 |
+| is_leaf     | boolean     | NOT NULL | `false`       | True if this is the finest-grain postable level.            |
+| status      | text        | NOT NULL | `'active'`    | Lifecycle status.                                           |
+| metadata    | jsonb       | NOT NULL | `'{}'::jsonb` | Extensible metadata.                                        |
+| created_at  | timestamptz | NOT NULL | `now()`       | Row creation timestamp.                                     |
+| created_by  | text        | NOT NULL | `'seed'`      | Identity that created the row.                              |
+| updated_at  | timestamptz | YES      | --            | Last update timestamp.                                      |
+| updated_by  | text        | YES      | --            | Identity that last updated the row.                         |
 
 ### Primary Key
 
@@ -547,18 +547,18 @@ Stores hierarchical industry classification codes within a given domain (ISIC di
 
 ### Foreign Keys
 
-| FK Column(s) | References | On Delete |
-|--------------|-----------|-----------|
-| domain_code | ref.industry_domain(code) | CASCADE |
+| FK Column(s)               | References                           | On Delete             |
+| -------------------------- | ------------------------------------ | --------------------- |
+| domain_code                | ref.industry_domain(code)            | CASCADE               |
 | (domain_code, parent_code) | ref.industry_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_industry_code_parent | (domain_code, parent_code) | Hierarchical tree traversal. |
-| idx_industry_code_level | (domain_code, level_no) | Filter by hierarchy level. |
-| idx_industry_code_keywords | keywords (GIN) | Type-ahead / full-text search on keywords array. |
+| Index Name                 | Columns                    | Notes                                            |
+| -------------------------- | -------------------------- | ------------------------------------------------ |
+| idx_industry_code_parent   | (domain_code, parent_code) | Hierarchical tree traversal.                     |
+| idx_industry_code_level    | (domain_code, level_no)    | Filter by hierarchy level.                       |
+| idx_industry_code_keywords | keywords (GIN)             | Type-ahead / full-text search on keywords array. |
 
 ### Relationships
 
@@ -576,17 +576,17 @@ Provides i18n (internationalization) translations for any reference data entity.
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| entity | text | NOT NULL | -- | Reference entity name (e.g. `country`, `currency`). Composite PK part 1. |
-| code | text | NOT NULL | -- | Code of the reference entity row (e.g. `US`, `USD`). Composite PK part 2. |
-| locale_code | text | NOT NULL | -- | BCP 47 locale code. Composite PK part 3. FK to `ref.locale`. |
-| name | text | NOT NULL | -- | Translated name in the target locale. |
-| description | text | YES | -- | Translated description (optional). |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column      | Type        | Nullable | Default  | Description                                                               |
+| ----------- | ----------- | -------- | -------- | ------------------------------------------------------------------------- |
+| entity      | text        | NOT NULL | --       | Reference entity name (e.g. `country`, `currency`). Composite PK part 1.  |
+| code        | text        | NOT NULL | --       | Code of the reference entity row (e.g. `US`, `USD`). Composite PK part 2. |
+| locale_code | text        | NOT NULL | --       | BCP 47 locale code. Composite PK part 3. FK to `ref.locale`.              |
+| name        | text        | NOT NULL | --       | Translated name in the target locale.                                     |
+| description | text        | YES      | --       | Translated description (optional).                                        |
+| created_at  | timestamptz | NOT NULL | `now()`  | Row creation timestamp.                                                   |
+| created_by  | text        | NOT NULL | `'seed'` | Identity that created the row.                                            |
+| updated_at  | timestamptz | YES      | --       | Last update timestamp.                                                    |
+| updated_by  | text        | YES      | --       | Identity that last updated the row.                                       |
 
 ### Primary Key
 
@@ -594,15 +594,15 @@ Provides i18n (internationalization) translations for any reference data entity.
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
+| FK Column   | References       | On Delete             |
+| ----------- | ---------------- | --------------------- |
 | locale_code | ref.locale(code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_label_locale | locale_code | Filter all labels by locale. |
+| Index Name              | Columns               | Notes                                                          |
+| ----------------------- | --------------------- | -------------------------------------------------------------- |
+| idx_label_locale        | locale_code           | Filter all labels by locale.                                   |
 | idx_label_entity_locale | (entity, locale_code) | Fast lookup for all codes of a given entity in a given locale. |
 
 ### Relationships
@@ -626,11 +626,11 @@ ref.localized_name(p_entity text, p_code text, p_locale text) RETURNS text
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| p_entity | text | Reference entity name (e.g. `'country'`, `'currency'`). |
-| p_code | text | Code of the entity row to translate. |
-| p_locale | text | Target BCP 47 locale (e.g. `'de-DE'`, `'ja'`). |
+| Parameter | Type | Description                                             |
+| --------- | ---- | ------------------------------------------------------- |
+| p_entity  | text | Reference entity name (e.g. `'country'`, `'currency'`). |
+| p_code    | text | Code of the entity row to translate.                    |
+| p_locale  | text | Target BCP 47 locale (e.g. `'de-DE'`, `'ja'`).          |
 
 ### Behavior
 

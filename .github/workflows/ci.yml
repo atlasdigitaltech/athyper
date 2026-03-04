@@ -64,10 +64,14 @@ jobs:
         run: pnpm run typecheck
 
       - name: Test
-        run: pnpm run test
+        run: pnpm run test -- --coverage
         env:
           CI: 'true'
           FORCE_COLOR: '1'
+
+      - name: Check changeset
+        if: github.event_name == 'pull_request'
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
 
       - name: Dependency graph check
         run: pnpm run depcheck

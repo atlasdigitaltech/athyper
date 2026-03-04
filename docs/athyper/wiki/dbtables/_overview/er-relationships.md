@@ -156,35 +156,35 @@ notify.push_subscription
 
 ## Cross-Schema Foreign Keys
 
-| Source | Target | Relationship |
-|--------|--------|-------------|
-| `meta.entity_operation.operation_code` | `core.operation.code` | Entity capabilities reference operation catalog |
-| `meta.permission_rule_operation.operation_id` | `core.operation.id` | Permission rules bind to operations |
-| `wf.lifecycle_timer_schedule.lifecycle_id` | `meta.lifecycle.id` | Timer schedules reference meta lifecycles |
-| `wf.lifecycle_timer_schedule.state_id` | `meta.lifecycle_state.id` | Timer schedules reference meta states |
-| `wf.lifecycle_timer_schedule.transition_id` | `meta.lifecycle_transition.id` | Timer schedules reference meta transitions |
-| `wf.lifecycle_timer_schedule.policy_id` | `meta.lifecycle_timer_policy.id` | Timer schedules snapshot meta policies |
-| `notify.message.rule_id` | `meta.notification_rule.id` | Messages originate from meta rules |
-| `audit.field_access_log.policy_id` | `meta.field_security_policy.id` | Field access logs reference security policies |
-| `ent.customer.industry_domain_code, industry_code` | `ref.industry_code` | Customer industry classification |
-| `ent.supplier.industry_domain_code, industry_code` | `ref.industry_code` | Supplier industry classification |
-| `ent.product.commodity_domain_code, commodity_code` | `ref.commodity_code` | Product commodity classification |
-| `ent.product_category.commodity_domain_code, commodity_code` | `ref.commodity_code` | Category commodity mapping |
-| `ent.employee.manager_id` | `ent.employee.id` | Self-referencing manager hierarchy |
-| `ent.employee.ou_id` | `core.organizational_unit.id` | Employee OU assignment |
-| `ent.employee.principal_id` | `core.principal.id` | Employee-to-principal link |
+| Source                                                       | Target                           | Relationship                                    |
+| ------------------------------------------------------------ | -------------------------------- | ----------------------------------------------- |
+| `meta.entity_operation.operation_code`                       | `core.operation.code`            | Entity capabilities reference operation catalog |
+| `meta.permission_rule_operation.operation_id`                | `core.operation.id`              | Permission rules bind to operations             |
+| `wf.lifecycle_timer_schedule.lifecycle_id`                   | `meta.lifecycle.id`              | Timer schedules reference meta lifecycles       |
+| `wf.lifecycle_timer_schedule.state_id`                       | `meta.lifecycle_state.id`        | Timer schedules reference meta states           |
+| `wf.lifecycle_timer_schedule.transition_id`                  | `meta.lifecycle_transition.id`   | Timer schedules reference meta transitions      |
+| `wf.lifecycle_timer_schedule.policy_id`                      | `meta.lifecycle_timer_policy.id` | Timer schedules snapshot meta policies          |
+| `notify.message.rule_id`                                     | `meta.notification_rule.id`      | Messages originate from meta rules              |
+| `audit.field_access_log.policy_id`                           | `meta.field_security_policy.id`  | Field access logs reference security policies   |
+| `ent.customer.industry_domain_code, industry_code`           | `ref.industry_code`              | Customer industry classification                |
+| `ent.supplier.industry_domain_code, industry_code`           | `ref.industry_code`              | Supplier industry classification                |
+| `ent.product.commodity_domain_code, commodity_code`          | `ref.commodity_code`             | Product commodity classification                |
+| `ent.product_category.commodity_domain_code, commodity_code` | `ref.commodity_code`             | Category commodity mapping                      |
+| `ent.employee.manager_id`                                    | `ent.employee.id`                | Self-referencing manager hierarchy              |
+| `ent.employee.ou_id`                                         | `core.organizational_unit.id`    | Employee OU assignment                          |
+| `ent.employee.principal_id`                                  | `core.principal.id`              | Employee-to-principal link                      |
 
 ## Polymorphic References
 
 Several tables use text-based polymorphic entity references instead of UUID FKs:
 
-| Table | Column(s) | Purpose |
-|-------|-----------|---------|
-| `collab.entity_comment` | `entity_type`, `entity_id` | Comments on any entity type |
-| `collab.comment_mention` | `comment_type`, `comment_id` | Mentions in entity or approval comments |
-| `collab.comment_reaction` | `comment_type`, `comment_id` | Reactions on any comment type |
-| `doc.attachment` | `owner_entity`, `owner_entity_id` | File ownership by any entity |
-| `doc.entity_document_link` | `entity_type`, `entity_id` | Document links to any entity |
-| `ent.entity_relationship` | `entity_a_type/id`, `entity_b_type/id` | Generic entity-to-entity links |
-| `audit.audit_log` | `entity_name`, `entity_id` | Audit trail for any entity |
-| `wf.workflow_instance` | `entity_type`, `entity_id` | Workflow on any entity |
+| Table                      | Column(s)                              | Purpose                                 |
+| -------------------------- | -------------------------------------- | --------------------------------------- |
+| `collab.entity_comment`    | `entity_type`, `entity_id`             | Comments on any entity type             |
+| `collab.comment_mention`   | `comment_type`, `comment_id`           | Mentions in entity or approval comments |
+| `collab.comment_reaction`  | `comment_type`, `comment_id`           | Reactions on any comment type           |
+| `doc.attachment`           | `owner_entity`, `owner_entity_id`      | File ownership by any entity            |
+| `doc.entity_document_link` | `entity_type`, `entity_id`             | Document links to any entity            |
+| `ent.entity_relationship`  | `entity_a_type/id`, `entity_b_type/id` | Generic entity-to-entity links          |
+| `audit.audit_log`          | `entity_name`, `entity_id`             | Audit trail for any entity              |
+| `wf.workflow_instance`     | `entity_type`, `entity_id`             | Workflow on any entity                  |

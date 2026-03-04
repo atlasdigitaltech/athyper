@@ -41,20 +41,20 @@ Athyper's infrastructure is orchestrated via Docker Compose under the `mesh/` di
 
 ## Service Components
 
-| Service | Image | Port(s) | Purpose |
-|---------|-------|---------|---------|
-| **PostgreSQL** | `postgres:16` | 5432 | Primary database (12 schemas) |
-| **PgBouncer (Apps)** | `pgbouncer` | 6432 | Connection pool for application queries |
-| **PgBouncer (Auth)** | `pgbouncer` | 6433 | Connection pool for Keycloak |
-| **Redis** | `redis:7` | 6379 | Sessions, cache, job queues, rate limiting |
-| **Keycloak** | `keycloak:25` | 8080 | Identity provider (OIDC/PKCE) |
-| **Traefik** | `traefik:3` | 80, 443 | Reverse proxy, TLS termination, routing |
-| **MinIO** | `minio` | 9000, 9001 | S3-compatible object storage |
-| **Prometheus** | `prometheus` | 9090 | Metrics collection |
-| **Grafana** | `grafana` | 3001 | Metrics dashboards |
-| **Tempo** | `grafana/tempo` | 3200 | Distributed tracing |
-| **Loki** | `grafana/loki` | 3100 | Log aggregation |
-| **Alloy** | `grafana/alloy` | 12345 | Log shipper (replaces Promtail) |
+| Service              | Image           | Port(s)    | Purpose                                    |
+| -------------------- | --------------- | ---------- | ------------------------------------------ |
+| **PostgreSQL**       | `postgres:16`   | 5432       | Primary database (12 schemas)              |
+| **PgBouncer (Apps)** | `pgbouncer`     | 6432       | Connection pool for application queries    |
+| **PgBouncer (Auth)** | `pgbouncer`     | 6433       | Connection pool for Keycloak               |
+| **Redis**            | `redis:7`       | 6379       | Sessions, cache, job queues, rate limiting |
+| **Keycloak**         | `keycloak:25`   | 8080       | Identity provider (OIDC/PKCE)              |
+| **Traefik**          | `traefik:3`     | 80, 443    | Reverse proxy, TLS termination, routing    |
+| **MinIO**            | `minio`         | 9000, 9001 | S3-compatible object storage               |
+| **Prometheus**       | `prometheus`    | 9090       | Metrics collection                         |
+| **Grafana**          | `grafana`       | 3001       | Metrics dashboards                         |
+| **Tempo**            | `grafana/tempo` | 3200       | Distributed tracing                        |
+| **Loki**             | `grafana/loki`  | 3100       | Log aggregation                            |
+| **Alloy**            | `grafana/alloy` | 12345      | Log shipper (replaces Promtail)            |
 
 ---
 
@@ -172,24 +172,24 @@ docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env up -d
 
 Two pools for workload isolation:
 
-| Pool | Port | Purpose | Max Connections |
-|------|------|---------|----------------|
-| **Apps** | 6432 | Application queries | Configurable per env |
+| Pool     | Port | Purpose              | Max Connections      |
+| -------- | ---- | -------------------- | -------------------- |
+| **Apps** | 6432 | Application queries  | Configurable per env |
 | **Auth** | 6433 | Keycloak connections | Configurable per env |
 
 ### Schema Provisioning
 
 SQL files in `framework/adapters/db/src/sql/` are numbered by execution order:
 
-| Range | Purpose |
-|-------|---------|
-| 001 | Schema creation (12 schemas) |
-| 010 | Core bootstrap tables |
+| Range   | Purpose                                                      |
+| ------- | ------------------------------------------------------------ |
+| 001     | Schema creation (12 schemas)                                 |
+| 010     | Core bootstrap tables                                        |
 | 020–090 | Feature tables (meta, ref, sec, wf, ent, doc, collab, audit) |
-| 100–120 | Service tables (notify, ui, content) |
-| 200 | Master seed data |
-| 2xx | Individual seed files |
-| 300+ | IAM + meta entity seeds |
+| 100–120 | Service tables (notify, ui, content)                         |
+| 200     | Master seed data                                             |
+| 2xx     | Individual seed files                                        |
+| 300+    | IAM + meta entity seeds                                      |
 
 ```bash
 pnpm db:provision        # Run all DDL + seed
@@ -209,12 +209,12 @@ pnpm db:provision:reset  # Reset checksums and re-run
 
 Key namespaces:
 
-| Pattern | Purpose |
-|---------|---------|
-| `session:{sid}` | User sessions |
-| `cache:{tenant}:*` | Tenant-scoped cache |
-| `queue:*` | Job queues (BullMQ) |
-| `ratelimit:*` | Rate limiter counters |
+| Pattern               | Purpose               |
+| --------------------- | --------------------- |
+| `session:{sid}`       | User sessions         |
+| `cache:{tenant}:*`    | Tenant-scoped cache   |
+| `queue:*`             | Job queues (BullMQ)   |
+| `ratelimit:*`         | Rate limiter counters |
 | `audit:auth:{tenant}` | BFF auth audit events |
 
 ---
@@ -246,11 +246,11 @@ See [IAM Documentation](../iam/README.md) for full Keycloak configuration.
 
 ### Routing Rules
 
-| Rule | Target |
-|------|--------|
-| `Host(athyper.local)` | Neon web app (:3000) |
-| `Host(auth.athyper.local)` | Keycloak (:8080) |
-| `PathPrefix(/api/runtime)` | Runtime API (:4000) |
+| Rule                       | Target               |
+| -------------------------- | -------------------- |
+| `Host(athyper.local)`      | Neon web app (:3000) |
+| `Host(auth.athyper.local)` | Keycloak (:8080)     |
+| `PathPrefix(/api/runtime)` | Runtime API (:4000)  |
 
 ---
 
@@ -299,16 +299,17 @@ See [IAM Documentation](../iam/README.md) for full Keycloak configuration.
 
 ## Environment Profiles
 
-| Setting | Local | Staging | Production |
-|---------|-------|---------|------------|
-| **TLS** | Self-signed certs | Let's Encrypt | Managed certs |
-| **DB Pooling** | Minimal (5-10) | Moderate (20-50) | Aggressive (50-200) |
-| **Log Level** | debug | info | warn |
-| **Keycloak** | Dev mode | Standard | HA cluster |
-| **Telemetry** | Full stack | Full stack | Metrics + tracing only |
-| **Realm Safety** | Accepts localhost | Rejects localhost | Rejects localhost |
+| Setting          | Local             | Staging           | Production             |
+| ---------------- | ----------------- | ----------------- | ---------------------- |
+| **TLS**          | Self-signed certs | Let's Encrypt     | Managed certs          |
+| **DB Pooling**   | Minimal (5-10)    | Moderate (20-50)  | Aggressive (50-200)    |
+| **Log Level**    | debug             | info              | warn                   |
+| **Keycloak**     | Dev mode          | Standard          | HA cluster             |
+| **Telemetry**    | Full stack        | Full stack        | Metrics + tracing only |
+| **Realm Safety** | Accepts localhost | Rejects localhost | Rejects localhost      |
 
 Environment files:
+
 - `mesh/env/local.env.example` — Local development
 - `mesh/env/staging.env.example` — Staging environment
 - `mesh/env/production.env.example` — Production environment

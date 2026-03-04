@@ -10,18 +10,18 @@ Pure TypeScript contracts with zero infrastructure dependencies. This package de
 
 ### Module Map
 
-| Module | Key Exports | Purpose |
-|--------|-------------|---------|
-| `access/` | `RbacPolicy`, `Permission`, `Role` | RBAC policy types and evaluation engine |
-| `events/` | `DomainEvent`, `EventBus`, `EventStore` | Domain event bus and event store contracts |
-| `jobs/` | `JobQueue`, `JobHandler`, `JobDefinition` | Background job type definitions |
-| `lifecycle/` | `EntityLifecycle`, `LifecycleTransition` | Entity lifecycle state machine contracts |
-| `meta/` | `EntityDefinition`, `FieldDefinition`, `CompiledModel` | Meta-engine contracts |
-| `model/` | `BaseEntity`, `AuditableEntity` | Base domain model types |
-| `observability/` | `HealthCheck`, `Metrics`, `Tracer`, `GracefulShutdown` | Health, metrics, tracing, shutdown |
-| `registry/` | `TenantRegistry`, `IdentityProviderRegistry` | Tenant and IdP registries |
-| `resilience/` | `CircuitBreaker`, `RetryPolicy` | Circuit breaker and retry policies |
-| `security/` | `RateLimiter`, `Sanitizer`, `Validator` | Rate limiter, input sanitizer, validator |
+| Module           | Key Exports                                            | Purpose                                    |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------ |
+| `access/`        | `RbacPolicy`, `Permission`, `Role`                     | RBAC policy types and evaluation engine    |
+| `events/`        | `DomainEvent`, `EventBus`, `EventStore`                | Domain event bus and event store contracts |
+| `jobs/`          | `JobQueue`, `JobHandler`, `JobDefinition`              | Background job type definitions            |
+| `lifecycle/`     | `EntityLifecycle`, `LifecycleTransition`               | Entity lifecycle state machine contracts   |
+| `meta/`          | `EntityDefinition`, `FieldDefinition`, `CompiledModel` | Meta-engine contracts                      |
+| `model/`         | `BaseEntity`, `AuditableEntity`                        | Base domain model types                    |
+| `observability/` | `HealthCheck`, `Metrics`, `Tracer`, `GracefulShutdown` | Health, metrics, tracing, shutdown         |
+| `registry/`      | `TenantRegistry`, `IdentityProviderRegistry`           | Tenant and IdP registries                  |
+| `resilience/`    | `CircuitBreaker`, `RetryPolicy`                        | Circuit breaker and retry policies         |
+| `security/`      | `RateLimiter`, `Sanitizer`, `Validator`                | Rate limiter, input sanitizer, validator   |
 
 ### Design Rules
 
@@ -73,6 +73,7 @@ adapters/db/src/
 ```
 
 **Key features:**
+
 - Connection pooling via `pg.Pool` with configurable min/max connections
 - Transaction support with automatic commit/rollback
 - Checksum-tracked provisioning (SQL files re-run only on content hash change)
@@ -82,11 +83,11 @@ adapters/db/src/
 
 OIDC/PKCE adapter for Keycloak.
 
-| File | Purpose |
-|------|---------|
+| File                       | Purpose                                     |
+| -------------------------- | ------------------------------------------- |
 | `keycloak/auth-adapter.ts` | PKCE Authorization Code flow implementation |
-| `keycloak/jwks-manager.ts` | Per-realm JWKS key cache (jose library) |
-| `keycloak/jwks.ts` | JWKS endpoint client |
+| `keycloak/jwks-manager.ts` | Per-realm JWKS key cache (jose library)     |
+| `keycloak/jwks.ts`         | JWKS endpoint client                        |
 
 **Build requirement**: This package produces `.d.ts` files consumed by downstream packages. After changes:
 
@@ -98,10 +99,10 @@ cd framework/adapters/auth && npx tsup src/index.ts --format esm --dts --sourcem
 
 Redis adapter wrapping `ioredis`.
 
-| File | Purpose |
-|------|---------|
+| File       | Purpose                                                            |
+| ---------- | ------------------------------------------------------------------ |
 | `redis.ts` | ioredis client with health check, reconnection, and error handling |
-| `index.ts` | Barrel export |
+| `index.ts` | Barrel export                                                      |
 
 Used for: sessions, cache, job queues, rate limiting, audit outbox.
 
@@ -109,19 +110,19 @@ Used for: sessions, cache, job queues, rate limiting, audit outbox.
 
 S3-compatible storage adapter (works with MinIO locally, AWS S3 in production).
 
-| File | Purpose |
-|------|---------|
-| `s3/client.ts` | S3Client factory (configurable endpoint, credentials, region) |
+| File               | Purpose                                                            |
+| ------------------ | ------------------------------------------------------------------ |
+| `s3/client.ts`     | S3Client factory (configurable endpoint, credentials, region)      |
 | `s3/operations.ts` | `putObject`, `getObject`, `deleteObject`, presigned URL generation |
-| `types.ts` | Storage operation types |
+| `types.ts`         | Storage operation types                                            |
 
 ### Telemetry Adapter (`@athyper/adapter-telemetry`)
 
 OpenTelemetry instrumentation adapter.
 
-| File | Purpose |
-|------|---------|
-| `index.ts` | Telemetry adapter initialization |
+| File              | Purpose                                             |
+| ----------------- | --------------------------------------------------- |
+| `index.ts`        | Telemetry adapter initialization                    |
 | `traceContext.ts` | Trace context propagation (W3C TraceContext format) |
 
 Feeds metrics to Prometheus, traces to Tempo, logs to Loki via the telemetry mesh stack.
@@ -136,23 +137,23 @@ The application orchestrator — 829 source files. Composes adapters and core co
 
 The bootstrap infrastructure.
 
-| File | Purpose |
-|------|---------|
-| `tokens.ts` | 150+ DI token definitions organized by domain |
-| `container.ts` | Generic DI container (singleton/scoped/transient) |
-| `container.runtime.ts` | Runtime service bindings |
-| `container.adapters.ts` | Adapter bindings |
-| `container.meta.ts` | Meta-engine bindings |
-| `container.defaults.ts` | Default/fallback bindings |
-| `bootstrap.ts` | Application bootstrap sequence |
-| `config.schema.ts` | Zod configuration schema |
-| `config.ts` | Config loader (JSON parameter files per environment) |
-| `httpServer.ts` | Express HTTP server setup |
-| `lifecycle.ts` | Startup/shutdown lifecycle manager |
-| `logger.ts` | Pino logger factory |
-| `audit.ts` | Audit writer interface |
-| `scope.ts` | Request scope management |
-| `tenantContext.ts` | Per-request tenant context |
+| File                    | Purpose                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `tokens.ts`             | 150+ DI token definitions organized by domain        |
+| `container.ts`          | Generic DI container (singleton/scoped/transient)    |
+| `container.runtime.ts`  | Runtime service bindings                             |
+| `container.adapters.ts` | Adapter bindings                                     |
+| `container.meta.ts`     | Meta-engine bindings                                 |
+| `container.defaults.ts` | Default/fallback bindings                            |
+| `bootstrap.ts`          | Application bootstrap sequence                       |
+| `config.schema.ts`      | Zod configuration schema                             |
+| `config.ts`             | Config loader (JSON parameter files per environment) |
+| `httpServer.ts`         | Express HTTP server setup                            |
+| `lifecycle.ts`          | Startup/shutdown lifecycle manager                   |
+| `logger.ts`             | Pino logger factory                                  |
+| `audit.ts`              | Audit writer interface                               |
+| `scope.ts`              | Request scope management                             |
+| `tenantContext.ts`      | Per-request tenant context                           |
 
 ### Bootstrap Sequence
 
@@ -177,11 +178,11 @@ The bootstrap infrastructure.
 
 Three process entry points in `runtime/src/runtimes/`:
 
-| Entry Point | Purpose |
-|-------------|---------|
-| `api/startApiRuntime.ts` | HTTP API server (Express) |
-| `scheduler/startSchedulerRuntime.ts` | Cron job scheduler |
-| `worker/startWorkerRuntime.ts` | Background job worker pool |
+| Entry Point                          | Purpose                    |
+| ------------------------------------ | -------------------------- |
+| `api/startApiRuntime.ts`             | HTTP API server (Express)  |
+| `scheduler/startSchedulerRuntime.ts` | Cron job scheduler         |
+| `worker/startWorkerRuntime.ts`       | Background job worker pool |
 
 ### Service Tree
 

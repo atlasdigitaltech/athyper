@@ -8,12 +8,13 @@ Athyper deployment procedures for local development (Windows) and server deploym
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|------|---------|---------|
-| **Node.js** | 20.x | [nodejs.org](https://nodejs.org) or `nvm install 20` |
-| **pnpm** | 10.28+ | `npm install -g pnpm` |
-| **Docker Desktop** | Latest | [docker.com](https://www.docker.com/products/docker-desktop) |
-| **Git** | Latest | [git-scm.com](https://git-scm.com) |
+| Tool               | Version | Install                                                      |
+| ------------------ | ------- | ------------------------------------------------------------ |
+| **Node.js**        | 20.x    | [nodejs.org](https://nodejs.org) or `nvm install 20`         |
+| **pnpm**           | 10.28+  | `npm install -g pnpm`                                        |
+| **Docker Desktop** | Latest  | [docker.com](https://www.docker.com/products/docker-desktop) |
+| **Git**            | Latest  | [git-scm.com](https://git-scm.com)                           |
+| **mkcert**         | Latest  | `winget install FiloSottile.mkcert`                           |
 
 ### Setup Steps
 
@@ -25,57 +26,85 @@ cd D:\Development\athyper-private
 # 2. Install dependencies
 pnpm install
 
-# 3. Set up environment file
-copy mesh\env\local.env.example mesh\env\.env
-# Edit .env with local settings (database passwords, etc.)
+# 3. Configure hosts file (run as Administrator)
+# Add to C:\Windows\System32\drivers\etc\hosts:
+#   127.0.0.1 gateway.mesh.athyper.local
+#   127.0.0.1 iam.mesh.athyper.local
+#   127.0.0.1 objectstorage.mesh.athyper.local
+#   127.0.0.1 objectstorage.console.mesh.athyper.local
+#   127.0.0.1 telemetry.mesh.athyper.local
+#   127.0.0.1 metrics.mesh.athyper.local
+#   127.0.0.1 traces.mesh.athyper.local
+#   127.0.0.1 logs.mesh.athyper.local
+#   127.0.0.1 neon.athyper.local
+#   127.0.0.1 api.athyper.local
 
-# 4. Generate TLS certificates for local development
+# 4. Set up environment file
+copy mesh\env\local.env.example mesh\env\.env
+
+# 5. Generate TLS certificates for local development
 .\mesh\scripts\generate-mesh-certs.bat
 
-# 5. Start Docker infrastructure
+# 6. Initialize data directories
+.\mesh\scripts\init-data.bat
+
+# 7. Start Docker infrastructure
 pnpm mesh:up
-# Wait for all containers to be healthy:
+# Wait for all containers to be healthy (~30s for Keycloak):
 pnpm mesh:ps
 
-# 6. Provision database schemas and seed data
+# 8. Provision database schemas and seed data
 pnpm db:provision
 
-# 7. Generate TypeScript types from database
+# 9. Import Keycloak realm (users, clients, roles)
+.\mesh\scripts\initdb-iam.bat
+
+# 10. Generate TypeScript types from database
 pnpm db:generate
 pnpm kysely:codegen
 
-# 8. Build all packages
+# 11. Build all packages
 pnpm build
 
-# 9. Start development servers (parallel via Turborepo)
+# 12. Configure Neon web app
+copy products\neon\apps\web\.env.example products\neon\apps\web\.env.local
+
+# 13. Start development servers
 pnpm dev
 ```
 
 ### Access Points (Local)
 
-| Service | URL |
-|---------|-----|
-| **Neon Web App** | `https://athyper.local:3000` |
-| **Runtime API** | `http://localhost:4000` |
-| **Keycloak Admin** | `http://localhost:8080/admin` |
-| **Grafana** | `http://localhost:3001` |
-| **MinIO Console** | `http://localhost:9001` |
-| **Prometheus** | `http://localhost:9090` |
+All services are accessed via the Traefik gateway on HTTPS (port 443), using the local TLS certificates.
+
+| Service                 | URL                                              |
+| ----------------------- | ------------------------------------------------ |
+| **Neon Web App**        | `http://localhost:3001`                           |
+| **Runtime API**         | `https://api.athyper.local`                       |
+| **Keycloak Admin**      | `https://iam.mesh.athyper.local`                  |
+| **Grafana (Telemetry)** | `https://telemetry.mesh.athyper.local`            |
+| **Prometheus**          | `https://metrics.mesh.athyper.local`              |
+| **Tempo (Traces)**      | `https://traces.mesh.athyper.local`               |
+| **Loki (Logs)**         | `https://logs.mesh.athyper.local`                 |
+| **MinIO Console**       | `https://objectstorage.console.mesh.athyper.local`|
+| **MinIO S3 API**        | `https://objectstorage.mesh.athyper.local`        |
 
 ### Windows-Specific Notes
 
-- **Hosts file**: Add `127.0.0.1 athyper.local auth.athyper.local` to `C:\Windows\System32\drivers\etc\hosts`
 - **Docker memory**: Allocate at least 8GB RAM to Docker Desktop (Settings → Resources)
 - **Line endings**: Git should be configured with `core.autocrlf=input` (the `.gitattributes` handles this)
 - **Path length**: Enable long paths if you encounter issues: `git config --system core.longpaths true`
-- **TLS trust**: Import `mesh/config/gateway/certs/cert.pem` into Windows certificate store as a trusted root CA for browser access without warnings
+- **TLS trust**: mkcert automatically installs its CA into the system trust store. If browsers still show warnings, run `mkcert -install` again
+- **Restart shell**: After installing mkcert via winget, restart your terminal for it to appear in PATH
 
 ### Common Development Commands
 
 ```bash
 # Start only specific services
-pnpm dev --filter @athyper/runtime     # Runtime only
-pnpm dev --filter @neon/web            # Next.js only
+pnpm dev --filter @neon/web            # Next.js web app only (http://localhost:3001)
+pnpm runtime:start:watch              # Runtime API with auto-restart on changes
+pnpm runtime:start:dev                # Runtime API (single run, no watch)
+pnpm runtime:start                    # Runtime API from pre-built dist/
 
 # Run tests
 pnpm test                              # All tests via Turborepo
@@ -97,6 +126,7 @@ pnpm check                             # lint + typecheck + test + depcheck
 # Database operations
 pnpm db:provision                      # Run DDL + seed
 pnpm db:provision:status               # Check provisioning status
+pnpm db:provision:reset                # Drop all schemas and re-seed
 pnpm db:studio                         # Open Prisma Studio
 
 # Infrastructure
@@ -112,15 +142,19 @@ pnpm clean:reset                       # Full clean + reinstall + rebuild
 
 ### Troubleshooting (Windows)
 
-| Issue | Solution |
-|-------|----------|
-| Port conflicts | Check `netstat -an \| findstr :5432` and stop conflicting services |
-| Docker not starting | Ensure WSL2 is enabled and Hyper-V is active |
-| pnpm install fails | Delete `node_modules` and `pnpm-lock.yaml`, run `pnpm install` |
-| DB provision fails | Check PostgreSQL is healthy: `docker logs mesh-db` |
-| TLS certificate errors | Regenerate certs: `.\mesh\scripts\generate-mesh-certs.bat` |
-| Out of disk space | `docker system prune -a` to clean Docker cache |
-| Keycloak won't start | Check port 8080 is free; check PgBouncer auth pool is healthy |
+| Issue                         | Solution                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| Port conflicts                | Check `netstat -an \| findstr :5432` and stop conflicting services          |
+| Docker not starting           | Ensure WSL2 is enabled and Hyper-V is active                                |
+| pnpm install fails            | Delete `node_modules` and `pnpm-lock.yaml`, run `pnpm install`              |
+| DB provision fails            | Check PostgreSQL is healthy: `docker logs athyper-mesh-db-1`                |
+| "variable is not set" warns   | Always use `--env-file` or run `copy mesh\env\local.env.example mesh\env\.env` |
+| "database does not exist"     | Run `.\mesh\scripts\init-data.bat`, then `pnpm mesh:down` + `pnpm mesh:up` |
+| TLS certificate errors        | Regenerate certs: `.\mesh\scripts\generate-mesh-certs.bat`                  |
+| mkcert not found              | Restart terminal after install, or `winget install FiloSottile.mkcert`      |
+| Out of disk space             | `docker system prune -a` to clean Docker cache                              |
+| Keycloak won't start          | Check dbpool-auth is healthy: `pnpm mesh:ps`                                |
+| Container "is a directory"    | Stop mesh, delete `mesh/data/`, run `init-data.bat`, restart mesh           |
 
 ---
 
@@ -128,13 +162,13 @@ pnpm clean:reset                       # Full clean + reinstall + rebuild
 
 ### Server Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| **CPU** | 4 vCores | 8 vCores |
-| **RAM** | 16 GB | 32 GB |
-| **Storage** | 200 GB SSD | 400 GB NVMe |
-| **OS** | Ubuntu 22.04 LTS | Ubuntu 24.04 LTS |
-| **Network** | 200 Mbit/s | 400 Mbit/s |
+| Resource    | Minimum          | Recommended      |
+| ----------- | ---------------- | ---------------- |
+| **CPU**     | 4 vCores         | 8 vCores         |
+| **RAM**     | 16 GB            | 32 GB            |
+| **Storage** | 200 GB SSD       | 400 GB NVMe      |
+| **OS**      | Ubuntu 22.04 LTS | Ubuntu 24.04 LTS |
+| **Network** | 200 Mbit/s       | 400 Mbit/s       |
 
 ### Initial Server Setup
 
@@ -186,10 +220,10 @@ pnpm install --frozen-lockfile
 cp mesh/env/staging.env.example mesh/env/.env
 # Edit .env with production values:
 #   - Strong database passwords
-#   - Real domain name
+#   - Real domain names for all *_HOST variables
 #   - Production Keycloak settings
 #   - S3/MinIO credentials
-#   - SMTP credentials (for notifications)
+#   - OTLP endpoint
 
 # 4. Set up TLS certificates
 # Option A: Self-signed (staging)
@@ -198,24 +232,31 @@ cp mesh/env/staging.env.example mesh/env/.env
 # Option B: Let's Encrypt (production)
 # Configure Traefik ACME in mesh/config/gateway/dynamic/mesh.tls.yml
 
-# 5. Start infrastructure
-docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env up -d
+# 5. Initialize data directories
+./mesh/scripts/init-data.sh
 
-# 6. Wait for services to be healthy
-docker compose -f mesh/compose/compose.yml ps
+# 6. Start infrastructure
+./mesh/scripts/up.sh
+# Or directly:
+docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env --profile mesh up -d
 
-# 7. Provision database
-pnpm db:provision
+# 7. Wait for services to be healthy
+docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env --profile mesh ps
 
-# 8. Generate types and build
+# 8. Provision database
+DATABASE_ADMIN_URL=postgresql://athyperadmin:<password>@localhost:5432/athyper_dev1 \
+  pnpm db:provision
+
+# 9. Import Keycloak realm
+./mesh/scripts/initdb-iam.sh
+
+# 10. Generate types and build
 pnpm db:generate
 pnpm kysely:codegen
 pnpm build
 
-# 9. Start application
+# 11. Start application
 pnpm runtime:start        # Start runtime API server
-# Or for the full stack:
-pnpm dev                   # Development mode
 ```
 
 ### Environment Configuration (Contabo)
@@ -224,32 +265,33 @@ Key settings in `mesh/env/.env`:
 
 ```env
 # Database
-POSTGRES_PASSWORD=<strong-password>
-POSTGRES_DB=athyper
-PGBOUNCER_MAX_CLIENT_CONN=200
-PGBOUNCER_DEFAULT_POOL_SIZE=50
+DB_ADMIN_PASSWORD=<strong-password>
+DATABASE_URL=postgresql://athyperadmin:<strong-password>@dbpool-apps:6432/athyper_dev1
+DATABASE_ADMIN_URL=postgresql://athyperadmin:<strong-password>@db:5432/athyper_dev1
 
 # Keycloak
-KEYCLOAK_ADMIN_PASSWORD=<strong-password>
-KC_HOSTNAME=auth.yourdomain.com
-KC_PROXY=edge
+IAM_ADMIN=athyperadmin
+IAM_ADMIN_PASSWORD=<strong-password>
+IAM_DB_PASSWORD=<strong-password>
+IAM_CLIENT_SECRET=<strong-secret>
 
 # Redis
-REDIS_PASSWORD=<strong-password>
-REDIS_MAXMEMORY=2gb
+MEMORYCACHE_PASSWORD=<strong-password>
+REDIS_URL=redis://:<strong-password>@memorycache:6379/0
 
 # MinIO
-MINIO_ROOT_USER=admin
-MINIO_ROOT_PASSWORD=<strong-password>
+S3_ACCESS_KEY=<access-key>
+S3_SECRET_KEY=<strong-secret>
 
 # Application
-NODE_ENV=production
 LOG_LEVEL=info
-DOMAIN=yourdomain.com
 
-# TLS
-TLS_CERT_PATH=/etc/traefik/certs/cert.pem
-TLS_KEY_PATH=/etc/traefik/certs/key.pem
+# Hostnames (use real domain)
+GATEWAY_HOST=gateway.yourdomain.com
+IAM_HOST=iam.yourdomain.com
+TELEMETRY_HOST=telemetry.yourdomain.com
+APPS_ATHYPER_API_HOST=api.yourdomain.com
+APPS_ATHYPER_WEB_HOST=app.yourdomain.com
 ```
 
 ### Domain & DNS Setup
@@ -309,7 +351,7 @@ pm2 save
 
 ```bash
 # Check service status
-docker compose -f mesh/compose/compose.yml ps
+docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env --profile mesh ps
 
 # Check resource usage
 docker stats
@@ -319,7 +361,7 @@ df -h
 docker system df
 
 # Check logs
-docker compose -f mesh/compose/compose.yml logs -f --tail=100 <service>
+docker compose -f mesh/compose/compose.yml --env-file mesh/env/.env --profile mesh logs -f --tail=100 <service>
 
 # Application health
 curl http://localhost:4000/api/health
@@ -329,13 +371,13 @@ curl http://localhost:4000/api/health
 
 ```bash
 # Database backup (daily cron)
-0 2 * * * docker exec mesh-db pg_dump -U postgres athyper | gzip > /backup/db/athyper_$(date +\%Y\%m\%d).sql.gz
+0 2 * * * docker exec athyper-mesh-db-1 pg_dump -U athyperadmin athyper_dev1 | gzip > /backup/db/athyper_$(date +\%Y\%m\%d).sql.gz
 
 # Object storage backup (weekly)
-0 3 * * 0 docker exec mesh-minio mc mirror /data /backup/minio/
+0 3 * * 0 docker exec athyper-mesh-objectstorage-1 mc mirror /data /backup/minio/
 
 # Keycloak realm export (before changes)
-docker exec mesh-iam /opt/keycloak/bin/kc.sh export --dir /tmp/export --realm athyper
+./mesh/scripts/export-iam.sh
 
 # Retention: keep 30 days of daily backups, 12 weeks of weekly backups
 find /backup/db -name "*.sql.gz" -mtime +30 -delete
@@ -376,14 +418,14 @@ sudo systemctl restart docker
 
 ### Scaling Considerations
 
-| Component | Scaling Approach |
-|-----------|-----------------|
+| Component       | Scaling Approach                                    |
+| --------------- | --------------------------------------------------- |
 | **Runtime API** | Run multiple instances behind Traefik load balancer |
-| **Workers** | Scale worker count via environment config |
-| **PostgreSQL** | Vertical scaling (more RAM/CPU) or read replicas |
-| **Redis** | Vertical scaling or Redis Cluster |
-| **MinIO** | Distributed mode for HA |
-| **Keycloak** | HA cluster mode (needs shared DB) |
+| **Workers**     | Scale worker count via environment config           |
+| **PostgreSQL**  | Vertical scaling (more RAM/CPU) or read replicas    |
+| **Redis**       | Vertical scaling or Redis Cluster                   |
+| **MinIO**       | Distributed mode for HA                             |
+| **Keycloak**    | HA cluster mode (needs shared DB)                   |
 
 ---
 
@@ -401,8 +443,9 @@ sudo systemctl restart docker
 
 ### Post-Deployment
 
-- [ ] All Docker services healthy (`docker compose ps`)
+- [ ] All Docker services healthy (`pnpm mesh:ps` or `docker compose ps`)
 - [ ] Database provisioned (`pnpm db:provision:status`)
+- [ ] Keycloak realm imported (`initdb-iam` script ran successfully)
 - [ ] Application health check passing (`curl /api/health`)
 - [ ] Keycloak accessible and realm configured
 - [ ] TLS working (check certificate in browser)
@@ -414,6 +457,7 @@ sudo systemctl restart docker
 
 ## Related Documentation
 
+- [Developer Setup](../../DEVELOPER-SETUP.md) — Detailed local setup guide with troubleshooting
 - [Infrastructure](../infrastructure/README.md) — Docker Compose mesh details
 - [Runbooks](../runbooks/README.md) — Operational procedures
 - [Security](../security/README.md) — Security hardening

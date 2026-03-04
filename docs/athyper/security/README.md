@@ -28,16 +28,16 @@ See [IAM Documentation](../iam/README.md) for full details.
 
 ### Key Controls
 
-| Control | Implementation |
-|---------|---------------|
-| **No browser tokens** | Only `neon_sid` HttpOnly cookie; tokens stay server-side in Redis |
-| **PKCE flow** | Prevents authorization code interception |
-| **CSRF protection** | Double-submit cookie (`__csrf` + `x-csrf-token` header) |
-| **Session rotation** | New session ID on login and token refresh |
-| **Idle timeout** | 900-second server-enforced idle timeout |
-| **Soft IP/UA binding** | Both must differ to trigger session destruction |
-| **MFA support** | TOTP, WebAuthn/FIDO2, backup codes |
-| **Realm safety** | Production rejects localhost identity providers |
+| Control                | Implementation                                                    |
+| ---------------------- | ----------------------------------------------------------------- |
+| **No browser tokens**  | Only `neon_sid` HttpOnly cookie; tokens stay server-side in Redis |
+| **PKCE flow**          | Prevents authorization code interception                          |
+| **CSRF protection**    | Double-submit cookie (`__csrf` + `x-csrf-token` header)           |
+| **Session rotation**   | New session ID on login and token refresh                         |
+| **Idle timeout**       | 900-second server-enforced idle timeout                           |
+| **Soft IP/UA binding** | Both must differ to trigger session destruction                   |
+| **MFA support**        | TOTP, WebAuthn/FIDO2, backup codes                                |
+| **Realm safety**       | Production rejects localhost identity providers                   |
 
 ---
 
@@ -49,14 +49,14 @@ Defined in `framework/core/src/access/`:
 
 ```typescript
 interface RbacPolicy {
-    role: string;
-    permissions: Permission[];
-    conditions?: PolicyCondition[];
+  role: string;
+  permissions: Permission[];
+  conditions?: PolicyCondition[];
 }
 
 interface Permission {
-    resource: string;
-    actions: ("create" | "read" | "update" | "delete" | "execute")[];
+  resource: string;
+  actions: ("create" | "read" | "update" | "delete" | "execute")[];
 }
 ```
 
@@ -65,6 +65,7 @@ interface Permission {
 File: `framework/runtime/src/services/platform/meta/core/policy-gate.service.ts`
 
 The policy gate evaluates access decisions:
+
 1. Resolve user roles from session
 2. Load applicable policies
 3. Evaluate conditions (tenant, time, field-level)
@@ -75,6 +76,7 @@ The policy gate evaluates access decisions:
 File: `framework/runtime/src/services/platform/policy-rules/`
 
 Declarative policy evaluation with:
+
 - **Rule evaluator**: Evaluates policies against facts
 - **Policy compiler**: Compiles declarative rules into executable form
 - **Subject resolver**: Resolves policy subjects (users, groups, roles)
@@ -93,21 +95,21 @@ Per-field access control:
 
 ```typescript
 interface FieldAccessPolicy {
-    entityType: string;
-    fieldName: string;
-    roles: string[];
-    access: "visible" | "masked" | "hidden";
-    maskPattern?: string;  // e.g., "****1234" for last-4-digits
+  entityType: string;
+  fieldName: string;
+  roles: string[];
+  access: "visible" | "masked" | "hidden";
+  maskPattern?: string; // e.g., "****1234" for last-4-digits
 }
 ```
 
 ### Field Masking
 
-| Mode | Output | Use Case |
-|------|--------|----------|
-| `visible` | Full value | Authorized users |
-| `masked` | `****1234` | Partial access (last N digits) |
-| `hidden` | Field omitted from response | No access |
+| Mode      | Output                      | Use Case                       |
+| --------- | --------------------------- | ------------------------------ |
+| `visible` | Full value                  | Authorized users               |
+| `masked`  | `****1234`                  | Partial access (last N digits) |
+| `hidden`  | Field omitted from response | No access                      |
 
 ### Field Projection
 
@@ -133,15 +135,16 @@ File: `framework/runtime/src/services/platform/foundation/security/`
 
 Three rate limiting scopes:
 
-| Scope | Key Pattern | Purpose |
-|-------|-------------|---------|
+| Scope          | Key Pattern                   | Purpose                            |
+| -------------- | ----------------------------- | ---------------------------------- |
 | **Per-tenant** | `ratelimit:tenant:{tenantId}` | Prevent tenant resource exhaustion |
-| **Per-user** | `ratelimit:user:{userId}` | Prevent user abuse |
-| **Per-IP** | `ratelimit:ip:{ip}` | Prevent brute force |
+| **Per-user**   | `ratelimit:user:{userId}`     | Prevent user abuse                 |
+| **Per-IP**     | `ratelimit:ip:{ip}`           | Prevent brute force                |
 
 ### Algorithm
 
 Sliding window counter in Redis:
+
 1. Increment counter for current window
 2. If count exceeds limit → 429 Too Many Requests
 3. Return `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers
@@ -151,6 +154,7 @@ Sliding window counter in Redis:
 File: `framework/runtime/src/services/enterprise-services/collaboration/domain/rate-limiter.ts`
 
 Additional rate limits for collaboration features:
+
 - Comment creation: X per minute per user
 - Reaction toggling: Y per minute per user
 - Mention notifications: Z per hour per user
@@ -169,13 +173,13 @@ File: `framework/runtime/src/services/platform/foundation/middleware/`
 
 Request middleware applied in order:
 
-| Order | Middleware | Purpose |
-|-------|-----------|---------|
-| 1 | Security headers | HSTS, X-Frame-Options, CSP, X-Content-Type-Options |
-| 2 | Rate limiting | Per-tenant/user/IP rate checks |
-| 3 | Observability | Request ID, trace context, timing |
-| 4 | Validation | Input sanitization, schema validation |
-| 5 | Field-level security | Field access policy enforcement |
+| Order | Middleware           | Purpose                                            |
+| ----- | -------------------- | -------------------------------------------------- |
+| 1     | Security headers     | HSTS, X-Frame-Options, CSP, X-Content-Type-Options |
+| 2     | Rate limiting        | Per-tenant/user/IP rate checks                     |
+| 3     | Observability        | Request ID, trace context, timing                  |
+| 4     | Validation           | Input sanitization, schema validation              |
+| 5     | Field-level security | Field access policy enforcement                    |
 
 ### Security Headers
 
@@ -229,6 +233,7 @@ File: `framework/core/src/security/validator.ts`
 ### Audit Column Encryption
 
 See [Compliance Documentation](../compliance/README.md) for details on:
+
 - AES-256-GCM column encryption
 - Key rotation
 - PII field encryption
@@ -236,6 +241,7 @@ See [Compliance Documentation](../compliance/README.md) for details on:
 ### Redaction
 
 The audit redaction pipeline removes sensitive data before storage:
+
 - Credit card numbers → `****1234`
 - SSN/Tax IDs → `***-**-1234`
 - Email addresses → `u***@domain.com`
@@ -245,15 +251,15 @@ The audit redaction pipeline removes sensitive data before storage:
 
 ## Session Security
 
-| Control | Implementation |
-|---------|---------------|
-| **Cookie flags** | `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/` |
-| **Session ID** | Cryptographically random (128-bit) |
-| **Session rotation** | New ID on auth events (prevent fixation) |
-| **Tenant binding** | Cross-tenant access destroys session |
-| **Idle timeout** | 900s server-enforced |
-| **Absolute timeout** | Configurable per environment |
-| **Concurrent sessions** | Configurable limit per user |
+| Control                 | Implementation                                    |
+| ----------------------- | ------------------------------------------------- |
+| **Cookie flags**        | `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/` |
+| **Session ID**          | Cryptographically random (128-bit)                |
+| **Session rotation**    | New ID on auth events (prevent fixation)          |
+| **Tenant binding**      | Cross-tenant access destroys session              |
+| **Idle timeout**        | 900s server-enforced                              |
+| **Absolute timeout**    | Configurable per environment                      |
+| **Concurrent sessions** | Configurable limit per user                       |
 
 ---
 
@@ -290,6 +296,7 @@ Adapter call → Circuit breaker check
 ### ESLint Boundaries
 
 The ESLint configuration enforces that:
+
 - `core` cannot import from `runtime`, `adapters`, `packages`, or `products`
 - `runtime` cannot import deep adapter internals
 - `packages` and `products` cannot import framework packages
@@ -298,6 +305,7 @@ The ESLint configuration enforces that:
 ### Dependency Cruiser
 
 `.dependency-cruiser.cjs` validates at the import-graph level:
+
 - No circular dependencies
 - Layer boundary compliance
 - No imports from forbidden zones

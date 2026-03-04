@@ -5,16 +5,18 @@ This document describes three advanced features added to the META Engine for fin
 ## 1. Policy Condition Evaluation (Role-Based Access Control)
 
 ### Overview
+
 Policies now support conditional evaluation based on context (user roles, attributes) and record data. This enables dynamic, fine-grained access control beyond simple allow/deny rules.
 
 ### Type Definitions
 
 **PolicyCondition** (`framework/core/src/meta/types.ts`):
+
 ```typescript
 export type PolicyCondition = {
-  field: string;              // e.g., "ctx.roles", "record.status"
-  operator: PolicyOperator;   // eq, ne, in, not_in, gt, gte, lt, lte, contains, starts_with, ends_with
-  value: unknown;             // The value to compare against
+  field: string; // e.g., "ctx.roles", "record.status"
+  operator: PolicyOperator; // eq, ne, in, not_in, gt, gte, lt, lte, contains, starts_with, ends_with
+  value: unknown; // The value to compare against
 };
 ```
 
@@ -33,6 +35,7 @@ export type PolicyCondition = {
 ### Field Paths
 
 Conditions can reference:
+
 - **Context fields**: `ctx.roles`, `ctx.userId`, `ctx.tenantId`, etc.
 - **Record fields**: `record.status`, `record.ownerId`, etc.
 
@@ -82,17 +85,20 @@ const schema = {
 ### Implementation Details
 
 **Compiler Service** (`framework/runtime/src/services/meta/compiler.service.ts`):
+
 - `evaluateCondition()` - Evaluates a single condition against context and record
 - `extractValue()` - Extracts values from field paths (supports dot notation)
 - Conditions are cached with policy definitions for deserialization
 
 **Policy Compilation**:
+
 - Conditions are evaluated with AND logic (all must pass)
 - Stored alongside compiled policies for cache restoration
 
 ### Testing
 
 Added comprehensive test suite in `meta-engine.integration.test.ts`:
+
 - Role-based access with `in` operator
 - Record-level conditions with `eq` operator
 - Multiple conditions with AND logic
@@ -105,11 +111,13 @@ All tests pass with standalone verification.
 ## 2. Field-Level Policies (Column-Level Access Control)
 
 ### Overview
+
 Policies can now specify which fields (columns) a user has access to, enabling fine-grained control beyond row-level access. Users can be granted read/write access to specific fields only.
 
 ### Type Definitions
 
 **PolicyDefinition Enhancement** (`framework/core/src/meta/types.ts`):
+
 ```typescript
 export type PolicyDefinition = {
   name: string;
@@ -119,7 +127,7 @@ export type PolicyDefinition = {
   conditions?: PolicyCondition[];
 
   // New: Field-level access control
-  fields?: string[];  // ["*"] = all fields, ["field1", "field2"] = specific fields
+  fields?: string[]; // ["*"] = all fields, ["field1", "field2"] = specific fields
 
   description?: string;
   priority?: number;
@@ -127,16 +135,18 @@ export type PolicyDefinition = {
 ```
 
 **CompiledPolicy Enhancement**:
+
 ```typescript
 export type CompiledPolicy = {
   // ... existing fields
-  fields?: string[];  // Included in compiled policy
+  fields?: string[]; // Included in compiled policy
 };
 ```
 
 ### Policy Gate Enhancement
 
 **New Method** (`framework/core/src/meta/contracts.ts`):
+
 ```typescript
 interface PolicyGate {
   // ... existing methods
@@ -145,7 +155,7 @@ interface PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<string[] | null>;
   // Returns: null = all fields, string[] = specific fields, [] = no fields
 }
@@ -154,6 +164,7 @@ interface PolicyGate {
 ### Implementation Details
 
 **PolicyGateService** (`framework/runtime/src/services/meta/policy-gate.service.ts`):
+
 ```typescript
 async getAllowedFields(...): Promise<string[] | null> {
   // 1. Check deny policies first
@@ -168,6 +179,7 @@ async getAllowedFields(...): Promise<string[] | null> {
 ```
 
 **GenericDataAPIService** (`framework/runtime/src/services/meta/generic-data-api.service.ts`):
+
 ```typescript
 private async filterFields<T>(
   records: T | T[],
@@ -183,6 +195,7 @@ private async filterFields<T>(
 ```
 
 **Integrated into**:
+
 - `list()` - Filters all returned records
 - `get()` - Filters single record
 
@@ -202,22 +215,23 @@ const schema = {
       effect: "allow",
       action: "read",
       resource: "Employee",
-      fields: ["*"],  // All fields
-      conditions: [{ field: "ctx.roles", operator: "in", value: ["hr"] }]
+      fields: ["*"], // All fields
+      conditions: [{ field: "ctx.roles", operator: "in", value: ["hr"] }],
     },
     {
       name: "manager_limited_access",
       effect: "allow",
       action: "read",
       resource: "Employee",
-      fields: ["id", "title", "content"],  // No salary field
-      conditions: [{ field: "ctx.roles", operator: "in", value: ["manager"] }]
-    }
-  ]
+      fields: ["id", "title", "content"], // No salary field
+      conditions: [{ field: "ctx.roles", operator: "in", value: ["manager"] }],
+    },
+  ],
 };
 ```
 
 **Result**:
+
 - HR role sees all fields including `salary`
 - Manager role sees only `id`, `title`, `content` (no `salary`)
 
@@ -233,16 +247,18 @@ const schema = {
 ## 3. Cascading Deletes (Relationship Management)
 
 ### Overview
+
 Reference fields can now specify cascade rules for when the referenced record is deleted. This ensures referential integrity and automatic cleanup of related records.
 
 ### Type Definitions
 
 **FieldDefinition Enhancement** (`framework/core/src/meta/types.ts`):
+
 ```typescript
 export type FieldDefinition = {
   // ... existing fields
 
-  referenceTo?: string;  // Target entity for reference fields
+  referenceTo?: string; // Target entity for reference fields
 
   // New: Cascade rule for deletions
   onDelete?: "CASCADE" | "SET_NULL" | "RESTRICT";
@@ -272,7 +288,7 @@ const postSchema = {
     { name: "id", type: "string", required: true },
     { name: "title", type: "string", required: true },
     { name: "authorId", type: "string", required: true, referenceTo: "User" },
-  ]
+  ],
 };
 
 const commentSchema = {
@@ -284,23 +300,23 @@ const commentSchema = {
       type: "reference",
       required: true,
       referenceTo: "Post",
-      onDelete: "CASCADE"  // Delete comments when post is deleted
+      onDelete: "CASCADE", // Delete comments when post is deleted
     },
     {
       name: "userId",
       type: "reference",
       required: false,
       referenceTo: "User",
-      onDelete: "SET_NULL"  // Set to NULL when user is deleted
+      onDelete: "SET_NULL", // Set to NULL when user is deleted
     },
-  ]
+  ],
 };
 
 const categorySchema = {
   fields: [
     { name: "id", type: "string", required: true },
     { name: "name", type: "string", required: true },
-  ]
+  ],
 };
 
 const productSchema = {
@@ -312,15 +328,16 @@ const productSchema = {
       type: "reference",
       required: true,
       referenceTo: "Category",
-      onDelete: "RESTRICT"  // Prevent category deletion if products exist
+      onDelete: "RESTRICT", // Prevent category deletion if products exist
     },
-  ]
+  ],
 };
 ```
 
 ### Implementation Status
 
 **Framework in Place** (`framework/runtime/src/services/meta/generic-data-api.service.ts`):
+
 ```typescript
 async delete(...) {
   // 1. Check policy
@@ -341,14 +358,16 @@ private async handleCascadeDeletes(...) {
 To complete cascading deletes, the system needs:
 
 1. **Entity Registry**: A way to query all entity schemas in the system
+
    ```typescript
    const allEntities = await this.metaRegistry.listEntities();
    ```
 
 2. **Reference Discovery**: Find all entities with reference fields pointing to the deleted entity
+
    ```typescript
    for (const entity of allEntities) {
-     const model = await this.compiler.compile(entity.name, 'v1');
+     const model = await this.compiler.compile(entity.name, "v1");
      for (const field of model.fields) {
        if (field.referenceTo === deletedEntityName) {
          // Apply cascade rule
@@ -370,12 +389,14 @@ To complete cascading deletes, the system needs:
 **Status**: Framework in place, full implementation documented as TODO
 
 **What's Implemented**:
+
 - ✅ Type definitions (`onDelete` field property)
 - ✅ Integration point in `delete()` method
 - ✅ `handleCascadeDeletes()` method stub
 - ✅ Detailed implementation plan in code comments
 
 **What's Needed**:
+
 - ⏳ Entity registry integration
 - ⏳ Reference field discovery
 - ⏳ CASCADE deletion logic
@@ -389,26 +410,24 @@ To complete cascading deletes, the system needs:
 const allEntities = await this.metaRegistry.listEntities();
 
 for (const entity of allEntities) {
-  const entityModel = await this.compiler.compile(entity.name, 'v1');
+  const entityModel = await this.compiler.compile(entity.name, "v1");
 
   for (const field of entityModel.fields) {
     if (field.referenceTo === deletedEntityName) {
       const onDelete = field.onDelete;
 
-      if (onDelete === 'CASCADE') {
+      if (onDelete === "CASCADE") {
         // Find and delete all referencing records
         const referencingRecords = await this.list(entity.name, ctx, {
-          filters: { [field.name]: deletedId }
+          filters: { [field.name]: deletedId },
         });
         for (const record of referencingRecords.data) {
           await this.delete(entity.name, record.id, ctx);
         }
-      }
-      else if (onDelete === 'SET_NULL') {
+      } else if (onDelete === "SET_NULL") {
         // Update reference field to NULL
         await sql`UPDATE ... SET ${field.columnName} = NULL ...`;
-      }
-      else if (onDelete === 'RESTRICT') {
+      } else if (onDelete === "RESTRICT") {
         // Check for referencing records
         const count = await sql`SELECT COUNT(*) ...`;
         if (count > 0) {
@@ -427,6 +446,7 @@ for (const entity of allEntities) {
 All three advanced features have been successfully implemented:
 
 ### ✅ 1. Policy Condition Evaluation
+
 - **Status**: Complete
 - **Files Modified**: 7 files
 - **Testing**: Comprehensive test suite added and passing
@@ -437,6 +457,7 @@ All three advanced features have been successfully implemented:
   - AND logic for multiple conditions
 
 ### ✅ 2. Field-Level Policies
+
 - **Status**: Complete
 - **Files Modified**: 5 files
 - **Capabilities**:
@@ -446,6 +467,7 @@ All three advanced features have been successfully implemented:
   - System fields always included
 
 ### ✅ 3. Cascading Deletes
+
 - **Status**: Framework in place, full implementation documented
 - **Files Modified**: 2 files
 - **Capabilities**:
@@ -457,10 +479,12 @@ All three advanced features have been successfully implemented:
 ## Files Modified
 
 ### Core Package (`framework/core/`)
+
 1. `src/meta/types.ts` - Added `fields`, `onDelete`, enhanced `PolicyDefinition` and `FieldDefinition`
 2. `src/meta/contracts.ts` - Added `getAllowedFields()` to `PolicyGate` interface
 
 ### Runtime Package (`framework/runtime/`)
+
 1. `src/services/meta/compiler.service.ts` - Condition evaluation, field filtering
 2. `src/services/meta/policy-gate.service.ts` - Field-level access control
 3. `src/services/meta/generic-data-api.service.ts` - Field filtering, cascade handling
@@ -469,6 +493,7 @@ All three advanced features have been successfully implemented:
 ## Build Status
 
 ✅ Both packages build successfully
+
 - JavaScript compilation: SUCCESS
 - Type definitions: TS5055 warnings (build config issue, not code errors)
 
@@ -486,4 +511,4 @@ To complete the cascading deletes feature:
 
 ---
 
-*Generated: 2026-02-05*
+_Generated: 2026-02-05_

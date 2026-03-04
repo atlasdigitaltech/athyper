@@ -37,26 +37,26 @@ Master customer records representing the organizations and individuals that the 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| code | text | NOT NULL | -- | Tenant-unique customer code (e.g. `CUST-001`). |
-| name | text | NOT NULL | -- | Legal or registered customer name. |
-| display_name | text | YES | -- | Friendly display name. |
-| customer_type | text | NOT NULL | `'individual'` | Classification: `individual`, `business`, `government`, `nonprofit`. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| tax_id | text | YES | -- | Tax identification number. |
-| industry_code | text | YES | -- | Industry classification code (qualified by `industry_domain_code`). |
-| industry_domain_code | text | YES | -- | Industry domain qualifier (e.g. `isic`, `naics`). |
-| primary_contact_id | uuid | YES | -- | Reference to primary contact (future FK). |
-| primary_address_id | uuid | YES | -- | Reference to primary address (future FK). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| tags | text[] | YES | -- | Searchable tag array. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column               | Type        | Nullable | Default             | Description                                                          |
+| -------------------- | ----------- | -------- | ------------------- | -------------------------------------------------------------------- |
+| id                   | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                               |
+| tenant_id            | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                  |
+| code                 | text        | NOT NULL | --                  | Tenant-unique customer code (e.g. `CUST-001`).                       |
+| name                 | text        | NOT NULL | --                  | Legal or registered customer name.                                   |
+| display_name         | text        | YES      | --                  | Friendly display name.                                               |
+| customer_type        | text        | NOT NULL | `'individual'`      | Classification: `individual`, `business`, `government`, `nonprofit`. |
+| status               | text        | NOT NULL | `'active'`          | Lifecycle status.                                                    |
+| tax_id               | text        | YES      | --                  | Tax identification number.                                           |
+| industry_code        | text        | YES      | --                  | Industry classification code (qualified by `industry_domain_code`).  |
+| industry_domain_code | text        | YES      | --                  | Industry domain qualifier (e.g. `isic`, `naics`).                    |
+| primary_contact_id   | uuid        | YES      | --                  | Reference to primary contact (future FK).                            |
+| primary_address_id   | uuid        | YES      | --                  | Reference to primary address (future FK).                            |
+| metadata             | jsonb       | YES      | --                  | Extensible metadata.                                                 |
+| tags                 | text[]      | YES      | --                  | Searchable tag array.                                                |
+| created_at           | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                              |
+| created_by           | text        | NOT NULL | --                  | Identity that created the row.                                       |
+| updated_at           | timestamptz | YES      | --                  | Last update timestamp.                                               |
+| updated_by           | text        | YES      | --                  | Identity that last updated the row.                                  |
 
 ### Primary Key
 
@@ -73,20 +73,20 @@ Master customer records representing the organizations and individuals that the 
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
+| FK Name / Column(s)                                         | References                           | On Delete             |
+| ----------------------------------------------------------- | ------------------------------------ | --------------------- |
+| tenant_id                                                   | core.tenant(id)                      | CASCADE               |
 | fk_customer_industry: (industry_domain_code, industry_code) | ref.industry_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_customer_tenant | tenant_id | Tenant partition scan. |
-| idx_customer_status | (tenant_id, status) | Filter customers by status within a tenant. |
-| idx_customer_name | (tenant_id, name) | Name lookup within a tenant. |
-| idx_customer_tags | tags (GIN) | Array containment / overlap queries on tags. |
-| idx_customer_industry | (industry_domain_code, industry_code) | Industry classification lookup. |
+| Index Name            | Columns                               | Notes                                        |
+| --------------------- | ------------------------------------- | -------------------------------------------- |
+| idx_customer_tenant   | tenant_id                             | Tenant partition scan.                       |
+| idx_customer_status   | (tenant_id, status)                   | Filter customers by status within a tenant.  |
+| idx_customer_name     | (tenant_id, name)                     | Name lookup within a tenant.                 |
+| idx_customer_tags     | tags (GIN)                            | Array containment / overlap queries on tags. |
+| idx_customer_industry | (industry_domain_code, industry_code) | Industry classification lookup.              |
 
 ### Relationships
 
@@ -104,28 +104,28 @@ Master supplier/vendor records for organizations that provide goods or services 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| code | text | NOT NULL | -- | Tenant-unique supplier code. |
-| name | text | NOT NULL | -- | Legal or registered supplier name. |
-| display_name | text | YES | -- | Friendly display name. |
-| supplier_type | text | NOT NULL | `'vendor'` | Classification: `vendor`, `contractor`, `distributor`, `manufacturer`. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| tax_id | text | YES | -- | Tax identification number. |
-| industry_code | text | YES | -- | Industry classification code (qualified by `industry_domain_code`). |
-| industry_domain_code | text | YES | -- | Industry domain qualifier (e.g. `isic`, `naics`). |
-| primary_contact_id | uuid | YES | -- | Reference to primary contact (future FK). |
-| primary_address_id | uuid | YES | -- | Reference to primary address (future FK). |
-| payment_terms | text | YES | -- | Payment terms (e.g. `NET30`, `NET60`). |
-| currency_code | text | YES | -- | Preferred payment currency (ISO 4217). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| tags | text[] | YES | -- | Searchable tag array. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column               | Type        | Nullable | Default             | Description                                                            |
+| -------------------- | ----------- | -------- | ------------------- | ---------------------------------------------------------------------- |
+| id                   | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                 |
+| tenant_id            | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                    |
+| code                 | text        | NOT NULL | --                  | Tenant-unique supplier code.                                           |
+| name                 | text        | NOT NULL | --                  | Legal or registered supplier name.                                     |
+| display_name         | text        | YES      | --                  | Friendly display name.                                                 |
+| supplier_type        | text        | NOT NULL | `'vendor'`          | Classification: `vendor`, `contractor`, `distributor`, `manufacturer`. |
+| status               | text        | NOT NULL | `'active'`          | Lifecycle status.                                                      |
+| tax_id               | text        | YES      | --                  | Tax identification number.                                             |
+| industry_code        | text        | YES      | --                  | Industry classification code (qualified by `industry_domain_code`).    |
+| industry_domain_code | text        | YES      | --                  | Industry domain qualifier (e.g. `isic`, `naics`).                      |
+| primary_contact_id   | uuid        | YES      | --                  | Reference to primary contact (future FK).                              |
+| primary_address_id   | uuid        | YES      | --                  | Reference to primary address (future FK).                              |
+| payment_terms        | text        | YES      | --                  | Payment terms (e.g. `NET30`, `NET60`).                                 |
+| currency_code        | text        | YES      | --                  | Preferred payment currency (ISO 4217).                                 |
+| metadata             | jsonb       | YES      | --                  | Extensible metadata.                                                   |
+| tags                 | text[]      | YES      | --                  | Searchable tag array.                                                  |
+| created_at           | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                                |
+| created_by           | text        | NOT NULL | --                  | Identity that created the row.                                         |
+| updated_at           | timestamptz | YES      | --                  | Last update timestamp.                                                 |
+| updated_by           | text        | YES      | --                  | Identity that last updated the row.                                    |
 
 ### Primary Key
 
@@ -142,19 +142,19 @@ Master supplier/vendor records for organizations that provide goods or services 
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
+| FK Name / Column(s)                                         | References                           | On Delete             |
+| ----------------------------------------------------------- | ------------------------------------ | --------------------- |
+| tenant_id                                                   | core.tenant(id)                      | CASCADE               |
 | fk_supplier_industry: (industry_domain_code, industry_code) | ref.industry_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_supplier_tenant | tenant_id | Tenant partition scan. |
-| idx_supplier_status | (tenant_id, status) | Filter suppliers by status within a tenant. |
-| idx_supplier_name | (tenant_id, name) | Name lookup within a tenant. |
-| idx_supplier_industry | (industry_domain_code, industry_code) | Industry classification lookup. |
+| Index Name            | Columns                               | Notes                                       |
+| --------------------- | ------------------------------------- | ------------------------------------------- |
+| idx_supplier_tenant   | tenant_id                             | Tenant partition scan.                      |
+| idx_supplier_status   | (tenant_id, status)                   | Filter suppliers by status within a tenant. |
+| idx_supplier_name     | (tenant_id, name)                     | Name lookup within a tenant.                |
+| idx_supplier_industry | (industry_domain_code, industry_code) | Industry classification lookup.             |
 
 ### Relationships
 
@@ -172,31 +172,31 @@ Master employee records linking human resources data with the platform's identit
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| principal_id | uuid | YES | -- | Linked security principal for authentication. FK to `core.principal`. |
-| employee_number | text | NOT NULL | -- | Tenant-unique employee identifier. |
-| first_name | text | NOT NULL | -- | Legal first name. |
-| last_name | text | NOT NULL | -- | Legal last name. |
-| display_name | text | YES | -- | Preferred display name. |
-| email | text | YES | -- | Work email address. |
-| phone | text | YES | -- | Work phone number. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| employment_type | text | NOT NULL | `'full_time'` | Employment classification. |
-| department | text | YES | -- | Department name (denormalized). |
-| title | text | YES | -- | Job title. |
-| manager_id | uuid | YES | -- | Direct manager. Self-referencing FK to `ent.employee`. |
-| ou_id | uuid | YES | -- | Organizational unit. FK to `core.organizational_unit`. |
-| hire_date | date | YES | -- | Date of hire. |
-| termination_date | date | YES | -- | Date of termination (NULL if still employed). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| tags | text[] | YES | -- | Searchable tag array. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column           | Type        | Nullable | Default             | Description                                                           |
+| ---------------- | ----------- | -------- | ------------------- | --------------------------------------------------------------------- |
+| id               | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                |
+| tenant_id        | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                   |
+| principal_id     | uuid        | YES      | --                  | Linked security principal for authentication. FK to `core.principal`. |
+| employee_number  | text        | NOT NULL | --                  | Tenant-unique employee identifier.                                    |
+| first_name       | text        | NOT NULL | --                  | Legal first name.                                                     |
+| last_name        | text        | NOT NULL | --                  | Legal last name.                                                      |
+| display_name     | text        | YES      | --                  | Preferred display name.                                               |
+| email            | text        | YES      | --                  | Work email address.                                                   |
+| phone            | text        | YES      | --                  | Work phone number.                                                    |
+| status           | text        | NOT NULL | `'active'`          | Lifecycle status.                                                     |
+| employment_type  | text        | NOT NULL | `'full_time'`       | Employment classification.                                            |
+| department       | text        | YES      | --                  | Department name (denormalized).                                       |
+| title            | text        | YES      | --                  | Job title.                                                            |
+| manager_id       | uuid        | YES      | --                  | Direct manager. Self-referencing FK to `ent.employee`.                |
+| ou_id            | uuid        | YES      | --                  | Organizational unit. FK to `core.organizational_unit`.                |
+| hire_date        | date        | YES      | --                  | Date of hire.                                                         |
+| termination_date | date        | YES      | --                  | Date of termination (NULL if still employed).                         |
+| metadata         | jsonb       | YES      | --                  | Extensible metadata.                                                  |
+| tags             | text[]      | YES      | --                  | Searchable tag array.                                                 |
+| created_at       | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                               |
+| created_by       | text        | NOT NULL | --                  | Identity that created the row.                                        |
+| updated_at       | timestamptz | YES      | --                  | Last update timestamp.                                                |
+| updated_by       | text        | YES      | --                  | Identity that last updated the row.                                   |
 
 ### Primary Key
 
@@ -213,22 +213,22 @@ Master employee records linking human resources data with the platform's identit
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| principal_id | core.principal(id) | SET NULL |
-| manager_id | ent.employee(id) | SET NULL |
-| ou_id | core.organizational_unit(id) | SET NULL |
+| FK Column    | References                   | On Delete |
+| ------------ | ---------------------------- | --------- |
+| tenant_id    | core.tenant(id)              | CASCADE   |
+| principal_id | core.principal(id)           | SET NULL  |
+| manager_id   | ent.employee(id)             | SET NULL  |
+| ou_id        | core.organizational_unit(id) | SET NULL  |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_employee_tenant | tenant_id | Tenant partition scan. |
-| idx_employee_principal | principal_id | Look up employee by security principal. |
-| idx_employee_status | (tenant_id, status) | Filter employees by status within a tenant. |
-| idx_employee_manager | manager_id | Manager hierarchy traversal. |
-| idx_employee_department | (tenant_id, department) | Filter employees by department. |
+| Index Name              | Columns                 | Notes                                       |
+| ----------------------- | ----------------------- | ------------------------------------------- |
+| idx_employee_tenant     | tenant_id               | Tenant partition scan.                      |
+| idx_employee_principal  | principal_id            | Look up employee by security principal.     |
+| idx_employee_status     | (tenant_id, status)     | Filter employees by status within a tenant. |
+| idx_employee_manager    | manager_id              | Manager hierarchy traversal.                |
+| idx_employee_department | (tenant_id, department) | Filter employees by department.             |
 
 ### Relationships
 
@@ -247,24 +247,24 @@ Hierarchical product categories that organize a tenant's product catalog into a 
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| code | text | NOT NULL | -- | Tenant-unique category code. |
-| name | text | NOT NULL | -- | Category display name. |
-| description | text | YES | -- | Category description. |
-| parent_id | uuid | YES | -- | Parent category for hierarchy. Self-referencing FK. |
-| sort_order | int | YES | -- | Display sort order among siblings. |
-| is_active | boolean | NOT NULL | `true` | Whether this category is active. |
-| commodity_domain_code | text | YES | -- | Primary commodity standard this category maps to (e.g. `unspsc`). |
-| commodity_code | text | YES | -- | Commodity code within the domain. |
-| commodity_level | smallint | YES | -- | Hierarchy level within the commodity domain (1=segment, 2=family, etc.). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column                | Type        | Nullable | Default             | Description                                                              |
+| --------------------- | ----------- | -------- | ------------------- | ------------------------------------------------------------------------ |
+| id                    | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                   |
+| tenant_id             | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                      |
+| code                  | text        | NOT NULL | --                  | Tenant-unique category code.                                             |
+| name                  | text        | NOT NULL | --                  | Category display name.                                                   |
+| description           | text        | YES      | --                  | Category description.                                                    |
+| parent_id             | uuid        | YES      | --                  | Parent category for hierarchy. Self-referencing FK.                      |
+| sort_order            | int         | YES      | --                  | Display sort order among siblings.                                       |
+| is_active             | boolean     | NOT NULL | `true`              | Whether this category is active.                                         |
+| commodity_domain_code | text        | YES      | --                  | Primary commodity standard this category maps to (e.g. `unspsc`).        |
+| commodity_code        | text        | YES      | --                  | Commodity code within the domain.                                        |
+| commodity_level       | smallint    | YES      | --                  | Hierarchy level within the commodity domain (1=segment, 2=family, etc.). |
+| metadata              | jsonb       | YES      | --                  | Extensible metadata.                                                     |
+| created_at            | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                                  |
+| created_by            | text        | NOT NULL | --                  | Identity that created the row.                                           |
+| updated_at            | timestamptz | YES      | --                  | Last update timestamp.                                                   |
+| updated_by            | text        | YES      | --                  | Identity that last updated the row.                                      |
 
 ### Primary Key
 
@@ -276,17 +276,17 @@ Hierarchical product categories that organize a tenant's product catalog into a 
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| parent_id | ent.product_category(id) | SET NULL |
+| FK Name / Column(s)                                                    | References                            | On Delete             |
+| ---------------------------------------------------------------------- | ------------------------------------- | --------------------- |
+| tenant_id                                                              | core.tenant(id)                       | CASCADE               |
+| parent_id                                                              | ent.product_category(id)              | SET NULL              |
 | fk_product_category_commodity: (commodity_domain_code, commodity_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_product_category_tenant | tenant_id | Tenant partition scan. |
+| Index Name                  | Columns   | Notes                        |
+| --------------------------- | --------- | ---------------------------- |
+| idx_product_category_tenant | tenant_id | Tenant partition scan.       |
 | idx_product_category_parent | parent_id | Hierarchical tree traversal. |
 
 ### Relationships
@@ -306,30 +306,30 @@ Master product records for goods, services, subscriptions, and bundles offered o
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| code | text | NOT NULL | -- | Tenant-unique product code. |
-| sku | text | YES | -- | Stock-keeping unit identifier. |
-| name | text | NOT NULL | -- | Product display name. |
-| description | text | YES | -- | Product description. |
-| category_id | uuid | YES | -- | Product category. FK to `ent.product_category`. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| product_type | text | NOT NULL | `'physical'` | Product classification. |
-| unit_of_measure | text | YES | -- | Default UoM code (references `ref.uom` informally). |
-| base_price | numeric(18,4) | YES | -- | Base price in the product's currency. |
-| currency_code | text | YES | -- | Pricing currency (ISO 4217). |
-| is_taxable | boolean | NOT NULL | `true` | Whether the product is subject to tax. |
-| tax_code | text | YES | -- | Tax category or rate code. |
-| commodity_domain_code | text | YES | -- | Commodity classification domain (e.g. `unspsc`, `hs`). |
-| commodity_code | text | YES | -- | Commodity code within the domain. |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| tags | text[] | YES | -- | Searchable tag array. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column                | Type          | Nullable | Default             | Description                                            |
+| --------------------- | ------------- | -------- | ------------------- | ------------------------------------------------------ |
+| id                    | uuid          | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                 |
+| tenant_id             | uuid          | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                    |
+| code                  | text          | NOT NULL | --                  | Tenant-unique product code.                            |
+| sku                   | text          | YES      | --                  | Stock-keeping unit identifier.                         |
+| name                  | text          | NOT NULL | --                  | Product display name.                                  |
+| description           | text          | YES      | --                  | Product description.                                   |
+| category_id           | uuid          | YES      | --                  | Product category. FK to `ent.product_category`.        |
+| status                | text          | NOT NULL | `'active'`          | Lifecycle status.                                      |
+| product_type          | text          | NOT NULL | `'physical'`        | Product classification.                                |
+| unit_of_measure       | text          | YES      | --                  | Default UoM code (references `ref.uom` informally).    |
+| base_price            | numeric(18,4) | YES      | --                  | Base price in the product's currency.                  |
+| currency_code         | text          | YES      | --                  | Pricing currency (ISO 4217).                           |
+| is_taxable            | boolean       | NOT NULL | `true`              | Whether the product is subject to tax.                 |
+| tax_code              | text          | YES      | --                  | Tax category or rate code.                             |
+| commodity_domain_code | text          | YES      | --                  | Commodity classification domain (e.g. `unspsc`, `hs`). |
+| commodity_code        | text          | YES      | --                  | Commodity code within the domain.                      |
+| metadata              | jsonb         | YES      | --                  | Extensible metadata.                                   |
+| tags                  | text[]        | YES      | --                  | Searchable tag array.                                  |
+| created_at            | timestamptz   | NOT NULL | `now()`             | Row creation timestamp.                                |
+| created_by            | text          | NOT NULL | --                  | Identity that created the row.                         |
+| updated_at            | timestamptz   | YES      | --                  | Last update timestamp.                                 |
+| updated_by            | text          | YES      | --                  | Identity that last updated the row.                    |
 
 ### Primary Key
 
@@ -346,22 +346,22 @@ Master product records for goods, services, subscriptions, and bundles offered o
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| category_id | ent.product_category(id) | SET NULL |
+| FK Name / Column(s)                                           | References                            | On Delete             |
+| ------------------------------------------------------------- | ------------------------------------- | --------------------- |
+| tenant_id                                                     | core.tenant(id)                       | CASCADE               |
+| category_id                                                   | ent.product_category(id)              | SET NULL              |
 | fk_product_commodity: (commodity_domain_code, commodity_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_product_tenant | tenant_id | Tenant partition scan. |
-| idx_product_status | (tenant_id, status) | Filter products by status within a tenant. |
-| idx_product_category | category_id | Products in a given category. |
-| idx_product_sku | (tenant_id, sku) | SKU lookup within a tenant. |
-| idx_product_tags | tags (GIN) | Array containment / overlap queries on tags. |
-| idx_product_commodity | (commodity_domain_code, commodity_code) | Commodity classification lookup. |
+| Index Name            | Columns                                 | Notes                                        |
+| --------------------- | --------------------------------------- | -------------------------------------------- |
+| idx_product_tenant    | tenant_id                               | Tenant partition scan.                       |
+| idx_product_status    | (tenant_id, status)                     | Filter products by status within a tenant.   |
+| idx_product_category  | category_id                             | Products in a given category.                |
+| idx_product_sku       | (tenant_id, sku)                        | SKU lookup within a tenant.                  |
+| idx_product_tags      | tags (GIN)                              | Array containment / overlap queries on tags. |
+| idx_product_commodity | (commodity_domain_code, commodity_code) | Commodity classification lookup.             |
 
 ### Relationships
 
@@ -379,24 +379,24 @@ A generic, polymorphic association table that links any two entities within a te
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| relationship_type | text | NOT NULL | -- | Relationship label (e.g. `parent_company`, `preferred_supplier`). |
-| entity_a_type | text | NOT NULL | -- | Entity type of side A (e.g. `customer`, `product`). |
-| entity_a_id | uuid | NOT NULL | -- | Row ID of side A entity. |
-| entity_b_type | text | NOT NULL | -- | Entity type of side B. |
-| entity_b_id | uuid | NOT NULL | -- | Row ID of side B entity. |
-| is_bidirectional | boolean | NOT NULL | `false` | Whether the relationship applies in both directions. |
-| status | text | NOT NULL | `'active'` | Lifecycle status. |
-| effective_from | timestamptz | YES | -- | Start of validity window. |
-| effective_until | timestamptz | YES | -- | End of validity window (NULL = no expiry). |
-| metadata | jsonb | YES | -- | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column            | Type        | Nullable | Default             | Description                                                       |
+| ----------------- | ----------- | -------- | ------------------- | ----------------------------------------------------------------- |
+| id                | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                            |
+| tenant_id         | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                               |
+| relationship_type | text        | NOT NULL | --                  | Relationship label (e.g. `parent_company`, `preferred_supplier`). |
+| entity_a_type     | text        | NOT NULL | --                  | Entity type of side A (e.g. `customer`, `product`).               |
+| entity_a_id       | uuid        | NOT NULL | --                  | Row ID of side A entity.                                          |
+| entity_b_type     | text        | NOT NULL | --                  | Entity type of side B.                                            |
+| entity_b_id       | uuid        | NOT NULL | --                  | Row ID of side B entity.                                          |
+| is_bidirectional  | boolean     | NOT NULL | `false`             | Whether the relationship applies in both directions.              |
+| status            | text        | NOT NULL | `'active'`          | Lifecycle status.                                                 |
+| effective_from    | timestamptz | YES      | --                  | Start of validity window.                                         |
+| effective_until   | timestamptz | YES      | --                  | End of validity window (NULL = no expiry).                        |
+| metadata          | jsonb       | YES      | --                  | Extensible metadata.                                              |
+| created_at        | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                           |
+| created_by        | text        | NOT NULL | --                  | Identity that created the row.                                    |
+| updated_at        | timestamptz | YES      | --                  | Last update timestamp.                                            |
+| updated_by        | text        | YES      | --                  | Identity that last updated the row.                               |
 
 ### Primary Key
 
@@ -408,19 +408,19 @@ A generic, polymorphic association table that links any two entities within a te
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
+| FK Column | References      | On Delete |
+| --------- | --------------- | --------- |
+| tenant_id | core.tenant(id) | CASCADE   |
 
 Note: `entity_a_id` and `entity_b_id` are **not** database-level foreign keys -- they are polymorphic references resolved by application logic using the corresponding `_type` column.
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_entity_relationship_a | (tenant_id, entity_a_type, entity_a_id) | Find all relationships from a given entity. |
-| idx_entity_relationship_b | (tenant_id, entity_b_type, entity_b_id) | Find all relationships to a given entity. |
-| idx_entity_relationship_type | (tenant_id, relationship_type) | Filter by relationship type. |
+| Index Name                   | Columns                                 | Notes                                       |
+| ---------------------------- | --------------------------------------- | ------------------------------------------- |
+| idx_entity_relationship_a    | (tenant_id, entity_a_type, entity_a_id) | Find all relationships from a given entity. |
+| idx_entity_relationship_b    | (tenant_id, entity_b_type, entity_b_id) | Find all relationships to a given entity.   |
+| idx_entity_relationship_type | (tenant_id, relationship_type)          | Filter by relationship type.                |
 
 ### Relationships
 
@@ -437,25 +437,25 @@ Cross-domain commodity code mappings that serve as a "Rosetta Stone" between dif
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| source_domain_code | text | NOT NULL | -- | Source commodity domain. FK to `ref.commodity_domain`. |
-| source_code | text | NOT NULL | -- | Source commodity code. |
-| target_domain_code | text | NOT NULL | -- | Target commodity domain. FK to `ref.commodity_domain`. |
-| target_code | text | NOT NULL | -- | Target commodity code. |
-| mapping_type | text | NOT NULL | -- | SKOS mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`, `RELATED`. |
-| confidence | decimal(5,2) | YES | -- | Confidence score (0.00 - 100.00). |
-| provenance | text | NOT NULL | `'MANUAL'` | Origin of the mapping. |
-| verified | boolean | NOT NULL | `false` | Whether the mapping has been expert-verified. |
-| verified_by | text | YES | -- | Identity that verified the mapping. |
-| verified_at | timestamptz | YES | -- | When the mapping was verified. |
-| notes | text | YES | -- | Free-text notes. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column             | Type         | Nullable | Default             | Description                                                              |
+| ------------------ | ------------ | -------- | ------------------- | ------------------------------------------------------------------------ |
+| id                 | uuid         | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                   |
+| source_domain_code | text         | NOT NULL | --                  | Source commodity domain. FK to `ref.commodity_domain`.                   |
+| source_code        | text         | NOT NULL | --                  | Source commodity code.                                                   |
+| target_domain_code | text         | NOT NULL | --                  | Target commodity domain. FK to `ref.commodity_domain`.                   |
+| target_code        | text         | NOT NULL | --                  | Target commodity code.                                                   |
+| mapping_type       | text         | NOT NULL | --                  | SKOS mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`, `RELATED`. |
+| confidence         | decimal(5,2) | YES      | --                  | Confidence score (0.00 - 100.00).                                        |
+| provenance         | text         | NOT NULL | `'MANUAL'`          | Origin of the mapping.                                                   |
+| verified           | boolean      | NOT NULL | `false`             | Whether the mapping has been expert-verified.                            |
+| verified_by        | text         | YES      | --                  | Identity that verified the mapping.                                      |
+| verified_at        | timestamptz  | YES      | --                  | When the mapping was verified.                                           |
+| notes              | text         | YES      | --                  | Free-text notes.                                                         |
+| metadata           | jsonb        | NOT NULL | `'{}'::jsonb`       | Extensible metadata.                                                     |
+| created_at         | timestamptz  | NOT NULL | `now()`             | Row creation timestamp.                                                  |
+| created_by         | text         | NOT NULL | `'seed'`            | Identity that created the row.                                           |
+| updated_at         | timestamptz  | YES      | --                  | Last update timestamp.                                                   |
+| updated_by         | text         | YES      | --                  | Identity that last updated the row.                                      |
 
 ### Primary Key
 
@@ -473,19 +473,19 @@ Cross-domain commodity code mappings that serve as a "Rosetta Stone" between dif
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| source_domain_code | ref.commodity_domain(code) | (default -- restrict) |
-| target_domain_code | ref.commodity_domain(code) | (default -- restrict) |
+| FK Name / Column(s)                                              | References                            | On Delete             |
+| ---------------------------------------------------------------- | ------------------------------------- | --------------------- |
+| source_domain_code                                               | ref.commodity_domain(code)            | (default -- restrict) |
+| target_domain_code                                               | ref.commodity_domain(code)            | (default -- restrict) |
 | fk_ent_commodity_xwalk_source: (source_domain_code, source_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 | fk_ent_commodity_xwalk_target: (target_domain_code, target_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_ent_cxwalk_source | (source_domain_code, source_code) | Lookup mappings from a source code. |
-| idx_ent_cxwalk_target | (target_domain_code, target_code) | Reverse lookup by target code. |
+| Index Name                | Columns                           | Notes                                                 |
+| ------------------------- | --------------------------------- | ----------------------------------------------------- |
+| idx_ent_cxwalk_source     | (source_domain_code, source_code) | Lookup mappings from a source code.                   |
+| idx_ent_cxwalk_target     | (target_domain_code, target_code) | Reverse lookup by target code.                        |
 | idx_ent_cxwalk_confidence | confidence WHERE verified = false | Unverified low-confidence mappings for review queues. |
 
 ### Relationships
@@ -502,25 +502,25 @@ Cross-domain industry code mappings that translate between industry classificati
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| source_domain_code | text | NOT NULL | -- | Source industry domain. FK to `ref.industry_domain`. |
-| source_code | text | NOT NULL | -- | Source industry code. |
-| target_domain_code | text | NOT NULL | -- | Target industry domain. FK to `ref.industry_domain`. |
-| target_code | text | NOT NULL | -- | Target industry code. |
-| mapping_type | text | NOT NULL | -- | SKOS mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`, `RELATED`. |
-| confidence | decimal(5,2) | YES | -- | Confidence score (0.00 - 100.00). |
-| provenance | text | NOT NULL | `'MANUAL'` | Origin of the mapping. |
-| verified | boolean | NOT NULL | `false` | Whether the mapping has been expert-verified. |
-| verified_by | text | YES | -- | Identity that verified the mapping. |
-| verified_at | timestamptz | YES | -- | When the mapping was verified. |
-| notes | text | YES | -- | Free-text notes. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column             | Type         | Nullable | Default             | Description                                                              |
+| ------------------ | ------------ | -------- | ------------------- | ------------------------------------------------------------------------ |
+| id                 | uuid         | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                   |
+| source_domain_code | text         | NOT NULL | --                  | Source industry domain. FK to `ref.industry_domain`.                     |
+| source_code        | text         | NOT NULL | --                  | Source industry code.                                                    |
+| target_domain_code | text         | NOT NULL | --                  | Target industry domain. FK to `ref.industry_domain`.                     |
+| target_code        | text         | NOT NULL | --                  | Target industry code.                                                    |
+| mapping_type       | text         | NOT NULL | --                  | SKOS mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`, `RELATED`. |
+| confidence         | decimal(5,2) | YES      | --                  | Confidence score (0.00 - 100.00).                                        |
+| provenance         | text         | NOT NULL | `'MANUAL'`          | Origin of the mapping.                                                   |
+| verified           | boolean      | NOT NULL | `false`             | Whether the mapping has been expert-verified.                            |
+| verified_by        | text         | YES      | --                  | Identity that verified the mapping.                                      |
+| verified_at        | timestamptz  | YES      | --                  | When the mapping was verified.                                           |
+| notes              | text         | YES      | --                  | Free-text notes.                                                         |
+| metadata           | jsonb        | NOT NULL | `'{}'::jsonb`       | Extensible metadata.                                                     |
+| created_at         | timestamptz  | NOT NULL | `now()`             | Row creation timestamp.                                                  |
+| created_by         | text         | NOT NULL | `'seed'`            | Identity that created the row.                                           |
+| updated_at         | timestamptz  | YES      | --                  | Last update timestamp.                                                   |
+| updated_by         | text         | YES      | --                  | Identity that last updated the row.                                      |
 
 ### Primary Key
 
@@ -538,19 +538,19 @@ Cross-domain industry code mappings that translate between industry classificati
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| source_domain_code | ref.industry_domain(code) | (default -- restrict) |
-| target_domain_code | ref.industry_domain(code) | (default -- restrict) |
+| FK Name / Column(s)                                             | References                           | On Delete             |
+| --------------------------------------------------------------- | ------------------------------------ | --------------------- |
+| source_domain_code                                              | ref.industry_domain(code)            | (default -- restrict) |
+| target_domain_code                                              | ref.industry_domain(code)            | (default -- restrict) |
 | fk_ent_industry_xwalk_source: (source_domain_code, source_code) | ref.industry_code(domain_code, code) | (default -- restrict) |
 | fk_ent_industry_xwalk_target: (target_domain_code, target_code) | ref.industry_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
+| Index Name            | Columns                           | Notes                               |
+| --------------------- | --------------------------------- | ----------------------------------- |
 | idx_ent_ixwalk_source | (source_domain_code, source_code) | Lookup mappings from a source code. |
-| idx_ent_ixwalk_target | (target_domain_code, target_code) | Reverse lookup by target code. |
+| idx_ent_ixwalk_target | (target_domain_code, target_code) | Reverse lookup by target code.      |
 
 ### Relationships
 
@@ -566,22 +566,22 @@ Bridges a tenant's internal product categories to standard commodity classificat
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| category_id | uuid | NOT NULL | -- | Product category being mapped. FK to `ent.product_category`. |
-| commodity_domain_code | text | NOT NULL | -- | Target commodity domain. |
-| commodity_code | text | NOT NULL | -- | Target commodity code. |
-| mapping_type | text | NOT NULL | `'EXACT'` | Mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`. |
-| confidence | decimal(5,2) | YES | -- | Confidence score (0.00 - 100.00). |
-| provenance | text | NOT NULL | `'MANUAL'` | Origin of the mapping. |
-| is_primary | boolean | NOT NULL | `false` | Whether this is the preferred mapping for the category. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column                | Type         | Nullable | Default             | Description                                                  |
+| --------------------- | ------------ | -------- | ------------------- | ------------------------------------------------------------ |
+| id                    | uuid         | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                       |
+| tenant_id             | uuid         | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                          |
+| category_id           | uuid         | NOT NULL | --                  | Product category being mapped. FK to `ent.product_category`. |
+| commodity_domain_code | text         | NOT NULL | --                  | Target commodity domain.                                     |
+| commodity_code        | text         | NOT NULL | --                  | Target commodity code.                                       |
+| mapping_type          | text         | NOT NULL | `'EXACT'`           | Mapping relation: `EXACT`, `BROAD`, `NARROW`, `PARTIAL`.     |
+| confidence            | decimal(5,2) | YES      | --                  | Confidence score (0.00 - 100.00).                            |
+| provenance            | text         | NOT NULL | `'MANUAL'`          | Origin of the mapping.                                       |
+| is_primary            | boolean      | NOT NULL | `false`             | Whether this is the preferred mapping for the category.      |
+| metadata              | jsonb        | NOT NULL | `'{}'::jsonb`       | Extensible metadata.                                         |
+| created_at            | timestamptz  | NOT NULL | `now()`             | Row creation timestamp.                                      |
+| created_by            | text         | NOT NULL | `'seed'`            | Identity that created the row.                               |
+| updated_at            | timestamptz  | YES      | --                  | Last update timestamp.                                       |
+| updated_by            | text         | YES      | --                  | Identity that last updated the row.                          |
 
 ### Primary Key
 
@@ -599,19 +599,19 @@ Bridges a tenant's internal product categories to standard commodity classificat
 
 ### Foreign Keys
 
-| FK Name / Column(s) | References | On Delete |
-|----------------------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| category_id | ent.product_category(id) | CASCADE |
+| FK Name / Column(s)                                                | References                            | On Delete             |
+| ------------------------------------------------------------------ | ------------------------------------- | --------------------- |
+| tenant_id                                                          | core.tenant(id)                       | CASCADE               |
+| category_id                                                        | ent.product_category(id)              | CASCADE               |
 | fk_ent_cat_commodity_code: (commodity_domain_code, commodity_code) | ref.commodity_code(domain_code, code) | (default -- restrict) |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_ent_cat_commodity_tenant | tenant_id | Tenant partition scan. |
-| idx_ent_cat_commodity_category | category_id | All mappings for a given category. |
-| idx_ent_cat_commodity_code | (commodity_domain_code, commodity_code) | Reverse lookup by commodity code. |
+| Index Name                     | Columns                                 | Notes                              |
+| ------------------------------ | --------------------------------------- | ---------------------------------- |
+| idx_ent_cat_commodity_tenant   | tenant_id                               | Tenant partition scan.             |
+| idx_ent_cat_commodity_category | category_id                             | All mappings for a given category. |
+| idx_ent_cat_commodity_code     | (commodity_domain_code, commodity_code) | Reverse lookup by commodity code.  |
 
 ### Relationships
 
@@ -628,28 +628,28 @@ Per-tenant configuration that governs classification behavior across the platfor
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. Primary key. FK to `core.tenant`. |
-| primary_commodity_domain | text | YES | -- | Primary commodity classification domain. FK to `ref.commodity_domain`. |
-| trade_commodity_domain | text | YES | -- | Trade/customs commodity domain (e.g. HS). FK to `ref.commodity_domain`. |
-| primary_industry_domain | text | YES | -- | Primary industry classification domain. FK to `ref.industry_domain`. |
-| require_commodity_code | boolean | NOT NULL | `false` | Whether commodity codes are mandatory on transactional lines. |
-| require_trade_code | boolean | NOT NULL | `false` | Whether trade/customs codes are mandatory. |
-| require_for_capex_above | decimal(18,4) | YES | -- | CapEx threshold above which classification is required. |
-| require_for_capex_currency | varchar(3) | YES | -- | Currency of the CapEx threshold. FK to `ref.currency`. |
-| require_for_regulated | boolean | NOT NULL | `true` | Whether classification is mandatory for regulated items. |
-| auto_classify_enabled | boolean | NOT NULL | `true` | Whether AI auto-classification is enabled. |
-| auto_crosswalk_enabled | boolean | NOT NULL | `true` | Whether automatic cross-domain mapping is enabled. |
-| min_confidence_auto | decimal(5,2) | NOT NULL | `90.00` | Minimum confidence for automatic acceptance of AI suggestions. |
-| min_confidence_suggest | decimal(5,2) | NOT NULL | `60.00` | Minimum confidence for showing AI suggestions to users. |
-| crosswalk_strategy | text | NOT NULL | `'BEST_MATCH'` | Strategy for cross-domain code resolution. |
-| cross_border_triggers | jsonb | NOT NULL | `'["SUPPLIER_COUNTRY_MISMATCH",...]'` | JSON array of cross-border determination trigger conditions. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | `'seed'` | Identity that created the row. |
-| updated_at | timestamptz | YES | -- | Last update timestamp. |
-| updated_by | text | YES | -- | Identity that last updated the row. |
+| Column                     | Type          | Nullable | Default                               | Description                                                             |
+| -------------------------- | ------------- | -------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| tenant_id                  | uuid          | NOT NULL | --                                    | Owning tenant. Primary key. FK to `core.tenant`.                        |
+| primary_commodity_domain   | text          | YES      | --                                    | Primary commodity classification domain. FK to `ref.commodity_domain`.  |
+| trade_commodity_domain     | text          | YES      | --                                    | Trade/customs commodity domain (e.g. HS). FK to `ref.commodity_domain`. |
+| primary_industry_domain    | text          | YES      | --                                    | Primary industry classification domain. FK to `ref.industry_domain`.    |
+| require_commodity_code     | boolean       | NOT NULL | `false`                               | Whether commodity codes are mandatory on transactional lines.           |
+| require_trade_code         | boolean       | NOT NULL | `false`                               | Whether trade/customs codes are mandatory.                              |
+| require_for_capex_above    | decimal(18,4) | YES      | --                                    | CapEx threshold above which classification is required.                 |
+| require_for_capex_currency | varchar(3)    | YES      | --                                    | Currency of the CapEx threshold. FK to `ref.currency`.                  |
+| require_for_regulated      | boolean       | NOT NULL | `true`                                | Whether classification is mandatory for regulated items.                |
+| auto_classify_enabled      | boolean       | NOT NULL | `true`                                | Whether AI auto-classification is enabled.                              |
+| auto_crosswalk_enabled     | boolean       | NOT NULL | `true`                                | Whether automatic cross-domain mapping is enabled.                      |
+| min_confidence_auto        | decimal(5,2)  | NOT NULL | `90.00`                               | Minimum confidence for automatic acceptance of AI suggestions.          |
+| min_confidence_suggest     | decimal(5,2)  | NOT NULL | `60.00`                               | Minimum confidence for showing AI suggestions to users.                 |
+| crosswalk_strategy         | text          | NOT NULL | `'BEST_MATCH'`                        | Strategy for cross-domain code resolution.                              |
+| cross_border_triggers      | jsonb         | NOT NULL | `'["SUPPLIER_COUNTRY_MISMATCH",...]'` | JSON array of cross-border determination trigger conditions.            |
+| metadata                   | jsonb         | NOT NULL | `'{}'::jsonb`                         | Extensible metadata.                                                    |
+| created_at                 | timestamptz   | NOT NULL | `now()`                               | Row creation timestamp.                                                 |
+| created_by                 | text          | NOT NULL | `'seed'`                              | Identity that created the row.                                          |
+| updated_at                 | timestamptz   | YES      | --                                    | Last update timestamp.                                                  |
+| updated_by                 | text          | YES      | --                                    | Identity that last updated the row.                                     |
 
 ### Primary Key
 
@@ -661,13 +661,13 @@ Per-tenant configuration that governs classification behavior across the platfor
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| primary_commodity_domain | ref.commodity_domain(code) | (default -- restrict) |
-| trade_commodity_domain | ref.commodity_domain(code) | (default -- restrict) |
-| primary_industry_domain | ref.industry_domain(code) | (default -- restrict) |
-| require_for_capex_currency | ref.currency(code) | (default -- restrict) |
+| FK Column                  | References                 | On Delete             |
+| -------------------------- | -------------------------- | --------------------- |
+| tenant_id                  | core.tenant(id)            | CASCADE               |
+| primary_commodity_domain   | ref.commodity_domain(code) | (default -- restrict) |
+| trade_commodity_domain     | ref.commodity_domain(code) | (default -- restrict) |
+| primary_industry_domain    | ref.industry_domain(code)  | (default -- restrict) |
+| require_for_capex_currency | ref.currency(code)         | (default -- restrict) |
 
 ### Indexes
 
@@ -688,24 +688,24 @@ Records every AI classification prediction for audit and feedback loop purposes.
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| source_type | text | NOT NULL | -- | Type of entity being classified. |
-| source_id | uuid | YES | -- | Row ID of the source entity (NULL for free-text). |
-| source_text | text | NOT NULL | -- | The input text that was classified. |
-| scheme_type | text | NOT NULL | -- | Classification scheme: `COMMODITY`, `INDUSTRY`, `SPEND_CATEGORY`. |
-| suggested_domain_code | text | YES | -- | Domain of the suggested code. |
-| suggested_code | text | NOT NULL | -- | The AI-predicted classification code. |
-| confidence | decimal(5,2) | NOT NULL | -- | Prediction confidence (0.00 - 100.00). |
-| model_id | uuid | YES | -- | AI model identifier. |
-| model_version | text | YES | -- | AI model version string. |
-| status | text | NOT NULL | `'PENDING'` | Resolution status. |
-| accepted_code | text | YES | -- | The code actually accepted (may differ if overridden). |
-| resolved_by | text | YES | -- | Identity that resolved the suggestion. |
-| resolved_at | timestamptz | YES | -- | When the suggestion was resolved. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
+| Column                | Type         | Nullable | Default             | Description                                                       |
+| --------------------- | ------------ | -------- | ------------------- | ----------------------------------------------------------------- |
+| id                    | uuid         | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                            |
+| tenant_id             | uuid         | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                               |
+| source_type           | text         | NOT NULL | --                  | Type of entity being classified.                                  |
+| source_id             | uuid         | YES      | --                  | Row ID of the source entity (NULL for free-text).                 |
+| source_text           | text         | NOT NULL | --                  | The input text that was classified.                               |
+| scheme_type           | text         | NOT NULL | --                  | Classification scheme: `COMMODITY`, `INDUSTRY`, `SPEND_CATEGORY`. |
+| suggested_domain_code | text         | YES      | --                  | Domain of the suggested code.                                     |
+| suggested_code        | text         | NOT NULL | --                  | The AI-predicted classification code.                             |
+| confidence            | decimal(5,2) | NOT NULL | --                  | Prediction confidence (0.00 - 100.00).                            |
+| model_id              | uuid         | YES      | --                  | AI model identifier.                                              |
+| model_version         | text         | YES      | --                  | AI model version string.                                          |
+| status                | text         | NOT NULL | `'PENDING'`         | Resolution status.                                                |
+| accepted_code         | text         | YES      | --                  | The code actually accepted (may differ if overridden).            |
+| resolved_by           | text         | YES      | --                  | Identity that resolved the suggestion.                            |
+| resolved_at           | timestamptz  | YES      | --                  | When the suggestion was resolved.                                 |
+| created_at            | timestamptz  | NOT NULL | `now()`             | Row creation timestamp.                                           |
 
 ### Primary Key
 
@@ -720,17 +720,17 @@ Records every AI classification prediction for audit and feedback loop purposes.
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
+| FK Column | References      | On Delete |
+| --------- | --------------- | --------- |
+| tenant_id | core.tenant(id) | CASCADE   |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_ent_cls_suggestion_tenant | tenant_id | Tenant partition scan. |
-| idx_ent_cls_suggestion_source | (tenant_id, source_type, source_id) | Find suggestions for a specific source entity. |
-| idx_ent_cls_suggestion_status | status WHERE status = 'PENDING' | Partial index for pending suggestion review queues. |
+| Index Name                    | Columns                             | Notes                                               |
+| ----------------------------- | ----------------------------------- | --------------------------------------------------- |
+| idx_ent_cls_suggestion_tenant | tenant_id                           | Tenant partition scan.                              |
+| idx_ent_cls_suggestion_source | (tenant_id, source_type, source_id) | Find suggestions for a specific source entity.      |
+| idx_ent_cls_suggestion_status | status WHERE status = 'PENDING'     | Partial index for pending suggestion review queues. |
 
 ### Relationships
 
@@ -747,19 +747,19 @@ Captures correction feedback from users, domain experts, bulk imports, and cross
 
 ### Technical Details
 
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| id | uuid | NOT NULL | `gen_random_uuid()` | Surrogate primary key. |
-| tenant_id | uuid | NOT NULL | -- | Owning tenant. FK to `core.tenant`. |
-| input_text | text | NOT NULL | -- | The original text that was classified. |
-| scheme_type | text | NOT NULL | -- | Classification scheme: `COMMODITY`, `INDUSTRY`, `SPEND_CATEGORY`. |
-| correct_domain_code | text | YES | -- | Domain of the correct code. |
-| correct_code | text | NOT NULL | -- | The verified correct classification code. |
-| source | text | NOT NULL | -- | Feedback source/origin. |
-| suggestion_id | uuid | YES | -- | Original suggestion being corrected (if any). FK to `ent.classification_suggestion`. |
-| metadata | jsonb | NOT NULL | `'{}'::jsonb` | Extensible metadata. |
-| created_at | timestamptz | NOT NULL | `now()` | Row creation timestamp. |
-| created_by | text | NOT NULL | -- | Identity that created the feedback. |
+| Column              | Type        | Nullable | Default             | Description                                                                          |
+| ------------------- | ----------- | -------- | ------------------- | ------------------------------------------------------------------------------------ |
+| id                  | uuid        | NOT NULL | `gen_random_uuid()` | Surrogate primary key.                                                               |
+| tenant_id           | uuid        | NOT NULL | --                  | Owning tenant. FK to `core.tenant`.                                                  |
+| input_text          | text        | NOT NULL | --                  | The original text that was classified.                                               |
+| scheme_type         | text        | NOT NULL | --                  | Classification scheme: `COMMODITY`, `INDUSTRY`, `SPEND_CATEGORY`.                    |
+| correct_domain_code | text        | YES      | --                  | Domain of the correct code.                                                          |
+| correct_code        | text        | NOT NULL | --                  | The verified correct classification code.                                            |
+| source              | text        | NOT NULL | --                  | Feedback source/origin.                                                              |
+| suggestion_id       | uuid        | YES      | --                  | Original suggestion being corrected (if any). FK to `ent.classification_suggestion`. |
+| metadata            | jsonb       | NOT NULL | `'{}'::jsonb`       | Extensible metadata.                                                                 |
+| created_at          | timestamptz | NOT NULL | `now()`             | Row creation timestamp.                                                              |
+| created_by          | text        | NOT NULL | --                  | Identity that created the feedback.                                                  |
 
 ### Primary Key
 
@@ -772,16 +772,16 @@ Captures correction feedback from users, domain experts, bulk imports, and cross
 
 ### Foreign Keys
 
-| FK Column | References | On Delete |
-|-----------|-----------|-----------|
-| tenant_id | core.tenant(id) | CASCADE |
-| suggestion_id | ent.classification_suggestion(id) | SET NULL |
+| FK Column     | References                        | On Delete |
+| ------------- | --------------------------------- | --------- |
+| tenant_id     | core.tenant(id)                   | CASCADE   |
+| suggestion_id | ent.classification_suggestion(id) | SET NULL  |
 
 ### Indexes
 
-| Index Name | Columns | Notes |
-|------------|---------|-------|
-| idx_ent_cls_feedback_tenant | tenant_id | Tenant partition scan. |
+| Index Name                  | Columns                                          | Notes                                        |
+| --------------------------- | ------------------------------------------------ | -------------------------------------------- |
+| idx_ent_cls_feedback_tenant | tenant_id                                        | Tenant partition scan.                       |
 | idx_ent_cls_feedback_scheme | (scheme_type, correct_domain_code, correct_code) | Training data extraction by scheme and code. |
 
 ### Relationships

@@ -53,22 +53,22 @@ The platform comprises three layers: **13 financial engines** (core computation)
 
 ### Key Capabilities
 
-| Capability | Description |
-|-----------|-------------|
-| **Event Sourcing** | Append-only event store with hash-chain integrity, monthly partitioning, and projection-based read models |
-| **13-Step Transaction Pipeline** | Deterministic intake → classification → resolution → scoring → approval → posting flow |
-| **Document Services** | Purchase Invoice, Payment Entry, Manual JE, and GL Inquiry with full lifecycle orchestration |
-| **Gross Settlement Payments** | Transactional payment posting with per-invoice allocation, WHT, discounts, and overpay protection |
-| **Bank Reconciliation** | 3-pass auto-matching (exact/fuzzy/amount-only) with manual review and session-based workflow |
-| **Hierarchical Budgets** | 4-level funding profiles (Enterprise → Division → OU → Intent) with real-time health monitoring |
-| **Multi-Book Assets** | Statutory, tax, management, and insurance depreciation books with 5 depreciation methods |
-| **Inventory Subledger** | FIFO/LIFO/weighted-average/standard/specific valuation with lot and serial tracking |
-| **Multi-Entity Federation** | Legal entity registry, intercompany agreements, transfer pricing, FX revaluation, and consolidation elimination |
-| **AI-Assisted Processing** | Atlas AI engine with L1-L3 autonomy levels, drift monitoring, and reversible autonomous actions |
-| **Outbox Pattern** | Post-commit side effects (inventory, asset, commission, federation) via idempotent handlers with retry and dead-letter |
-| **Blueprint Differentiation** | 6 blueprints (A-F) scaling from 1 OU/15 accounts to 13 OUs/168 accounts per tenant |
-| **HTTP API** | 36 RESTful endpoints across 4 modules (accounting, payments, banking, GL inquiry) |
-| **UI Components** | 5 presentational components + 4 tab plugins with data-fetching hooks |
+| Capability                       | Description                                                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Event Sourcing**               | Append-only event store with hash-chain integrity, monthly partitioning, and projection-based read models              |
+| **13-Step Transaction Pipeline** | Deterministic intake → classification → resolution → scoring → approval → posting flow                                 |
+| **Document Services**            | Purchase Invoice, Payment Entry, Manual JE, and GL Inquiry with full lifecycle orchestration                           |
+| **Gross Settlement Payments**    | Transactional payment posting with per-invoice allocation, WHT, discounts, and overpay protection                      |
+| **Bank Reconciliation**          | 3-pass auto-matching (exact/fuzzy/amount-only) with manual review and session-based workflow                           |
+| **Hierarchical Budgets**         | 4-level funding profiles (Enterprise → Division → OU → Intent) with real-time health monitoring                        |
+| **Multi-Book Assets**            | Statutory, tax, management, and insurance depreciation books with 5 depreciation methods                               |
+| **Inventory Subledger**          | FIFO/LIFO/weighted-average/standard/specific valuation with lot and serial tracking                                    |
+| **Multi-Entity Federation**      | Legal entity registry, intercompany agreements, transfer pricing, FX revaluation, and consolidation elimination        |
+| **AI-Assisted Processing**       | Atlas AI engine with L1-L3 autonomy levels, drift monitoring, and reversible autonomous actions                        |
+| **Outbox Pattern**               | Post-commit side effects (inventory, asset, commission, federation) via idempotent handlers with retry and dead-letter |
+| **Blueprint Differentiation**    | 6 blueprints (A-F) scaling from 1 OU/15 accounts to 13 OUs/168 accounts per tenant                                     |
+| **HTTP API**                     | 36 RESTful endpoints across 4 modules (accounting, payments, banking, GL inquiry)                                      |
+| **UI Components**                | 5 presentational components + 4 tab plugins with data-fetching hooks                                                   |
 
 ### Design Mandates
 
@@ -103,14 +103,14 @@ Phase 1 (Core)          Phase 2 (Extended)      Phase 3 (Enterprise)    Phase 4 
 
 ### 2.2 Schema Layout
 
-| Schema | Purpose | Engine(s) |
-|--------|---------|-----------|
-| `evt` | Immutable event store | Event Store |
-| `fin` | All financial domain tables | All other engines |
-| `meta` | Approval workflow templates | Decision Grid (approval routing) |
-| `core` | Tenants, organizational units | OU + Intent (org hierarchy) |
-| `ref` | Reference data (currencies, countries, UoM) | Tax, Posting, Inventory |
-| `ent` | Entity master data (suppliers, customers, products) | Commitment, Inventory, Commission, Production |
+| Schema | Purpose                                             | Engine(s)                                     |
+| ------ | --------------------------------------------------- | --------------------------------------------- |
+| `evt`  | Immutable event store                               | Event Store                                   |
+| `fin`  | All financial domain tables                         | All other engines                             |
+| `meta` | Approval workflow templates                         | Decision Grid (approval routing)              |
+| `core` | Tenants, organizational units                       | OU + Intent (org hierarchy)                   |
+| `ref`  | Reference data (currencies, countries, UoM)         | Tax, Posting, Inventory                       |
+| `ent`  | Entity master data (suppliers, customers, products) | Commitment, Inventory, Commission, Production |
 
 ### 2.3 RuntimeModule Pattern
 
@@ -124,7 +124,7 @@ export const engineModule: RuntimeModule = {
   },
   contribute(container) {
     // Phase 2: Register health checks, event consumers, background jobs
-  }
+  },
 };
 ```
 
@@ -148,41 +148,41 @@ This eliminates exception-driven control flow and makes error handling explicit 
 
 ### 3.1 Tenant → Blueprint Mapping
 
-| # | Tenant | Country | Currency | FY Start | Blueprint | Tier |
-|---|--------|---------|----------|----------|-----------|------|
-| 1 | `demo_my` | MY | MYR | Jan | **A** | Freelancer / Solo |
-| 2 | `demo_in` | IN | INR | Apr | **A** | Freelancer / Solo |
-| 3 | `demo_sa` | SA | SAR | Jan | **B** | Small (0-25 employees) |
-| 4 | `demo_qa` | QA | QAR | Jan | **B** | Small (0-25 employees) |
-| 5 | `demo_fr` | FR | EUR | Jan | **C** | SME (up to 200 employees) |
-| 6 | `demo_de` | DE | EUR | Jan | **C** | SME (up to 200 employees) |
-| 7 | `demo_ch` | CH | CHF | Jan | **E** | Multi-location |
-| 8 | `demo_us` | US | USD | Jan | **D** | Big single country |
-| 9 | `demo_ca` | CA | CAD | Apr | **F** | Multi-country enterprise |
+| #   | Tenant    | Country | Currency | FY Start | Blueprint | Tier                      |
+| --- | --------- | ------- | -------- | -------- | --------- | ------------------------- |
+| 1   | `demo_my` | MY      | MYR      | Jan      | **A**     | Freelancer / Solo         |
+| 2   | `demo_in` | IN      | INR      | Apr      | **A**     | Freelancer / Solo         |
+| 3   | `demo_sa` | SA      | SAR      | Jan      | **B**     | Small (0-25 employees)    |
+| 4   | `demo_qa` | QA      | QAR      | Jan      | **B**     | Small (0-25 employees)    |
+| 5   | `demo_fr` | FR      | EUR      | Jan      | **C**     | SME (up to 200 employees) |
+| 6   | `demo_de` | DE      | EUR      | Jan      | **C**     | SME (up to 200 employees) |
+| 7   | `demo_ch` | CH      | CHF      | Jan      | **E**     | Multi-location            |
+| 8   | `demo_us` | US      | USD      | Jan      | **D**     | Big single country        |
+| 9   | `demo_ca` | CA      | CAD      | Apr      | **F**     | Multi-country enterprise  |
 
 ### 3.2 Entity Code Strategy
 
 `entity_code` represents the **posting entity** = **legal/statutory boundary**:
 
-| Blueprint | entity_code(s) | Rationale |
-|-----------|---------------|-----------|
-| A, B, C, D, E | `'HQ'` only | Single statutory entity. Branches and SSCs are OUs, not posting entities. |
-| F | `'LE-CA'`, `'LE-MY'`, `'LE-SA'`, `'LE-IN'` | Holding company + 3 subsidiaries. Each has its own COA, fiscal periods, and tax regime. |
+| Blueprint     | entity_code(s)                             | Rationale                                                                               |
+| ------------- | ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| A, B, C, D, E | `'HQ'` only                                | Single statutory entity. Branches and SSCs are OUs, not posting entities.               |
+| F             | `'LE-CA'`, `'LE-MY'`, `'LE-SA'`, `'LE-IN'` | Holding company + 3 subsidiaries. Each has its own COA, fiscal periods, and tax regime. |
 
 ### 3.3 Blueprint Scaling Summary
 
-| Dimension | A | B | C | D | E | F |
-|-----------|---|---|---|---|---|---|
-| **Operating Units** | 1 | 5 | 8 | 12 | 9 | 13 |
-| **entity_codes** | 1 | 1 | 1 | 1 | 1 | 4 |
-| **COA Accounts** | ~18 | ~26 | ~42 | ~52 | ~42 | ~168 (42×4) |
-| **Fiscal Periods** | 13 | 13 | 13 | 13 | 13 | 52 (13×4) |
-| **Cost Centers** | 1 | 3 | 6 | 8 | 6 | 10 |
-| **Profit Centers** | 0 | 1 | 2 | 3 | 3 | 4 |
-| **Tax Jurisdictions** | 1 | 1 | 1 | 4 | 4 | 5 |
-| **Funding Profiles** | 0 | 0 | 5 | 12 | 7 | 16 |
-| **Approval Stages** | 1 | 2 | 3 | 3 | 2 | 3 |
-| **Legal Entities** | 0 | 0 | 0 | 0 | 0 | 4 |
+| Dimension             | A   | B   | C   | D   | E   | F           |
+| --------------------- | --- | --- | --- | --- | --- | ----------- |
+| **Operating Units**   | 1   | 5   | 8   | 12  | 9   | 13          |
+| **entity_codes**      | 1   | 1   | 1   | 1   | 1   | 4           |
+| **COA Accounts**      | ~18 | ~26 | ~42 | ~52 | ~42 | ~168 (42×4) |
+| **Fiscal Periods**    | 13  | 13  | 13  | 13  | 13  | 52 (13×4)   |
+| **Cost Centers**      | 1   | 3   | 6   | 8   | 6   | 10          |
+| **Profit Centers**    | 0   | 1   | 2   | 3   | 3   | 4           |
+| **Tax Jurisdictions** | 1   | 1   | 1   | 4   | 4   | 5           |
+| **Funding Profiles**  | 0   | 0   | 5   | 12  | 7   | 16          |
+| **Approval Stages**   | 1   | 2   | 3   | 3   | 2   | 3           |
+| **Legal Entities**    | 0   | 0   | 0   | 0   | 0   | 4           |
 
 ### 3.4 Definition Locks (Invariants)
 
@@ -216,35 +216,36 @@ The Event Store is the foundational persistence layer for all financial engines.
 
 **Universal Event Envelope** — Every event shares a common structure:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `event_type` | VARCHAR(100) | e.g., `funding.reserved`, `commitment.created`, `posting.created` |
-| `source_engine` | VARCHAR(50) | Engine that emitted the event |
-| `txn_id` | UUID | Transaction identity (links related events) |
-| `doc_id` | UUID | Source document (PO, Invoice, etc.) |
-| `doc_type` | VARCHAR(20) | `PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER` |
-| `correlation_id` | UUID | Causal chain root |
-| `actor_type` | VARCHAR(20) | `USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER` |
-| `payload` | JSONB | Domain-specific event data |
-| `payload_hash` | VARCHAR(64) | SHA-256 for tamper detection |
-| `partition_domain` | VARCHAR(30) | Event ordering domain (e.g., `OU_FLOW`, `FUNDING_FLOW`) |
-| `sequence_no` | BIGINT | Monotonic per-partition sequence |
-| `idempotency_key` | VARCHAR(200) | Prevents duplicate event emission |
+| Field              | Type         | Description                                                                                        |
+| ------------------ | ------------ | -------------------------------------------------------------------------------------------------- |
+| `event_type`       | VARCHAR(100) | e.g., `funding.reserved`, `commitment.created`, `posting.created`                                  |
+| `source_engine`    | VARCHAR(50)  | Engine that emitted the event                                                                      |
+| `txn_id`           | UUID         | Transaction identity (links related events)                                                        |
+| `doc_id`           | UUID         | Source document (PO, Invoice, etc.)                                                                |
+| `doc_type`         | VARCHAR(20)  | `PR`, `PO`, `INVOICE`, `PAYMENT`, `CREDIT`, `ACCRUAL`, `RECLASS`, `CONTRACT`, `GRN`, `JE`, `OTHER` |
+| `correlation_id`   | UUID         | Causal chain root                                                                                  |
+| `actor_type`       | VARCHAR(20)  | `USER`, `SYSTEM`, `AI_AGENT`, `SCHEDULER`                                                          |
+| `payload`          | JSONB        | Domain-specific event data                                                                         |
+| `payload_hash`     | VARCHAR(64)  | SHA-256 for tamper detection                                                                       |
+| `partition_domain` | VARCHAR(30)  | Event ordering domain (e.g., `OU_FLOW`, `FUNDING_FLOW`)                                            |
+| `sequence_no`      | BIGINT       | Monotonic per-partition sequence                                                                   |
+| `idempotency_key`  | VARCHAR(200) | Prevents duplicate event emission                                                                  |
 
 **Partition Domains** (deterministic ordering groups):
+
 - `OU_FLOW`, `COMMITMENT_FLOW`, `FUNDING_FLOW`, `ENTITY_FLOW`, `INVENTORY_FLOW`, `WORKORDER_FLOW`, `ASSET_FLOW`, `COMMISSION_FLOW`, `IC_FLOW`
 
 **Partition Key Format**: `{domain}:{tenantId}:{entityCode}:{primaryId}`
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `evt.event` | Append-only event store (monthly partitioned) | UNIQUE `(tenant_id, partition_domain, partition_key, sequence_no)` |
-| `evt.event_snapshot` | Projection state snapshots | Indexed by `(projection_id, partition_key)` |
-| `evt.projection_registry` | Formal projection registration | UNIQUE `(tenant_id, projection_id)` |
-| `evt.projection_checkpoint` | Consumer resume points | UNIQUE `(tenant_id, projection_id, partition_domain, partition_key)` |
-| `evt.sequence_counter` | Atomic monotonic counter | PK `(tenant_id, partition_domain, partition_key)` |
+| Table                       | Purpose                                       | Key Constraint                                                       |
+| --------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| `evt.event`                 | Append-only event store (monthly partitioned) | UNIQUE `(tenant_id, partition_domain, partition_key, sequence_no)`   |
+| `evt.event_snapshot`        | Projection state snapshots                    | Indexed by `(projection_id, partition_key)`                          |
+| `evt.projection_registry`   | Formal projection registration                | UNIQUE `(tenant_id, projection_id)`                                  |
+| `evt.projection_checkpoint` | Consumer resume points                        | UNIQUE `(tenant_id, projection_id, partition_domain, partition_key)` |
+| `evt.sequence_counter`      | Atomic monotonic counter                      | PK `(tenant_id, partition_domain, partition_key)`                    |
 
 #### Immutability Enforcement
 
@@ -256,27 +257,27 @@ The Event Store is the foundational persistence layer for all financial engines.
 
 Projections are materialized read models rebuilt from events:
 
-| Projection | Engine | Source Events | Domain |
-|-----------|--------|---------------|--------|
-| `gl-balance` | Posting | `posting.created`, `posting.reversed` | `ENTITY_FLOW` |
-| `funding-profile-state` | Budget | `funding.reserved/committed/consumed/released` | `FUNDING_FLOW` |
-| `commitment-lifecycle` | Commitment | `commitment.created/fulfilled/cancelled` | `COMMITMENT_FLOW` |
-| `inventory-balance` | Inventory | `inventory.receipt/issue/transfer` | `INVENTORY_FLOW` |
-| `asset-register` | Asset | `asset.capitalize/depreciate/dispose` | `ASSET_FLOW` |
-| `commission-accrual` | Commission | `commission.calculated/accrued/settled` | `COMMISSION_FLOW` |
-| `ic-netting` | Federation | `ic.created/mirrored/netted` | `IC_FLOW` |
-| `wip-accumulation` | Production | `workorder.material/labor/overhead` | `WORKORDER_FLOW` |
+| Projection              | Engine     | Source Events                                  | Domain            |
+| ----------------------- | ---------- | ---------------------------------------------- | ----------------- |
+| `gl-balance`            | Posting    | `posting.created`, `posting.reversed`          | `ENTITY_FLOW`     |
+| `funding-profile-state` | Budget     | `funding.reserved/committed/consumed/released` | `FUNDING_FLOW`    |
+| `commitment-lifecycle`  | Commitment | `commitment.created/fulfilled/cancelled`       | `COMMITMENT_FLOW` |
+| `inventory-balance`     | Inventory  | `inventory.receipt/issue/transfer`             | `INVENTORY_FLOW`  |
+| `asset-register`        | Asset      | `asset.capitalize/depreciate/dispose`          | `ASSET_FLOW`      |
+| `commission-accrual`    | Commission | `commission.calculated/accrued/settled`        | `COMMISSION_FLOW` |
+| `ic-netting`            | Federation | `ic.created/mirrored/netted`                   | `IC_FLOW`         |
+| `wip-accumulation`      | Production | `workorder.material/labor/overhead`            | `WORKORDER_FLOW`  |
 
 **Rebuild Strategies**: `SNAPSHOT_AND_CATCHUP` (default) or `FULL_REBUILD`
 
 #### Services
 
-| Service | Responsibility |
-|---------|---------------|
-| `EventPublisher` | Append events with idempotency check, hash computation, sequence assignment |
-| `EventConsumer` | Subscribe to event types, manage checkpoints, handle ordering |
-| `ProjectionManager` | Register projections, manage snapshots, trigger rebuilds |
-| `TieringService` | Archive old events to cold storage (hot/warm/cold tiers) |
+| Service             | Responsibility                                                              |
+| ------------------- | --------------------------------------------------------------------------- |
+| `EventPublisher`    | Append events with idempotency check, hash computation, sequence assignment |
+| `EventConsumer`     | Subscribe to event types, manage checkpoints, handle ordering               |
+| `ProjectionManager` | Register projections, manage snapshots, trigger rebuilds                    |
+| `TieringService`    | Archive old events to cold storage (hot/warm/cold tiers)                    |
 
 ---
 
@@ -306,11 +307,13 @@ Level 3: DEPARTMENT / COST-CENTER
 ```
 
 **OU Status Lifecycle**:
+
 ```
 DRAFT → ACTIVE → UNDER_REVIEW → SUNSET → ARCHIVED
 ```
 
 **Business Intent Domains**:
+
 - `OPEX` — Operating expenses (travel, IT, facilities, professional services, marketing)
 - `CAPEX` — Capital expenditures (equipment, IT infrastructure, vehicles, intangibles)
 - `REVENUE` — Revenue recognition (sales, services, subscriptions)
@@ -336,20 +339,20 @@ DRAFT → ACTIVE → UNDER_REVIEW → SUNSET → ARCHIVED
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.operating_unit` | Finance-scoped OU with defaults + classification policy | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.business_intent` | Intent ontology with GL defaults + commodity affinities | UNIQUE `(tenant_id, code)` |
-| `fin.ou_intent_mapping` | OU↔Intent availability + approval/compliance overrides | UNIQUE `(tenant_id, ou_id, intent_id)` |
-| `fin.spend_category` | Tenant spend groups with financial properties | UNIQUE `(tenant_id, code)` |
-| `fin.spend_category_commodity_map` | Maps commodity code ranges to spend categories | UNIQUE `(tenant_id, category_id, domain, code_from)` |
-| `fin.category_intent_rule` | Context-driven intent resolution with explanation templates | UNIQUE `(tenant_id, category_id, condition_type, priority)` |
-| `ent.commodity_crosswalk` | Cross-domain commodity code mappings (UNSPSC/HS) | UNIQUE `(source_domain, source_code, target_domain, target_code)` |
-| `ent.industry_crosswalk` | Cross-domain industry code mappings (ISIC/NAICS) | UNIQUE `(source_domain, source_code, target_domain, target_code)` |
-| `ent.category_commodity_map` | Maps tenant product categories to standard codes | UNIQUE `(tenant_id, category_id, domain, code)` |
-| `ent.classification_config` | Per-tenant classification preferences + policies | PK `(tenant_id)` |
-| `ent.classification_suggestion` | AI classification predictions with resolution tracking | Indexed by `(tenant_id, source_type, source_id)` |
-| `ent.classification_feedback` | AI training feedback from user corrections | Indexed by `(scheme_type, domain, code)` |
+| Table                              | Purpose                                                     | Key Constraint                                                    |
+| ---------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `fin.operating_unit`               | Finance-scoped OU with defaults + classification policy     | UNIQUE `(tenant_id, entity_code, code)`                           |
+| `fin.business_intent`              | Intent ontology with GL defaults + commodity affinities     | UNIQUE `(tenant_id, code)`                                        |
+| `fin.ou_intent_mapping`            | OU↔Intent availability + approval/compliance overrides      | UNIQUE `(tenant_id, ou_id, intent_id)`                            |
+| `fin.spend_category`               | Tenant spend groups with financial properties               | UNIQUE `(tenant_id, code)`                                        |
+| `fin.spend_category_commodity_map` | Maps commodity code ranges to spend categories              | UNIQUE `(tenant_id, category_id, domain, code_from)`              |
+| `fin.category_intent_rule`         | Context-driven intent resolution with explanation templates | UNIQUE `(tenant_id, category_id, condition_type, priority)`       |
+| `ent.commodity_crosswalk`          | Cross-domain commodity code mappings (UNSPSC/HS)            | UNIQUE `(source_domain, source_code, target_domain, target_code)` |
+| `ent.industry_crosswalk`           | Cross-domain industry code mappings (ISIC/NAICS)            | UNIQUE `(source_domain, source_code, target_domain, target_code)` |
+| `ent.category_commodity_map`       | Maps tenant product categories to standard codes            | UNIQUE `(tenant_id, category_id, domain, code)`                   |
+| `ent.classification_config`        | Per-tenant classification preferences + policies            | PK `(tenant_id)`                                                  |
+| `ent.classification_suggestion`    | AI classification predictions with resolution tracking      | Indexed by `(tenant_id, source_type, source_id)`                  |
+| `ent.classification_feedback`      | AI training feedback from user corrections                  | Indexed by `(scheme_type, domain, code)`                          |
 
 #### Resolution Flow
 
@@ -377,27 +380,27 @@ User selects OU (auto-selected from profile, switchable if permitted)
 
 #### Acceptance Criteria
 
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 1 | Simple domestic: OU + "office supplies" + $200 | Suggests CAT-OFFICE → OPEX-GENERAL; no HS needed; submittable |
-| 2 | Below threshold: "Laptop" $800 | Suggests CAT-IT-HW → OPEX-IT with explanation |
-| 3 | Above threshold: "Laptop" $2,400 | Suggests CAT-IT-HW → CAPEX-IT with explanation |
-| 4 | Subscription: "Laptop" $2,400/mo | IS_RECURRING → OPEX-IT regardless of amount |
-| 5 | Restricted intent: HR user opens dropdown | Transfer/Regulatory/Admin intents not visible |
-| 6 | Restricted category: Non-authorized user | Cannot select "Legal Settlement" |
-| 7 | Cross-border: Supplier DE, entity MY | is_cross_border=true → HS mandatory → blocked until provided |
-| 8 | Override tracking: User changes CAPEX→OPEX | Logs original suggestion, user selection, reason |
-| 9 | Classification optional: OPEX-TRAVEL | No classification required; user picks intent directly |
-| 10 | Classification mandatory (policy): CAPEX above threshold | Category required (asset tagging depends on it) |
+| #   | Scenario                                                 | Expected Behavior                                             |
+| --- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | Simple domestic: OU + "office supplies" + $200           | Suggests CAT-OFFICE → OPEX-GENERAL; no HS needed; submittable |
+| 2   | Below threshold: "Laptop" $800                           | Suggests CAT-IT-HW → OPEX-IT with explanation                 |
+| 3   | Above threshold: "Laptop" $2,400                         | Suggests CAT-IT-HW → CAPEX-IT with explanation                |
+| 4   | Subscription: "Laptop" $2,400/mo                         | IS_RECURRING → OPEX-IT regardless of amount                   |
+| 5   | Restricted intent: HR user opens dropdown                | Transfer/Regulatory/Admin intents not visible                 |
+| 6   | Restricted category: Non-authorized user                 | Cannot select "Legal Settlement"                              |
+| 7   | Cross-border: Supplier DE, entity MY                     | is_cross_border=true → HS mandatory → blocked until provided  |
+| 8   | Override tracking: User changes CAPEX→OPEX               | Logs original suggestion, user selection, reason              |
+| 9   | Classification optional: OPEX-TRAVEL                     | No classification required; user picks intent directly        |
+| 10  | Classification mandatory (policy): CAPEX above threshold | Category required (asset tagging depends on it)               |
 
 #### Ownership Model
 
-| Owner | Manages |
-|-------|---------|
-| Finance | Intent library, spend categories, CAPEX thresholds, depreciation defaults, approval policies |
-| Procurement | Catalogs, supplier item codes, vendor-to-classification mappings, default categories by commodity |
-| Compliance/Tax | Cross-border rules (when HS required), regulatory restrictions, sanctions |
-| Business OU owners | OU structure, which intents/categories their OU is allowed to use (within finance policy) |
+| Owner              | Manages                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| Finance            | Intent library, spend categories, CAPEX thresholds, depreciation defaults, approval policies      |
+| Procurement        | Catalogs, supplier item codes, vendor-to-classification mappings, default categories by commodity |
+| Compliance/Tax     | Cross-border rules (when HS required), regulatory restrictions, sanctions                         |
+| Business OU owners | OU structure, which intents/categories their OU is allowed to use (within finance policy)         |
 
 ---
 
@@ -414,38 +417,38 @@ See [Section 5](#5-transaction-pipeline-13-step-decision-grid) for the full pipe
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.transaction_pipeline` | Transaction processing state | UNIQUE `(txn_id)` |
-| `fin.policy_module` | Registered policy modules | UNIQUE `(tenant_id, module_id, module_version)` |
-| `fin.policy_evaluation_log` | Immutable policy decision audit (MC-5) | Indexed by `(txn_id)` |
-| `fin.smart_default_rule` | Configurable default resolution rules | Indexed by `(tenant_id, field_name)` |
-| `fin.exception` | Policy/funding overrides with time-bounded validity | UNIQUE `(exception_id)` |
+| Table                       | Purpose                                             | Key Constraint                                  |
+| --------------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| `fin.transaction_pipeline`  | Transaction processing state                        | UNIQUE `(txn_id)`                               |
+| `fin.policy_module`         | Registered policy modules                           | UNIQUE `(tenant_id, module_id, module_version)` |
+| `fin.policy_evaluation_log` | Immutable policy decision audit (MC-5)              | Indexed by `(txn_id)`                           |
+| `fin.smart_default_rule`    | Configurable default resolution rules               | Indexed by `(tenant_id, field_name)`            |
+| `fin.exception`             | Policy/funding overrides with time-bounded validity | UNIQUE `(exception_id)`                         |
 
 #### Policy Modules (8 per tenant)
 
-| Module | Scope | Description |
-|--------|-------|-------------|
-| `POL-SPEND` | Spending limits | Amount thresholds by role, OU, and intent |
-| `POL-VENDOR` | Vendor compliance | Preferred vendor lists, blacklists |
-| `POL-BUDGET` | Budget adherence | FP utilization thresholds |
-| `POL-CATEGORY` | Category restrictions | Allowed/blocked expense categories per OU |
-| `POL-SOD` | Segregation of duties | Requester != approver, submitter != receiver |
-| `POL-TEMPORAL` | Time-based controls | Blackout periods, fiscal close restrictions |
-| `POL-GEO` | Geographic restrictions | Country/region compliance rules |
-| `POL-CONTRACT` | Contract compliance | Contract term adherence |
+| Module         | Scope                   | Description                                  |
+| -------------- | ----------------------- | -------------------------------------------- |
+| `POL-SPEND`    | Spending limits         | Amount thresholds by role, OU, and intent    |
+| `POL-VENDOR`   | Vendor compliance       | Preferred vendor lists, blacklists           |
+| `POL-BUDGET`   | Budget adherence        | FP utilization thresholds                    |
+| `POL-CATEGORY` | Category restrictions   | Allowed/blocked expense categories per OU    |
+| `POL-SOD`      | Segregation of duties   | Requester != approver, submitter != receiver |
+| `POL-TEMPORAL` | Time-based controls     | Blackout periods, fiscal close restrictions  |
+| `POL-GEO`      | Geographic restrictions | Country/region compliance rules              |
+| `POL-CONTRACT` | Contract compliance     | Contract term adherence                      |
 
 #### Workflow Path Determination
 
 Based on composite risk score (weighted: policy 40%, risk 40%, AI confidence 20%):
 
-| Score Range | Path | Action |
-|------------|------|--------|
-| 0–19 | `ZERO_APPROVAL` | Auto-approve, no human review |
-| 20–59 | `STANDARD` | Standard approval workflow |
-| 60–79 | `ENHANCED` | Enhanced multi-level review |
-| 80–99 | `EXECUTIVE` | Executive-level approval required |
-| 100 or BLOCKED | `BLOCKED` | Reject with remediation guidance |
+| Score Range    | Path            | Action                            |
+| -------------- | --------------- | --------------------------------- |
+| 0–19           | `ZERO_APPROVAL` | Auto-approve, no human review     |
+| 20–59          | `STANDARD`      | Standard approval workflow        |
+| 60–79          | `ENHANCED`      | Enhanced multi-level review       |
+| 80–99          | `EXECUTIVE`     | Executive-level approval required |
+| 100 or BLOCKED | `BLOCKED`       | Reject with remediation guidance  |
 
 ---
 
@@ -471,14 +474,15 @@ Level 4: Intent (purpose-specific — OPEX, CAPEX, etc.)
 
 **Fund Lifecycle Actions**:
 
-| Action | Trigger | Effect on FP |
-|--------|---------|-------------|
-| `RESERVE` | Transaction submitted to pipeline | +reserved_amount |
-| `COMMIT` | PO/Contract approved | +committed_amount, −reserved_amount |
-| `CONSUME` | GRN received or payment made | +consumed_amount, −committed_amount |
-| `RELEASE` | Cancel, partial delivery, or credit | +released_amount |
+| Action    | Trigger                             | Effect on FP                        |
+| --------- | ----------------------------------- | ----------------------------------- |
+| `RESERVE` | Transaction submitted to pipeline   | +reserved_amount                    |
+| `COMMIT`  | PO/Contract approved                | +committed_amount, −reserved_amount |
+| `CONSUME` | GRN received or payment made        | +consumed_amount, −committed_amount |
+| `RELEASE` | Cancel, partial delivery, or credit | +released_amount                    |
 
 **Available Balance Formula**:
+
 ```
 available = total_limit − (reserved + committed + consumed − released)
 utilization% = (reserved + committed + consumed − released) / total_limit × 100
@@ -486,25 +490,26 @@ utilization% = (reserved + committed + consumed − released) / total_limit × 1
 
 **Health Status** (real-time, configurable thresholds):
 
-| Status | Default Threshold | Meaning |
-|--------|-------------------|---------|
-| `GREEN` | < 75% utilization | Healthy |
-| `YELLOW` | 75–89% | Warning — approaching limit |
-| `RED` | 90–99% | Critical — near exhaustion |
-| `BLACK` | ≥ 100% | Overspent — all actions blocked |
+| Status   | Default Threshold | Meaning                         |
+| -------- | ----------------- | ------------------------------- |
+| `GREEN`  | < 75% utilization | Healthy                         |
+| `YELLOW` | 75–89%            | Warning — approaching limit     |
+| `RED`    | 90–99%            | Critical — near exhaustion      |
+| `BLACK`  | ≥ 100%            | Overspent — all actions blocked |
 
 **Trend Analysis**: Compares current vs. previous utilization with 2% significance threshold:
+
 - `IMPROVING`: utilization dropped by > 2%
 - `STABLE`: change within ±2%
 - `DETERIORATING`: utilization increased by > 2%
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.funding_profile` | 4-level hierarchical budget master | UNIQUE `(tenant_id, entity_code, code, fiscal_year)` |
-| `fin.funding_transaction` | Immutable action audit trail | UNIQUE `(idempotency_key)` |
-| `fin.funding_transfer` | Cross-FP fund reallocation requests | Indexed by `(from_fp_id, to_fp_id)` |
+| Table                     | Purpose                             | Key Constraint                                       |
+| ------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `fin.funding_profile`     | 4-level hierarchical budget master  | UNIQUE `(tenant_id, entity_code, code, fiscal_year)` |
+| `fin.funding_transaction` | Immutable action audit trail        | UNIQUE `(idempotency_key)`                           |
+| `fin.funding_transfer`    | Cross-FP fund reallocation requests | Indexed by `(from_fp_id, to_fp_id)`                  |
 
 #### Boundary Rules
 
@@ -515,13 +520,13 @@ utilization% = (reserved + committed + consumed − released) / total_limit × 1
 
 #### Blueprint-Specific Funding
 
-| Blueprint | Levels Used | Example Hierarchy |
-|-----------|------------|-------------------|
-| A, B | None (funding disabled) | — |
-| C | 3 | Enterprise → Division (Products/Services) → Department |
-| D | 4 | Enterprise → Region (East/West) → Branch (NYC/SF) → Intent (OPEX/CAPEX) |
-| E | 3 | Enterprise → Branch (ZH/GVA/BSL) → Department |
-| F | 4 | Group → Legal Entity (LE-CA/MY/SA/IN) → Department → Intent |
+| Blueprint | Levels Used             | Example Hierarchy                                                       |
+| --------- | ----------------------- | ----------------------------------------------------------------------- |
+| A, B      | None (funding disabled) | —                                                                       |
+| C         | 3                       | Enterprise → Division (Products/Services) → Department                  |
+| D         | 4                       | Enterprise → Region (East/West) → Branch (NYC/SF) → Intent (OPEX/CAPEX) |
+| E         | 3                       | Enterprise → Branch (ZH/GVA/BSL) → Department                           |
+| F         | 4                       | Group → Legal Entity (LE-CA/MY/SA/IN) → Department → Intent             |
 
 ---
 
@@ -539,6 +544,7 @@ Tracks financial obligations (purchase orders, contracts, subscriptions, leases)
 **Document Types**: `PR` (Purchase Requisition), `PO` (Purchase Order), `CONTRACT`, `SUBSCRIPTION`, `LEASE`
 
 **Commitment Types**:
+
 - `ONE_TIME` — Single payment/delivery
 - `FIXED_RECURRING` — Regular scheduled payments (monthly SaaS, rent)
 - `MILESTONE` — Payment upon milestone completion
@@ -547,6 +553,7 @@ Tracks financial obligations (purchase orders, contracts, subscriptions, leases)
 - `RETENTION_RELEASE` — Holdback released on completion
 
 **Status Lifecycle**:
+
 ```
 DRAFT → PENDING → ACTIVE → PARTIALLY_FULFILLED → FULFILLED
                          ↘ CANCELLED
@@ -554,6 +561,7 @@ DRAFT → PENDING → ACTIVE → PARTIALLY_FULFILLED → FULFILLED
 ```
 
 **Fulfillment Tracking**:
+
 - `remaining_amount` is a generated column: `total_amount − fulfilled_amount`
 - Status auto-transitions: when `fulfilled_amount = total_amount`, status becomes `FULFILLED`
 
@@ -561,11 +569,11 @@ DRAFT → PENDING → ACTIVE → PARTIALLY_FULFILLED → FULFILLED
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.commitment` | Obligation master | UNIQUE `(tenant_id, entity_code, doc_number)` |
-| `fin.commitment_schedule` | Payment/delivery schedule entries | UNIQUE `(tenant_id, commitment_id, schedule_seq)` |
-| `fin.commitment_fulfillment` | GRN/receipt/payment match records | Indexed by `(commitment_id)` |
+| Table                        | Purpose                           | Key Constraint                                    |
+| ---------------------------- | --------------------------------- | ------------------------------------------------- |
+| `fin.commitment`             | Obligation master                 | UNIQUE `(tenant_id, entity_code, doc_number)`     |
+| `fin.commitment_schedule`    | Payment/delivery schedule entries | UNIQUE `(tenant_id, commitment_id, schedule_seq)` |
+| `fin.commitment_fulfillment` | GRN/receipt/payment match records | Indexed by `(commitment_id)`                      |
 
 #### Cross-Engine Integration
 
@@ -589,52 +597,56 @@ Implements double-entry bookkeeping with chart of accounts management, fiscal pe
 
 **Chart of Accounts** — Hierarchical GL account master:
 
-| Account Range | Type | Normal Balance |
-|--------------|------|----------------|
-| 1000–1999 | ASSET | DEBIT |
-| 2000–2999 | LIABILITY | CREDIT |
-| 3000–3999 | EQUITY | CREDIT |
-| 4000–4999 | REVENUE | CREDIT |
-| 5000–5999 | EXPENSE (COGS) | DEBIT |
-| 6000–6999 | EXPENSE (OPEX) | DEBIT |
-| 7000–7999 | OTHER INCOME | CREDIT |
-| 8000–8999 | OTHER EXPENSE | DEBIT |
-| 9000–9999 | TAX PROVISION | DEBIT |
+| Account Range | Type           | Normal Balance |
+| ------------- | -------------- | -------------- |
+| 1000–1999     | ASSET          | DEBIT          |
+| 2000–2999     | LIABILITY      | CREDIT         |
+| 3000–3999     | EQUITY         | CREDIT         |
+| 4000–4999     | REVENUE        | CREDIT         |
+| 5000–5999     | EXPENSE (COGS) | DEBIT          |
+| 6000–6999     | EXPENSE (OPEX) | DEBIT          |
+| 7000–7999     | OTHER INCOME   | CREDIT         |
+| 8000–8999     | OTHER EXPENSE  | DEBIT          |
+| 9000–9999     | TAX PROVISION  | DEBIT          |
 
 - `is_group = true`: Summary/header account (no direct posting)
 - `is_group = false`: Postable leaf account
 - `subledger_type`: Links to AP, AR, ASSET, INVENTORY, WIP, or COMMISSION subledger
 
 **Fiscal Period Control**:
+
 ```
 FUTURE → OPEN → SOFT_CLOSE → HARD_CLOSE
 ```
+
 - `OPEN`: All postings allowed
 - `SOFT_CLOSE`: Only reversals allowed
 - `HARD_CLOSE`: No modifications (final)
 
 **Double-Entry Validation** (enforced at both application and database level):
+
 - `CHECK (total_debit = total_credit)` on `journal_entry`
 - `CHECK (NOT (debit_amount > 0 AND credit_amount > 0))` on `journal_line` — each line is single-sided
 - Minimum 2 lines per journal entry
 
 **Accounting Profiles** — Hidden posting intelligence:
+
 - Maps business intents + categories to multi-line GL posting patterns
 - Example: AP-OPEX profile → Dr 6100 (OpEx), Cr 2110 (Accounts Payable)
 - 4 base profiles (all blueprints) + 2 extended (C/D/E/F): `AP-OPEX`, `AP-CAPEX`, `AP-TRAVEL`, `AP-VENDOR-PMT`, `AP-INTERCOMPANY`, `AP-DEPRECIATION`
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.chart_of_accounts` | GL account master | UNIQUE `(tenant_id, entity_code, account_code)` |
-| `fin.cost_center` | Cost allocation dimension | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.profit_center` | Revenue/P&L reporting dimension | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.fiscal_period` | Period open/close control | UNIQUE `(tenant_id, entity_code, fiscal_year, period_number)` |
-| `fin.accounting_profile` | GL posting pattern templates | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.journal_entry` | Journal entry headers | UNIQUE `(tenant_id, entity_code, je_number)` |
-| `fin.journal_line` | Journal entry line items | UNIQUE `(tenant_id, je_id, line_no)` |
-| `fin.gl_balance` | Denormalized period balances (projection) | UNIQUE composite on `(tenant_id, entity_code, account_id, fiscal_year, period_number, cost_center_id, currency_code)` |
+| Table                    | Purpose                                   | Key Constraint                                                                                                        |
+| ------------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `fin.chart_of_accounts`  | GL account master                         | UNIQUE `(tenant_id, entity_code, account_code)`                                                                       |
+| `fin.cost_center`        | Cost allocation dimension                 | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
+| `fin.profit_center`      | Revenue/P&L reporting dimension           | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
+| `fin.fiscal_period`      | Period open/close control                 | UNIQUE `(tenant_id, entity_code, fiscal_year, period_number)`                                                         |
+| `fin.accounting_profile` | GL posting pattern templates              | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
+| `fin.journal_entry`      | Journal entry headers                     | UNIQUE `(tenant_id, entity_code, je_number)`                                                                          |
+| `fin.journal_line`       | Journal entry line items                  | UNIQUE `(tenant_id, je_id, line_no)`                                                                                  |
+| `fin.gl_balance`         | Denormalized period balances (projection) | UNIQUE composite on `(tenant_id, entity_code, account_id, fiscal_year, period_number, cost_center_id, currency_code)` |
 
 #### Posting Flow
 
@@ -664,6 +676,7 @@ Calculates taxes per transaction based on jurisdiction, effective date, and tax 
 **Tax Types**: `VAT`, `GST`, `SALES_TAX`, `WHT` (withholding), `EXCISE`, `CUSTOMS`
 
 **Jurisdiction Hierarchy** (for nested tax regimes):
+
 ```
 COUNTRY → STATE → CITY → SPECIAL_ZONE
 ```
@@ -673,6 +686,7 @@ Example: Switzerland has CH-FTA (country) → CH-ZH, CH-GVA, CH-BSL (cantonal/st
 **Tax Scoping Rule**: Tax tables are **tenant-scoped** (no `entity_code` column). For multi-entity tenants (Blueprint F), all country jurisdictions are seeded under the single tenant. Runtime resolution uses `legal_entity.country_code → tax_jurisdiction.country_code`.
 
 **Tax Calculation**:
+
 ```
 tax_amount = base_amount × (rate / 100)
 ```
@@ -681,26 +695,26 @@ Features: effective date ranges, reverse charge, treaty rates (for cross-border 
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.tax_jurisdiction` | Tax authority registry | UNIQUE `(tenant_id, code)` |
-| `fin.tax_rate` | Time-dependent tax rates | UNIQUE `(tenant_id, jurisdiction_id, tax_code, effective_from)` |
-| `fin.tax_calculation` | Computed tax per transaction (audit trail) | Indexed by `(tenant_id, txn_id)` |
-| `fin.tax_credit_ledger` | Input tax credit tracking per period | UNIQUE `(tenant_id, entity_code, jurisdiction_id, fiscal_year, period_number)` |
+| Table                   | Purpose                                    | Key Constraint                                                                 |
+| ----------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `fin.tax_jurisdiction`  | Tax authority registry                     | UNIQUE `(tenant_id, code)`                                                     |
+| `fin.tax_rate`          | Time-dependent tax rates                   | UNIQUE `(tenant_id, jurisdiction_id, tax_code, effective_from)`                |
+| `fin.tax_calculation`   | Computed tax per transaction (audit trail) | Indexed by `(tenant_id, txn_id)`                                               |
+| `fin.tax_credit_ledger` | Input tax credit tracking per period       | UNIQUE `(tenant_id, entity_code, jurisdiction_id, fiscal_year, period_number)` |
 
 #### Country-Specific Tax Regimes (Seeded)
 
-| Country | Regime | Key Rates |
-|---------|--------|-----------|
-| MY | SST (Sales & Services Tax) | Services 6%, Goods 10% |
-| IN | GST (Central + State + Integrated) | 5%, 12%, 18%, 28% slabs |
-| SA | ZATCA VAT | Standard 15%, Zero 0% |
-| QA | No VAT | Demo placeholder 0% |
-| FR | TVA (French VAT) | Normal 20%, Reduced 5.5%, Intermediate 10%, Super-reduced 2.1% |
-| DE | MwSt (German VAT) | Standard 19%, Reduced 7% |
-| CH | MWST (Swiss VAT) | Standard 8.1%, Reduced 2.6%, Hotel 3.8% |
-| US | State Sales Tax only | NY 8%, CA 7.25%, WA 6.5%, GA 4% (no federal) |
-| CA | GST/HST + subsidiary jurisdictions | Federal GST 5%, Ontario HST 13% + MY/SA/IN rates |
+| Country | Regime                             | Key Rates                                                      |
+| ------- | ---------------------------------- | -------------------------------------------------------------- |
+| MY      | SST (Sales & Services Tax)         | Services 6%, Goods 10%                                         |
+| IN      | GST (Central + State + Integrated) | 5%, 12%, 18%, 28% slabs                                        |
+| SA      | ZATCA VAT                          | Standard 15%, Zero 0%                                          |
+| QA      | No VAT                             | Demo placeholder 0%                                            |
+| FR      | TVA (French VAT)                   | Normal 20%, Reduced 5.5%, Intermediate 10%, Super-reduced 2.1% |
+| DE      | MwSt (German VAT)                  | Standard 19%, Reduced 7%                                       |
+| CH      | MWST (Swiss VAT)                   | Standard 8.1%, Reduced 2.6%, Hotel 3.8%                        |
+| US      | State Sales Tax only               | NY 8%, CA 7.25%, WA 6.5%, GA 4% (no federal)                   |
+| CA      | GST/HST + subsidiary jurisdictions | Federal GST 5%, Ontario HST 13% + MY/SA/IN rates               |
 
 ---
 
@@ -718,39 +732,40 @@ Manages the complete lifecycle of fixed assets from acquisition through deprecia
 **Asset Classes**: `LAND`, `BUILDING`, `MACHINERY`, `VEHICLE`, `FURNITURE`, `IT_EQUIPMENT`, `INTANGIBLE`, `LEASED`
 
 **Asset Status Lifecycle**:
+
 ```
 WIP → CAPITALIZED → ACTIVE → IMPAIRED → RETIRED → DISPOSED
 ```
 
 **Multi-Book Depreciation** — Each asset maintains separate depreciation schedules:
 
-| Book | Purpose |
-|------|---------|
-| `STATUTORY` | Financial reporting (IFRS/local GAAP) |
-| `TAX` | Tax authority requirements (potentially different method/life) |
-| `MANAGEMENT` | Internal management reporting |
-| `INSURANCE` | Insurance valuation |
+| Book         | Purpose                                                        |
+| ------------ | -------------------------------------------------------------- |
+| `STATUTORY`  | Financial reporting (IFRS/local GAAP)                          |
+| `TAX`        | Tax authority requirements (potentially different method/life) |
+| `MANAGEMENT` | Internal management reporting                                  |
+| `INSURANCE`  | Insurance valuation                                            |
 
 **Depreciation Methods**:
 
-| Method | Formula | Use Case |
-|--------|---------|----------|
-| `STRAIGHT_LINE` | (Cost − Residual) / Life | Most common |
-| `REDUCING_BALANCE` | NBV × (1/Life) per period | Declining value assets |
-| `UNITS_OF_PRODUCTION` | (Cost − Residual) / Total Units × Period Units | Usage-based |
-| `ACCELERATED` | Double declining balance | Front-loaded depreciation |
-| `MACRS` | IRS half-year convention tables | US tax depreciation |
+| Method                | Formula                                        | Use Case                  |
+| --------------------- | ---------------------------------------------- | ------------------------- |
+| `STRAIGHT_LINE`       | (Cost − Residual) / Life                       | Most common               |
+| `REDUCING_BALANCE`    | NBV × (1/Life) per period                      | Declining value assets    |
+| `UNITS_OF_PRODUCTION` | (Cost − Residual) / Total Units × Period Units | Usage-based               |
+| `ACCELERATED`         | Double declining balance                       | Front-loaded depreciation |
+| `MACRS`               | IRS half-year convention tables                | US tax depreciation       |
 
 **Generated Column**: `net_book_value = cost_basis − accumulated_depreciation`
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.asset` | Fixed asset register | UNIQUE `(tenant_id, entity_code, asset_number)` |
-| `fin.asset_book` | Multi-book depreciation schedules | UNIQUE `(tenant_id, asset_id, book_type)` |
-| `fin.asset_transaction` | Lifecycle event log (capitalize, depreciate, revalue, dispose) | Indexed by `(asset_id, book_type)` |
-| `fin.depreciation_run` | Batch depreciation execution records | Indexed by `(entity_code, book_type, fiscal_year, period_number)` |
+| Table                   | Purpose                                                        | Key Constraint                                                    |
+| ----------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `fin.asset`             | Fixed asset register                                           | UNIQUE `(tenant_id, entity_code, asset_number)`                   |
+| `fin.asset_book`        | Multi-book depreciation schedules                              | UNIQUE `(tenant_id, asset_id, book_type)`                         |
+| `fin.asset_transaction` | Lifecycle event log (capitalize, depreciate, revalue, dispose) | Indexed by `(asset_id, book_type)`                                |
+| `fin.depreciation_run`  | Batch depreciation execution records                           | Indexed by `(entity_code, book_type, fiscal_year, period_number)` |
 
 ---
 
@@ -767,13 +782,13 @@ Full inventory management with five valuation methods, lot/serial tracking, ware
 
 **Valuation Methods**:
 
-| Method | Description |
-|--------|-------------|
-| `FIFO` | First In, First Out — oldest layers consumed first |
-| `LIFO` | Last In, First Out — newest layers consumed first |
-| `WEIGHTED_AVG` | Average cost of all layers |
-| `STANDARD` | Pre-determined standard cost; variances tracked separately |
-| `SPECIFIC` | Specific lot/serial identification |
+| Method         | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| `FIFO`         | First In, First Out — oldest layers consumed first         |
+| `LIFO`         | Last In, First Out — newest layers consumed first          |
+| `WEIGHTED_AVG` | Average cost of all layers                                 |
+| `STANDARD`     | Pre-determined standard cost; variances tracked separately |
+| `SPECIFIC`     | Specific lot/serial identification                         |
 
 **Movement Types**: `RECEIPT`, `ISSUE_SALES`, `ISSUE_PRODUCTION`, `TRANSFER_OUT`, `TRANSFER_IN`, `ADJUSTMENT`, `SCRAP`, `RETURN`
 
@@ -783,15 +798,15 @@ Full inventory management with five valuation methods, lot/serial tracking, ware
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.warehouse` | Warehouse/location master | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.item_master` | Item configuration (valuation method, reorder points) | UNIQUE `(tenant_id, entity_code, product_id)` |
-| `fin.inventory_balance` | Current stock by location/lot/serial | UNIQUE composite including lot/serial |
-| `fin.inventory_movement` | Movement audit log | Indexed by `(item_id, warehouse_id, movement_type)` |
-| `fin.inventory_valuation_layer` | FIFO/LIFO layer tracking | Indexed by `(item_id, warehouse_id, remaining_qty)` |
-| `fin.stocktake` | Physical count headers | Indexed by `(warehouse_id, status)` |
-| `fin.stocktake_line` | Physical count line items with variance | Generated: `variance_qty = counted_qty − system_qty` |
+| Table                           | Purpose                                               | Key Constraint                                       |
+| ------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| `fin.warehouse`                 | Warehouse/location master                             | UNIQUE `(tenant_id, entity_code, code)`              |
+| `fin.item_master`               | Item configuration (valuation method, reorder points) | UNIQUE `(tenant_id, entity_code, product_id)`        |
+| `fin.inventory_balance`         | Current stock by location/lot/serial                  | UNIQUE composite including lot/serial                |
+| `fin.inventory_movement`        | Movement audit log                                    | Indexed by `(item_id, warehouse_id, movement_type)`  |
+| `fin.inventory_valuation_layer` | FIFO/LIFO layer tracking                              | Indexed by `(item_id, warehouse_id, remaining_qty)`  |
+| `fin.stocktake`                 | Physical count headers                                | Indexed by `(warehouse_id, status)`                  |
+| `fin.stocktake_line`            | Physical count line items with variance               | Generated: `variance_qty = counted_qty − system_qty` |
 
 ---
 
@@ -813,6 +828,7 @@ Manages commission plans, partner assignments, calculation, accrual, settlement,
 **Partner Types**: `EMPLOYEE`, `AGENT`, `RESELLER`, `AFFILIATE`
 
 **Commission Lifecycle**:
+
 ```
 CALCULATED → ACCRUED → APPROVED → SETTLED
                                     ↘ CLAWED_BACK (within clawback window)
@@ -824,12 +840,12 @@ CALCULATED → ACCRUED → APPROVED → SETTLED
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.commission_plan` | Plan definitions (tiers, formulas, clawback rules) | UNIQUE `(tenant_id, entity_code, code)` |
-| `fin.commission_assignment` | Partner-to-plan assignments | UNIQUE `(tenant_id, partner_id, plan_id, effective_from)` |
-| `fin.commission_calculation` | Individual calculation records with GL references | Indexed by `(partner_id, status)` |
-| `fin.commission_statement` | Periodic partner statements | Indexed by `(partner_id, period_start, period_end)` |
+| Table                        | Purpose                                            | Key Constraint                                            |
+| ---------------------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `fin.commission_plan`        | Plan definitions (tiers, formulas, clawback rules) | UNIQUE `(tenant_id, entity_code, code)`                   |
+| `fin.commission_assignment`  | Partner-to-plan assignments                        | UNIQUE `(tenant_id, partner_id, plan_id, effective_from)` |
+| `fin.commission_calculation` | Individual calculation records with GL references  | Indexed by `(partner_id, status)`                         |
+| `fin.commission_statement`   | Periodic partner statements                        | Indexed by `(partner_id, period_start, period_end)`       |
 
 ---
 
@@ -851,6 +867,7 @@ Manages multi-entity corporate structures including legal entities, intercompany
 **Intercompany Agreement Types**: `GOODS`, `SERVICES`, `LOAN`, `ROYALTY`, `MANAGEMENT_FEE`
 
 **Transfer Pricing Methods** (OECD-aligned):
+
 - `CUP` — Comparable Uncontrolled Price
 - `RESALE_MINUS` — Resale Price minus margin
 - `COST_PLUS` — Cost plus markup
@@ -858,6 +875,7 @@ Manages multi-entity corporate structures including legal entities, intercompany
 - `PROFIT_SPLIT` — Split profits by contribution
 
 **IC Transaction Lifecycle**:
+
 ```
 CREATED → MIRRORED → PRICED → POSTED → NETTED → SETTLED
 ```
@@ -865,6 +883,7 @@ CREATED → MIRRORED → PRICED → POSTED → NETTED → SETTLED
 **FX Rate Types**: `SPOT`, `PERIOD_AVG`, `PERIOD_END`, `BUDGET`
 
 **Consolidation Eliminations**:
+
 - `IC_REVENUE_EXPENSE` — Eliminate IC sales/COGS
 - `IC_RECEIVABLE_PAYABLE` — Eliminate IC balances
 - `IC_PROFIT` — Eliminate unrealized IC profit
@@ -873,24 +892,24 @@ CREATED → MIRRORED → PRICED → POSTED → NETTED → SETTLED
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.legal_entity` | Legal entity registry | UNIQUE `(tenant_id, code)` |
-| `fin.intercompany_agreement` | IC trading relationships | UNIQUE `(tenant_id, source, dest, agreement_type)` |
-| `fin.intercompany_transaction` | IC transaction pairs | Indexed by `(source_entity, dest_entity)` |
-| `fin.fx_rate` | Exchange rate table | UNIQUE `(tenant_id, from, to, rate_type, effective_date)` |
-| `fin.fx_revaluation` | Unrealized FX gain/loss | Indexed by `(entity_code, fiscal_year, period)` |
-| `fin.consolidation_elimination` | IC elimination entries | Indexed by `(fiscal_year, period_number)` |
-| `fin.netting_batch` | IC netting batches | Indexed by `(status)` |
+| Table                           | Purpose                  | Key Constraint                                            |
+| ------------------------------- | ------------------------ | --------------------------------------------------------- |
+| `fin.legal_entity`              | Legal entity registry    | UNIQUE `(tenant_id, code)`                                |
+| `fin.intercompany_agreement`    | IC trading relationships | UNIQUE `(tenant_id, source, dest, agreement_type)`        |
+| `fin.intercompany_transaction`  | IC transaction pairs     | Indexed by `(source_entity, dest_entity)`                 |
+| `fin.fx_rate`                   | Exchange rate table      | UNIQUE `(tenant_id, from, to, rate_type, effective_date)` |
+| `fin.fx_revaluation`            | Unrealized FX gain/loss  | Indexed by `(entity_code, fiscal_year, period)`           |
+| `fin.consolidation_elimination` | IC elimination entries   | Indexed by `(fiscal_year, period_number)`                 |
+| `fin.netting_batch`             | IC netting batches       | Indexed by `(status)`                                     |
 
 #### Blueprint F Configuration (demo_ca)
 
-| Entity | Country | Functional | Reporting | Type | Ownership |
-|--------|---------|-----------|-----------|------|-----------|
-| LE-CA | Canada | CAD | CAD | PARENT | — |
-| LE-MY | Malaysia | MYR | CAD | SUBSIDIARY | 100% |
-| LE-SA | Saudi Arabia | SAR | CAD | SUBSIDIARY | 100% |
-| LE-IN | India | INR | CAD | SUBSIDIARY | 100% |
+| Entity | Country      | Functional | Reporting | Type       | Ownership |
+| ------ | ------------ | ---------- | --------- | ---------- | --------- |
+| LE-CA  | Canada       | CAD        | CAD       | PARENT     | —         |
+| LE-MY  | Malaysia     | MYR        | CAD       | SUBSIDIARY | 100%      |
+| LE-SA  | Saudi Arabia | SAR        | CAD       | SUBSIDIARY | 100%      |
+| LE-IN  | India        | INR        | CAD       | SUBSIDIARY | 100%      |
 
 **IC Agreements**: LE-MY→LE-SA (Services, Cost+10%), LE-SA→LE-IN (Goods, CUP), LE-MY→LE-IN (Management Fee, Cost+5%)
 
@@ -908,48 +927,52 @@ Manages manufacturing processes including bills of materials, routing operations
 #### Core Concepts
 
 **BOM (Bill of Materials)** — Multi-level recursive structure:
+
 - `phantom` components are exploded through (not separately inventoried)
 - Scrap percentage allowances per component
 - Version control with effective dates
 
 **Routing Operations** — Manufacturing steps:
+
 - Setup time + run time per operation
 - Labor rate + overhead rate per work center
 - Sequential operation ordering
 
 **Work Order Status**:
+
 ```
 PLANNED → RELEASED → IN_PROGRESS → COMPLETED → CLOSED
 ```
 
 **WIP Cost Accumulation** (3 cost types):
+
 - `MATERIAL` — Components consumed (from Inventory Engine)
 - `LABOR` — Direct labor hours × rate
 - `OVERHEAD` — Applied manufacturing overhead
 
 **Variance Analysis** (at work order close):
 
-| Variance | Formula | Description |
-|----------|---------|-------------|
-| `PRICE` | (Actual Price − Standard Price) × Actual Qty | Material price variance |
-| `USAGE` | (Actual Qty − Standard Qty) × Standard Price | Material usage variance |
-| `RATE` | (Actual Rate − Standard Rate) × Actual Hours | Labor rate variance |
+| Variance     | Formula                                         | Description               |
+| ------------ | ----------------------------------------------- | ------------------------- |
+| `PRICE`      | (Actual Price − Standard Price) × Actual Qty    | Material price variance   |
+| `USAGE`      | (Actual Qty − Standard Qty) × Standard Price    | Material usage variance   |
+| `RATE`       | (Actual Rate − Standard Rate) × Actual Hours    | Labor rate variance       |
 | `EFFICIENCY` | (Actual Hours − Standard Hours) × Standard Rate | Labor efficiency variance |
-| `VOLUME` | Planned − Applied overhead | Overhead volume variance |
+| `VOLUME`     | Planned − Applied overhead                      | Overhead volume variance  |
 
 **Generated Column**: `variance = actual_amount − planned_amount` on `work_order_cost`
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.bill_of_materials` | BOM headers (versioned) | UNIQUE `(tenant_id, entity_code, product_id, version)` |
-| `fin.bom_line` | BOM components | UNIQUE `(tenant_id, bom_id, line_no)` |
-| `fin.routing` | Manufacturing operations | UNIQUE `(tenant_id, entity_code, product_id, operation_seq)` |
-| `fin.work_order` | Production orders | UNIQUE `(tenant_id, entity_code, wo_number)` |
-| `fin.work_order_cost` | WIP cost accumulation | Indexed by `(work_order_id)` |
-| `fin.work_order_material_issue` | Material consumption records | Indexed by `(work_order_id)` |
-| `fin.production_variance` | Variance analysis at close | Indexed by `(work_order_id)` |
+| Table                           | Purpose                      | Key Constraint                                               |
+| ------------------------------- | ---------------------------- | ------------------------------------------------------------ |
+| `fin.bill_of_materials`         | BOM headers (versioned)      | UNIQUE `(tenant_id, entity_code, product_id, version)`       |
+| `fin.bom_line`                  | BOM components               | UNIQUE `(tenant_id, bom_id, line_no)`                        |
+| `fin.routing`                   | Manufacturing operations     | UNIQUE `(tenant_id, entity_code, product_id, operation_seq)` |
+| `fin.work_order`                | Production orders            | UNIQUE `(tenant_id, entity_code, wo_number)`                 |
+| `fin.work_order_cost`           | WIP cost accumulation        | Indexed by `(work_order_id)`                                 |
+| `fin.work_order_material_issue` | Material consumption records | Indexed by `(work_order_id)`                                 |
+| `fin.production_variance`       | Variance analysis at close   | Indexed by `(work_order_id)`                                 |
 
 ---
 
@@ -966,17 +989,18 @@ Provides AI/ML-powered predictions, recommendations, anomaly detection, and auto
 
 **Autonomy Levels**:
 
-| Level | Name | Behavior |
-|-------|------|----------|
-| `L1` | Recommended | Propose action; human decides |
-| `L2` | Semi-Autonomous | Auto-execute with mandatory review within reversal window |
-| `L3` | Full Autonomous | Execute immediately if confidence ≥ 95%; reversible within window |
+| Level | Name            | Behavior                                                          |
+| ----- | --------------- | ----------------------------------------------------------------- |
+| `L1`  | Recommended     | Propose action; human decides                                     |
+| `L2`  | Semi-Autonomous | Auto-execute with mandatory review within reversal window         |
+| `L3`  | Full Autonomous | Execute immediately if confidence ≥ 95%; reversible within window |
 
 **Model Types**: `CLASSIFICATION`, `REGRESSION`, `ANOMALY`, `RECOMMENDATION`, `NLP`
 
 **Prediction Types**: `RECOMMENDATION`, `ANOMALY`, `CLASSIFICATION`, `FORECAST`
 
 **Action Lifecycle**:
+
 ```
 PROPOSED → EXECUTED → REVERSED (within reversal window)
                     → REJECTED (by human)
@@ -986,6 +1010,7 @@ PROPOSED → EXECUTED → REVERSED (within reversal window)
 **Default reversal window**: 60 minutes
 
 **Drift Monitoring** — Continuous model health tracking:
+
 - Feature drift score (input distribution shift)
 - Prediction drift score (output behavior change)
 - Data quality score
@@ -994,12 +1019,12 @@ PROPOSED → EXECUTED → REVERSED (within reversal window)
 
 #### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.ai_model_registry` | Deployed ML model registry | UNIQUE `(tenant_id, model_code, model_version)` |
-| `fin.ai_prediction` | Prediction/recommendation log | Indexed by `(model_id, txn_id)` |
-| `fin.ai_action` | Autonomous action log (L2/L3) | Indexed by `(status, reversal_window_expires_at)` |
-| `fin.ai_drift_monitor` | Model bias/drift monitoring | Indexed by `(model_id, monitoring_date)` |
+| Table                   | Purpose                       | Key Constraint                                    |
+| ----------------------- | ----------------------------- | ------------------------------------------------- |
+| `fin.ai_model_registry` | Deployed ML model registry    | UNIQUE `(tenant_id, model_code, model_version)`   |
+| `fin.ai_prediction`     | Prediction/recommendation log | Indexed by `(model_id, txn_id)`                   |
+| `fin.ai_action`         | Autonomous action log (L2/L3) | Indexed by `(status, reversal_window_expires_at)` |
+| `fin.ai_drift_monitor`  | Model bias/drift monitoring   | Indexed by `(model_id, monitoring_date)`          |
 
 ---
 
@@ -1048,31 +1073,31 @@ Classification is **optional by default** — the step populates what it can and
 
 Smart defaults auto-populate 10 fields using configurable rules:
 
-| Field | Resolution Method | Source |
-|-------|------------------|--------|
-| `intent` | Rules engine (category + context → intent) | `fin.category_intent_rule`, `fin.spend_category` |
-| `domain` | Rules engine (capitalization threshold) | `fin.spend_category` thresholds |
-| `gl_account` | Rules engine (OU + Intent → GL mapping) | `fin.ou_intent_mapping`, `fin.business_intent` |
-| `cost_center` | Direct lookup (OU default) | `fin.operating_unit.default_cost_center_id` |
-| `profit_center` | Direct lookup (OU default) | `fin.operating_unit.default_profit_center_id` |
-| `fund_center` | Direct lookup (OU default FP) | `fin.operating_unit.default_fp_id` |
-| `tax_code` | Rules engine (country + category) | `fin.tax_jurisdiction`, `fin.business_intent` |
-| `currency_code` | Direct lookup (OU default) | `fin.operating_unit.default_currency_code` |
-| `hs_code` | Rules engine (commodity crosswalk) | `ent.commodity_crosswalk` |
-| `classification_required` | Rules engine (policy + category) | OU, category, config, cross-border |
+| Field                     | Resolution Method                          | Source                                           |
+| ------------------------- | ------------------------------------------ | ------------------------------------------------ |
+| `intent`                  | Rules engine (category + context → intent) | `fin.category_intent_rule`, `fin.spend_category` |
+| `domain`                  | Rules engine (capitalization threshold)    | `fin.spend_category` thresholds                  |
+| `gl_account`              | Rules engine (OU + Intent → GL mapping)    | `fin.ou_intent_mapping`, `fin.business_intent`   |
+| `cost_center`             | Direct lookup (OU default)                 | `fin.operating_unit.default_cost_center_id`      |
+| `profit_center`           | Direct lookup (OU default)                 | `fin.operating_unit.default_profit_center_id`    |
+| `fund_center`             | Direct lookup (OU default FP)              | `fin.operating_unit.default_fp_id`               |
+| `tax_code`                | Rules engine (country + category)          | `fin.tax_jurisdiction`, `fin.business_intent`    |
+| `currency_code`           | Direct lookup (OU default)                 | `fin.operating_unit.default_currency_code`       |
+| `hs_code`                 | Rules engine (commodity crosswalk)         | `ent.commodity_crosswalk`                        |
+| `classification_required` | Rules engine (policy + category)           | OU, category, config, cross-border               |
 
 ### Exception System
 
 When a transaction is `BLOCKED`, the Exception system allows time-bounded overrides:
 
-| Exception Scope | Description |
-|----------------|-------------|
-| `txn_id` | Override for a specific transaction |
-| `doc_id` | Override for all transactions under a document |
-| `ou_id` | Override for all transactions in an OU |
-| `funding_profile_id` | Override funding limits temporarily |
-| `policy_module_id` | Temporarily disable a specific policy |
-| `vendor_id` | Override vendor restrictions |
+| Exception Scope      | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `txn_id`             | Override for a specific transaction            |
+| `doc_id`             | Override for all transactions under a document |
+| `ou_id`              | Override for all transactions in an OU         |
+| `funding_profile_id` | Override funding limits temporarily            |
+| `policy_module_id`   | Temporarily disable a specific policy          |
+| `vendor_id`          | Override vendor restrictions                   |
 
 Exceptions require approval, have explicit `valid_from` / `valid_to` dates, and are tracked in `fin.exception` with full audit trail.
 
@@ -1084,12 +1109,12 @@ Document Services sit above the engine layer and orchestrate the full lifecycle 
 
 All document services share cross-cutting infrastructure via the `finance/shared/` module:
 
-| Component | Purpose |
-|-----------|---------|
-| `DocumentControl` | Auto-numbering (`{prefix}-{year}-{seqNo}`), idempotency checking, optimistic concurrency (`assertVersion`) |
-| `OUIntentResolver` | Resolves GL account, cost center, profit center, FP, tax code, currency from OU hierarchy + business intent |
-| `DecisionGridEvaluator` | Thin facade over the 13-step pipeline for document submission scoring |
-| `OutboxEmitter` | Writes post-commit events to `evt.event` within the caller's transaction |
+| Component               | Purpose                                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `DocumentControl`       | Auto-numbering (`{prefix}-{year}-{seqNo}`), idempotency checking, optimistic concurrency (`assertVersion`)  |
+| `OUIntentResolver`      | Resolves GL account, cost center, profit center, FP, tax code, currency from OU hierarchy + business intent |
+| `DecisionGridEvaluator` | Thin facade over the 13-step pipeline for document submission scoring                                       |
+| `OutboxEmitter`         | Writes post-commit events to `evt.event` within the caller's transaction                                    |
 
 **RuntimeModules**: `business.finance.accounting` (22 DI registrations, 18 routes) and `business.finance.payments` (12 DI registrations, 9 routes).
 
@@ -1114,16 +1139,16 @@ DRAFT / SUBMITTED / APPROVED / POSTED / PARTIALLY_PAID → CANCELLED (terminal)
 
 #### Service API
 
-| Method | Signature | Key Behavior |
-|--------|-----------|--------------|
-| `create` | `(ctx, input) → PurchaseInvoice` | Idempotency check, generate INV number, create DRAFT |
-| `update` | `(ctx, id, input) → PurchaseInvoice` | DRAFT only, optimistic concurrency via `assertVersion` |
-| `setLines` | `(ctx, invoiceId, lines, version?) → PurchaseInvoiceLine[]` | DRAFT only, bulk upsert, recalculates header totals |
-| `resolveLineDefaults` | `(ctx, invoiceId) → ResolvedDefaults` | Returns GL/CC/PC/FP/tax defaults from OU + Intent |
-| `submit` | `(ctx, invoiceId) → PurchaseInvoice` | Validates lines/totals/GL accounts, Decision Grid, budget RESERVE, approval routing |
-| `onApprovalComplete` | `(ctx, invoiceId, outcome) → PurchaseInvoice` | APPROVED: budget COMMIT. REJECTED: revert to DRAFT, budget RELEASE |
-| `post` | `(ctx, invoiceId) → PurchaseInvoice` | Tax calculation + JE creation + GL update + budget CONSUME + outbox emit |
-| `cancel` | `(ctx, invoiceId) → PurchaseInvoice` | From any non-terminal status; reverses JE if POSTED, releases budget, cancels approval |
+| Method                | Signature                                                   | Key Behavior                                                                           |
+| --------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `create`              | `(ctx, input) → PurchaseInvoice`                            | Idempotency check, generate INV number, create DRAFT                                   |
+| `update`              | `(ctx, id, input) → PurchaseInvoice`                        | DRAFT only, optimistic concurrency via `assertVersion`                                 |
+| `setLines`            | `(ctx, invoiceId, lines, version?) → PurchaseInvoiceLine[]` | DRAFT only, bulk upsert, recalculates header totals                                    |
+| `resolveLineDefaults` | `(ctx, invoiceId) → ResolvedDefaults`                       | Returns GL/CC/PC/FP/tax defaults from OU + Intent                                      |
+| `submit`              | `(ctx, invoiceId) → PurchaseInvoice`                        | Validates lines/totals/GL accounts, Decision Grid, budget RESERVE, approval routing    |
+| `onApprovalComplete`  | `(ctx, invoiceId, outcome) → PurchaseInvoice`               | APPROVED: budget COMMIT. REJECTED: revert to DRAFT, budget RELEASE                     |
+| `post`                | `(ctx, invoiceId) → PurchaseInvoice`                        | Tax calculation + JE creation + GL update + budget CONSUME + outbox emit               |
+| `cancel`              | `(ctx, invoiceId) → PurchaseInvoice`                        | From any non-terminal status; reverses JE if POSTED, releases budget, cancels approval |
 
 #### Posting Flow (12-Engine Orchestration)
 
@@ -1142,20 +1167,20 @@ DRAFT / SUBMITTED / APPROVED / POSTED / PARTIALLY_PAID → CANCELLED (terminal)
 
 #### Budget Integration
 
-| Event | Budget Action | Trigger |
-|-------|--------------|---------|
-| Submit (with FP) | `RESERVE` | Pre-approval fund lock |
-| Approval Complete | `COMMIT` | Reservation confirmed |
-| Post | `CONSUME` | Budget spent |
-| Rejection / Cancellation | `RELEASE` | Funds returned |
+| Event                    | Budget Action | Trigger                |
+| ------------------------ | ------------- | ---------------------- |
+| Submit (with FP)         | `RESERVE`     | Pre-approval fund lock |
+| Approval Complete        | `COMMIT`      | Reservation confirmed  |
+| Post                     | `CONSUME`     | Budget spent           |
+| Rejection / Cancellation | `RELEASE`     | Funds returned         |
 
 #### Tax Posting Splits
 
-| Tax Type | Account | Side | Mode |
-|----------|---------|------|------|
-| Recoverable (input credit eligible) | `TAX_INPUT_CREDIT` | DEBIT | `SEPARATE_LINE` |
-| Non-recoverable | `TAX_EXPENSE` | DEBIT | `ADD_TO_BASE_LINE` |
-| Withholding (WHT) | `WHT_PAYABLE` | CREDIT | `SEPARATE_LINE` |
+| Tax Type                            | Account            | Side   | Mode               |
+| ----------------------------------- | ------------------ | ------ | ------------------ |
+| Recoverable (input credit eligible) | `TAX_INPUT_CREDIT` | DEBIT  | `SEPARATE_LINE`    |
+| Non-recoverable                     | `TAX_EXPENSE`      | DEBIT  | `ADD_TO_BASE_LINE` |
+| Withholding (WHT)                   | `WHT_PAYABLE`      | CREDIT | `SEPARATE_LINE`    |
 
 #### Dependencies (14)
 
@@ -1200,16 +1225,16 @@ DRAFT / SUBMITTED / APPROVED → CANCELLED (terminal)
 
 #### Service API
 
-| Method | Signature | Key Behavior |
-|--------|-----------|--------------|
-| `create` | `(ctx, input) → PaymentEntry` | Idempotency check, generate PAY number, create DRAFT |
-| `update` | `(ctx, id, input) → PaymentEntry` | DRAFT only, optimistic concurrency |
-| `addAllocations` | `(ctx, paymentId, allocations, version?) → PaymentAllocation[]` | DRAFT only, bulk upsert |
-| `submit` | `(ctx, paymentId) → PaymentEntry` | Validates allocations, cross-supplier check, sum match, Decision Grid |
-| `onApprovalComplete` | `(ctx, paymentId, outcome) → PaymentEntry` | APPROVED or revert to DRAFT |
-| `post` | `(ctx, paymentId) → PaymentEntry` | **Transactional**: lock invoices → validate → build JE → post → update paid amounts |
-| `cancel` | `(ctx, paymentId) → PaymentEntry` | Reverse JE if POSTED, transition to CANCELLED |
-| `reconcile` | `(ctx, paymentId) → PaymentEntry` | POSTED → RECONCILED with timestamp/actor |
+| Method               | Signature                                                       | Key Behavior                                                                        |
+| -------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `create`             | `(ctx, input) → PaymentEntry`                                   | Idempotency check, generate PAY number, create DRAFT                                |
+| `update`             | `(ctx, id, input) → PaymentEntry`                               | DRAFT only, optimistic concurrency                                                  |
+| `addAllocations`     | `(ctx, paymentId, allocations, version?) → PaymentAllocation[]` | DRAFT only, bulk upsert                                                             |
+| `submit`             | `(ctx, paymentId) → PaymentEntry`                               | Validates allocations, cross-supplier check, sum match, Decision Grid               |
+| `onApprovalComplete` | `(ctx, paymentId, outcome) → PaymentEntry`                      | APPROVED or revert to DRAFT                                                         |
+| `post`               | `(ctx, paymentId) → PaymentEntry`                               | **Transactional**: lock invoices → validate → build JE → post → update paid amounts |
+| `cancel`             | `(ctx, paymentId) → PaymentEntry`                               | Reverse JE if POSTED, transition to CANCELLED                                       |
+| `reconcile`          | `(ctx, paymentId) → PaymentEntry`                               | POSTED → RECONCILED with timestamp/actor                                            |
 
 #### Transactional Post Flow
 
@@ -1234,14 +1259,14 @@ COMMIT
 
 #### Validation Rules
 
-| Rule | Error Code | HTTP |
-|------|-----------|------|
-| Allocations must exist | `NO_ALLOCATIONS` | 400 |
-| All amounts positive | `INVALID_AMOUNT` | 400 |
-| Sum of allocations = payment total | `ALLOCATION_MISMATCH` | 400 |
-| All invoices same supplier | `CROSS_SUPPLIER` | 400 |
-| Discount + WHT ≤ allocated | `DEDUCTION_EXCEEDS_ALLOCATION` | 400 |
-| Allocated ≤ remaining | `OVERPAYMENT` | 409 |
+| Rule                               | Error Code                     | HTTP |
+| ---------------------------------- | ------------------------------ | ---- |
+| Allocations must exist             | `NO_ALLOCATIONS`               | 400  |
+| All amounts positive               | `INVALID_AMOUNT`               | 400  |
+| Sum of allocations = payment total | `ALLOCATION_MISMATCH`          | 400  |
+| All invoices same supplier         | `CROSS_SUPPLIER`               | 400  |
+| Discount + WHT ≤ allocated         | `DEDUCTION_EXCEEDS_ALLOCATION` | 400  |
+| Allocated ≤ remaining              | `OVERPAYMENT`                  | 409  |
 
 ---
 
@@ -1264,13 +1289,13 @@ Note: No explicit SUBMITTED status. The CREATED state serves as both draft and s
 
 #### Service API
 
-| Method | Signature | Key Behavior |
-|--------|-----------|--------------|
-| `create` | `(ctx, input) → JournalEntry` | Validates lines, double-entry balance, accounts (active/non-group/postable), fiscal period (OPEN). Generates MJE number. Persists as CREATED — GL balances NOT updated yet. |
-| `submit` | `(ctx, jeId, options?) → ManualJESubmitResult` | Decision Grid evaluation. BLOCKED → fail. ZERO_APPROVAL + `directPost=true` → auto-post. Otherwise returns evaluation for approval routing. |
-| `onApprovalComplete` | `(ctx, jeId, outcome) → JournalEntry` | Approved → delegates to `post()`. Rejected → stays CREATED for revision. |
-| `post` | `(ctx, jeId) → JournalEntry` | Re-validates everything (accounts, balance, period). Updates GL balances via `incrementPeriodAmounts`. Marks POSTED. |
-| `reverse` | `(ctx, jeId) → JournalEntry` | Validates `docType === "MANUAL_JE"`. Generates reversal JE. Delegates to `PostingService.reverse()`. |
+| Method               | Signature                                      | Key Behavior                                                                                                                                                                |
+| -------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create`             | `(ctx, input) → JournalEntry`                  | Validates lines, double-entry balance, accounts (active/non-group/postable), fiscal period (OPEN). Generates MJE number. Persists as CREATED — GL balances NOT updated yet. |
+| `submit`             | `(ctx, jeId, options?) → ManualJESubmitResult` | Decision Grid evaluation. BLOCKED → fail. ZERO_APPROVAL + `directPost=true` → auto-post. Otherwise returns evaluation for approval routing.                                 |
+| `onApprovalComplete` | `(ctx, jeId, outcome) → JournalEntry`          | Approved → delegates to `post()`. Rejected → stays CREATED for revision.                                                                                                    |
+| `post`               | `(ctx, jeId) → JournalEntry`                   | Re-validates everything (accounts, balance, period). Updates GL balances via `incrementPeriodAmounts`. Marks POSTED.                                                        |
+| `reverse`            | `(ctx, jeId) → JournalEntry`                   | Validates `docType === "MANUAL_JE"`. Generates reversal JE. Delegates to `PostingService.reverse()`.                                                                        |
 
 #### Direct Post Mode
 
@@ -1279,6 +1304,7 @@ When the Decision Grid returns `ZERO_APPROVAL` and the caller passes `directPost
 #### Defensive Re-Validation
 
 The `post()` method fully re-validates all inputs because accounts may be deactivated or fiscal periods may close between creation and posting:
+
 - All accounts must still be active, non-group, and allow direct posting
 - Fiscal period must still be OPEN
 - Double-entry balance must still hold
@@ -1296,19 +1322,19 @@ Read-only reporting service providing three views of general ledger data: summar
 
 #### Service API
 
-| Method | Filters | Returns |
-|--------|---------|---------|
-| `getGLSummary` | tenantId, entityCode, fiscalYear, [periodNumber, accountId, costCenterId, accountType] | Per-account opening/period/closing debit and credit balances |
-| `getGLDetail` | tenantId, entityCode, accountId, fiscalYear, [periodNumber, reversalMode] | Individual journal lines with JE number, posting date, doc type, running balance, and `sourceDocLineId` |
-| `getTrialBalance` | tenantId, entityCode, fiscalYear, periodNumber, [reversalMode] | Aggregated debit/credit per account (cumulative through period). Excludes zero-balance accounts. |
+| Method            | Filters                                                                                | Returns                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `getGLSummary`    | tenantId, entityCode, fiscalYear, [periodNumber, accountId, costCenterId, accountType] | Per-account opening/period/closing debit and credit balances                                            |
+| `getGLDetail`     | tenantId, entityCode, accountId, fiscalYear, [periodNumber, reversalMode]              | Individual journal lines with JE number, posting date, doc type, running balance, and `sourceDocLineId` |
+| `getTrialBalance` | tenantId, entityCode, fiscalYear, periodNumber, [reversalMode]                         | Aggregated debit/credit per account (cumulative through period). Excludes zero-balance accounts.        |
 
 #### Reversal Handling Modes
 
-| Mode | Behavior |
-|------|----------|
-| `NETTED` (default) | Only POSTED JEs. Reversals naturally cancel out in aggregation. |
-| `SEPARATE` | Includes both POSTED and REVERSED JEs as separate rows. |
-| `EXCLUDED` | Only POSTED JEs where `reversed_by_id IS NULL` — excludes any reversed JE. |
+| Mode               | Behavior                                                                   |
+| ------------------ | -------------------------------------------------------------------------- |
+| `NETTED` (default) | Only POSTED JEs. Reversals naturally cancel out in aggregation.            |
+| `SEPARATE`         | Includes both POSTED and REVERSED JEs as separate rows.                    |
+| `EXCLUDED`         | Only POSTED JEs where `reversed_by_id IS NULL` — excludes any reversed JE. |
 
 #### GL Drill-Down Chain
 
@@ -1354,11 +1380,11 @@ UNMATCHED → AUTO_MATCHED → CONFIRMED (on session complete)
 
 ### 3-Pass Auto-Matching Algorithm
 
-| Pass | Match Type | Criteria | Confidence |
-|------|-----------|----------|------------|
-| 1 | `EXACT` | Amount match + reference match (exact/substring) + date within 3 business days | 97 |
-| 2 | `FUZZY_REF` | Amount match + Levenshtein distance ≤ 3 on reference | 80–94 |
-| 3 | `AMOUNT_ONLY` | Exact amount within 5-day window | 60–79 |
+| Pass | Match Type    | Criteria                                                                       | Confidence |
+| ---- | ------------- | ------------------------------------------------------------------------------ | ---------- |
+| 1    | `EXACT`       | Amount match + reference match (exact/substring) + date within 3 business days | 97         |
+| 2    | `FUZZY_REF`   | Amount match + Levenshtein distance ≤ 3 on reference                           | 80–94      |
+| 3    | `AMOUNT_ONLY` | Exact amount within 5-day window                                               | 60–79      |
 
 - Auto-apply threshold: confidence ≥ 90 (only Pass 1 matches auto-apply)
 - Below threshold → flagged for manual review
@@ -1367,13 +1393,13 @@ UNMATCHED → AUTO_MATCHED → CONFIRMED (on session complete)
 
 ### Service API
 
-| Method | Behavior |
-|--------|----------|
-| `importStatement(ctx, input)` | Creates statement header + bulk-inserts lines with sequential `lineNo` |
-| `startReconciliation(ctx, statementId)` | Creates OPEN session, marks statement IN_PROGRESS. Idempotent (returns existing session). |
-| `runAutoMatch(ctx, sessionId)` | Executes 3-pass algorithm, auto-applies ≥90 confidence matches, refreshes session counts |
-| `manualMatch(ctx, lineId, paymentId)` | Sets line to MANUAL_MATCHED with confidence 100 |
-| `unmatch(ctx, lineId)` | Reverts to UNMATCHED. Blocked for CONFIRMED lines. |
+| Method                                   | Behavior                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `importStatement(ctx, input)`            | Creates statement header + bulk-inserts lines with sequential `lineNo`                                                  |
+| `startReconciliation(ctx, statementId)`  | Creates OPEN session, marks statement IN_PROGRESS. Idempotent (returns existing session).                               |
+| `runAutoMatch(ctx, sessionId)`           | Executes 3-pass algorithm, auto-applies ≥90 confidence matches, refreshes session counts                                |
+| `manualMatch(ctx, lineId, paymentId)`    | Sets line to MANUAL_MATCHED with confidence 100                                                                         |
+| `unmatch(ctx, lineId)`                   | Reverts to UNMATCHED. Blocked for CONFIRMED lines.                                                                      |
 | `completeReconciliation(ctx, sessionId)` | Confirms all matches, calls `PaymentEntryService.reconcile()` for each matched payment, completes session and statement |
 
 ### Session Counts
@@ -1382,11 +1408,11 @@ The reconciliation session tracks: `total_lines`, `auto_matched`, `manual_matche
 
 ### Tables
 
-| Table | Purpose | Key Constraint |
-|-------|---------|----------------|
-| `fin.bank_statement` | Imported statement header | UNIQUE `(tenant_id, entity_code, statement_number)` |
-| `fin.bank_statement_line` | Individual bank transactions | UNIQUE `(tenant_id, statement_id, line_no)` |
-| `fin.reconciliation_session` | Reconciliation work tracking | UNIQUE `(tenant_id, statement_id)` |
+| Table                        | Purpose                      | Key Constraint                                      |
+| ---------------------------- | ---------------------------- | --------------------------------------------------- |
+| `fin.bank_statement`         | Imported statement header    | UNIQUE `(tenant_id, entity_code, statement_number)` |
+| `fin.bank_statement_line`    | Individual bank transactions | UNIQUE `(tenant_id, statement_id, line_no)`         |
+| `fin.reconciliation_session` | Reconciliation work tracking | UNIQUE `(tenant_id, statement_id)`                  |
 
 ---
 
@@ -1417,19 +1443,19 @@ POST-COMMIT (via outbox event: "finance.document.posted"):
 
 ```typescript
 interface PostActionEvent {
-    type: "finance.document.posted";
-    docId: string;
-    docType: "PURCHASE_INVOICE" | "PAYMENT_ENTRY";
-    tenantId: string;
-    entityCode: string;
-    jeId: string;
-    supplierId: string;
-    lines: Array<{
-        lineId: string;
-        intentDomain: string | null;   // "CAPEX" triggers asset handler
-        itemId: string | null;         // non-null triggers inventory handler
-        warehouseId: string | null;
-    }>;
+  type: "finance.document.posted";
+  docId: string;
+  docType: "PURCHASE_INVOICE" | "PAYMENT_ENTRY";
+  tenantId: string;
+  entityCode: string;
+  jeId: string;
+  supplierId: string;
+  lines: Array<{
+    lineId: string;
+    intentDomain: string | null; // "CAPEX" triggers asset handler
+    itemId: string | null; // non-null triggers inventory handler
+    warehouseId: string | null;
+  }>;
 }
 ```
 
@@ -1443,12 +1469,12 @@ Polls `evt.event` for PENDING events using `FOR UPDATE SKIP LOCKED` for concurre
 
 ### Post-Action Handlers (4)
 
-| Handler | Trigger | Idempotency Key | Engine |
-|---------|---------|-----------------|--------|
-| `InventoryReceiptHandler` | Line has `itemId` | `inventory:{docId}:{lineId}:RECEIPT` | Inventory |
-| `AssetWIPHandler` | Line has `intentDomain === "CAPEX"` | `asset:{docId}:{lineId}:WIP` | Asset |
-| `CommissionCalcHandler` | Always (per document) | `commission:{docId}:CALC` | Commission |
-| `FederationICHandler` | Cross-entity posting | `federation:{docId}:IC` | Federation |
+| Handler                   | Trigger                             | Idempotency Key                      | Engine     |
+| ------------------------- | ----------------------------------- | ------------------------------------ | ---------- |
+| `InventoryReceiptHandler` | Line has `itemId`                   | `inventory:{docId}:{lineId}:RECEIPT` | Inventory  |
+| `AssetWIPHandler`         | Line has `intentDomain === "CAPEX"` | `asset:{docId}:{lineId}:WIP`         | Asset      |
+| `CommissionCalcHandler`   | Always (per document)               | `commission:{docId}:CALC`            | Commission |
+| `FederationICHandler`     | Cross-entity posting                | `federation:{docId}:IC`              | Federation |
 
 All handlers silently skip if they encounter an `IDEMPOTENT_DUPLICATE` error.
 
@@ -1459,90 +1485,96 @@ All handlers silently skip if they encounter an `IDEMPOTENT_DUPLICATE` error.
 All endpoints require authentication (`authRequired: true`). Error responses follow a consistent contract:
 
 ```json
-{ "error": { "code": "ERROR_CODE", "message": "Human-readable message", "details": {} } }
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable message",
+    "details": {}
+  }
+}
 ```
 
 ### Error Code → HTTP Status Mapping
 
-| Error Code | HTTP | Description |
-|-----------|------|-------------|
-| `NOT_FOUND` | 404 | Resource does not exist |
-| `VERSION_CONFLICT` / `ALREADY_POSTED` | 409 | Optimistic concurrency or duplicate operation |
-| `OVERPAYMENT` | 409 | Allocation exceeds invoice remaining |
-| `INVALID_STATUS` / `CROSS_SUPPLIER` / `NO_ALLOCATIONS` | 400 | Validation failure |
-| `BLOCKED_BY_POLICY` / `SUBMISSION_BLOCKED` | 403 | Decision Grid blocked |
-| `PERIOD_CLOSED` | 422 | Fiscal period not open |
+| Error Code                                             | HTTP | Description                                   |
+| ------------------------------------------------------ | ---- | --------------------------------------------- |
+| `NOT_FOUND`                                            | 404  | Resource does not exist                       |
+| `VERSION_CONFLICT` / `ALREADY_POSTED`                  | 409  | Optimistic concurrency or duplicate operation |
+| `OVERPAYMENT`                                          | 409  | Allocation exceeds invoice remaining          |
+| `INVALID_STATUS` / `CROSS_SUPPLIER` / `NO_ALLOCATIONS` | 400  | Validation failure                            |
+| `BLOCKED_BY_POLICY` / `SUBMISSION_BLOCKED`             | 403  | Decision Grid blocked                         |
+| `PERIOD_CLOSED`                                        | 422  | Fiscal period not open                        |
 
 ### 9.1 Purchase Invoice Endpoints (9 routes)
 
-| Method | Path | Handler | Description |
-|--------|------|---------|-------------|
-| POST | `/api/fin/purchase-invoices` | `CreatePurchaseInvoiceHandler` | Create DRAFT invoice |
-| GET | `/api/fin/purchase-invoices` | `ListPurchaseInvoicesHandler` | List with filters + pagination |
-| GET | `/api/fin/purchase-invoices/:id` | `GetPurchaseInvoiceHandler` | Get single invoice |
-| PATCH | `/api/fin/purchase-invoices/:id` | `UpdatePurchaseInvoiceHandler` | Update DRAFT (version required) |
-| POST | `/api/fin/purchase-invoices/:id/lines` | `SetInvoiceLinesHandler` | Upsert full line set |
-| GET | `/api/fin/purchase-invoices/:id/lines/defaults` | `GetInvoiceLineDefaultsHandler` | Get OU+Intent defaults |
-| POST | `/api/fin/purchase-invoices/:id/submit` | `SubmitInvoiceHandler` | Submit for approval |
-| POST | `/api/fin/purchase-invoices/:id/post` | `PostInvoiceHandler` | Post approved invoice |
-| POST | `/api/fin/purchase-invoices/:id/cancel` | `CancelInvoiceHandler` | Cancel with reversal cascade |
+| Method | Path                                            | Handler                         | Description                     |
+| ------ | ----------------------------------------------- | ------------------------------- | ------------------------------- |
+| POST   | `/api/fin/purchase-invoices`                    | `CreatePurchaseInvoiceHandler`  | Create DRAFT invoice            |
+| GET    | `/api/fin/purchase-invoices`                    | `ListPurchaseInvoicesHandler`   | List with filters + pagination  |
+| GET    | `/api/fin/purchase-invoices/:id`                | `GetPurchaseInvoiceHandler`     | Get single invoice              |
+| PATCH  | `/api/fin/purchase-invoices/:id`                | `UpdatePurchaseInvoiceHandler`  | Update DRAFT (version required) |
+| POST   | `/api/fin/purchase-invoices/:id/lines`          | `SetInvoiceLinesHandler`        | Upsert full line set            |
+| GET    | `/api/fin/purchase-invoices/:id/lines/defaults` | `GetInvoiceLineDefaultsHandler` | Get OU+Intent defaults          |
+| POST   | `/api/fin/purchase-invoices/:id/submit`         | `SubmitInvoiceHandler`          | Submit for approval             |
+| POST   | `/api/fin/purchase-invoices/:id/post`           | `PostInvoiceHandler`            | Post approved invoice           |
+| POST   | `/api/fin/purchase-invoices/:id/cancel`         | `CancelInvoiceHandler`          | Cancel with reversal cascade    |
 
 **List Filters**: `entityCode`, `status`, `supplierId`, `search`, `dateFrom`, `dateTo`
 **Pagination**: `limit` (max 200), `offset`, `sort`, `dir` (asc/desc)
 
 ### 9.2 Manual JE Endpoints (6 routes)
 
-| Method | Path | Handler | Description |
-|--------|------|---------|-------------|
-| POST | `/api/fin/journal-entries` | `CreateManualJEHandler` | Create CREATED (draft) JE |
-| GET | `/api/fin/journal-entries` | `ListJournalEntriesHandler` | List with filters + pagination |
-| GET | `/api/fin/journal-entries/:id` | `GetJournalEntryHandler` | Get JE with lines |
-| POST | `/api/fin/journal-entries/:id/submit` | `SubmitManualJEHandler` | Submit (supports `directPost`) |
-| POST | `/api/fin/journal-entries/:id/post` | `PostManualJEHandler` | Post approved JE |
-| POST | `/api/fin/journal-entries/:id/reverse` | `ReverseManualJEHandler` | Reverse posted JE |
+| Method | Path                                   | Handler                     | Description                    |
+| ------ | -------------------------------------- | --------------------------- | ------------------------------ |
+| POST   | `/api/fin/journal-entries`             | `CreateManualJEHandler`     | Create CREATED (draft) JE      |
+| GET    | `/api/fin/journal-entries`             | `ListJournalEntriesHandler` | List with filters + pagination |
+| GET    | `/api/fin/journal-entries/:id`         | `GetJournalEntryHandler`    | Get JE with lines              |
+| POST   | `/api/fin/journal-entries/:id/submit`  | `SubmitManualJEHandler`     | Submit (supports `directPost`) |
+| POST   | `/api/fin/journal-entries/:id/post`    | `PostManualJEHandler`       | Post approved JE               |
+| POST   | `/api/fin/journal-entries/:id/reverse` | `ReverseManualJEHandler`    | Reverse posted JE              |
 
 **List Filters**: `entityCode`, `fiscalYear`, `periodNumber`, `status`, `txnId`, `docId`, `search`, `dateFrom`, `dateTo`
 
 ### 9.3 GL Inquiry Endpoints (3 routes)
 
-| Method | Path | Handler | Description |
-|--------|------|---------|-------------|
-| GET | `/api/fin/gl/summary` | `GLSummaryHandler` | Period balances by account |
-| GET | `/api/fin/gl/detail` | `GLDetailHandler` | Journal lines for an account |
-| GET | `/api/fin/gl/trial-balance` | `TrialBalanceHandler` | Trial balance with balance check |
+| Method | Path                        | Handler               | Description                      |
+| ------ | --------------------------- | --------------------- | -------------------------------- |
+| GET    | `/api/fin/gl/summary`       | `GLSummaryHandler`    | Period balances by account       |
+| GET    | `/api/fin/gl/detail`        | `GLDetailHandler`     | Journal lines for an account     |
+| GET    | `/api/fin/gl/trial-balance` | `TrialBalanceHandler` | Trial balance with balance check |
 
 **Required**: `fiscalYear`. GL Detail also requires `accountId`. Trial Balance requires `periodNumber`.
 **Optional**: `periodNumber`, `costCenterId`, `accountType`, `reversalMode`
 
 ### 9.4 Payment Endpoints (9 routes)
 
-| Method | Path | Handler | Description |
-|--------|------|---------|-------------|
-| POST | `/api/fin/payments` | `CreatePaymentHandler` | Create DRAFT payment |
-| GET | `/api/fin/payments` | `ListPaymentsHandler` | List with filters + pagination |
-| GET | `/api/fin/payments/:id` | `GetPaymentHandler` | Get single payment |
-| PATCH | `/api/fin/payments/:id` | `UpdatePaymentHandler` | Update DRAFT (version required) |
-| POST | `/api/fin/payments/:id/allocations` | `SetAllocationsHandler` | Upsert allocation set |
-| POST | `/api/fin/payments/:id/submit` | `SubmitPaymentHandler` | Submit for approval |
-| POST | `/api/fin/payments/:id/post` | `PostPaymentHandler` | Transactional gross settlement |
-| POST | `/api/fin/payments/:id/cancel` | `CancelPaymentHandler` | Cancel with optional JE reversal |
-| POST | `/api/fin/payments/:id/reconcile` | `ReconcilePaymentHandler` | Mark as reconciled |
+| Method | Path                                | Handler                   | Description                      |
+| ------ | ----------------------------------- | ------------------------- | -------------------------------- |
+| POST   | `/api/fin/payments`                 | `CreatePaymentHandler`    | Create DRAFT payment             |
+| GET    | `/api/fin/payments`                 | `ListPaymentsHandler`     | List with filters + pagination   |
+| GET    | `/api/fin/payments/:id`             | `GetPaymentHandler`       | Get single payment               |
+| PATCH  | `/api/fin/payments/:id`             | `UpdatePaymentHandler`    | Update DRAFT (version required)  |
+| POST   | `/api/fin/payments/:id/allocations` | `SetAllocationsHandler`   | Upsert allocation set            |
+| POST   | `/api/fin/payments/:id/submit`      | `SubmitPaymentHandler`    | Submit for approval              |
+| POST   | `/api/fin/payments/:id/post`        | `PostPaymentHandler`      | Transactional gross settlement   |
+| POST   | `/api/fin/payments/:id/cancel`      | `CancelPaymentHandler`    | Cancel with optional JE reversal |
+| POST   | `/api/fin/payments/:id/reconcile`   | `ReconcilePaymentHandler` | Mark as reconciled               |
 
 **List Filters**: `entityCode`, `status`, `supplierId`, `search`, `dateFrom`, `dateTo`
 
 ### 9.5 Bank Reconciliation Endpoints (9 routes)
 
-| Method | Path | Handler | Description |
-|--------|------|---------|-------------|
-| POST | `/api/fin/bank-statements` | `ImportStatementHandler` | Import statement + lines |
-| GET | `/api/fin/bank-statements` | `ListStatementsHandler` | List with filters + pagination |
-| GET | `/api/fin/bank-statements/:id` | `GetStatementHandler` | Get with embedded lines |
-| POST | `/api/fin/bank-statements/:id/reconcile` | `StartReconciliationHandler` | Start reconciliation session |
-| POST | `/api/fin/reconciliation/:id/auto-match` | `AutoMatchHandler` | Run 3-pass matching |
-| POST | `/api/fin/reconciliation/:id/match` | `ManualMatchHandler` | Manual match (lineId, paymentId) |
-| POST | `/api/fin/reconciliation/:id/unmatch` | `UnmatchHandler` | Revert match |
-| POST | `/api/fin/reconciliation/:id/complete` | `CompleteReconciliationHandler` | Finalize and reconcile payments |
-| GET | `/api/fin/reconciliation/:id/report` | `ReconciliationReportHandler` | Session summary report |
+| Method | Path                                     | Handler                         | Description                      |
+| ------ | ---------------------------------------- | ------------------------------- | -------------------------------- |
+| POST   | `/api/fin/bank-statements`               | `ImportStatementHandler`        | Import statement + lines         |
+| GET    | `/api/fin/bank-statements`               | `ListStatementsHandler`         | List with filters + pagination   |
+| GET    | `/api/fin/bank-statements/:id`           | `GetStatementHandler`           | Get with embedded lines          |
+| POST   | `/api/fin/bank-statements/:id/reconcile` | `StartReconciliationHandler`    | Start reconciliation session     |
+| POST   | `/api/fin/reconciliation/:id/auto-match` | `AutoMatchHandler`              | Run 3-pass matching              |
+| POST   | `/api/fin/reconciliation/:id/match`      | `ManualMatchHandler`            | Manual match (lineId, paymentId) |
+| POST   | `/api/fin/reconciliation/:id/unmatch`    | `UnmatchHandler`                | Revert match                     |
+| POST   | `/api/fin/reconciliation/:id/complete`   | `CompleteReconciliationHandler` | Finalize and reconcile payments  |
+| GET    | `/api/fin/reconciliation/:id/report`     | `ReconciliationReportHandler`   | Session summary report           |
 
 ---
 
@@ -1553,13 +1585,13 @@ All endpoints require authentication (`authRequired: true`). Error responses fol
 
 ### 10.1 Component Catalogue
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `InvoiceLineGrid` | `InvoiceLineGrid.tsx` | Editable table grid for purchase invoice lines |
-| `JournalLineGrid` | `JournalLineGrid.tsx` | Debit/credit grid for journal entry lines |
-| `PaymentAllocationPicker` | `PaymentAllocationPicker.tsx` | Two-section gross settlement picker |
-| `GLBalanceReport` | `GLBalanceReport.tsx` | Tabbed GL report (summary, detail, trial balance) |
-| `DecisionScorePanel` | `DecisionScorePanel.tsx` | Decision Grid evaluation audit panel |
+| Component                 | File                          | Purpose                                           |
+| ------------------------- | ----------------------------- | ------------------------------------------------- |
+| `InvoiceLineGrid`         | `InvoiceLineGrid.tsx`         | Editable table grid for purchase invoice lines    |
+| `JournalLineGrid`         | `JournalLineGrid.tsx`         | Debit/credit grid for journal entry lines         |
+| `PaymentAllocationPicker` | `PaymentAllocationPicker.tsx` | Two-section gross settlement picker               |
+| `GLBalanceReport`         | `GLBalanceReport.tsx`         | Tabbed GL report (summary, detail, trial balance) |
+| `DecisionScorePanel`      | `DecisionScorePanel.tsx`      | Decision Grid evaluation audit panel              |
 
 ### 10.2 InvoiceLineGrid
 
@@ -1578,6 +1610,7 @@ Displays: Line number, account, description, debit amount, credit amount, subled
 **Props**: `availableInvoices`, `allocations`, `paymentTotal`, `totalAllocated`, `unallocatedAmount`, `isFullyAllocated`, `currencyCode`, `onAddInvoice`, `onRemoveAllocation`, `onAllocationChange`, `readOnly`
 
 Two-section layout:
+
 1. **Available Invoices** table (hidden in read-only): Unpaid invoices with "Add" button per row
 2. **Allocations** table: Editable fields for allocated amount, discount, WHT. Net cash is computed.
 
@@ -1588,6 +1621,7 @@ Summary bar shows: Payment Total, Allocated, Unallocated, and a status badge ("F
 **Props**: `summaryRows`, `detailRows`, `trialBalanceRows`, `summaryTotals`, `trialBalanceTotals`, `trialBalanceIsBalanced`, `reversalMode`, `onReversalModeChange`, `onAccountFilter`, `onDateRangeChange`, `currencyCode`, `loading`
 
 Three tabs:
+
 1. **GL Summary**: Per-account opening/period/closing balances with footer totals
 2. **GL Detail**: Individual posting lines with JE number, date, doc type badge, running balance (red if negative), reversal mode toggle (NETTED/SEPARATE/EXCLUDED)
 3. **Trial Balance**: Account-level debit/credit with balance check indicator (green/red)
@@ -1602,12 +1636,12 @@ Displays: Circular score gauge (color-coded), approval route badge, per-module h
 
 Four `TabPlugin` objects in `finance-plugin.tsx` wire components into the entity page system:
 
-| Plugin | Hook | Component |
-|--------|------|-----------|
-| `invoiceLinesPlugin` | `useInvoiceLines(entityId)` | `InvoiceLineGrid` (view mode) |
-| `journalLinesPlugin` | `useJournalEntry(entityId)` | `JournalLineGrid` (view mode) |
+| Plugin                     | Hook                              | Component                            |
+| -------------------------- | --------------------------------- | ------------------------------------ |
+| `invoiceLinesPlugin`       | `useInvoiceLines(entityId)`       | `InvoiceLineGrid` (view mode)        |
+| `journalLinesPlugin`       | `useJournalEntry(entityId)`       | `JournalLineGrid` (view mode)        |
 | `paymentAllocationsPlugin` | `usePaymentAllocations(entityId)` | `PaymentAllocationPicker` (readOnly) |
-| `decisionScorePlugin` | `useDecisionScore(entityId)` | `DecisionScorePanel` |
+| `decisionScorePlugin`      | `useDecisionScore(entityId)`      | `DecisionScorePanel`                 |
 
 Each plugin maps DTOs from `@/lib/finance/types` to component domain types and computes derived values (totals, balance checks) using string-based arithmetic helpers.
 
@@ -1621,13 +1655,14 @@ All monetary calculations use string-based decimal arithmetic via `engines/share
 
 ```typescript
 interface Money {
-  amount: string;           // "1234.5678" — NEVER a float
-  currencyCode: string;     // ISO 4217
-  precision: number;        // Decimal places (default: 4)
+  amount: string; // "1234.5678" — NEVER a float
+  currencyCode: string; // ISO 4217
+  precision: number; // Decimal places (default: 4)
 }
 ```
 
 Internal arithmetic uses `BigInt` scaling to eliminate floating-point errors:
+
 - `addMoney(a, b)` — Addition (currency must match)
 - `subtractMoney(a, b)` — Subtraction (currency must match)
 - `multiplyMoney(m, scalar)` — Scalar multiplication
@@ -1659,39 +1694,39 @@ Shared utilities in `engines/shared/event-helpers.ts`:
 
 ### 12.1 Table Count by Engine/Module
 
-| Engine/Module | Schema | Tables | Key Tables |
-|---------------|--------|--------|------------|
-| Event Store | `evt` | 5 | `event` (partitioned), `projection_registry` |
-| OU + Intent + Classification | `fin` + `ent` | 12 | `operating_unit`, `business_intent`, `spend_category`, `category_intent_rule`, `classification_config` |
-| Decision Grid | `fin` | 5 | `transaction_pipeline`, `policy_module`, `exception` |
-| Budget | `fin` | 3 | `funding_profile`, `funding_transaction` |
-| Commitment | `fin` | 3 | `commitment`, `commitment_schedule` |
-| Posting | `fin` | 8 | `chart_of_accounts`, `journal_entry`, `journal_line`, `gl_balance` |
-| Tax | `fin` | 4 | `tax_jurisdiction`, `tax_rate`, `tax_calculation` |
-| Asset | `fin` | 4 | `asset`, `asset_book`, `depreciation_run` |
-| Inventory | `fin` | 7 | `item_master`, `inventory_balance`, `valuation_layer` |
-| Commission | `fin` | 4 | `commission_plan`, `commission_calculation` |
-| Federation | `fin` | 7 | `legal_entity`, `fx_rate`, `consolidation_elimination` |
-| Production | `fin` | 7 | `bill_of_materials`, `work_order`, `production_variance` |
-| Atlas AI | `fin` | 4 | `ai_model_registry`, `ai_prediction`, `ai_action` |
-| Approval (meta) | `meta` | 4 | `approval_template`, `approval_template_stage`, `approval_template_rule` |
-| **Purchase Invoice** | `fin` | **3** | `document_sequence`, `purchase_invoice`, `purchase_invoice_line` |
-| **Payment Entry** | `fin` | **2** | `payment_entry`, `payment_allocation` |
-| **Bank Reconciliation** | `fin` | **3** | `bank_statement`, `bank_statement_line`, `reconciliation_session` |
-| **Total** | | **76** | |
+| Engine/Module                | Schema        | Tables | Key Tables                                                                                             |
+| ---------------------------- | ------------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| Event Store                  | `evt`         | 5      | `event` (partitioned), `projection_registry`                                                           |
+| OU + Intent + Classification | `fin` + `ent` | 12     | `operating_unit`, `business_intent`, `spend_category`, `category_intent_rule`, `classification_config` |
+| Decision Grid                | `fin`         | 5      | `transaction_pipeline`, `policy_module`, `exception`                                                   |
+| Budget                       | `fin`         | 3      | `funding_profile`, `funding_transaction`                                                               |
+| Commitment                   | `fin`         | 3      | `commitment`, `commitment_schedule`                                                                    |
+| Posting                      | `fin`         | 8      | `chart_of_accounts`, `journal_entry`, `journal_line`, `gl_balance`                                     |
+| Tax                          | `fin`         | 4      | `tax_jurisdiction`, `tax_rate`, `tax_calculation`                                                      |
+| Asset                        | `fin`         | 4      | `asset`, `asset_book`, `depreciation_run`                                                              |
+| Inventory                    | `fin`         | 7      | `item_master`, `inventory_balance`, `valuation_layer`                                                  |
+| Commission                   | `fin`         | 4      | `commission_plan`, `commission_calculation`                                                            |
+| Federation                   | `fin`         | 7      | `legal_entity`, `fx_rate`, `consolidation_elimination`                                                 |
+| Production                   | `fin`         | 7      | `bill_of_materials`, `work_order`, `production_variance`                                               |
+| Atlas AI                     | `fin`         | 4      | `ai_model_registry`, `ai_prediction`, `ai_action`                                                      |
+| Approval (meta)              | `meta`        | 4      | `approval_template`, `approval_template_stage`, `approval_template_rule`                               |
+| **Purchase Invoice**         | `fin`         | **3**  | `document_sequence`, `purchase_invoice`, `purchase_invoice_line`                                       |
+| **Payment Entry**            | `fin`         | **2**  | `payment_entry`, `payment_allocation`                                                                  |
+| **Bank Reconciliation**      | `fin`         | **3**  | `bank_statement`, `bank_statement_line`, `reconciliation_session`                                      |
+| **Total**                    |               | **76** |                                                                                                        |
 
 ### 12.2 New Tables (v2.2)
 
-| Table | DDL File | Purpose | Key Constraint |
-|-------|----------|---------|----------------|
-| `fin.document_sequence` | `196_purchase_invoice.sql` | Auto-numbering for finance documents | PK `(tenant_id, entity_code, prefix, fiscal_year)` |
-| `fin.purchase_invoice` | `196_purchase_invoice.sql` | Non-PO invoice header | UNIQUE `(tenant_id, entity_code, invoice_number)` |
-| `fin.purchase_invoice_line` | `196_purchase_invoice.sql` | Invoice line items | UNIQUE `(tenant_id, invoice_id, line_no)` |
-| `fin.payment_entry` | `197_payment_entry.sql` | Payment header | UNIQUE `(tenant_id, entity_code, payment_number)` |
-| `fin.payment_allocation` | `197_payment_entry.sql` | Per-invoice allocation (gross settlement) | UNIQUE `(tenant_id, payment_id, line_no)` |
-| `fin.bank_statement` | `199_bank_reconciliation.sql` | Imported bank statement header | UNIQUE `(tenant_id, entity_code, statement_number)` |
-| `fin.bank_statement_line` | `199_bank_reconciliation.sql` | Individual bank transactions | UNIQUE `(tenant_id, statement_id, line_no)` |
-| `fin.reconciliation_session` | `199_bank_reconciliation.sql` | Reconciliation work tracking | UNIQUE `(tenant_id, statement_id)` |
+| Table                        | DDL File                      | Purpose                                   | Key Constraint                                      |
+| ---------------------------- | ----------------------------- | ----------------------------------------- | --------------------------------------------------- |
+| `fin.document_sequence`      | `196_purchase_invoice.sql`    | Auto-numbering for finance documents      | PK `(tenant_id, entity_code, prefix, fiscal_year)`  |
+| `fin.purchase_invoice`       | `196_purchase_invoice.sql`    | Non-PO invoice header                     | UNIQUE `(tenant_id, entity_code, invoice_number)`   |
+| `fin.purchase_invoice_line`  | `196_purchase_invoice.sql`    | Invoice line items                        | UNIQUE `(tenant_id, invoice_id, line_no)`           |
+| `fin.payment_entry`          | `197_payment_entry.sql`       | Payment header                            | UNIQUE `(tenant_id, entity_code, payment_number)`   |
+| `fin.payment_allocation`     | `197_payment_entry.sql`       | Per-invoice allocation (gross settlement) | UNIQUE `(tenant_id, payment_id, line_no)`           |
+| `fin.bank_statement`         | `199_bank_reconciliation.sql` | Imported bank statement header            | UNIQUE `(tenant_id, entity_code, statement_number)` |
+| `fin.bank_statement_line`    | `199_bank_reconciliation.sql` | Individual bank transactions              | UNIQUE `(tenant_id, statement_id, line_no)`         |
+| `fin.reconciliation_session` | `199_bank_reconciliation.sql` | Reconciliation work tracking              | UNIQUE `(tenant_id, statement_id)`                  |
 
 ### 12.3 Schema Delta: journal_line.source_doc_line_id
 
@@ -1705,36 +1740,36 @@ Links each JE line back to the specific source document line that generated it, 
 
 ### 12.4 Generated Columns (Computed at Database Level)
 
-| Table | Column | Formula |
-|-------|--------|---------|
-| `fin.commitment` | `remaining_amount` | `total_amount − fulfilled_amount` |
-| `fin.asset_book` | `net_book_value` | `cost_basis − accumulated_depreciation` |
-| `fin.inventory_balance` | `total_value` | `quantity_on_hand × unit_cost` |
-| `fin.work_order_cost` | `variance` | `actual_amount − planned_amount` |
-| `fin.tax_credit_ledger` | `net_position` | `input_credits − output_liability` |
-| `fin.stocktake_line` | `variance_qty` | `counted_qty − system_qty` |
+| Table                   | Column             | Formula                                 |
+| ----------------------- | ------------------ | --------------------------------------- |
+| `fin.commitment`        | `remaining_amount` | `total_amount − fulfilled_amount`       |
+| `fin.asset_book`        | `net_book_value`   | `cost_basis − accumulated_depreciation` |
+| `fin.inventory_balance` | `total_value`      | `quantity_on_hand × unit_cost`          |
+| `fin.work_order_cost`   | `variance`         | `actual_amount − planned_amount`        |
+| `fin.tax_credit_ledger` | `net_position`     | `input_credits − output_liability`      |
+| `fin.stocktake_line`    | `variance_qty`     | `counted_qty − system_qty`              |
 
 ### 12.5 PostgreSQL Enum Types
 
-| Type | Values |
-|------|--------|
-| `fin.valuation_method` | `FIFO`, `LIFO`, `WEIGHTED_AVG`, `STANDARD`, `SPECIFIC` |
-| `fin.movement_type` | `RECEIPT`, `ISSUE_SALES`, `ISSUE_PRODUCTION`, `TRANSFER_OUT`, `TRANSFER_IN`, `ADJUSTMENT`, `SCRAP`, `RETURN` |
-| `fin.stocktake_status` | `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED` |
+| Type                   | Values                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `fin.valuation_method` | `FIFO`, `LIFO`, `WEIGHTED_AVG`, `STANDARD`, `SPECIFIC`                                                       |
+| `fin.movement_type`    | `RECEIPT`, `ISSUE_SALES`, `ISSUE_PRODUCTION`, `TRANSFER_OUT`, `TRANSFER_IN`, `ADJUSTMENT`, `SCRAP`, `RETURN` |
+| `fin.stocktake_status` | `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`                                                           |
 
 ### 12.6 Hierarchical Structures
 
-| Entity | Max Depth | Parent Column | Use |
-|--------|----------|---------------|-----|
-| `fin.operating_unit` | 3 | `parent_id` | Org hierarchy |
-| `fin.business_intent` | Unlimited | `parent_id` | Intent taxonomy |
-| `fin.funding_profile` | 4 | `parent_id` | Budget hierarchy |
-| `fin.chart_of_accounts` | Unlimited | `parent_id` | GL account tree |
-| `fin.cost_center` | Unlimited | `parent_id` | Cost allocation tree |
-| `fin.tax_jurisdiction` | Unlimited | `parent_id` | Jurisdiction nesting |
-| `fin.legal_entity` | Unlimited | `parent_entity_id` | Corporate structure |
-| `fin.asset` | Unlimited | `parent_asset_id` | Component assets |
-| `fin.bill_of_materials` | Multi-level (via BOM explosion) | BOM line references | Manufacturing BOM |
+| Entity                  | Max Depth                       | Parent Column       | Use                  |
+| ----------------------- | ------------------------------- | ------------------- | -------------------- |
+| `fin.operating_unit`    | 3                               | `parent_id`         | Org hierarchy        |
+| `fin.business_intent`   | Unlimited                       | `parent_id`         | Intent taxonomy      |
+| `fin.funding_profile`   | 4                               | `parent_id`         | Budget hierarchy     |
+| `fin.chart_of_accounts` | Unlimited                       | `parent_id`         | GL account tree      |
+| `fin.cost_center`       | Unlimited                       | `parent_id`         | Cost allocation tree |
+| `fin.tax_jurisdiction`  | Unlimited                       | `parent_id`         | Jurisdiction nesting |
+| `fin.legal_entity`      | Unlimited                       | `parent_entity_id`  | Corporate structure  |
+| `fin.asset`             | Unlimited                       | `parent_asset_id`   | Component assets     |
+| `fin.bill_of_materials` | Multi-level (via BOM explosion) | BOM line references | Manufacturing BOM    |
 
 ---
 
@@ -1742,20 +1777,20 @@ Links each JE line back to the specific source document line that generated it, 
 
 ### 13.1 Seed File Inventory
 
-| File | Domain | Tables Seeded |
-|------|--------|---------------|
-| `290_seed_demo_finance.sql` | Base finance (demo tenants) | `fin.business_intent`, `fin.policy_module`, `fin.smart_default_rule`, `evt.projection_registry` |
-| `291_seed_demo_org_units.sql` | Org hierarchy | `core.organizational_unit`, `fin.operating_unit` (+ DDL patch) |
-| `292_seed_demo_coa.sql` | Chart of accounts | `fin.chart_of_accounts` |
-| `293_seed_demo_fiscal.sql` | Fiscal periods | `fin.fiscal_period` |
-| `294_seed_demo_cost_profit.sql` | Cost/profit centers | `fin.cost_center`, `fin.profit_center` (+ OU default updates) |
-| `295_seed_demo_tax.sql` | Tax jurisdictions & rates | `fin.tax_jurisdiction`, `fin.tax_rate` |
-| `296_seed_demo_accounting.sql` | Accounting profiles | `fin.accounting_profile` |
-| `297_seed_demo_funding.sql` | Funding profiles | `fin.funding_profile` |
-| `298_seed_demo_approval.sql` | Approval workflows | `meta.approval_template`, `meta.approval_template_stage`, `meta.approval_template_rule` |
-| `299_seed_demo_legal_entity.sql` | Federation (F only) | `fin.legal_entity`, `fin.intercompany_agreement`, `fin.fx_rate` |
-| `301_seed_demo_classification.sql` | Classification engine | `ent.classification_config`, `fin.spend_category`, `fin.category_intent_rule` |
-| `325_seed_approval_definitions.sql` | Finance approval definitions | `wf.approval_definition` (6 templates for PI/PAY/MJE) |
+| File                                | Domain                       | Tables Seeded                                                                                   |
+| ----------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| `290_seed_demo_finance.sql`         | Base finance (demo tenants)  | `fin.business_intent`, `fin.policy_module`, `fin.smart_default_rule`, `evt.projection_registry` |
+| `291_seed_demo_org_units.sql`       | Org hierarchy                | `core.organizational_unit`, `fin.operating_unit` (+ DDL patch)                                  |
+| `292_seed_demo_coa.sql`             | Chart of accounts            | `fin.chart_of_accounts`                                                                         |
+| `293_seed_demo_fiscal.sql`          | Fiscal periods               | `fin.fiscal_period`                                                                             |
+| `294_seed_demo_cost_profit.sql`     | Cost/profit centers          | `fin.cost_center`, `fin.profit_center` (+ OU default updates)                                   |
+| `295_seed_demo_tax.sql`             | Tax jurisdictions & rates    | `fin.tax_jurisdiction`, `fin.tax_rate`                                                          |
+| `296_seed_demo_accounting.sql`      | Accounting profiles          | `fin.accounting_profile`                                                                        |
+| `297_seed_demo_funding.sql`         | Funding profiles             | `fin.funding_profile`                                                                           |
+| `298_seed_demo_approval.sql`        | Approval workflows           | `meta.approval_template`, `meta.approval_template_stage`, `meta.approval_template_rule`         |
+| `299_seed_demo_legal_entity.sql`    | Federation (F only)          | `fin.legal_entity`, `fin.intercompany_agreement`, `fin.fx_rate`                                 |
+| `301_seed_demo_classification.sql`  | Classification engine        | `ent.classification_config`, `fin.spend_category`, `fin.category_intent_rule`                   |
+| `325_seed_approval_definitions.sql` | Finance approval definitions | `wf.approval_definition` (6 templates for PI/PAY/MJE)                                           |
 
 ### 13.2 Base Finance Data (290 — All Tenants)
 
@@ -1769,11 +1804,13 @@ Identical for all 9 tenants:
 ### 13.3 OU Hierarchy by Blueprint (291)
 
 **Blueprint A** (Freelancer):
+
 ```
 COMPANY (Level 1)
 ```
 
 **Blueprint B** (Small):
+
 ```
 COMPANY (Level 1)
   └─ BRANCH-HQ (Level 2)
@@ -1783,6 +1820,7 @@ COMPANY (Level 1)
 ```
 
 **Blueprint C** (SME):
+
 ```
 COMPANY (Level 1)
   ├─ DIV-PRODUCTS (Level 2)
@@ -1794,6 +1832,7 @@ COMPANY (Level 1)
 ```
 
 **Blueprint D** (Big single country):
+
 ```
 COMPANY (Level 1)
   ├─ REGION-EAST (Level 2)
@@ -1814,6 +1853,7 @@ COMPANY (Level 1)
 ```
 
 **Blueprint E** (Multi-location):
+
 ```
 COMPANY (Level 1)
   ├─ BRANCH-ZH (Level 2, Zurich)
@@ -1828,6 +1868,7 @@ COMPANY (Level 1)
 ```
 
 **Blueprint F** (Multi-country):
+
 ```
 COMPANY (Level 1, Group shell)
   ├─ LE-CA (Level 2, entity_code='LE-CA')
@@ -1848,33 +1889,33 @@ COMPANY (Level 1, Group shell)
 
 All blueprints use subsets of a common numbering scheme:
 
-| Range | Type | Blueprint A | B | C | D | E | F |
-|-------|------|:-----------:|:-:|:-:|:-:|:-:|:-:|
-| 1000–1160 | Current Assets | 4 | 5 | 7 | 9 | 7 | 7×4 |
-| 1200–1260 | Fixed Assets | — | — | 4 | 6 | 4 | 4×4 |
-| 1900 | IC Receivables | — | — | — | 1 | — | 1×4 |
-| 2000–2220 | Liabilities | 3 | 4 | 6 | 8 | 6 | 6×4 |
-| 2900 | IC Payables | — | — | — | 1 | — | 1×4 |
-| 3000–3200 | Equity | 2 | 2 | 3 | 3 | 3 | 3×4 |
-| 4000–4900 | Revenue | 2 | 3 | 5 | 5 | 5 | 5×4 |
-| 5000–5400 | COGS | — | 2 | 3 | 5 | 3 | 3×4 |
-| 6000–6900 | OPEX | 4 | 8 | 10 | 12 | 10 | 10×4 |
-| 7000–8200 | Other Inc/Exp | — | — | 3 | 3 | 3 | 3×4 |
-| 9000 | Tax Provision | — | — | 1 | 1 | 1 | 1×4 |
-| **Total** | | **~18** | **~26** | **~42** | **~52** | **~42** | **~168** |
+| Range     | Type           | Blueprint A |    B    |    C    |    D    |    E    |    F     |
+| --------- | -------------- | :---------: | :-----: | :-----: | :-----: | :-----: | :------: |
+| 1000–1160 | Current Assets |      4      |    5    |    7    |    9    |    7    |   7×4    |
+| 1200–1260 | Fixed Assets   |      —      |    —    |    4    |    6    |    4    |   4×4    |
+| 1900      | IC Receivables |      —      |    —    |    —    |    1    |    —    |   1×4    |
+| 2000–2220 | Liabilities    |      3      |    4    |    6    |    8    |    6    |   6×4    |
+| 2900      | IC Payables    |      —      |    —    |    —    |    1    |    —    |   1×4    |
+| 3000–3200 | Equity         |      2      |    2    |    3    |    3    |    3    |   3×4    |
+| 4000–4900 | Revenue        |      2      |    3    |    5    |    5    |    5    |   5×4    |
+| 5000–5400 | COGS           |      —      |    2    |    3    |    5    |    3    |   3×4    |
+| 6000–6900 | OPEX           |      4      |    8    |   10    |   12    |   10    |   10×4   |
+| 7000–8200 | Other Inc/Exp  |      —      |    —    |    3    |    3    |    3    |   3×4    |
+| 9000      | Tax Provision  |      —      |    —    |    1    |    1    |    1    |   1×4    |
+| **Total** |                |   **~18**   | **~26** | **~42** | **~52** | **~42** | **~168** |
 
 Blueprint F replicates the C-level COA per legal entity entity_code (LE-CA, LE-MY, LE-SA, LE-IN).
 
 ### 13.5 Approval Workflows by Blueprint (298)
 
-| Blueprint | Template | Stages | Flow | Threshold |
-|-----------|---------|--------|------|-----------|
-| A | `APPR-SOLO-1` | 1 | Owner self-approval | — |
-| B | `APPR-SMALL-2` | 2 | Dept Head → Owner | 1,000 |
-| C | `APPR-SME-3` | 3 | Dept Head → Div Manager → CFO | 5,000 / 10,000 |
-| D | `APPR-ENT-3` | 3 | Dept Head → Controller → CFO | 10,000 / 50,000 |
-| E | `APPR-BRANCH-2` | 2 | Branch Manager → Group CFO | 25,000 |
-| F | `APPR-ENTITY-3` | 3 | Entity Controller → Group CFO → Board | 50,000 / 100,000 |
+| Blueprint | Template        | Stages | Flow                                  | Threshold        |
+| --------- | --------------- | ------ | ------------------------------------- | ---------------- |
+| A         | `APPR-SOLO-1`   | 1      | Owner self-approval                   | —                |
+| B         | `APPR-SMALL-2`  | 2      | Dept Head → Owner                     | 1,000            |
+| C         | `APPR-SME-3`    | 3      | Dept Head → Div Manager → CFO         | 5,000 / 10,000   |
+| D         | `APPR-ENT-3`    | 3      | Dept Head → Controller → CFO          | 10,000 / 50,000  |
+| E         | `APPR-BRANCH-2` | 2      | Branch Manager → Group CFO            | 25,000           |
+| F         | `APPR-ENTITY-3` | 3      | Entity Controller → Group CFO → Board | 50,000 / 100,000 |
 
 **Role Codes Used**: `OWNER`, `DEPT_HEAD`, `DIV_MANAGER`, `CFO`, `CONTROLLER`, `BRANCH_MANAGER`, `GROUP_CFO`, `ENTITY_CONTROLLER`, `BOARD`
 
@@ -1886,42 +1927,42 @@ The `325_seed_approval_definitions.sql` seeds 6 approval templates into `wf.appr
 
 **Purchase Invoice (3 templates)**:
 
-| Template | Score Range | Amount | Levels | Flow |
-|----------|-----------|--------|--------|------|
-| `PI_STANDARD` | 0.75–0.90 | < 50k | 1 | Cost center manager → dept head (escalation). 48h SLA. |
-| `PI_ENHANCED` | 0.50–0.75 | 50k–500k | 2 | Cost center manager (48h) → finance director (72h) |
-| `PI_EXECUTIVE` | 0.25–0.50 | > 500k | 3 | Cost center manager (24h) → finance director (48h) → CFO (72h, notifies CEO) |
+| Template       | Score Range | Amount   | Levels | Flow                                                                         |
+| -------------- | ----------- | -------- | ------ | ---------------------------------------------------------------------------- |
+| `PI_STANDARD`  | 0.75–0.90   | < 50k    | 1      | Cost center manager → dept head (escalation). 48h SLA.                       |
+| `PI_ENHANCED`  | 0.50–0.75   | 50k–500k | 2      | Cost center manager (48h) → finance director (72h)                           |
+| `PI_EXECUTIVE` | 0.25–0.50   | > 500k   | 3      | Cost center manager (24h) → finance director (48h) → CFO (72h, notifies CEO) |
 
 **Payment Entry (2 templates)**:
 
-| Template | Amount | Levels | Flow |
-|----------|--------|--------|------|
-| `PAY_STANDARD` | < 100k | 1 | Treasury analyst (24h) → treasury manager (escalation) |
-| `PAY_HIGH_VALUE` | >= 100k | 2 | Treasury manager (24h) → CFO (48h, notifies CEO) |
+| Template         | Amount  | Levels | Flow                                                   |
+| ---------------- | ------- | ------ | ------------------------------------------------------ |
+| `PAY_STANDARD`   | < 100k  | 1      | Treasury analyst (24h) → treasury manager (escalation) |
+| `PAY_HIGH_VALUE` | >= 100k | 2      | Treasury manager (24h) → CFO (48h, notifies CEO)       |
 
 **Manual JE (1 template)**:
 
-| Template | Route | Levels | Flow |
-|----------|-------|--------|------|
-| `MJE_STANDARD` | STANDARD/ENHANCED/EXECUTIVE | 2 | GL controller (24h) → finance director. `directPostMode` allows auto-post for amounts ≤ 10k with `fin.je.direct_post` permission. |
+| Template       | Route                       | Levels | Flow                                                                                                                              |
+| -------------- | --------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `MJE_STANDARD` | STANDARD/ENHANCED/EXECUTIVE | 2      | GL controller (24h) → finance director. `directPostMode` allows auto-post for amounts ≤ 10k with `fin.je.direct_post` permission. |
 
 All templates enforce SOD: submitter cannot approve. Seeds to all tenants via replication.
 
 ### 13.7 Seed Data Row Counts
 
-| Seed File | Tables | Approx Rows |
-|-----------|--------|-------------|
-| 290 | 4 tables | ~396 |
-| 291 | 2 tables | ~124 |
-| 292 | 1 table | ~434 |
-| 293 | 1 table | ~156 |
-| 294 | 2 tables (+ OU updates) | ~60 |
-| 295 | 2 tables | ~75 |
-| 296 | 1 table | ~55 |
-| 297 | 1 table | ~45 |
-| 298 | 3 tables | ~47 |
-| 299 | 3 tables | ~15 |
-| **Total** | **20 tables** | **~1,407** |
+| Seed File | Tables                  | Approx Rows |
+| --------- | ----------------------- | ----------- |
+| 290       | 4 tables                | ~396        |
+| 291       | 2 tables                | ~124        |
+| 292       | 1 table                 | ~434        |
+| 293       | 1 table                 | ~156        |
+| 294       | 2 tables (+ OU updates) | ~60         |
+| 295       | 2 tables                | ~75         |
+| 296       | 1 table                 | ~55         |
+| 297       | 1 table                 | ~45         |
+| 298       | 3 tables                | ~47         |
+| 299       | 3 tables                | ~15         |
+| **Total** | **20 tables**           | **~1,407**  |
 
 ---
 
@@ -1944,14 +1985,14 @@ The finance engines are configured through `framework/runtime/src/kernel/config.
 
 ### 14.2 Key Feature Flags
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `financeEngines.budget` | `true` | Enable/disable budget engine. When `false`, funding profiles are ignored (LEFT JOIN safe). |
-| `financeEngines.atlas` | `false` | Enable Atlas AI engine. L1/L2/L3 autonomy levels. |
-| `financeEngines.federation` | `false` | Enable multi-entity federation. Required for Blueprint F. |
-| `financeEngines.production` | `false` | Enable production/WIP engine. |
-| `financeEngines.inventory` | `false` | Enable inventory subledger. |
-| `financeEngines.commission` | `false` | Enable commission engine. |
+| Flag                        | Default | Description                                                                                |
+| --------------------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `financeEngines.budget`     | `true`  | Enable/disable budget engine. When `false`, funding profiles are ignored (LEFT JOIN safe). |
+| `financeEngines.atlas`      | `false` | Enable Atlas AI engine. L1/L2/L3 autonomy levels.                                          |
+| `financeEngines.federation` | `false` | Enable multi-entity federation. Required for Blueprint F.                                  |
+| `financeEngines.production` | `false` | Enable production/WIP engine.                                                              |
+| `financeEngines.inventory`  | `false` | Enable inventory subledger.                                                                |
+| `financeEngines.commission` | `false` | Enable commission engine.                                                                  |
 
 ### 14.3 Database Provisioning
 
@@ -1983,18 +2024,19 @@ Files are tracked via `public.schema_provisions` with checksum-based change dete
 
 Multiple audit mechanisms operate simultaneously:
 
-| Mechanism | Scope | Storage |
-|-----------|-------|---------|
-| Event Store | All financial state changes | `evt.event` (partitioned, immutable) |
-| Policy Evaluation Log | Decision Grid policy decisions | `fin.policy_evaluation_log` (immutable, MC-5) |
-| Funding Transactions | Budget lifecycle actions | `fin.funding_transaction` |
-| Asset Transactions | Asset lifecycle events | `fin.asset_transaction` |
-| Tax Calculations | Per-transaction tax audit | `fin.tax_calculation` |
-| AI Predictions + Actions | AI decision trail | `fin.ai_prediction`, `fin.ai_action` |
+| Mechanism                | Scope                          | Storage                                       |
+| ------------------------ | ------------------------------ | --------------------------------------------- |
+| Event Store              | All financial state changes    | `evt.event` (partitioned, immutable)          |
+| Policy Evaluation Log    | Decision Grid policy decisions | `fin.policy_evaluation_log` (immutable, MC-5) |
+| Funding Transactions     | Budget lifecycle actions       | `fin.funding_transaction`                     |
+| Asset Transactions       | Asset lifecycle events         | `fin.asset_transaction`                       |
+| Tax Calculations         | Per-transaction tax audit      | `fin.tax_calculation`                         |
+| AI Predictions + Actions | AI decision trail              | `fin.ai_prediction`, `fin.ai_action`          |
 
 ### 15.3 Idempotency
 
 All write operations support idempotency through one of:
+
 - `idempotency_key` column with UNIQUE constraint (Event Store, Funding Transaction)
 - `ON CONFLICT (unique_key) DO UPDATE SET updated_at = now()` (most tables)
 - `ON CONFLICT DO NOTHING` (tables without `updated_at`)
@@ -2008,14 +2050,14 @@ All write operations support idempotency through one of:
 
 ### 15.5 Boundary Rules
 
-| Engine | Rule |
-|--------|------|
-| Event Store | All writes are append-only. No updates or deletes. |
-| Budget | Only `FundLifecycleService` may mutate FP amounts. |
-| Commitment | Never mutates FP directly — emits events for Budget Engine. |
-| Posting | Double-entry invariant enforced at DB level. Period must be OPEN. |
-| Tax | No cross-currency calculations without explicit FX conversion. |
-| Atlas AI | L3 actions auto-execute only at confidence ≥ 95%. |
+| Engine      | Rule                                                              |
+| ----------- | ----------------------------------------------------------------- |
+| Event Store | All writes are append-only. No updates or deletes.                |
+| Budget      | Only `FundLifecycleService` may mutate FP amounts.                |
+| Commitment  | Never mutates FP directly — emits events for Budget Engine.       |
+| Posting     | Double-entry invariant enforced at DB level. Period must be OPEN. |
+| Tax         | No cross-currency calculations without explicit FX conversion.    |
+| Atlas AI    | L3 actions auto-execute only at confidence ≥ 95%.                 |
 
 ---
 
@@ -2023,27 +2065,27 @@ All write operations support idempotency through one of:
 
 ### A. Upsert Key Reference
 
-| Table | Unique Key | ON CONFLICT Pattern |
-|-------|-----------|-------------------|
-| `core.organizational_unit` | `(tenant_id, code)` | DO UPDATE SET updated_at |
-| `fin.operating_unit` | `(tenant_id, entity_code, code)` | DO UPDATE SET updated_at |
-| `fin.business_intent` | `(tenant_id, code)` | DO UPDATE SET updated_at |
-| `fin.chart_of_accounts` | `(tenant_id, entity_code, account_code)` | DO UPDATE SET updated_at |
-| `fin.fiscal_period` | `(tenant_id, entity_code, fiscal_year, period_number)` | DO NOTHING |
-| `fin.cost_center` | `(tenant_id, entity_code, code)` | DO UPDATE SET name |
-| `fin.profit_center` | `(tenant_id, entity_code, code)` | DO UPDATE SET name |
-| `fin.tax_jurisdiction` | `(tenant_id, code)` | DO UPDATE SET name |
-| `fin.tax_rate` | `(tenant_id, jurisdiction_id, tax_code, effective_from)` | DO UPDATE SET rate |
-| `fin.accounting_profile` | `(tenant_id, entity_code, code)` | DO UPDATE SET updated_at |
-| `fin.funding_profile` | `(tenant_id, entity_code, code, fiscal_year)` | DO UPDATE SET updated_at |
-| `fin.policy_module` | `(tenant_id, module_id, module_version)` | DO UPDATE SET updated_at |
-| `evt.projection_registry` | `(tenant_id, projection_id)` | DO UPDATE SET updated_at |
-| `meta.approval_template` | `(tenant_id, code, version_no)` | DO UPDATE SET updated_at |
-| `meta.approval_template_stage` | `(tenant_id, approval_template_id, stage_no)` | DO UPDATE SET name |
-| `meta.approval_template_rule` | None (guarded) | IF NOT EXISTS + md5() |
-| `fin.legal_entity` | `(tenant_id, code)` | DO UPDATE SET updated_at |
-| `fin.intercompany_agreement` | `(tenant_id, source, dest, agreement_type)` | DO NOTHING |
-| `fin.fx_rate` | `(tenant_id, from, to, rate_type, effective_date)` | DO UPDATE SET rate |
+| Table                          | Unique Key                                               | ON CONFLICT Pattern      |
+| ------------------------------ | -------------------------------------------------------- | ------------------------ |
+| `core.organizational_unit`     | `(tenant_id, code)`                                      | DO UPDATE SET updated_at |
+| `fin.operating_unit`           | `(tenant_id, entity_code, code)`                         | DO UPDATE SET updated_at |
+| `fin.business_intent`          | `(tenant_id, code)`                                      | DO UPDATE SET updated_at |
+| `fin.chart_of_accounts`        | `(tenant_id, entity_code, account_code)`                 | DO UPDATE SET updated_at |
+| `fin.fiscal_period`            | `(tenant_id, entity_code, fiscal_year, period_number)`   | DO NOTHING               |
+| `fin.cost_center`              | `(tenant_id, entity_code, code)`                         | DO UPDATE SET name       |
+| `fin.profit_center`            | `(tenant_id, entity_code, code)`                         | DO UPDATE SET name       |
+| `fin.tax_jurisdiction`         | `(tenant_id, code)`                                      | DO UPDATE SET name       |
+| `fin.tax_rate`                 | `(tenant_id, jurisdiction_id, tax_code, effective_from)` | DO UPDATE SET rate       |
+| `fin.accounting_profile`       | `(tenant_id, entity_code, code)`                         | DO UPDATE SET updated_at |
+| `fin.funding_profile`          | `(tenant_id, entity_code, code, fiscal_year)`            | DO UPDATE SET updated_at |
+| `fin.policy_module`            | `(tenant_id, module_id, module_version)`                 | DO UPDATE SET updated_at |
+| `evt.projection_registry`      | `(tenant_id, projection_id)`                             | DO UPDATE SET updated_at |
+| `meta.approval_template`       | `(tenant_id, code, version_no)`                          | DO UPDATE SET updated_at |
+| `meta.approval_template_stage` | `(tenant_id, approval_template_id, stage_no)`            | DO UPDATE SET name       |
+| `meta.approval_template_rule`  | None (guarded)                                           | IF NOT EXISTS + md5()    |
+| `fin.legal_entity`             | `(tenant_id, code)`                                      | DO UPDATE SET updated_at |
+| `fin.intercompany_agreement`   | `(tenant_id, source, dest, agreement_type)`              | DO NOTHING               |
+| `fin.fx_rate`                  | `(tenant_id, from, to, rate_type, effective_date)`       | DO UPDATE SET rate       |
 
 ### B. End-to-End Transaction Example
 
@@ -2069,42 +2111,42 @@ All write operations support idempotency through one of:
 
 ### C. File Locations
 
-| Category | Path |
-|----------|------|
-| DDL (Event Store) | `framework/adapters/db/src/sql/150_event_store.sql` |
-| DDL (OU + Intent) | `framework/adapters/db/src/sql/155_ou_intent.sql` |
-| DDL (Spend Category) | `framework/adapters/db/src/sql/157_spend_category.sql` |
-| DDL (Classification) | `framework/adapters/db/src/sql/071_ent_classification.sql` |
-| DDL (Decision Grid) | `framework/adapters/db/src/sql/160_decision_grid.sql` |
-| DDL (Budget) | `framework/adapters/db/src/sql/170_budget.sql` |
-| DDL (Commitment) | `framework/adapters/db/src/sql/180_commitment.sql` |
-| DDL (Posting) | `framework/adapters/db/src/sql/190_posting.sql` |
-| DDL (Tax) | `framework/adapters/db/src/sql/195_tax.sql` |
-| DDL (Asset) | `framework/adapters/db/src/sql/161_asset.sql` |
-| DDL (Inventory) | `framework/adapters/db/src/sql/162_inventory.sql` |
-| DDL (Commission) | `framework/adapters/db/src/sql/163_commission.sql` |
-| DDL (Federation) | `framework/adapters/db/src/sql/164_federation.sql` |
-| DDL (Production) | `framework/adapters/db/src/sql/165_production.sql` |
-| DDL (Atlas AI) | `framework/adapters/db/src/sql/166_atlas_ai.sql` |
-| DDL (Approval) | `framework/adapters/db/src/sql/040_meta.sql` |
-| DDL (Purchase Invoice) | `framework/adapters/db/src/sql/07_finance/196_purchase_invoice.sql` |
-| DDL (Payment Entry) | `framework/adapters/db/src/sql/07_finance/197_payment_entry.sql` |
-| DDL (Bank Reconciliation) | `framework/adapters/db/src/sql/07_finance/199_bank_reconciliation.sql` |
-| Seed (290–301) | `framework/adapters/db/src/sql/10_seed_standard/29x_seed_*.sql`, `30x_*.sql` |
-| Seed (Approval Defs) | `framework/adapters/db/src/sql/10_seed_standard/325_seed_approval_definitions.sql` |
-| Runtime Engines | `framework/runtime/src/services/business/engines/` |
-| Shared Foundations | `framework/runtime/src/services/business/engines/shared/` |
-| Accounting Module | `framework/runtime/src/services/business/finance/accounting/` |
-| Payments Module | `framework/runtime/src/services/business/finance/payments/` |
-| Banking Module | `framework/runtime/src/services/business/finance/banking/` |
-| Finance Shared | `framework/runtime/src/services/business/finance/shared/` |
-| Finance Tests | `framework/runtime/src/services/business/finance/__tests__/` |
-| Budget Tests | `framework/runtime/src/services/business/engines/budget-engine/__tests__/` |
-| UI Components | `products/neon/apps/web/components/finance/` |
-| Tab Plugins | `products/neon/apps/web/lib/entity-page/plugins/finance-plugin.tsx` |
-| DI Tokens | `framework/runtime/src/kernel/tokens.ts` |
-| Config Schema | `framework/runtime/src/kernel/config.schema.ts` |
-| Seed CLI | `framework/adapters/db/src/seed/seed.ts` |
+| Category                  | Path                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| DDL (Event Store)         | `framework/adapters/db/src/sql/150_event_store.sql`                                |
+| DDL (OU + Intent)         | `framework/adapters/db/src/sql/155_ou_intent.sql`                                  |
+| DDL (Spend Category)      | `framework/adapters/db/src/sql/157_spend_category.sql`                             |
+| DDL (Classification)      | `framework/adapters/db/src/sql/071_ent_classification.sql`                         |
+| DDL (Decision Grid)       | `framework/adapters/db/src/sql/160_decision_grid.sql`                              |
+| DDL (Budget)              | `framework/adapters/db/src/sql/170_budget.sql`                                     |
+| DDL (Commitment)          | `framework/adapters/db/src/sql/180_commitment.sql`                                 |
+| DDL (Posting)             | `framework/adapters/db/src/sql/190_posting.sql`                                    |
+| DDL (Tax)                 | `framework/adapters/db/src/sql/195_tax.sql`                                        |
+| DDL (Asset)               | `framework/adapters/db/src/sql/161_asset.sql`                                      |
+| DDL (Inventory)           | `framework/adapters/db/src/sql/162_inventory.sql`                                  |
+| DDL (Commission)          | `framework/adapters/db/src/sql/163_commission.sql`                                 |
+| DDL (Federation)          | `framework/adapters/db/src/sql/164_federation.sql`                                 |
+| DDL (Production)          | `framework/adapters/db/src/sql/165_production.sql`                                 |
+| DDL (Atlas AI)            | `framework/adapters/db/src/sql/166_atlas_ai.sql`                                   |
+| DDL (Approval)            | `framework/adapters/db/src/sql/040_meta.sql`                                       |
+| DDL (Purchase Invoice)    | `framework/adapters/db/src/sql/07_finance/196_purchase_invoice.sql`                |
+| DDL (Payment Entry)       | `framework/adapters/db/src/sql/07_finance/197_payment_entry.sql`                   |
+| DDL (Bank Reconciliation) | `framework/adapters/db/src/sql/07_finance/199_bank_reconciliation.sql`             |
+| Seed (290–301)            | `framework/adapters/db/src/sql/10_seed_standard/29x_seed_*.sql`, `30x_*.sql`       |
+| Seed (Approval Defs)      | `framework/adapters/db/src/sql/10_seed_standard/325_seed_approval_definitions.sql` |
+| Runtime Engines           | `framework/runtime/src/services/business/engines/`                                 |
+| Shared Foundations        | `framework/runtime/src/services/business/engines/shared/`                          |
+| Accounting Module         | `framework/runtime/src/services/business/finance/accounting/`                      |
+| Payments Module           | `framework/runtime/src/services/business/finance/payments/`                        |
+| Banking Module            | `framework/runtime/src/services/business/finance/banking/`                         |
+| Finance Shared            | `framework/runtime/src/services/business/finance/shared/`                          |
+| Finance Tests             | `framework/runtime/src/services/business/finance/__tests__/`                       |
+| Budget Tests              | `framework/runtime/src/services/business/engines/budget-engine/__tests__/`         |
+| UI Components             | `products/neon/apps/web/components/finance/`                                       |
+| Tab Plugins               | `products/neon/apps/web/lib/entity-page/plugins/finance-plugin.tsx`                |
+| DI Tokens                 | `framework/runtime/src/kernel/tokens.ts`                                           |
+| Config Schema             | `framework/runtime/src/kernel/config.schema.ts`                                    |
+| Seed CLI                  | `framework/adapters/db/src/seed/seed.ts`                                           |
 
 ### D. Verification Queries
 
@@ -2165,100 +2207,100 @@ ORDER BY 1;
 
 #### Purchase Invoice Lifecycle (16 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| T1 | Create + add lines → defaults resolve | `OUIntentResolver.resolveDefaults` called, line defaults populated |
-| T2 | Submit → Decision Grid → approval | `decisionGrid.evaluate` called, `approvalOps.createInstance` called |
-| T3 | Low-amount → zero-approval bypass | Status jumps to APPROVED, no approval created |
-| T4 | Submit with fp_id → budget RESERVED | `budgetOps.reserve` called with correct amount |
-| T5 | Approve → budget COMMITTED | `budgetOps.commit` called on approval event |
-| T6 | Post → JE + GL updated | `postingService.createAndPost` called with Dr/Cr lines |
-| T7 | Post with tax → Dr Tax Input Credit | JE lines include TAX_INPUT_CREDIT debit |
-| T8 | CAPEX → asset creation context | Post succeeds with CAPEX intent domain in outbox event |
-| T9 | item_id → inventory receipt outbox | Outbox event contains inventory line data |
-| T10 | IC supplier → federation outbox | Outbox event contains supplier info for IC handler |
-| T11 | Commission → commission outbox | Outbox event emitted for commission handler |
-| T12 | Budget CONSUMED on post | `budgetOps.consume` called |
-| T23 | Cancel POSTED → reversal + release | `postingService.reverse` + `budgetOps.release` |
-| T24 | Cancel SUBMITTED → approval cancel | `approvalOps.cancelInstance` + `budgetOps.release` |
-| T25 | Reject → back to DRAFT + release | Status reverts, budget released |
-| T28 | Post twice → rejected | Returns ALREADY_POSTED |
+| #   | Test                                  | Assertion                                                           |
+| --- | ------------------------------------- | ------------------------------------------------------------------- |
+| T1  | Create + add lines → defaults resolve | `OUIntentResolver.resolveDefaults` called, line defaults populated  |
+| T2  | Submit → Decision Grid → approval     | `decisionGrid.evaluate` called, `approvalOps.createInstance` called |
+| T3  | Low-amount → zero-approval bypass     | Status jumps to APPROVED, no approval created                       |
+| T4  | Submit with fp_id → budget RESERVED   | `budgetOps.reserve` called with correct amount                      |
+| T5  | Approve → budget COMMITTED            | `budgetOps.commit` called on approval event                         |
+| T6  | Post → JE + GL updated                | `postingService.createAndPost` called with Dr/Cr lines              |
+| T7  | Post with tax → Dr Tax Input Credit   | JE lines include TAX_INPUT_CREDIT debit                             |
+| T8  | CAPEX → asset creation context        | Post succeeds with CAPEX intent domain in outbox event              |
+| T9  | item_id → inventory receipt outbox    | Outbox event contains inventory line data                           |
+| T10 | IC supplier → federation outbox       | Outbox event contains supplier info for IC handler                  |
+| T11 | Commission → commission outbox        | Outbox event emitted for commission handler                         |
+| T12 | Budget CONSUMED on post               | `budgetOps.consume` called                                          |
+| T23 | Cancel POSTED → reversal + release    | `postingService.reverse` + `budgetOps.release`                      |
+| T24 | Cancel SUBMITTED → approval cancel    | `approvalOps.cancelInstance` + `budgetOps.release`                  |
+| T25 | Reject → back to DRAFT + release      | Status reverts, budget released                                     |
+| T28 | Post twice → rejected                 | Returns ALREADY_POSTED                                              |
 
 #### Payment Lifecycle (7 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| T13 | Post → Dr AP Cr Bank | JE total debit = total credit = 1000 |
-| T14 | WHT → Cr WHT Payable | JE includes WHT credit line (WHT 100, net 900) |
-| T15 | Concurrent overpay → 409 | Second allocation exceeds remaining → OVERPAYMENT |
-| T16 | Invoice status → PAID | `updatePaidAmount` called, status transitions to PAID |
-| T26 | Cross-supplier → 400 | Returns CROSS_SUPPLIER |
-| T27 | Balanced JE proof | Dr AP 1000 = Cr Bank 850 + Cr WHT 100 + Cr Disc 50 |
-| T17-18 | Commitment + commission settlement | Spec tests (todo markers) |
+| #      | Test                               | Assertion                                             |
+| ------ | ---------------------------------- | ----------------------------------------------------- |
+| T13    | Post → Dr AP Cr Bank               | JE total debit = total credit = 1000                  |
+| T14    | WHT → Cr WHT Payable               | JE includes WHT credit line (WHT 100, net 900)        |
+| T15    | Concurrent overpay → 409           | Second allocation exceeds remaining → OVERPAYMENT     |
+| T16    | Invoice status → PAID              | `updatePaidAmount` called, status transitions to PAID |
+| T26    | Cross-supplier → 400               | Returns CROSS_SUPPLIER                                |
+| T27    | Balanced JE proof                  | Dr AP 1000 = Cr Bank 850 + Cr WHT 100 + Cr Disc 50    |
+| T17-18 | Commitment + commission settlement | Spec tests (todo markers)                             |
 
 #### Manual JE Lifecycle (2 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
+| #   | Test                              | Assertion                           |
+| --- | --------------------------------- | ----------------------------------- |
 | T19 | 3x "33.3333" = "99.9999" balanced | `validateDoubleEntry` returns valid |
-| T20 | HARD_CLOSE period → rejected | Returns PERIOD_CLOSED |
+| T20 | HARD_CLOSE period → rejected      | Returns PERIOD_CLOSED               |
 
 #### GL Inquiry (3 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| T21 | Trial balance balanced | Sum debits = sum credits |
-| T22 | Drill-down chain | Rows have sourceDocLineId linking to invoice/allocation |
-| T30 | Reversed entry modes | NETTED vs SEPARATE produce different result shapes |
+| #   | Test                   | Assertion                                               |
+| --- | ---------------------- | ------------------------------------------------------- |
+| T21 | Trial balance balanced | Sum debits = sum credits                                |
+| T22 | Drill-down chain       | Rows have sourceDocLineId linking to invoice/allocation |
+| T30 | Reversed entry modes   | NETTED vs SEPARATE produce different result shapes      |
 
 #### Money Library (12 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| T29 | multiplyByRate precision | `money("100") * "0.185"` = `"18.5000"` (HALF_UP, not truncated) |
-| — | sumAmounts no float drift | `"0.1000" + "0.2000"` = `"0.3000"` |
-| — | compareAmounts | Returns -1, 0, 1 correctly |
-| — | isZero | Detects zero values |
-| — | toRatio | Produces decimal string, not Money |
-| — | 3 equal fractions sum | `"33.3333" + "33.3333" + "33.3334"` = `"100.0000"` |
-| — | (6 additional arithmetic tests) | Addition, subtraction, formatting, inverse operations |
+| #   | Test                            | Assertion                                                       |
+| --- | ------------------------------- | --------------------------------------------------------------- |
+| T29 | multiplyByRate precision        | `money("100") * "0.185"` = `"18.5000"` (HALF_UP, not truncated) |
+| —   | sumAmounts no float drift       | `"0.1000" + "0.2000"` = `"0.3000"`                              |
+| —   | compareAmounts                  | Returns -1, 0, 1 correctly                                      |
+| —   | isZero                          | Detects zero values                                             |
+| —   | toRatio                         | Produces decimal string, not Money                              |
+| —   | 3 equal fractions sum           | `"33.3333" + "33.3333" + "33.3334"` = `"100.0000"`              |
+| —   | (6 additional arithmetic tests) | Addition, subtraction, formatting, inverse operations           |
 
 #### Handler Contracts (3 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| T31 | POST lines when status!=DRAFT → 400 | Returns INVALID_STATUS |
-| T32a | Cross-supplier payment → 400 | Returns CROSS_SUPPLIER |
-| T32b | Overpay payment → 409 | Returns OVERPAYMENT |
+| #    | Test                                | Assertion              |
+| ---- | ----------------------------------- | ---------------------- |
+| T31  | POST lines when status!=DRAFT → 400 | Returns INVALID_STATUS |
+| T32a | Cross-supplier payment → 400        | Returns CROSS_SUPPLIER |
+| T32b | Overpay payment → 409               | Returns OVERPAYMENT    |
 
 #### Bank Reconciliation (13 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| — | Pass 1 exact match | Amount + reference + date → confidence 97 (EXACT) |
-| — | Pass 2 fuzzy reference | Amount + Levenshtein ≤ 3 → confidence 80-94 (FUZZY_REF) |
-| — | Pass 3 amount only | Exact amount within 5 days → confidence 60-79 (AMOUNT_ONLY) |
-| — | No match on amount mismatch | Even 1 cent difference → no match |
-| — | No double-matching | Each payment matched at most once |
-| — | Import statement | Creates header + lines with sequential lineNo |
-| — | Start reconciliation | Creates OPEN session, marks IN_PROGRESS |
-| — | Idempotent start | Returns existing OPEN session |
-| — | Auto-match dispatches | Applies ≥90 confidence matches |
-| — | Manual match | MANUAL_MATCHED with confidence 100 |
-| — | Unmatch reverts | Line back to UNMATCHED |
-| — | Unmatch blocked for CONFIRMED | Error code CONFIRMED |
-| — | Complete reconciliation | Calls reconcilePayment, confirms all, completes session |
+| #   | Test                          | Assertion                                                   |
+| --- | ----------------------------- | ----------------------------------------------------------- |
+| —   | Pass 1 exact match            | Amount + reference + date → confidence 97 (EXACT)           |
+| —   | Pass 2 fuzzy reference        | Amount + Levenshtein ≤ 3 → confidence 80-94 (FUZZY_REF)     |
+| —   | Pass 3 amount only            | Exact amount within 5 days → confidence 60-79 (AMOUNT_ONLY) |
+| —   | No match on amount mismatch   | Even 1 cent difference → no match                           |
+| —   | No double-matching            | Each payment matched at most once                           |
+| —   | Import statement              | Creates header + lines with sequential lineNo               |
+| —   | Start reconciliation          | Creates OPEN session, marks IN_PROGRESS                     |
+| —   | Idempotent start              | Returns existing OPEN session                               |
+| —   | Auto-match dispatches         | Applies ≥90 confidence matches                              |
+| —   | Manual match                  | MANUAL_MATCHED with confidence 100                          |
+| —   | Unmatch reverts               | Line back to UNMATCHED                                      |
+| —   | Unmatch blocked for CONFIRMED | Error code CONFIRMED                                        |
+| —   | Complete reconciliation       | Calls reconcilePayment, confirms all, completes session     |
 
 #### Budget Lifecycle Integration (6 tests)
 
-| # | Test | Assertion |
-|---|------|-----------|
-| — | RESERVE → funds locked | reserved=10k, health GREEN |
-| — | COMMIT → confirmed | reserved→0, committed→10k |
-| — | CONSUME → spent | committed→0, consumed→10k |
-| — | RELEASE → returned | released=10k |
-| — | Over-budget → rejection | FP_BREACH error |
-| — | Partial RELEASE | released=3k, health recalculated |
+| #   | Test                    | Assertion                        |
+| --- | ----------------------- | -------------------------------- |
+| —   | RESERVE → funds locked  | reserved=10k, health GREEN       |
+| —   | COMMIT → confirmed      | reserved→0, committed→10k        |
+| —   | CONSUME → spent         | committed→0, consumed→10k        |
+| —   | RELEASE → returned      | released=10k                     |
+| —   | Over-budget → rejection | FP_BREACH error                  |
+| —   | Partial RELEASE         | released=3k, health recalculated |
 
 ### F. End-to-End Purchase Invoice Lifecycle Example
 
