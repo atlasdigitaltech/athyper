@@ -7,7 +7,13 @@
 
 import type { IAuditTrailService } from "../audit/types.js";
 import type { IApprovalInstanceRepository } from "../instance/types.js";
-import type { ApprovalActionType, ApprovalStep, ApprovalTrigger, ApprovalWorkflowTemplate, SlaConfiguration } from "../types.js";
+import type {
+  ApprovalActionType,
+  ApprovalStep,
+  ApprovalTrigger,
+  ApprovalWorkflowTemplate,
+  SlaConfiguration,
+} from "../types.js";
 import type {
   ImpactAnalysis,
   ImpactIssue,
@@ -30,7 +36,9 @@ type TemplateDefinition = {
 };
 
 // Alias for backward compatibility - template with definition access
-type ApprovalTemplate = ApprovalWorkflowTemplate & { definition: TemplateDefinition };
+type ApprovalTemplate = ApprovalWorkflowTemplate & {
+  definition: TemplateDefinition;
+};
 
 /**
  * Version Control Service Implementation
@@ -39,7 +47,7 @@ export class VersionControlService implements IVersionControlService {
   constructor(
     private readonly versionRepository: IVersionRepository,
     private readonly instanceRepository: IApprovalInstanceRepository,
-    private readonly auditService?: IAuditTrailService
+    private readonly auditService?: IAuditTrailService,
   ) {}
 
   /**
@@ -51,15 +59,24 @@ export class VersionControlService implements IVersionControlService {
     definition: ApprovalTemplate["definition"],
     metadata: WorkflowVersion["metadata"],
     createdBy: string,
-    changeDescription?: string
+    changeDescription?: string,
   ): Promise<WorkflowVersion> {
     // Get existing versions to determine version number
-    const existingVersions = await this.versionRepository.getVersions(tenantId, templateId);
-    const maxVersion = existingVersions.reduce((max, v) => Math.max(max, v.version), 0);
+    const existingVersions = await this.versionRepository.getVersions(
+      tenantId,
+      templateId,
+    );
+    const maxVersion = existingVersions.reduce(
+      (max, v) => Math.max(max, v.version),
+      0,
+    );
     const newVersionNumber = maxVersion + 1;
 
     // Get previous active version for change tracking
-    const previousVersion = await this.versionRepository.getActiveVersion(tenantId, templateId);
+    const previousVersion = await this.versionRepository.getActiveVersion(
+      tenantId,
+      templateId,
+    );
     let changes: VersionChange[] = [];
 
     if (previousVersion) {
@@ -100,9 +117,12 @@ export class VersionControlService implements IVersionControlService {
   async publishVersion(
     tenantId: string,
     versionId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<WorkflowVersion> {
-    const version = await this.versionRepository.getVersion(tenantId, versionId);
+    const version = await this.versionRepository.getVersion(
+      tenantId,
+      versionId,
+    );
     if (!version) {
       throw new Error("Version not found");
     }
@@ -112,7 +132,10 @@ export class VersionControlService implements IVersionControlService {
     }
 
     // Deprecate current active version
-    const currentActive = await this.versionRepository.getActiveVersion(tenantId, version.templateId);
+    const currentActive = await this.versionRepository.getActiveVersion(
+      tenantId,
+      version.templateId,
+    );
     if (currentActive) {
       await this.versionRepository.updateVersion(tenantId, currentActive.id, {
         status: "deprecated",
@@ -131,11 +154,15 @@ export class VersionControlService implements IVersionControlService {
 
     // Publish new version
     const now = new Date();
-    const published = await this.versionRepository.updateVersion(tenantId, versionId, {
-      status: "active",
-      publishedAt: now,
-      publishedBy,
-    });
+    const published = await this.versionRepository.updateVersion(
+      tenantId,
+      versionId,
+      {
+        status: "active",
+        publishedAt: now,
+        publishedBy,
+      },
+    );
 
     await this.versionRepository.createLifecycleEvent({
       versionId,
@@ -154,9 +181,12 @@ export class VersionControlService implements IVersionControlService {
     tenantId: string,
     versionId: string,
     deprecatedBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion> {
-    const version = await this.versionRepository.getVersion(tenantId, versionId);
+    const version = await this.versionRepository.getVersion(
+      tenantId,
+      versionId,
+    );
     if (!version) {
       throw new Error("Version not found");
     }
@@ -166,11 +196,15 @@ export class VersionControlService implements IVersionControlService {
     }
 
     const now = new Date();
-    const deprecated = await this.versionRepository.updateVersion(tenantId, versionId, {
-      status: "deprecated",
-      deprecatedAt: now,
-      deprecatedBy,
-    });
+    const deprecated = await this.versionRepository.updateVersion(
+      tenantId,
+      versionId,
+      {
+        status: "deprecated",
+        deprecatedAt: now,
+        deprecatedBy,
+      },
+    );
 
     await this.versionRepository.createLifecycleEvent({
       versionId,
@@ -190,9 +224,12 @@ export class VersionControlService implements IVersionControlService {
     tenantId: string,
     versionId: string,
     retiredBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion> {
-    const version = await this.versionRepository.getVersion(tenantId, versionId);
+    const version = await this.versionRepository.getVersion(
+      tenantId,
+      versionId,
+    );
     if (!version) {
       throw new Error("Version not found");
     }
@@ -203,15 +240,21 @@ export class VersionControlService implements IVersionControlService {
 
     // Check for active instances
     if (version.activeInstanceCount && version.activeInstanceCount > 0) {
-      throw new Error(`Cannot retire version with ${version.activeInstanceCount} active instances`);
+      throw new Error(
+        `Cannot retire version with ${version.activeInstanceCount} active instances`,
+      );
     }
 
     const now = new Date();
-    const retired = await this.versionRepository.updateVersion(tenantId, versionId, {
-      status: "retired",
-      retiredAt: now,
-      retiredBy,
-    });
+    const retired = await this.versionRepository.updateVersion(
+      tenantId,
+      versionId,
+      {
+        status: "retired",
+        retiredAt: now,
+        retiredBy,
+      },
+    );
 
     await this.versionRepository.createLifecycleEvent({
       versionId,
@@ -231,9 +274,12 @@ export class VersionControlService implements IVersionControlService {
     tenantId: string,
     versionId: string,
     reactivatedBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion> {
-    const version = await this.versionRepository.getVersion(tenantId, versionId);
+    const version = await this.versionRepository.getVersion(
+      tenantId,
+      versionId,
+    );
     if (!version) {
       throw new Error("Version not found");
     }
@@ -243,7 +289,10 @@ export class VersionControlService implements IVersionControlService {
     }
 
     // Deprecate current active version if exists
-    const currentActive = await this.versionRepository.getActiveVersion(tenantId, version.templateId);
+    const currentActive = await this.versionRepository.getActiveVersion(
+      tenantId,
+      version.templateId,
+    );
     if (currentActive && currentActive.id !== versionId) {
       await this.versionRepository.updateVersion(tenantId, currentActive.id, {
         status: "deprecated",
@@ -253,13 +302,17 @@ export class VersionControlService implements IVersionControlService {
     }
 
     const now = new Date();
-    const reactivated = await this.versionRepository.updateVersion(tenantId, versionId, {
-      status: "active",
-      deprecatedAt: undefined,
-      deprecatedBy: undefined,
-      retiredAt: undefined,
-      retiredBy: undefined,
-    });
+    const reactivated = await this.versionRepository.updateVersion(
+      tenantId,
+      versionId,
+      {
+        status: "active",
+        deprecatedAt: undefined,
+        deprecatedBy: undefined,
+        retiredAt: undefined,
+        retiredBy: undefined,
+      },
+    );
 
     await this.versionRepository.createLifecycleEvent({
       versionId,
@@ -275,8 +328,14 @@ export class VersionControlService implements IVersionControlService {
   /**
    * Get version history for a template
    */
-  async getVersionHistory(tenantId: string, templateId: string): Promise<WorkflowVersion[]> {
-    const versions = await this.versionRepository.getVersions(tenantId, templateId);
+  async getVersionHistory(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion[]> {
+    const versions = await this.versionRepository.getVersions(
+      tenantId,
+      templateId,
+    );
     return versions.sort((a, b) => b.version - a.version);
   }
 
@@ -286,16 +345,25 @@ export class VersionControlService implements IVersionControlService {
   async compareVersions(
     tenantId: string,
     fromVersionId: string,
-    toVersionId: string
+    toVersionId: string,
   ): Promise<VersionComparison> {
-    const fromVersion = await this.versionRepository.getVersion(tenantId, fromVersionId);
-    const toVersion = await this.versionRepository.getVersion(tenantId, toVersionId);
+    const fromVersion = await this.versionRepository.getVersion(
+      tenantId,
+      fromVersionId,
+    );
+    const toVersion = await this.versionRepository.getVersion(
+      tenantId,
+      toVersionId,
+    );
 
     if (!fromVersion || !toVersion) {
       throw new Error("One or both versions not found");
     }
 
-    const changes = this.detectChanges(fromVersion.definition, toVersion.definition);
+    const changes = this.detectChanges(
+      fromVersion.definition,
+      toVersion.definition,
+    );
     const breakingChanges = changes.filter((c) => c.breaking);
 
     // Calculate summary
@@ -304,7 +372,9 @@ export class VersionControlService implements IVersionControlService {
       stepsRemoved: changes.filter((c) => c.type === "step_removed").length,
       stepsModified: changes.filter((c) => c.type === "step_modified").length,
       conditionsChanged: changes.filter((c) =>
-        ["condition_added", "condition_removed", "condition_modified"].includes(c.type)
+        ["condition_added", "condition_removed", "condition_modified"].includes(
+          c.type,
+        ),
       ).length,
       slaChanged: changes.some((c) => c.type === "sla_modified"),
       escalationsChanged: changes.some((c) => c.type === "escalation_modified"),
@@ -323,14 +393,23 @@ export class VersionControlService implements IVersionControlService {
   /**
    * Analyze impact of activating a new version
    */
-  async analyzeImpact(tenantId: string, versionId: string): Promise<ImpactAnalysis> {
-    const version = await this.versionRepository.getVersion(tenantId, versionId);
+  async analyzeImpact(
+    tenantId: string,
+    versionId: string,
+  ): Promise<ImpactAnalysis> {
+    const version = await this.versionRepository.getVersion(
+      tenantId,
+      versionId,
+    );
     if (!version) {
       throw new Error("Version not found");
     }
 
     // Get current active version
-    const activeVersion = await this.versionRepository.getActiveVersion(tenantId, version.templateId);
+    const activeVersion = await this.versionRepository.getActiveVersion(
+      tenantId,
+      version.templateId,
+    );
 
     const issues: ImpactIssue[] = [];
     const recommendations: string[] = [];
@@ -346,7 +425,11 @@ export class VersionControlService implements IVersionControlService {
 
     if (activeVersion && activeVersion.id !== versionId) {
       // Compare versions
-      const comparison = await this.compareVersions(tenantId, activeVersion.id, versionId);
+      const comparison = await this.compareVersions(
+        tenantId,
+        activeVersion.id,
+        versionId,
+      );
 
       // Check for breaking changes
       if (comparison.breakingChanges.length > 0) {
@@ -360,7 +443,9 @@ export class VersionControlService implements IVersionControlService {
 
         migrationRequired = true;
         recommendations.push("Create a migration plan for existing instances");
-        recommendations.push("Consider running both versions in parallel during transition");
+        recommendations.push(
+          "Consider running both versions in parallel during transition",
+        );
       }
 
       // Check for step removals
@@ -372,7 +457,8 @@ export class VersionControlService implements IVersionControlService {
           affectedEntities: comparison.changes
             .filter((c) => c.type === "step_removed")
             .map((c) => c.path),
-          resolution: "Ensure removed steps are not critical to in-flight workflows",
+          resolution:
+            "Ensure removed steps are not critical to in-flight workflows",
         });
 
         migrationSteps.push({
@@ -404,7 +490,9 @@ export class VersionControlService implements IVersionControlService {
           resolution: "Plan migration during low-activity period",
         });
 
-        recommendations.push(`Schedule migration for ${affectedInstances.total} active instances`);
+        recommendations.push(
+          `Schedule migration for ${affectedInstances.total} active instances`,
+        );
       }
     }
 
@@ -432,7 +520,9 @@ export class VersionControlService implements IVersionControlService {
 
     // Add general recommendations
     if (issues.length === 0) {
-      recommendations.push("Version is ready for activation with no issues detected");
+      recommendations.push(
+        "Version is ready for activation with no issues detected",
+      );
     } else {
       recommendations.push("Address all error-level issues before activation");
     }
@@ -451,7 +541,10 @@ export class VersionControlService implements IVersionControlService {
   /**
    * Get active version for a template
    */
-  async getActiveVersion(tenantId: string, templateId: string): Promise<WorkflowVersion | null> {
+  async getActiveVersion(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion | null> {
     return this.versionRepository.getActiveVersion(tenantId, templateId);
   }
 
@@ -461,7 +554,7 @@ export class VersionControlService implements IVersionControlService {
   async cloneVersion(
     tenantId: string,
     versionId: string,
-    createdBy: string
+    createdBy: string,
   ): Promise<WorkflowVersion> {
     const source = await this.versionRepository.getVersion(tenantId, versionId);
     if (!source) {
@@ -474,14 +567,17 @@ export class VersionControlService implements IVersionControlService {
       JSON.parse(JSON.stringify(source.definition)),
       { ...source.metadata, name: `${source.metadata.name} (Copy)` },
       createdBy,
-      `Cloned from version ${source.version}`
+      `Cloned from version ${source.version}`,
     );
   }
 
   /**
    * Get version lifecycle events
    */
-  async getLifecycleHistory(tenantId: string, versionId: string): Promise<VersionLifecycleEvent[]> {
+  async getLifecycleHistory(
+    tenantId: string,
+    versionId: string,
+  ): Promise<VersionLifecycleEvent[]> {
     return this.versionRepository.getLifecycleEvents(tenantId, versionId);
   }
 
@@ -490,7 +586,7 @@ export class VersionControlService implements IVersionControlService {
    */
   async validateVersion(
     tenantId: string,
-    definition: ApprovalTemplate["definition"]
+    definition: ApprovalTemplate["definition"],
   ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -516,8 +612,13 @@ export class VersionControlService implements IVersionControlService {
 
       // Check dependency references
       for (const depId of step.dependsOn || []) {
-        if (!stepIds.has(depId) && !definition.steps?.some((s: ApprovalStep) => s.id === depId)) {
-          errors.push(`Step "${step.name}" depends on non-existent step: ${depId}`);
+        if (
+          !stepIds.has(depId) &&
+          !definition.steps?.some((s: ApprovalStep) => s.id === depId)
+        ) {
+          errors.push(
+            `Step "${step.name}" depends on non-existent step: ${depId}`,
+          );
         }
       }
 
@@ -528,14 +629,19 @@ export class VersionControlService implements IVersionControlService {
     }
 
     // Check for circular dependencies
-    const circularDeps = this.detectCircularDependencies(definition.steps || []);
+    const circularDeps = this.detectCircularDependencies(
+      definition.steps || [],
+    );
     if (circularDeps.length > 0) {
       errors.push(`Circular dependencies detected: ${circularDeps.join(", ")}`);
     }
 
     // Check global SLA
     if (definition.globalSla) {
-      if (!definition.globalSla.warningThreshold && !definition.globalSla.completionTime) {
+      if (
+        !definition.globalSla.warningThreshold &&
+        !definition.globalSla.completionTime
+      ) {
         warnings.push("Global SLA is defined but has no thresholds set");
       }
     }
@@ -552,12 +658,16 @@ export class VersionControlService implements IVersionControlService {
    */
   private detectChanges(
     oldDef: ApprovalTemplate["definition"],
-    newDef: ApprovalTemplate["definition"]
+    newDef: ApprovalTemplate["definition"],
   ): VersionChange[] {
     const changes: VersionChange[] = [];
 
-    const oldSteps = new Map<string, ApprovalStep>((oldDef.steps || []).map((s: ApprovalStep) => [s.id, s]));
-    const newSteps = new Map<string, ApprovalStep>((newDef.steps || []).map((s: ApprovalStep) => [s.id, s]));
+    const oldSteps = new Map<string, ApprovalStep>(
+      (oldDef.steps || []).map((s: ApprovalStep) => [s.id, s]),
+    );
+    const newSteps = new Map<string, ApprovalStep>(
+      (newDef.steps || []).map((s: ApprovalStep) => [s.id, s]),
+    );
 
     // Detect added steps
     for (const [id, step] of newSteps) {
@@ -615,7 +725,7 @@ export class VersionControlService implements IVersionControlService {
   private compareSteps(
     stepId: string,
     oldStep: ApprovalStep,
-    newStep: ApprovalStep
+    newStep: ApprovalStep,
   ): VersionChange[] {
     const changes: VersionChange[] = [];
 
@@ -644,7 +754,9 @@ export class VersionControlService implements IVersionControlService {
     }
 
     // Check approver rules
-    if (JSON.stringify(oldStep.approvers) !== JSON.stringify(newStep.approvers)) {
+    if (
+      JSON.stringify(oldStep.approvers) !== JSON.stringify(newStep.approvers)
+    ) {
       changes.push({
         type: "approver_rule_modified",
         path: `steps.${stepId}.approvers`,
@@ -656,7 +768,9 @@ export class VersionControlService implements IVersionControlService {
     }
 
     // Check conditions
-    if (JSON.stringify(oldStep.conditions) !== JSON.stringify(newStep.conditions)) {
+    if (
+      JSON.stringify(oldStep.conditions) !== JSON.stringify(newStep.conditions)
+    ) {
       changes.push({
         type: "condition_modified",
         path: `steps.${stepId}.conditions`,
@@ -729,7 +843,11 @@ export class VersionControlService implements IVersionControlService {
 export function createVersionControlService(
   versionRepository: IVersionRepository,
   instanceRepository: IApprovalInstanceRepository,
-  auditService?: IAuditTrailService
+  auditService?: IAuditTrailService,
 ): IVersionControlService {
-  return new VersionControlService(versionRepository, instanceRepository, auditService);
+  return new VersionControlService(
+    versionRepository,
+    instanceRepository,
+    auditService,
+  );
 }

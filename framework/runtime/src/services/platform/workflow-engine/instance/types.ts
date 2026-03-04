@@ -479,11 +479,11 @@ export class ConcurrencyError extends Error {
   constructor(
     public readonly instanceId: string,
     public readonly expectedVersion: number,
-    public readonly actualVersion: number
+    public readonly actualVersion: number,
   ) {
     super(
       `Concurrency conflict: instance ${instanceId} was modified. ` +
-      `Expected version ${expectedVersion}, found ${actualVersion}`
+        `Expected version ${expectedVersion}, found ${actualVersion}`,
     );
     this.name = "ConcurrencyError";
   }
@@ -642,35 +642,94 @@ export interface ApprovalInstanceQueryOptions {
  */
 export interface IApprovalInstanceRepository {
   // Instance CRUD
-  getById(tenantId: string, instanceId: string): Promise<ApprovalInstance | undefined>;
-  getByEntityId(tenantId: string, entityType: string, entityId: string): Promise<ApprovalInstance[]>;
-  list(tenantId: string, options?: ApprovalInstanceQueryOptions): Promise<ApprovalInstance[]>;
-  create(tenantId: string, instance: Omit<ApprovalInstance, "id" | "createdAt">): Promise<ApprovalInstance>;
-  update(tenantId: string, instanceId: string, updates: Partial<ApprovalInstance>): Promise<ApprovalInstance>;
+  getById(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalInstance | undefined>;
+  getByEntityId(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<ApprovalInstance[]>;
+  list(
+    tenantId: string,
+    options?: ApprovalInstanceQueryOptions,
+  ): Promise<ApprovalInstance[]>;
+  create(
+    tenantId: string,
+    instance: Omit<ApprovalInstance, "id" | "createdAt">,
+  ): Promise<ApprovalInstance>;
+  update(
+    tenantId: string,
+    instanceId: string,
+    updates: Partial<ApprovalInstance>,
+  ): Promise<ApprovalInstance>;
   delete(tenantId: string, instanceId: string): Promise<void>;
 
   // Step instance operations
-  getStepInstances(tenantId: string, instanceId: string): Promise<ApprovalStepInstance[]>;
-  getStepInstance(tenantId: string, stepInstanceId: string): Promise<ApprovalStepInstance | undefined>;
-  createStepInstances(tenantId: string, steps: Omit<ApprovalStepInstance, "id">[]): Promise<ApprovalStepInstance[]>;
-  updateStepInstance(tenantId: string, stepInstanceId: string, updates: Partial<ApprovalStepInstance>): Promise<ApprovalStepInstance>;
+  getStepInstances(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalStepInstance[]>;
+  getStepInstance(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalStepInstance | undefined>;
+  createStepInstances(
+    tenantId: string,
+    steps: Omit<ApprovalStepInstance, "id">[],
+  ): Promise<ApprovalStepInstance[]>;
+  updateStepInstance(
+    tenantId: string,
+    stepInstanceId: string,
+    updates: Partial<ApprovalStepInstance>,
+  ): Promise<ApprovalStepInstance>;
 
   // Action records
-  recordAction(tenantId: string, action: Omit<ApprovalActionRecord, "id">): Promise<ApprovalActionRecord>;
-  getActionHistory(tenantId: string, instanceId: string): Promise<ApprovalActionRecord[]>;
+  recordAction(
+    tenantId: string,
+    action: Omit<ApprovalActionRecord, "id">,
+  ): Promise<ApprovalActionRecord>;
+  getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalActionRecord[]>;
 
   // Entity locks
-  acquireLock(tenantId: string, lock: Omit<EntityLock, "id">): Promise<EntityLock>;
-  releaseLock(tenantId: string, entityType: string, entityId: string): Promise<void>;
-  getLock(tenantId: string, entityType: string, entityId: string): Promise<EntityLock | undefined>;
+  acquireLock(
+    tenantId: string,
+    lock: Omit<EntityLock, "id">,
+  ): Promise<EntityLock>;
+  releaseLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<void>;
+  getLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<EntityLock | undefined>;
 
   // State transitions
-  recordStateTransition(tenantId: string, transition: Omit<EntityStateTransition, "id">): Promise<EntityStateTransition>;
-  getStateTransitions(tenantId: string, entityType: string, entityId: string): Promise<EntityStateTransition[]>;
+  recordStateTransition(
+    tenantId: string,
+    transition: Omit<EntityStateTransition, "id">,
+  ): Promise<EntityStateTransition>;
+  getStateTransitions(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<EntityStateTransition[]>;
 
   // Queries for dashboards
-  countByStatus(tenantId: string): Promise<Record<ApprovalInstanceStatus, number>>;
-  getPendingForUser(tenantId: string, userId: string): Promise<ApprovalInstance[]>;
+  countByStatus(
+    tenantId: string,
+  ): Promise<Record<ApprovalInstanceStatus, number>>;
+  getPendingForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<ApprovalInstance[]>;
 
   // Optimistic locking
   /**
@@ -681,7 +740,7 @@ export interface IApprovalInstanceRepository {
     tenantId: string,
     instanceId: string,
     updates: Partial<ApprovalInstance>,
-    expectedVersion: number
+    expectedVersion: number,
   ): Promise<ApprovalInstance>;
 
   /**
@@ -692,7 +751,7 @@ export interface IApprovalInstanceRepository {
     tenantId: string,
     instanceId: string,
     lockOwner: string,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<{ lockToken: string; expiresAt: Date } | null>;
 
   /**
@@ -701,7 +760,7 @@ export interface IApprovalInstanceRepository {
   releaseInstanceLock?(
     tenantId: string,
     instanceId: string,
-    lockToken: string
+    lockToken: string,
   ): Promise<boolean>;
 }
 
@@ -710,40 +769,85 @@ export interface IApprovalInstanceRepository {
  */
 export interface IApprovalInstanceService {
   /** Create a new approval instance */
-  createInstance(tenantId: string, input: CreateApprovalInstanceInput): Promise<CreateApprovalInstanceResult>;
+  createInstance(
+    tenantId: string,
+    input: CreateApprovalInstanceInput,
+  ): Promise<CreateApprovalInstanceResult>;
 
   /** Get instance by ID */
-  getInstance(tenantId: string, instanceId: string): Promise<ApprovalInstance | undefined>;
+  getInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalInstance | undefined>;
 
   /** Get instances for an entity */
-  getInstancesForEntity(tenantId: string, entityType: string, entityId: string): Promise<ApprovalInstance[]>;
+  getInstancesForEntity(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<ApprovalInstance[]>;
 
   /** List instances */
-  listInstances(tenantId: string, options?: ApprovalInstanceQueryOptions): Promise<ApprovalInstance[]>;
+  listInstances(
+    tenantId: string,
+    options?: ApprovalInstanceQueryOptions,
+  ): Promise<ApprovalInstance[]>;
 
   /** Get step instances for an approval */
-  getStepInstances(tenantId: string, instanceId: string): Promise<ApprovalStepInstance[]>;
+  getStepInstances(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalStepInstance[]>;
 
   /** Get pending approvals for a user */
-  getPendingForUser(tenantId: string, userId: string): Promise<ApprovalInstance[]>;
+  getPendingForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<ApprovalInstance[]>;
 
   /** Cancel an instance */
-  cancelInstance(tenantId: string, instanceId: string, userId: string, reason?: string): Promise<ApprovalInstance>;
+  cancelInstance(
+    tenantId: string,
+    instanceId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<ApprovalInstance>;
 
   /** Withdraw an instance (by requester) */
-  withdrawInstance(tenantId: string, instanceId: string, userId: string, reason?: string): Promise<ApprovalInstance>;
+  withdrawInstance(
+    tenantId: string,
+    instanceId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<ApprovalInstance>;
 
   /** Put instance on hold */
-  holdInstance(tenantId: string, instanceId: string, userId: string, reason?: string): Promise<ApprovalInstance>;
+  holdInstance(
+    tenantId: string,
+    instanceId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<ApprovalInstance>;
 
   /** Release instance from hold */
-  releaseInstance(tenantId: string, instanceId: string, userId: string): Promise<ApprovalInstance>;
+  releaseInstance(
+    tenantId: string,
+    instanceId: string,
+    userId: string,
+  ): Promise<ApprovalInstance>;
 
   /** Check entity lock */
-  checkEntityLock(tenantId: string, entityType: string, entityId: string): Promise<EntityLock | undefined>;
+  checkEntityLock(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<EntityLock | undefined>;
 
   /** Get action history */
-  getActionHistory(tenantId: string, instanceId: string): Promise<ApprovalActionRecord[]>;
+  getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalActionRecord[]>;
 }
 
 /**
@@ -751,7 +855,11 @@ export interface IApprovalInstanceService {
  */
 export interface IEntityStateHandler {
   /** Get current entity state */
-  getEntityState(tenantId: string, entityType: string, entityId: string): Promise<string | undefined>;
+  getEntityState(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<string | undefined>;
 
   /** Update entity state */
   updateEntityState(
@@ -759,7 +867,7 @@ export interface IEntityStateHandler {
     entityType: string,
     entityId: string,
     newState: EntityApprovalState,
-    context: { instanceId: string; reason: string }
+    context: { instanceId: string; reason: string },
   ): Promise<void>;
 
   /** Lock entity for edits */
@@ -768,7 +876,7 @@ export interface IEntityStateHandler {
     entityType: string,
     entityId: string,
     mode: EntityLockMode,
-    context: { instanceId: string }
+    context: { instanceId: string },
   ): Promise<void>;
 
   /** Unlock entity */
@@ -776,9 +884,13 @@ export interface IEntityStateHandler {
     tenantId: string,
     entityType: string,
     entityId: string,
-    context: { instanceId: string }
+    context: { instanceId: string },
   ): Promise<void>;
 
   /** Check if entity can be edited */
-  canEditEntity(tenantId: string, entityType: string, entityId: string): Promise<{ allowed: boolean; reason?: string }>;
+  canEditEntity(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<{ allowed: boolean; reason?: string }>;
 }

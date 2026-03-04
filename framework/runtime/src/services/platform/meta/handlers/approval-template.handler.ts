@@ -22,12 +22,19 @@ import type { Request, Response } from "express";
 // ============================================================================
 
 export class ListTemplatesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
-    const { page, pageSize } = req.query as { page?: string; pageSize?: string };
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
+    const { page, pageSize } = req.query as {
+      page?: string;
+      pageSize?: string;
+    };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -51,12 +58,16 @@ export class ListTemplatesHandler implements RouteHandler {
 }
 
 export class CreateTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -77,12 +88,16 @@ export class CreateTemplateHandler implements RouteHandler {
 }
 
 export class GetTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -110,13 +125,17 @@ export class GetTemplateHandler implements RouteHandler {
 }
 
 export class UpdateTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -137,12 +156,16 @@ export class UpdateTemplateHandler implements RouteHandler {
 }
 
 export class DeleteTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -165,12 +188,16 @@ export class DeleteTemplateHandler implements RouteHandler {
 // ============================================================================
 
 export class GetStagesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -199,12 +226,16 @@ export class GetStagesHandler implements RouteHandler {
 }
 
 export class GetRulesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -237,12 +268,16 @@ export class GetRulesHandler implements RouteHandler {
 // ============================================================================
 
 export class ValidateTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -262,12 +297,16 @@ export class ValidateTemplateHandler implements RouteHandler {
 }
 
 export class CompileTemplateHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -291,12 +330,16 @@ export class CompileTemplateHandler implements RouteHandler {
 // ============================================================================
 
 export class ListVersionsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -316,18 +359,27 @@ export class ListVersionsHandler implements RouteHandler {
 }
 
 export class RollbackHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const { targetVersion } = req.body as { targetVersion: number };
     const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
-      const template = await service.rollback(code, targetVersion, tenantId, userId);
+      const template = await service.rollback(
+        code,
+        targetVersion,
+        tenantId,
+        userId,
+      );
 
       res.status(200).json({
         success: true,
@@ -343,7 +395,11 @@ export class RollbackHandler implements RouteHandler {
 }
 
 export class DiffHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const { v1, v2 } = req.query as { v1?: string; v2?: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -351,17 +407,25 @@ export class DiffHandler implements RouteHandler {
     if (!v1 || !v2) {
       res.status(400).json({
         success: false,
-        error: { code: "MISSING_PARAMS", message: "Query params v1 and v2 are required" },
+        error: {
+          code: "MISSING_PARAMS",
+          message: "Query params v1 and v2 are required",
+        },
       });
       return;
     }
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
-      const diff = await service.diff(code, parseInt(v1, 10), parseInt(v2, 10), tenantId);
+      const diff = await service.diff(
+        code,
+        parseInt(v1, 10),
+        parseInt(v2, 10),
+        tenantId,
+      );
 
       res.status(200).json({
         success: true,
@@ -377,12 +441,16 @@ export class DiffHandler implements RouteHandler {
 }
 
 export class ImpactAnalysisHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {
@@ -402,13 +470,17 @@ export class ImpactAnalysisHandler implements RouteHandler {
 }
 
 export class TestResolutionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { code } = req.params as { code: string };
     const context = req.body as Record<string, unknown>;
     const tenantId = ctx.tenant.tenantKey ?? "default";
 
     const service = await ctx.container.resolve<ApprovalTemplateService>(
-      META_TOKENS.approvalTemplateService
+      META_TOKENS.approvalTemplateService,
     );
 
     try {

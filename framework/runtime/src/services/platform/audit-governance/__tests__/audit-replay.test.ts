@@ -24,10 +24,18 @@ function createKyselyMockDb(executeImpl: (...args: any[]) => Promise<any>) {
     transformQuery: (node: any) => node,
     compileQuery: () => ({ sql: "", parameters: [] }),
     executeQuery: executeImpl,
-    withConnectionProvider: function() { return this; },
-    withPlugin: function() { return this; },
-    withPluginAtFront: function() { return this; },
-    withoutPlugins: function() { return this; },
+    withConnectionProvider: function () {
+      return this;
+    },
+    withPlugin: function () {
+      return this;
+    },
+    withPluginAtFront: function () {
+      return this;
+    },
+    withoutPlugins: function () {
+      return this;
+    },
   };
 
   return {
@@ -35,7 +43,9 @@ function createKyselyMockDb(executeImpl: (...args: any[]) => Promise<any>) {
   } as any;
 }
 
-function createMockObjectStorage(files: Record<string, string>): ReplayObjectStorage {
+function createMockObjectStorage(
+  files: Record<string, string>,
+): ReplayObjectStorage {
   return {
     get: vi.fn().mockImplementation(async (key: string) => {
       const content = files[key];
@@ -45,7 +55,9 @@ function createMockObjectStorage(files: Record<string, string>): ReplayObjectSto
   };
 }
 
-function createMockDlqRepo(entries: Partial<AuditDlqEntry>[] = []): AuditDlqRepo {
+function createMockDlqRepo(
+  entries: Partial<AuditDlqEntry>[] = [],
+): AuditDlqRepo {
   const markedReplayed: string[] = [];
 
   return {
@@ -80,8 +92,12 @@ function createMockHashChain() {
   return {
     resetTenant: vi.fn(),
     initFromDb: vi.fn().mockResolvedValue(undefined),
-    computeHash: vi.fn().mockResolvedValue({ hash_prev: "prev", hash_curr: "curr" }),
-    verifyChain: vi.fn().mockReturnValue({ valid: true, eventsChecked: 0, message: "OK" }),
+    computeHash: vi
+      .fn()
+      .mockResolvedValue({ hash_prev: "prev", hash_curr: "curr" }),
+    verifyChain: vi
+      .fn()
+      .mockReturnValue({ valid: true, eventsChecked: 0, message: "OK" }),
     writeAnchor: vi.fn().mockResolvedValue(undefined),
   } as unknown as AuditHashChainService;
 }
@@ -120,7 +136,12 @@ describe("AuditReplayService", () => {
       const hashChain = createMockHashChain();
       const objectStorage = createMockObjectStorage({});
       const db = createKyselyMockDb(async () => ({ rows: [] }));
-      const service = new AuditReplayService(db, hashChain, null, objectStorage);
+      const service = new AuditReplayService(
+        db,
+        hashChain,
+        null,
+        objectStorage,
+      );
 
       await expect(
         service.replayFromNdjson({
@@ -134,8 +155,16 @@ describe("AuditReplayService", () => {
     it("should handle empty NDJSON (0 events)", async () => {
       const hashChain = createMockHashChain();
       const objectStorage = createMockObjectStorage({ "empty.ndjson": "" });
-      const db = createKyselyMockDb(async () => ({ rows: [], numAffectedRows: 0n }));
-      const service = new AuditReplayService(db, hashChain, null, objectStorage);
+      const db = createKyselyMockDb(async () => ({
+        rows: [],
+        numAffectedRows: 0n,
+      }));
+      const service = new AuditReplayService(
+        db,
+        hashChain,
+        null,
+        objectStorage,
+      );
 
       const result = await service.replayFromNdjson({
         tenantId: TENANT,
@@ -156,8 +185,16 @@ describe("AuditReplayService", () => {
 
       const hashChain = createMockHashChain();
       const objectStorage = createMockObjectStorage({ "test.ndjson": ndjson });
-      const db = createKyselyMockDb(async () => ({ rows: [], numAffectedRows: 1n }));
-      const service = new AuditReplayService(db, hashChain, null, objectStorage);
+      const db = createKyselyMockDb(async () => ({
+        rows: [],
+        numAffectedRows: 1n,
+      }));
+      const service = new AuditReplayService(
+        db,
+        hashChain,
+        null,
+        objectStorage,
+      );
 
       const progressCalls: any[] = [];
       const result = await service.replayFromNdjson({
@@ -174,11 +211,20 @@ describe("AuditReplayService", () => {
     });
 
     it("should rebuild hash chain after replay", async () => {
-      const ndjson = '{"id":"evt-1","event_type":"workflow.started","event_timestamp":"2025-01-01T00:00:00Z"}\n';
+      const ndjson =
+        '{"id":"evt-1","event_type":"workflow.started","event_timestamp":"2025-01-01T00:00:00Z"}\n';
       const hashChain = createMockHashChain();
       const objectStorage = createMockObjectStorage({ "test.ndjson": ndjson });
-      const db = createKyselyMockDb(async () => ({ rows: [], numAffectedRows: 1n }));
-      const service = new AuditReplayService(db, hashChain, null, objectStorage);
+      const db = createKyselyMockDb(async () => ({
+        rows: [],
+        numAffectedRows: 1n,
+      }));
+      const service = new AuditReplayService(
+        db,
+        hashChain,
+        null,
+        objectStorage,
+      );
 
       await service.replayFromNdjson({
         tenantId: TENANT,
@@ -213,18 +259,27 @@ describe("AuditReplayService", () => {
         {
           id: "dlq-1",
           eventType: "workflow.started",
-          payload: { event_type: "workflow.started", event_timestamp: "2025-01-01T00:00:00Z" },
+          payload: {
+            event_type: "workflow.started",
+            event_timestamp: "2025-01-01T00:00:00Z",
+          },
         },
         {
           id: "dlq-2",
           eventType: "workflow.approved",
-          payload: { event_type: "workflow.approved", event_timestamp: "2025-01-01T01:00:00Z" },
+          payload: {
+            event_type: "workflow.approved",
+            event_timestamp: "2025-01-01T01:00:00Z",
+          },
         },
       ];
 
       const dlqRepo = createMockDlqRepo(dlqEntries);
       const hashChain = createMockHashChain();
-      const db = createKyselyMockDb(async () => ({ rows: [], numAffectedRows: 1n }));
+      const db = createKyselyMockDb(async () => ({
+        rows: [],
+        numAffectedRows: 1n,
+      }));
       const service = new AuditReplayService(db, hashChain, dlqRepo, null);
 
       const result = await service.replayFromDlq({
@@ -240,13 +295,19 @@ describe("AuditReplayService", () => {
       const dlqEntries = [
         {
           id: "dlq-1",
-          payload: { event_type: "workflow.started", event_timestamp: "2025-01-01T00:00:00Z" },
+          payload: {
+            event_type: "workflow.started",
+            event_timestamp: "2025-01-01T00:00:00Z",
+          },
         },
       ];
 
       const dlqRepo = createMockDlqRepo(dlqEntries);
       const hashChain = createMockHashChain();
-      const db = createKyselyMockDb(async () => ({ rows: [], numAffectedRows: 1n }));
+      const db = createKyselyMockDb(async () => ({
+        rows: [],
+        numAffectedRows: 1n,
+      }));
       const service = new AuditReplayService(db, hashChain, dlqRepo, null);
 
       await service.replayFromDlq({
@@ -270,14 +331,23 @@ describe("auditDailyBackup.worker", () => {
     const hashChain = createMockHashChain();
 
     const exportService = {
-      export: vi.fn().mockResolvedValue({ manifest: {}, ndjsonKey: "key", manifestKey: "mkey" }),
+      export: vi.fn().mockResolvedValue({
+        manifest: {},
+        ndjsonKey: "key",
+        manifestKey: "mkey",
+      }),
     } as any;
 
     const db = createKyselyMockDb(async () => ({
       rows: [{ tenant_id: "00000000-0000-0000-0000-000000000001" }],
     }));
 
-    const handler = createAuditDailyBackupHandler(db, exportService, hashChain, logger as any);
+    const handler = createAuditDailyBackupHandler(
+      db,
+      exportService,
+      hashChain,
+      logger as any,
+    );
 
     const result = await handler({});
 
@@ -308,7 +378,12 @@ describe("auditDailyBackup.worker", () => {
       ],
     }));
 
-    const handler = createAuditDailyBackupHandler(db, exportService, hashChain, logger as any);
+    const handler = createAuditDailyBackupHandler(
+      db,
+      exportService,
+      hashChain,
+      logger as any,
+    );
 
     const result = await handler({});
 
@@ -324,12 +399,19 @@ describe("auditDailyBackup.worker", () => {
     const hashChain = createMockHashChain();
 
     const exportService = {
-      export: vi.fn().mockResolvedValue({ manifest: {}, ndjsonKey: "k", manifestKey: "m" }),
+      export: vi
+        .fn()
+        .mockResolvedValue({ manifest: {}, ndjsonKey: "k", manifestKey: "m" }),
     } as any;
 
     const db = {} as any; // Not used when tenantId is provided
 
-    const handler = createAuditDailyBackupHandler(db, exportService, hashChain, logger as any);
+    const handler = createAuditDailyBackupHandler(
+      db,
+      exportService,
+      hashChain,
+      logger as any,
+    );
 
     const result = await handler({
       tenantId: "00000000-0000-0000-0000-000000000099",

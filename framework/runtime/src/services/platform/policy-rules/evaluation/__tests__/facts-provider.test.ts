@@ -54,7 +54,11 @@ class InMemoryFactsCache {
     return entry.data;
   }
 
-  setSubject(principalId: string, tenantId: string, subject: PolicySubject): void {
+  setSubject(
+    principalId: string,
+    tenantId: string,
+    subject: PolicySubject,
+  ): void {
     const key = `${tenantId}:${principalId}`;
     this.subjectCache.set(key, {
       data: subject,
@@ -68,7 +72,11 @@ class InMemoryFactsCache {
   }
 
   // Resource caching
-  getResource(tenantId: string, resourceType: string, resourceId?: string): PolicyResource | undefined {
+  getResource(
+    tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ): PolicyResource | undefined {
     const key = `${tenantId}:${resourceType}:${resourceId ?? "*"}`;
     const entry = this.resourceCache.get(key);
 
@@ -81,7 +89,12 @@ class InMemoryFactsCache {
     return entry.data;
   }
 
-  setResource(tenantId: string, resourceType: string, resource: PolicyResource, resourceId?: string): void {
+  setResource(
+    tenantId: string,
+    resourceType: string,
+    resource: PolicyResource,
+    resourceId?: string,
+  ): void {
     const key = `${tenantId}:${resourceType}:${resourceId ?? "*"}`;
     this.resourceCache.set(key, {
       data: resource,
@@ -89,7 +102,11 @@ class InMemoryFactsCache {
     });
   }
 
-  invalidateResource(tenantId: string, resourceType: string, resourceId?: string): void {
+  invalidateResource(
+    tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ): void {
     const key = `${tenantId}:${resourceType}:${resourceId ?? "*"}`;
     this.resourceCache.delete(key);
   }
@@ -117,20 +134,37 @@ class MockFactsProvider {
   private cache: InMemoryFactsCache;
   private subjectFetchCount: number = 0;
   private resourceFetchCount: number = 0;
-  private subjectFetcher: (principalId: string, tenantId: string) => Promise<PolicySubject>;
-  private resourceFetcher: (tenantId: string, type: string, id?: string) => Promise<PolicyResource>;
+  private subjectFetcher: (
+    principalId: string,
+    tenantId: string,
+  ) => Promise<PolicySubject>;
+  private resourceFetcher: (
+    tenantId: string,
+    type: string,
+    id?: string,
+  ) => Promise<PolicyResource>;
 
   constructor(
     ttl: Partial<FactsTtlConfig> = {},
-    subjectFetcher?: (principalId: string, tenantId: string) => Promise<PolicySubject>,
-    resourceFetcher?: (tenantId: string, type: string, id?: string) => Promise<PolicyResource>
+    subjectFetcher?: (
+      principalId: string,
+      tenantId: string,
+    ) => Promise<PolicySubject>,
+    resourceFetcher?: (
+      tenantId: string,
+      type: string,
+      id?: string,
+    ) => Promise<PolicyResource>,
   ) {
     this.cache = new InMemoryFactsCache(ttl);
     this.subjectFetcher = subjectFetcher ?? this.defaultSubjectFetcher;
     this.resourceFetcher = resourceFetcher ?? this.defaultResourceFetcher;
   }
 
-  private async defaultSubjectFetcher(principalId: string, tenantId: string): Promise<PolicySubject> {
+  private async defaultSubjectFetcher(
+    principalId: string,
+    tenantId: string,
+  ): Promise<PolicySubject> {
     return {
       principalId,
       principalType: "user",
@@ -140,7 +174,11 @@ class MockFactsProvider {
     };
   }
 
-  private async defaultResourceFetcher(tenantId: string, type: string, id?: string): Promise<PolicyResource> {
+  private async defaultResourceFetcher(
+    tenantId: string,
+    type: string,
+    id?: string,
+  ): Promise<PolicyResource> {
     return {
       type,
       id,
@@ -148,7 +186,10 @@ class MockFactsProvider {
     };
   }
 
-  async resolveSubject(principalId: string, tenantId: string): Promise<PolicySubject> {
+  async resolveSubject(
+    principalId: string,
+    tenantId: string,
+  ): Promise<PolicySubject> {
     // Check cache first
     const cached = this.cache.getSubject(principalId, tenantId);
     if (cached) {
@@ -165,7 +206,11 @@ class MockFactsProvider {
     return subject;
   }
 
-  async resolveResource(tenantId: string, type: string, id?: string): Promise<PolicyResource> {
+  async resolveResource(
+    tenantId: string,
+    type: string,
+    id?: string,
+  ): Promise<PolicyResource> {
     // Check cache first
     const cached = this.cache.getResource(tenantId, type, id);
     if (cached) {
@@ -186,7 +231,7 @@ class MockFactsProvider {
     principalId: string,
     tenantId: string,
     resourceType: string,
-    resourceId?: string
+    resourceId?: string,
   ): Promise<ResolvedFacts> {
     const [subject, resource] = await Promise.all([
       this.resolveSubject(principalId, tenantId),
@@ -204,7 +249,11 @@ class MockFactsProvider {
     this.cache.invalidateSubject(principalId, tenantId);
   }
 
-  invalidateResourceCache(tenantId: string, resourceType: string, resourceId?: string): void {
+  invalidateResourceCache(
+    tenantId: string,
+    resourceType: string,
+    resourceId?: string,
+  ): void {
     this.cache.invalidateResource(tenantId, resourceType, resourceId);
   }
 
@@ -243,7 +292,10 @@ describe("Facts Provider - Subject Resolution", () => {
   });
 
   it("should resolve subject with roles and groups", async () => {
-    const customFetcher = async (principalId: string, _tenantId: string): Promise<PolicySubject> => ({
+    const customFetcher = async (
+      principalId: string,
+      _tenantId: string,
+    ): Promise<PolicySubject> => ({
       principalId,
       principalType: "user",
       roles: ["admin", "editor"],
@@ -261,7 +313,10 @@ describe("Facts Provider - Subject Resolution", () => {
     });
 
     const providerWithCustomFetcher = new MockFactsProvider({}, customFetcher);
-    const subject = await providerWithCustomFetcher.resolveSubject("user-123", "tenant-1");
+    const subject = await providerWithCustomFetcher.resolveSubject(
+      "user-123",
+      "tenant-1",
+    );
 
     expect(subject.principalId).toBe("user-123");
     expect(subject.principalType).toBe("user");
@@ -273,7 +328,10 @@ describe("Facts Provider - Subject Resolution", () => {
   });
 
   it("should resolve service principal", async () => {
-    const customFetcher = async (principalId: string, _tenantId: string): Promise<PolicySubject> => ({
+    const customFetcher = async (
+      principalId: string,
+      _tenantId: string,
+    ): Promise<PolicySubject> => ({
       principalId,
       principalType: "service",
       roles: ["service-role"],
@@ -282,7 +340,10 @@ describe("Facts Provider - Subject Resolution", () => {
     });
 
     const providerWithCustomFetcher = new MockFactsProvider({}, customFetcher);
-    const subject = await providerWithCustomFetcher.resolveSubject("svc-api", "tenant-1");
+    const subject = await providerWithCustomFetcher.resolveSubject(
+      "svc-api",
+      "tenant-1",
+    );
 
     expect(subject.principalType).toBe("service");
     expect(subject.attributes.serviceType).toBe("api-gateway");
@@ -301,7 +362,11 @@ describe("Facts Provider - Resource Resolution", () => {
   });
 
   it("should resolve resource with attributes", async () => {
-    const customFetcher = async (tenantId: string, type: string, id?: string): Promise<PolicyResource> => ({
+    const customFetcher = async (
+      tenantId: string,
+      type: string,
+      id?: string,
+    ): Promise<PolicyResource> => ({
       type,
       id,
       module: "crm",
@@ -313,8 +378,16 @@ describe("Facts Provider - Resource Resolution", () => {
       },
     });
 
-    const providerWithCustomFetcher = new MockFactsProvider({}, undefined, customFetcher);
-    const resource = await providerWithCustomFetcher.resolveResource("tenant-1", "document", "doc-123");
+    const providerWithCustomFetcher = new MockFactsProvider(
+      {},
+      undefined,
+      customFetcher,
+    );
+    const resource = await providerWithCustomFetcher.resolveResource(
+      "tenant-1",
+      "document",
+      "doc-123",
+    );
 
     expect(resource.type).toBe("document");
     expect(resource.id).toBe("doc-123");
@@ -330,7 +403,11 @@ describe("Facts Provider - Resource Resolution", () => {
   });
 
   it("should include owner information", async () => {
-    const customFetcher = async (tenantId: string, type: string, id?: string): Promise<PolicyResource> => ({
+    const customFetcher = async (
+      tenantId: string,
+      type: string,
+      id?: string,
+    ): Promise<PolicyResource> => ({
       type,
       id,
       ownerId: "user-owner",
@@ -338,8 +415,16 @@ describe("Facts Provider - Resource Resolution", () => {
       attributes: {},
     });
 
-    const providerWithCustomFetcher = new MockFactsProvider({}, undefined, customFetcher);
-    const resource = await providerWithCustomFetcher.resolveResource("tenant-1", "document", "doc-123");
+    const providerWithCustomFetcher = new MockFactsProvider(
+      {},
+      undefined,
+      customFetcher,
+    );
+    const resource = await providerWithCustomFetcher.resolveResource(
+      "tenant-1",
+      "document",
+      "doc-123",
+    );
 
     expect(resource.ownerId).toBe("user-owner");
     expect(resource.costCenter).toBe("CC-100");
@@ -354,7 +439,10 @@ describe("Facts Provider - Caching", () => {
   let provider: MockFactsProvider;
 
   beforeEach(() => {
-    provider = new MockFactsProvider({ subjectTtlMs: 60000, resourceTtlMs: 30000 });
+    provider = new MockFactsProvider({
+      subjectTtlMs: 60000,
+      resourceTtlMs: 30000,
+    });
     provider.resetFetchCounts();
   });
 
@@ -617,7 +705,12 @@ describe("Facts Provider - Resolve Facts", () => {
   });
 
   it("should resolve both subject and resource", async () => {
-    const facts = await provider.resolveFacts("user-123", "tenant-1", "document", "doc-456");
+    const facts = await provider.resolveFacts(
+      "user-123",
+      "tenant-1",
+      "document",
+      "doc-456",
+    );
 
     expect(facts.subject.principalId).toBe("user-123");
     expect(facts.resource.type).toBe("document");
@@ -647,11 +740,16 @@ describe("Facts Provider - Resolve Facts", () => {
           id,
           attributes: {},
         };
-      }
+      },
     );
 
     const start = Date.now();
-    await slowProvider.resolveFacts("user-123", "tenant-1", "document", "doc-456");
+    await slowProvider.resolveFacts(
+      "user-123",
+      "tenant-1",
+      "document",
+      "doc-456",
+    );
     const duration = Date.now() - start;
 
     // Should be roughly parallel (not sequential which would be 100ms+)
@@ -683,7 +781,7 @@ describe("Facts Provider - Edge Cases", () => {
         roles: [],
         groups: [],
         attributes: {},
-      })
+      }),
     );
 
     const subject = await provider.resolveSubject("user-123", "tenant-1");
@@ -695,13 +793,16 @@ describe("Facts Provider - Edge Cases", () => {
   it("should handle special characters in IDs", async () => {
     const provider = new MockFactsProvider();
 
-    const subject = await provider.resolveSubject("user:special/chars@test", "tenant:special");
+    const subject = await provider.resolveSubject(
+      "user:special/chars@test",
+      "tenant:special",
+    );
     expect(subject.principalId).toBe("user:special/chars@test");
 
     const resource = await provider.resolveResource(
       "tenant:special",
       "document/type",
-      "doc:with/special@chars"
+      "doc:with/special@chars",
     );
     expect(resource.type).toBe("document/type");
     expect(resource.id).toBe("doc:with/special@chars");
@@ -721,7 +822,7 @@ describe("Facts Provider - Edge Cases", () => {
           groups: [],
           attributes: { fetchCount },
         };
-      }
+      },
     );
 
     // Start multiple concurrent requests
@@ -753,7 +854,7 @@ describe("Facts Provider - Edge Cases", () => {
           zero: 0,
           falseValue: false,
         },
-      })
+      }),
     );
 
     const subject = await provider.resolveSubject("user-123", "tenant-1");

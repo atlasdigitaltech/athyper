@@ -699,7 +699,14 @@ export interface ActionField {
   label: string;
 
   /** Field type */
-  type: "text" | "textarea" | "select" | "multiselect" | "date" | "number" | "boolean";
+  type:
+    | "text"
+    | "textarea"
+    | "select"
+    | "multiselect"
+    | "date"
+    | "number"
+    | "boolean";
 
   /** Whether field is required */
   required: boolean;
@@ -769,7 +776,10 @@ export type CreateApprovalWorkflowInput = Omit<
  * Update template input
  */
 export type UpdateApprovalWorkflowInput = Partial<
-  Omit<ApprovalWorkflowTemplate, "id" | "tenantId" | "version" | "createdAt" | "createdBy">
+  Omit<
+    ApprovalWorkflowTemplate,
+    "id" | "tenantId" | "version" | "createdAt" | "createdBy"
+  >
 >;
 
 /**
@@ -860,22 +870,35 @@ export interface TemplateValidationWarning {
  */
 export interface IApprovalWorkflowRepository {
   /** Get template by ID */
-  getById(tenantId: string, templateId: string): Promise<StoredApprovalWorkflowTemplate | undefined>;
+  getById(
+    tenantId: string,
+    templateId: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined>;
 
   /** Get template by code */
-  getByCode(tenantId: string, code: string, version?: number): Promise<StoredApprovalWorkflowTemplate | undefined>;
+  getByCode(
+    tenantId: string,
+    code: string,
+    version?: number,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined>;
 
   /** Get active template by code */
-  getActiveByCode(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate | undefined>;
+  getActiveByCode(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined>;
 
   /** List templates */
-  list(tenantId: string, options?: ApprovalWorkflowQueryOptions): Promise<StoredApprovalWorkflowTemplate[]>;
+  list(
+    tenantId: string,
+    options?: ApprovalWorkflowQueryOptions,
+  ): Promise<StoredApprovalWorkflowTemplate[]>;
 
   /** Create template */
   create(
     tenantId: string,
     template: CreateApprovalWorkflowInput,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Update template (creates new version) */
@@ -883,20 +906,31 @@ export interface IApprovalWorkflowRepository {
     tenantId: string,
     templateId: string,
     updates: UpdateApprovalWorkflowInput,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Publish template (make version active) */
-  publish(tenantId: string, templateId: string, publishedBy: string): Promise<StoredApprovalWorkflowTemplate>;
+  publish(
+    tenantId: string,
+    templateId: string,
+    publishedBy: string,
+  ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Unpublish template */
-  unpublish(tenantId: string, templateId: string, unpublishedBy: string): Promise<StoredApprovalWorkflowTemplate>;
+  unpublish(
+    tenantId: string,
+    templateId: string,
+    unpublishedBy: string,
+  ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Delete template */
   delete(tenantId: string, templateId: string): Promise<void>;
 
   /** Get all versions of a template */
-  getVersionHistory(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate[]>;
+  getVersionHistory(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate[]>;
 
   /** Clone template */
   clone(
@@ -904,14 +938,14 @@ export interface IApprovalWorkflowRepository {
     templateId: string,
     newCode: string,
     newName: string,
-    clonedBy: string
+    clonedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Find templates matching trigger conditions */
   findMatchingTemplates(
     tenantId: string,
     entityType: ApprovalEntityType,
-    triggerEvent: ApprovalTriggerEvent
+    triggerEvent: ApprovalTriggerEvent,
   ): Promise<StoredApprovalWorkflowTemplate[]>;
 }
 
@@ -920,13 +954,15 @@ export interface IApprovalWorkflowRepository {
  */
 export interface IApprovalWorkflowService {
   /** Validate template */
-  validate(template: CreateApprovalWorkflowInput | ApprovalWorkflowTemplate): TemplateValidationResult;
+  validate(
+    template: CreateApprovalWorkflowInput | ApprovalWorkflowTemplate,
+  ): TemplateValidationResult;
 
   /** Create template */
   createTemplate(
     tenantId: string,
     template: CreateApprovalWorkflowInput,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Update template */
@@ -934,26 +970,32 @@ export interface IApprovalWorkflowService {
     tenantId: string,
     templateId: string,
     updates: UpdateApprovalWorkflowInput,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Publish template */
   publishTemplate(
     tenantId: string,
     templateId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Get template */
-  getTemplate(tenantId: string, templateId: string): Promise<StoredApprovalWorkflowTemplate | undefined>;
+  getTemplate(
+    tenantId: string,
+    templateId: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined>;
 
   /** Get active template by code */
-  getActiveTemplate(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate | undefined>;
+  getActiveTemplate(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined>;
 
   /** List templates */
   listTemplates(
     tenantId: string,
-    options?: ApprovalWorkflowQueryOptions
+    options?: ApprovalWorkflowQueryOptions,
   ): Promise<StoredApprovalWorkflowTemplate[]>;
 
   /** Delete template */
@@ -965,7 +1007,7 @@ export interface IApprovalWorkflowService {
     templateId: string,
     newCode: string,
     newName: string,
-    clonedBy: string
+    clonedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate>;
 
   /** Find templates for entity */
@@ -973,14 +1015,14 @@ export interface IApprovalWorkflowService {
     tenantId: string,
     entityType: ApprovalEntityType,
     triggerEvent: ApprovalTriggerEvent,
-    entityData?: Record<string, unknown>
+    entityData?: Record<string, unknown>,
   ): Promise<StoredApprovalWorkflowTemplate[]>;
 
   /** Resolve approvers for a step */
   resolveApprovers(
     tenantId: string,
     step: ApprovalStep,
-    context: ApproverResolutionContext
+    context: ApproverResolutionContext,
   ): Promise<ResolvedApprover[]>;
 }
 

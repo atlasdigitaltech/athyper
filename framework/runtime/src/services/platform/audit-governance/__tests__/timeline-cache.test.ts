@@ -14,12 +14,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createTimelineCacheService } from "../domain/timeline-cache.service.js";
 
-import type { ActivityTimelineEntry, TimelineQuery } from "../domain/activity-timeline.service.js";
-import type { TimelineCacheBackend , TimelineCacheService} from "../domain/timeline-cache.service.js";
+import type {
+  ActivityTimelineEntry,
+  TimelineQuery,
+} from "../domain/activity-timeline.service.js";
+import type {
+  TimelineCacheBackend,
+  TimelineCacheService,
+} from "../domain/timeline-cache.service.js";
 
 // ─── Test Helpers ──────────────────────────────────────────────────
 
-function makeEntry(id: string, source = "workflow_audit"): ActivityTimelineEntry {
+function makeEntry(
+  id: string,
+  source = "workflow_audit",
+): ActivityTimelineEntry {
   return {
     id,
     source: source as any,
@@ -43,12 +52,16 @@ function makeQuery(overrides: Partial<TimelineQuery> = {}): TimelineQuery {
   };
 }
 
-function createMockRedis(): TimelineCacheBackend & { store: Map<string, string> } {
+function createMockRedis(): TimelineCacheBackend & {
+  store: Map<string, string>;
+} {
   const store = new Map<string, string>();
   return {
     store,
     get: vi.fn(async (key: string) => store.get(key) ?? null),
-    set: vi.fn(async (key: string, value: string) => { store.set(key, value); }),
+    set: vi.fn(async (key: string, value: string) => {
+      store.set(key, value);
+    }),
     del: vi.fn(async (...keys: string[]) => {
       let count = 0;
       for (const key of keys) {
@@ -95,7 +108,9 @@ describe("TimelineCacheService (in-memory)", () => {
     const result = await cache.get(makeQuery());
 
     expect(result![0].occurredAt).toBeInstanceOf(Date);
-    expect(result![0].occurredAt.toISOString()).toBe("2025-06-15T10:00:00.000Z");
+    expect(result![0].occurredAt.toISOString()).toBe(
+      "2025-06-15T10:00:00.000Z",
+    );
   });
 
   it("should expire entries after TTL", async () => {
@@ -111,7 +126,10 @@ describe("TimelineCacheService (in-memory)", () => {
   });
 
   it("should evict oldest when max entries exceeded", async () => {
-    cache = createTimelineCacheService(null, { maxMemoryEntries: 2, ttlSeconds: 300 });
+    cache = createTimelineCacheService(null, {
+      maxMemoryEntries: 2,
+      ttlSeconds: 300,
+    });
 
     await cache.set(makeQuery({ entityId: "po-1" }), [makeEntry("e1")]);
     await cache.set(makeQuery({ entityId: "po-2" }), [makeEntry("e2")]);
@@ -131,27 +149,45 @@ describe("TimelineCacheService (in-memory)", () => {
   });
 
   it("should invalidate by tenant", async () => {
-    await cache.set(makeQuery({ tenantId: "t-1", entityId: "po-1" }), [makeEntry("e1")]);
-    await cache.set(makeQuery({ tenantId: "t-1", entityId: "po-2" }), [makeEntry("e2")]);
-    await cache.set(makeQuery({ tenantId: "t-2", entityId: "po-1" }), [makeEntry("e3")]);
+    await cache.set(makeQuery({ tenantId: "t-1", entityId: "po-1" }), [
+      makeEntry("e1"),
+    ]);
+    await cache.set(makeQuery({ tenantId: "t-1", entityId: "po-2" }), [
+      makeEntry("e2"),
+    ]);
+    await cache.set(makeQuery({ tenantId: "t-2", entityId: "po-1" }), [
+      makeEntry("e3"),
+    ]);
 
     const deleted = await cache.invalidate("t-1");
     expect(deleted).toBe(2);
 
     // t-1 entries gone
-    expect(await cache.get(makeQuery({ tenantId: "t-1", entityId: "po-1" }))).toBeNull();
+    expect(
+      await cache.get(makeQuery({ tenantId: "t-1", entityId: "po-1" })),
+    ).toBeNull();
     // t-2 entry still exists
-    expect(await cache.get(makeQuery({ tenantId: "t-2", entityId: "po-1" }))).not.toBeNull();
+    expect(
+      await cache.get(makeQuery({ tenantId: "t-2", entityId: "po-1" })),
+    ).not.toBeNull();
   });
 
   it("should invalidate by entity type", async () => {
-    await cache.set(makeQuery({ entityType: "PO", entityId: "po-1" }), [makeEntry("e1")]);
-    await cache.set(makeQuery({ entityType: "SO", entityId: "so-1" }), [makeEntry("e2")]);
+    await cache.set(makeQuery({ entityType: "PO", entityId: "po-1" }), [
+      makeEntry("e1"),
+    ]);
+    await cache.set(makeQuery({ entityType: "SO", entityId: "so-1" }), [
+      makeEntry("e2"),
+    ]);
 
     await cache.invalidate("t-1", "PO");
 
-    expect(await cache.get(makeQuery({ entityType: "PO", entityId: "po-1" }))).toBeNull();
-    expect(await cache.get(makeQuery({ entityType: "SO", entityId: "so-1" }))).not.toBeNull();
+    expect(
+      await cache.get(makeQuery({ entityType: "PO", entityId: "po-1" })),
+    ).toBeNull();
+    expect(
+      await cache.get(makeQuery({ entityType: "SO", entityId: "so-1" })),
+    ).not.toBeNull();
   });
 
   it("should invalidate by specific entity", async () => {
@@ -232,8 +268,14 @@ describe("TimelineCacheService (Redis)", () => {
 describe("Cache Key Determinism", () => {
   it("should produce same key for same query params", async () => {
     const cache = createTimelineCacheService(null);
-    const q1 = makeQuery({ startDate: new Date("2025-06-01"), endDate: new Date("2025-06-30") });
-    const q2 = makeQuery({ startDate: new Date("2025-06-01"), endDate: new Date("2025-06-30") });
+    const q1 = makeQuery({
+      startDate: new Date("2025-06-01"),
+      endDate: new Date("2025-06-30"),
+    });
+    const q2 = makeQuery({
+      startDate: new Date("2025-06-01"),
+      endDate: new Date("2025-06-30"),
+    });
 
     await cache.set(q1, [makeEntry("e1")]);
     const result = await cache.get(q2);

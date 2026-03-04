@@ -3,7 +3,10 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
-import { AuditMetrics, createAuditHealthChecker } from "../observability/metrics.js";
+import {
+  AuditMetrics,
+  createAuditHealthChecker,
+} from "../observability/metrics.js";
 
 import type { ResilientAuditWriter } from "../domain/resilient-audit-writer.js";
 import type { AuditOutboxRepo } from "../persistence/AuditOutboxRepo.js";
@@ -34,7 +37,11 @@ describe("AuditMetrics", () => {
     const registry = createMockRegistry();
     const metrics = new AuditMetrics(registry);
 
-    metrics.eventIngested({ tenant: "t-1", event_type: "workflow.created", severity: "info" });
+    metrics.eventIngested({
+      tenant: "t-1",
+      event_type: "workflow.created",
+      severity: "info",
+    });
     expect(registry.incrementCounter).toHaveBeenCalledWith(
       "audit_events_ingested_total",
       1,

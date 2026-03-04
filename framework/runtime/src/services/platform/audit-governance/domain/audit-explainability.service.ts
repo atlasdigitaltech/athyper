@@ -143,7 +143,10 @@ export class AuditExplainabilityService {
   /**
    * Explain an audit event chain by correlation_id.
    */
-  async explain(tenantId: string, correlationId: string): Promise<EventExplanation> {
+  async explain(
+    tenantId: string,
+    correlationId: string,
+  ): Promise<EventExplanation> {
     const eventsResult = await sql<any>`
       SELECT id, event_type, severity, actor_user_id, event_timestamp,
              comment, instance_id, trace_id
@@ -153,21 +156,25 @@ export class AuditExplainabilityService {
       ORDER BY event_timestamp ASC
     `.execute(this.db);
 
-    const events: ExplainedEvent[] = (eventsResult.rows ?? []).map((r: any) => ({
-      id: r.id,
-      eventType: r.event_type,
-      severity: r.severity ?? "info",
-      actorUserId: r.actor_user_id ?? undefined,
-      timestamp: new Date(r.event_timestamp),
-      summary: r.comment ?? r.event_type,
-      traceId: r.trace_id ?? undefined,
-    }));
+    const events: ExplainedEvent[] = (eventsResult.rows ?? []).map(
+      (r: any) => ({
+        id: r.id,
+        eventType: r.event_type,
+        severity: r.severity ?? "info",
+        actorUserId: r.actor_user_id ?? undefined,
+        timestamp: new Date(r.event_timestamp),
+        summary: r.comment ?? r.event_type,
+        traceId: r.trace_id ?? undefined,
+      }),
+    );
 
     let workflowInstance: EventExplanation["workflowInstance"];
     if (events.length > 0) {
       const firstEvent = eventsResult.rows[0];
       if (firstEvent?.instance_id) {
-        workflowInstance = await this.resolveWorkflowInstance(firstEvent.instance_id);
+        workflowInstance = await this.resolveWorkflowInstance(
+          firstEvent.instance_id,
+        );
       }
     }
 
@@ -184,7 +191,10 @@ export class AuditExplainabilityService {
    * Explain a specific permission decision by reconstructing the full
    * decision path from permission_decision_log + audit_log.
    */
-  async explainDecision(tenantId: string, decisionId: string): Promise<DecisionExplanation | undefined> {
+  async explainDecision(
+    tenantId: string,
+    decisionId: string,
+  ): Promise<DecisionExplanation | undefined> {
     // 1. Fetch the decision record
     const decisionResult = await sql<any>`
       SELECT id, principal_id, resource_type, resource_id, action,
@@ -200,7 +210,9 @@ export class AuditExplainabilityService {
     if (!row) return undefined;
 
     // 2. Parse conditions evaluated (stored as JSONB)
-    const conditionsEvaluated: ConditionTrace[] = Array.isArray(row.conditions_evaluated)
+    const conditionsEvaluated: ConditionTrace[] = Array.isArray(
+      row.conditions_evaluated,
+    )
       ? (row.conditions_evaluated as any[]).map((c: any) => ({
           field: c.field ?? "",
           operator: c.operator ?? "",
@@ -213,7 +225,12 @@ export class AuditExplainabilityService {
     // 3. Resolve policy metadata if policy_id exists
     let policyMatch: DecisionExplanation["policyMatch"];
     if (row.policy_id) {
-      policyMatch = await this.resolvePolicyMatch(tenantId, row.policy_id, row.rule_id, row.effect);
+      policyMatch = await this.resolvePolicyMatch(
+        tenantId,
+        row.policy_id,
+        row.rule_id,
+        row.effect,
+      );
     }
 
     // 4. Fetch related audit events by correlation_id
@@ -262,10 +279,14 @@ export class AuditExplainabilityService {
       sql`resource_id = ${entityId}`,
     ];
     if (options.startDate) {
-      conditions.push(sql`decided_at >= ${options.startDate.toISOString()}::timestamptz`);
+      conditions.push(
+        sql`decided_at >= ${options.startDate.toISOString()}::timestamptz`,
+      );
     }
     if (options.endDate) {
-      conditions.push(sql`decided_at <= ${options.endDate.toISOString()}::timestamptz`);
+      conditions.push(
+        sql`decided_at <= ${options.endDate.toISOString()}::timestamptz`,
+      );
     }
 
     const where = conditions.reduce((a, b) => sql`${a} AND ${b}`);
@@ -311,10 +332,14 @@ export class AuditExplainabilityService {
 
     const conditions = [sql`tenant_id = ${tenantId}::uuid`];
     if (options.startDate) {
-      conditions.push(sql`decided_at >= ${options.startDate.toISOString()}::timestamptz`);
+      conditions.push(
+        sql`decided_at >= ${options.startDate.toISOString()}::timestamptz`,
+      );
     }
     if (options.endDate) {
-      conditions.push(sql`decided_at <= ${options.endDate.toISOString()}::timestamptz`);
+      conditions.push(
+        sql`decided_at <= ${options.endDate.toISOString()}::timestamptz`,
+      );
     }
     if (options.userId) {
       conditions.push(sql`principal_id = ${options.userId}`);
@@ -362,16 +387,18 @@ export class AuditExplainabilityService {
       LIMIT ${limit} OFFSET ${offset}
     `.execute(this.db);
 
-    const decisions: DecisionSummary[] = (decisionsResult.rows ?? []).map((r: any) => ({
-      decisionId: r.id,
-      timestamp: new Date(r.decided_at),
-      principalId: r.principal_id,
-      resourceType: r.resource_type,
-      resourceId: r.resource_id,
-      action: r.action,
-      effect: r.effect,
-      policyId: r.policy_id ?? undefined,
-    }));
+    const decisions: DecisionSummary[] = (decisionsResult.rows ?? []).map(
+      (r: any) => ({
+        decisionId: r.id,
+        timestamp: new Date(r.decided_at),
+        principalId: r.principal_id,
+        resourceType: r.resource_type,
+        resourceId: r.resource_id,
+        action: r.action,
+        effect: r.effect,
+        policyId: r.policy_id ?? undefined,
+      }),
+    );
 
     return {
       tenantId,

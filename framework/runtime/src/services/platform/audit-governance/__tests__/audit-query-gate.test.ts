@@ -9,7 +9,10 @@ import {
   type AuditAccessRole,
 } from "../domain/audit-query-gate.js";
 
-import type { AuditEvent, AuditEventQueryOptions } from "../../workflow-engine/audit/types.js";
+import type {
+  AuditEvent,
+  AuditEventQueryOptions,
+} from "../../workflow-engine/audit/types.js";
 
 function makeCaller(roles: AuditAccessRole[], userId = "user-1"): AuditCaller {
   return { userId, tenantId: "t-1", roles };
@@ -22,8 +25,18 @@ function makeEvent(overrides: Partial<AuditEvent> = {}): AuditEvent {
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date(),
     ipAddress: "192.168.1.1",

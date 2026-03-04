@@ -32,29 +32,43 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     return `${tenantId}:${taskId}`;
   }
 
-  async getById(tenantId: string, taskId: string): Promise<ApprovalTask | undefined> {
+  async getById(
+    tenantId: string,
+    taskId: string,
+  ): Promise<ApprovalTask | undefined> {
     return this.tasks.get(this.makeKey(tenantId, taskId));
   }
 
-  async getByAssignmentId(tenantId: string, assignmentId: string): Promise<ApprovalTask | undefined> {
+  async getByAssignmentId(
+    tenantId: string,
+    assignmentId: string,
+  ): Promise<ApprovalTask | undefined> {
     return Array.from(this.tasks.values()).find(
-      (t) => t.tenantId === tenantId && t.assignmentId === assignmentId
+      (t) => t.tenantId === tenantId && t.assignmentId === assignmentId,
     );
   }
 
-  async list(tenantId: string, assigneeId: string, options?: InboxFilterOptions): Promise<ApprovalTask[]> {
+  async list(
+    tenantId: string,
+    assigneeId: string,
+    options?: InboxFilterOptions,
+  ): Promise<ApprovalTask[]> {
     let results = Array.from(this.tasks.values()).filter(
-      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId
+      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId,
     );
 
     // Apply filters
     if (options?.status) {
-      const statuses = Array.isArray(options.status) ? options.status : [options.status];
+      const statuses = Array.isArray(options.status)
+        ? options.status
+        : [options.status];
       results = results.filter((t) => statuses.includes(t.status));
     }
 
     if (options?.priority) {
-      const priorities = Array.isArray(options.priority) ? options.priority : [options.priority];
+      const priorities = Array.isArray(options.priority)
+        ? options.priority
+        : [options.priority];
       results = results.filter((t) => priorities.includes(t.priority));
     }
 
@@ -68,11 +82,15 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     }
 
     if (options?.templateCode) {
-      results = results.filter((t) => t.workflow.templateCode === options.templateCode);
+      results = results.filter(
+        (t) => t.workflow.templateCode === options.templateCode,
+      );
     }
 
     if (options?.requesterId) {
-      results = results.filter((t) => t.requester.userId === options.requesterId);
+      results = results.filter(
+        (t) => t.requester.userId === options.requesterId,
+      );
     }
 
     if (options?.overdueOnly) {
@@ -109,7 +127,7 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
         (t) =>
           t.title.toLowerCase().includes(searchLower) ||
           t.description?.toLowerCase().includes(searchLower) ||
-          t.entity.displayName?.toLowerCase().includes(searchLower)
+          t.entity.displayName?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -156,7 +174,10 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     return results.slice(offset, offset + limit);
   }
 
-  async create(tenantId: string, task: Omit<ApprovalTask, "id" | "createdAt">): Promise<ApprovalTask> {
+  async create(
+    tenantId: string,
+    task: Omit<ApprovalTask, "id" | "createdAt">,
+  ): Promise<ApprovalTask> {
     const id = this.generateId();
     const now = new Date();
 
@@ -170,7 +191,11 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     return created;
   }
 
-  async update(tenantId: string, taskId: string, updates: Partial<ApprovalTask>): Promise<ApprovalTask> {
+  async update(
+    tenantId: string,
+    taskId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<ApprovalTask> {
     const key = this.makeKey(tenantId, taskId);
     const existing = this.tasks.get(key);
 
@@ -195,7 +220,10 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     this.tasks.delete(this.makeKey(tenantId, taskId));
   }
 
-  async createBulk(tenantId: string, tasks: Omit<ApprovalTask, "id" | "createdAt">[]): Promise<ApprovalTask[]> {
+  async createBulk(
+    tenantId: string,
+    tasks: Omit<ApprovalTask, "id" | "createdAt">[],
+  ): Promise<ApprovalTask[]> {
     const created: ApprovalTask[] = [];
     for (const task of tasks) {
       const newTask = await this.create(tenantId, task);
@@ -204,7 +232,11 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     return created;
   }
 
-  async updateByInstanceId(tenantId: string, instanceId: string, updates: Partial<ApprovalTask>): Promise<void> {
+  async updateByInstanceId(
+    tenantId: string,
+    instanceId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<void> {
     for (const [key, task] of this.tasks) {
       if (task.tenantId === tenantId && task.instanceId === instanceId) {
         this.tasks.set(key, { ...task, ...updates, updatedAt: new Date() });
@@ -212,7 +244,10 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     }
   }
 
-  async deleteByInstanceId(tenantId: string, instanceId: string): Promise<void> {
+  async deleteByInstanceId(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<void> {
     for (const [key, task] of this.tasks) {
       if (task.tenantId === tenantId && task.instanceId === instanceId) {
         this.tasks.delete(key);
@@ -220,15 +255,21 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     }
   }
 
-  async getTasksForInstance(tenantId: string, instanceId: string): Promise<ApprovalTask[]> {
+  async getTasksForInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalTask[]> {
     return Array.from(this.tasks.values()).filter(
-      (t) => t.tenantId === tenantId && t.instanceId === instanceId
+      (t) => t.tenantId === tenantId && t.instanceId === instanceId,
     );
   }
 
-  async getTasksForStep(tenantId: string, stepInstanceId: string): Promise<ApprovalTask[]> {
+  async getTasksForStep(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalTask[]> {
     return Array.from(this.tasks.values()).filter(
-      (t) => t.tenantId === tenantId && t.stepInstanceId === stepInstanceId
+      (t) => t.tenantId === tenantId && t.stepInstanceId === stepInstanceId,
     );
   }
 
@@ -236,13 +277,14 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     const now = new Date();
     return Array.from(this.tasks.values()).filter(
       (t) =>
-        t.tenantId === tenantId &&
-        t.status === "pending" &&
-        t.sla.dueAt < now
+        t.tenantId === tenantId && t.status === "pending" && t.sla.dueAt < now,
     );
   }
 
-  async getTasksDueSoon(tenantId: string, withinHours: number): Promise<ApprovalTask[]> {
+  async getTasksDueSoon(
+    tenantId: string,
+    withinHours: number,
+  ): Promise<ApprovalTask[]> {
     const now = new Date();
     const deadline = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
 
@@ -251,13 +293,16 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
         t.tenantId === tenantId &&
         t.status === "pending" &&
         t.sla.dueAt > now &&
-        t.sla.dueAt <= deadline
+        t.sla.dueAt <= deadline,
     );
   }
 
-  async getInboxSummary(tenantId: string, assigneeId: string): Promise<InboxSummary> {
+  async getInboxSummary(
+    tenantId: string,
+    assigneeId: string,
+  ): Promise<InboxSummary> {
     const tasks = Array.from(this.tasks.values()).filter(
-      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId
+      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId,
     );
 
     const now = new Date();
@@ -316,9 +361,13 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
     };
   }
 
-  async countByAssignee(tenantId: string, assigneeId: string, status?: ApprovalTaskStatus): Promise<number> {
+  async countByAssignee(
+    tenantId: string,
+    assigneeId: string,
+    status?: ApprovalTaskStatus,
+  ): Promise<number> {
     let tasks = Array.from(this.tasks.values()).filter(
-      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId
+      (t) => t.tenantId === tenantId && t.assigneeId === assigneeId,
     );
 
     if (status) {
@@ -346,7 +395,10 @@ export class InMemoryApprovalTaskRepository implements IApprovalTaskRepository {
 export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
   constructor(private readonly db: Kysely<DB>) {}
 
-  async getById(tenantId: string, taskId: string): Promise<ApprovalTask | undefined> {
+  async getById(
+    tenantId: string,
+    taskId: string,
+  ): Promise<ApprovalTask | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_task" as any)
       .selectAll()
@@ -358,7 +410,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return this.mapRowToTask(result);
   }
 
-  async getByAssignmentId(tenantId: string, assignmentId: string): Promise<ApprovalTask | undefined> {
+  async getByAssignmentId(
+    tenantId: string,
+    assignmentId: string,
+  ): Promise<ApprovalTask | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_task" as any)
       .selectAll()
@@ -370,7 +425,11 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return this.mapRowToTask(result);
   }
 
-  async list(tenantId: string, assigneeId: string, options?: InboxFilterOptions): Promise<ApprovalTask[]> {
+  async list(
+    tenantId: string,
+    assigneeId: string,
+    options?: InboxFilterOptions,
+  ): Promise<ApprovalTask[]> {
     let query = this.db
       .selectFrom("meta.approval_task" as any)
       .selectAll()
@@ -378,12 +437,16 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
       .where("assignee_id", "=", assigneeId);
 
     if (options?.status) {
-      const statuses = Array.isArray(options.status) ? options.status : [options.status];
+      const statuses = Array.isArray(options.status)
+        ? options.status
+        : [options.status];
       query = query.where("status", "in", statuses);
     }
 
     if (options?.priority) {
-      const priorities = Array.isArray(options.priority) ? options.priority : [options.priority];
+      const priorities = Array.isArray(options.priority)
+        ? options.priority
+        : [options.priority];
       query = query.where("priority", "in", priorities);
     }
 
@@ -433,7 +496,7 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
         eb.or([
           eb("title", "ilike", `%${options.search}%`),
           eb("description", "ilike", `%${options.search}%`),
-        ])
+        ]),
       );
     }
 
@@ -451,7 +514,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return results.map((r: any) => this.mapRowToTask(r));
   }
 
-  async create(tenantId: string, task: Omit<ApprovalTask, "id" | "createdAt">): Promise<ApprovalTask> {
+  async create(
+    tenantId: string,
+    task: Omit<ApprovalTask, "id" | "createdAt">,
+  ): Promise<ApprovalTask> {
     const id = crypto.randomUUID();
     const now = new Date();
 
@@ -498,7 +564,11 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return { ...task, id, createdAt: now };
   }
 
-  async update(tenantId: string, taskId: string, updates: Partial<ApprovalTask>): Promise<ApprovalTask> {
+  async update(
+    tenantId: string,
+    taskId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<ApprovalTask> {
     const now = new Date();
     const updateData: Record<string, unknown> = { updated_at: now };
 
@@ -506,12 +576,18 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     if (updates.priority !== undefined) updateData.priority = updates.priority;
     if (updates.isRead !== undefined) updateData.is_read = updates.isRead;
     if (updates.readAt !== undefined) updateData.read_at = updates.readAt;
-    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
-    if (updates.assigneeId !== undefined) updateData.assignee_id = updates.assigneeId;
-    if (updates.assigneeDisplayName !== undefined) updateData.assignee_display_name = updates.assigneeDisplayName;
-    if (updates.assigneeEmail !== undefined) updateData.assignee_email = updates.assigneeEmail;
-    if (updates.delegation !== undefined) updateData.delegation = JSON.stringify(updates.delegation);
-    if (updates.escalation !== undefined) updateData.escalation = JSON.stringify(updates.escalation);
+    if (updates.completedAt !== undefined)
+      updateData.completed_at = updates.completedAt;
+    if (updates.assigneeId !== undefined)
+      updateData.assignee_id = updates.assigneeId;
+    if (updates.assigneeDisplayName !== undefined)
+      updateData.assignee_display_name = updates.assigneeDisplayName;
+    if (updates.assigneeEmail !== undefined)
+      updateData.assignee_email = updates.assigneeEmail;
+    if (updates.delegation !== undefined)
+      updateData.delegation = JSON.stringify(updates.delegation);
+    if (updates.escalation !== undefined)
+      updateData.escalation = JSON.stringify(updates.escalation);
     if (updates.sla !== undefined) {
       updateData.due_at = updates.sla.dueAt;
       updateData.warning_at = updates.sla.warningAt;
@@ -542,7 +618,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
       .execute();
   }
 
-  async createBulk(tenantId: string, tasks: Omit<ApprovalTask, "id" | "createdAt">[]): Promise<ApprovalTask[]> {
+  async createBulk(
+    tenantId: string,
+    tasks: Omit<ApprovalTask, "id" | "createdAt">[],
+  ): Promise<ApprovalTask[]> {
     const created: ApprovalTask[] = [];
     for (const task of tasks) {
       const newTask = await this.create(tenantId, task);
@@ -551,7 +630,11 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return created;
   }
 
-  async updateByInstanceId(tenantId: string, instanceId: string, updates: Partial<ApprovalTask>): Promise<void> {
+  async updateByInstanceId(
+    tenantId: string,
+    instanceId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<void> {
     const updateData: Record<string, unknown> = { updated_at: new Date() };
 
     if (updates.status !== undefined) updateData.status = updates.status;
@@ -564,7 +647,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
       .execute();
   }
 
-  async deleteByInstanceId(tenantId: string, instanceId: string): Promise<void> {
+  async deleteByInstanceId(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom("meta.approval_task" as any)
       .where("tenant_id", "=", tenantId)
@@ -572,7 +658,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
       .execute();
   }
 
-  async getTasksForInstance(tenantId: string, instanceId: string): Promise<ApprovalTask[]> {
+  async getTasksForInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalTask[]> {
     const results = await this.db
       .selectFrom("meta.approval_task" as any)
       .selectAll()
@@ -584,7 +673,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return results.map((r: any) => this.mapRowToTask(r));
   }
 
-  async getTasksForStep(tenantId: string, stepInstanceId: string): Promise<ApprovalTask[]> {
+  async getTasksForStep(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalTask[]> {
     const results = await this.db
       .selectFrom("meta.approval_task" as any)
       .selectAll()
@@ -610,7 +702,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return results.map((r: any) => this.mapRowToTask(r));
   }
 
-  async getTasksDueSoon(tenantId: string, withinHours: number): Promise<ApprovalTask[]> {
+  async getTasksDueSoon(
+    tenantId: string,
+    withinHours: number,
+  ): Promise<ApprovalTask[]> {
     const now = new Date();
     const deadline = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
 
@@ -626,7 +721,10 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     return results.map((r: any) => this.mapRowToTask(r));
   }
 
-  async getInboxSummary(tenantId: string, assigneeId: string): Promise<InboxSummary> {
+  async getInboxSummary(
+    tenantId: string,
+    assigneeId: string,
+  ): Promise<InboxSummary> {
     // For now, use a simpler approach by fetching tasks
     const tasks = await this.list(tenantId, assigneeId, { limit: 1000 });
 
@@ -686,7 +784,11 @@ export class DatabaseApprovalTaskRepository implements IApprovalTaskRepository {
     };
   }
 
-  async countByAssignee(tenantId: string, assigneeId: string, status?: ApprovalTaskStatus): Promise<number> {
+  async countByAssignee(
+    tenantId: string,
+    assigneeId: string,
+    status?: ApprovalTaskStatus,
+  ): Promise<number> {
     let query = this.db
       .selectFrom("meta.approval_task" as any)
       .select((eb: any) => eb.fn.count("id").as("count"))
@@ -780,6 +882,8 @@ export function createInMemoryApprovalTaskRepository(): InMemoryApprovalTaskRepo
   return new InMemoryApprovalTaskRepository();
 }
 
-export function createDatabaseApprovalTaskRepository(db: Kysely<DB>): DatabaseApprovalTaskRepository {
+export function createDatabaseApprovalTaskRepository(
+  db: Kysely<DB>,
+): DatabaseApprovalTaskRepository {
   return new DatabaseApprovalTaskRepository(db);
 }

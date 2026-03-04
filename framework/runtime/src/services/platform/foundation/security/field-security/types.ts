@@ -22,7 +22,12 @@ export type PolicyType = "read" | "write" | "both";
  * Policy scope (hierarchy level)
  * record > entity_version > entity > module > global
  */
-export type PolicyScope = "global" | "module" | "entity" | "entity_version" | "record";
+export type PolicyScope =
+  | "global"
+  | "module"
+  | "entity"
+  | "entity_version"
+  | "record";
 
 /**
  * Subject type (who is accessing)
@@ -37,17 +42,17 @@ export type SubjectType = "user" | "service" | "system";
  * ABAC comparison operators
  */
 export type AbacComparison =
-  | "eq"       // Equal
-  | "neq"      // Not equal
-  | "in"       // In array
-  | "nin"      // Not in array
-  | "gt"       // Greater than
-  | "gte"      // Greater than or equal
-  | "lt"       // Less than
-  | "lte"      // Less than or equal
+  | "eq" // Equal
+  | "neq" // Not equal
+  | "in" // In array
+  | "nin" // Not in array
+  | "gt" // Greater than
+  | "gte" // Greater than or equal
+  | "lt" // Less than
+  | "lte" // Less than or equal
   | "contains" // String contains
-  | "starts"   // String starts with
-  | "ends"     // String ends with
+  | "starts" // String starts with
+  | "ends" // String ends with
   | "matches"; // Regex match
 
 /**
@@ -434,9 +439,11 @@ export class FieldAccessDeniedError extends Error {
   constructor(
     public readonly fieldPath: string,
     public readonly action: "read" | "write",
-    public readonly reason?: string
+    public readonly reason?: string,
   ) {
-    super(`Access denied for ${action} on field: ${fieldPath}${reason ? ` (${reason})` : ""}`);
+    super(
+      `Access denied for ${action} on field: ${fieldPath}${reason ? ` (${reason})` : ""}`,
+    );
     this.name = "FieldAccessDeniedError";
   }
 }
@@ -447,9 +454,12 @@ export class FieldAccessDeniedError extends Error {
 export class PolicyValidationError extends Error {
   constructor(
     public readonly errors: Array<{ field: string; message: string }>,
-    message?: string
+    message?: string,
   ) {
-    super(message || `Policy validation failed: ${errors.map((e) => `${e.field}: ${e.message}`).join("; ")}`);
+    super(
+      message ||
+        `Policy validation failed: ${errors.map((e) => `${e.field}: ${e.message}`).join("; ")}`,
+    );
     this.name = "PolicyValidationError";
   }
 }

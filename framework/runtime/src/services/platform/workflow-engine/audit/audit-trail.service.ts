@@ -82,7 +82,10 @@ function getEventSeverity(eventType: AuditEventType): AuditEventSeverity {
 export class InMemoryAuditRepository implements IAuditRepository {
   private events: Map<string, AuditEvent[]> = new Map();
 
-  async recordEvent(tenantId: string, event: Omit<AuditEvent, "id">): Promise<AuditEvent> {
+  async recordEvent(
+    tenantId: string,
+    event: Omit<AuditEvent, "id">,
+  ): Promise<AuditEvent> {
     const fullEvent: AuditEvent = {
       ...event,
       id: generateId("aud"),
@@ -96,7 +99,10 @@ export class InMemoryAuditRepository implements IAuditRepository {
     return fullEvent;
   }
 
-  async getEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<AuditEvent[]> {
+  async getEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<AuditEvent[]> {
     let events = this.events.get(tenantId) || [];
 
     // Apply filters
@@ -104,7 +110,9 @@ export class InMemoryAuditRepository implements IAuditRepository {
       events = events.filter((e) => e.instanceId === options.instanceId);
     }
     if (options?.stepInstanceId) {
-      events = events.filter((e) => e.stepInstanceId === options.stepInstanceId);
+      events = events.filter(
+        (e) => e.stepInstanceId === options.stepInstanceId,
+      );
     }
     if (options?.entityType) {
       events = events.filter((e) => e.entity.type === options.entityType);
@@ -113,7 +121,9 @@ export class InMemoryAuditRepository implements IAuditRepository {
       events = events.filter((e) => e.entity.id === options.entityId);
     }
     if (options?.templateCode) {
-      events = events.filter((e) => e.workflow.templateCode === options.templateCode);
+      events = events.filter(
+        (e) => e.workflow.templateCode === options.templateCode,
+      );
     }
     if (options?.eventTypes && options.eventTypes.length > 0) {
       events = events.filter((e) => options.eventTypes!.includes(e.eventType));
@@ -142,7 +152,9 @@ export class InMemoryAuditRepository implements IAuditRepository {
           return a.eventType.localeCompare(b.eventType) * sortDir;
         case "severity": {
           const severityOrder = { info: 0, warning: 1, error: 2, critical: 3 };
-          return (severityOrder[a.severity] - severityOrder[b.severity]) * sortDir;
+          return (
+            (severityOrder[a.severity] - severityOrder[b.severity]) * sortDir
+          );
         }
         default:
           return (a.timestamp.getTime() - b.timestamp.getTime()) * sortDir;
@@ -155,7 +167,10 @@ export class InMemoryAuditRepository implements IAuditRepository {
     return events.slice(offset, offset + limit);
   }
 
-  async getInstanceAuditTrail(tenantId: string, instanceId: string): Promise<InstanceAuditTrail> {
+  async getInstanceAuditTrail(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<InstanceAuditTrail> {
     const events = await this.getEvents(tenantId, {
       instanceId,
       sortBy: "timestamp",
@@ -183,8 +198,12 @@ export class InMemoryAuditRepository implements IAuditRepository {
     // Build step summaries
     const steps: StepAuditSummary[] = [];
     for (const [stepId, stepEvts] of stepEvents) {
-      const activatedEvent = stepEvts.find((e) => e.eventType === "step.activated");
-      const completedEvent = stepEvts.find((e) => e.eventType === "step.completed");
+      const activatedEvent = stepEvts.find(
+        (e) => e.eventType === "step.activated",
+      );
+      const completedEvent = stepEvts.find(
+        (e) => e.eventType === "step.completed",
+      );
       const skippedEvent = stepEvts.find((e) => e.eventType === "step.skipped");
 
       const approverActions = stepEvts
@@ -214,17 +233,22 @@ export class InMemoryAuditRepository implements IAuditRepository {
         completedAt: completedEvent?.timestamp || skippedEvent?.timestamp,
         durationMs:
           activatedEvent && (completedEvent || skippedEvent)
-            ? (completedEvent?.timestamp || skippedEvent?.timestamp)!.getTime() -
+            ? (completedEvent?.timestamp ||
+                skippedEvent?.timestamp)!.getTime() -
               activatedEvent.timestamp.getTime()
             : undefined,
         approverActions,
-        escalationCount: stepEvts.filter((e) => e.eventType === "step.escalated").length,
+        escalationCount: stepEvts.filter(
+          (e) => e.eventType === "step.escalated",
+        ).length,
         slaStatus: stepEvts.some((e) => e.eventType === "sla.breach")
           ? "breached"
           : stepEvts.some((e) => e.eventType === "sla.warning")
             ? "warning"
             : "on_track",
-        autoApproved: stepEvts.some((e) => e.eventType === "step.auto_approved"),
+        autoApproved: stepEvts.some(
+          (e) => e.eventType === "step.auto_approved",
+        ),
         skipped: !!skippedEvent,
         skipReason: skippedEvent?.details?.reason as string | undefined,
       });
@@ -233,13 +257,22 @@ export class InMemoryAuditRepository implements IAuditRepository {
     // Calculate statistics
     const statistics = {
       totalSteps: steps.length,
-      completedSteps: steps.filter((s) => s.status === "completed" || s.status === "approved").length,
+      completedSteps: steps.filter(
+        (s) => s.status === "completed" || s.status === "approved",
+      ).length,
       skippedSteps: steps.filter((s) => s.skipped).length,
-      totalApprovers: steps.reduce((sum, s) => sum + s.approverActions.length, 0),
-      approvedCount: events.filter((e) => e.eventType === "action.approve").length,
-      rejectedCount: events.filter((e) => e.eventType === "action.reject").length,
-      delegatedCount: events.filter((e) => e.eventType === "action.delegate").length,
-      escalationCount: events.filter((e) => e.eventType === "step.escalated").length,
+      totalApprovers: steps.reduce(
+        (sum, s) => sum + s.approverActions.length,
+        0,
+      ),
+      approvedCount: events.filter((e) => e.eventType === "action.approve")
+        .length,
+      rejectedCount: events.filter((e) => e.eventType === "action.reject")
+        .length,
+      delegatedCount: events.filter((e) => e.eventType === "action.delegate")
+        .length,
+      escalationCount: events.filter((e) => e.eventType === "step.escalated")
+        .length,
       slaBreachCount: events.filter((e) => e.eventType === "sla.breach").length,
     };
 
@@ -248,7 +281,7 @@ export class InMemoryAuditRepository implements IAuditRepository {
       (e) =>
         e.eventType === "workflow.approved" ||
         e.eventType === "workflow.rejected" ||
-        e.eventType === "workflow.cancelled"
+        e.eventType === "workflow.cancelled",
     );
 
     return {
@@ -256,12 +289,15 @@ export class InMemoryAuditRepository implements IAuditRepository {
       entity: firstEvent.entity,
       workflow: firstEvent.workflow,
       requester: firstEvent.actor,
-      currentStatus: (lastEvent.newState?.instanceStatus as any) || "in_progress",
-      currentEntityState: (lastEvent.newState?.entityState as any) || "pending_approval",
+      currentStatus:
+        (lastEvent.newState?.instanceStatus as any) || "in_progress",
+      currentEntityState:
+        (lastEvent.newState?.entityState as any) || "pending_approval",
       createdAt: firstEvent.timestamp,
       completedAt: finalDecisionEvent?.timestamp,
       totalDurationMs: finalDecisionEvent
-        ? finalDecisionEvent.timestamp.getTime() - firstEvent.timestamp.getTime()
+        ? finalDecisionEvent.timestamp.getTime() -
+          firstEvent.timestamp.getTime()
         : undefined,
       finalDecision: finalDecisionEvent
         ? {
@@ -277,7 +313,10 @@ export class InMemoryAuditRepository implements IAuditRepository {
     };
   }
 
-  async getStepAuditSummary(tenantId: string, stepInstanceId: string): Promise<StepAuditSummary> {
+  async getStepAuditSummary(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<StepAuditSummary> {
     const events = await this.getEvents(tenantId, {
       stepInstanceId,
       sortBy: "timestamp",
@@ -323,7 +362,8 @@ export class InMemoryAuditRepository implements IAuditRepository {
             activatedEvent.timestamp.getTime()
           : undefined,
       approverActions,
-      escalationCount: events.filter((e) => e.eventType === "step.escalated").length,
+      escalationCount: events.filter((e) => e.eventType === "step.escalated")
+        .length,
       slaStatus: events.some((e) => e.eventType === "sla.breach")
         ? "breached"
         : events.some((e) => e.eventType === "sla.warning")
@@ -335,12 +375,22 @@ export class InMemoryAuditRepository implements IAuditRepository {
     };
   }
 
-  async countEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<number> {
-    const events = await this.getEvents(tenantId, { ...options, limit: undefined, offset: undefined });
+  async countEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<number> {
+    const events = await this.getEvents(tenantId, {
+      ...options,
+      limit: undefined,
+      offset: undefined,
+    });
     return events.length;
   }
 
-  async getEventsByCorrelationId(tenantId: string, correlationId: string): Promise<AuditEvent[]> {
+  async getEventsByCorrelationId(
+    tenantId: string,
+    correlationId: string,
+  ): Promise<AuditEvent[]> {
     const allEvents = this.events.get(tenantId) || [];
     return allEvents.filter((e) => e.correlationId === correlationId);
   }
@@ -348,7 +398,7 @@ export class InMemoryAuditRepository implements IAuditRepository {
   async aggregateForReport(
     tenantId: string,
     reportType: string,
-    options: any
+    options: any,
   ): Promise<Record<string, unknown>> {
     // Basic aggregation - real implementation would use database aggregation
     const events = await this.getEvents(tenantId, {
@@ -363,7 +413,7 @@ export class InMemoryAuditRepository implements IAuditRepository {
           acc[e.eventType] = (acc[e.eventType] || 0) + 1;
           return acc;
         },
-        {} as Record<string, number>
+        {} as Record<string, number>,
       ),
     };
   }
@@ -375,7 +425,7 @@ export class InMemoryAuditRepository implements IAuditRepository {
 export class AuditTrailService implements IAuditTrailService {
   constructor(
     private readonly auditRepository: IAuditRepository,
-    private readonly instanceRepository?: IApprovalInstanceRepository
+    private readonly instanceRepository?: IApprovalInstanceRepository,
   ) {}
 
   /**
@@ -398,10 +448,13 @@ export class AuditTrailService implements IAuditTrailService {
       userAgent?: string;
       correlationId?: string;
       sessionId?: string;
-    }
+    },
   ): Promise<AuditEvent> {
     // Check if using simplified signature (object as second arg)
-    if (typeof eventTypeOrEvent === "object" && "instanceId" in eventTypeOrEvent) {
+    if (
+      typeof eventTypeOrEvent === "object" &&
+      "instanceId" in eventTypeOrEvent
+    ) {
       const simpleEvent = eventTypeOrEvent as SimpleAuditEventInput;
       const event: Omit<AuditEvent, "id"> = {
         tenantId,
@@ -436,7 +489,9 @@ export class AuditTrailService implements IAuditTrailService {
     // Full signature
     const eventType = eventTypeOrEvent as AuditEventType;
     if (!instance || !actor) {
-      throw new Error("instance and actor are required for full recordEvent signature");
+      throw new Error(
+        "instance and actor are required for full recordEvent signature",
+      );
     }
 
     const event: Omit<AuditEvent, "id"> = {
@@ -493,21 +548,30 @@ export class AuditTrailService implements IAuditTrailService {
   /**
    * Get audit trail for instance
    */
-  async getAuditTrail(tenantId: string, instanceId: string): Promise<InstanceAuditTrail> {
+  async getAuditTrail(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<InstanceAuditTrail> {
     return this.auditRepository.getInstanceAuditTrail(tenantId, instanceId);
   }
 
   /**
    * Get audit events
    */
-  async getEvents(tenantId: string, options?: AuditEventQueryOptions): Promise<AuditEvent[]> {
+  async getEvents(
+    tenantId: string,
+    options?: AuditEventQueryOptions,
+  ): Promise<AuditEvent[]> {
     return this.auditRepository.getEvents(tenantId, options);
   }
 
   /**
    * Get step history
    */
-  async getStepHistory(tenantId: string, stepInstanceId: string): Promise<AuditEvent[]> {
+  async getStepHistory(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<AuditEvent[]> {
     return this.auditRepository.getEvents(tenantId, {
       stepInstanceId,
       sortBy: "timestamp",
@@ -521,7 +585,7 @@ export class AuditTrailService implements IAuditTrailService {
   async exportAuditTrail(
     tenantId: string,
     instanceId: string,
-    format: "json" | "csv" | "pdf"
+    format: "json" | "csv" | "pdf",
   ): Promise<{ content: string | Buffer; mimeType: string }> {
     const trail = await this.getAuditTrail(tenantId, instanceId);
 
@@ -538,7 +602,7 @@ export class AuditTrailService implements IAuditTrailService {
         const csvRows = trail.events
           .map(
             (e) =>
-              `"${e.id}","${e.timestamp.toISOString()}","${e.eventType}","${e.severity}","${e.actor.displayName || e.actor.userId}","${e.action || ""}","${(e.comment || "").replace(/"/g, '""')}","${e.stepInstanceId || ""}","${e.previousState?.instanceStatus || ""}","${e.newState?.instanceStatus || ""}"`
+              `"${e.id}","${e.timestamp.toISOString()}","${e.eventType}","${e.severity}","${e.actor.displayName || e.actor.userId}","${e.action || ""}","${(e.comment || "").replace(/"/g, '""')}","${e.stepInstanceId || ""}","${e.previousState?.instanceStatus || ""}","${e.newState?.instanceStatus || ""}"`,
           )
           .join("\n");
         return {
@@ -593,7 +657,7 @@ ${trail.events.map((e) => `[${e.timestamp.toISOString()}] ${e.eventType} by ${e.
  */
 export function createAuditTrailService(
   auditRepository: IAuditRepository,
-  instanceRepository?: IApprovalInstanceRepository
+  instanceRepository?: IApprovalInstanceRepository,
 ): IAuditTrailService {
   return new AuditTrailService(auditRepository, instanceRepository);
 }

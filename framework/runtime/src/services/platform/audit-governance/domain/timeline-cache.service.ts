@@ -13,7 +13,10 @@
 
 import { createHash } from "crypto";
 
-import type { ActivityTimelineEntry, TimelineQuery } from "./activity-timeline.service.js";
+import type {
+  ActivityTimelineEntry,
+  TimelineQuery,
+} from "./activity-timeline.service.js";
 
 // ============================================================================
 // Types
@@ -51,7 +54,10 @@ export class TimelineCacheService {
   private readonly memCache: Map<string, { data: string; expiresAt: number }>;
   private readonly maxMemoryEntries: number;
 
-  constructor(redis: TimelineCacheBackend | null, options: TimelineCacheOptions = {}) {
+  constructor(
+    redis: TimelineCacheBackend | null,
+    options: TimelineCacheOptions = {},
+  ) {
     this.redis = redis;
     this.ttlSeconds = options.ttlSeconds ?? 60;
     this.prefix = options.prefix ?? "timeline";
@@ -88,7 +94,10 @@ export class TimelineCacheService {
   /**
    * Store timeline results in cache.
    */
-  async set(query: TimelineQuery, results: ActivityTimelineEntry[]): Promise<void> {
+  async set(
+    query: TimelineQuery,
+    results: ActivityTimelineEntry[],
+  ): Promise<void> {
     const key = this.buildKey(query);
     const data = JSON.stringify(results);
 
@@ -117,7 +126,11 @@ export class TimelineCacheService {
    *   - invalidate(tenantId, entityType) → all for this entity type
    *   - invalidate(tenantId, entityType, entityId) → specific entity
    */
-  async invalidate(tenantId: string, entityType?: string, entityId?: string): Promise<number> {
+  async invalidate(
+    tenantId: string,
+    entityType?: string,
+    entityId?: string,
+  ): Promise<number> {
     let pattern: string;
     if (entityType && entityId) {
       pattern = `${this.prefix}:${tenantId}:${entityType}:${entityId}:*`;
@@ -198,7 +211,10 @@ export class TimelineCacheService {
       limit: query.limit,
       offset: query.offset,
     });
-    return createHash("sha256").update(normalized).digest("hex").substring(0, 12);
+    return createHash("sha256")
+      .update(normalized)
+      .digest("hex")
+      .substring(0, 12);
   }
 }
 
@@ -210,7 +226,10 @@ export class TimelineCacheService {
  * JSON reviver that converts ISO date strings back to Date objects.
  */
 function dateReviver(_key: string, value: unknown): unknown {
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+  if (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+  ) {
     return new Date(value);
   }
   return value;

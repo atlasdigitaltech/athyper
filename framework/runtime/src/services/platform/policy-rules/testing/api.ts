@@ -147,7 +147,7 @@ export type ApiContext = {
  */
 export type ApiHandler<TReq, TRes> = (
   ctx: ApiContext,
-  body: TReq
+  body: TReq,
 ) => Promise<TRes>;
 
 // ============================================================================
@@ -162,7 +162,7 @@ export type ApiHandler<TReq, TRes> = (
 export class PolicySimulatorApiController {
   constructor(
     private readonly simulator: IPolicySimulator,
-    private readonly testCaseRepository: ITestCaseRepository
+    private readonly testCaseRepository: ITestCaseRepository,
   ) {}
 
   // ============================================================================
@@ -176,7 +176,7 @@ export class PolicySimulatorApiController {
    */
   async simulate(
     ctx: ApiContext,
-    request: SimulateRequest
+    request: SimulateRequest,
   ): Promise<SimulateResponse> {
     // Validate request
     if (!request.input) {
@@ -191,7 +191,7 @@ export class PolicySimulatorApiController {
     const result = await this.simulator.simulate(
       ctx.tenantId,
       request.input,
-      request.options
+      request.options,
     );
 
     return result;
@@ -204,7 +204,7 @@ export class PolicySimulatorApiController {
    */
   async validatePolicy(
     ctx: ApiContext,
-    request: ValidatePolicyRequest
+    request: ValidatePolicyRequest,
   ): Promise<ValidatePolicyResponse> {
     // Validate request
     if (!request.policy) {
@@ -214,7 +214,7 @@ export class PolicySimulatorApiController {
     // Run validation
     const result = await this.simulator.validatePolicy(
       request.policy,
-      request.options
+      request.options,
     );
 
     return result;
@@ -231,12 +231,19 @@ export class PolicySimulatorApiController {
    */
   async listTestCases(
     ctx: ApiContext,
-    query: ListTestCasesQuery
+    query: ListTestCasesQuery,
   ): Promise<ListTestCasesResponse> {
     const limit = query.limit ? parseInt(query.limit, 10) : 50;
     const offset = query.offset ? parseInt(query.offset, 10) : 0;
-    const tags = query.tags ? query.tags.split(",").map((t) => t.trim()) : undefined;
-    const enabled = query.enabled === "true" ? true : query.enabled === "false" ? false : undefined;
+    const tags = query.tags
+      ? query.tags.split(",").map((t) => t.trim())
+      : undefined;
+    const enabled =
+      query.enabled === "true"
+        ? true
+        : query.enabled === "false"
+          ? false
+          : undefined;
 
     const testCases = await this.testCaseRepository.list(ctx.tenantId, {
       policyId: query.policyId,
@@ -261,9 +268,12 @@ export class PolicySimulatorApiController {
    */
   async listTestCasesByPolicy(
     ctx: ApiContext,
-    policyId: string
+    policyId: string,
   ): Promise<ListTestCasesResponse> {
-    const testCases = await this.testCaseRepository.getByPolicy(ctx.tenantId, policyId);
+    const testCases = await this.testCaseRepository.getByPolicy(
+      ctx.tenantId,
+      policyId,
+    );
 
     return {
       testCases,
@@ -280,12 +290,19 @@ export class PolicySimulatorApiController {
    */
   async getTestCase(
     ctx: ApiContext,
-    testCaseId: string
+    testCaseId: string,
   ): Promise<StoredTestCase> {
-    const testCase = await this.testCaseRepository.getById(ctx.tenantId, testCaseId);
+    const testCase = await this.testCaseRepository.getById(
+      ctx.tenantId,
+      testCaseId,
+    );
 
     if (!testCase) {
-      throw new ApiError("NOT_FOUND", `Test case not found: ${testCaseId}`, 404);
+      throw new ApiError(
+        "NOT_FOUND",
+        `Test case not found: ${testCaseId}`,
+        404,
+      );
     }
 
     return testCase;
@@ -298,7 +315,7 @@ export class PolicySimulatorApiController {
    */
   async createTestCase(
     ctx: ApiContext,
-    request: CreateTestCaseRequest
+    request: CreateTestCaseRequest,
   ): Promise<CreateTestCaseResponse> {
     // Validate request
     if (!request.name) {
@@ -315,7 +332,7 @@ export class PolicySimulatorApiController {
     const testCase = await this.testCaseRepository.create(
       ctx.tenantId,
       request,
-      ctx.userId
+      ctx.userId,
     );
 
     return testCase;
@@ -329,12 +346,19 @@ export class PolicySimulatorApiController {
   async updateTestCase(
     ctx: ApiContext,
     testCaseId: string,
-    request: UpdateTestCaseRequest
+    request: UpdateTestCaseRequest,
   ): Promise<UpdateTestCaseResponse> {
     // Check exists
-    const existing = await this.testCaseRepository.getById(ctx.tenantId, testCaseId);
+    const existing = await this.testCaseRepository.getById(
+      ctx.tenantId,
+      testCaseId,
+    );
     if (!existing) {
-      throw new ApiError("NOT_FOUND", `Test case not found: ${testCaseId}`, 404);
+      throw new ApiError(
+        "NOT_FOUND",
+        `Test case not found: ${testCaseId}`,
+        404,
+      );
     }
 
     // Update
@@ -342,7 +366,7 @@ export class PolicySimulatorApiController {
       ctx.tenantId,
       testCaseId,
       request,
-      ctx.userId
+      ctx.userId,
     );
 
     return updated;
@@ -355,12 +379,19 @@ export class PolicySimulatorApiController {
    */
   async deleteTestCase(
     ctx: ApiContext,
-    testCaseId: string
+    testCaseId: string,
   ): Promise<{ success: boolean }> {
     // Check exists
-    const existing = await this.testCaseRepository.getById(ctx.tenantId, testCaseId);
+    const existing = await this.testCaseRepository.getById(
+      ctx.tenantId,
+      testCaseId,
+    );
     if (!existing) {
-      throw new ApiError("NOT_FOUND", `Test case not found: ${testCaseId}`, 404);
+      throw new ApiError(
+        "NOT_FOUND",
+        `Test case not found: ${testCaseId}`,
+        404,
+      );
     }
 
     // Delete
@@ -380,19 +411,30 @@ export class PolicySimulatorApiController {
    */
   async runTestCase(
     ctx: ApiContext,
-    testCaseId: string
+    testCaseId: string,
   ): Promise<RunTestCaseResponse> {
     // Get test case
-    const testCase = await this.testCaseRepository.getById(ctx.tenantId, testCaseId);
+    const testCase = await this.testCaseRepository.getById(
+      ctx.tenantId,
+      testCaseId,
+    );
     if (!testCase) {
-      throw new ApiError("NOT_FOUND", `Test case not found: ${testCaseId}`, 404);
+      throw new ApiError(
+        "NOT_FOUND",
+        `Test case not found: ${testCaseId}`,
+        404,
+      );
     }
 
     // Run test
     const result = await this.simulator.runTestCase(ctx.tenantId, testCase);
 
     // Update last run result
-    await this.testCaseRepository.updateRunResult(ctx.tenantId, testCaseId, result);
+    await this.testCaseRepository.updateRunResult(
+      ctx.tenantId,
+      testCaseId,
+      result,
+    );
 
     return result;
   }
@@ -404,7 +446,7 @@ export class PolicySimulatorApiController {
    */
   async runTestSuite(
     ctx: ApiContext,
-    request: RunTestSuiteRequest
+    request: RunTestSuiteRequest,
   ): Promise<RunTestSuiteResponse> {
     let testCases: StoredTestCase[];
 
@@ -419,20 +461,28 @@ export class PolicySimulatorApiController {
       }
     } else if (request.tags && request.tags.length > 0) {
       // Run by tags
-      testCases = await this.testCaseRepository.getByTags(ctx.tenantId, request.tags);
+      testCases = await this.testCaseRepository.getByTags(
+        ctx.tenantId,
+        request.tags,
+      );
     } else if (request.policyId) {
       // Run by policy
-      testCases = await this.testCaseRepository.getByPolicy(ctx.tenantId, request.policyId);
+      testCases = await this.testCaseRepository.getByPolicy(
+        ctx.tenantId,
+        request.policyId,
+      );
     } else {
       // Run all enabled
-      testCases = await this.testCaseRepository.list(ctx.tenantId, { enabled: true });
+      testCases = await this.testCaseRepository.list(ctx.tenantId, {
+        enabled: true,
+      });
     }
 
     // Run suite
     const result = await this.simulator.runTestSuite(
       ctx.tenantId,
       testCases,
-      request.suiteName
+      request.suiteName,
     );
 
     // Update run results for each test
@@ -440,7 +490,7 @@ export class PolicySimulatorApiController {
       await this.testCaseRepository.updateRunResult(
         ctx.tenantId,
         testResult.testCaseId,
-        testResult
+        testResult,
       );
     }
 
@@ -460,7 +510,7 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly statusCode: number = 400,
-    public readonly details?: Record<string, unknown>
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -564,7 +614,7 @@ export function getSimulatorRoutes(): RouteDefinition[] {
  */
 export function createPolicySimulatorApi(
   simulator: IPolicySimulator,
-  testCaseRepository: ITestCaseRepository
+  testCaseRepository: ITestCaseRepository,
 ): PolicySimulatorApiController {
   return new PolicySimulatorApiController(simulator, testCaseRepository);
 }

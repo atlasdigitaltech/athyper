@@ -18,7 +18,13 @@ import {
   PolicyEvaluationError,
 } from "../types.js";
 
-import type { ScopeType, SubjectType, Effect, ConditionGroup, Condition } from "../../types.js";
+import type {
+  ScopeType,
+  SubjectType,
+  Effect,
+  ConditionGroup,
+  Condition,
+} from "../../types.js";
 import type {
   PolicyInput,
   PolicySubject,
@@ -33,7 +39,9 @@ import type {
 // Test Fixtures
 // ============================================================================
 
-function createMockSubject(overrides: Partial<PolicySubject> = {}): PolicySubject {
+function createMockSubject(
+  overrides: Partial<PolicySubject> = {},
+): PolicySubject {
   return {
     principalId: "user-123",
     principalType: "user",
@@ -57,7 +65,9 @@ function createMockSubject(overrides: Partial<PolicySubject> = {}): PolicySubjec
   };
 }
 
-function createMockResource(overrides: Partial<PolicyResource> = {}): PolicyResource {
+function createMockResource(
+  overrides: Partial<PolicyResource> = {},
+): PolicyResource {
   return {
     type: "document",
     id: "doc-456",
@@ -85,7 +95,9 @@ function createMockAction(overrides: Partial<PolicyAction> = {}): PolicyAction {
   };
 }
 
-function createMockContext(_overrides: Partial<PolicyContext> = {}): PolicyContext {
+function createMockContext(
+  _overrides: Partial<PolicyContext> = {},
+): PolicyContext {
   return {
     tenantId: "tenant-1",
     realmId: "realm-1",
@@ -124,7 +136,10 @@ function createMockInput(overrides: Partial<PolicyInput> = {}): PolicyInput {
 /**
  * Evaluates a single condition against input (mirrors evaluator logic)
  */
-function evaluateSingleCondition(condition: Condition, input: PolicyInput): boolean {
+function evaluateSingleCondition(
+  condition: Condition,
+  input: PolicyInput,
+): boolean {
   const fieldValue = resolveFieldValue(condition.field, input);
   const compareValue = condition.value;
 
@@ -136,24 +151,32 @@ function evaluateSingleCondition(condition: Condition, input: PolicyInput): bool
       return fieldValue !== compareValue;
 
     case "gt":
-      return typeof fieldValue === "number" &&
+      return (
+        typeof fieldValue === "number" &&
         typeof compareValue === "number" &&
-        fieldValue > compareValue;
+        fieldValue > compareValue
+      );
 
     case "gte":
-      return typeof fieldValue === "number" &&
+      return (
+        typeof fieldValue === "number" &&
         typeof compareValue === "number" &&
-        fieldValue >= compareValue;
+        fieldValue >= compareValue
+      );
 
     case "lt":
-      return typeof fieldValue === "number" &&
+      return (
+        typeof fieldValue === "number" &&
         typeof compareValue === "number" &&
-        fieldValue < compareValue;
+        fieldValue < compareValue
+      );
 
     case "lte":
-      return typeof fieldValue === "number" &&
+      return (
+        typeof fieldValue === "number" &&
         typeof compareValue === "number" &&
-        fieldValue <= compareValue;
+        fieldValue <= compareValue
+      );
 
     case "in":
       return Array.isArray(compareValue) && compareValue.includes(fieldValue);
@@ -162,25 +185,33 @@ function evaluateSingleCondition(condition: Condition, input: PolicyInput): bool
       return Array.isArray(compareValue) && !compareValue.includes(fieldValue);
 
     case "contains":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.includes(compareValue);
+        fieldValue.includes(compareValue)
+      );
 
     case "starts_with":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.startsWith(compareValue);
+        fieldValue.startsWith(compareValue)
+      );
 
     case "ends_with":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.endsWith(compareValue);
+        fieldValue.endsWith(compareValue)
+      );
 
     case "matches":
       try {
-        return typeof fieldValue === "string" &&
+        return (
+          typeof fieldValue === "string" &&
           typeof compareValue === "string" &&
-          new RegExp(compareValue).test(fieldValue);
+          new RegExp(compareValue).test(fieldValue)
+        );
       } catch {
         return false;
       }
@@ -250,12 +281,12 @@ function evaluateConditions(
   conditions: ConditionGroup,
   input: PolicyInput,
   maxDepth: number = 10,
-  currentDepth: number = 0
+  currentDepth: number = 0,
 ): boolean {
   if (currentDepth > maxDepth) {
     throw new PolicyEvaluationError(
       PolicyErrorCodes.POLICY_EXPR_TOO_DEEP,
-      `Expression depth exceeded maximum of ${maxDepth}`
+      `Expression depth exceeded maximum of ${maxDepth}`,
     );
   }
 
@@ -264,7 +295,14 @@ function evaluateConditions(
   if (operator === "and") {
     for (const condition of conditions.conditions) {
       if ("conditions" in condition) {
-        if (!evaluateConditions(condition as ConditionGroup, input, maxDepth, currentDepth + 1)) {
+        if (
+          !evaluateConditions(
+            condition as ConditionGroup,
+            input,
+            maxDepth,
+            currentDepth + 1,
+          )
+        ) {
           return false;
         }
       } else {
@@ -277,7 +315,14 @@ function evaluateConditions(
   } else {
     for (const condition of conditions.conditions) {
       if ("conditions" in condition) {
-        if (evaluateConditions(condition as ConditionGroup, input, maxDepth, currentDepth + 1)) {
+        if (
+          evaluateConditions(
+            condition as ConditionGroup,
+            input,
+            maxDepth,
+            currentDepth + 1,
+          )
+        ) {
           return true;
         }
       } else {
@@ -619,8 +664,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-          { field: "subject.attributes.level", operator: "eq", value: "senior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "senior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(true);
@@ -630,8 +683,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-          { field: "subject.attributes.level", operator: "eq", value: "junior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "junior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(false);
@@ -641,8 +702,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
-          { field: "subject.attributes.level", operator: "eq", value: "senior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "senior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(false);
@@ -654,8 +723,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
-          { field: "subject.attributes.level", operator: "eq", value: "senior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "senior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(true);
@@ -665,8 +742,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
-          { field: "subject.attributes.level", operator: "eq", value: "junior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "junior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(false);
@@ -676,8 +761,16 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-          { field: "subject.attributes.level", operator: "eq", value: "junior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "junior",
+          },
         ],
       };
       expect(evaluateConditions(group, input)).toBe(true);
@@ -689,12 +782,24 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
           {
             operator: "and",
             conditions: [
-              { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-              { field: "subject.attributes.level", operator: "eq", value: "senior" },
+              {
+                field: "subject.attributes.department",
+                operator: "eq",
+                value: "engineering",
+              },
+              {
+                field: "subject.attributes.level",
+                operator: "eq",
+                value: "senior",
+              },
             ],
           } as ConditionGroup,
         ],
@@ -706,12 +811,24 @@ describe("Condition Groups", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
           {
             operator: "or",
             conditions: [
-              { field: "subject.attributes.level", operator: "eq", value: "senior" },
-              { field: "subject.attributes.level", operator: "eq", value: "lead" },
+              {
+                field: "subject.attributes.level",
+                operator: "eq",
+                value: "senior",
+              },
+              {
+                field: "subject.attributes.level",
+                operator: "eq",
+                value: "lead",
+              },
             ],
           } as ConditionGroup,
         ],
@@ -730,8 +847,16 @@ describe("Condition Groups", () => {
               {
                 operator: "and",
                 conditions: [
-                  { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-                  { field: "subject.attributes.level", operator: "in", value: ["senior", "lead"] },
+                  {
+                    field: "subject.attributes.department",
+                    operator: "eq",
+                    value: "engineering",
+                  },
+                  {
+                    field: "subject.attributes.level",
+                    operator: "in",
+                    value: ["senior", "lead"],
+                  },
                 ],
               } as ConditionGroup,
               { field: "subject.roles", operator: "contains", value: "admin" },
@@ -747,7 +872,13 @@ describe("Condition Groups", () => {
       // Build a deeply nested group (11 levels deep with maxDepth=10)
       let innerGroup: ConditionGroup = {
         operator: "and",
-        conditions: [{ field: "subject.attributes.department", operator: "eq", value: "engineering" }],
+        conditions: [
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+        ],
       };
 
       for (let i = 0; i < 12; i++) {
@@ -757,7 +888,9 @@ describe("Condition Groups", () => {
         };
       }
 
-      expect(() => evaluateConditions(innerGroup, input, 10)).toThrow(PolicyEvaluationError);
+      expect(() => evaluateConditions(innerGroup, input, 10)).toThrow(
+        PolicyEvaluationError,
+      );
     });
   });
 });
@@ -767,7 +900,9 @@ describe("Condition Groups", () => {
 // ============================================================================
 
 describe("Conflict Resolution Strategies", () => {
-  function createMatchedRule(overrides: Partial<MatchedRule> & { ruleId: string }): MatchedRule {
+  function createMatchedRule(
+    overrides: Partial<MatchedRule> & { ruleId: string },
+  ): MatchedRule {
     return {
       ruleId: overrides.ruleId,
       policyId: "policy-1",
@@ -784,7 +919,7 @@ describe("Conflict Resolution Strategies", () => {
 
   function resolveEffect(
     matchedRules: MatchedRule[],
-    strategy: ConflictResolution
+    strategy: ConflictResolution,
   ): { effect: Effect; decidingRule?: MatchedRule } {
     if (matchedRules.length === 0) {
       return { effect: "deny" };
@@ -793,9 +928,21 @@ describe("Conflict Resolution Strategies", () => {
     // Sort by determinism rules
     const sorted = [...matchedRules].sort((a, b) =>
       compareRules(
-        { scopeType: a.scopeType, subjectType: a.subjectType, priority: a.priority, effect: a.effect, ruleId: a.ruleId },
-        { scopeType: b.scopeType, subjectType: b.subjectType, priority: b.priority, effect: b.effect, ruleId: b.ruleId }
-      )
+        {
+          scopeType: a.scopeType,
+          subjectType: a.subjectType,
+          priority: a.priority,
+          effect: a.effect,
+          ruleId: a.ruleId,
+        },
+        {
+          scopeType: b.scopeType,
+          subjectType: b.subjectType,
+          priority: b.priority,
+          effect: b.effect,
+          ruleId: b.ruleId,
+        },
+      ),
     );
 
     switch (strategy) {
@@ -898,8 +1045,18 @@ describe("Conflict Resolution Strategies", () => {
 
     it("should consider scope specificity before priority", () => {
       const rules = [
-        createMatchedRule({ ruleId: "r1", effect: "allow", priority: 50, scopeType: "module" }),
-        createMatchedRule({ ruleId: "r2", effect: "deny", priority: 100, scopeType: "entity" }),
+        createMatchedRule({
+          ruleId: "r1",
+          effect: "allow",
+          priority: 50,
+          scopeType: "module",
+        }),
+        createMatchedRule({
+          ruleId: "r2",
+          effect: "deny",
+          priority: 100,
+          scopeType: "entity",
+        }),
       ];
 
       const result = resolveEffect(rules, "priority_order");
@@ -908,8 +1065,18 @@ describe("Conflict Resolution Strategies", () => {
 
     it("should use deny-wins for tie-breaking at same priority", () => {
       const rules = [
-        createMatchedRule({ ruleId: "r1", effect: "allow", priority: 100, scopeType: "entity" }),
-        createMatchedRule({ ruleId: "r2", effect: "deny", priority: 100, scopeType: "entity" }),
+        createMatchedRule({
+          ruleId: "r1",
+          effect: "allow",
+          priority: 100,
+          scopeType: "entity",
+        }),
+        createMatchedRule({
+          ruleId: "r2",
+          effect: "deny",
+          priority: 100,
+          scopeType: "entity",
+        }),
       ];
 
       const result = resolveEffect(rules, "priority_order");
@@ -944,23 +1111,55 @@ describe("Conflict Resolution Strategies", () => {
 describe("Determinism Rules", () => {
   describe("Scope Specificity", () => {
     it("should order record > entity_version > entity > module > global", () => {
-      expect(SCOPE_SPECIFICITY_ORDER["record"]).toBeGreaterThan(SCOPE_SPECIFICITY_ORDER["entity_version"]);
-      expect(SCOPE_SPECIFICITY_ORDER["entity_version"]).toBeGreaterThan(SCOPE_SPECIFICITY_ORDER["entity"]);
-      expect(SCOPE_SPECIFICITY_ORDER["entity"]).toBeGreaterThan(SCOPE_SPECIFICITY_ORDER["module"]);
-      expect(SCOPE_SPECIFICITY_ORDER["module"]).toBeGreaterThan(SCOPE_SPECIFICITY_ORDER["global"]);
+      expect(SCOPE_SPECIFICITY_ORDER["record"]).toBeGreaterThan(
+        SCOPE_SPECIFICITY_ORDER["entity_version"],
+      );
+      expect(SCOPE_SPECIFICITY_ORDER["entity_version"]).toBeGreaterThan(
+        SCOPE_SPECIFICITY_ORDER["entity"],
+      );
+      expect(SCOPE_SPECIFICITY_ORDER["entity"]).toBeGreaterThan(
+        SCOPE_SPECIFICITY_ORDER["module"],
+      );
+      expect(SCOPE_SPECIFICITY_ORDER["module"]).toBeGreaterThan(
+        SCOPE_SPECIFICITY_ORDER["global"],
+      );
     });
 
     it("should prefer more specific scope in compareRules", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "module" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "module" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0); // A comes before B (entity is more specific)
     });
 
     it("should prefer record over entity", () => {
-      const ruleA = { scopeType: "record" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "record" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0);
@@ -969,22 +1168,52 @@ describe("Determinism Rules", () => {
 
   describe("Subject Specificity", () => {
     it("should order user > service > kc_role > kc_group", () => {
-      expect(SUBJECT_SPECIFICITY_ORDER["user"]).toBeGreaterThan(SUBJECT_SPECIFICITY_ORDER["service"]);
-      expect(SUBJECT_SPECIFICITY_ORDER["service"]).toBeGreaterThan(SUBJECT_SPECIFICITY_ORDER["kc_role"]);
-      expect(SUBJECT_SPECIFICITY_ORDER["kc_role"]).toBeGreaterThan(SUBJECT_SPECIFICITY_ORDER["kc_group"]);
+      expect(SUBJECT_SPECIFICITY_ORDER["user"]).toBeGreaterThan(
+        SUBJECT_SPECIFICITY_ORDER["service"],
+      );
+      expect(SUBJECT_SPECIFICITY_ORDER["service"]).toBeGreaterThan(
+        SUBJECT_SPECIFICITY_ORDER["kc_role"],
+      );
+      expect(SUBJECT_SPECIFICITY_ORDER["kc_role"]).toBeGreaterThan(
+        SUBJECT_SPECIFICITY_ORDER["kc_group"],
+      );
     });
 
     it("should prefer user over role within same scope", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "kc_role" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "kc_role" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0);
     });
 
     it("should prefer service over group within same scope", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "service" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "kc_group" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "service" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "kc_group" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0);
@@ -993,16 +1222,40 @@ describe("Determinism Rules", () => {
 
   describe("Priority Ordering", () => {
     it("should prefer lower priority number (higher actual priority)", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 50, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 50,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0);
     });
 
     it("should evaluate priority only after scope and subject", () => {
-      const ruleA = { scopeType: "module" as ScopeType, subjectType: "user" as SubjectType, priority: 10, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "module" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 10,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeGreaterThan(0); // B comes before A (entity is more specific)
@@ -1011,8 +1264,20 @@ describe("Determinism Rules", () => {
 
   describe("Effect Tie-Breaking", () => {
     it("should prefer deny over allow at same scope/subject/priority", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "deny" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "deny" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0);
@@ -1021,8 +1286,20 @@ describe("Determinism Rules", () => {
 
   describe("Rule ID Tie-Breaking", () => {
     it("should use lexicographic rule ID ordering as final tie-breaker", () => {
-      const ruleA = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r1" };
-      const ruleB = { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "allow" as Effect, ruleId: "r2" };
+      const ruleA = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r1",
+      };
+      const ruleB = {
+        scopeType: "entity" as ScopeType,
+        subjectType: "user" as SubjectType,
+        priority: 100,
+        effect: "allow" as Effect,
+        ruleId: "r2",
+      };
 
       const result = compareRules(ruleA, ruleB);
       expect(result).toBeLessThan(0); // "r1" < "r2"
@@ -1032,11 +1309,41 @@ describe("Determinism Rules", () => {
   describe("Complex Ordering Scenarios", () => {
     it("should correctly sort mixed rules", () => {
       const rules = [
-        { scopeType: "global" as ScopeType, subjectType: "kc_group" as SubjectType, priority: 10, effect: "allow" as Effect, ruleId: "r1" },
-        { scopeType: "entity" as ScopeType, subjectType: "user" as SubjectType, priority: 100, effect: "deny" as Effect, ruleId: "r2" },
-        { scopeType: "entity" as ScopeType, subjectType: "kc_role" as SubjectType, priority: 50, effect: "allow" as Effect, ruleId: "r3" },
-        { scopeType: "record" as ScopeType, subjectType: "user" as SubjectType, priority: 200, effect: "allow" as Effect, ruleId: "r4" },
-        { scopeType: "module" as ScopeType, subjectType: "service" as SubjectType, priority: 1, effect: "deny" as Effect, ruleId: "r5" },
+        {
+          scopeType: "global" as ScopeType,
+          subjectType: "kc_group" as SubjectType,
+          priority: 10,
+          effect: "allow" as Effect,
+          ruleId: "r1",
+        },
+        {
+          scopeType: "entity" as ScopeType,
+          subjectType: "user" as SubjectType,
+          priority: 100,
+          effect: "deny" as Effect,
+          ruleId: "r2",
+        },
+        {
+          scopeType: "entity" as ScopeType,
+          subjectType: "kc_role" as SubjectType,
+          priority: 50,
+          effect: "allow" as Effect,
+          ruleId: "r3",
+        },
+        {
+          scopeType: "record" as ScopeType,
+          subjectType: "user" as SubjectType,
+          priority: 200,
+          effect: "allow" as Effect,
+          ruleId: "r4",
+        },
+        {
+          scopeType: "module" as ScopeType,
+          subjectType: "service" as SubjectType,
+          priority: 1,
+          effect: "deny" as Effect,
+          ruleId: "r5",
+        },
       ];
 
       const sorted = [...rules].sort((a, b) => compareRules(a, b));
@@ -1062,7 +1369,9 @@ describe("Determinism Rules", () => {
 // ============================================================================
 
 describe("Subject Key Building", () => {
-  function buildSubjectKeys(subject: PolicySubject): Array<{ type: SubjectType; key: string }> {
+  function buildSubjectKeys(
+    subject: PolicySubject,
+  ): Array<{ type: SubjectType; key: string }> {
     const keys: Array<{ type: SubjectType; key: string }> = [];
 
     // User key
@@ -1142,7 +1451,7 @@ describe("PolicyEvaluationError", () => {
   it("should create error with code and message", () => {
     const error = new PolicyEvaluationError(
       PolicyErrorCodes.POLICY_EVAL_TIMEOUT,
-      "Evaluation timed out"
+      "Evaluation timed out",
     );
 
     expect(error.code).toBe("POLICY_EVAL_TIMEOUT");
@@ -1154,16 +1463,19 @@ describe("PolicyEvaluationError", () => {
     const error = new PolicyEvaluationError(
       PolicyErrorCodes.INVALID_INPUT,
       "Invalid input",
-      { field: "subject.principalId", reason: "required" }
+      { field: "subject.principalId", reason: "required" },
     );
 
-    expect(error.details).toEqual({ field: "subject.principalId", reason: "required" });
+    expect(error.details).toEqual({
+      field: "subject.principalId",
+      reason: "required",
+    });
   });
 
   it("should be instanceof Error", () => {
     const error = new PolicyEvaluationError(
       PolicyErrorCodes.INTERNAL_ERROR,
-      "Internal error"
+      "Internal error",
     );
 
     expect(error).toBeInstanceOf(Error);
@@ -1215,7 +1527,9 @@ describe("Edge Cases", () => {
         operator: "gt",
         value: 50,
       };
-      expect(evaluateSingleCondition(condition, inputWithStringNumber)).toBe(false);
+      expect(evaluateSingleCondition(condition, inputWithStringNumber)).toBe(
+        false,
+      );
     });
 
     it("should not coerce number to string for string operators", () => {
@@ -1295,7 +1609,9 @@ describe("Edge Cases", () => {
         operator: "matches",
         value: "^user/.*", // Valid regex
       };
-      expect(evaluateSingleCondition(condition, inputWithSpecialChars)).toBe(true);
+      expect(evaluateSingleCondition(condition, inputWithSpecialChars)).toBe(
+        true,
+      );
     });
 
     it("should handle unicode in field values", () => {

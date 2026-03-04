@@ -87,7 +87,7 @@ export class IdentityMapperService {
     tenantId: string,
     idpInfo: IdpIdentityInfo,
     principalType: PrincipalType = "user",
-    createdBy: string = "system"
+    createdBy: string = "system",
   ): Promise<PrincipalResult> {
     console.log(
       JSON.stringify({
@@ -96,14 +96,14 @@ export class IdentityMapperService {
         idpName: idpInfo.idpName,
         idpSubject: idpInfo.idpSubject,
         principalType,
-      })
+      }),
     );
 
     // Check if idp_identity already exists
     const existingIdentity = await this.getIdpIdentity(
       tenantId,
       idpInfo.idpName,
-      idpInfo.idpSubject
+      idpInfo.idpSubject,
     );
 
     if (existingIdentity) {
@@ -113,7 +113,7 @@ export class IdentityMapperService {
           msg: "identity_mapping_existing",
           principalId: existingIdentity.principal_id,
           idpIdentityId: existingIdentity.id,
-        })
+        }),
       );
 
       return {
@@ -128,7 +128,7 @@ export class IdentityMapperService {
       tenantId,
       idpInfo,
       principalType,
-      createdBy
+      createdBy,
     );
   }
 
@@ -138,7 +138,7 @@ export class IdentityMapperService {
   private async getIdpIdentity(
     tenantId: string,
     idpName: string,
-    idpSubject: string
+    idpSubject: string,
   ): Promise<{ id: string; principal_id: string } | undefined> {
     const result = await this.db
       .selectFrom("core.idp_identity")
@@ -160,7 +160,7 @@ export class IdentityMapperService {
     tenantId: string,
     idpInfo: IdpIdentityInfo,
     principalType: PrincipalType,
-    createdBy: string
+    createdBy: string,
   ): Promise<PrincipalResult> {
     return this.db.transaction().execute(async (trx) => {
       // 1. Create principal
@@ -187,7 +187,7 @@ export class IdentityMapperService {
           principalId,
           tenantId,
           principalType,
-        })
+        }),
       );
 
       // 2. Create IdP identity link
@@ -212,7 +212,7 @@ export class IdentityMapperService {
           principalId,
           idpName: idpInfo.idpName,
           idpSubject: idpInfo.idpSubject,
-        })
+        }),
       );
 
       // 3. Create principal profile (optional metadata)
@@ -232,7 +232,7 @@ export class IdentityMapperService {
           JSON.stringify({
             msg: "principal_profile_created",
             principalId,
-          })
+          }),
         );
       }
 
@@ -247,9 +247,7 @@ export class IdentityMapperService {
   /**
    * Get principal by ID
    */
-  async getPrincipal(
-    principalId: string
-  ): Promise<
+  async getPrincipal(principalId: string): Promise<
     | {
         id: string;
         tenant_id: string;
@@ -339,19 +337,19 @@ export class IdentityMapperService {
     principalId: string,
     tenantId: string,
     idpInfo: IdpIdentityInfo,
-    createdBy: string = "system"
+    createdBy: string = "system",
   ): Promise<string> {
     // Check if already linked
     const existing = await this.getIdpIdentity(
       tenantId,
       idpInfo.idpName,
-      idpInfo.idpSubject
+      idpInfo.idpSubject,
     );
 
     if (existing) {
       if (existing.principal_id !== principalId) {
         throw new Error(
-          `Identity already linked to different principal: ${existing.principal_id}`
+          `Identity already linked to different principal: ${existing.principal_id}`,
         );
       }
       return existing.id;
@@ -378,7 +376,7 @@ export class IdentityMapperService {
         principalId,
         idpIdentityId,
         idpName: idpInfo.idpName,
-      })
+      }),
     );
 
     return idpIdentityId;
@@ -389,7 +387,7 @@ export class IdentityMapperService {
    */
   async updatePrincipalActive(
     principalId: string,
-    isActive: boolean
+    isActive: boolean,
   ): Promise<void> {
     await this.db
       .updateTable("core.principal")
@@ -402,7 +400,7 @@ export class IdentityMapperService {
         msg: "principal_status_updated",
         principalId,
         isActive,
-      })
+      }),
     );
   }
 
@@ -424,7 +422,7 @@ export class IdentityMapperService {
       searchTerm?: string;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<
     Array<{
       id: string;
@@ -437,7 +435,14 @@ export class IdentityMapperService {
   > {
     let query = this.db
       .selectFrom("core.principal")
-      .select(["id", "principal_type", "principal_code", "display_name", "email", "is_active"])
+      .select([
+        "id",
+        "principal_type",
+        "principal_code",
+        "display_name",
+        "email",
+        "is_active",
+      ])
       .where("tenant_id", "=", tenantId);
 
     if (filters?.principalType) {
@@ -453,7 +458,7 @@ export class IdentityMapperService {
         eb.or([
           eb("display_name", "ilike", `%${filters.searchTerm}%`),
           eb("email", "ilike", `%${filters.searchTerm}%`),
-        ])
+        ]),
       );
     }
 

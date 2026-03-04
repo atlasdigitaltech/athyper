@@ -25,21 +25,22 @@ const ListBindingsQuerySchema = z.object({
   includeExpired: z.coerce.boolean().default(false),
 });
 
-const CreateBindingBodySchema = z.object({
-  principalId: z.string().uuid(),
-  // Either roleId (custom role) or personaCode (system persona)
-  roleId: z.string().uuid().optional(),
-  personaCode: z.string().optional(),
-  // Optional scoping
-  ouNodeId: z.string().uuid().optional(),
-  moduleCode: z.string().optional(),
-  // Validity period
-  validFrom: z.string().datetime().optional(),
-  validUntil: z.string().datetime().optional(),
-}).refine(
-  (data) => data.roleId || data.personaCode,
-  { message: "Either roleId or personaCode must be provided" }
-);
+const CreateBindingBodySchema = z
+  .object({
+    principalId: z.string().uuid(),
+    // Either roleId (custom role) or personaCode (system persona)
+    roleId: z.string().uuid().optional(),
+    personaCode: z.string().optional(),
+    // Optional scoping
+    ouNodeId: z.string().uuid().optional(),
+    moduleCode: z.string().optional(),
+    // Validity period
+    validFrom: z.string().datetime().optional(),
+    validUntil: z.string().datetime().optional(),
+  })
+  .refine((data) => data.roleId || data.personaCode, {
+    message: "Either roleId or personaCode must be provided",
+  });
 
 // ============================================================================
 // Route Factory
@@ -56,7 +57,7 @@ export interface RoleBindingsRoutesDependencies {
  */
 export function createRoleBindingsRoutes(
   router: Router,
-  deps: RoleBindingsRoutesDependencies
+  deps: RoleBindingsRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId } = deps;
 
@@ -75,7 +76,11 @@ export function createRoleBindingsRoutes(
           .selectFrom("core.role_binding as rb")
           .leftJoin("core.principal as p", "p.id", "rb.principal_id")
           .leftJoin("core.principal_profile as pp", "pp.principal_id", "p.id")
-          .leftJoin("core.persona as persona", "persona.code", "rb.persona_code")
+          .leftJoin(
+            "core.persona as persona",
+            "persona.code",
+            "rb.persona_code",
+          )
           .leftJoin("core.role as r", "r.id", "rb.role_id")
           .leftJoin("core.ou_node as ou", "ou.id", "rb.ou_node_id")
           .select([
@@ -122,7 +127,7 @@ export function createRoleBindingsRoutes(
             eb.or([
               eb("rb.valid_until", "is", null),
               eb("rb.valid_until", ">", new Date()),
-            ])
+            ]),
           );
         }
 
@@ -143,7 +148,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to list role bindings", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -327,7 +332,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to create role binding", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -345,7 +350,11 @@ export function createRoleBindingsRoutes(
           .selectFrom("core.role_binding as rb")
           .leftJoin("core.principal as p", "p.id", "rb.principal_id")
           .leftJoin("core.principal_profile as pp", "pp.principal_id", "p.id")
-          .leftJoin("core.persona as persona", "persona.code", "rb.persona_code")
+          .leftJoin(
+            "core.persona as persona",
+            "persona.code",
+            "rb.persona_code",
+          )
           .leftJoin("core.role as r", "r.id", "rb.role_id")
           .leftJoin("core.ou_node as ou", "ou.id", "rb.ou_node_id")
           .select([
@@ -382,7 +391,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to get role binding", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -427,7 +436,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to delete role binding", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -497,7 +506,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to extend role binding", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -553,7 +562,7 @@ export function createRoleBindingsRoutes(
         logger.error("Failed to revoke role binding", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

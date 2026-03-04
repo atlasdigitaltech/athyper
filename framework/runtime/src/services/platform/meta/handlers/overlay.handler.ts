@@ -9,7 +9,10 @@
 
 import { META_TOKENS } from "@athyper/core/meta";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
 import type {
   IOverlayRepository,
   SchemaComposerService,
@@ -19,7 +22,7 @@ import type {
   UpdateOverlayInput,
   CreateOverlayChangeInput,
 } from "../../foundation/overlay-system/types.js";
-import type { AuditLogger , MetaRegistry } from "@athyper/core/meta";
+import type { AuditLogger, MetaRegistry } from "@athyper/core/meta";
 import type { Request, Response } from "express";
 
 // ============================================================================
@@ -34,7 +37,11 @@ import type { Request, Response } from "express";
  * Query params: page, pageSize, isActive
  */
 export class ListOverlaysHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { entity } = req.params as { entity: string };
       const { page, pageSize, isActive } = req.query as {
@@ -45,16 +52,21 @@ export class ListOverlaysHandler implements RouteHandler {
 
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
-      const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+      const registry = await ctx.container.resolve<MetaRegistry>(
+        META_TOKENS.registry,
+      );
 
       // Get base entity ID from entity name
       const entityRecord = await registry.getEntity(entity);
       if (!entityRecord) {
         res.status(404).json({
           success: false,
-          error: { code: "ENTITY_NOT_FOUND", message: `Entity not found: ${entity}` },
+          error: {
+            code: "ENTITY_NOT_FOUND",
+            message: `Entity not found: ${entity}`,
+          },
         });
         return;
       }
@@ -62,7 +74,7 @@ export class ListOverlaysHandler implements RouteHandler {
       // List overlays for this entity
       const overlays = await overlayRepository.findByBaseEntity(
         entityRecord.id,
-        tenantId
+        tenantId,
       );
 
       // Apply filters
@@ -104,23 +116,32 @@ export class ListOverlaysHandler implements RouteHandler {
  * POST /api/meta/entities/:entity/overlays
  */
 export class CreateOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { entity } = req.params as { entity: string };
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
-      const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+      const registry = await ctx.container.resolve<MetaRegistry>(
+        META_TOKENS.registry,
+      );
 
       // Get base entity ID
       const entityRecord = await registry.getEntity(entity);
       if (!entityRecord) {
         res.status(404).json({
           success: false,
-          error: { code: "ENTITY_NOT_FOUND", message: `Entity not found: ${entity}` },
+          error: {
+            code: "ENTITY_NOT_FOUND",
+            message: `Entity not found: ${entity}`,
+          },
         });
         return;
       }
@@ -133,7 +154,9 @@ export class CreateOverlayHandler implements RouteHandler {
       const overlay = await overlayRepository.create(input, tenantId, userId);
 
       // Audit log
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.create",
         userId,
@@ -141,7 +164,11 @@ export class CreateOverlayHandler implements RouteHandler {
         realmId: ctx.auth.realmKey ?? "default",
         action: "create",
         resource: `overlay:${overlay.overlayKey}`,
-        details: { overlayId: overlay.id, overlayKey: overlay.overlayKey, entityName: entity },
+        details: {
+          overlayId: overlay.id,
+          overlayKey: overlay.overlayKey,
+          entityName: entity,
+        },
         result: "success",
       });
 
@@ -164,12 +191,16 @@ export class CreateOverlayHandler implements RouteHandler {
  * GET /api/meta/entities/:entity/overlays/:id
  */
 export class GetOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Get overlay with changes
@@ -202,13 +233,17 @@ export class GetOverlayHandler implements RouteHandler {
  * PATCH /api/meta/entities/:entity/overlays/:id
  */
 export class UpdateOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
       const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Parse input
@@ -219,7 +254,9 @@ export class UpdateOverlayHandler implements RouteHandler {
 
       // Audit log
       const tenantId = ctx.tenant.tenantKey ?? "default";
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.update",
         userId,
@@ -250,12 +287,16 @@ export class UpdateOverlayHandler implements RouteHandler {
  * DELETE /api/meta/entities/:entity/overlays/:id
  */
 export class DeleteOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Delete overlay (cascades to changes)
@@ -264,7 +305,9 @@ export class DeleteOverlayHandler implements RouteHandler {
       // Audit log
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.delete",
         userId,
@@ -301,22 +344,31 @@ export class DeleteOverlayHandler implements RouteHandler {
  * Includes conflict reporting (I4).
  */
 export class PreviewOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { entity } = req.params as { entity: string };
       const tenantId = ctx.tenant.tenantKey ?? "default";
 
       const schemaComposer = await ctx.container.resolve<SchemaComposerService>(
-        META_TOKENS.schemaComposer
+        META_TOKENS.schemaComposer,
       );
-      const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+      const registry = await ctx.container.resolve<MetaRegistry>(
+        META_TOKENS.registry,
+      );
 
       // Get base entity
       const entityRecord = await registry.getEntity(entity);
       if (!entityRecord) {
         res.status(404).json({
           success: false,
-          error: { code: "ENTITY_NOT_FOUND", message: `Entity not found: ${entity}` },
+          error: {
+            code: "ENTITY_NOT_FOUND",
+            message: `Entity not found: ${entity}`,
+          },
         });
         return;
       }
@@ -344,7 +396,7 @@ export class PreviewOverlayHandler implements RouteHandler {
         entityRecord.id,
         tenantId,
         baseSchema,
-        overlay
+        overlay,
       );
 
       res.status(200).json({
@@ -373,18 +425,24 @@ export class PreviewOverlayHandler implements RouteHandler {
  * POST /api/meta/entities/:entity/overlays/:id/validate
  */
 export class ValidateOverlayHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { entity, id } = req.params as { entity: string; id: string };
       const tenantId = ctx.tenant.tenantKey ?? "default";
 
       const schemaComposer = await ctx.container.resolve<SchemaComposerService>(
-        META_TOKENS.schemaComposer
+        META_TOKENS.schemaComposer,
       );
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
-      const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+      const registry = await ctx.container.resolve<MetaRegistry>(
+        META_TOKENS.registry,
+      );
 
       // Get overlay with changes
       const overlay = await overlayRepository.findByIdWithChanges(id);
@@ -401,7 +459,10 @@ export class ValidateOverlayHandler implements RouteHandler {
       if (!entityRecord) {
         res.status(404).json({
           success: false,
-          error: { code: "ENTITY_NOT_FOUND", message: `Entity not found: ${entity}` },
+          error: {
+            code: "ENTITY_NOT_FOUND",
+            message: `Entity not found: ${entity}`,
+          },
         });
         return;
       }
@@ -422,7 +483,10 @@ export class ValidateOverlayHandler implements RouteHandler {
       const baseSchema = latestVersion.schema as Record<string, unknown>;
 
       // Validate overlay
-      const validationResult = await schemaComposer.validateOverlay(baseSchema, overlay);
+      const validationResult = await schemaComposer.validateOverlay(
+        baseSchema,
+        overlay,
+      );
 
       res.status(200).json({
         success: true,
@@ -447,12 +511,16 @@ export class ValidateOverlayHandler implements RouteHandler {
  * GET /api/meta/entities/:entity/overlays/:id/changes
  */
 export class GetChangesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Get changes
@@ -477,12 +545,16 @@ export class GetChangesHandler implements RouteHandler {
  * POST /api/meta/entities/:entity/overlays/:id/changes
  */
 export class AddChangeHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Parse input
@@ -491,10 +563,17 @@ export class AddChangeHandler implements RouteHandler {
       const createdBy = ctx.auth.userId ?? ctx.auth.subject ?? "system";
 
       // Add change
-      const change = await overlayRepository.addChange(id, changeInput, tenantId, createdBy);
+      const change = await overlayRepository.addChange(
+        id,
+        changeInput,
+        tenantId,
+        createdBy,
+      );
 
       // Audit log
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.addChange",
         userId: createdBy,
@@ -502,7 +581,12 @@ export class AddChangeHandler implements RouteHandler {
         realmId: ctx.auth?.realmKey ?? "default",
         action: "create",
         resource: `overlay:${id}/change:${change.id}`,
-        details: { overlayId: id, changeId: change.id, kind: changeInput.kind, path: changeInput.path },
+        details: {
+          overlayId: id,
+          changeId: change.id,
+          kind: changeInput.kind,
+          path: changeInput.path,
+        },
         result: "success",
       });
 
@@ -525,12 +609,16 @@ export class AddChangeHandler implements RouteHandler {
  * DELETE /api/meta/entities/:entity/overlays/:id/changes/:changeId
  */
 export class RemoveChangeHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { changeId } = req.params as { changeId: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Remove change
@@ -539,7 +627,9 @@ export class RemoveChangeHandler implements RouteHandler {
       // Audit log
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.removeChange",
         userId,
@@ -569,12 +659,16 @@ export class RemoveChangeHandler implements RouteHandler {
  * POST /api/meta/entities/:entity/overlays/:id/changes/reorder
  */
 export class ReorderChangesHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     try {
       const { id } = req.params as { id: string };
 
       const overlayRepository = await ctx.container.resolve<IOverlayRepository>(
-        META_TOKENS.overlayRepository
+        META_TOKENS.overlayRepository,
       );
 
       // Parse change IDs
@@ -597,7 +691,9 @@ export class ReorderChangesHandler implements RouteHandler {
       // Audit log
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const userId = ctx.auth.userId ?? ctx.auth.subject ?? "system";
-      const auditLogger = await ctx.container.resolve<AuditLogger>(META_TOKENS.auditLogger);
+      const auditLogger = await ctx.container.resolve<AuditLogger>(
+        META_TOKENS.auditLogger,
+      );
       await auditLogger.log({
         eventType: "meta.overlay.reorderChanges",
         userId,

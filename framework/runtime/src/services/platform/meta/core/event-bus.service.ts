@@ -61,19 +61,23 @@ export class MetaEventBusService implements MetaEventBus {
       // If handler returns a promise, catch async errors
       if (result && typeof result.catch === "function") {
         result.catch((err: unknown) => {
-          console.error(JSON.stringify({
-            msg: "meta_event_handler_async_error",
-            eventType: event.type,
-            error: String(err),
-          }));
+          console.error(
+            JSON.stringify({
+              msg: "meta_event_handler_async_error",
+              eventType: event.type,
+              error: String(err),
+            }),
+          );
         });
       }
     } catch (err) {
-      console.error(JSON.stringify({
-        msg: "meta_event_handler_error",
-        eventType: event.type,
-        error: String(err),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "meta_event_handler_error",
+          eventType: event.type,
+          error: String(err),
+        }),
+      );
     }
   }
 }

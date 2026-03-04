@@ -13,21 +13,21 @@
  * Overlay change kind - defines the type of modification
  */
 export type OverlayChangeKind =
-  | "addField"          // Add a new field to entity
-  | "modifyField"       // Modify existing field properties
-  | "removeField"       // Remove a field from entity
-  | "tweakPolicy"       // Modify policy configuration
-  | "addIndex"          // Add database index (future)
-  | "removeIndex"       // Remove database index (future)
-  | "tweakRelation";    // Modify relationship (future)
+  | "addField" // Add a new field to entity
+  | "modifyField" // Modify existing field properties
+  | "removeField" // Remove a field from entity
+  | "tweakPolicy" // Modify policy configuration
+  | "addIndex" // Add database index (future)
+  | "removeIndex" // Remove database index (future)
+  | "tweakRelation"; // Modify relationship (future)
 
 /**
  * Overlay conflict resolution mode
  */
 export type OverlayConflictMode =
-  | "fail"      // Throw error if target already exists/conflicts
+  | "fail" // Throw error if target already exists/conflicts
   | "overwrite" // Replace existing target completely
-  | "merge";    // Deep merge with existing target (for objects)
+  | "merge"; // Deep merge with existing target (for objects)
 
 // ============================================================================
 // Database Record Types
@@ -320,11 +320,11 @@ export interface ListOverlaysOptions {
 export class OverlayConflictError extends Error {
   constructor(
     public readonly conflicts: OverlayConflict[],
-    message?: string
+    message?: string,
   ) {
     super(
       message ||
-        `Overlay conflicts: ${conflicts.map((c) => `${c.overlayKey}:${c.path} - ${c.message}`).join("; ")}`
+        `Overlay conflicts: ${conflicts.map((c) => `${c.overlayKey}:${c.path} - ${c.message}`).join("; ")}`,
     );
     this.name = "OverlayConflictError";
   }
@@ -335,12 +335,16 @@ export class OverlayConflictError extends Error {
  */
 export class OverlayValidationError extends Error {
   constructor(
-    public readonly errors: Array<{ path: string; message: string; code: string }>,
-    message?: string
+    public readonly errors: Array<{
+      path: string;
+      message: string;
+      code: string;
+    }>,
+    message?: string,
   ) {
     super(
       message ||
-        `Overlay validation failed: ${errors.map((e) => `${e.path} - ${e.message}`).join("; ")}`
+        `Overlay validation failed: ${errors.map((e) => `${e.path} - ${e.message}`).join("; ")}`,
     );
     this.name = "OverlayValidationError";
   }
@@ -352,7 +356,7 @@ export class OverlayValidationError extends Error {
 export class OverlayNotFoundError extends Error {
   constructor(
     public readonly identifier: string,
-    public readonly identifierType: "id" | "key" = "id"
+    public readonly identifierType: "id" | "key" = "id",
   ) {
     super(`Overlay not found: ${identifierType}=${identifier}`);
     this.name = "OverlayNotFoundError";

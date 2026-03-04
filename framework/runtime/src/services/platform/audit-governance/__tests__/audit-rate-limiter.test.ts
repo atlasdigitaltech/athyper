@@ -31,7 +31,11 @@ describe("AuditRateLimiter", () => {
       const limiter = createMockLimiter(false); // Even if rate limited
       const rateLimiter = new AuditRateLimiter(limiter);
 
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.created", "critical");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.created",
+        "critical",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
       // Should not even call the limiter
@@ -42,7 +46,11 @@ describe("AuditRateLimiter", () => {
       const limiter = createMockLimiter(false);
       const rateLimiter = new AuditRateLimiter(limiter);
 
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.error", "error");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.error",
+        "error",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
     });
@@ -51,7 +59,11 @@ describe("AuditRateLimiter", () => {
       const limiter = createMockLimiter(false);
       const rateLimiter = new AuditRateLimiter(limiter);
 
-      const result = await rateLimiter.shouldCapture("t-1", "admin.force_approve", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "admin.force_approve",
+        "info",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
     });
@@ -60,7 +72,11 @@ describe("AuditRateLimiter", () => {
       const limiter = createMockLimiter(false);
       const rateLimiter = new AuditRateLimiter(limiter);
 
-      const result = await rateLimiter.shouldCapture("t-1", "security.breach", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "security.breach",
+        "info",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
     });
@@ -71,10 +87,16 @@ describe("AuditRateLimiter", () => {
       const limiter = createMockLimiter(true);
       const rateLimiter = new AuditRateLimiter(limiter);
 
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.created", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.created",
+        "info",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
-      expect(limiter.consume).toHaveBeenCalledWith("audit:rate:t-1:workflow.created");
+      expect(limiter.consume).toHaveBeenCalledWith(
+        "audit:rate:t-1:workflow.created",
+      );
     });
 
     it("should sample when rate limit hit", async () => {
@@ -83,7 +105,11 @@ describe("AuditRateLimiter", () => {
         defaultSamplingRate: 1.0, // 100% sampling = always capture even when limited
       });
 
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.created", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.created",
+        "info",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(true);
     });
@@ -94,7 +120,11 @@ describe("AuditRateLimiter", () => {
         defaultSamplingRate: 0.0, // 0% sampling = always drop when limited
       });
 
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.created", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.created",
+        "info",
+      );
       expect(result.capture).toBe(false);
       expect(result.sampled).toBe(true);
     });
@@ -103,10 +133,16 @@ describe("AuditRateLimiter", () => {
   describe("fail-open behavior", () => {
     it("should capture on Redis failure", async () => {
       const limiter = createMockLimiter(true);
-      (limiter.consume as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Redis down"));
+      (limiter.consume as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("Redis down"),
+      );
 
       const rateLimiter = new AuditRateLimiter(limiter);
-      const result = await rateLimiter.shouldCapture("t-1", "workflow.created", "info");
+      const result = await rateLimiter.shouldCapture(
+        "t-1",
+        "workflow.created",
+        "info",
+      );
       expect(result.capture).toBe(true);
       expect(result.sampled).toBe(false);
     });

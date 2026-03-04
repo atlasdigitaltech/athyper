@@ -27,12 +27,13 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
   private actionRequests: Map<string, AdminActionRequest> = new Map();
   private actionLogs: Map<string, AdminActionLog> = new Map();
   private reassignments: Map<string, StepReassignment[]> = new Map();
-  private deadlineModifications: Map<string, DeadlineModification[]> = new Map();
+  private deadlineModifications: Map<string, DeadlineModification[]> =
+    new Map();
 
   // Action requests
 
   async createActionRequest(
-    request: Omit<AdminActionRequest, "id">
+    request: Omit<AdminActionRequest, "id">,
   ): Promise<AdminActionRequest> {
     const id = generateId("action");
     const newRequest: AdminActionRequest = { id, ...request };
@@ -42,7 +43,7 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
 
   async getActionRequest(
     tenantId: string,
-    requestId: string
+    requestId: string,
   ): Promise<AdminActionRequest | null> {
     const request = this.actionRequests.get(requestId);
     return request?.tenantId === tenantId ? request : null;
@@ -50,23 +51,25 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
 
   async getActionRequestsByInstance(
     tenantId: string,
-    instanceId: string
+    instanceId: string,
   ): Promise<AdminActionRequest[]> {
     return Array.from(this.actionRequests.values()).filter(
-      (r) => r.tenantId === tenantId && r.instanceId === instanceId
+      (r) => r.tenantId === tenantId && r.instanceId === instanceId,
     );
   }
 
-  async getPendingActionRequests(tenantId: string): Promise<AdminActionRequest[]> {
+  async getPendingActionRequests(
+    tenantId: string,
+  ): Promise<AdminActionRequest[]> {
     return Array.from(this.actionRequests.values()).filter(
-      (r) => r.tenantId === tenantId && r.status === "pending"
+      (r) => r.tenantId === tenantId && r.status === "pending",
     );
   }
 
   async updateActionRequest(
     tenantId: string,
     requestId: string,
-    updates: Partial<AdminActionRequest>
+    updates: Partial<AdminActionRequest>,
   ): Promise<AdminActionRequest> {
     const existing = this.actionRequests.get(requestId);
     if (!existing || existing.tenantId !== tenantId) {
@@ -80,23 +83,31 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
 
   // Action logs
 
-  async createActionLog(log: Omit<AdminActionLog, "id">): Promise<AdminActionLog> {
+  async createActionLog(
+    log: Omit<AdminActionLog, "id">,
+  ): Promise<AdminActionLog> {
     const id = generateId("log");
     const newLog: AdminActionLog = { id, ...log };
     this.actionLogs.set(id, newLog);
     return newLog;
   }
 
-  async getActionLogs(tenantId: string, instanceId: string): Promise<AdminActionLog[]> {
+  async getActionLogs(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminActionLog[]> {
     return Array.from(this.actionLogs.values())
       .filter((l) => l.tenantId === tenantId && l.instanceId === instanceId)
-      .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime(),
+      );
   }
 
   async getActionLogsByUser(
     tenantId: string,
     userId: string,
-    since?: Date
+    since?: Date,
   ): Promise<AdminActionLog[]> {
     return Array.from(this.actionLogs.values())
       .filter((l) => {
@@ -105,12 +116,17 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
         if (since && new Date(l.performedAt) < since) return false;
         return true;
       })
-      .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime(),
+      );
   }
 
   // Reassignments
 
-  async createReassignment(reassignment: StepReassignment): Promise<StepReassignment> {
+  async createReassignment(
+    reassignment: StepReassignment,
+  ): Promise<StepReassignment> {
     const key = reassignment.stepInstanceId;
     const existing = this.reassignments.get(key) || [];
     existing.push(reassignment);
@@ -120,7 +136,7 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
 
   async getReassignments(
     tenantId: string,
-    stepInstanceId: string
+    stepInstanceId: string,
   ): Promise<StepReassignment[]> {
     return this.reassignments.get(stepInstanceId) || [];
   }
@@ -128,7 +144,7 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
   // Deadline modifications
 
   async createDeadlineModification(
-    modification: DeadlineModification
+    modification: DeadlineModification,
   ): Promise<DeadlineModification> {
     const key = modification.stepInstanceId;
     const existing = this.deadlineModifications.get(key) || [];
@@ -139,7 +155,7 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
 
   async getDeadlineModifications(
     tenantId: string,
-    stepInstanceId: string
+    stepInstanceId: string,
   ): Promise<DeadlineModification[]> {
     return this.deadlineModifications.get(stepInstanceId) || [];
   }
@@ -168,12 +184,11 @@ export class InMemoryAdminActionRepository implements IAdminActionRepository {
     const requests = Array.from(this.actionRequests.values());
     const reassignmentCount = Array.from(this.reassignments.values()).reduce(
       (sum, arr) => sum + arr.length,
-      0
+      0,
     );
-    const modificationCount = Array.from(this.deadlineModifications.values()).reduce(
-      (sum, arr) => sum + arr.length,
-      0
-    );
+    const modificationCount = Array.from(
+      this.deadlineModifications.values(),
+    ).reduce((sum, arr) => sum + arr.length, 0);
 
     return {
       actionRequests: {

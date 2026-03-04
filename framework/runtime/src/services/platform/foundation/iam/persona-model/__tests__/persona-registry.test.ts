@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { InMemoryPersonaCapabilityRepository } from "../persona-capability.repository.js";
 import { PersonaRegistryService } from "../persona-registry.service.js";
+
 import type { Persona, PersonaCode, ScopeMode } from "../types.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,12 +43,12 @@ function makePersona(
 
 /** Standard DB seed personas (using DB codes). */
 const DB_PERSONAS: Persona[] = [
-  makePersona("viewer",      10, "tenant"),
-  makePersona("reporter",    20, "tenant"),
-  makePersona("requester",   30, "tenant"),
-  makePersona("agent",       40, "ou"),
-  makePersona("manager",     50, "ou"),
-  makePersona("moduleAdmin", 60, "module"),  // camelCase from DB
+  makePersona("viewer", 10, "tenant"),
+  makePersona("reporter", 20, "tenant"),
+  makePersona("requester", 30, "tenant"),
+  makePersona("agent", 40, "ou"),
+  makePersona("manager", 50, "ou"),
+  makePersona("moduleAdmin", 60, "module"), // camelCase from DB
   makePersona("tenantAdmin", 100, "tenant"), // camelCase from DB
 ];
 
@@ -60,7 +61,9 @@ describe("PersonaRegistryService", () => {
   beforeEach(() => {
     repo = new InMemoryPersonaCapabilityRepository();
     repo.setPersonas(DB_PERSONAS);
-    registry = new PersonaRegistryService(repo, noopLogger, { cacheTtlMs: 100 });
+    registry = new PersonaRegistryService(repo, noopLogger, {
+      cacheTtlMs: 100,
+    });
   });
 
   // ── getPersonas ─────────────────────────────────────────────────────
@@ -148,36 +151,56 @@ describe("PersonaRegistryService", () => {
     });
 
     it("resolves single role", async () => {
-      expect(await registry.resolveEffectivePersona(["requester"])).toBe("requester");
+      expect(await registry.resolveEffectivePersona(["requester"])).toBe(
+        "requester",
+      );
     });
 
     it("defaults to viewer when no roles match", async () => {
       expect(await registry.resolveEffectivePersona([])).toBe("viewer");
-      expect(await registry.resolveEffectivePersona(["unknown_xyz"])).toBe("viewer");
+      expect(await registry.resolveEffectivePersona(["unknown_xyz"])).toBe(
+        "viewer",
+      );
     });
 
     it("handles case-insensitive matching", async () => {
-      expect(await registry.resolveEffectivePersona(["TENANT_ADMIN"])).toBe("tenant_admin");
-      expect(await registry.resolveEffectivePersona(["Manager"])).toBe("manager");
+      expect(await registry.resolveEffectivePersona(["TENANT_ADMIN"])).toBe(
+        "tenant_admin",
+      );
+      expect(await registry.resolveEffectivePersona(["Manager"])).toBe(
+        "manager",
+      );
     });
 
     it("handles alias roles", async () => {
-      expect(await registry.resolveEffectivePersona(["admin"])).toBe("tenant_admin");
-      expect(await registry.resolveEffectivePersona(["supervisor"])).toBe("manager");
-      expect(await registry.resolveEffectivePersona(["readonly"])).toBe("viewer");
-      expect(await registry.resolveEffectivePersona(["user"])).toBe("requester");
+      expect(await registry.resolveEffectivePersona(["admin"])).toBe(
+        "tenant_admin",
+      );
+      expect(await registry.resolveEffectivePersona(["supervisor"])).toBe(
+        "manager",
+      );
+      expect(await registry.resolveEffectivePersona(["readonly"])).toBe(
+        "viewer",
+      );
+      expect(await registry.resolveEffectivePersona(["user"])).toBe(
+        "requester",
+      );
     });
 
     it("handles camelCase DB role codes", async () => {
-      expect(await registry.resolveEffectivePersona(["tenantAdmin"])).toBe("tenant_admin");
-      expect(await registry.resolveEffectivePersona(["moduleAdmin"])).toBe("module_admin");
+      expect(await registry.resolveEffectivePersona(["tenantAdmin"])).toBe(
+        "tenant_admin",
+      );
+      expect(await registry.resolveEffectivePersona(["moduleAdmin"])).toBe(
+        "module_admin",
+      );
     });
 
     it("picks best from mixed canonical and alias roles", async () => {
       const result = await registry.resolveEffectivePersona([
-        "readonly",   // alias for viewer (10)
-        "processor",  // alias for agent (40)
-        "manager",    // canonical (50)
+        "readonly", // alias for viewer (10)
+        "processor", // alias for agent (40)
+        "manager", // canonical (50)
       ]);
       expect(result).toBe("manager");
     });
@@ -205,7 +228,7 @@ describe("PersonaRegistryService", () => {
 
     it("deduplicates alias matches", async () => {
       const result = await registry.getQualifiedPersonas([
-        "admin",        // alias for tenant_admin
+        "admin", // alias for tenant_admin
         "tenant_admin", // canonical
       ]);
       expect(result).toEqual(["tenant_admin"]);
@@ -232,7 +255,9 @@ describe("PersonaRegistryService", () => {
 
     it("refreshes cache after TTL expires", async () => {
       // Use a very short TTL so the test doesn't sleep long
-      const shortTtlRegistry = new PersonaRegistryService(repo, noopLogger, { cacheTtlMs: 50 });
+      const shortTtlRegistry = new PersonaRegistryService(repo, noopLogger, {
+        cacheTtlMs: 50,
+      });
       const getPersonasSpy = vi.spyOn(repo, "getPersonas");
 
       await shortTtlRegistry.resolveEffectivePersona(["viewer"]);
@@ -267,7 +292,10 @@ describe("PersonaRegistryService", () => {
         throw new Error("DB connection refused");
       };
 
-      const fallbackRegistry = new PersonaRegistryService(failingRepo, noopLogger);
+      const fallbackRegistry = new PersonaRegistryService(
+        failingRepo,
+        noopLogger,
+      );
 
       const result = await fallbackRegistry.resolveEffectivePersona([
         "viewer",
@@ -283,11 +311,18 @@ describe("PersonaRegistryService", () => {
         throw new Error("DB down");
       };
 
-      const fallbackRegistry = new PersonaRegistryService(failingRepo, noopLogger);
+      const fallbackRegistry = new PersonaRegistryService(
+        failingRepo,
+        noopLogger,
+      );
 
       expect(await fallbackRegistry.getScopeMode("agent")).toBe("ou");
-      expect(await fallbackRegistry.getScopeMode("module_admin")).toBe("module");
-      expect(await fallbackRegistry.getScopeMode("tenant_admin")).toBe("tenant");
+      expect(await fallbackRegistry.getScopeMode("module_admin")).toBe(
+        "module",
+      );
+      expect(await fallbackRegistry.getScopeMode("tenant_admin")).toBe(
+        "tenant",
+      );
     });
   });
 });

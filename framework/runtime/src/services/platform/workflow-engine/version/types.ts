@@ -5,7 +5,13 @@
  * and impact analysis for template changes.
  */
 
-import type { ApprovalActionType, ApprovalStep, ApprovalTrigger, ApprovalWorkflowTemplate, SlaConfiguration } from "../types.js";
+import type {
+  ApprovalActionType,
+  ApprovalStep,
+  ApprovalTrigger,
+  ApprovalWorkflowTemplate,
+  SlaConfiguration,
+} from "../types.js";
 
 // Definition type extracted from template (the runtime configuration part)
 type TemplateDefinition = {
@@ -17,7 +23,9 @@ type TemplateDefinition = {
 };
 
 // Alias for backward compatibility - template with definition access
-type ApprovalTemplate = ApprovalWorkflowTemplate & { definition: TemplateDefinition };
+type ApprovalTemplate = ApprovalWorkflowTemplate & {
+  definition: TemplateDefinition;
+};
 
 /**
  * Version status
@@ -185,19 +193,46 @@ export type VersionSearchCriteria = {
 export interface IVersionRepository {
   // Version CRUD
   createVersion(version: Omit<WorkflowVersion, "id">): Promise<WorkflowVersion>;
-  getVersion(tenantId: string, versionId: string): Promise<WorkflowVersion | null>;
-  getVersionByNumber(tenantId: string, templateId: string, version: number): Promise<WorkflowVersion | null>;
+  getVersion(
+    tenantId: string,
+    versionId: string,
+  ): Promise<WorkflowVersion | null>;
+  getVersionByNumber(
+    tenantId: string,
+    templateId: string,
+    version: number,
+  ): Promise<WorkflowVersion | null>;
   getVersions(tenantId: string, templateId: string): Promise<WorkflowVersion[]>;
-  getActiveVersion(tenantId: string, templateId: string): Promise<WorkflowVersion | null>;
-  updateVersion(tenantId: string, versionId: string, updates: Partial<WorkflowVersion>): Promise<WorkflowVersion>;
-  searchVersions(tenantId: string, criteria: VersionSearchCriteria): Promise<WorkflowVersion[]>;
+  getActiveVersion(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion | null>;
+  updateVersion(
+    tenantId: string,
+    versionId: string,
+    updates: Partial<WorkflowVersion>,
+  ): Promise<WorkflowVersion>;
+  searchVersions(
+    tenantId: string,
+    criteria: VersionSearchCriteria,
+  ): Promise<WorkflowVersion[]>;
 
   // Lifecycle events
-  createLifecycleEvent(event: Omit<VersionLifecycleEvent, "id">): Promise<VersionLifecycleEvent>;
-  getLifecycleEvents(tenantId: string, versionId: string): Promise<VersionLifecycleEvent[]>;
+  createLifecycleEvent(
+    event: Omit<VersionLifecycleEvent, "id">,
+  ): Promise<VersionLifecycleEvent>;
+  getLifecycleEvents(
+    tenantId: string,
+    versionId: string,
+  ): Promise<VersionLifecycleEvent[]>;
 
   // Statistics
-  updateInstanceCount(tenantId: string, versionId: string, count: number, activeCount: number): Promise<void>;
+  updateInstanceCount(
+    tenantId: string,
+    versionId: string,
+    count: number,
+    activeCount: number,
+  ): Promise<void>;
 }
 
 /**
@@ -213,7 +248,7 @@ export interface IVersionControlService {
     definition: ApprovalTemplate["definition"],
     metadata: WorkflowVersion["metadata"],
     createdBy: string,
-    changeDescription?: string
+    changeDescription?: string,
   ): Promise<WorkflowVersion>;
 
   /**
@@ -222,7 +257,7 @@ export interface IVersionControlService {
   publishVersion(
     tenantId: string,
     versionId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<WorkflowVersion>;
 
   /**
@@ -232,7 +267,7 @@ export interface IVersionControlService {
     tenantId: string,
     versionId: string,
     deprecatedBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion>;
 
   /**
@@ -242,7 +277,7 @@ export interface IVersionControlService {
     tenantId: string,
     versionId: string,
     retiredBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion>;
 
   /**
@@ -252,13 +287,16 @@ export interface IVersionControlService {
     tenantId: string,
     versionId: string,
     reactivatedBy: string,
-    reason: string
+    reason: string,
   ): Promise<WorkflowVersion>;
 
   /**
    * Get version history for a template
    */
-  getVersionHistory(tenantId: string, templateId: string): Promise<WorkflowVersion[]>;
+  getVersionHistory(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion[]>;
 
   /**
    * Compare two versions
@@ -266,21 +304,21 @@ export interface IVersionControlService {
   compareVersions(
     tenantId: string,
     fromVersionId: string,
-    toVersionId: string
+    toVersionId: string,
   ): Promise<VersionComparison>;
 
   /**
    * Analyze impact of activating a new version
    */
-  analyzeImpact(
-    tenantId: string,
-    versionId: string
-  ): Promise<ImpactAnalysis>;
+  analyzeImpact(tenantId: string, versionId: string): Promise<ImpactAnalysis>;
 
   /**
    * Get active version for a template
    */
-  getActiveVersion(tenantId: string, templateId: string): Promise<WorkflowVersion | null>;
+  getActiveVersion(
+    tenantId: string,
+    templateId: string,
+  ): Promise<WorkflowVersion | null>;
 
   /**
    * Clone a version
@@ -288,19 +326,22 @@ export interface IVersionControlService {
   cloneVersion(
     tenantId: string,
     versionId: string,
-    createdBy: string
+    createdBy: string,
   ): Promise<WorkflowVersion>;
 
   /**
    * Get version lifecycle events
    */
-  getLifecycleHistory(tenantId: string, versionId: string): Promise<VersionLifecycleEvent[]>;
+  getLifecycleHistory(
+    tenantId: string,
+    versionId: string,
+  ): Promise<VersionLifecycleEvent[]>;
 
   /**
    * Validate a version definition
    */
   validateVersion(
     tenantId: string,
-    definition: ApprovalTemplate["definition"]
+    definition: ApprovalTemplate["definition"],
   ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }>;
 }

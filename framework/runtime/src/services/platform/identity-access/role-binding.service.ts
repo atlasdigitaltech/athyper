@@ -18,8 +18,8 @@ import {
   PERSONA_CODES,
   type PersonaCode,
 } from "../foundation/iam/persona-model/types.js";
-import type { PersonaRegistryService } from "../foundation/iam/persona-model/persona-registry.service.js";
 
+import type { PersonaRegistryService } from "../foundation/iam/persona-model/persona-registry.service.js";
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
@@ -177,14 +177,20 @@ export class RoleBindingService {
   private readonly registry: PersonaRegistryService | null;
 
   constructor(db: Kysely<DB>, registry?: PersonaRegistryService);
-  constructor(private readonly db: Kysely<DB>, registry?: PersonaRegistryService) {
+  constructor(
+    private readonly db: Kysely<DB>,
+    registry?: PersonaRegistryService,
+  ) {
     this.registry = registry ?? null;
   }
 
   /**
    * Seed standard roles for tenant
    */
-  async seedStandardRoles(tenantId: string, createdBy: string): Promise<RoleInfo[]> {
+  async seedStandardRoles(
+    tenantId: string,
+    createdBy: string,
+  ): Promise<RoleInfo[]> {
     const roles: RoleInfo[] = [];
 
     for (const roleDef of STANDARD_ROLES) {
@@ -225,7 +231,7 @@ export class RoleBindingService {
           id,
           tenantId,
           code: roleDef.code,
-        })
+        }),
       );
     }
 
@@ -240,7 +246,7 @@ export class RoleBindingService {
     code: string,
     name: string,
     scopeMode: ScopeMode,
-    createdBy: string
+    createdBy: string,
   ): Promise<RoleInfo> {
     const id = crypto.randomUUID();
     await this.db
@@ -290,7 +296,10 @@ export class RoleBindingService {
   /**
    * Get role by code
    */
-  async getRoleByCode(tenantId: string, code: string): Promise<RoleInfo | undefined> {
+  async getRoleByCode(
+    tenantId: string,
+    code: string,
+  ): Promise<RoleInfo | undefined> {
     const result = await this.db
       .selectFrom("core.role")
       .select(["id", "tenant_id", "code", "name", "category"])
@@ -354,7 +363,7 @@ export class RoleBindingService {
         principalId: request.principalId,
         groupId: request.groupId,
         scopeKind: request.scopeKind ?? "tenant",
-      })
+      }),
     );
 
     return {
@@ -384,7 +393,7 @@ export class RoleBindingService {
       JSON.stringify({
         msg: "role_binding_removed",
         id: bindingId,
-      })
+      }),
     );
   }
 
@@ -393,7 +402,7 @@ export class RoleBindingService {
    */
   async getPrincipalRoles(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<Array<RoleInfo & { binding: RoleBindingInfo }>> {
     const now = new Date();
 
@@ -414,7 +423,7 @@ export class RoleBindingService {
       .where("pr.tenant_id", "=", tenantId)
       .where("pr.principal_id", "=", principalId)
       .where((eb) =>
-        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)])
+        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)]),
       )
       .execute();
 
@@ -446,7 +455,10 @@ export class RoleBindingService {
         .where("pr.tenant_id", "=", tenantId)
         .where("pr.principal_id", "in", groupIds)
         .where((eb) =>
-          eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)])
+          eb.or([
+            eb("pr.expires_at", "is", null),
+            eb("pr.expires_at", ">", now),
+          ]),
         )
         .execute();
     }
@@ -501,7 +513,7 @@ export class RoleBindingService {
       isActive?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<RoleInfo[]> {
     const query = this.db
       .selectFrom("core.role")
@@ -537,7 +549,7 @@ export class RoleBindingService {
    */
   async resolveEffectivePersona(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PersonaCode> {
     const roles = await this.getPrincipalRoles(principalId, tenantId);
 
@@ -584,7 +596,7 @@ export class RoleBindingService {
    */
   async getQualifiedPersonas(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PersonaCode[]> {
     const roles = await this.getPrincipalRoles(principalId, tenantId);
     const roleCodes = roles.map((r) => r.code);
@@ -620,7 +632,7 @@ export class RoleBindingService {
    */
   async getPersonaScopedBindings(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<
     Array<{
       personaCode: PersonaCode;
@@ -652,7 +664,7 @@ export class RoleBindingService {
   async hasPersona(
     principalId: string,
     tenantId: string,
-    personaCode: PersonaCode
+    personaCode: PersonaCode,
   ): Promise<boolean> {
     const qualified = await this.getQualifiedPersonas(principalId, tenantId);
     return qualified.includes(personaCode);

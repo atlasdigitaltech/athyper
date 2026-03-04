@@ -8,9 +8,7 @@ import type {
   ApprovalInstance,
   ApprovalStepInstance,
 } from "../instance/types.js";
-import type {
-  ApprovalActionType,
-} from "../types.js";
+import type { ApprovalActionType } from "../types.js";
 
 // ============================================================================
 // 3.1 Task Creation
@@ -300,7 +298,12 @@ export const DEFAULT_WORK_QUEUE_CONFIG: WorkQueueConfig = {
 /**
  * Notification channel
  */
-export type NotificationChannel = "email" | "in_app" | "push" | "sms" | "webhook";
+export type NotificationChannel =
+  | "email"
+  | "in_app"
+  | "push"
+  | "sms"
+  | "webhook";
 
 /**
  * Notification type
@@ -541,26 +544,60 @@ export interface ReminderSchedule {
 export interface IApprovalTaskRepository {
   // Task CRUD
   getById(tenantId: string, taskId: string): Promise<ApprovalTask | undefined>;
-  getByAssignmentId(tenantId: string, assignmentId: string): Promise<ApprovalTask | undefined>;
-  list(tenantId: string, assigneeId: string, options?: InboxFilterOptions): Promise<ApprovalTask[]>;
-  create(tenantId: string, task: Omit<ApprovalTask, "id" | "createdAt">): Promise<ApprovalTask>;
-  update(tenantId: string, taskId: string, updates: Partial<ApprovalTask>): Promise<ApprovalTask>;
+  getByAssignmentId(
+    tenantId: string,
+    assignmentId: string,
+  ): Promise<ApprovalTask | undefined>;
+  list(
+    tenantId: string,
+    assigneeId: string,
+    options?: InboxFilterOptions,
+  ): Promise<ApprovalTask[]>;
+  create(
+    tenantId: string,
+    task: Omit<ApprovalTask, "id" | "createdAt">,
+  ): Promise<ApprovalTask>;
+  update(
+    tenantId: string,
+    taskId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<ApprovalTask>;
   delete(tenantId: string, taskId: string): Promise<void>;
 
   // Bulk operations
-  createBulk(tenantId: string, tasks: Omit<ApprovalTask, "id" | "createdAt">[]): Promise<ApprovalTask[]>;
-  updateByInstanceId(tenantId: string, instanceId: string, updates: Partial<ApprovalTask>): Promise<void>;
+  createBulk(
+    tenantId: string,
+    tasks: Omit<ApprovalTask, "id" | "createdAt">[],
+  ): Promise<ApprovalTask[]>;
+  updateByInstanceId(
+    tenantId: string,
+    instanceId: string,
+    updates: Partial<ApprovalTask>,
+  ): Promise<void>;
   deleteByInstanceId(tenantId: string, instanceId: string): Promise<void>;
 
   // Queries
-  getTasksForInstance(tenantId: string, instanceId: string): Promise<ApprovalTask[]>;
-  getTasksForStep(tenantId: string, stepInstanceId: string): Promise<ApprovalTask[]>;
+  getTasksForInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalTask[]>;
+  getTasksForStep(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<ApprovalTask[]>;
   getOverdueTasks(tenantId: string): Promise<ApprovalTask[]>;
-  getTasksDueSoon(tenantId: string, withinHours: number): Promise<ApprovalTask[]>;
+  getTasksDueSoon(
+    tenantId: string,
+    withinHours: number,
+  ): Promise<ApprovalTask[]>;
 
   // Summary
   getInboxSummary(tenantId: string, assigneeId: string): Promise<InboxSummary>;
-  countByAssignee(tenantId: string, assigneeId: string, status?: ApprovalTaskStatus): Promise<number>;
+  countByAssignee(
+    tenantId: string,
+    assigneeId: string,
+    status?: ApprovalTaskStatus,
+  ): Promise<number>;
 }
 
 /**
@@ -569,31 +606,59 @@ export interface IApprovalTaskRepository {
 export interface INotificationService {
   // Send notifications
   sendTaskAssigned(tenantId: string, task: ApprovalTask): Promise<void>;
-  sendReminder(tenantId: string, task: ApprovalTask, reminderNumber: number): Promise<void>;
+  sendReminder(
+    tenantId: string,
+    task: ApprovalTask,
+    reminderNumber: number,
+  ): Promise<void>;
   sendSlaWarning(tenantId: string, task: ApprovalTask): Promise<void>;
   sendSlaBreach(tenantId: string, task: ApprovalTask): Promise<void>;
-  sendEscalation(tenantId: string, task: ApprovalTask, escalatedTo: NotificationRecipient): Promise<void>;
-  sendApprovalComplete(tenantId: string, instance: ApprovalInstance, outcome: "approved" | "rejected"): Promise<void>;
+  sendEscalation(
+    tenantId: string,
+    task: ApprovalTask,
+    escalatedTo: NotificationRecipient,
+  ): Promise<void>;
+  sendApprovalComplete(
+    tenantId: string,
+    instance: ApprovalInstance,
+    outcome: "approved" | "rejected",
+  ): Promise<void>;
 
   // Bulk notifications
   sendBulkReminders(tenantId: string, tasks: ApprovalTask[]): Promise<void>;
 
   // Notification management
-  getNotifications(tenantId: string, userId: string, options?: {
-    unreadOnly?: boolean;
-    type?: NotificationType;
-    limit?: number;
-    offset?: number;
-  }): Promise<NotificationRecord[]>;
+  getNotifications(
+    tenantId: string,
+    userId: string,
+    options?: {
+      unreadOnly?: boolean;
+      type?: NotificationType;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<NotificationRecord[]>;
   markAsRead(tenantId: string, notificationId: string): Promise<void>;
   markAllAsRead(tenantId: string, userId: string): Promise<void>;
 
   // Preferences
-  getPreferences(tenantId: string, userId: string): Promise<NotificationPreferences | undefined>;
-  updatePreferences(tenantId: string, userId: string, preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences>;
+  getPreferences(
+    tenantId: string,
+    userId: string,
+  ): Promise<NotificationPreferences | undefined>;
+  updatePreferences(
+    tenantId: string,
+    userId: string,
+    preferences: Partial<NotificationPreferences>,
+  ): Promise<NotificationPreferences>;
 
   // Templates
-  getTemplate(tenantId: string, type: NotificationType, channel: NotificationChannel, locale?: string): Promise<NotificationTemplate | undefined>;
+  getTemplate(
+    tenantId: string,
+    type: NotificationType,
+    channel: NotificationChannel,
+    locale?: string,
+  ): Promise<NotificationTemplate | undefined>;
 }
 
 /**
@@ -604,13 +669,21 @@ export interface IApprovalTaskService {
   createTasksForStep(
     tenantId: string,
     instance: ApprovalInstance,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<ApprovalTask[]>;
 
   // Inbox operations
-  getInbox(tenantId: string, userId: string, options?: InboxFilterOptions): Promise<ApprovalTask[]>;
+  getInbox(
+    tenantId: string,
+    userId: string,
+    options?: InboxFilterOptions,
+  ): Promise<ApprovalTask[]>;
   getInboxSummary(tenantId: string, userId: string): Promise<InboxSummary>;
-  getWorkQueue(tenantId: string, userId: string, config?: Partial<WorkQueueConfig>): Promise<WorkQueueItem[]>;
+  getWorkQueue(
+    tenantId: string,
+    userId: string,
+    config?: Partial<WorkQueueConfig>,
+  ): Promise<WorkQueueItem[]>;
 
   // Task operations
   getTask(tenantId: string, taskId: string): Promise<ApprovalTask | undefined>;
@@ -622,7 +695,7 @@ export interface IApprovalTaskService {
     tenantId: string,
     taskId: string,
     action: ApprovalActionType,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTask>;
 
   // Task delegation
@@ -631,7 +704,7 @@ export interface IApprovalTaskService {
     taskId: string,
     delegateTo: string,
     delegatedBy: string,
-    reason?: string
+    reason?: string,
   ): Promise<ApprovalTask>;
 
   // Task cancellation
@@ -639,11 +712,22 @@ export interface IApprovalTaskService {
 
   // SLA management
   processOverdueTasks(tenantId: string): Promise<void>;
-  scheduleReminders(tenantId: string, task: ApprovalTask): Promise<ReminderSchedule[]>;
+  scheduleReminders(
+    tenantId: string,
+    task: ApprovalTask,
+  ): Promise<ReminderSchedule[]>;
 
   // Admin operations
-  getTasksForInstance(tenantId: string, instanceId: string): Promise<ApprovalTask[]>;
-  reassignTask(tenantId: string, taskId: string, newAssigneeId: string, reassignedBy: string): Promise<ApprovalTask>;
+  getTasksForInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<ApprovalTask[]>;
+  reassignTask(
+    tenantId: string,
+    taskId: string,
+    newAssigneeId: string,
+    reassignedBy: string,
+  ): Promise<ApprovalTask>;
 }
 
 /**
@@ -651,5 +735,8 @@ export interface IApprovalTaskService {
  */
 export interface INotificationSender {
   channel: NotificationChannel;
-  send(notification: NotificationRecord, recipient: NotificationRecipient): Promise<{ success: boolean; error?: string }>;
+  send(
+    notification: NotificationRecord,
+    recipient: NotificationRecipient,
+  ): Promise<{ success: boolean; error?: string }>;
 }

@@ -13,7 +13,10 @@
 
 import type { Logger } from "../../../../../kernel/logger.js";
 import type { AuditDlqManager } from "../../domain/AuditDlqManager.js";
-import type { AuditOutboxRepo, AuditOutboxEntry } from "../../persistence/AuditOutboxRepo.js";
+import type {
+  AuditOutboxRepo,
+  AuditOutboxEntry,
+} from "../../persistence/AuditOutboxRepo.js";
 import type { WorkflowAuditRepository } from "../../persistence/WorkflowAuditRepository.js";
 import type { Job, JobHandler } from "@athyper/core";
 
@@ -61,7 +64,10 @@ export function createDrainAuditOutboxHandler(
     }
 
     if (batch.length === 0) {
-      logger.debug({ jobId: job.id }, "[audit:worker:drain] No items to process");
+      logger.debug(
+        { jobId: job.id },
+        "[audit:worker:drain] No items to process",
+      );
       return;
     }
 
@@ -72,7 +78,11 @@ export function createDrainAuditOutboxHandler(
 
     // 2. Persist each item to the audit table
     const persisted: string[] = [];
-    const failed: Array<{ id: string; error: string; entry: AuditOutboxEntry }> = [];
+    const failed: Array<{
+      id: string;
+      error: string;
+      entry: AuditOutboxEntry;
+    }> = [];
 
     for (const entry of batch) {
       try {

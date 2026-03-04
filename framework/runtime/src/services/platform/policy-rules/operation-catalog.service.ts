@@ -26,40 +26,196 @@ const STANDARD_OPERATIONS: Array<{
   sortOrder: number;
 }> = [
   // Entity operations
-  { namespace: "ENTITY", code: "READ", name: "Read", description: "Read entity records", sortOrder: 10 },
-  { namespace: "ENTITY", code: "CREATE", name: "Create", description: "Create new records", sortOrder: 20 },
-  { namespace: "ENTITY", code: "UPDATE", name: "Update", description: "Update existing records", sortOrder: 30 },
-  { namespace: "ENTITY", code: "DELETE", name: "Delete", description: "Delete records (soft or hard)", sortOrder: 40 },
-  { namespace: "ENTITY", code: "LIST", name: "List", description: "List/search records", sortOrder: 50 },
-  { namespace: "ENTITY", code: "EXPORT", name: "Export", description: "Export records to file", sortOrder: 60 },
-  { namespace: "ENTITY", code: "IMPORT", name: "Import", description: "Import records from file", sortOrder: 70 },
+  {
+    namespace: "ENTITY",
+    code: "READ",
+    name: "Read",
+    description: "Read entity records",
+    sortOrder: 10,
+  },
+  {
+    namespace: "ENTITY",
+    code: "CREATE",
+    name: "Create",
+    description: "Create new records",
+    sortOrder: 20,
+  },
+  {
+    namespace: "ENTITY",
+    code: "UPDATE",
+    name: "Update",
+    description: "Update existing records",
+    sortOrder: 30,
+  },
+  {
+    namespace: "ENTITY",
+    code: "DELETE",
+    name: "Delete",
+    description: "Delete records (soft or hard)",
+    sortOrder: 40,
+  },
+  {
+    namespace: "ENTITY",
+    code: "LIST",
+    name: "List",
+    description: "List/search records",
+    sortOrder: 50,
+  },
+  {
+    namespace: "ENTITY",
+    code: "EXPORT",
+    name: "Export",
+    description: "Export records to file",
+    sortOrder: 60,
+  },
+  {
+    namespace: "ENTITY",
+    code: "IMPORT",
+    name: "Import",
+    description: "Import records from file",
+    sortOrder: 70,
+  },
 
   // Workflow operations
-  { namespace: "WORKFLOW", code: "SUBMIT", name: "Submit", description: "Submit for approval", sortOrder: 10 },
-  { namespace: "WORKFLOW", code: "APPROVE", name: "Approve", description: "Approve submission", sortOrder: 20 },
-  { namespace: "WORKFLOW", code: "REJECT", name: "Reject", description: "Reject submission", sortOrder: 30 },
-  { namespace: "WORKFLOW", code: "CANCEL", name: "Cancel", description: "Cancel workflow", sortOrder: 40 },
-  { namespace: "WORKFLOW", code: "REASSIGN", name: "Reassign", description: "Reassign task", sortOrder: 50 },
-  { namespace: "WORKFLOW", code: "ESCALATE", name: "Escalate", description: "Escalate to higher authority", sortOrder: 60 },
+  {
+    namespace: "WORKFLOW",
+    code: "SUBMIT",
+    name: "Submit",
+    description: "Submit for approval",
+    sortOrder: 10,
+  },
+  {
+    namespace: "WORKFLOW",
+    code: "APPROVE",
+    name: "Approve",
+    description: "Approve submission",
+    sortOrder: 20,
+  },
+  {
+    namespace: "WORKFLOW",
+    code: "REJECT",
+    name: "Reject",
+    description: "Reject submission",
+    sortOrder: 30,
+  },
+  {
+    namespace: "WORKFLOW",
+    code: "CANCEL",
+    name: "Cancel",
+    description: "Cancel workflow",
+    sortOrder: 40,
+  },
+  {
+    namespace: "WORKFLOW",
+    code: "REASSIGN",
+    name: "Reassign",
+    description: "Reassign task",
+    sortOrder: 50,
+  },
+  {
+    namespace: "WORKFLOW",
+    code: "ESCALATE",
+    name: "Escalate",
+    description: "Escalate to higher authority",
+    sortOrder: 60,
+  },
 
   // Utility operations
-  { namespace: "UTIL", code: "ADMIN", name: "Admin", description: "Administrative operations", sortOrder: 10 },
-  { namespace: "UTIL", code: "CONFIG", name: "Configure", description: "Configuration changes", sortOrder: 20 },
-  { namespace: "UTIL", code: "AUDIT_VIEW", name: "View Audit", description: "View audit logs", sortOrder: 30 },
+  {
+    namespace: "UTIL",
+    code: "ADMIN",
+    name: "Admin",
+    description: "Administrative operations",
+    sortOrder: 10,
+  },
+  {
+    namespace: "UTIL",
+    code: "CONFIG",
+    name: "Configure",
+    description: "Configuration changes",
+    sortOrder: 20,
+  },
+  {
+    namespace: "UTIL",
+    code: "AUDIT_VIEW",
+    name: "View Audit",
+    description: "View audit logs",
+    sortOrder: 30,
+  },
 
   // Delegation operations
-  { namespace: "DELEGATION", code: "DELEGATE", name: "Delegate", description: "Delegate authority", sortOrder: 10 },
-  { namespace: "DELEGATION", code: "REVOKE_DELEGATION", name: "Revoke Delegation", description: "Revoke delegated authority", sortOrder: 20 },
+  {
+    namespace: "DELEGATION",
+    code: "DELEGATE",
+    name: "Delegate",
+    description: "Delegate authority",
+    sortOrder: 10,
+  },
+  {
+    namespace: "DELEGATION",
+    code: "REVOKE_DELEGATION",
+    name: "Revoke Delegation",
+    description: "Revoke delegated authority",
+    sortOrder: 20,
+  },
 
   // Collaboration operations
-  { namespace: "COLLAB", code: "COMMENT_CREATE", name: "Create Comment", description: "Add comments to records", sortOrder: 10 },
-  { namespace: "COLLAB", code: "COMMENT_READ", name: "Read Comments", description: "View comments on records", sortOrder: 20 },
-  { namespace: "COLLAB", code: "COMMENT_UPDATE", name: "Update Comment", description: "Edit own comments", sortOrder: 30 },
-  { namespace: "COLLAB", code: "COMMENT_DELETE", name: "Delete Comment", description: "Delete own comments", sortOrder: 40 },
-  { namespace: "COLLAB", code: "COMMENT_MODERATE", name: "Moderate Comments", description: "Edit/delete any comment (admin)", sortOrder: 50 },
-  { namespace: "COLLAB", code: "MENTION", name: "Mention Users", description: "Use @mentions in comments", sortOrder: 60 },
-  { namespace: "COLLAB", code: "ATTACH", name: "Attach Files", description: "Attach files to comments", sortOrder: 70 },
-  { namespace: "COLLAB", code: "TIMELINE_VIEW", name: "View Timeline", description: "View activity timeline", sortOrder: 80 },
+  {
+    namespace: "COLLAB",
+    code: "COMMENT_CREATE",
+    name: "Create Comment",
+    description: "Add comments to records",
+    sortOrder: 10,
+  },
+  {
+    namespace: "COLLAB",
+    code: "COMMENT_READ",
+    name: "Read Comments",
+    description: "View comments on records",
+    sortOrder: 20,
+  },
+  {
+    namespace: "COLLAB",
+    code: "COMMENT_UPDATE",
+    name: "Update Comment",
+    description: "Edit own comments",
+    sortOrder: 30,
+  },
+  {
+    namespace: "COLLAB",
+    code: "COMMENT_DELETE",
+    name: "Delete Comment",
+    description: "Delete own comments",
+    sortOrder: 40,
+  },
+  {
+    namespace: "COLLAB",
+    code: "COMMENT_MODERATE",
+    name: "Moderate Comments",
+    description: "Edit/delete any comment (admin)",
+    sortOrder: 50,
+  },
+  {
+    namespace: "COLLAB",
+    code: "MENTION",
+    name: "Mention Users",
+    description: "Use @mentions in comments",
+    sortOrder: 60,
+  },
+  {
+    namespace: "COLLAB",
+    code: "ATTACH",
+    name: "Attach Files",
+    description: "Attach files to comments",
+    sortOrder: 70,
+  },
+  {
+    namespace: "COLLAB",
+    code: "TIMELINE_VIEW",
+    name: "View Timeline",
+    description: "View activity timeline",
+    sortOrder: 80,
+  },
 ];
 
 /**
@@ -80,7 +236,9 @@ export class OperationCatalogService {
 
     // Ensure operation categories exist
     const categoryIds = new Map<string, string>();
-    const namespaces = [...new Set(STANDARD_OPERATIONS.map((op) => op.namespace))];
+    const namespaces = [
+      ...new Set(STANDARD_OPERATIONS.map((op) => op.namespace)),
+    ];
 
     for (const ns of namespaces) {
       const cat = await this.db
@@ -140,7 +298,7 @@ export class OperationCatalogService {
       JSON.stringify({
         msg: "operations_seeded",
         count: seeded,
-      })
+      }),
     );
 
     return seeded;
@@ -188,7 +346,9 @@ export class OperationCatalogService {
   /**
    * Get operation by full code (e.g., "ENTITY.READ")
    */
-  async getOperation(operationCode: OperationCode): Promise<OperationInfo | undefined> {
+  async getOperation(
+    operationCode: OperationCode,
+  ): Promise<OperationInfo | undefined> {
     await this.loadCache();
     return this.operationCache.get(operationCode);
   }
@@ -196,7 +356,9 @@ export class OperationCatalogService {
   /**
    * Get operation by ID
    */
-  async getOperationById(operationId: string): Promise<OperationInfo | undefined> {
+  async getOperationById(
+    operationId: string,
+  ): Promise<OperationInfo | undefined> {
     await this.loadCache();
     return this.operationByIdCache.get(operationId);
   }
@@ -204,7 +366,9 @@ export class OperationCatalogService {
   /**
    * Get operation ID by code
    */
-  async getOperationId(operationCode: OperationCode): Promise<string | undefined> {
+  async getOperationId(
+    operationCode: OperationCode,
+  ): Promise<string | undefined> {
     const op = await this.getOperation(operationCode);
     return op?.id;
   }
@@ -234,7 +398,9 @@ export class OperationCatalogService {
   /**
    * List operations by namespace
    */
-  async listByNamespace(namespace: OperationNamespace): Promise<OperationInfo[]> {
+  async listByNamespace(
+    namespace: OperationNamespace,
+  ): Promise<OperationInfo[]> {
     return this.listOperations({ namespace });
   }
 
@@ -303,7 +469,9 @@ export class OperationCatalogService {
   /**
    * Parse operation code string
    */
-  parseOperationCode(code: string): { namespace: OperationNamespace; code: string } | null {
+  parseOperationCode(
+    code: string,
+  ): { namespace: OperationNamespace; code: string } | null {
     const parts = code.split(".");
     if (parts.length !== 2) return null;
 

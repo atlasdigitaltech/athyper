@@ -8,8 +8,14 @@
 import type { AuditHashChainService } from "./hash-chain.service.js";
 import type { Logger } from "../../../../kernel/logger.js";
 import type { AuditDlqRepo } from "../persistence/AuditDlqRepo.js";
-import type { AuditOutboxRepo, AuditOutboxEntry } from "../persistence/AuditOutboxRepo.js";
-import type { AuditDlqEntry, CreateAuditDlqInput } from "./models/AuditDlqEntry.js";
+import type {
+  AuditOutboxRepo,
+  AuditOutboxEntry,
+} from "../persistence/AuditOutboxRepo.js";
+import type {
+  AuditDlqEntry,
+  CreateAuditDlqInput,
+} from "./models/AuditDlqEntry.js";
 
 export class AuditDlqManager {
   constructor(
@@ -59,7 +65,12 @@ export class AuditDlqManager {
    */
   async list(
     tenantId: string,
-    options?: { eventType?: string; unreplayedOnly?: boolean; limit?: number; offset?: number },
+    options?: {
+      eventType?: string;
+      unreplayedOnly?: boolean;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<AuditDlqEntry[]> {
     return this.dlqRepo.list(tenantId, options);
   }
@@ -67,7 +78,10 @@ export class AuditDlqManager {
   /**
    * Inspect a single DLQ entry.
    */
-  async inspect(tenantId: string, id: string): Promise<AuditDlqEntry | undefined> {
+  async inspect(
+    tenantId: string,
+    id: string,
+  ): Promise<AuditDlqEntry | undefined> {
     return this.dlqRepo.getById(tenantId, id);
   }
 
@@ -78,7 +92,11 @@ export class AuditDlqManager {
    * After replay, resets the hash chain for the affected tenant so that
    * the re-processed event gets a fresh chain position.
    */
-  async retry(tenantId: string, id: string, replayedBy: string): Promise<boolean> {
+  async retry(
+    tenantId: string,
+    id: string,
+    replayedBy: string,
+  ): Promise<boolean> {
     const entry = await this.dlqRepo.getById(tenantId, id);
     if (!entry) return false;
 

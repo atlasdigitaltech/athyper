@@ -18,14 +18,16 @@ describe("Immutability Guard (specifications)", () => {
     // UPDATE core.workflow_event_log SET severity = 'info' WHERE id = '...'
     // Should raise: 'Audit records are immutable. UPDATE/DELETE is not allowed.'
     // Error code: restrict_violation (23001)
-    const expectedError = "Audit records are immutable. UPDATE/DELETE is not allowed.";
+    const expectedError =
+      "Audit records are immutable. UPDATE/DELETE is not allowed.";
     expect(expectedError).toContain("immutable");
   });
 
   it("spec: DELETE should be blocked on workflow_event_log", () => {
     // DELETE FROM core.workflow_event_log WHERE id = '...'
     // Should raise: restrict_violation
-    const expectedError = "Audit records are immutable. UPDATE/DELETE is not allowed.";
+    const expectedError =
+      "Audit records are immutable. UPDATE/DELETE is not allowed.";
     expect(expectedError).toContain("immutable");
   });
 

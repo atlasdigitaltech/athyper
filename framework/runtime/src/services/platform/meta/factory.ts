@@ -4,8 +4,10 @@
  * Creates and wires all META Engine services for DI container registration.
  */
 
-
-import { DatabaseOverlayRepository, SchemaComposerService } from "../foundation/overlay-system/index.js";
+import {
+  DatabaseOverlayRepository,
+  SchemaComposerService,
+} from "../foundation/overlay-system/index.js";
 
 import { ApprovalTemplateServiceImpl } from "./approval/approval-template.service.js";
 import { ApprovalServiceImpl } from "./approval/approval.service.js";
@@ -18,8 +20,14 @@ import { MetaEventBusService } from "./core/event-bus.service.js";
 import { MetaStoreService } from "./core/meta-store.service.js";
 import { PolicyGateService } from "./core/policy-gate.service.js";
 import { MetaRegistryService } from "./core/registry.service.js";
-import { GenericDataAPIService, type FieldSecurityFilter } from "./data/generic-data-api.service.js";
-import { ActionDispatcherServiceImpl, EntityPageDescriptorServiceImpl } from "./descriptor/index.js";
+import {
+  GenericDataAPIService,
+  type FieldSecurityFilter,
+} from "./data/generic-data-api.service.js";
+import {
+  ActionDispatcherServiceImpl,
+  EntityPageDescriptorServiceImpl,
+} from "./descriptor/index.js";
 import { LifecycleManagerService } from "./lifecycle/lifecycle-manager.service.js";
 import { LifecycleRouteCompilerService } from "./lifecycle/lifecycle-route-compiler.service.js";
 import { LifecycleTimerServiceImpl } from "./lifecycle/lifecycle-timer.service.js";
@@ -30,7 +38,6 @@ import { MigrationRunnerService } from "./schema/migration-runner.service.js";
 import { PublishService } from "./schema/publish.service.js";
 import { SchemaChangeNotifier } from "./schema/schema-change-notifier.js";
 import { ValidationEngineService } from "./validation/rule-engine.service.js";
-
 
 import type { MetaStore } from "./core/meta-store.service.js";
 import type { LifecycleDB_Type } from "./data/db-helpers.js";
@@ -134,19 +141,23 @@ export type MetaServices = {
  * // ... etc
  * ```
  */
-export function createMetaServices(
-  config: MetaServicesConfig
-): MetaServices {
+export function createMetaServices(config: MetaServicesConfig): MetaServices {
   // Create services in dependency order
 
   // 0. Console logger adapter for overlay system (simple wrapper)
   const consoleLogger: Logger = {
-    info: (metaOrMsg: any, msgOrMeta?: any) => console.info(metaOrMsg, msgOrMeta),
-    warn: (metaOrMsg: any, msgOrMeta?: any) => console.warn(metaOrMsg, msgOrMeta),
-    error: (metaOrMsg: any, msgOrMeta?: any) => console.error(metaOrMsg, msgOrMeta),
-    debug: (metaOrMsg: any, msgOrMeta?: any) => console.debug(metaOrMsg, msgOrMeta),
-    trace: (metaOrMsg: any, msgOrMeta?: any) => console.trace(metaOrMsg, msgOrMeta),
-    fatal: (metaOrMsg: any, msgOrMeta?: any) => console.error("[FATAL]", metaOrMsg, msgOrMeta),
+    info: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.info(metaOrMsg, msgOrMeta),
+    warn: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.warn(metaOrMsg, msgOrMeta),
+    error: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.error(metaOrMsg, msgOrMeta),
+    debug: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.debug(metaOrMsg, msgOrMeta),
+    trace: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.trace(metaOrMsg, msgOrMeta),
+    fatal: (metaOrMsg: any, msgOrMeta?: any) =>
+      console.error("[FATAL]", metaOrMsg, msgOrMeta),
     log: (msg: string) => console.log(msg),
   };
 
@@ -154,7 +165,9 @@ export function createMetaServices(
   const eventBus = new MetaEventBusService();
 
   // 0.1. Metrics (optional — create if registry provided)
-  const metrics = config.metricsRegistry ? new MetaMetrics(config.metricsRegistry) : undefined;
+  const metrics = config.metricsRegistry
+    ? new MetaMetrics(config.metricsRegistry)
+    : undefined;
 
   // 1. Registry (no dependencies on other META services)
   const registry = new MetaRegistryService(config.db);
@@ -170,36 +183,41 @@ export function createMetaServices(
   const auditLogger = new AuditLoggerService(config.db);
 
   // 4. Policy Gate (depends on compiler, optionally db for decision logging)
-  const policyGate = new PolicyGateService(compiler, config.db as unknown as LifecycleDB_Type);
+  const policyGate = new PolicyGateService(
+    compiler,
+    config.db as unknown as LifecycleDB_Type,
+  );
 
   // 5. Entity Classification Service (depends on db)
   const classificationService = new EntityClassificationServiceImpl(
-    config.db as unknown as LifecycleDB_Type
+    config.db as unknown as LifecycleDB_Type,
   );
 
   // 6. Numbering Engine (depends on db)
   const numberingEngine = new NumberingEngineService(
-    config.db as unknown as LifecycleDB_Type
+    config.db as unknown as LifecycleDB_Type,
   );
 
   // 7. Lifecycle Route Compiler (depends on db)
-  const lifecycleRouteCompiler = new LifecycleRouteCompilerService(config.db as unknown as LifecycleDB_Type);
+  const lifecycleRouteCompiler = new LifecycleRouteCompilerService(
+    config.db as unknown as LifecycleDB_Type,
+  );
 
   // 8. Lifecycle Manager (depends on db, lifecycleRouteCompiler, policyGate)
   const lifecycleManager = new LifecycleManagerService(
     config.db as unknown as LifecycleDB_Type,
     lifecycleRouteCompiler,
-    policyGate
+    policyGate,
   );
 
   // 9. Lifecycle Timer Service (depends on db)
   const lifecycleTimerService = new LifecycleTimerServiceImpl(
-    config.db as unknown as LifecycleDB_Type
+    config.db as unknown as LifecycleDB_Type,
   );
 
   // 10. Approval Service (depends on db)
   const approvalService = new ApprovalServiceImpl(
-    config.db as unknown as LifecycleDB_Type
+    config.db as unknown as LifecycleDB_Type,
   );
 
   // 11. Wire circular dependencies
@@ -233,14 +251,12 @@ export function createMetaServices(
   );
 
   // 10.4 Overlay Repository (depends on db)
-  const overlayRepository = new DatabaseOverlayRepository(
-    config.db as any
-  );
+  const overlayRepository = new DatabaseOverlayRepository(config.db as any);
 
   // 10.4.1 Schema Composer (depends on overlayRepository)
   const schemaComposer = new SchemaComposerService(
     overlayRepository,
-    consoleLogger
+    consoleLogger,
   );
 
   // 10.5 Validation Engine (depends on compiler, registry, cache, db)
@@ -373,7 +389,7 @@ export function registerMetaServices(
   container: {
     register<T>(token: string, instance: T): void;
   },
-  config: MetaServicesConfig
+  config: MetaServicesConfig,
 ): MetaServices {
   const services = createMetaServices(config);
 

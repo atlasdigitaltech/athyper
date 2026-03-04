@@ -6,7 +6,12 @@
 
 import { describe, it, expect } from "vitest";
 
-import type { Condition, ConditionGroup, CompiledRule, SubjectSnapshot } from "../types.js";
+import type {
+  Condition,
+  ConditionGroup,
+  CompiledRule,
+  SubjectSnapshot,
+} from "../types.js";
 
 // Mock condition evaluation logic for unit testing
 // This tests the condition evaluation logic without database dependencies
@@ -150,8 +155,16 @@ describe("Condition Evaluation", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-          { field: "subject.attributes.level", operator: "eq", value: "senior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "senior",
+          },
         ],
       };
 
@@ -163,8 +176,16 @@ describe("Condition Evaluation", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
-          { field: "subject.attributes.level", operator: "eq", value: "junior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "junior",
+          },
         ],
       };
 
@@ -176,8 +197,16 @@ describe("Condition Evaluation", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
-          { field: "subject.attributes.level", operator: "eq", value: "senior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "senior",
+          },
         ],
       };
 
@@ -189,8 +218,16 @@ describe("Condition Evaluation", () => {
       const group: ConditionGroup = {
         operator: "or",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "sales" },
-          { field: "subject.attributes.level", operator: "eq", value: "junior" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "sales",
+          },
+          {
+            field: "subject.attributes.level",
+            operator: "eq",
+            value: "junior",
+          },
         ],
       };
 
@@ -202,12 +239,24 @@ describe("Condition Evaluation", () => {
       const group: ConditionGroup = {
         operator: "and",
         conditions: [
-          { field: "subject.attributes.department", operator: "eq", value: "engineering" },
+          {
+            field: "subject.attributes.department",
+            operator: "eq",
+            value: "engineering",
+          },
           {
             operator: "or",
             conditions: [
-              { field: "subject.attributes.level", operator: "eq", value: "senior" },
-              { field: "subject.attributes.level", operator: "eq", value: "lead" },
+              {
+                field: "subject.attributes.level",
+                operator: "eq",
+                value: "senior",
+              },
+              {
+                field: "subject.attributes.level",
+                operator: "eq",
+                value: "lead",
+              },
             ],
           } as ConditionGroup,
         ],
@@ -241,8 +290,14 @@ describe("Condition Evaluation", () => {
 describe("Effect Precedence", () => {
   it("should select more specific scope over general", () => {
     const rules: Array<{ rule: CompiledRule; scopeType: string }> = [
-      { rule: { ruleId: "1", effect: "allow", priority: 100 }, scopeType: "global" },
-      { rule: { ruleId: "2", effect: "deny", priority: 100 }, scopeType: "entity" },
+      {
+        rule: { ruleId: "1", effect: "allow", priority: 100 },
+        scopeType: "global",
+      },
+      {
+        rule: { ruleId: "2", effect: "deny", priority: 100 },
+        scopeType: "entity",
+      },
     ];
 
     const winner = selectWinner(rules);
@@ -252,8 +307,14 @@ describe("Effect Precedence", () => {
 
   it("should select lower priority within same scope", () => {
     const rules: Array<{ rule: CompiledRule; scopeType: string }> = [
-      { rule: { ruleId: "1", effect: "allow", priority: 100 }, scopeType: "entity" },
-      { rule: { ruleId: "2", effect: "deny", priority: 50 }, scopeType: "entity" },
+      {
+        rule: { ruleId: "1", effect: "allow", priority: 100 },
+        scopeType: "entity",
+      },
+      {
+        rule: { ruleId: "2", effect: "deny", priority: 50 },
+        scopeType: "entity",
+      },
     ];
 
     const winner = selectWinner(rules);
@@ -262,8 +323,14 @@ describe("Effect Precedence", () => {
 
   it("should prefer deny over allow at same scope and priority", () => {
     const rules: Array<{ rule: CompiledRule; scopeType: string }> = [
-      { rule: { ruleId: "1", effect: "allow", priority: 100 }, scopeType: "entity" },
-      { rule: { ruleId: "2", effect: "deny", priority: 100 }, scopeType: "entity" },
+      {
+        rule: { ruleId: "1", effect: "allow", priority: 100 },
+        scopeType: "entity",
+      },
+      {
+        rule: { ruleId: "2", effect: "deny", priority: 100 },
+        scopeType: "entity",
+      },
     ];
 
     const winner = selectWinner(rules);
@@ -326,7 +393,10 @@ function resolveFieldValue(field: string, subject: SubjectSnapshot): unknown {
   return value;
 }
 
-function evaluateCondition(condition: Condition, subject: SubjectSnapshot): boolean {
+function evaluateCondition(
+  condition: Condition,
+  subject: SubjectSnapshot,
+): boolean {
   const fieldValue = resolveFieldValue(condition.field, subject);
   const compareValue = condition.value;
 
@@ -340,18 +410,30 @@ function evaluateCondition(condition: Condition, subject: SubjectSnapshot): bool
     case "not_in":
       return Array.isArray(compareValue) && !compareValue.includes(fieldValue);
     case "contains":
-      return typeof fieldValue === "string" && typeof compareValue === "string" &&
-        fieldValue.includes(compareValue);
+      return (
+        typeof fieldValue === "string" &&
+        typeof compareValue === "string" &&
+        fieldValue.includes(compareValue)
+      );
     case "starts_with":
-      return typeof fieldValue === "string" && typeof compareValue === "string" &&
-        fieldValue.startsWith(compareValue);
+      return (
+        typeof fieldValue === "string" &&
+        typeof compareValue === "string" &&
+        fieldValue.startsWith(compareValue)
+      );
     case "ends_with":
-      return typeof fieldValue === "string" && typeof compareValue === "string" &&
-        fieldValue.endsWith(compareValue);
+      return (
+        typeof fieldValue === "string" &&
+        typeof compareValue === "string" &&
+        fieldValue.endsWith(compareValue)
+      );
     case "matches":
       try {
-        return typeof fieldValue === "string" && typeof compareValue === "string" &&
-          new RegExp(compareValue).test(fieldValue);
+        return (
+          typeof fieldValue === "string" &&
+          typeof compareValue === "string" &&
+          new RegExp(compareValue).test(fieldValue)
+        );
       } catch {
         return false;
       }
@@ -364,7 +446,10 @@ function evaluateCondition(condition: Condition, subject: SubjectSnapshot): bool
   }
 }
 
-function evaluateConditionGroup(group: ConditionGroup, subject: SubjectSnapshot): boolean {
+function evaluateConditionGroup(
+  group: ConditionGroup,
+  subject: SubjectSnapshot,
+): boolean {
   const operator = group.operator ?? "and";
 
   if (operator === "and") {
@@ -405,10 +490,12 @@ const SCOPE_SPECIFICITY: Record<string, number> = {
 };
 
 function selectWinner(
-  matchedRules: Array<{ rule: CompiledRule; scopeType: string }>
+  matchedRules: Array<{ rule: CompiledRule; scopeType: string }>,
 ): { rule: CompiledRule; scopeType: string } {
   const sorted = [...matchedRules].sort((a, b) => {
-    const scopeDiff = (SCOPE_SPECIFICITY[b.scopeType] ?? 0) - (SCOPE_SPECIFICITY[a.scopeType] ?? 0);
+    const scopeDiff =
+      (SCOPE_SPECIFICITY[b.scopeType] ?? 0) -
+      (SCOPE_SPECIFICITY[a.scopeType] ?? 0);
     if (scopeDiff !== 0) return scopeDiff;
 
     const priorityDiff = a.rule.priority - b.rule.priority;

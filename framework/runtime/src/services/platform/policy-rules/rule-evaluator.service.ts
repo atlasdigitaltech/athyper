@@ -50,41 +50,45 @@ export class RuleEvaluatorService {
     private readonly subjectResolver: SubjectResolverService,
     private readonly policyCompiler: PolicyCompilerService,
     private readonly policyResolution: PolicyResolutionService,
-    private readonly operationCatalog: OperationCatalogService
+    private readonly operationCatalog: OperationCatalogService,
   ) {}
 
   /**
    * Main authorization entry point
    */
-  async authorize(request: AuthorizationRequest): Promise<AuthorizationDecision> {
+  async authorize(
+    request: AuthorizationRequest,
+  ): Promise<AuthorizationDecision> {
     const startTime = Date.now();
 
     try {
       // 1. Resolve subject snapshot
       const subject = await this.subjectResolver.resolveSubject(
         request.principalId,
-        request.tenantId
+        request.tenantId,
       );
 
       // 2. Build subject keys for matching
       const subjectKeys = this.subjectResolver.buildSubjectKeys(subject);
 
       // 3. Get operation ID
-      const operation = await this.operationCatalog.getOperation(request.operationCode);
+      const operation = await this.operationCatalog.getOperation(
+        request.operationCode,
+      );
       if (!operation) {
         return this.createDenyDecision(
           request,
           undefined,
           undefined,
           `Unknown operation: ${request.operationCode}`,
-          Date.now() - startTime
+          Date.now() - startTime,
         );
       }
 
       // 4. Resolve applicable policies
       const policies = await this.policyResolution.resolvePolicies(
         request.tenantId,
-        request.resource
+        request.resource,
       );
 
       if (policies.length === 0) {
@@ -94,7 +98,7 @@ export class RuleEvaluatorService {
           undefined,
           undefined,
           "No policies apply to this resource",
-          Date.now() - startTime
+          Date.now() - startTime,
         );
       }
 
@@ -110,7 +114,7 @@ export class RuleEvaluatorService {
         const compiled = await this.policyCompiler.getOrCompile(
           request.tenantId,
           policy.activeVersionId,
-          "system"
+          "system",
         );
 
         if (!compiled) continue;
@@ -121,12 +125,14 @@ export class RuleEvaluatorService {
           subjectKeys,
           operation.id,
           request.resource,
-          policy.scopeType
+          policy.scopeType,
         );
 
         for (const rule of rules) {
           // Evaluate conditions
-          if (await this.evaluateConditions(rule.conditions, subject, request)) {
+          if (
+            await this.evaluateConditions(rule.conditions, subject, request)
+          ) {
             matchedRules.push({
               rule,
               policyVersionId: policy.activeVersionId,
@@ -150,7 +156,7 @@ export class RuleEvaluatorService {
           principalId: request.principalId,
           operationCode: request.operationCode,
           error: String(error),
-        })
+        }),
       );
 
       return this.createDenyDecision(
@@ -158,7 +164,7 @@ export class RuleEvaluatorService {
         undefined,
         undefined,
         `Authorization error: ${String(error)}`,
-        Date.now() - startTime
+        Date.now() - startTime,
       );
     }
   }
@@ -170,7 +176,7 @@ export class RuleEvaluatorService {
     principalId: string,
     tenantId: string,
     operationCode: string,
-    resource: AuthorizationRequest["resource"]
+    resource: AuthorizationRequest["resource"],
   ): Promise<boolean> {
     const decision = await this.authorize({
       principalId,
@@ -190,7 +196,7 @@ export class RuleEvaluatorService {
     subjectKeys: SubjectKey[],
     operationId: string,
     resource: AuthorizationRequest["resource"],
-    scopeType: ScopeType
+    scopeType: ScopeType,
   ): CompiledRule[] {
     const matchedRules: CompiledRule[] = [];
 
@@ -234,7 +240,7 @@ export class RuleEvaluatorService {
    */
   private buildScopeKey(
     scopeType: ScopeType,
-    resource: AuthorizationRequest["resource"]
+    resource: AuthorizationRequest["resource"],
   ): string {
     switch (scopeType) {
       case "global":
@@ -259,7 +265,7 @@ export class RuleEvaluatorService {
   private async evaluateConditions(
     conditions: CompiledRule["conditions"],
     subject: SubjectSnapshot,
-    request: AuthorizationRequest
+    request: AuthorizationRequest,
   ): Promise<boolean> {
     if (!conditions) return true;
 
@@ -292,7 +298,7 @@ export class RuleEvaluatorService {
       policyVersionId: string;
       scopeType: ScopeType;
     }>,
-    request: AuthorizationRequest
+    request: AuthorizationRequest,
   ): Omit<AuthorizationDecision, "evaluationTimeMs"> {
     if (matchedRules.length === 0) {
       return {
@@ -307,7 +313,8 @@ export class RuleEvaluatorService {
     // Sort by: scope specificity (desc), priority (asc), effect (deny first)
     const sorted = [...matchedRules].sort((a, b) => {
       // 1. Scope specificity (higher = more specific)
-      const scopeDiff = SCOPE_SPECIFICITY[b.scopeType] - SCOPE_SPECIFICITY[a.scopeType];
+      const scopeDiff =
+        SCOPE_SPECIFICITY[b.scopeType] - SCOPE_SPECIFICITY[a.scopeType];
       if (scopeDiff !== 0) return scopeDiff;
 
       // 2. Priority (lower = higher priority)
@@ -330,9 +337,10 @@ export class RuleEvaluatorService {
       resourceKey: this.buildResourceKey(request.resource),
       matchedRuleId: winner.rule.ruleId,
       matchedPolicyVersionId: winner.policyVersionId,
-      reason: winner.rule.effect === "allow"
-        ? `Allowed by rule ${winner.rule.ruleId} (scope: ${winner.scopeType}, priority: ${winner.rule.priority})`
-        : `Denied by rule ${winner.rule.ruleId} (scope: ${winner.scopeType}, priority: ${winner.rule.priority})`,
+      reason:
+        winner.rule.effect === "allow"
+          ? `Allowed by rule ${winner.rule.ruleId} (scope: ${winner.scopeType}, priority: ${winner.rule.priority})`
+          : `Denied by rule ${winner.rule.ruleId} (scope: ${winner.scopeType}, priority: ${winner.rule.priority})`,
     };
   }
 
@@ -354,7 +362,7 @@ export class RuleEvaluatorService {
     ruleId: string | undefined,
     policyVersionId: string | undefined,
     reason: string,
-    evaluationTimeMs: number
+    evaluationTimeMs: number,
   ): AuthorizationDecision {
     return {
       effect: "deny",

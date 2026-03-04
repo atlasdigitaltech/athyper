@@ -77,7 +77,9 @@ export class AuditStorageTieringService {
 
       let isArchived = false;
       if (this.archiveMarkerRepo) {
-        isArchived = await this.archiveMarkerRepo.isMonthArchived(partition.month);
+        isArchived = await this.archiveMarkerRepo.isMonthArchived(
+          partition.month,
+        );
       }
 
       assignments.push({
@@ -128,8 +130,16 @@ export class AuditStorageTieringService {
     // Cold months: enumerate months before coldCutoff that are within the range
     if (startDate < coldCutoff) {
       const coldEnd = endDate < coldCutoff ? endDate : coldCutoff;
-      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      const cutoffMonth = new Date(coldEnd.getFullYear(), coldEnd.getMonth(), 1);
+      const current = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1,
+      );
+      const cutoffMonth = new Date(
+        coldEnd.getFullYear(),
+        coldEnd.getMonth(),
+        1,
+      );
 
       while (current <= cutoffMonth) {
         result.coldMonths.push(new Date(current));

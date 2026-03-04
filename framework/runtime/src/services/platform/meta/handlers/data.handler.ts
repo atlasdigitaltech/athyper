@@ -8,11 +8,16 @@ import { META_TOKENS } from "@athyper/core/meta";
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
-import type { GenericDataAPI, ListOptions, RequestContext } from "@athyper/core/meta";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
+import type {
+  GenericDataAPI,
+  ListOptions,
+  RequestContext,
+} from "@athyper/core/meta";
 import type { Request, Response } from "express";
-
-
 
 // ============================================================================
 // Helper Functions
@@ -32,7 +37,11 @@ function toMetaRequestContext(ctx: HttpHandlerContext): RequestContext {
 // ============================================================================
 
 export class ListRecordsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
     const { page, pageSize, orderBy, orderDir } = req.query as {
       page?: string;
@@ -41,7 +50,9 @@ export class ListRecordsHandler implements RouteHandler {
       orderDir?: "asc" | "desc";
     };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     // Parse query parameters
@@ -102,7 +113,10 @@ export class ListRecordsHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -130,10 +144,16 @@ export class ListRecordsHandler implements RouteHandler {
 // ============================================================================
 
 export class GetRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -170,7 +190,10 @@ export class GetRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -198,7 +221,11 @@ export class GetRecordHandler implements RouteHandler {
 // ============================================================================
 
 export class CreateRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
     const data = req.body;
 
@@ -214,7 +241,9 @@ export class CreateRecordHandler implements RouteHandler {
       return;
     }
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -240,7 +269,10 @@ export class CreateRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -251,7 +283,10 @@ export class CreateRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("validation") || error.message.includes("Validation")) {
+        if (
+          error.message.includes("validation") ||
+          error.message.includes("Validation")
+        ) {
           res.status(400).json({
             success: false,
             error: {
@@ -279,7 +314,11 @@ export class CreateRecordHandler implements RouteHandler {
 // ============================================================================
 
 export class UpdateRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
     const data = req.body;
 
@@ -295,7 +334,9 @@ export class UpdateRecordHandler implements RouteHandler {
       return;
     }
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -310,7 +351,10 @@ export class UpdateRecordHandler implements RouteHandler {
       logger.error({ error, entity, id }, "Failed to update record");
 
       if (error instanceof Error) {
-        if (error.message.includes("not found") || error.message.includes("Record not found")) {
+        if (
+          error.message.includes("not found") ||
+          error.message.includes("Record not found")
+        ) {
           res.status(404).json({
             success: false,
             error: {
@@ -321,7 +365,10 @@ export class UpdateRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -332,7 +379,10 @@ export class UpdateRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("validation") || error.message.includes("Validation")) {
+        if (
+          error.message.includes("validation") ||
+          error.message.includes("Validation")
+        ) {
           res.status(400).json({
             success: false,
             error: {
@@ -371,10 +421,16 @@ export class UpdateRecordHandler implements RouteHandler {
 // ============================================================================
 
 export class DeleteRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -389,7 +445,10 @@ export class DeleteRecordHandler implements RouteHandler {
       logger.error({ error, entity, id }, "Failed to delete record");
 
       if (error instanceof Error) {
-        if (error.message.includes("not found") || error.message.includes("Record not found")) {
+        if (
+          error.message.includes("not found") ||
+          error.message.includes("Record not found")
+        ) {
           res.status(404).json({
             success: false,
             error: {
@@ -400,7 +459,10 @@ export class DeleteRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -428,10 +490,16 @@ export class DeleteRecordHandler implements RouteHandler {
 // ============================================================================
 
 export class CountRecordsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -459,7 +527,10 @@ export class CountRecordsHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -487,10 +558,16 @@ export class CountRecordsHandler implements RouteHandler {
 // ============================================================================
 
 export class RestoreRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -505,7 +582,10 @@ export class RestoreRecordHandler implements RouteHandler {
       logger.error({ error, entity, id }, "Failed to restore record");
 
       if (error instanceof Error) {
-        if (error.message.includes("not found") || error.message.includes("Deleted record not found")) {
+        if (
+          error.message.includes("not found") ||
+          error.message.includes("Deleted record not found")
+        ) {
           res.status(404).json({
             success: false,
             error: {
@@ -516,7 +596,10 @@ export class RestoreRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -544,7 +627,11 @@ export class RestoreRecordHandler implements RouteHandler {
 // ============================================================================
 
 export class BulkCreateRecordsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
     const data = req.body;
 
@@ -572,7 +659,9 @@ export class BulkCreateRecordsHandler implements RouteHandler {
       return;
     }
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -598,7 +687,10 @@ export class BulkCreateRecordsHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -626,7 +718,11 @@ export class BulkCreateRecordsHandler implements RouteHandler {
 // ============================================================================
 
 export class BulkUpdateRecordsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
     const updates = req.body;
 
@@ -669,7 +765,9 @@ export class BulkUpdateRecordsHandler implements RouteHandler {
       }
     }
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -695,7 +793,10 @@ export class BulkUpdateRecordsHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -723,7 +824,11 @@ export class BulkUpdateRecordsHandler implements RouteHandler {
 // ============================================================================
 
 export class BulkDeleteRecordsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity } = req.params as { entity: string };
     const { ids } = req.body as { ids: string[] };
 
@@ -733,7 +838,8 @@ export class BulkDeleteRecordsHandler implements RouteHandler {
         success: false,
         error: {
           code: "INVALID_REQUEST_BODY",
-          message: "Request body must have 'ids' property as an array of strings",
+          message:
+            "Request body must have 'ids' property as an array of strings",
         },
       });
       return;
@@ -751,7 +857,9 @@ export class BulkDeleteRecordsHandler implements RouteHandler {
       return;
     }
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -777,7 +885,10 @@ export class BulkDeleteRecordsHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {
@@ -805,10 +916,16 @@ export class BulkDeleteRecordsHandler implements RouteHandler {
 // ============================================================================
 
 export class PermanentDeleteRecordHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entity, id } = req.params as { entity: string; id: string };
 
-    const dataAPI = await ctx.container.resolve<GenericDataAPI>(META_TOKENS.dataAPI);
+    const dataAPI = await ctx.container.resolve<GenericDataAPI>(
+      META_TOKENS.dataAPI,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -820,10 +937,16 @@ export class PermanentDeleteRecordHandler implements RouteHandler {
       });
     } catch (error) {
       const logger = await ctx.container.resolve<any>(TOKENS.logger);
-      logger.error({ error, entity, id }, "Failed to permanently delete record");
+      logger.error(
+        { error, entity, id },
+        "Failed to permanently delete record",
+      );
 
       if (error instanceof Error) {
-        if (error.message.includes("not found") || error.message.includes("Record not found")) {
+        if (
+          error.message.includes("not found") ||
+          error.message.includes("Record not found")
+        ) {
           res.status(404).json({
             success: false,
             error: {
@@ -834,7 +957,10 @@ export class PermanentDeleteRecordHandler implements RouteHandler {
           return;
         }
 
-        if (error.message.includes("permission") || error.message.includes("denied")) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("denied")
+        ) {
           res.status(403).json({
             success: false,
             error: {

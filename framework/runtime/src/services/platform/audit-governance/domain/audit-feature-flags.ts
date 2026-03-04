@@ -130,19 +130,22 @@ export class AuditFeatureFlagResolver {
     }
 
     try {
-      const rows = await this.db
+      const rows = (await this.db
         .selectFrom(FEATURE_FLAG_TABLE as any)
         .select(["flag_key", "is_enabled", "config"])
         .where("tenant_id", "=", tenantId)
         .where("flag_key", "in", Object.values(FLAG_KEYS))
-        .execute() as Array<{ flag_key: string; is_enabled: boolean; config: any }>;
+        .execute()) as Array<{
+        flag_key: string;
+        is_enabled: boolean;
+        config: any;
+      }>;
 
       const flags: AuditFeatureFlags = { ...this.defaults };
 
       for (const row of rows) {
-        const config = typeof row.config === "string"
-          ? JSON.parse(row.config)
-          : row.config;
+        const config =
+          typeof row.config === "string" ? JSON.parse(row.config) : row.config;
 
         switch (row.flag_key) {
           case FLAG_KEYS.writeMode: {

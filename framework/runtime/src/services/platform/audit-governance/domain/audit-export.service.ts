@@ -60,7 +60,11 @@ export interface AuditExportResult {
  * Minimal object storage interface (subset of ObjectStorageAdapter).
  */
 export interface ExportObjectStorage {
-  put(key: string, body: Buffer | string, opts?: { contentType?: string; metadata?: Record<string, string> }): Promise<void>;
+  put(
+    key: string,
+    body: Buffer | string,
+    opts?: { contentType?: string; metadata?: Record<string, string> },
+  ): Promise<void>;
 }
 
 // ============================================================================
@@ -78,7 +82,13 @@ export class AuditExportService {
    * Export audit events to object storage as NDJSON + manifest.
    */
   async export(options: AuditExportOptions): Promise<AuditExportResult> {
-    const { tenantId, startDate, endDate, limit = 100_000, exportedBy } = options;
+    const {
+      tenantId,
+      startDate,
+      endDate,
+      limit = 100_000,
+      exportedBy,
+    } = options;
     const exportId = crypto.randomUUID();
     const now = new Date();
 
@@ -94,7 +104,9 @@ export class AuditExportService {
     const events = await this.auditRepo.getEvents(tenantId, queryOptions);
 
     // 2. Serialize to NDJSON
-    const ndjson = events.map((e) => JSON.stringify(e)).join("\n") + (events.length > 0 ? "\n" : "");
+    const ndjson =
+      events.map((e) => JSON.stringify(e)).join("\n") +
+      (events.length > 0 ? "\n" : "");
 
     // 3. Compute SHA-256 hash
     const sha256 = createHash("sha256").update(ndjson, "utf8").digest("hex");
@@ -130,12 +142,16 @@ export class AuditExportService {
         },
       });
 
-      await this.objectStorage.put(manifestKey, JSON.stringify(manifest, null, 2), {
-        contentType: "application/json",
-        metadata: {
-          "x-audit-export-id": exportId,
+      await this.objectStorage.put(
+        manifestKey,
+        JSON.stringify(manifest, null, 2),
+        {
+          contentType: "application/json",
+          metadata: {
+            "x-audit-export-id": exportId,
+          },
         },
-      });
+      );
     }
 
     // 7. Log to security_event (audit-of-audit)

@@ -5,7 +5,6 @@
  * MVP: Simple allow/deny based on compiled policies.
  */
 
-
 import { uuid } from "../data/db-helpers.js";
 import { META_SPANS, withSpan } from "../observability/tracing.js";
 
@@ -28,7 +27,7 @@ export class PolicyGateService implements PolicyGate {
 
   constructor(
     private readonly compiler: MetaCompiler,
-    private readonly db?: LifecycleDB_Type
+    private readonly db?: LifecycleDB_Type,
   ) {}
 
   /** Set metrics collector for observability (late binding). */
@@ -40,11 +39,15 @@ export class PolicyGateService implements PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<boolean> {
     return withSpan(
       META_SPANS.POLICY_EVALUATE,
-      { "meta.entity": resource, "meta.action": action, "meta.tenant_id": ctx.tenantId },
+      {
+        "meta.entity": resource,
+        "meta.action": action,
+        "meta.tenant_id": ctx.tenantId,
+      },
       async (span) => {
         const start = Date.now();
         try {
@@ -53,7 +56,7 @@ export class PolicyGateService implements PolicyGate {
 
           // Get applicable policies
           const policies = compiledModel.policies.filter(
-            (p) => p.action === action || p.action === "*"
+            (p) => p.action === action || p.action === "*",
           );
 
           span.setAttribute("meta.policy_count", policies.length);
@@ -61,7 +64,10 @@ export class PolicyGateService implements PolicyGate {
           if (policies.length === 0) {
             // No policies defined = deny by default
             this.metrics?.policyDenied({ entity: resource, action });
-            this.metrics?.policyEvalLatency(Date.now() - start, { entity: resource, action });
+            this.metrics?.policyEvalLatency(Date.now() - start, {
+              entity: resource,
+              action,
+            });
             return false;
           }
 
@@ -75,7 +81,10 @@ export class PolicyGateService implements PolicyGate {
             if (result) {
               // Explicit deny takes precedence
               this.metrics?.policyDenied({ entity: resource, action });
-              this.metrics?.policyEvalLatency(Date.now() - start, { entity: resource, action });
+              this.metrics?.policyEvalLatency(Date.now() - start, {
+                entity: resource,
+                action,
+              });
               return false;
             }
           }
@@ -89,18 +98,30 @@ export class PolicyGateService implements PolicyGate {
             const result = policy.evaluate(evalCtx, record);
             if (result) {
               // Allow if condition matches
-              this.metrics?.policyEvalLatency(Date.now() - start, { entity: resource, action });
+              this.metrics?.policyEvalLatency(Date.now() - start, {
+                entity: resource,
+                action,
+              });
               return true;
             }
           }
 
           // No matching allow policy = deny
           this.metrics?.policyDenied({ entity: resource, action });
-          this.metrics?.policyEvalLatency(Date.now() - start, { entity: resource, action });
+          this.metrics?.policyEvalLatency(Date.now() - start, {
+            entity: resource,
+            action,
+          });
           return false;
         } catch (error) {
-          console.error(`Policy evaluation error for ${action}:${resource}:`, error);
-          this.metrics?.policyEvalLatency(Date.now() - start, { entity: resource, action });
+          console.error(
+            `Policy evaluation error for ${action}:${resource}:`,
+            error,
+          );
+          this.metrics?.policyEvalLatency(Date.now() - start, {
+            entity: resource,
+            action,
+          });
           // Fail secure: deny on error
           return false;
         }
@@ -112,7 +133,7 @@ export class PolicyGateService implements PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<PolicyDecision> {
     try {
       // Get compiled model for resource
@@ -120,7 +141,7 @@ export class PolicyGateService implements PolicyGate {
 
       // Get applicable policies
       const policies = compiledModel.policies.filter(
-        (p) => p.action === action || p.action === "*"
+        (p) => p.action === action || p.action === "*",
       );
 
       if (policies.length === 0) {
@@ -174,7 +195,9 @@ export class PolicyGateService implements PolicyGate {
           ruleId: policy.name,
           effect: "allow",
           matched,
-          reason: matched ? "Allow policy matched" : "Allow policy did not match",
+          reason: matched
+            ? "Allow policy matched"
+            : "Allow policy did not match",
         });
 
         if (matched) {
@@ -201,7 +224,10 @@ export class PolicyGateService implements PolicyGate {
       await this.logDecision(decision, action, resource, ctx);
       return decision;
     } catch (error) {
-      console.error(`Policy evaluation error for ${action}:${resource}:`, error);
+      console.error(
+        `Policy evaluation error for ${action}:${resource}:`,
+        error,
+      );
       const decision: PolicyDecision = {
         allowed: false,
         effect: "deny",
@@ -218,20 +244,20 @@ export class PolicyGateService implements PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<void> {
     const allowed = await this.can(action, resource, ctx, record);
 
     if (!allowed) {
       throw new Error(
-        `Access denied: ${action} on ${resource} for user ${ctx.userId}`
+        `Access denied: ${action} on ${resource} for user ${ctx.userId}`,
       );
     }
   }
 
   async getPolicies(
     action: string,
-    resource: string
+    resource: string,
   ): Promise<Array<{ name: string; effect: string }>> {
     try {
       const compiledModel = await this.compiler.compile(resource, "v1");
@@ -250,7 +276,7 @@ export class PolicyGateService implements PolicyGate {
   async evaluatePolicy(
     _policyName: string,
     _ctx: RequestContext,
-    _record?: unknown
+    _record?: unknown,
   ): Promise<boolean> {
     // This would require loading the policy by name
     // For MVP, just return false
@@ -261,7 +287,7 @@ export class PolicyGateService implements PolicyGate {
     action: string,
     resource: string,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<string[] | null> {
     try {
       const compiledModel = await this.compiler.compile(resource, "v1");
@@ -330,7 +356,7 @@ export class PolicyGateService implements PolicyGate {
           action,
           resource,
           err: String(error),
-        })
+        }),
       );
       // On error, deny all fields
       return [];
@@ -340,7 +366,7 @@ export class PolicyGateService implements PolicyGate {
   async authorizeMany(
     checks: Array<{ action: string; resource: string }>,
     ctx: RequestContext,
-    record?: unknown
+    record?: unknown,
   ): Promise<Map<string, PolicyDecision>> {
     const results = new Map<string, PolicyDecision>();
 
@@ -363,7 +389,7 @@ export class PolicyGateService implements PolicyGate {
 
           // Get applicable policies for this action
           const policies = allPolicies.filter(
-            (p) => p.action === action || p.action === "*"
+            (p) => p.action === action || p.action === "*",
           );
 
           if (policies.length === 0) {
@@ -391,7 +417,9 @@ export class PolicyGateService implements PolicyGate {
               ruleId: policy.name,
               effect: "deny",
               matched,
-              reason: matched ? "Deny policy matched" : "Deny policy did not match",
+              reason: matched
+                ? "Deny policy matched"
+                : "Deny policy did not match",
             });
 
             if (matched) {
@@ -423,7 +451,9 @@ export class PolicyGateService implements PolicyGate {
               ruleId: policy.name,
               effect: "allow",
               matched,
-              reason: matched ? "Allow policy matched" : "Allow policy did not match",
+              reason: matched
+                ? "Allow policy matched"
+                : "Allow policy did not match",
             });
 
             if (matched) {
@@ -502,7 +532,7 @@ export class PolicyGateService implements PolicyGate {
     resource: string,
     ctx: RequestContext,
     entityId?: string,
-    entityVersionId?: string
+    entityVersionId?: string,
   ): Promise<void> {
     if (!this.db) {
       // Database not provided, skip logging
@@ -535,20 +565,24 @@ export class PolicyGateService implements PolicyGate {
         })
         .execute();
 
-      console.log(JSON.stringify({
-        msg: "policy_decision_logged",
-        tenantId: ctx.tenantId,
-        actor: ctx.userId,
-        action,
-        resource,
-        effect: decision.effect,
-        matchedRule: decision.matchedRuleId,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "policy_decision_logged",
+          tenantId: ctx.tenantId,
+          actor: ctx.userId,
+          action,
+          resource,
+          effect: decision.effect,
+          matchedRule: decision.matchedRuleId,
+        }),
+      );
     } catch (error) {
-      console.error(JSON.stringify({
-        msg: "policy_decision_log_error",
-        error: String(error),
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "policy_decision_log_error",
+          error: String(error),
+        }),
+      );
       // Don't fail authorization on logging error
     }
   }

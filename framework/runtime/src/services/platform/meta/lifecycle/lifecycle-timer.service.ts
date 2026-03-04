@@ -17,7 +17,10 @@
  * 4. Manual transition → cancelTimers() (prevent stale execution)
  */
 
-import { evaluateConditionGroup, resolveFieldValue } from "../../shared/condition-evaluator.js";
+import {
+  evaluateConditionGroup,
+  resolveFieldValue,
+} from "../../shared/condition-evaluator.js";
 import { uuid, now } from "../data/db-helpers.js";
 
 import type { LifecycleDB_Type } from "../data/db-helpers.js";
@@ -35,8 +38,6 @@ import type {
   ConditionGroup,
   GenericDataAPI,
 } from "@athyper/core/meta";
-
-
 
 // ============================================================================
 // Job Type Constants
@@ -79,55 +80,63 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
     entityName: string,
     entityId: string,
     ctx: RequestContext,
-    triggerData?: Record<string, unknown>
+    triggerData?: Record<string, unknown>,
   ): Promise<LifecycleTimerSchedule | undefined> {
     // Load timer policy
     const policy = await this.getPolicy(policyId, ctx.tenantId);
     if (!policy) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_timer_policy_not_found",
-        policyId,
-        tenantId: ctx.tenantId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_timer_policy_not_found",
+          policyId,
+          tenantId: ctx.tenantId,
+        }),
+      );
       return undefined;
     }
 
     // Get current lifecycle instance
     if (!this.lifecycleManager) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_timer_manager_not_wired",
-        policyId,
-        entityName,
-        entityId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_timer_manager_not_wired",
+          policyId,
+          entityName,
+          entityId,
+        }),
+      );
       return undefined;
     }
 
     const instance = await this.lifecycleManager.getInstance(
       entityName,
       entityId,
-      ctx.tenantId
+      ctx.tenantId,
     );
 
     if (!instance) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_timer_instance_not_found",
-        entityName,
-        entityId,
-        tenantId: ctx.tenantId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_timer_instance_not_found",
+          entityName,
+          entityId,
+          tenantId: ctx.tenantId,
+        }),
+      );
       return undefined;
     }
 
     // Calculate fire time
     const fireAt = this.calculateFireTime(policy.rules, triggerData);
     if (!fireAt || fireAt.getTime() <= Date.now()) {
-      console.log(JSON.stringify({
-        msg: "lifecycle_timer_fire_time_invalid",
-        policyId,
-        fireAt: fireAt?.toISOString(),
-        reason: !fireAt ? "null" : "in_past",
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_timer_fire_time_invalid",
+          policyId,
+          fireAt: fireAt?.toISOString(),
+          reason: !fireAt ? "null" : "in_past",
+        }),
+      );
       return undefined;
     }
 
@@ -179,7 +188,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
             policyId,
           },
         },
-        { delay, attempts: 1 }
+        { delay, attempts: 1 },
       );
 
       // Update schedule with actual job ID
@@ -189,24 +198,28 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
         .where("id", "=", scheduleId)
         .execute();
 
-      console.log(JSON.stringify({
-        msg: "lifecycle_timer_scheduled",
-        scheduleId,
-        entityName,
-        entityId,
-        timerType: policy.rules.timerType,
-        fireAt: fireAt.toISOString(),
-        jobId: job.id,
-        delayMs: delay,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_timer_scheduled",
+          scheduleId,
+          entityName,
+          entityId,
+          timerType: policy.rules.timerType,
+          fireAt: fireAt.toISOString(),
+          jobId: job.id,
+          delayMs: delay,
+        }),
+      );
 
       return this.mapScheduleRow({ ...schedule, job_id: job.id } as any);
     }
 
-    console.warn(JSON.stringify({
-      msg: "lifecycle_timer_queue_not_available",
-      scheduleId,
-    }));
+    console.warn(
+      JSON.stringify({
+        msg: "lifecycle_timer_queue_not_available",
+        scheduleId,
+      }),
+    );
 
     return this.mapScheduleRow(schedule as any);
   }
@@ -217,7 +230,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
     entityName: string,
     entityId: string,
     tenantId: string,
-    reason: string
+    reason: string,
   ): Promise<number> {
     // Fetch active timers
     const timers = await this.db
@@ -248,25 +261,29 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
         try {
           await this.jobQueue.removeJob(timer.job_id);
         } catch (err) {
-          console.warn(JSON.stringify({
-            msg: "lifecycle_timer_job_removal_failed",
-            jobId: timer.job_id,
-            error: String(err),
-          }));
+          console.warn(
+            JSON.stringify({
+              msg: "lifecycle_timer_job_removal_failed",
+              jobId: timer.job_id,
+              error: String(err),
+            }),
+          );
         }
       }
 
       canceled++;
     }
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_timers_canceled",
-      entityName,
-      entityId,
-      tenantId,
-      count: canceled,
-      reason,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_timers_canceled",
+        entityName,
+        entityId,
+        tenantId,
+        count: canceled,
+        reason,
+      }),
+    );
 
     return canceled;
   }
@@ -275,7 +292,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
     entityName: string,
     entityId: string,
     tenantId: string,
-    timerType: LifecycleTimerType
+    timerType: LifecycleTimerType,
   ): Promise<number> {
     // Fetch active timers of specific type
     const timers = await this.db
@@ -307,35 +324,36 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
         try {
           await this.jobQueue.removeJob(timer.job_id);
         } catch (err) {
-          console.warn(JSON.stringify({
-            msg: "lifecycle_timer_job_removal_failed",
-            jobId: timer.job_id,
-            error: String(err),
-          }));
+          console.warn(
+            JSON.stringify({
+              msg: "lifecycle_timer_job_removal_failed",
+              jobId: timer.job_id,
+              error: String(err),
+            }),
+          );
         }
       }
 
       canceled++;
     }
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_timers_canceled_by_type",
-      entityName,
-      entityId,
-      tenantId,
-      timerType,
-      count: canceled,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_timers_canceled_by_type",
+        entityName,
+        entityId,
+        tenantId,
+        timerType,
+        count: canceled,
+      }),
+    );
 
     return canceled;
   }
 
   // ===== Timer Execution =====
 
-  async processTimer(
-    scheduleId: string,
-    tenantId: string
-  ): Promise<void> {
+  async processTimer(scheduleId: string, tenantId: string): Promise<void> {
     // Load schedule
     const schedule = await this.db
       .selectFrom("wf.lifecycle_timer_schedule")
@@ -345,21 +363,25 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
       .executeTakeFirst();
 
     if (!schedule) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_timer_schedule_not_found",
-        scheduleId,
-        tenantId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_timer_schedule_not_found",
+          scheduleId,
+          tenantId,
+        }),
+      );
       return;
     }
 
     // Guard check: skip if already fired or canceled
     if (schedule.status !== "scheduled") {
-      console.log(JSON.stringify({
-        msg: "lifecycle_timer_already_processed",
-        scheduleId,
-        status: schedule.status,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_timer_already_processed",
+          scheduleId,
+          status: schedule.status,
+        }),
+      );
       return;
     }
 
@@ -371,41 +393,49 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
       .execute();
 
     // Parse policy snapshot
-    const policyRules = JSON.parse(schedule.policy_snapshot as any) as LifecycleTimerRules;
+    const policyRules = JSON.parse(
+      schedule.policy_snapshot as any,
+    ) as LifecycleTimerRules;
 
     // Guard check: verify entity still exists
     if (!this.lifecycleManager) {
-      console.error(JSON.stringify({
-        msg: "lifecycle_timer_manager_not_wired",
-        scheduleId,
-      }));
+      console.error(
+        JSON.stringify({
+          msg: "lifecycle_timer_manager_not_wired",
+          scheduleId,
+        }),
+      );
       return;
     }
 
     const instance = await this.lifecycleManager.getInstance(
       schedule.entity_name,
       schedule.entity_id,
-      tenantId
+      tenantId,
     );
 
     if (!instance) {
-      console.log(JSON.stringify({
-        msg: "lifecycle_timer_skipped_instance_not_found",
-        scheduleId,
-        entityName: schedule.entity_name,
-        entityId: schedule.entity_id,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_timer_skipped_instance_not_found",
+          scheduleId,
+          entityName: schedule.entity_name,
+          entityId: schedule.entity_id,
+        }),
+      );
       return;
     }
 
     // Evaluate conditions (if any) - requires entity record
     if (policyRules.conditions) {
       if (!this.genericDataAPI) {
-        console.warn(JSON.stringify({
-          msg: "lifecycle_timer_condition_evaluation_skipped",
-          scheduleId,
-          reason: "generic_data_api_not_available",
-        }));
+        console.warn(
+          JSON.stringify({
+            msg: "lifecycle_timer_condition_evaluation_skipped",
+            scheduleId,
+            reason: "generic_data_api_not_available",
+          }),
+        );
       } else {
         const evalCtx: RequestContext = {
           userId: "system",
@@ -417,28 +447,32 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
         const record = await this.genericDataAPI.get(
           schedule.entity_name,
           schedule.entity_id,
-          evalCtx
+          evalCtx,
         );
         if (!record) {
-          console.warn(JSON.stringify({
-            msg: "lifecycle_timer_condition_entity_not_found",
-            scheduleId,
-            entityName: schedule.entity_name,
-            entityId: schedule.entity_id,
-          }));
+          console.warn(
+            JSON.stringify({
+              msg: "lifecycle_timer_condition_entity_not_found",
+              scheduleId,
+              entityName: schedule.entity_name,
+              entityId: schedule.entity_id,
+            }),
+          );
           return;
         }
         const conditionMet = evaluateConditionGroup(
           policyRules.conditions as ConditionGroup,
-          record as Record<string, unknown>
+          record as Record<string, unknown>,
         );
         if (!conditionMet) {
-          console.log(JSON.stringify({
-            msg: "lifecycle_timer_condition_not_met",
-            scheduleId,
-            entityName: schedule.entity_name,
-            entityId: schedule.entity_id,
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_timer_condition_not_met",
+              scheduleId,
+              entityName: schedule.entity_name,
+              entityId: schedule.entity_id,
+            }),
+          );
           return;
         }
       }
@@ -466,18 +500,20 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
       ctx,
     });
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_timer_executed",
-      scheduleId,
-      entityName: schedule.entity_name,
-      entityId: schedule.entity_id,
-      timerType: schedule.timer_type,
-      operationCode,
-      success: result.success,
-      newState: result.newStateCode,
-      error: result.error,
-      reason: result.reason,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_timer_executed",
+        scheduleId,
+        entityName: schedule.entity_name,
+        entityId: schedule.entity_id,
+        timerType: schedule.timer_type,
+        operationCode,
+        success: result.success,
+        newState: result.newStateCode,
+        error: result.error,
+        reason: result.reason,
+      }),
+    );
   }
 
   // ===== Reminder Processing =====
@@ -492,20 +528,24 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
       .executeTakeFirst();
 
     if (!schedule) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_reminder_schedule_not_found",
-        scheduleId,
-        tenantId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_reminder_schedule_not_found",
+          scheduleId,
+          tenantId,
+        }),
+      );
       return;
     }
 
     if (schedule.status !== "scheduled") {
-      console.log(JSON.stringify({
-        msg: "lifecycle_reminder_already_processed",
-        scheduleId,
-        status: schedule.status,
-      }));
+      console.log(
+        JSON.stringify({
+          msg: "lifecycle_reminder_already_processed",
+          scheduleId,
+          status: schedule.status,
+        }),
+      );
       return;
     }
 
@@ -516,14 +556,16 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
       .where("id", "=", scheduleId)
       .execute();
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_reminder_fired",
-      scheduleId,
-      tenantId,
-      entityName: schedule.entity_name,
-      entityId: schedule.entity_id,
-      timerType: schedule.timer_type,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_reminder_fired",
+        scheduleId,
+        tenantId,
+        entityName: schedule.entity_name,
+        entityId: schedule.entity_id,
+        timerType: schedule.timer_type,
+      }),
+    );
 
     // TODO (P1): Send notification via NotificationService
   }
@@ -532,11 +574,13 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
   async rehydrateTimers(tenantId: string): Promise<number> {
     if (!this.jobQueue) {
-      console.warn(JSON.stringify({
-        msg: "lifecycle_timer_rehydration_skipped",
-        reason: "job_queue_not_available",
-        tenantId,
-      }));
+      console.warn(
+        JSON.stringify({
+          msg: "lifecycle_timer_rehydration_skipped",
+          reason: "job_queue_not_available",
+          tenantId,
+        }),
+      );
       return 0;
     }
 
@@ -554,16 +598,20 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
     for (const timer of timers) {
       try {
-        const policyRules = JSON.parse(timer.policy_snapshot as any) as LifecycleTimerRules;
+        const policyRules = JSON.parse(
+          timer.policy_snapshot as any,
+        ) as LifecycleTimerRules;
         const fireAt = new Date(timer.fire_at);
         const delay = fireAt.getTime() - Date.now();
 
         if (delay <= 0) {
-          console.log(JSON.stringify({
-            msg: "lifecycle_timer_rehydration_skipped_past",
-            scheduleId: timer.id,
-            fireAt: fireAt.toISOString(),
-          }));
+          console.log(
+            JSON.stringify({
+              msg: "lifecycle_timer_rehydration_skipped_past",
+              scheduleId: timer.id,
+              fireAt: fireAt.toISOString(),
+            }),
+          );
           continue;
         }
 
@@ -586,7 +634,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
               rehydrated: true,
             },
           },
-          { delay, attempts: 1 }
+          { delay, attempts: 1 },
         );
 
         // Update job ID
@@ -598,19 +646,23 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
         rehydrated++;
       } catch (error) {
-        console.error(JSON.stringify({
-          msg: "lifecycle_timer_rehydration_failed",
-          scheduleId: timer.id,
-          error: String(error),
-        }));
+        console.error(
+          JSON.stringify({
+            msg: "lifecycle_timer_rehydration_failed",
+            scheduleId: timer.id,
+            error: String(error),
+          }),
+        );
       }
     }
 
-    console.log(JSON.stringify({
-      msg: "lifecycle_timers_rehydrated",
-      tenantId,
-      count: rehydrated,
-    }));
+    console.log(
+      JSON.stringify({
+        msg: "lifecycle_timers_rehydrated",
+        tenantId,
+        count: rehydrated,
+      }),
+    );
 
     return rehydrated;
   }
@@ -620,7 +672,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
   async getActiveTimers(
     entityName: string,
     entityId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTimerSchedule[]> {
     const timers = await this.db
       .selectFrom("wf.lifecycle_timer_schedule")
@@ -659,7 +711,8 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
       const activeCount = Number(activeTimers?.count ?? 0);
 
-      const healthy = staleCount === 0 && !!this.jobQueue && !!this.lifecycleManager;
+      const healthy =
+        staleCount === 0 && !!this.jobQueue && !!this.lifecycleManager;
 
       return {
         healthy,
@@ -686,7 +739,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
   private async getPolicy(
     policyId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<LifecycleTimerPolicy | undefined> {
     const row = await this.db
       .selectFrom("meta.lifecycle_timer_policy")
@@ -712,7 +765,7 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
 
   private calculateFireTime(
     rules: LifecycleTimerRules,
-    triggerData?: Record<string, unknown>
+    triggerData?: Record<string, unknown>,
   ): Date | undefined {
     const now = Date.now();
 
@@ -731,7 +784,8 @@ export class LifecycleTimerServiceImpl implements LifecycleTimerService {
         const fieldValue = resolveFieldValue(rules.delayFromField, triggerData);
         if (!(fieldValue instanceof Date)) {
           // Try parsing as ISO string
-          const parsedDate = typeof fieldValue === "string" ? new Date(fieldValue) : null;
+          const parsedDate =
+            typeof fieldValue === "string" ? new Date(fieldValue) : null;
           if (!parsedDate || isNaN(parsedDate.getTime())) {
             return undefined;
           }

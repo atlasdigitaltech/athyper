@@ -90,6 +90,9 @@ export class AuditRateLimiter {
    * Get the sampling rate for a given event type.
    */
   private getSamplingRate(eventType: string): number {
-    return this.config.samplingOverrides?.[eventType] ?? this.config.defaultSamplingRate;
+    return (
+      this.config.samplingOverrides?.[eventType] ??
+      this.config.defaultSamplingRate
+    );
   }
 }

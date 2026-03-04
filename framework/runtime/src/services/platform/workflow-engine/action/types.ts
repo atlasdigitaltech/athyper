@@ -691,7 +691,7 @@ export interface IActionExecutionService {
     instanceId: string,
     stepInstanceId: string,
     userId: string,
-    action: ApprovalActionType
+    action: ApprovalActionType,
   ): Promise<{ allowed: boolean; reason?: string }>;
 
   /** Get available actions for a user on a step */
@@ -699,7 +699,7 @@ export interface IActionExecutionService {
     tenantId: string,
     instanceId: string,
     stepInstanceId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalActionType[]>;
 }
 
@@ -710,21 +710,21 @@ export interface IStepCompletionService {
   /** Evaluate if step is complete */
   evaluateStepCompletion(
     tenantId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<StepCompletionEvaluation>;
 
   /** Get next steps to activate */
   getNextStepsToActivate(
     tenantId: string,
     instance: ApprovalInstance,
-    completedStep: ApprovalStepInstance
+    completedStep: ApprovalStepInstance,
   ): Promise<StepActivationDecision[]>;
 
   /** Activate a step */
   activateStep(
     tenantId: string,
     instance: ApprovalInstance,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<ApprovalStepInstance>;
 }
 
@@ -735,13 +735,13 @@ export interface ISlaMonitoringService {
   /** Check SLA status for a step */
   checkStepSla(
     tenantId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<StepSlaStatus>;
 
   /** Check SLA for all active steps in an instance */
   checkInstanceSla(
     tenantId: string,
-    instance: ApprovalInstance
+    instance: ApprovalInstance,
   ): Promise<StepSlaStatus[]>;
 
   /** Process SLA breaches (called by scheduler) */
@@ -759,7 +759,7 @@ export interface IEscalationService {
   executeEscalation(
     tenantId: string,
     stepInstance: ApprovalStepInstance,
-    reason: string
+    reason: string,
   ): Promise<EscalationResult>;
 
   /** Get escalation targets for a step */
@@ -767,7 +767,7 @@ export interface IEscalationService {
     tenantId: string,
     instance: ApprovalInstance,
     stepInstance: ApprovalStepInstance,
-    escalationLevel: number
+    escalationLevel: number,
   ): Promise<EscalationTarget[]>;
 }
 
@@ -778,14 +778,14 @@ export interface IWorkflowCompletionService {
   /** Complete workflow with approval */
   completeAsApproved(
     tenantId: string,
-    instance: ApprovalInstance
+    instance: ApprovalInstance,
   ): Promise<WorkflowCompletionResult>;
 
   /** Complete workflow with rejection */
   completeAsRejected(
     tenantId: string,
     instance: ApprovalInstance,
-    reason: string
+    reason: string,
   ): Promise<WorkflowCompletionResult>;
 
   /** Cancel workflow */
@@ -793,14 +793,14 @@ export interface IWorkflowCompletionService {
     tenantId: string,
     instance: ApprovalInstance,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<WorkflowCompletionResult>;
 
   /** Execute post-approval hooks */
   executeHooks(
     tenantId: string,
     instance: ApprovalInstance,
-    outcome: "approved" | "rejected" | "cancelled"
+    outcome: "approved" | "rejected" | "cancelled",
   ): Promise<HookExecutionResult[]>;
 
   /** Fire workflow event */
@@ -824,13 +824,13 @@ export interface IDelegationValidator {
     tenantId: string,
     fromUserId: string,
     toUserId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<{ allowed: boolean; reason?: string }>;
 
   /** Get allowed delegation targets */
   getAllowedDelegationTargets(
     tenantId: string,
     userId: string,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<Array<{ userId: string; displayName?: string }>>;
 }

@@ -42,11 +42,17 @@ export class TriggerIntegrityVerificationHandler {
     body: { startDate: string; endDate: string },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     if (!body.startDate || !body.endDate) {
-      return { status: 400, body: { error: "startDate and endDate are required" } };
+      return {
+        status: 400,
+        body: { error: "startDate and endDate are required" },
+      };
     }
 
     const report = await this.deps.integrityService.verifyTenantRange({
@@ -72,7 +78,10 @@ export class TriggerExportVerificationHandler {
     body: { manifestKey: string },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     if (!body.manifestKey) {
@@ -101,7 +110,10 @@ export class ListIntegrityReportsHandler {
     query: { limit?: number },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     const reports = await this.deps.integrityService.listReports(
@@ -125,7 +137,10 @@ export class GetIntegrityReportHandler {
     params: { id: string },
   ): Promise<HandlerResult> {
     if (!context.roles.includes("security_admin")) {
-      return { status: 403, body: { error: "Forbidden: requires security_admin role" } };
+      return {
+        status: 403,
+        body: { error: "Forbidden: requires security_admin role" },
+      };
     }
 
     const report = await this.deps.integrityService.getReport(

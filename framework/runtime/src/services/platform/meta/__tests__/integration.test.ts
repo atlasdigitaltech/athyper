@@ -18,7 +18,6 @@ import type { RequestContext } from "@athyper/core/meta";
 import type { Redis } from "ioredis";
 import type { Kysely } from "kysely";
 
-
 // Mock database client with proper chaining support
 const createMockDb = (): Kysely<DB> => {
   const mockData = {
@@ -28,28 +27,61 @@ const createMockDb = (): Kysely<DB> => {
   };
 
   // Helper to filter data based on where conditions
-  const applyWhereFilters = (data: any[], conditions: Array<[string, string, any]>) => {
+  const applyWhereFilters = (
+    data: any[],
+    conditions: Array<[string, string, any]>,
+  ) => {
     return data.filter((record) => {
       return conditions.every(([column, operator, value]) => {
-        if (operator === "=") {
-          return record[column] === value;
-        } else if (operator === "!=") {
-          return record[column] !== value;
-        }
+        if (operator === "=") return record[column] === value;
+        if (operator === "!=") return record[column] !== value;
+        if (operator === "in")
+          return Array.isArray(value)
+            ? value.includes(record[column])
+            : false;
+        if (operator === ">=") return record[column] >= value;
+        if (operator === "<=") return record[column] <= value;
+        if (operator === ">") return record[column] > value;
+        if (operator === "<") return record[column] < value;
         return true;
       });
     });
   };
 
   // Create chainable query builder
-  const createSelectQuery = (table: string, columns: string[] | "all") => {
+  const createSelectQuery = (table: string, initialColumns: string[] | "all") => {
+    let columns: string[] | "all" = initialColumns;
     const whereConditions: Array<[string, string, any]> = [];
     let orderByColumn: string | undefined;
     let orderByDirection: "asc" | "desc" = "asc";
     let limitValue: number | undefined;
     let offsetValue: number | undefined;
+    let hasFunctionSelect = false;
+    let hasGroupBy = false;
 
     const queryBuilder: any = {
+      // Support chained .select().select() calls
+      select: (cols: any) => {
+        if (typeof cols === "function") {
+          hasFunctionSelect = true;
+        } else {
+          const newCols = Array.isArray(cols) ? cols : [cols];
+          if (columns === "all") {
+            columns = newCols;
+          } else {
+            columns = [...columns, ...newCols];
+          }
+        }
+        return queryBuilder;
+      },
+      selectAll: () => {
+        columns = "all";
+        return queryBuilder;
+      },
+      groupBy: () => {
+        hasGroupBy = true;
+        return queryBuilder;
+      },
       where: (col: string, op: string, val: any) => {
         whereConditions.push([col, op, val]);
         return queryBuilder;
@@ -70,13 +102,14 @@ const createMockDb = (): Kysely<DB> => {
       execute: vi.fn(async () => {
         let results: any[] = [];
 
-        if (table === "meta.meta_entities") {
+        if (table === "meta.entity") {
           results = Array.from(mockData.entities.values());
-        } else if (table === "meta.meta_versions") {
+        } else if (table === "meta.entity_version") {
           results = Array.from(mockData.versions.values());
-        } else if (table === "meta.meta_audit") {
+        } else if (table === "audit.audit_log") {
           results = [...mockData.audit];
         }
+        // Unknown tables (meta.field, meta.relation, etc.) → empty array
 
         // Apply where filters
         if (whereConditions.length > 0) {
@@ -101,20 +134,26 @@ const createMockDb = (): Kysely<DB> => {
           results = results.slice(0, limitValue);
         }
 
+        // Handle function-style select (COUNT queries)
+        if (hasFunctionSelect) {
+          // GROUP BY with empty results → empty array (SQL behavior)
+          if (hasGroupBy && results.length === 0) return [];
+          return [{ count: results.length }];
+        }
+
         // Return selected columns or all
         if (columns === "all") {
           return results;
         } else {
-          // Ensure columns is an array
           const colsArray = Array.isArray(columns) ? columns : [columns];
 
           // Special case: COUNT queries should always return a result
-          const isCountQuery = colsArray.some((col) =>
-            typeof col === "string" && col.toLowerCase().includes("count")
+          const isCountQuery = colsArray.some(
+            (col) =>
+              typeof col === "string" && col.toLowerCase().includes("count"),
           );
 
           if (isCountQuery && results.length === 0) {
-            // Return count: 0 for empty result sets
             return [{ count: 0 }];
           }
 
@@ -157,22 +196,27 @@ const createMockDb = (): Kysely<DB> => {
               updated_at: timestamp,
             };
 
-            if (table === "meta.meta_entities") {
+            if (table === "meta.entity") {
               // Ensure active_version is null (not undefined) and add camelCase mapping
               record.active_version = record.active_version ?? null;
               record.activeVersion = record.active_version; // Map to camelCase for entity format
               mockData.entities.set(data.name, record);
-            } else if (table === "meta.meta_versions") {
-              const key = `${data.entity_name}:${data.version}`;
+            } else if (table === "meta.entity_version") {
+              const key = `${data.entity_id}:${data.label}`;
+              // Look up entity name from entities map
+              const entityEntry = Array.from(
+                mockData.entities.values(),
+              ).find((e) => e.id === data.entity_id);
+              record.entity_name = entityEntry?.name ?? data.entity_id;
               // Add camelCase mappings for version
               record.entityName = record.entity_name;
-              record.isActive = record.is_active ?? false;
+              record.isActive = record.status === "active";
               record.createdAt = new Date(record.created_at);
               record.updatedAt = new Date(record.updated_at);
               record.createdBy = record.created_by;
               record.updatedBy = record.updated_by;
               mockData.versions.set(key, record);
-            } else if (table === "meta.meta_audit") {
+            } else if (table === "audit.audit_log") {
               mockData.audit.push(record);
             }
 
@@ -180,8 +224,11 @@ const createMockDb = (): Kysely<DB> => {
           }),
         })),
         execute: vi.fn(async () => {
-          if (table === "meta.meta_audit") {
-            mockData.audit.push(data);
+          if (table === "audit.audit_log") {
+            mockData.audit.push({
+              ...data,
+              occurred_at: new Date().toISOString(),
+            });
           }
         }),
       })),
@@ -189,7 +236,12 @@ const createMockDb = (): Kysely<DB> => {
     selectFrom: vi.fn((table: string) => ({
       selectAll: vi.fn(() => createSelectQuery(table, "all")),
       select: vi.fn((cols: any) => {
-        // Ensure cols is an array
+        if (typeof cols === "function") {
+          // Function-style select (e.g., eb => eb.fn.countAll().as("count"))
+          const qb = createSelectQuery(table, []);
+          qb.select(cols);
+          return qb;
+        }
         const colsArray = Array.isArray(cols) ? cols : [cols];
         return createSelectQuery(table, colsArray);
       }),
@@ -205,17 +257,18 @@ const createMockDb = (): Kysely<DB> => {
           },
           returningAll: vi.fn(() => ({
             executeTakeFirstOrThrow: vi.fn(async () => {
-              if (table === "meta.meta_versions") {
+              if (table === "meta.entity_version") {
                 const versions = Array.from(mockData.versions.values());
                 const filtered = applyWhereFilters(versions, whereConditions);
 
                 if (filtered.length > 0) {
                   const updated = { ...filtered[0], ...updates };
-                  const key = `${updated.entity_name}:${updated.version}`;
+                  updated.isActive = updated.status === "active";
+                  const key = `${updated.entity_id}:${updated.label}`;
                   mockData.versions.set(key, updated);
                   return updated;
                 }
-              } else if (table === "meta.meta_entities") {
+              } else if (table === "meta.entity") {
                 const entities = Array.from(mockData.entities.values());
                 const filtered = applyWhereFilters(entities, whereConditions);
 
@@ -230,13 +283,56 @@ const createMockDb = (): Kysely<DB> => {
             }),
           })),
           execute: vi.fn(async () => {
-            // Silent execute without returning
+            // Apply updates to matching records
+            if (table === "meta.entity_version") {
+              const versions = Array.from(mockData.versions.values());
+              const filtered = applyWhereFilters(versions, whereConditions);
+              for (const record of filtered) {
+                Object.assign(record, updates);
+                record.isActive = record.status === "active";
+                const key = `${record.entity_id}:${record.label}`;
+                mockData.versions.set(key, record);
+              }
+            } else if (table === "meta.entity") {
+              const entities = Array.from(mockData.entities.values());
+              const filtered = applyWhereFilters(entities, whereConditions);
+              for (const record of filtered) {
+                Object.assign(record, updates);
+                mockData.entities.set(record.name, record);
+              }
+            }
           }),
         };
 
         return updateBuilder;
       }),
     })),
+    deleteFrom: vi.fn((table: string) => {
+      const whereConditions: Array<[string, string, any]> = [];
+      const deleteBuilder: any = {
+        where: (col: string, op: string, val: any) => {
+          whereConditions.push([col, op, val]);
+          return deleteBuilder;
+        },
+        execute: vi.fn(async () => {
+          if (table === "meta.entity") {
+            const entities = Array.from(mockData.entities.values());
+            const filtered = applyWhereFilters(entities, whereConditions);
+            for (const record of filtered) {
+              mockData.entities.delete(record.name);
+            }
+          } else if (table === "meta.entity_version") {
+            const versions = Array.from(mockData.versions.values());
+            const filtered = applyWhereFilters(versions, whereConditions);
+            for (const record of filtered) {
+              const key = `${record.entity_id}:${record.label}`;
+              mockData.versions.delete(key);
+            }
+          }
+        }),
+      };
+      return deleteBuilder;
+    }),
   } as any;
 };
 
@@ -259,7 +355,9 @@ const createMockRedis = (): Redis => {
 };
 
 // Test context
-const createTestContext = (overrides?: Partial<RequestContext>): RequestContext => ({
+const createTestContext = (
+  overrides?: Partial<RequestContext>,
+): RequestContext => ({
   userId: "test-user-123",
   tenantId: "test-tenant-456",
   realmId: "test-realm",
@@ -269,26 +367,83 @@ const createTestContext = (overrides?: Partial<RequestContext>): RequestContext 
 
 // Helper to create schema with required system fields
 const createSchemaWithSystemFields = (
-  fields: Array<{ name: string; type: string; required?: boolean; [key: string]: any }>,
-  policies: Array<{ name: string; effect: string; action: string; resource: string; priority?: number; conditions?: any[] }>
+  fields: Array<{
+    name: string;
+    type: string;
+    required?: boolean;
+    [key: string]: any;
+  }>,
+  policies: Array<{
+    name: string;
+    effect: string;
+    action: string;
+    resource: string;
+    priority?: number;
+    conditions?: any[];
+  }>,
 ) => {
   // System fields required by the META engine
   const systemFields = [
     { name: "id", type: "uuid" as const, required: true, isSystem: true },
-    { name: "tenant_id", type: "uuid" as const, required: true, isSystem: true },
-    { name: "realm_id", type: "string" as const, required: true, isSystem: true },
-    { name: "created_at", type: "datetime" as const, required: true, isSystem: true },
-    { name: "created_by", type: "string" as const, required: true, isSystem: true },
-    { name: "updated_at", type: "datetime" as const, required: true, isSystem: true },
-    { name: "updated_by", type: "string" as const, required: true, isSystem: true },
-    { name: "deleted_at", type: "datetime" as const, required: false, isSystem: true },
-    { name: "deleted_by", type: "string" as const, required: false, isSystem: true },
-    { name: "version", type: "number" as const, required: true, isSystem: true },
+    {
+      name: "tenant_id",
+      type: "uuid" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "realm_id",
+      type: "string" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "created_at",
+      type: "datetime" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "created_by",
+      type: "string" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "updated_at",
+      type: "datetime" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "updated_by",
+      type: "string" as const,
+      required: true,
+      isSystem: true,
+    },
+    {
+      name: "deleted_at",
+      type: "datetime" as const,
+      required: false,
+      isSystem: true,
+    },
+    {
+      name: "deleted_by",
+      type: "string" as const,
+      required: false,
+      isSystem: true,
+    },
+    {
+      name: "version",
+      type: "number" as const,
+      required: true,
+      isSystem: true,
+    },
   ];
 
   // Filter out any user-defined fields that conflict with system fields
-  const systemFieldNames = new Set(systemFields.map(f => f.name));
-  const userFields = fields.filter(f => !systemFieldNames.has(f.name));
+  const systemFieldNames = new Set(systemFields.map((f) => f.name));
+  const userFields = fields.filter((f) => !systemFieldNames.has(f.name));
 
   return {
     fields: [...systemFields, ...userFields],
@@ -326,7 +481,7 @@ describe("META Engine Integration Tests", () => {
       const entity = await registry.createEntity(
         "Product",
         "Product catalog",
-        ctx
+        ctx,
       );
 
       expect(entity).toBeDefined();
@@ -348,14 +503,14 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Product",
           },
-        ]
+        ],
       );
 
       const version = await registry.createVersion(
         "Product",
         "v1",
         schema,
-        ctx
+        ctx,
       );
 
       expect(version).toBeDefined();
@@ -408,7 +563,7 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Order",
           },
-        ]
+        ],
       );
 
       const result = await metaStore.createEntityWithVersion(
@@ -416,7 +571,7 @@ describe("META Engine Integration Tests", () => {
         "Order management",
         "v1",
         schema,
-        ctx
+        ctx,
       );
 
       expect(result.entity).toBeDefined();
@@ -434,9 +589,7 @@ describe("META Engine Integration Tests", () => {
       const { metaStore } = services;
 
       const schema = createSchemaWithSystemFields(
-        [
-          { name: "content", type: "string" as const, required: true },
-        ],
+        [{ name: "content", type: "string" as const, required: true }],
         [
           {
             name: "admin_all",
@@ -466,7 +619,7 @@ describe("META Engine Integration Tests", () => {
             priority: 75,
             // Deny delete for all users (no conditions = applies to everyone)
           },
-        ]
+        ],
       );
 
       await metaStore.createEntityWithVersion(
@@ -474,7 +627,7 @@ describe("META Engine Integration Tests", () => {
         "Document management",
         "v1",
         schema,
-        ctx
+        ctx,
       );
     });
 
@@ -516,7 +669,7 @@ describe("META Engine Integration Tests", () => {
       const userCtx = createTestContext({ roles: ["user"] });
 
       await expect(
-        policyGate.enforce("delete", "Document", userCtx)
+        policyGate.enforce("delete", "Document", userCtx),
       ).rejects.toThrow("Access denied");
     });
 
@@ -525,7 +678,7 @@ describe("META Engine Integration Tests", () => {
       const adminCtx = createTestContext({ roles: ["admin"] });
 
       await expect(
-        policyGate.enforce("read", "Document", adminCtx)
+        policyGate.enforce("read", "Document", adminCtx),
       ).resolves.not.toThrow();
     });
   });
@@ -588,7 +741,7 @@ describe("META Engine Integration Tests", () => {
               },
             ],
           },
-        ]
+        ],
       );
 
       await metaStore.createEntityWithVersion(
@@ -596,7 +749,7 @@ describe("META Engine Integration Tests", () => {
         "Secure document with role-based policies",
         "v1",
         schema,
-        ctx
+        ctx,
       );
     });
 
@@ -645,7 +798,7 @@ describe("META Engine Integration Tests", () => {
         "read",
         "SecureDoc",
         userCtx,
-        publishedDoc
+        publishedDoc,
       );
 
       // Draft document - should deny
@@ -654,7 +807,7 @@ describe("META Engine Integration Tests", () => {
         "read",
         "SecureDoc",
         userCtx,
-        draftDoc
+        draftDoc,
       );
 
       expect(canReadPublished).toBe(true);
@@ -673,7 +826,7 @@ describe("META Engine Integration Tests", () => {
         "read",
         "SecureDoc",
         userCtx,
-        publishedDoc
+        publishedDoc,
       );
 
       expect(canRead).toBe(true);
@@ -686,7 +839,7 @@ describe("META Engine Integration Tests", () => {
         "read",
         "SecureDoc",
         userCtx,
-        draftDoc
+        draftDoc,
       );
 
       expect(canReadDraft).toBe(false);
@@ -711,7 +864,7 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Product",
           },
-        ]
+        ],
       );
 
       await metaStore.createEntityWithVersion(
@@ -719,7 +872,7 @@ describe("META Engine Integration Tests", () => {
         "Product catalog",
         "v1",
         schema,
-        ctx
+        ctx,
       );
     });
 
@@ -769,9 +922,7 @@ describe("META Engine Integration Tests", () => {
       const { metaStore } = services;
 
       const schema = createSchemaWithSystemFields(
-        [
-          { name: "content", type: "string" as const, required: true },
-        ],
+        [{ name: "content", type: "string" as const, required: true }],
         [
           {
             name: "doc_read",
@@ -779,7 +930,7 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Document",
           },
-        ]
+        ],
       );
 
       await metaStore.createEntityWithVersion(
@@ -787,7 +938,7 @@ describe("META Engine Integration Tests", () => {
         "Document management",
         "v1",
         schema,
-        ctx
+        ctx,
       );
     });
 
@@ -870,7 +1021,7 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Product",
           },
-        ]
+        ],
       );
 
       await metaStore.createEntityWithVersion(
@@ -878,7 +1029,7 @@ describe("META Engine Integration Tests", () => {
         "Product catalog",
         "v1",
         schema,
-        ctx
+        ctx,
       );
     });
 
@@ -893,7 +1044,7 @@ describe("META Engine Integration Tests", () => {
       expect(setexSpy).toHaveBeenCalledWith(
         "meta:compiled:Product:v1",
         3600,
-        expect.any(String)
+        expect.any(String),
       );
 
       // Second compilation should hit cache
@@ -934,10 +1085,7 @@ describe("META Engine Integration Tests", () => {
       await registry.createEntity("Entity1", "First", ctx);
       await registry.createEntity("Entity2", "Second", ctx);
 
-      const schema = createSchemaWithSystemFields(
-        [],
-        []
-      );
+      const schema = createSchemaWithSystemFields([], []);
 
       await registry.createVersion("Entity1", "v1", schema, ctx);
       await registry.createVersion("Entity2", "v1", schema, ctx);
@@ -1004,9 +1152,7 @@ describe("META Engine Integration Tests", () => {
       const { compiler } = services;
 
       const schema = createSchemaWithSystemFields(
-        [
-          { name: "validField", type: "string" as const, required: true },
-        ],
+        [{ name: "validField", type: "string" as const, required: true }],
         [
           {
             name: "valid_policy",
@@ -1014,7 +1160,7 @@ describe("META Engine Integration Tests", () => {
             action: "read" as const,
             resource: "Test",
           },
-        ]
+        ],
       );
 
       const result = await compiler.validate(schema);
@@ -1040,10 +1186,8 @@ describe("META Engine Integration Tests", () => {
       const { compiler } = services;
 
       const schema = createSchemaWithSystemFields(
-        [
-          { name: "badField", type: "invalid_type" as any, required: true },
-        ],
-        []
+        [{ name: "badField", type: "invalid_type" as any, required: true }],
+        [],
       );
 
       const result = await compiler.validate(schema);
@@ -1051,7 +1195,7 @@ describe("META Engine Integration Tests", () => {
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
       expect(result.errors?.some((e) => e.code === "INVALID_FIELD_TYPE")).toBe(
-        true
+        true,
       );
     });
 
@@ -1059,10 +1203,8 @@ describe("META Engine Integration Tests", () => {
       const { compiler } = services;
 
       const schema = createSchemaWithSystemFields(
-        [
-          { name: "refField", type: "reference" as const, required: true },
-        ],
-        []
+        [{ name: "refField", type: "reference" as const, required: true }],
+        [],
       );
 
       const result = await compiler.validate(schema);
@@ -1070,7 +1212,7 @@ describe("META Engine Integration Tests", () => {
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
       expect(
-        result.errors?.some((e) => e.code === "MISSING_REFERENCE_TO")
+        result.errors?.some((e) => e.code === "MISSING_REFERENCE_TO"),
       ).toBe(true);
     });
 
@@ -1079,16 +1221,16 @@ describe("META Engine Integration Tests", () => {
 
       const schema = createSchemaWithSystemFields(
         [{ name: "enumField", type: "enum" as const, required: true }],
-        []
+        [],
       );
 
       const result = await compiler.validate(schema);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(
-        result.errors?.some((e) => e.code === "MISSING_ENUM_VALUES")
-      ).toBe(true);
+      expect(result.errors?.some((e) => e.code === "MISSING_ENUM_VALUES")).toBe(
+        true,
+      );
     });
   });
 });

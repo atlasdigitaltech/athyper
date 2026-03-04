@@ -40,15 +40,27 @@ function createMockDb() {
   };
 }
 
-function makeEvent(overrides: Partial<Omit<AuditEvent, "id">> = {}): Omit<AuditEvent, "id"> {
+function makeEvent(
+  overrides: Partial<Omit<AuditEvent, "id">> = {},
+): Omit<AuditEvent, "id"> {
   return {
     tenantId: "t-1",
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
     stepInstanceId: "step-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User", isAdmin: false },
     action: "approve",
     timestamp: new Date("2025-06-15T10:00:00Z"),
@@ -81,7 +93,11 @@ describe("WorkflowAuditRepository", () => {
         }),
       };
 
-      const repo = new WorkflowAuditRepository(db, undefined, mockRedaction as any);
+      const repo = new WorkflowAuditRepository(
+        db,
+        undefined,
+        mockRedaction as any,
+      );
       await repo.recordEvent("t-1", makeEvent());
 
       expect(mockRedaction.redact).toHaveBeenCalledTimes(1);
@@ -100,7 +116,10 @@ describe("WorkflowAuditRepository", () => {
       await repo.recordEvent("t-1", makeEvent());
 
       expect(mockHashChain.computeHash).toHaveBeenCalledTimes(1);
-      expect(mockHashChain.computeHash).toHaveBeenCalledWith("t-1", expect.any(Object));
+      expect(mockHashChain.computeHash).toHaveBeenCalledWith(
+        "t-1",
+        expect.any(Object),
+      );
     });
 
     it("should extract denormalized columns from actor and workflow", async () => {
@@ -108,8 +127,17 @@ describe("WorkflowAuditRepository", () => {
       const repo = new WorkflowAuditRepository(db);
 
       const event = makeEvent({
-        actor: { userId: "admin-1", displayName: "Admin", isAdmin: true } as any,
-        workflow: { templateId: "t1", templateCode: "PO-APPROVAL", templateVersion: 3, templateName: "PO Approval" },
+        actor: {
+          userId: "admin-1",
+          displayName: "Admin",
+          isAdmin: true,
+        } as any,
+        workflow: {
+          templateId: "t1",
+          templateCode: "PO-APPROVAL",
+          templateVersion: 3,
+          templateName: "PO Approval",
+        },
       });
 
       await repo.recordEvent("t-1", event);
@@ -132,7 +160,12 @@ describe("WorkflowAuditRepository", () => {
         instance_id: "inst-1",
         step_instance_id: null,
         entity: JSON.stringify({ type: "PO", id: "po-1" }),
-        workflow: JSON.stringify({ templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" }),
+        workflow: JSON.stringify({
+          templateId: "t1",
+          templateCode: "WF1",
+          templateVersion: 1,
+          templateName: "Test",
+        }),
         actor: JSON.stringify({ userId: "u-1" }),
         action: "approve",
         previous_state: null,
@@ -170,7 +203,12 @@ describe("WorkflowAuditRepository", () => {
         instance_id: "inst-1",
         step_instance_id: "step-1",
         entity: { type: "PO", id: "po-1" }, // Already parsed (pg driver behavior)
-        workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+        workflow: {
+          templateId: "t1",
+          templateCode: "WF1",
+          templateVersion: 1,
+          templateName: "Test",
+        },
         actor: { userId: "u-1" },
         action: null,
         previous_state: null,

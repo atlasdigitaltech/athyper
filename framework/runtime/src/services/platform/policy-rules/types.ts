@@ -374,11 +374,14 @@ export interface IPolicyGate {
     tenantId: string,
     principalId: string,
     operationCode: OperationCode,
-    resource: ResourceDescriptor
+    resource: ResourceDescriptor,
   ): Promise<boolean>;
 
   /**
    * Get subject snapshot for principal
    */
-  getSubjectSnapshot(principalId: string, tenantId: string): Promise<SubjectSnapshot>;
+  getSubjectSnapshot(
+    principalId: string,
+    tenantId: string,
+  ): Promise<SubjectSnapshot>;
 }

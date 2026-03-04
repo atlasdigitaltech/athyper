@@ -47,85 +47,239 @@ describe("resolveFieldValue", () => {
 // ============================================================================
 
 describe("evaluateCondition", () => {
-  const ctx: EvaluationContext = { amount: 500, name: "test", status: "active" };
+  const ctx: EvaluationContext = {
+    amount: 500,
+    name: "test",
+    status: "active",
+  };
 
   it("eq", () => {
-    expect(evaluateCondition({ field: "amount", operator: "eq", value: 500 }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "eq", value: 100 }, ctx)).toBe(false);
+    expect(
+      evaluateCondition({ field: "amount", operator: "eq", value: 500 }, ctx),
+    ).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "eq", value: 100 }, ctx),
+    ).toBe(false);
   });
 
   it("ne", () => {
-    expect(evaluateCondition({ field: "amount", operator: "ne", value: 100 }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "ne", value: 500 }, ctx)).toBe(false);
+    expect(
+      evaluateCondition({ field: "amount", operator: "ne", value: 100 }, ctx),
+    ).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "ne", value: 500 }, ctx),
+    ).toBe(false);
   });
 
   it("gt / gte / lt / lte", () => {
-    expect(evaluateCondition({ field: "amount", operator: "gt", value: 400 }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "gt", value: 500 }, ctx)).toBe(false);
-    expect(evaluateCondition({ field: "amount", operator: "gte", value: 500 }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "lt", value: 600 }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "lte", value: 500 }, ctx)).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "gt", value: 400 }, ctx),
+    ).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "gt", value: 500 }, ctx),
+    ).toBe(false);
+    expect(
+      evaluateCondition({ field: "amount", operator: "gte", value: 500 }, ctx),
+    ).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "lt", value: 600 }, ctx),
+    ).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "lte", value: 500 }, ctx),
+    ).toBe(true);
   });
 
   it("in / not_in", () => {
-    expect(evaluateCondition({ field: "status", operator: "in", value: ["active", "pending"] }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "status", operator: "in", value: ["closed"] }, ctx)).toBe(false);
-    expect(evaluateCondition({ field: "status", operator: "not_in", value: ["closed"] }, ctx)).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "status", operator: "in", value: ["active", "pending"] },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "status", operator: "in", value: ["closed"] },
+        ctx,
+      ),
+    ).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "status", operator: "not_in", value: ["closed"] },
+        ctx,
+      ),
+    ).toBe(true);
   });
 
   it("contains / not_contains / starts_with / ends_with", () => {
-    expect(evaluateCondition({ field: "name", operator: "contains", value: "es" }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "name", operator: "not_contains", value: "xyz" }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "name", operator: "starts_with", value: "te" }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "name", operator: "ends_with", value: "st" }, ctx)).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "contains", value: "es" },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "not_contains", value: "xyz" },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "starts_with", value: "te" },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "ends_with", value: "st" },
+        ctx,
+      ),
+    ).toBe(true);
   });
 
   it("matches (regex)", () => {
-    expect(evaluateCondition({ field: "name", operator: "matches", value: "^te.+$" }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "name", operator: "matches", value: "^xyz$" }, ctx)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "matches", value: "^te.+$" },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "matches", value: "^xyz$" },
+        ctx,
+      ),
+    ).toBe(false);
   });
 
   it("matches returns false for invalid regex", () => {
-    expect(evaluateCondition({ field: "name", operator: "matches", value: "[invalid" }, ctx)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "matches", value: "[invalid" },
+        ctx,
+      ),
+    ).toBe(false);
   });
 
   it("exists / not_exists", () => {
-    expect(evaluateCondition({ field: "name", operator: "exists", value: null }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "missing", operator: "exists", value: null }, ctx)).toBe(false);
-    expect(evaluateCondition({ field: "missing", operator: "not_exists", value: null }, ctx)).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "name", operator: "exists", value: null },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "missing", operator: "exists", value: null },
+        ctx,
+      ),
+    ).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "missing", operator: "not_exists", value: null },
+        ctx,
+      ),
+    ).toBe(true);
   });
 
   it("between", () => {
-    expect(evaluateCondition({ field: "amount", operator: "between", value: [400, 600] }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "amount", operator: "between", value: [501, 600] }, ctx)).toBe(false);
-    expect(evaluateCondition({ field: "amount", operator: "between", value: "not_array" }, ctx)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "amount", operator: "between", value: [400, 600] },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "amount", operator: "between", value: [501, 600] },
+        ctx,
+      ),
+    ).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "amount", operator: "between", value: "not_array" },
+        ctx,
+      ),
+    ).toBe(false);
   });
 
   it("empty / not_empty", () => {
     const ctxEmpty: EvaluationContext = { val: "", arr: [], nul: null };
-    expect(evaluateCondition({ field: "val", operator: "empty", value: null }, ctxEmpty)).toBe(true);
-    expect(evaluateCondition({ field: "arr", operator: "empty", value: null }, ctxEmpty)).toBe(true);
-    expect(evaluateCondition({ field: "nul", operator: "empty", value: null }, ctxEmpty)).toBe(true);
-    expect(evaluateCondition({ field: "missing", operator: "empty", value: null }, ctxEmpty)).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "val", operator: "empty", value: null },
+        ctxEmpty,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "arr", operator: "empty", value: null },
+        ctxEmpty,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "nul", operator: "empty", value: null },
+        ctxEmpty,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "missing", operator: "empty", value: null },
+        ctxEmpty,
+      ),
+    ).toBe(true);
 
-    expect(evaluateCondition({ field: "amount", operator: "not_empty", value: null }, ctx)).toBe(true);
-    expect(evaluateCondition({ field: "val", operator: "not_empty", value: null }, ctxEmpty)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "amount", operator: "not_empty", value: null },
+        ctx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "val", operator: "not_empty", value: null },
+        ctxEmpty,
+      ),
+    ).toBe(false);
   });
 
   it("date_before / date_after", () => {
     const dateCtx: EvaluationContext = { created: "2024-06-15" };
-    expect(evaluateCondition({ field: "created", operator: "date_before", value: "2024-12-31" }, dateCtx)).toBe(true);
-    expect(evaluateCondition({ field: "created", operator: "date_after", value: "2024-01-01" }, dateCtx)).toBe(true);
-    expect(evaluateCondition({ field: "created", operator: "date_before", value: "2024-01-01" }, dateCtx)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "created", operator: "date_before", value: "2024-12-31" },
+        dateCtx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "created", operator: "date_after", value: "2024-01-01" },
+        dateCtx,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateCondition(
+        { field: "created", operator: "date_before", value: "2024-01-01" },
+        dateCtx,
+      ),
+    ).toBe(false);
   });
 
   it("returns false for unknown operator", () => {
-    expect(evaluateCondition({ field: "amount", operator: "unknown" as any, value: 1 }, ctx)).toBe(false);
+    expect(
+      evaluateCondition(
+        { field: "amount", operator: "unknown" as any, value: 1 },
+        ctx,
+      ),
+    ).toBe(false);
   });
 
   it("handles string-to-number coercion for gt/lt", () => {
     const strCtx: EvaluationContext = { amount: "42" };
-    expect(evaluateCondition({ field: "amount", operator: "gt", value: 40 }, strCtx)).toBe(true);
+    expect(
+      evaluateCondition({ field: "amount", operator: "gt", value: 40 }, strCtx),
+    ).toBe(true);
   });
 });
 

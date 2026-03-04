@@ -26,7 +26,6 @@ import type {
 } from "@athyper/core/meta";
 import type { Kysely } from "kysely";
 
-
 // RequestContext type (inline for now - should be imported from contracts)
 type RequestContext = {
   userId: string;
@@ -199,12 +198,16 @@ export class PublishService {
         applyDdl,
         notifyRuntime,
         userId: ctx.userId,
-      })
+      }),
     );
 
     try {
       // Gate 1: Check if version is already published (immutable check)
-      const existingArtifact = await this.getPublishArtifact(entityName, version, ctx.tenantId);
+      const existingArtifact = await this.getPublishArtifact(
+        entityName,
+        version,
+        ctx.tenantId,
+      );
       if (existingArtifact) {
         const errors = [
           `Version ${version} is already published and cannot be modified. Create a new version instead.`,
@@ -215,7 +218,7 @@ export class PublishService {
             entityName,
             version,
             artifactId: existingArtifact.id,
-          })
+          }),
         );
         return {
           success: false,
@@ -230,19 +233,21 @@ export class PublishService {
           msg: "publish_gate_validate",
           entityName,
           version,
-        })
+        }),
       );
 
       const validation = await this.compiler.validate(schema);
       if (!validation.valid) {
-        const errors = validation.errors?.map((e) => e.message ?? String(e)) ?? ["Validation failed"];
+        const errors = validation.errors?.map(
+          (e) => e.message ?? String(e),
+        ) ?? ["Validation failed"];
         console.error(
           JSON.stringify({
             msg: "publish_validation_failed",
             entityName,
             version,
             errors,
-          })
+          }),
         );
         return {
           success: false,
@@ -264,7 +269,7 @@ export class PublishService {
           msg: "publish_gate_compile",
           entityName,
           version,
-        })
+        }),
       );
 
       // For now, we'll use a temporary approach to compile
@@ -277,7 +282,7 @@ export class PublishService {
           msg: "publish_gate_diagnostics",
           entityName,
           version,
-        })
+        }),
       );
 
       const diagnostics = this.runDiagnostics(compiledModel, schema);
@@ -289,7 +294,7 @@ export class PublishService {
             entityName,
             version,
             errors: diagnostics.errors,
-          })
+          }),
         );
         return {
           success: false,
@@ -308,7 +313,7 @@ export class PublishService {
             msg: "publish_gate_ddl_plan",
             entityName,
             version,
-          })
+          }),
         );
 
         const ddlResult = this.ddlGenerator.generateDdl(compiledModel, {
@@ -328,7 +333,7 @@ export class PublishService {
             msg: "publish_gate_apply_ddl",
             entityName,
             version,
-          })
+          }),
         );
 
         const plan = [
@@ -350,7 +355,7 @@ export class PublishService {
               entityName,
               version,
               errors: migrationResult.errors,
-            })
+            }),
           );
           return {
             success: false,
@@ -365,7 +370,7 @@ export class PublishService {
             entityName,
             version,
             reason: "MigrationRunnerService not available",
-          })
+          }),
         );
       }
 
@@ -375,7 +380,7 @@ export class PublishService {
           msg: "publish_gate_persist",
           entityName,
           version,
-        })
+        }),
       );
 
       const artifact = await this.persistPublishArtifact({
@@ -403,7 +408,7 @@ export class PublishService {
           compiledHash: artifact.compiledHash,
           ddlApplied: applyDdl && !!migrationPlanSql,
           runtimeNotified: notifyRuntime && !!this.notifier,
-        })
+        }),
       );
 
       return {
@@ -419,7 +424,7 @@ export class PublishService {
           entityName,
           version,
           error: String(error),
-        })
+        }),
       );
 
       return {
@@ -442,7 +447,7 @@ export class PublishService {
    */
   private runDiagnostics(
     compiledModel: CompiledModel,
-    _schema: EntitySchema
+    _schema: EntitySchema,
   ): DiagnosticsSummary {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -457,7 +462,7 @@ export class PublishService {
 
     // Count relationships
     const relationshipCount = compiledModel.fields.filter(
-      (f) => f.type === "reference"
+      (f) => f.type === "reference",
     ).length;
 
     // Lifecycle transitions (if supported)
@@ -465,7 +470,9 @@ export class PublishService {
 
     // Warnings
     if (relationshipCount > 10) {
-      warnings.push("Entity has more than 10 relationships, consider splitting");
+      warnings.push(
+        "Entity has more than 10 relationships, consider splitting",
+      );
     }
 
     if (compiledModel.fields.length > 50) {
@@ -494,7 +501,10 @@ export class PublishService {
    * - deleted_at/by
    * - version (int)
    */
-  private validateSystemFields(compiledModel: CompiledModel, errors: string[]): boolean {
+  private validateSystemFields(
+    compiledModel: CompiledModel,
+    errors: string[],
+  ): boolean {
     const requiredFields = [
       { name: "id", type: "uuid" },
       { name: "tenant_id", type: "uuid" },
@@ -515,17 +525,19 @@ export class PublishService {
 
       if (!field) {
         errors.push(
-          `Missing required system field: ${required.name} (${Array.isArray(required.type) ? required.type.join(" or ") : required.type})`
+          `Missing required system field: ${required.name} (${Array.isArray(required.type) ? required.type.join(" or ") : required.type})`,
         );
         allPresent = false;
         continue;
       }
 
       // Type check
-      const expectedTypes = Array.isArray(required.type) ? required.type : [required.type];
+      const expectedTypes = Array.isArray(required.type)
+        ? required.type
+        : [required.type];
       if (!expectedTypes.includes(field.type as string)) {
         errors.push(
-          `System field ${required.name} has wrong type: expected ${expectedTypes.join(" or ")}, got ${field.type}`
+          `System field ${required.name} has wrong type: expected ${expectedTypes.join(" or ")}, got ${field.type}`,
         );
         allPresent = false;
       }
@@ -562,7 +574,11 @@ export class PublishService {
     } = params;
 
     // Generate artifact ID
-    const artifactId = this.generateArtifactId(entityName, version, ctx.tenantId);
+    const artifactId = this.generateArtifactId(
+      entityName,
+      version,
+      ctx.tenantId,
+    );
 
     // Hash compiled model
     const compiledHash = this.hashCompiledModel(compiledModel);
@@ -583,7 +599,9 @@ export class PublishService {
 
     // Persist to meta.publish_artifact table
     try {
-      await (this.db as unknown as Kysely<Record<string, Record<string, unknown>>>)
+      await (
+        this.db as unknown as Kysely<Record<string, Record<string, unknown>>>
+      )
         .insertInto("meta.publish_artifact" as never)
         .values({
           id: artifactId,
@@ -606,7 +624,7 @@ export class PublishService {
           entityName,
           version,
           error: String(error),
-        })
+        }),
       );
       // Non-fatal: artifact is still returned in-memory even if DB write fails
     }
@@ -618,7 +636,7 @@ export class PublishService {
         entityName,
         version,
         compiledHash,
-      })
+      }),
     );
 
     return artifact;
@@ -630,16 +648,18 @@ export class PublishService {
   private async getPublishArtifact(
     entityName: string,
     version: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PublishArtifact | undefined> {
     try {
-      const row = await (this.db as unknown as Kysely<Record<string, Record<string, unknown>>>)
+      const row = (await (
+        this.db as unknown as Kysely<Record<string, Record<string, unknown>>>
+      )
         .selectFrom("meta.publish_artifact" as never)
         .selectAll()
         .where("tenant_id" as never, "=", tenantId as never)
         .where("entity_name" as never, "=", entityName as never)
         .where("version" as never, "=", version as never)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+        .executeTakeFirst()) as Record<string, unknown> | undefined;
 
       if (!row) return undefined;
 
@@ -653,7 +673,7 @@ export class PublishService {
           : row.diagnostics_summary) as DiagnosticsSummary,
         appliedOverlaySet: (typeof row.applied_overlay_set === "string"
           ? JSON.parse(row.applied_overlay_set)
-          : row.applied_overlay_set ?? []) as string[],
+          : (row.applied_overlay_set ?? [])) as string[],
         migrationPlanHash: (row.migration_plan_hash as string) ?? undefined,
         migrationPlanSql: (row.migration_plan_sql as string) ?? undefined,
         publishedAt: new Date(row.published_at as string),
@@ -668,7 +688,7 @@ export class PublishService {
           version,
           tenantId,
           error: String(error),
-        })
+        }),
       );
       return undefined;
     }
@@ -677,7 +697,11 @@ export class PublishService {
   /**
    * Generate artifact ID
    */
-  private generateArtifactId(entityName: string, version: string, tenantId: string): string {
+  private generateArtifactId(
+    entityName: string,
+    version: string,
+    tenantId: string,
+  ): string {
     const timestamp = Date.now();
     return `artifact_${tenantId}_${entityName}_${version}_${timestamp}`;
   }
@@ -695,7 +719,7 @@ export class PublishService {
         tableName: model.tableName,
       },
       null,
-      0 // No whitespace for consistent hash
+      0, // No whitespace for consistent hash
     );
 
     return this.hashString(serialized);
@@ -711,8 +735,16 @@ export class PublishService {
   /**
    * Check if version is published (immutable)
    */
-  async isPublished(entityName: string, version: string, tenantId: string): Promise<boolean> {
-    const artifact = await this.getPublishArtifact(entityName, version, tenantId);
+  async isPublished(
+    entityName: string,
+    version: string,
+    tenantId: string,
+  ): Promise<boolean> {
+    const artifact = await this.getPublishArtifact(
+      entityName,
+      version,
+      tenantId,
+    );
     return artifact !== undefined;
   }
 
@@ -721,16 +753,18 @@ export class PublishService {
    */
   async getPublishHistory(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PublishArtifact[]> {
     try {
-      const rows = await (this.db as unknown as Kysely<Record<string, Record<string, unknown>>>)
+      const rows = (await (
+        this.db as unknown as Kysely<Record<string, Record<string, unknown>>>
+      )
         .selectFrom("meta.publish_artifact" as never)
         .selectAll()
         .where("tenant_id" as never, "=", tenantId as never)
         .where("entity_name" as never, "=", entityName as never)
         .orderBy("published_at" as never, "desc")
-        .execute() as Record<string, unknown>[];
+        .execute()) as Record<string, unknown>[];
 
       return rows.map((row) => ({
         id: row.id as string,
@@ -742,7 +776,7 @@ export class PublishService {
           : row.diagnostics_summary) as DiagnosticsSummary,
         appliedOverlaySet: (typeof row.applied_overlay_set === "string"
           ? JSON.parse(row.applied_overlay_set)
-          : row.applied_overlay_set ?? []) as string[],
+          : (row.applied_overlay_set ?? [])) as string[],
         migrationPlanHash: (row.migration_plan_hash as string) ?? undefined,
         migrationPlanSql: (row.migration_plan_sql as string) ?? undefined,
         publishedAt: new Date(row.published_at as string),
@@ -756,7 +790,7 @@ export class PublishService {
           entityName,
           tenantId,
           error: String(error),
-        })
+        }),
       );
       return [];
     }

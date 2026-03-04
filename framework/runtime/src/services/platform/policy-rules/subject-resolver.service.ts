@@ -35,7 +35,7 @@ export class SubjectResolverService {
     private readonly roleBindingService?: RoleBindingService,
     private readonly groupSyncService?: GroupSyncService,
     private readonly ouMembershipService?: OUMembershipService,
-    private readonly entitlementSnapshotService?: EntitlementSnapshotService
+    private readonly entitlementSnapshotService?: EntitlementSnapshotService,
   ) {}
 
   /**
@@ -46,7 +46,7 @@ export class SubjectResolverService {
    */
   async resolveSubject(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<SubjectSnapshot> {
     const cacheKey = `${principalId}:${tenantId}`;
 
@@ -58,7 +58,10 @@ export class SubjectResolverService {
 
     // If entitlement snapshot service is available, use it
     if (this.entitlementSnapshotService) {
-      const snapshot = await this.buildFromEntitlementSnapshot(principalId, tenantId);
+      const snapshot = await this.buildFromEntitlementSnapshot(
+        principalId,
+        tenantId,
+      );
       this.cache.set(cacheKey, snapshot);
       return snapshot;
     }
@@ -74,12 +77,13 @@ export class SubjectResolverService {
    */
   private async buildFromEntitlementSnapshot(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<SubjectSnapshot> {
-    const entitlement = await this.entitlementSnapshotService!.getOrGenerateSnapshot(
-      principalId,
-      tenantId
-    );
+    const entitlement =
+      await this.entitlementSnapshotService!.getOrGenerateSnapshot(
+        principalId,
+        tenantId,
+      );
 
     // Get principal info
     const principal = await this.getPrincipalInfo(principalId);
@@ -112,7 +116,7 @@ export class SubjectResolverService {
    */
   private async buildSnapshot(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<SubjectSnapshot> {
     // Get principal info
     const principal = await this.getPrincipalInfo(principalId);
@@ -122,7 +126,7 @@ export class SubjectResolverService {
     if (this.roleBindingService) {
       const rolesWithBindings = await this.roleBindingService.getPrincipalRoles(
         principalId,
-        tenantId
+        tenantId,
       );
       roles = rolesWithBindings.map((r) => r.code);
     } else {
@@ -133,7 +137,8 @@ export class SubjectResolverService {
     // Get groups
     let groups: string[] = [];
     if (this.groupSyncService) {
-      const groupInfos = await this.groupSyncService.getPrincipalGroups(principalId);
+      const groupInfos =
+        await this.groupSyncService.getPrincipalGroups(principalId);
       groups = groupInfos.map((g) => g.code);
     } else {
       // Fallback: query directly
@@ -186,7 +191,7 @@ export class SubjectResolverService {
    * Get principal info
    */
   private async getPrincipalInfo(
-    principalId: string
+    principalId: string,
   ): Promise<{ principal_type: string } | undefined> {
     const result = await this.db
       .selectFrom("core.principal")
@@ -202,7 +207,7 @@ export class SubjectResolverService {
    */
   private async getRolesDirectly(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<string[]> {
     const now = new Date();
 
@@ -213,7 +218,7 @@ export class SubjectResolverService {
       .where("pr.tenant_id", "=", tenantId)
       .where("pr.principal_id", "=", principalId)
       .where((eb) =>
-        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)])
+        eb.or([eb("pr.expires_at", "is", null), eb("pr.expires_at", ">", now)]),
       )
       .execute();
 
@@ -225,7 +230,7 @@ export class SubjectResolverService {
    */
   private async getGroupsDirectly(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<string[]> {
     const groups = await this.db
       .selectFrom("core.group_member as gm")
@@ -242,7 +247,7 @@ export class SubjectResolverService {
    * Get OU membership directly from database via principal_ou → organizational_unit
    */
   private async getOUMembershipDirectly(
-    principalId: string
+    principalId: string,
   ): Promise<{ id: string; path: string; code: string } | undefined> {
     const result = await this.db
       .selectFrom("core.principal_ou as po")

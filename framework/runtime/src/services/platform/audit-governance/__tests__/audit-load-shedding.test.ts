@@ -19,7 +19,9 @@ import {
 
 // ─── Test Helpers ──────────────────────────────────────────────────
 
-function createService(options?: { cacheTtlMs?: number }): AuditLoadSheddingService {
+function createService(options?: {
+  cacheTtlMs?: number;
+}): AuditLoadSheddingService {
   return createAuditLoadSheddingService(null, options);
 }
 
@@ -33,7 +35,11 @@ describe("AuditLoadSheddingService — Never-Drop Rules", () => {
   });
 
   it("should always accept admin events (force_approve)", async () => {
-    const result = await service.evaluate("t-1", "admin.force_approve", "critical");
+    const result = await service.evaluate(
+      "t-1",
+      "admin.force_approve",
+      "critical",
+    );
     expect(result.accepted).toBe(true);
     expect(result.reason).toBe("never_drop");
   });
@@ -69,7 +75,11 @@ describe("AuditLoadSheddingService — Never-Drop Rules", () => {
   });
 
   it("should always accept critical severity events", async () => {
-    const result = await service.evaluate("t-1", "workflow.created", "critical");
+    const result = await service.evaluate(
+      "t-1",
+      "workflow.created",
+      "critical",
+    );
     expect(result.accepted).toBe(true);
     expect(result.reason).toBe("never_drop");
   });
@@ -77,7 +87,11 @@ describe("AuditLoadSheddingService — Never-Drop Rules", () => {
   it("should accept never-drop events even in emergency mode", async () => {
     service.setEmergencyMode(true);
 
-    const result = await service.evaluate("t-1", "admin.force_approve", "critical");
+    const result = await service.evaluate(
+      "t-1",
+      "admin.force_approve",
+      "critical",
+    );
     expect(result.accepted).toBe(true);
     expect(result.reason).toBe("never_drop");
   });

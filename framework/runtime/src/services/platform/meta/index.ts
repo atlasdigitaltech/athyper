@@ -24,4 +24,9 @@ export * from "./data/index.js";
 export * from "./schema/index.js";
 
 // Factory function for service creation
-export { createMetaServices, registerMetaServices, type MetaServicesConfig, type MetaServices } from "./factory.js";
+export {
+  createMetaServices,
+  registerMetaServices,
+  type MetaServicesConfig,
+  type MetaServices,
+} from "./factory.js";

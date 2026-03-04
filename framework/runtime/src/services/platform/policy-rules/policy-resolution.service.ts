@@ -65,7 +65,7 @@ export class PolicyResolutionService {
    */
   async resolvePolicies(
     tenantId: string,
-    resource: ResourceDescriptor
+    resource: ResourceDescriptor,
   ): Promise<ResolvedPolicy[]> {
     const candidates: ResolvedPolicy[] = [];
 
@@ -74,7 +74,7 @@ export class PolicyResolutionService {
       const policies = await this.getPoliciesForScope(
         tenantId,
         "entity_version",
-        resource.entityVersionId
+        resource.entityVersionId,
       );
       candidates.push(
         ...policies.map((p) => ({
@@ -82,7 +82,7 @@ export class PolicyResolutionService {
           activeVersionId: p.version.id,
           scopeType: p.policy.scopeType,
           priority: 1,
-        }))
+        })),
       );
     }
 
@@ -91,7 +91,7 @@ export class PolicyResolutionService {
       const policies = await this.getPoliciesForScope(
         tenantId,
         "entity",
-        resource.entityCode
+        resource.entityCode,
       );
       candidates.push(
         ...policies.map((p) => ({
@@ -99,7 +99,7 @@ export class PolicyResolutionService {
           activeVersionId: p.version.id,
           scopeType: p.policy.scopeType,
           priority: 2,
-        }))
+        })),
       );
     }
 
@@ -108,7 +108,7 @@ export class PolicyResolutionService {
       const policies = await this.getPoliciesForScope(
         tenantId,
         "module",
-        resource.moduleCode
+        resource.moduleCode,
       );
       candidates.push(
         ...policies.map((p) => ({
@@ -116,7 +116,7 @@ export class PolicyResolutionService {
           activeVersionId: p.version.id,
           scopeType: p.policy.scopeType,
           priority: 3,
-        }))
+        })),
       );
     }
 
@@ -124,7 +124,7 @@ export class PolicyResolutionService {
     const globalPolicies = await this.getPoliciesForScope(
       tenantId,
       "global",
-      null
+      null,
     );
     candidates.push(
       ...globalPolicies.map((p) => ({
@@ -132,7 +132,7 @@ export class PolicyResolutionService {
         activeVersionId: p.version.id,
         scopeType: p.policy.scopeType,
         priority: 4,
-      }))
+      })),
     );
 
     // Sort by priority (most specific first), then by policy name
@@ -152,7 +152,7 @@ export class PolicyResolutionService {
   private async getPoliciesForScope(
     tenantId: string,
     scopeType: ScopeType,
-    scopeKey: string | null
+    scopeKey: string | null,
   ): Promise<Array<{ policy: PolicyInfo; version: PolicyVersionInfo }>> {
     // Build query for policies with published versions
     let query = this.db
@@ -160,7 +160,7 @@ export class PolicyResolutionService {
       .innerJoin(
         "meta.permission_policy_version as v",
         "v.permission_policy_id",
-        "p.id"
+        "p.id",
       )
       .select([
         "p.id as policy_id",
@@ -213,11 +213,17 @@ export class PolicyResolutionService {
    */
   async getActiveVersion(
     tenantId: string,
-    policyId: string
+    policyId: string,
   ): Promise<PolicyVersionInfo | undefined> {
     const result = await this.db
       .selectFrom("meta.permission_policy_version")
-      .select(["id", "permission_policy_id", "version_no", "status", "published_at"])
+      .select([
+        "id",
+        "permission_policy_id",
+        "version_no",
+        "status",
+        "published_at",
+      ])
       .where("tenant_id", "=", tenantId)
       .where("permission_policy_id", "=", policyId)
       .where("status", "=", "published")
@@ -242,7 +248,14 @@ export class PolicyResolutionService {
   async getPolicy(policyId: string): Promise<PolicyInfo | undefined> {
     const result = await this.db
       .selectFrom("meta.permission_policy")
-      .select(["id", "name", "description", "scope_type", "scope_key", "is_active"])
+      .select([
+        "id",
+        "name",
+        "description",
+        "scope_type",
+        "scope_key",
+        "is_active",
+      ])
       .where("id", "=", policyId)
       .executeTakeFirst();
 
@@ -344,7 +357,7 @@ export class PolicyResolutionService {
   async publishPolicyVersion(
     tenantId: string,
     versionId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<void> {
     // Archive any existing published version
     const version = await this.db
@@ -387,7 +400,7 @@ export class PolicyResolutionService {
         msg: "policy_version_published",
         versionId,
         publishedBy,
-      })
+      }),
     );
   }
 
@@ -401,11 +414,18 @@ export class PolicyResolutionService {
       isActive?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<PolicyInfo[]> {
     let query = this.db
       .selectFrom("meta.permission_policy")
-      .select(["id", "name", "description", "scope_type", "scope_key", "is_active"])
+      .select([
+        "id",
+        "name",
+        "description",
+        "scope_type",
+        "scope_key",
+        "is_active",
+      ])
       .where("tenant_id", "=", tenantId);
 
     if (filters?.scopeType) {

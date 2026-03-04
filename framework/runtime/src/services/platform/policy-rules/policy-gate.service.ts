@@ -11,9 +11,7 @@
  * - Entity API: gate.authorizeEntity(...)
  */
 
-import {
-  DatabasePersonaCapabilityRepository,
-} from "../foundation/iam/persona-model/persona-capability.repository.js";
+import { DatabasePersonaCapabilityRepository } from "../foundation/iam/persona-model/persona-capability.repository.js";
 import {
   PersonaCapabilityService,
   type IPersonaCapabilityService,
@@ -21,7 +19,10 @@ import {
 import { PersonaRegistryService } from "../foundation/iam/persona-model/persona-registry.service.js";
 import { RoleBindingService } from "../identity-access/role-binding.service.js";
 
-import { DecisionLoggerService, type DecisionLoggerConfig } from "./decision-logger.service.js";
+import {
+  DecisionLoggerService,
+  type DecisionLoggerConfig,
+} from "./decision-logger.service.js";
 import { OperationCatalogService } from "./operation-catalog.service.js";
 import { PolicyCompilerService } from "./policy-compiler.service.js";
 import { PolicyResolutionService } from "./policy-resolution.service.js";
@@ -95,10 +96,7 @@ export class PolicyGateService implements IPolicyGate {
   private readonly config: PolicyGateConfig;
   private readonly db: Kysely<DB>;
 
-  constructor(
-    db: Kysely<DB>,
-    config?: Partial<PolicyGateConfig>
-  ) {
+  constructor(db: Kysely<DB>, config?: Partial<PolicyGateConfig>) {
     this.db = db;
     this.config = { ...DEFAULT_CONFIG, ...config };
 
@@ -107,18 +105,35 @@ export class PolicyGateService implements IPolicyGate {
     this.policyResolution = new PolicyResolutionService(db);
     this.policyCompiler = new PolicyCompilerService(db);
     this.subjectResolver = new SubjectResolverService(db);
-    this.decisionLogger = new DecisionLoggerService(db, this.config.loggerConfig);
+    this.decisionLogger = new DecisionLoggerService(
+      db,
+      this.config.loggerConfig,
+    );
 
     // Initialize persona registry (DB-driven priorities)
     const personaCapabilityRepo = new DatabasePersonaCapabilityRepository(db);
-    const noopLogger = { info() {}, warn() {}, error() {}, debug() {}, trace() {}, fatal() {}, log() {} } as any;
-    const personaRegistry = new PersonaRegistryService(personaCapabilityRepo, noopLogger);
+    const noopLogger = {
+      info() {},
+      warn() {},
+      error() {},
+      debug() {},
+      trace() {},
+      fatal() {},
+      log() {},
+    } as any;
+    const personaRegistry = new PersonaRegistryService(
+      personaCapabilityRepo,
+      noopLogger,
+    );
 
     // Initialize persona capability service with registry
     this.personaCapability = new PersonaCapabilityService(
       personaCapabilityRepo,
       noopLogger,
-      { cacheTtlMs: this.config.personaCapabilityCacheTtlMs, registry: personaRegistry }
+      {
+        cacheTtlMs: this.config.personaCapabilityCacheTtlMs,
+        registry: personaRegistry,
+      },
     );
 
     // Initialize role binding service with registry
@@ -130,7 +145,7 @@ export class PolicyGateService implements IPolicyGate {
       this.subjectResolver,
       this.policyCompiler,
       this.policyResolution,
-      this.operationCatalog
+      this.operationCatalog,
     );
 
     // Set subject cache TTL
@@ -140,7 +155,9 @@ export class PolicyGateService implements IPolicyGate {
   /**
    * Main authorization method
    */
-  async authorize(request: AuthorizationRequest): Promise<AuthorizationDecision> {
+  async authorize(
+    request: AuthorizationRequest,
+  ): Promise<AuthorizationDecision> {
     // If disabled, allow all
     if (!this.config.enabled) {
       return {
@@ -157,7 +174,7 @@ export class PolicyGateService implements IPolicyGate {
     try {
       subject = await this.subjectResolver.resolveSubject(
         request.principalId,
-        request.tenantId
+        request.tenantId,
       );
     } catch (error) {
       console.error(`Failed to resolve subject: ${error}`);
@@ -181,7 +198,7 @@ export class PolicyGateService implements IPolicyGate {
     tenantId: string,
     principalId: string,
     operationCode: OperationCode,
-    resource: ResourceDescriptor
+    resource: ResourceDescriptor,
   ): Promise<boolean> {
     const decision = await this.authorize({
       tenantId,
@@ -200,7 +217,7 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     operationCode: OperationCode,
-    resource: ResourceDescriptor
+    resource: ResourceDescriptor,
   ): Promise<boolean> {
     return this.hasPermission(tenantId, principalId, operationCode, resource);
   }
@@ -210,7 +227,7 @@ export class PolicyGateService implements IPolicyGate {
    */
   async getSubjectSnapshot(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<SubjectSnapshot> {
     return this.subjectResolver.resolveSubject(principalId, tenantId);
   }
@@ -228,7 +245,7 @@ export class PolicyGateService implements IPolicyGate {
     operation: "READ" | "CREATE" | "UPDATE" | "DELETE" | "LIST",
     entityCode: string,
     recordId?: string,
-    entityVersionId?: string
+    entityVersionId?: string,
   ): Promise<AuthorizationDecision> {
     return this.authorize({
       principalId,
@@ -249,14 +266,14 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     entityCode: string,
-    recordId?: string
+    recordId?: string,
   ): Promise<boolean> {
     const decision = await this.authorizeEntity(
       principalId,
       tenantId,
       "READ",
       entityCode,
-      recordId
+      recordId,
     );
     return decision.effect === "allow";
   }
@@ -267,13 +284,13 @@ export class PolicyGateService implements IPolicyGate {
   async canCreate(
     principalId: string,
     tenantId: string,
-    entityCode: string
+    entityCode: string,
   ): Promise<boolean> {
     const decision = await this.authorizeEntity(
       principalId,
       tenantId,
       "CREATE",
-      entityCode
+      entityCode,
     );
     return decision.effect === "allow";
   }
@@ -285,14 +302,14 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     entityCode: string,
-    recordId: string
+    recordId: string,
   ): Promise<boolean> {
     const decision = await this.authorizeEntity(
       principalId,
       tenantId,
       "UPDATE",
       entityCode,
-      recordId
+      recordId,
     );
     return decision.effect === "allow";
   }
@@ -304,14 +321,14 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     entityCode: string,
-    recordId: string
+    recordId: string,
   ): Promise<boolean> {
     const decision = await this.authorizeEntity(
       principalId,
       tenantId,
       "DELETE",
       entityCode,
-      recordId
+      recordId,
     );
     return decision.effect === "allow";
   }
@@ -344,7 +361,7 @@ export class PolicyGateService implements IPolicyGate {
       moduleCode?: string;
       entityKey?: string;
       recordId?: string;
-    }
+    },
   ): Promise<PersonaAuthDecision> {
     // 1. If persona capabilities are disabled, fall back to rule-based
     if (!this.config.personaCapabilitiesEnabled) {
@@ -367,14 +384,17 @@ export class PolicyGateService implements IPolicyGate {
     // 2. Resolve subject's effective persona
     const effectivePersona = await this.roleBinding.resolveEffectivePersona(
       principalId,
-      tenantId
+      tenantId,
     );
 
     // 3. Get subject's OU membership for scope checking
     const ouMembership = await this.getSubjectOuPath(principalId, tenantId);
 
     // 4. Get qualified personas
-    const qualifiedPersonas = await this.roleBinding.getQualifiedPersonas(principalId, tenantId);
+    const qualifiedPersonas = await this.roleBinding.getQualifiedPersonas(
+      principalId,
+      tenantId,
+    );
 
     // 5. Build SubjectWithPersona
     const subjectWithPersona = {
@@ -402,7 +422,7 @@ export class PolicyGateService implements IPolicyGate {
     const result = await this.personaCapability.authorize(
       subjectWithPersona as any,
       operationCode,
-      capabilityContext as any
+      capabilityContext as any,
     );
 
     return result;
@@ -417,17 +437,17 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     operationCode: string,
-    context?: CapabilityContext
+    context?: CapabilityContext,
   ): Promise<CapabilityCheckResult> {
     const effectivePersona = await this.roleBinding.resolveEffectivePersona(
       principalId,
-      tenantId
+      tenantId,
     );
 
     return this.personaCapability.hasCapability(
       effectivePersona,
       operationCode,
-      context
+      context,
     );
   }
 
@@ -436,7 +456,7 @@ export class PolicyGateService implements IPolicyGate {
    */
   async getEffectivePersona(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PersonaCode> {
     return this.roleBinding.resolveEffectivePersona(principalId, tenantId);
   }
@@ -446,7 +466,7 @@ export class PolicyGateService implements IPolicyGate {
    */
   async getQualifiedPersonas(
     principalId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<PersonaCode[]> {
     return this.roleBinding.getQualifiedPersonas(principalId, tenantId);
   }
@@ -457,7 +477,7 @@ export class PolicyGateService implements IPolicyGate {
   async hasPersona(
     principalId: string,
     tenantId: string,
-    personaCode: PersonaCode
+    personaCode: PersonaCode,
   ): Promise<boolean> {
     return this.roleBinding.hasPersona(principalId, tenantId, personaCode);
   }
@@ -467,7 +487,7 @@ export class PolicyGateService implements IPolicyGate {
    */
   private async getSubjectOuPath(
     principalId: string,
-    _tenantId: string
+    _tenantId: string,
   ): Promise<{ nodeId: string; path: string } | undefined> {
     const result = await this.db
       .selectFrom("core.principal_ou as po")
@@ -489,11 +509,11 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     operationCodes: string[],
-    context?: CapabilityContext
+    context?: CapabilityContext,
   ): Promise<Map<string, CapabilityCheckResult>> {
     const effectivePersona = await this.roleBinding.resolveEffectivePersona(
       principalId,
-      tenantId
+      tenantId,
     );
 
     const results = new Map<string, CapabilityCheckResult>();
@@ -502,7 +522,7 @@ export class PolicyGateService implements IPolicyGate {
       const result = await this.personaCapability.hasCapability(
         effectivePersona,
         opCode,
-        context
+        context,
       );
       results.set(opCode, result);
     }
@@ -520,14 +540,20 @@ export class PolicyGateService implements IPolicyGate {
   async authorizeWorkflow(
     principalId: string,
     tenantId: string,
-    operation: "SUBMIT" | "APPROVE" | "REJECT" | "CANCEL" | "REASSIGN" | "ESCALATE",
+    operation:
+      | "SUBMIT"
+      | "APPROVE"
+      | "REJECT"
+      | "CANCEL"
+      | "REASSIGN"
+      | "ESCALATE",
     entityCode: string,
     recordId: string,
     workflowContext?: {
       workflowId?: string;
       stepId?: string;
       attributes?: Record<string, unknown>;
-    }
+    },
   ): Promise<AuthorizationDecision> {
     return this.authorize({
       principalId,
@@ -552,14 +578,14 @@ export class PolicyGateService implements IPolicyGate {
     principalId: string,
     tenantId: string,
     entityCode: string,
-    recordId: string
+    recordId: string,
   ): Promise<boolean> {
     const decision = await this.authorizeWorkflow(
       principalId,
       tenantId,
       "APPROVE",
       entityCode,
-      recordId
+      recordId,
     );
     return decision.effect === "allow";
   }
@@ -685,7 +711,7 @@ export class PolicyGateService implements IPolicyGate {
   async getRecentLogs(
     tenantId: string,
     principalId: string,
-    limit: number = 100
+    limit: number = 100,
   ) {
     return this.decisionLogger.getRecentLogs(tenantId, principalId, limit);
   }
@@ -752,7 +778,7 @@ export class PolicyGateService implements IPolicyGate {
  */
 export function createPolicyGate(
   db: Kysely<DB>,
-  config?: Partial<PolicyGateConfig>
+  config?: Partial<PolicyGateConfig>,
 ): PolicyGateService {
   return new PolicyGateService(db, config);
 }

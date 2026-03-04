@@ -46,9 +46,7 @@ export function createAuditDailyBackupHandler(
 ) {
   return async (payload: DailyBackupPayload): Promise<DailyBackupResult> => {
     // Determine date range (default: yesterday)
-    const backupDate = payload.date
-      ? new Date(payload.date)
-      : getYesterday();
+    const backupDate = payload.date ? new Date(payload.date) : getYesterday();
 
     const startDate = new Date(backupDate);
     startDate.setHours(0, 0, 0, 0);

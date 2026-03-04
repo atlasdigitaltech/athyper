@@ -12,9 +12,10 @@
  * Falls back to FALLBACK_PRIORITIES when the DB is unreachable.
  */
 
+import { PERSONA_CODES } from "./types.js";
+
 import type { IPersonaCapabilityRepository } from "./persona-capability.repository.js";
 import type { Persona, PersonaCode, ScopeMode } from "./types.js";
-import { PERSONA_CODES } from "./types.js";
 import type { Logger } from "../../../../../kernel/logger.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -26,12 +27,12 @@ const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
  * Priority: higher number = more privileged.
  */
 const FALLBACK_PRIORITIES: ReadonlyMap<PersonaCode, FallbackPersona> = new Map([
-  ["viewer",       { priority: 10,  scopeMode: "tenant" as ScopeMode }],
-  ["reporter",     { priority: 20,  scopeMode: "tenant" as ScopeMode }],
-  ["requester",    { priority: 30,  scopeMode: "tenant" as ScopeMode }],
-  ["agent",        { priority: 40,  scopeMode: "ou" as ScopeMode }],
-  ["manager",      { priority: 50,  scopeMode: "ou" as ScopeMode }],
-  ["module_admin", { priority: 60,  scopeMode: "module" as ScopeMode }],
+  ["viewer", { priority: 10, scopeMode: "tenant" as ScopeMode }],
+  ["reporter", { priority: 20, scopeMode: "tenant" as ScopeMode }],
+  ["requester", { priority: 30, scopeMode: "tenant" as ScopeMode }],
+  ["agent", { priority: 40, scopeMode: "ou" as ScopeMode }],
+  ["manager", { priority: 50, scopeMode: "ou" as ScopeMode }],
+  ["module_admin", { priority: 60, scopeMode: "module" as ScopeMode }],
   ["tenant_admin", { priority: 100, scopeMode: "tenant" as ScopeMode }],
 ]);
 
@@ -176,9 +177,8 @@ export class PersonaRegistryService {
       if (!normalized) continue;
 
       const persona = this.personaMap.get(normalized);
-      const priority = persona?.priority
-        ?? FALLBACK_PRIORITIES.get(normalized)?.priority
-        ?? 0;
+      const priority =
+        persona?.priority ?? FALLBACK_PRIORITIES.get(normalized)?.priority ?? 0;
 
       if (priority > bestPriority) {
         bestPriority = priority;
@@ -204,10 +204,14 @@ export class PersonaRegistryService {
 
     // Sort by priority descending (most privileged first)
     return Array.from(matched).sort((a, b) => {
-      const aPriority = this.personaMap.get(a)?.priority
-        ?? FALLBACK_PRIORITIES.get(a)?.priority ?? 0;
-      const bPriority = this.personaMap.get(b)?.priority
-        ?? FALLBACK_PRIORITIES.get(b)?.priority ?? 0;
+      const aPriority =
+        this.personaMap.get(a)?.priority ??
+        FALLBACK_PRIORITIES.get(a)?.priority ??
+        0;
+      const bPriority =
+        this.personaMap.get(b)?.priority ??
+        FALLBACK_PRIORITIES.get(b)?.priority ??
+        0;
       return bPriority - aPriority;
     });
   }
@@ -241,9 +245,12 @@ export class PersonaRegistryService {
       this.rebuildMap(normalized);
       return normalized;
     } catch (err) {
-      this.logger.warn("PersonaRegistry: DB unreachable, using fallback priorities", {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      this.logger.warn(
+        "PersonaRegistry: DB unreachable, using fallback priorities",
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
 
       // Build Persona objects from fallback map
       const fallback = this.buildFallbackPersonas();
@@ -263,10 +270,13 @@ export class PersonaRegistryService {
       const normalizedCode = DB_CODE_NORMALIZATION[p.code] ?? p.code;
       // Validate that the normalized code is a valid PersonaCode
       if (!PERSONA_CODES.includes(normalizedCode as PersonaCode)) {
-        this.logger.warn("PersonaRegistry: Unknown persona code from DB, skipping", {
-          code: p.code,
-          normalized: normalizedCode,
-        });
+        this.logger.warn(
+          "PersonaRegistry: Unknown persona code from DB, skipping",
+          {
+            code: p.code,
+            normalized: normalizedCode,
+          },
+        );
       }
       return { ...p, code: normalizedCode as PersonaCode };
     });

@@ -28,7 +28,14 @@ describe("Event Taxonomy", () => {
 
   it("should have valid category for every entry", () => {
     const validCategories = [
-      "workflow", "step", "action", "admin", "sla", "entity", "error", "recovery",
+      "workflow",
+      "step",
+      "action",
+      "admin",
+      "sla",
+      "entity",
+      "error",
+      "recovery",
     ];
     for (const [, entry] of Object.entries(AUDIT_EVENT_TAXONOMY)) {
       expect(validCategories).toContain(entry.category);
@@ -77,7 +84,12 @@ describe("Event Taxonomy", () => {
       const missing = validateAuditEvent("workflow.created", {
         instanceId: "inst-1",
         entity: { type: "PO", id: "po-1" },
-        workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+        workflow: {
+          templateId: "t1",
+          templateCode: "WF1",
+          templateVersion: 1,
+          templateName: "Test",
+        },
         actor: { userId: "u1" },
       });
       expect(missing).toHaveLength(0);

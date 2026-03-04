@@ -13,7 +13,6 @@ import type { Logger } from "../../../../../kernel/logger.js";
 import type { NextFunction, Request, Response, Router } from "express";
 import type { Kysely } from "kysely";
 
-
 // ============================================================================
 // Validation Schemas
 // ============================================================================
@@ -26,11 +25,17 @@ const ListRolesQuerySchema = z.object({
 });
 
 const CreateRoleBodySchema = z.object({
-  code: z.string().min(1).max(100).regex(/^[a-z][a-z0-9_]*$/),
+  code: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z][a-z0-9_]*$/),
   name: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
   scopeMode: z.enum(["tenant", "ou", "module"]).default("tenant"),
-  basePersona: z.enum(PERSONA_CODES as unknown as [string, ...string[]]).optional(),
+  basePersona: z
+    .enum(PERSONA_CODES as unknown as [string, ...string[]])
+    .optional(),
 });
 
 const UpdateRoleBodySchema = z.object({
@@ -54,7 +59,7 @@ export interface RolesRoutesDependencies {
  */
 export function createRolesRoutes(
   router: Router,
-  deps: RolesRoutesDependencies
+  deps: RolesRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId } = deps;
 
@@ -119,7 +124,7 @@ export function createRolesRoutes(
             eb.or([
               eb("code", "ilike", `%${query.search}%`),
               eb("name", "ilike", `%${query.search}%`),
-            ])
+            ]),
           );
         }
 
@@ -148,7 +153,7 @@ export function createRolesRoutes(
         logger.error("Failed to list roles", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -230,7 +235,7 @@ export function createRolesRoutes(
         logger.error("Failed to create role", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -297,7 +302,7 @@ export function createRolesRoutes(
         logger.error("Failed to get role", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -386,7 +391,7 @@ export function createRolesRoutes(
         logger.error("Failed to update role", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -452,7 +457,7 @@ export function createRolesRoutes(
         logger.error("Failed to delete role", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -507,11 +512,7 @@ export function createRolesRoutes(
         const capabilities = await db
           .selectFrom("core.persona_capability as pc")
           .innerJoin("core.operation as o", "o.id", "pc.operation_id")
-          .innerJoin(
-            "core.operation_category as oc",
-            "oc.id",
-            "o.category_id"
-          )
+          .innerJoin("core.operation_category as oc", "oc.id", "o.category_id")
           .select([
             "oc.code as categoryCode",
             "o.code as operationCode",
@@ -533,7 +534,7 @@ export function createRolesRoutes(
         logger.error("Failed to get role capabilities", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

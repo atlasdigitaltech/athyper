@@ -44,7 +44,7 @@ export interface RateLimitMiddlewareOptions {
   onRateLimitExceeded?: (
     req: Request,
     res: Response,
-    result: RateLimitResult
+    result: RateLimitResult,
   ) => void | Promise<void>;
 
   /**
@@ -67,7 +67,7 @@ export interface RateLimitMiddlewareOptions {
  * Create rate limiting middleware
  */
 export function rateLimitMiddleware(
-  options: RateLimitMiddlewareOptions
+  options: RateLimitMiddlewareOptions,
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   const {
     limiter,
@@ -119,7 +119,7 @@ export function rateLimitMiddleware(
           msg: "rate_limit_middleware_error",
           path: req.path,
           err: String(error),
-        })
+        }),
       );
       next();
     }
@@ -132,7 +132,7 @@ export function rateLimitMiddleware(
 async function generateDefaultKey(
   req: Request,
   getTenantKey?: (req: Request) => string | undefined,
-  getUserId?: (req: Request) => string | undefined
+  getUserId?: (req: Request) => string | undefined,
 ): Promise<string> {
   const context: RateLimitContext = {
     tenantKey: getTenantKey?.(req),
@@ -169,7 +169,7 @@ function getClientIp(req: Request): string {
 function addRateLimitHeaders(
   res: Response,
   result: RateLimitResult,
-  options: { standardHeaders?: boolean; legacyHeaders?: boolean }
+  options: { standardHeaders?: boolean; legacyHeaders?: boolean },
 ): void {
   const resetSeconds = Math.ceil(result.resetMs / 1000);
 
@@ -211,7 +211,7 @@ function handleRateLimitExceeded(res: Response, result: RateLimitResult): void {
  * Create per-tenant rate limiter middleware
  */
 export function perTenantRateLimiter(
-  limiter: RateLimiter
+  limiter: RateLimiter,
 ): ReturnType<typeof rateLimitMiddleware> {
   return rateLimitMiddleware({
     limiter,
@@ -229,7 +229,7 @@ export function perTenantRateLimiter(
  * Create per-user rate limiter middleware
  */
 export function perUserRateLimiter(
-  limiter: RateLimiter
+  limiter: RateLimiter,
 ): ReturnType<typeof rateLimitMiddleware> {
   return rateLimitMiddleware({
     limiter,
@@ -248,7 +248,7 @@ export function perUserRateLimiter(
  * Create per-IP rate limiter middleware
  */
 export function perIpRateLimiter(
-  limiter: RateLimiter
+  limiter: RateLimiter,
 ): ReturnType<typeof rateLimitMiddleware> {
   return rateLimitMiddleware({
     limiter,
@@ -260,14 +260,16 @@ export function perIpRateLimiter(
  * Create per-endpoint rate limiter middleware
  */
 export function perEndpointRateLimiter(
-  limiter: RateLimiter
+  limiter: RateLimiter,
 ): ReturnType<typeof rateLimitMiddleware> {
   return rateLimitMiddleware({
     limiter,
     keyGenerator: async (req) => {
       const tenantKey = (req as any).tenantKey || (req as any).tenant?.key;
       const endpoint = `${req.method}:${req.path}`;
-      return tenantKey ? `tenant:${tenantKey}:endpoint:${endpoint}` : `endpoint:${endpoint}`;
+      return tenantKey
+        ? `tenant:${tenantKey}:endpoint:${endpoint}`
+        : `endpoint:${endpoint}`;
     },
   });
 }

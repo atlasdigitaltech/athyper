@@ -29,17 +29,23 @@ describe("Tenant Context Setter", () => {
   describe("setTenantContext", () => {
     it("should reject non-UUID tenant IDs", async () => {
       const { db } = createMockDb();
-      await expect(setTenantContext(db, "not-a-uuid")).rejects.toThrow("Invalid tenant ID format");
+      await expect(setTenantContext(db, "not-a-uuid")).rejects.toThrow(
+        "Invalid tenant ID format",
+      );
     });
 
     it("should reject SQL injection attempts", async () => {
       const { db } = createMockDb();
-      await expect(setTenantContext(db, "'; DROP TABLE core.workflow_event_log; --")).rejects.toThrow("Invalid tenant ID format");
+      await expect(
+        setTenantContext(db, "'; DROP TABLE core.workflow_event_log; --"),
+      ).rejects.toThrow("Invalid tenant ID format");
     });
 
     it("should reject empty string", async () => {
       const { db } = createMockDb();
-      await expect(setTenantContext(db, "")).rejects.toThrow("Invalid tenant ID format");
+      await expect(setTenantContext(db, "")).rejects.toThrow(
+        "Invalid tenant ID format",
+      );
     });
 
     it("should accept valid UUID v4", async () => {
@@ -48,9 +54,10 @@ describe("Tenant Context Setter", () => {
       const { db } = createMockDb();
       try {
         await setTenantContext(db, "550e8400-e29b-41d4-a716-446655440000");
-      } catch (e: any) {
+      } catch (e: unknown) {
         // Will throw because mock DB can't execute SQL, but NOT a validation error
-        expect(e.message).not.toContain("Invalid tenant ID format");
+        const message = e instanceof Error ? e.message : "Unknown error";
+        expect(message).not.toContain("Invalid tenant ID format");
       }
     });
 
@@ -58,8 +65,9 @@ describe("Tenant Context Setter", () => {
       const { db } = createMockDb();
       try {
         await setTenantContext(db, "550E8400-E29B-41D4-A716-446655440000");
-      } catch (e: any) {
-        expect(e.message).not.toContain("Invalid tenant ID format");
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Unknown error";
+        expect(message).not.toContain("Invalid tenant ID format");
       }
     });
   });
@@ -113,11 +121,19 @@ describe("Immutability Guard (strengthened specifications)", () => {
 
   it("spec: two dedicated roles are created as NOLOGIN", () => {
     const roles = [
-      { name: "athyper_retention", canLogin: false, purpose: "audit retention DELETE" },
-      { name: "athyper_admin", canLogin: false, purpose: "audit admin UPDATE key_version" },
+      {
+        name: "athyper_retention",
+        canLogin: false,
+        purpose: "audit retention DELETE",
+      },
+      {
+        name: "athyper_admin",
+        canLogin: false,
+        purpose: "audit admin UPDATE key_version",
+      },
     ];
     expect(roles).toHaveLength(2);
-    expect(roles.every(r => !r.canLogin)).toBe(true);
+    expect(roles.every((r) => !r.canLogin)).toBe(true);
   });
 
   it("spec: retention role has DELETE grant on 5 audit tables", () => {
@@ -146,7 +162,8 @@ describe("Row-Level Security (specifications)", () => {
   });
 
   it("spec: RLS policy uses athyper.current_tenant session variable", () => {
-    const policyUsing = "tenant_id = current_setting('athyper.current_tenant', true)::uuid";
+    const policyUsing =
+      "tenant_id = current_setting('athyper.current_tenant', true)::uuid";
     expect(policyUsing).toContain("athyper.current_tenant");
     expect(policyUsing).toContain("::uuid");
   });

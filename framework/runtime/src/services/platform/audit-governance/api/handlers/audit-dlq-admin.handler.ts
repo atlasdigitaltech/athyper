@@ -29,7 +29,11 @@ const DLQ_TOKEN = "audit.dlqManager";
 // ─── List DLQ Entries ───────────────────────────────────────────────
 
 export class ListAuditDlqHandler {
-  async handle(req: Request, res: Response, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HandlerContext,
+  ): Promise<void> {
     const dlqManager = await ctx.container.resolve<AuditDlqManager>(DLQ_TOKEN);
     const tenantId = ctx.tenant.tenantId;
 
@@ -55,7 +59,11 @@ export class ListAuditDlqHandler {
 // ─── Inspect Single DLQ Entry ───────────────────────────────────────
 
 export class InspectAuditDlqHandler {
-  async handle(req: Request, res: Response, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HandlerContext,
+  ): Promise<void> {
     const dlqManager = await ctx.container.resolve<AuditDlqManager>(DLQ_TOKEN);
     const tenantId = ctx.tenant.tenantId;
     const dlqId = req.params.id;
@@ -78,7 +86,11 @@ export class InspectAuditDlqHandler {
 // ─── Retry Single DLQ Entry ────────────────────────────────────────
 
 export class RetryAuditDlqHandler {
-  async handle(req: Request, res: Response, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HandlerContext,
+  ): Promise<void> {
     const dlqManager = await ctx.container.resolve<AuditDlqManager>(DLQ_TOKEN);
     const tenantId = ctx.tenant.tenantId;
     const dlqId = req.params.id;
@@ -101,7 +113,11 @@ export class RetryAuditDlqHandler {
 // ─── Bulk Replay DLQ Entries ───────────────────────────────────────
 
 export class BulkReplayAuditDlqHandler {
-  async handle(req: Request, res: Response, ctx: HandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HandlerContext,
+  ): Promise<void> {
     const dlqManager = await ctx.container.resolve<AuditDlqManager>(DLQ_TOKEN);
     const tenantId = ctx.tenant.tenantId;
     const replayedBy = ctx.auth.userId ?? "admin";

@@ -44,9 +44,7 @@ export async function setTenantContext(
  * Clear the current tenant context.
  * Useful for worker processes that operate across tenants.
  */
-export async function clearTenantContext(
-  db: Kysely<DB>,
-): Promise<void> {
+export async function clearTenantContext(db: Kysely<DB>): Promise<void> {
   await sql`RESET athyper.current_tenant`.execute(db);
 }
 
@@ -57,9 +55,7 @@ export async function clearTenantContext(
  * Set the audit retention bypass variable for authorized operations.
  * Requires the caller to have the appropriate DB role (athyper_retention or athyper_admin).
  */
-export async function setAuditBypass(
-  db: Kysely<DB>,
-): Promise<void> {
+export async function setAuditBypass(db: Kysely<DB>): Promise<void> {
   await sql`SET LOCAL athyper.audit_retention_bypass = 'true'`.execute(db);
 }
 
@@ -142,7 +138,8 @@ export async function callRetentionDelete(
 // Validation
 // ============================================================================
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isValidUUID(value: string): boolean {
   return UUID_REGEX.test(value);

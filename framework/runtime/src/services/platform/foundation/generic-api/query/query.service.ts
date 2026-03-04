@@ -13,7 +13,11 @@ import {
   parseQualifiedField,
 } from "./query-dsl.js";
 
-import type { JoinPlanner, JoinPlan, IRelationshipRegistry } from "./join-planner.js";
+import type {
+  JoinPlanner,
+  JoinPlan,
+  IRelationshipRegistry,
+} from "./join-planner.js";
 import type {
   QueryRequest,
   QueryResponse,
@@ -101,7 +105,7 @@ export class GenericQueryService {
     private fieldProjection: FieldProjectionBuilder,
     private registry: IRelationshipRegistry,
     private logger: Logger,
-    guardrails?: Partial<QueryGuardrails>
+    guardrails?: Partial<QueryGuardrails>,
   ) {
     this.guardrails = { ...DEFAULT_GUARDRAILS, ...guardrails };
   }
@@ -111,7 +115,7 @@ export class GenericQueryService {
    */
   async executeQuery<T = Record<string, unknown>>(
     query: QueryRequest,
-    context: QueryContext
+    context: QueryContext,
   ): Promise<QueryResponse<T>> {
     const startTime = Date.now();
     const { tenantId, subject, options = {} } = context;
@@ -123,10 +127,8 @@ export class GenericQueryService {
     }
 
     // Plan joins
-    const { plan, validation: planValidation } = await this.joinPlanner.planJoins(
-      query,
-      tenantId
-    );
+    const { plan, validation: planValidation } =
+      await this.joinPlanner.planJoins(query, tenantId);
 
     if (!plan || !planValidation.valid) {
       throw new QueryValidationError(planValidation.errors);
@@ -142,7 +144,7 @@ export class GenericQueryService {
     // Execute with timeout
     const timeout = Math.min(
       options.timeout ?? this.guardrails.defaultTimeout,
-      this.guardrails.maxTimeout
+      this.guardrails.maxTimeout,
     );
 
     try {
@@ -159,7 +161,10 @@ export class GenericQueryService {
       const meta: QueryMetadata = {
         executionTimeMs,
         rowCount: rows.length,
-        entitiesAccessed: [plan.baseEntity, ...plan.joins.map((j) => j.targetEntity)],
+        entitiesAccessed: [
+          plan.baseEntity,
+          ...plan.joins.map((j) => j.targetEntity),
+        ],
         fieldsReturned: query.select,
       };
 
@@ -177,7 +182,10 @@ export class GenericQueryService {
         pagination: {
           offset: query.offset ?? 0,
           limit: query.limit,
-          hasMore: totalCount !== undefined ? (query.offset ?? 0) + rows.length < totalCount : rows.length === query.limit,
+          hasMore:
+            totalCount !== undefined
+              ? (query.offset ?? 0) + rows.length < totalCount
+              : rows.length === query.limit,
         },
         meta,
       };
@@ -196,9 +204,12 @@ export class GenericQueryService {
    */
   async validateQuery(
     query: QueryRequest,
-    tenantId: string
+    tenantId: string,
   ): Promise<QueryValidationResult> {
-    const { plan: _plan, validation } = await this.joinPlanner.planJoins(query, tenantId);
+    const { plan: _plan, validation } = await this.joinPlanner.planJoins(
+      query,
+      tenantId,
+    );
     return validation;
   }
 
@@ -207,7 +218,7 @@ export class GenericQueryService {
    */
   async explainQuery(
     query: QueryRequest,
-    context: QueryContext
+    context: QueryContext,
   ): Promise<{
     validation: QueryValidationResult;
     plan?: JoinPlan;
@@ -215,7 +226,10 @@ export class GenericQueryService {
   }> {
     const { tenantId, subject } = context;
 
-    const { plan, validation } = await this.joinPlanner.planJoins(query, tenantId);
+    const { plan, validation } = await this.joinPlanner.planJoins(
+      query,
+      tenantId,
+    );
 
     if (!plan || !validation.valid) {
       return { validation };
@@ -238,7 +252,7 @@ export class GenericQueryService {
     query: QueryRequest,
     plan: JoinPlan,
     subject: SubjectSnapshot,
-    context: QueryContext
+    context: QueryContext,
   ): Promise<BuiltQuery> {
     const { tenantId } = context;
 
@@ -256,22 +270,35 @@ export class GenericQueryService {
           `${plannedJoin.targetTable} as ${plannedJoin.definition.as}`,
           (join) =>
             join
-              .onRef(joinCondition.leftColumn as any, "=", joinCondition.rightColumn as any)
-              .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId)
+              .onRef(
+                joinCondition.leftColumn as any,
+                "=",
+                joinCondition.rightColumn as any,
+              )
+              .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId),
         );
       } else {
         qb = qb.leftJoin(
           `${plannedJoin.targetTable} as ${plannedJoin.definition.as}`,
           (join) =>
             join
-              .onRef(joinCondition.leftColumn as any, "=", joinCondition.rightColumn as any)
-              .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId)
+              .onRef(
+                joinCondition.leftColumn as any,
+                "=",
+                joinCondition.rightColumn as any,
+              )
+              .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId),
         );
       }
     }
 
     // Build field projection with security
-    const projection = await this.buildSecureProjection(query, plan, subject, tenantId);
+    const projection = await this.buildSecureProjection(
+      query,
+      plan,
+      subject,
+      tenantId,
+    );
 
     // Apply SELECT with security-filtered fields
     qb = qb.select(projection.columns.map((col) => sql.raw(col) as any));
@@ -302,23 +329,33 @@ export class GenericQueryService {
 
       // Apply same joins
       for (const plannedJoin of plan.joins) {
-        const joinCondition = this.parseJoinCondition(plannedJoin.definition.on);
+        const joinCondition = this.parseJoinCondition(
+          plannedJoin.definition.on,
+        );
 
         if (plannedJoin.definition.type === "inner") {
           countQb = countQb.innerJoin(
             `${plannedJoin.targetTable} as ${plannedJoin.definition.as}`,
             (join) =>
               join
-                .onRef(joinCondition.leftColumn as any, "=", joinCondition.rightColumn as any)
-                .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId)
+                .onRef(
+                  joinCondition.leftColumn as any,
+                  "=",
+                  joinCondition.rightColumn as any,
+                )
+                .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId),
           );
         } else {
           countQb = countQb.leftJoin(
             `${plannedJoin.targetTable} as ${plannedJoin.definition.as}`,
             (join) =>
               join
-                .onRef(joinCondition.leftColumn as any, "=", joinCondition.rightColumn as any)
-                .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId)
+                .onRef(
+                  joinCondition.leftColumn as any,
+                  "=",
+                  joinCondition.rightColumn as any,
+                )
+                .on(`${plannedJoin.definition.as}.tenant_id`, "=", tenantId),
           );
         }
       }
@@ -347,7 +384,7 @@ export class GenericQueryService {
     query: QueryRequest,
     plan: JoinPlan,
     subject: SubjectSnapshot,
-    tenantId: string
+    tenantId: string,
   ): Promise<{ columns: string[]; deniedFields: string[] }> {
     const columns: string[] = [];
     const deniedFields: string[] = [];
@@ -375,11 +412,13 @@ export class GenericQueryService {
         subject,
         { tenantId },
         plan.baseAlias,
-        { applyMaskingInSql: true }
+        { applyMaskingInSql: true },
       );
 
       columns.push(...projection.selectColumns);
-      deniedFields.push(...projection.deniedFields.map((f) => `${plan.baseAlias}.${f}`));
+      deniedFields.push(
+        ...projection.deniedFields.map((f) => `${plan.baseAlias}.${f}`),
+      );
     }
 
     // Process joined entity fields
@@ -394,11 +433,13 @@ export class GenericQueryService {
           subject,
           { tenantId },
           join.definition.as,
-          { applyMaskingInSql: true }
+          { applyMaskingInSql: true },
         );
 
         columns.push(...projection.selectColumns);
-        deniedFields.push(...projection.deniedFields.map((f) => `${join.definition.as}.${f}`));
+        deniedFields.push(
+          ...projection.deniedFields.map((f) => `${join.definition.as}.${f}`),
+        );
       }
     }
 
@@ -428,7 +469,7 @@ export class GenericQueryService {
    */
   private applyWhereConditions(
     qb: SelectQueryBuilder<any, any, any>,
-    where: WhereCondition | WhereGroup
+    where: WhereCondition | WhereGroup,
   ): SelectQueryBuilder<any, any, any> {
     if (isWhereGroup(where)) {
       return this.applyWhereGroup(qb, where);
@@ -442,7 +483,7 @@ export class GenericQueryService {
    */
   private applyWhereGroup(
     qb: SelectQueryBuilder<any, any, any>,
-    group: WhereGroup
+    group: WhereGroup,
   ): SelectQueryBuilder<any, any, any> {
     if (group.conditions.length === 0) {
       return qb;
@@ -455,7 +496,10 @@ export class GenericQueryService {
           if (isWhereGroup(condition)) {
             combined = eb.and([combined, this.buildWhereGroup(eb, condition)]);
           } else {
-            combined = eb.and([combined, this.buildWhereCondition(eb, condition)]);
+            combined = eb.and([
+              combined,
+              this.buildWhereCondition(eb, condition),
+            ]);
           }
         }
         return combined;
@@ -467,7 +511,10 @@ export class GenericQueryService {
           if (isWhereGroup(condition)) {
             combined = eb.or([combined, this.buildWhereGroup(eb, condition)]);
           } else {
-            combined = eb.or([combined, this.buildWhereCondition(eb, condition)]);
+            combined = eb.or([
+              combined,
+              this.buildWhereCondition(eb, condition),
+            ]);
           }
         }
         return combined;
@@ -544,7 +591,7 @@ export class GenericQueryService {
    */
   private applyWhereCondition(
     qb: SelectQueryBuilder<any, any, any>,
-    condition: WhereCondition
+    condition: WhereCondition,
   ): SelectQueryBuilder<any, any, any> {
     return qb.where((eb) => this.buildWhereCondition(eb, condition));
   }
@@ -554,14 +601,17 @@ export class GenericQueryService {
    */
   private applyOrderBy(
     qb: SelectQueryBuilder<any, any, any>,
-    orderBy: OrderByClause[]
+    orderBy: OrderByClause[],
   ): SelectQueryBuilder<any, any, any> {
     for (const clause of orderBy) {
       const direction = clause.direction === "desc" ? "desc" : "asc";
 
       if (clause.nulls) {
-        const nullsDirection = clause.nulls === "first" ? "nulls first" : "nulls last";
-        qb = qb.orderBy(sql.raw(`${clause.field} ${direction} ${nullsDirection}`) as any);
+        const nullsDirection =
+          clause.nulls === "first" ? "nulls first" : "nulls last";
+        qb = qb.orderBy(
+          sql.raw(`${clause.field} ${direction} ${nullsDirection}`) as any,
+        );
       } else {
         qb = qb.orderBy(clause.field as any, direction);
       }
@@ -574,14 +624,16 @@ export class GenericQueryService {
    */
   private async executeWithTimeout(
     qb: SelectQueryBuilder<any, any, any>,
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<unknown[]> {
     // Set statement timeout
     const _timeoutSeconds = Math.ceil(timeoutMs / 1000);
 
     return this.db.transaction().execute(async (trx) => {
       // Set timeout for this transaction
-      await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(trx);
+      await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(
+        trx,
+      );
 
       // Execute query
       const result = await qb.execute();
@@ -594,10 +646,12 @@ export class GenericQueryService {
    */
   private async executeCountWithTimeout(
     qb: SelectQueryBuilder<any, any, any>,
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<number> {
     return this.db.transaction().execute(async (trx) => {
-      await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(trx);
+      await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(
+        trx,
+      );
 
       const result = await qb.executeTakeFirst();
       return Number((result as any)?.count ?? 0);
@@ -613,8 +667,12 @@ export class GenericQueryService {
  * Query validation error
  */
 export class QueryValidationError extends Error {
-  constructor(public errors: Array<{ code: string; message: string; path?: string }>) {
-    super(`Query validation failed: ${errors.map((e) => e.message).join(", ")}`);
+  constructor(
+    public errors: Array<{ code: string; message: string; path?: string }>,
+  ) {
+    super(
+      `Query validation failed: ${errors.map((e) => e.message).join(", ")}`,
+    );
     this.name = "QueryValidationError";
   }
 }

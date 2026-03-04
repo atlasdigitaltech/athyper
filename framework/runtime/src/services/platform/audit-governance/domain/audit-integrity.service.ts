@@ -80,14 +80,25 @@ export class AuditIntegrityService {
    * Verify integrity of a tenant's audit data within a date range.
    * Checks hash chain continuity, anchor match, and partition completeness.
    */
-  async verifyTenantRange(options: VerifyRangeOptions): Promise<IntegrityReport> {
+  async verifyTenantRange(
+    options: VerifyRangeOptions,
+  ): Promise<IntegrityReport> {
     const { tenantId, startDate, endDate, initiatedBy } = options;
     const startTime = Date.now();
 
     // 1. Create report (status=running)
     const reportId = crypto.randomUUID();
-    await this.insertReport(reportId, tenantId, "range", initiatedBy, startDate, endDate);
-    await this.updateReportStatus(reportId, "running", { started_at: new Date() });
+    await this.insertReport(
+      reportId,
+      tenantId,
+      "range",
+      initiatedBy,
+      startDate,
+      endDate,
+    );
+    await this.updateReportStatus(reportId, "running", {
+      started_at: new Date(),
+    });
 
     try {
       // 2. Query events in date range (paged)
@@ -145,10 +156,17 @@ export class AuditIntegrityService {
       const chainResult = this.hashChain.verifyChain(tenantId, chainEvents);
 
       // 4. Verify anchors
-      const anchorMatch = await this.verifyAnchors(tenantId, startDate, endDate);
+      const anchorMatch = await this.verifyAnchors(
+        tenantId,
+        startDate,
+        endDate,
+      );
 
       // 5. Check partition completeness
-      const partitionsComplete = await this.checkPartitionCompleteness(startDate, endDate);
+      const partitionsComplete = await this.checkPartitionCompleteness(
+        startDate,
+        endDate,
+      );
 
       // 6. Determine status
       const passed = chainResult.valid && anchorMatch && partitionsComplete;
@@ -186,8 +204,15 @@ export class AuditIntegrityService {
 
       // 9. Metrics
       const durationMs = Date.now() - startTime;
-      this.metrics?.integrityVerificationCompleted({ tenant: tenantId, type: "range", result: status });
-      this.metrics?.integrityVerificationDuration(durationMs, { tenant: tenantId, type: "range" });
+      this.metrics?.integrityVerificationCompleted({
+        tenant: tenantId,
+        type: "range",
+        result: status,
+      });
+      this.metrics?.integrityVerificationDuration(durationMs, {
+        tenant: tenantId,
+        type: "range",
+      });
 
       return this.buildReport(reportId, tenantId, "range", status, {
         eventsChecked: allEvents.length,
@@ -208,7 +233,11 @@ export class AuditIntegrityService {
         error_message: errorMessage,
         completed_at: new Date(),
       });
-      this.metrics?.integrityVerificationCompleted({ tenant: tenantId, type: "range", result: "error" });
+      this.metrics?.integrityVerificationCompleted({
+        tenant: tenantId,
+        type: "range",
+        result: "error",
+      });
 
       return this.buildReport(reportId, tenantId, "range", "error", {
         errorMessage,
@@ -228,7 +257,9 @@ export class AuditIntegrityService {
 
     const reportId = crypto.randomUUID();
     await this.insertReport(reportId, tenantId, "export", initiatedBy);
-    await this.updateReportStatus(reportId, "running", { started_at: new Date() });
+    await this.updateReportStatus(reportId, "running", {
+      started_at: new Date(),
+    });
 
     try {
       if (!this.objectStorage) {
@@ -241,9 +272,10 @@ export class AuditIntegrityService {
         throw new Error(`Manifest not found: ${manifestKey}`);
       }
 
-      const manifestStr = typeof manifestResult.body === "string"
-        ? manifestResult.body
-        : manifestResult.body.toString("utf-8");
+      const manifestStr =
+        typeof manifestResult.body === "string"
+          ? manifestResult.body
+          : manifestResult.body.toString("utf-8");
       const manifest = JSON.parse(manifestStr) as {
         sha256: string;
         ndjsonKey: string;
@@ -256,16 +288,22 @@ export class AuditIntegrityService {
         throw new Error(`NDJSON file not found: ${manifest.ndjsonKey}`);
       }
 
-      const ndjsonContent = typeof ndjsonResult.body === "string"
-        ? ndjsonResult.body
-        : ndjsonResult.body.toString("utf-8");
+      const ndjsonContent =
+        typeof ndjsonResult.body === "string"
+          ? ndjsonResult.body
+          : ndjsonResult.body.toString("utf-8");
 
       // 3. Re-compute SHA-256
-      const computedHash = createHash("sha256").update(ndjsonContent, "utf8").digest("hex");
+      const computedHash = createHash("sha256")
+        .update(ndjsonContent, "utf8")
+        .digest("hex");
       const hashValid = computedHash === manifest.sha256;
 
       // 4. Count lines
-      const lineCount = ndjsonContent.trim() === "" ? 0 : ndjsonContent.trim().split("\n").length;
+      const lineCount =
+        ndjsonContent.trim() === ""
+          ? 0
+          : ndjsonContent.trim().split("\n").length;
 
       const status = hashValid ? "passed" : "failed";
       const now = new Date();
@@ -295,8 +333,15 @@ export class AuditIntegrityService {
       });
 
       const durationMs = Date.now() - startTime;
-      this.metrics?.integrityVerificationCompleted({ tenant: tenantId, type: "export", result: status });
-      this.metrics?.integrityVerificationDuration(durationMs, { tenant: tenantId, type: "export" });
+      this.metrics?.integrityVerificationCompleted({
+        tenant: tenantId,
+        type: "export",
+        result: status,
+      });
+      this.metrics?.integrityVerificationDuration(durationMs, {
+        tenant: tenantId,
+        type: "export",
+      });
 
       return this.buildReport(reportId, tenantId, "export", status, {
         eventsChecked: lineCount,
@@ -313,7 +358,11 @@ export class AuditIntegrityService {
         error_message: errorMessage,
         completed_at: new Date(),
       });
-      this.metrics?.integrityVerificationCompleted({ tenant: tenantId, type: "export", result: "error" });
+      this.metrics?.integrityVerificationCompleted({
+        tenant: tenantId,
+        type: "export",
+        result: "error",
+      });
 
       return this.buildReport(reportId, tenantId, "export", "error", {
         errorMessage,
@@ -327,7 +376,10 @@ export class AuditIntegrityService {
   /**
    * Get a specific integrity report.
    */
-  async getReport(tenantId: string, reportId: string): Promise<IntegrityReport | undefined> {
+  async getReport(
+    tenantId: string,
+    reportId: string,
+  ): Promise<IntegrityReport | undefined> {
     const result = await sql<any>`
       SELECT * FROM core.integrity_report
       WHERE id = ${reportId}::uuid AND tenant_id = ${tenantId}::uuid
@@ -475,9 +527,10 @@ export class AuditIntegrityService {
     status: string,
     extra?: Record<string, unknown>,
   ): Promise<void> {
-    const startedAt = extra?.started_at instanceof Date
-      ? sql`${extra.started_at.toISOString()}::timestamptz`
-      : sql`started_at`;
+    const startedAt =
+      extra?.started_at instanceof Date
+        ? sql`${extra.started_at.toISOString()}::timestamptz`
+        : sql`started_at`;
 
     await sql`
       UPDATE core.integrity_report
@@ -491,9 +544,10 @@ export class AuditIntegrityService {
     fields: Record<string, unknown>,
   ): Promise<void> {
     const status = fields.status as string;
-    const completedAt = fields.completed_at instanceof Date
-      ? fields.completed_at.toISOString()
-      : null;
+    const completedAt =
+      fields.completed_at instanceof Date
+        ? fields.completed_at.toISOString()
+        : null;
 
     await sql`
       UPDATE core.integrity_report
@@ -573,7 +627,10 @@ export class AuditIntegrityService {
       brokenAtEventId: row.broken_at_event_id ?? null,
       brokenAtIndex: row.broken_at_index ?? null,
       errorMessage: row.error_message ?? null,
-      details: typeof row.details === "string" ? JSON.parse(row.details) : row.details ?? {},
+      details:
+        typeof row.details === "string"
+          ? JSON.parse(row.details)
+          : (row.details ?? {}),
       initiatedBy: row.initiated_by,
       startedAt: row.started_at ? new Date(row.started_at) : null,
       completedAt: row.completed_at ? new Date(row.completed_at) : null,

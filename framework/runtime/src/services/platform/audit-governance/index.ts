@@ -25,17 +25,20 @@ import { AuditHashChainService } from "./domain/hash-chain.service.js";
 import { createRedactionPipeline } from "./domain/redaction-pipeline.js";
 import { ResilientAuditWriter } from "./domain/resilient-audit-writer.js";
 import { createDrainAuditOutboxHandler } from "./jobs/workers/drainAuditOutbox.worker.js";
-import { AuditMetrics, createAuditHealthChecker } from "./observability/metrics.js";
+import {
+  AuditMetrics,
+  createAuditHealthChecker,
+} from "./observability/metrics.js";
 import { AuditArchiveMarkerRepo } from "./persistence/AuditArchiveMarkerRepo.js";
 import { AuditDlqRepo } from "./persistence/AuditDlqRepo.js";
 import { AuditOutboxRepo } from "./persistence/AuditOutboxRepo.js";
 import { createWorkflowAuditRepository } from "./persistence/WorkflowAuditRepository.js";
 
-import type { AuditFeatureFlagResolver} from "./domain/audit-feature-flags.js";
+import type { AuditFeatureFlagResolver } from "./domain/audit-feature-flags.js";
 import type { AuditLoadSheddingService } from "./domain/audit-load-shedding.service.js";
-import type { AuditColumnEncryptionService} from "./domain/column-encryption.service.js";
-import type { AuditRedactionPipeline} from "./domain/redaction-pipeline.js";
-import type { WorkflowAuditRepository} from "./persistence/WorkflowAuditRepository.js";
+import type { AuditColumnEncryptionService } from "./domain/column-encryption.service.js";
+import type { AuditRedactionPipeline } from "./domain/redaction-pipeline.js";
+import type { WorkflowAuditRepository } from "./persistence/WorkflowAuditRepository.js";
 import type { RuntimeConfig } from "../../../kernel/config.schema.js";
 import type { Container } from "../../../kernel/container.js";
 import type { Logger } from "../../../kernel/logger.js";
@@ -67,345 +70,496 @@ export const module: RuntimeModule = {
     logger.info("[audit-governance] Registering module");
 
     // ── Feature Flags ─────────────────────────────────────────────
-    c.register(TOKENS.auditFeatureFlags, async () => {
-      let config: RuntimeConfig | undefined;
-      try {
-        config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      } catch {
-        // Config not available
-      }
+    c.register(
+      TOKENS.auditFeatureFlags,
+      async () => {
+        let config: RuntimeConfig | undefined;
+        try {
+          config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        } catch {
+          // Config not available
+        }
 
-      const auditConfig = config?.audit ?? {};
+        const auditConfig = config?.audit ?? {};
 
-      return createAuditFeatureFlagResolver(db, {
-        defaults: {
-          writeMode: (auditConfig as any).writeMode ?? "outbox",
-          hashChainEnabled: (auditConfig as any).hashChainEnabled ?? true,
-          timelineEnabled: (auditConfig as any).timelineEnabled ?? true,
-          encryptionEnabled: (auditConfig as any).encryptionEnabled ?? false,
-        },
-      });
-    }, "singleton");
+        return createAuditFeatureFlagResolver(db, {
+          defaults: {
+            writeMode: (auditConfig as any).writeMode ?? "outbox",
+            hashChainEnabled: (auditConfig as any).hashChainEnabled ?? true,
+            timelineEnabled: (auditConfig as any).timelineEnabled ?? true,
+            encryptionEnabled: (auditConfig as any).encryptionEnabled ?? false,
+          },
+        });
+      },
+      "singleton",
+    );
 
     // ── Column Encryption ────────────────────────────────────────────
-    c.register(TOKENS.auditEncryption, async () => {
-      let config: RuntimeConfig | undefined;
-      try {
-        config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      } catch {
-        // Config not available
-      }
+    c.register(
+      TOKENS.auditEncryption,
+      async () => {
+        let config: RuntimeConfig | undefined;
+        try {
+          config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        } catch {
+          // Config not available
+        }
 
-      const auditConfig = config?.audit ?? {};
-      const encryptionEnabled = (auditConfig as any).encryptionEnabled ?? false;
+        const auditConfig = config?.audit ?? {};
+        const encryptionEnabled =
+          (auditConfig as any).encryptionEnabled ?? false;
 
-      if (!encryptionEnabled) {
-        return null; // Encryption disabled
-      }
+        if (!encryptionEnabled) {
+          return null; // Encryption disabled
+        }
 
-      // Master key from env (never stored in config files)
-      const masterKey = process.env.AUDIT_ENCRYPTION_MASTER_KEY;
-      if (!masterKey) {
-        logger.warn(
-          {},
-          "[audit-governance] Encryption enabled but AUDIT_ENCRYPTION_MASTER_KEY not set — encryption disabled",
-        );
-        return null;
-      }
+        // Master key from env (never stored in config files)
+        const masterKey = process.env.AUDIT_ENCRYPTION_MASTER_KEY;
+        if (!masterKey) {
+          logger.warn(
+            {},
+            "[audit-governance] Encryption enabled but AUDIT_ENCRYPTION_MASTER_KEY not set — encryption disabled",
+          );
+          return null;
+        }
 
-      return createColumnEncryptionService(masterKey);
-    }, "singleton");
+        return createColumnEncryptionService(masterKey);
+      },
+      "singleton",
+    );
 
     // ── Load Shedding ─────────────────────────────────────────────
-    c.register(TOKENS.auditLoadShedding, async () => {
-      let config: RuntimeConfig | undefined;
-      try {
-        config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      } catch {
-        // Config not available
-      }
+    c.register(
+      TOKENS.auditLoadShedding,
+      async () => {
+        let config: RuntimeConfig | undefined;
+        try {
+          config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        } catch {
+          // Config not available
+        }
 
-      const enabled = (config?.audit as any)?.loadSheddingEnabled ?? false;
-      if (!enabled) {
-        return null;
-      }
+        const enabled = (config?.audit as any)?.loadSheddingEnabled ?? false;
+        if (!enabled) {
+          return null;
+        }
 
-      return createAuditLoadSheddingService(db);
-    }, "singleton");
+        return createAuditLoadSheddingService(db);
+      },
+      "singleton",
+    );
 
     // ── Hash Chain ─────────────────────────────────────────────────
-    c.register(TOKENS.auditHashChain, async () => {
-      // Hash chain per-tenant state is lazily initialized on first write
-      // (computeHash defaults to GENESIS_HASH if no state loaded)
-      return new AuditHashChainService();
-    }, "singleton");
+    c.register(
+      TOKENS.auditHashChain,
+      async () => {
+        // Hash chain per-tenant state is lazily initialized on first write
+        // (computeHash defaults to GENESIS_HASH if no state loaded)
+        return new AuditHashChainService();
+      },
+      "singleton",
+    );
 
     // ── Redaction Pipeline ─────────────────────────────────────────
-    c.register(TOKENS.auditRedaction, async () => {
-      // MaskingService may not be registered yet — create a minimal one
-      let masking: MaskingService;
-      try {
-        masking = await c.resolve<MaskingService>("security.masking");
-      } catch {
-        // Fallback: create a stub masking service if not registered
-        masking = {
-          mask: (value: unknown, _strategy: string, _opts?: unknown) => String(value),
-        } as MaskingService;
-      }
-      return createRedactionPipeline(masking);
-    }, "singleton");
+    c.register(
+      TOKENS.auditRedaction,
+      async () => {
+        // MaskingService may not be registered yet — create a minimal one
+        let masking: MaskingService;
+        try {
+          masking = await c.resolve<MaskingService>("security.masking");
+        } catch {
+          // Fallback: create a stub masking service if not registered
+          masking = {
+            mask: (value: unknown, _strategy: string, _opts?: unknown) =>
+              String(value),
+          } as MaskingService;
+        }
+        return createRedactionPipeline(masking);
+      },
+      "singleton",
+    );
 
     // ── Persistence ────────────────────────────────────────────────
-    c.register(TOKENS.auditOutboxRepo, async () => {
-      return new AuditOutboxRepo(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditOutboxRepo,
+      async () => {
+        return new AuditOutboxRepo(db);
+      },
+      "singleton",
+    );
 
-    c.register(TOKENS.auditWorkflowRepo, async () => {
-      const hashChain = await c.resolve<AuditHashChainService>(TOKENS.auditHashChain);
-      const redaction = await c.resolve<AuditRedactionPipeline>(TOKENS.auditRedaction);
+    c.register(
+      TOKENS.auditWorkflowRepo,
+      async () => {
+        const hashChain = await c.resolve<AuditHashChainService>(
+          TOKENS.auditHashChain,
+        );
+        const redaction = await c.resolve<AuditRedactionPipeline>(
+          TOKENS.auditRedaction,
+        );
 
-      // Optional: resolve OTel trace context if telemetry adapter is available
-      let traceResolver: (() => { traceId: string } | undefined) | undefined;
-      try {
-        const telemetry = await c.resolve<{ getOtelTraceContext?: () => { traceId: string } | undefined }>(TOKENS.telemetry);
-        if (telemetry?.getOtelTraceContext) {
-          traceResolver = telemetry.getOtelTraceContext;
+        // Optional: resolve OTel trace context if telemetry adapter is available
+        let traceResolver: (() => { traceId: string } | undefined) | undefined;
+        try {
+          const telemetry = await c.resolve<{
+            getOtelTraceContext?: () => { traceId: string } | undefined;
+          }>(TOKENS.telemetry);
+          if (telemetry?.getOtelTraceContext) {
+            traceResolver = telemetry.getOtelTraceContext;
+          }
+        } catch {
+          // Telemetry adapter not available — no trace enrichment
         }
-      } catch {
-        // Telemetry adapter not available — no trace enrichment
-      }
 
-      // Optional: column-level encryption
-      let encryption: AuditColumnEncryptionService | undefined;
-      try {
-        encryption = await c.resolve<AuditColumnEncryptionService | null>(TOKENS.auditEncryption) ?? undefined;
-      } catch {
-        // Encryption not available
-      }
+        // Optional: column-level encryption
+        let encryption: AuditColumnEncryptionService | undefined;
+        try {
+          encryption =
+            (await c.resolve<AuditColumnEncryptionService | null>(
+              TOKENS.auditEncryption,
+            )) ?? undefined;
+        } catch {
+          // Encryption not available
+        }
 
-      return createWorkflowAuditRepository(db, hashChain, redaction, traceResolver, encryption);
-    }, "singleton");
+        return createWorkflowAuditRepository(
+          db,
+          hashChain,
+          redaction,
+          traceResolver,
+          encryption,
+        );
+      },
+      "singleton",
+    );
 
     // ── Rate Limiter ───────────────────────────────────────────────
-    c.register(TOKENS.auditRateLimiter, async () => {
-      let rateLimiter: RateLimiter;
-      try {
-        // Try to resolve a shared rate limiter from cache adapter
-        const redis = await c.resolve<any>(TOKENS.cache);
-        // Use a lightweight RateLimiter wrapping the Redis client
-        const { RedisRateLimiter } = await import("../foundation/security/redis-rate-limiter.js") as any;
-        rateLimiter = new RedisRateLimiter(redis, {
-          maxRequests: 500,
-          windowMs: 60_000, // 500 audit events per tenant per minute
-        });
-      } catch {
-        // No Redis — create a pass-through limiter
-        rateLimiter = {
-          consume: async () => ({ allowed: true, remaining: 999, limit: 999, resetMs: 0 }),
-          check: async () => ({ allowed: true, remaining: 999, limit: 999, resetMs: 0 }),
-          reset: async () => {},
-          getStatus: async () => ({ allowed: true, remaining: 999, limit: 999, resetMs: 0 }),
-        } as RateLimiter;
-      }
-      return new AuditRateLimiter(rateLimiter);
-    }, "singleton");
+    c.register(
+      TOKENS.auditRateLimiter,
+      async () => {
+        let rateLimiter: RateLimiter;
+        try {
+          // Try to resolve a shared rate limiter from cache adapter
+          const redis = await c.resolve<any>(TOKENS.cache);
+          // Use a lightweight RateLimiter wrapping the Redis client
+          const { RedisRateLimiter } =
+            (await import("../foundation/security/redis-rate-limiter.js")) as any;
+          rateLimiter = new RedisRateLimiter(redis, {
+            maxRequests: 500,
+            windowMs: 60_000, // 500 audit events per tenant per minute
+          });
+        } catch {
+          // No Redis — create a pass-through limiter
+          rateLimiter = {
+            consume: async () => ({
+              allowed: true,
+              remaining: 999,
+              limit: 999,
+              resetMs: 0,
+            }),
+            check: async () => ({
+              allowed: true,
+              remaining: 999,
+              limit: 999,
+              resetMs: 0,
+            }),
+            reset: async () => {},
+            getStatus: async () => ({
+              allowed: true,
+              remaining: 999,
+              limit: 999,
+              resetMs: 0,
+            }),
+          } as RateLimiter;
+        }
+        return new AuditRateLimiter(rateLimiter);
+      },
+      "singleton",
+    );
 
     // ── Query Gate ─────────────────────────────────────────────────
-    c.register(TOKENS.auditQueryGate, async () => {
-      return new AuditQueryPolicyGate(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditQueryGate,
+      async () => {
+        return new AuditQueryPolicyGate(db);
+      },
+      "singleton",
+    );
 
     // ── Resilient Writer ───────────────────────────────────────────
-    c.register(TOKENS.auditResilientWriter, async () => {
-      const outboxRepo = await c.resolve<AuditOutboxRepo>(TOKENS.auditOutboxRepo);
-      const redaction = await c.resolve<AuditRedactionPipeline>(TOKENS.auditRedaction);
-      const hashChain = await c.resolve<AuditHashChainService>(TOKENS.auditHashChain);
-      const flagResolver = await c.resolve<AuditFeatureFlagResolver>(TOKENS.auditFeatureFlags);
+    c.register(
+      TOKENS.auditResilientWriter,
+      async () => {
+        const outboxRepo = await c.resolve<AuditOutboxRepo>(
+          TOKENS.auditOutboxRepo,
+        );
+        const redaction = await c.resolve<AuditRedactionPipeline>(
+          TOKENS.auditRedaction,
+        );
+        const hashChain = await c.resolve<AuditHashChainService>(
+          TOKENS.auditHashChain,
+        );
+        const flagResolver = await c.resolve<AuditFeatureFlagResolver>(
+          TOKENS.auditFeatureFlags,
+        );
 
-      // Optional: sync writer for "sync" write mode
-      let syncWriter: WorkflowAuditRepository | undefined;
-      try {
-        syncWriter = await c.resolve<WorkflowAuditRepository>(TOKENS.auditWorkflowRepo);
-      } catch {
-        // Not available — sync mode will fall back to outbox
-      }
+        // Optional: sync writer for "sync" write mode
+        let syncWriter: WorkflowAuditRepository | undefined;
+        try {
+          syncWriter = await c.resolve<WorkflowAuditRepository>(
+            TOKENS.auditWorkflowRepo,
+          );
+        } catch {
+          // Not available — sync mode will fall back to outbox
+        }
 
-      let circuitBreaker: CircuitBreaker;
-      try {
-        const breakers = await c.resolve<AdapterCircuitBreakers>(TOKENS.circuitBreakers);
-        circuitBreaker = breakers.getOrCreate("audit-outbox", {
-          failureThreshold: 10,
-          failureWindow: 60_000,
-          resetTimeout: 15_000,
-          successThreshold: 3,
+        let circuitBreaker: CircuitBreaker;
+        try {
+          const breakers = await c.resolve<AdapterCircuitBreakers>(
+            TOKENS.circuitBreakers,
+          );
+          circuitBreaker = breakers.getOrCreate("audit-outbox", {
+            failureThreshold: 10,
+            failureWindow: 60_000,
+            resetTimeout: 15_000,
+            successThreshold: 3,
+          });
+        } catch {
+          // Fallback: no-op circuit breaker (always closed)
+          circuitBreaker = {
+            execute: async <T>(fn: () => Promise<T>) => fn(),
+            getMetrics: () => ({
+              state: "CLOSED" as const,
+              failures: 0,
+              successes: 0,
+              totalCalls: 0,
+            }),
+            reset: () => {},
+          } as unknown as CircuitBreaker;
+        }
+
+        let metrics: AuditMetrics | undefined;
+        try {
+          metrics = await c.resolve<AuditMetrics>(TOKENS.auditMetrics);
+        } catch {
+          // Metrics not yet registered
+        }
+
+        // Optional: load shedding
+        let loadShedding: AuditLoadSheddingService | undefined;
+        try {
+          loadShedding =
+            (await c.resolve<AuditLoadSheddingService | null>(
+              TOKENS.auditLoadShedding,
+            )) ?? undefined;
+        } catch {
+          // Load shedding not available
+        }
+
+        return new ResilientAuditWriter(outboxRepo, circuitBreaker, {
+          redaction,
+          hashChain,
+          metrics,
+          logger,
+          maxBufferSize: 1000,
+          flagResolver,
+          syncWriter,
+          loadShedding,
         });
-      } catch {
-        // Fallback: no-op circuit breaker (always closed)
-        circuitBreaker = {
-          execute: async <T>(fn: () => Promise<T>) => fn(),
-          getMetrics: () => ({ state: "CLOSED" as const, failures: 0, successes: 0, totalCalls: 0 }),
-          reset: () => {},
-        } as unknown as CircuitBreaker;
-      }
-
-      let metrics: AuditMetrics | undefined;
-      try {
-        metrics = await c.resolve<AuditMetrics>(TOKENS.auditMetrics);
-      } catch {
-        // Metrics not yet registered
-      }
-
-      // Optional: load shedding
-      let loadShedding: AuditLoadSheddingService | undefined;
-      try {
-        loadShedding = await c.resolve<AuditLoadSheddingService | null>(TOKENS.auditLoadShedding) ?? undefined;
-      } catch {
-        // Load shedding not available
-      }
-
-      return new ResilientAuditWriter(outboxRepo, circuitBreaker, {
-        redaction,
-        hashChain,
-        metrics,
-        logger,
-        maxBufferSize: 1000,
-        flagResolver,
-        syncWriter,
-        loadShedding,
-      });
-    }, "singleton");
+      },
+      "singleton",
+    );
 
     // ── Activity Timeline ──────────────────────────────────────────
-    c.register(TOKENS.auditTimeline, async () => {
-      const svc = new ActivityTimelineService(db);
+    c.register(
+      TOKENS.auditTimeline,
+      async () => {
+        const svc = new ActivityTimelineService(db);
 
-      // Wire feature flag resolver for timeline toggle
-      try {
-        const flagResolver = await c.resolve<AuditFeatureFlagResolver>(TOKENS.auditFeatureFlags);
-        svc.setFlagResolver(flagResolver);
-      } catch {
-        // Flags not available — timeline always on
-      }
+        // Wire feature flag resolver for timeline toggle
+        try {
+          const flagResolver = await c.resolve<AuditFeatureFlagResolver>(
+            TOKENS.auditFeatureFlags,
+          );
+          svc.setFlagResolver(flagResolver);
+        } catch {
+          // Flags not available — timeline always on
+        }
 
-      return svc;
-    }, "singleton");
+        return svc;
+      },
+      "singleton",
+    );
 
     // ── DLQ Repo ─────────────────────────────────────────────────
-    c.register(TOKENS.auditDlqRepo, async () => {
-      return new AuditDlqRepo(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditDlqRepo,
+      async () => {
+        return new AuditDlqRepo(db);
+      },
+      "singleton",
+    );
 
     // ── DLQ Manager ─────────────────────────────────────────────
-    c.register(TOKENS.auditDlqManager, async () => {
-      const dlqRepo = await c.resolve<AuditDlqRepo>(TOKENS.auditDlqRepo);
-      const outboxRepo = await c.resolve<AuditOutboxRepo>(TOKENS.auditOutboxRepo);
+    c.register(
+      TOKENS.auditDlqManager,
+      async () => {
+        const dlqRepo = await c.resolve<AuditDlqRepo>(TOKENS.auditDlqRepo);
+        const outboxRepo = await c.resolve<AuditOutboxRepo>(
+          TOKENS.auditOutboxRepo,
+        );
 
-      let hashChain: AuditHashChainService | null = null;
-      try {
-        hashChain = await c.resolve<AuditHashChainService>(TOKENS.auditHashChain);
-      } catch {
-        // Hash chain not available
-      }
+        let hashChain: AuditHashChainService | null = null;
+        try {
+          hashChain = await c.resolve<AuditHashChainService>(
+            TOKENS.auditHashChain,
+          );
+        } catch {
+          // Hash chain not available
+        }
 
-      return new AuditDlqManager(dlqRepo, outboxRepo, hashChain, logger);
-    }, "singleton");
+        return new AuditDlqManager(dlqRepo, outboxRepo, hashChain, logger);
+      },
+      "singleton",
+    );
 
     // ── Metrics ────────────────────────────────────────────────────
-    c.register(TOKENS.auditMetrics, async () => {
-      const metricsRegistry = await c.resolve<MetricsRegistry>(TOKENS.metricsRegistry);
-      return new AuditMetrics(metricsRegistry);
-    }, "singleton");
+    c.register(
+      TOKENS.auditMetrics,
+      async () => {
+        const metricsRegistry = await c.resolve<MetricsRegistry>(
+          TOKENS.metricsRegistry,
+        );
+        return new AuditMetrics(metricsRegistry);
+      },
+      "singleton",
+    );
 
     // ── Integrity Service ────────────────────────────────────────
-    c.register(TOKENS.auditIntegrity, async () => {
-      const hashChain = await c.resolve<AuditHashChainService>(TOKENS.auditHashChain);
+    c.register(
+      TOKENS.auditIntegrity,
+      async () => {
+        const hashChain = await c.resolve<AuditHashChainService>(
+          TOKENS.auditHashChain,
+        );
 
-      let metrics: AuditMetrics | undefined;
-      try {
-        metrics = await c.resolve<AuditMetrics>(TOKENS.auditMetrics);
-      } catch {
-        // Metrics not available
-      }
+        let metrics: AuditMetrics | undefined;
+        try {
+          metrics = await c.resolve<AuditMetrics>(TOKENS.auditMetrics);
+        } catch {
+          // Metrics not available
+        }
 
-      let objectStorage: any = null;
-      try {
-        objectStorage = await c.resolve<any>(TOKENS.objectStorage);
-      } catch {
-        // Object storage not available
-      }
+        let objectStorage: any = null;
+        try {
+          objectStorage = await c.resolve<any>(TOKENS.objectStorage);
+        } catch {
+          // Object storage not available
+        }
 
-      return new AuditIntegrityService(db, hashChain, objectStorage, metrics);
-    }, "singleton");
+        return new AuditIntegrityService(db, hashChain, objectStorage, metrics);
+      },
+      "singleton",
+    );
 
     // ── Replay Service ──────────────────────────────────────────
-    c.register(TOKENS.auditReplay, async () => {
-      const hashChain = await c.resolve<AuditHashChainService>(TOKENS.auditHashChain);
+    c.register(
+      TOKENS.auditReplay,
+      async () => {
+        const hashChain = await c.resolve<AuditHashChainService>(
+          TOKENS.auditHashChain,
+        );
 
-      let dlqRepo: AuditDlqRepo | null = null;
-      try {
-        dlqRepo = await c.resolve<AuditDlqRepo>(TOKENS.auditDlqRepo);
-      } catch {
-        // DLQ not available
-      }
+        let dlqRepo: AuditDlqRepo | null = null;
+        try {
+          dlqRepo = await c.resolve<AuditDlqRepo>(TOKENS.auditDlqRepo);
+        } catch {
+          // DLQ not available
+        }
 
-      let objectStorage: any = null;
-      try {
-        objectStorage = await c.resolve<any>(TOKENS.objectStorage);
-      } catch {
-        // Object storage not available
-      }
+        let objectStorage: any = null;
+        try {
+          objectStorage = await c.resolve<any>(TOKENS.objectStorage);
+        } catch {
+          // Object storage not available
+        }
 
-      return new AuditReplayService(db, hashChain, dlqRepo, objectStorage);
-    }, "singleton");
+        return new AuditReplayService(db, hashChain, dlqRepo, objectStorage);
+      },
+      "singleton",
+    );
 
     // ── Archive Marker Repo ──────────────────────────────────────
-    c.register(TOKENS.auditArchiveMarkerRepo, async () => {
-      return new AuditArchiveMarkerRepo(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditArchiveMarkerRepo,
+      async () => {
+        return new AuditArchiveMarkerRepo(db);
+      },
+      "singleton",
+    );
 
     // ── Storage Tiering ─────────────────────────────────────────
-    c.register(TOKENS.auditStorageTiering, async () => {
-      let config: RuntimeConfig | undefined;
-      try {
-        config = await c.resolve<RuntimeConfig>(TOKENS.config);
-      } catch {
-        // Config not available
-      }
+    c.register(
+      TOKENS.auditStorageTiering,
+      async () => {
+        let config: RuntimeConfig | undefined;
+        try {
+          config = await c.resolve<RuntimeConfig>(TOKENS.config);
+        } catch {
+          // Config not available
+        }
 
-      const auditConfig = config?.audit ?? {};
-      const tieringEnabled = (auditConfig as any).tieringEnabled ?? false;
+        const auditConfig = config?.audit ?? {};
+        const tieringEnabled = (auditConfig as any).tieringEnabled ?? false;
 
-      if (!tieringEnabled) {
-        return null;
-      }
+        if (!tieringEnabled) {
+          return null;
+        }
 
-      let archiveMarkerRepo: AuditArchiveMarkerRepo | null = null;
-      try {
-        archiveMarkerRepo = await c.resolve<AuditArchiveMarkerRepo>(TOKENS.auditArchiveMarkerRepo);
-      } catch {
-        // Repo not available
-      }
+        let archiveMarkerRepo: AuditArchiveMarkerRepo | null = null;
+        try {
+          archiveMarkerRepo = await c.resolve<AuditArchiveMarkerRepo>(
+            TOKENS.auditArchiveMarkerRepo,
+          );
+        } catch {
+          // Repo not available
+        }
 
-      return new AuditStorageTieringService(archiveMarkerRepo, {
-        warmAfterDays: (auditConfig as any).warmAfterDays ?? 90,
-        coldAfterDays: (auditConfig as any).coldAfterDays ?? 365,
-      });
-    }, "singleton");
+        return new AuditStorageTieringService(archiveMarkerRepo, {
+          warmAfterDays: (auditConfig as any).warmAfterDays ?? 90,
+          coldAfterDays: (auditConfig as any).coldAfterDays ?? 365,
+        });
+      },
+      "singleton",
+    );
 
     // ── Explainability Service ───────────────────────────────────
-    c.register(TOKENS.auditExplainability, async () => {
-      return new AuditExplainabilityService(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditExplainability,
+      async () => {
+        return new AuditExplainabilityService(db);
+      },
+      "singleton",
+    );
 
     // ── Access Report Service ────────────────────────────────────
-    c.register(TOKENS.auditAccessReport, async () => {
-      return new AuditAccessReportService(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditAccessReport,
+      async () => {
+        return new AuditAccessReportService(db);
+      },
+      "singleton",
+    );
 
     // ── DSAR Service ─────────────────────────────────────────────
-    c.register(TOKENS.auditDsar, async () => {
-      return new AuditDsarService(db);
-    }, "singleton");
+    c.register(
+      TOKENS.auditDsar,
+      async () => {
+        return new AuditDsarService(db);
+      },
+      "singleton",
+    );
   },
 
   async contribute(c: Container) {
@@ -413,9 +567,15 @@ export const module: RuntimeModule = {
 
     // ── Health Check ───────────────────────────────────────────────
     try {
-      const healthRegistry = await c.resolve<HealthCheckRegistry>(TOKENS.healthRegistry);
-      const outboxRepo = await c.resolve<AuditOutboxRepo>(TOKENS.auditOutboxRepo);
-      const writer = await c.resolve<ResilientAuditWriter>(TOKENS.auditResilientWriter);
+      const healthRegistry = await c.resolve<HealthCheckRegistry>(
+        TOKENS.healthRegistry,
+      );
+      const outboxRepo = await c.resolve<AuditOutboxRepo>(
+        TOKENS.auditOutboxRepo,
+      );
+      const writer = await c.resolve<ResilientAuditWriter>(
+        TOKENS.auditResilientWriter,
+      );
 
       healthRegistry.register(
         "audit-pipeline",
@@ -423,12 +583,17 @@ export const module: RuntimeModule = {
         { type: "internal", required: false },
       );
     } catch (err) {
-      logger.warn({ error: String(err) }, "[audit-governance] Could not register health check");
+      logger.warn(
+        { error: String(err) },
+        "[audit-governance] Could not register health check",
+      );
     }
 
     // ── Slow Query Handler + Timeline Metrics ──────────────────────
     try {
-      const timeline = await c.resolve<ActivityTimelineService>(TOKENS.auditTimeline);
+      const timeline = await c.resolve<ActivityTimelineService>(
+        TOKENS.auditTimeline,
+      );
       let metrics: AuditMetrics | undefined;
       try {
         metrics = await c.resolve<AuditMetrics>(TOKENS.auditMetrics);
@@ -442,16 +607,25 @@ export const module: RuntimeModule = {
 
       const db = await c.resolve<Kysely<DB>>(TOKENS.db);
       const slowQueryHandler = new AuditSlowQueryHandler(db, metrics, logger);
-      timeline.setSlowQueryHandler((durationMs, query) => slowQueryHandler.handle(durationMs, query));
+      timeline.setSlowQueryHandler((durationMs, query) =>
+        slowQueryHandler.handle(durationMs, query),
+      );
     } catch (err) {
-      logger.warn({ error: String(err) }, "[audit-governance] Could not wire slow query handler");
+      logger.warn(
+        { error: String(err) },
+        "[audit-governance] Could not wire slow query handler",
+      );
     }
 
     // ── BullMQ Workers ─────────────────────────────────────────────
     try {
       const jobQueue = await c.resolve<JobQueue>(TOKENS.jobQueue);
-      const outboxRepo = await c.resolve<AuditOutboxRepo>(TOKENS.auditOutboxRepo);
-      const auditRepo = await c.resolve<WorkflowAuditRepository>(TOKENS.auditWorkflowRepo);
+      const outboxRepo = await c.resolve<AuditOutboxRepo>(
+        TOKENS.auditOutboxRepo,
+      );
+      const auditRepo = await c.resolve<WorkflowAuditRepository>(
+        TOKENS.auditWorkflowRepo,
+      );
 
       let dlqManager: AuditDlqManager | undefined;
       try {
@@ -463,12 +637,20 @@ export const module: RuntimeModule = {
       await jobQueue.process(
         "drain-audit-outbox",
         2,
-        createDrainAuditOutboxHandler(outboxRepo, auditRepo, logger, dlqManager),
+        createDrainAuditOutboxHandler(
+          outboxRepo,
+          auditRepo,
+          logger,
+          dlqManager,
+        ),
       );
 
       logger.info("[audit-governance] Drain worker registered (concurrency=2)");
     } catch (err) {
-      logger.warn({ error: String(err) }, "[audit-governance] Could not register drain worker");
+      logger.warn(
+        { error: String(err) },
+        "[audit-governance] Could not register drain worker",
+      );
     }
 
     // ── Schedule Contributions (for CronScheduler) ───────────────────
@@ -477,16 +659,19 @@ export const module: RuntimeModule = {
 
       jobRegistry.addSchedule({
         name: "drain-audit-outbox",
-        cron: "*/5 * * * *",       // every 5 minutes
+        cron: "*/5 * * * *", // every 5 minutes
         jobName: "drain-audit-outbox",
       });
       jobRegistry.addSchedule({
         name: "audit-log-retention",
-        cron: "0 2 * * *",         // daily at 2 AM
+        cron: "0 2 * * *", // daily at 2 AM
         jobName: "audit-log-retention",
       });
     } catch (err) {
-      logger.warn({ error: String(err) }, "[audit-governance] Could not register schedules");
+      logger.warn(
+        { error: String(err) },
+        "[audit-governance] Could not register schedules",
+      );
     }
 
     logger.info("[audit-governance] Module contributed");

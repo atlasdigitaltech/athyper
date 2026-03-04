@@ -28,14 +28,14 @@ import type {
   MetaCompiler,
   MetaRegistry,
   RequestContext,
-
   ValidationRule,
   ValidationRuleSet,
   ValidationTrigger,
   ValidationPhase,
   RuleValidationError,
   RuleValidationResult,
-  ConditionalRule} from "@athyper/core/meta";
+  ConditionalRule,
+} from "@athyper/core/meta";
 import type { Redis } from "ioredis";
 import type { Kysely } from "kysely";
 
@@ -135,7 +135,11 @@ export class ValidationEngineService {
   ): Promise<RuleValidationResult> {
     return withSpan(
       META_SPANS.VALIDATE,
-      { "meta.entity": entityName, "meta.trigger": trigger, "meta.tenant_id": ctx.tenantId },
+      {
+        "meta.entity": entityName,
+        "meta.trigger": trigger,
+        "meta.tenant_id": ctx.tenantId,
+      },
       async (span) => {
         const start = Date.now();
         const graph = await this.compileRules(entityName, "v1");
@@ -210,7 +214,8 @@ export class ValidationEngineService {
     rules?: ValidationRule[],
     trigger: ValidationTrigger = "create",
   ): Promise<RuleValidationResult> {
-    const effectiveRules = rules ?? (await this.compileRules(entityName, "v1")).rules;
+    const effectiveRules =
+      rules ?? (await this.compileRules(entityName, "v1")).rules;
     const ctx: RequestContext = {
       userId: "test",
       tenantId: "test",
@@ -230,7 +235,10 @@ export class ValidationEngineService {
   /**
    * Compile and cache validation rules for an entity.
    */
-  async compileRules(entityName: string, version: string): Promise<CompiledRuleGraph> {
+  async compileRules(
+    entityName: string,
+    version: string,
+  ): Promise<CompiledRuleGraph> {
     const cacheKey = `${entityName}:${version}`;
 
     // L1 check
@@ -265,7 +273,12 @@ export class ValidationEngineService {
     // Store in L1 + L2
     this.l1Cache.set(cacheKey, graph);
     try {
-      await this.cache.set(l2Key, JSON.stringify(graph), "EX", ValidationEngineService.L2_TTL);
+      await this.cache.set(
+        l2Key,
+        JSON.stringify(graph),
+        "EX",
+        ValidationEngineService.L2_TTL,
+      );
     } catch {
       // Best-effort L2 cache
     }
@@ -306,7 +319,8 @@ export class ValidationEngineService {
     for (const field of model.fields) {
       // The compiled model may carry per-field validation rules
       // stored in the source metadata. We look at the raw field definition.
-      const fieldRules = (field as unknown as Record<string, unknown>).validationRules;
+      const fieldRules = (field as unknown as Record<string, unknown>)
+        .validationRules;
       if (!fieldRules) continue;
 
       const ruleSet = fieldRules as ValidationRuleSet;
@@ -343,14 +357,23 @@ export class ValidationEngineService {
 
     // Filter rules by trigger and phase
     const applicableRules = rules.filter((rule) => {
-      if (!rule.appliesOn.includes(trigger) && !rule.appliesOn.includes("all")) {
+      if (
+        !rule.appliesOn.includes(trigger) &&
+        !rule.appliesOn.includes("all")
+      ) {
         return false;
       }
       return rule.phase === phase;
     });
 
     for (const rule of applicableRules) {
-      const result = await this.evaluateRule(rule, data, evalContext, ctx, entityName);
+      const result = await this.evaluateRule(
+        rule,
+        data,
+        evalContext,
+        ctx,
+        entityName,
+      );
       if (result) {
         if (result.severity === "error") {
           errors.push(result);
@@ -400,7 +423,13 @@ export class ValidationEngineService {
         return this.evalCrossField(rule, value, data);
 
       case "conditional":
-        return await this.evalConditional(rule, data, evalContext, ctx, entityName);
+        return await this.evalConditional(
+          rule,
+          data,
+          evalContext,
+          ctx,
+          entityName,
+        );
 
       case "date_range":
         return this.evalDateRange(rule, value, data);
@@ -436,13 +465,22 @@ export class ValidationEngineService {
   ): RuleValidationError | null {
     if (value === undefined || value === null) return null; // Skip nulls (use required rule for that)
     const num = typeof value === "number" ? value : Number(value);
-    if (isNaN(num)) return this.makeError(rule, value, `${rule.fieldPath} must be a number`);
+    if (isNaN(num))
+      return this.makeError(rule, value, `${rule.fieldPath} must be a number`);
 
     if (rule.min !== undefined && num < rule.min) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be at least ${rule.min}`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be at least ${rule.min}`,
+      );
     }
     if (rule.max !== undefined && num > rule.max) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be at most ${rule.max}`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be at most ${rule.max}`,
+      );
     }
     return null;
   }
@@ -455,10 +493,18 @@ export class ValidationEngineService {
     const str = String(value);
 
     if (rule.minLength !== undefined && str.length < rule.minLength) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be at least ${rule.minLength} characters`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be at least ${rule.minLength} characters`,
+      );
     }
     if (rule.maxLength !== undefined && str.length > rule.maxLength) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be at most ${rule.maxLength} characters`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be at most ${rule.maxLength} characters`,
+      );
     }
     return null;
   }
@@ -473,10 +519,19 @@ export class ValidationEngineService {
     try {
       const regex = new RegExp(rule.pattern, rule.flags);
       if (!regex.test(str)) {
-        return this.makeError(rule, value, rule.message ?? `${rule.fieldPath} does not match the required pattern`);
+        return this.makeError(
+          rule,
+          value,
+          rule.message ??
+            `${rule.fieldPath} does not match the required pattern`,
+        );
       }
     } catch {
-      return this.makeError(rule, value, `Invalid regex pattern: ${rule.pattern}`);
+      return this.makeError(
+        rule,
+        value,
+        `Invalid regex pattern: ${rule.pattern}`,
+      );
     }
     return null;
   }
@@ -489,7 +544,11 @@ export class ValidationEngineService {
     const str = String(value);
 
     if (!rule.allowedValues.includes(str)) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be one of: ${rule.allowedValues.join(", ")}`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be one of: ${rule.allowedValues.join(", ")}`,
+      );
     }
     return null;
   }
@@ -501,18 +560,23 @@ export class ValidationEngineService {
   ): RuleValidationError | null {
     if (value === undefined || value === null) return null;
 
-    const compareValue = resolveFieldValue(rule.compareField, data as EvaluationContext);
+    const compareValue = resolveFieldValue(
+      rule.compareField,
+      data as EvaluationContext,
+    );
     if (compareValue === undefined || compareValue === null) return null;
 
     // Use the shared condition evaluator for the comparison
     const conditionResult = evaluateConditionGroup(
       {
         operator: "and",
-        conditions: [{
-          field: rule.fieldPath,
-          operator: rule.operator,
-          value: compareValue,
-        }],
+        conditions: [
+          {
+            field: rule.fieldPath,
+            operator: rule.operator,
+            value: compareValue,
+          },
+        ],
       },
       data as EvaluationContext,
     );
@@ -521,7 +585,8 @@ export class ValidationEngineService {
       return this.makeError(
         rule,
         value,
-        rule.message ?? `${rule.fieldPath} must be ${rule.operator} ${rule.compareField}`,
+        rule.message ??
+          `${rule.fieldPath} must be ${rule.operator} ${rule.compareField}`,
       );
     }
     return null;
@@ -540,8 +605,17 @@ export class ValidationEngineService {
 
     // Evaluate nested "then" rules
     for (const nestedRule of rule.then) {
-      const value = resolveFieldValue(nestedRule.fieldPath, data as EvaluationContext);
-      const result = await this.evaluateRule(nestedRule, data, evalContext, ctx, entityName);
+      const value = resolveFieldValue(
+        nestedRule.fieldPath,
+        data as EvaluationContext,
+      );
+      const result = await this.evaluateRule(
+        nestedRule,
+        data,
+        evalContext,
+        ctx,
+        entityName,
+      );
       if (result) {
         // Override severity with parent rule severity if parent is "error"
         return {
@@ -562,36 +636,65 @@ export class ValidationEngineService {
 
     const dateValue = toDate(value);
     if (!dateValue) {
-      return this.makeError(rule, value, `${rule.fieldPath} must be a valid date`);
+      return this.makeError(
+        rule,
+        value,
+        `${rule.fieldPath} must be a valid date`,
+      );
     }
 
     if (rule.afterField) {
-      const afterValue = resolveFieldValue(rule.afterField, data as EvaluationContext);
+      const afterValue = resolveFieldValue(
+        rule.afterField,
+        data as EvaluationContext,
+      );
       const afterDate = toDate(afterValue);
       if (afterDate && dateValue <= afterDate) {
-        return this.makeError(rule, value, rule.message ?? `${rule.fieldPath} must be after ${rule.afterField}`);
+        return this.makeError(
+          rule,
+          value,
+          rule.message ?? `${rule.fieldPath} must be after ${rule.afterField}`,
+        );
       }
     }
 
     if (rule.beforeField) {
-      const beforeValue = resolveFieldValue(rule.beforeField, data as EvaluationContext);
+      const beforeValue = resolveFieldValue(
+        rule.beforeField,
+        data as EvaluationContext,
+      );
       const beforeDate = toDate(beforeValue);
       if (beforeDate && dateValue >= beforeDate) {
-        return this.makeError(rule, value, rule.message ?? `${rule.fieldPath} must be before ${rule.beforeField}`);
+        return this.makeError(
+          rule,
+          value,
+          rule.message ??
+            `${rule.fieldPath} must be before ${rule.beforeField}`,
+        );
       }
     }
 
     if (rule.minDate) {
       const minDate = new Date(rule.minDate);
       if (!isNaN(minDate.getTime()) && dateValue < minDate) {
-        return this.makeError(rule, value, rule.message ?? `${rule.fieldPath} must be on or after ${rule.minDate}`);
+        return this.makeError(
+          rule,
+          value,
+          rule.message ??
+            `${rule.fieldPath} must be on or after ${rule.minDate}`,
+        );
       }
     }
 
     if (rule.maxDate) {
       const maxDate = new Date(rule.maxDate);
       if (!isNaN(maxDate.getTime()) && dateValue > maxDate) {
-        return this.makeError(rule, value, rule.message ?? `${rule.fieldPath} must be on or before ${rule.maxDate}`);
+        return this.makeError(
+          rule,
+          value,
+          rule.message ??
+            `${rule.fieldPath} must be on or before ${rule.maxDate}`,
+        );
       }
     }
 
@@ -623,7 +726,8 @@ export class ValidationEngineService {
         return this.makeError(
           rule,
           value,
-          rule.message ?? `${rule.fieldPath} references a non-existent ${rule.targetEntity} record`,
+          rule.message ??
+            `${rule.fieldPath} references a non-existent ${rule.targetEntity} record`,
         );
       }
     } catch {
@@ -657,7 +761,10 @@ export class ValidationEngineService {
       // Add scope fields to the uniqueness check
       if (rule.scope) {
         for (const scopeField of rule.scope) {
-          const scopeValue = resolveFieldValue(scopeField, data as EvaluationContext);
+          const scopeValue = resolveFieldValue(
+            scopeField,
+            data as EvaluationContext,
+          );
           if (scopeValue !== undefined && scopeValue !== null) {
             query = query.where(scopeField as any, "=", scopeValue);
           }

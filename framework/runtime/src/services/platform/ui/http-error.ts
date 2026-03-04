@@ -6,11 +6,11 @@
  * to the appropriate HTTP status code.
  */
 export class HttpError extends Error {
-    constructor(
-        public readonly status: number,
-        public readonly code: string,
-        message: string,
-    ) {
-        super(message);
-    }
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
 }

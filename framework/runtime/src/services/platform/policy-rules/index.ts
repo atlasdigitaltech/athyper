@@ -46,9 +46,16 @@ export {
 // Sub-services (for advanced usage)
 export { OperationCatalogService } from "./operation-catalog.service.js";
 export { PolicyResolutionService } from "./policy-resolution.service.js";
-export type { PolicyInfo, PolicyVersionInfo, ResolvedPolicy } from "./policy-resolution.service.js";
+export type {
+  PolicyInfo,
+  PolicyVersionInfo,
+  ResolvedPolicy,
+} from "./policy-resolution.service.js";
 export { PolicyCompilerService } from "./policy-compiler.service.js";
 export { SubjectResolverService } from "./subject-resolver.service.js";
 export { RuleEvaluatorService } from "./rule-evaluator.service.js";
 export { DecisionLoggerService } from "./decision-logger.service.js";
-export type { DecisionLogEntry, DecisionLoggerConfig } from "./decision-logger.service.js";
+export type {
+  DecisionLogEntry,
+  DecisionLoggerConfig,
+} from "./decision-logger.service.js";

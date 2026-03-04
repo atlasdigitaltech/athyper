@@ -11,7 +11,10 @@ import { META_TOKENS } from "@athyper/core/meta";
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
 import type {
   ActionDispatcher,
   EntityPageDescriptorService,
@@ -44,16 +47,24 @@ function toMetaRequestContext(ctx: HttpHandlerContext): RequestContext {
  * Cacheable by compiledModelHash (returned in response).
  */
 export class StaticDescriptorHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entityName } = req.params as { entityName: string };
 
-    const descriptorService = await ctx.container.resolve<EntityPageDescriptorService>(
-      META_TOKENS.descriptorService,
-    );
+    const descriptorService =
+      await ctx.container.resolve<EntityPageDescriptorService>(
+        META_TOKENS.descriptorService,
+      );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
-      const descriptor = await descriptorService.describeStatic(entityName, metaCtx);
+      const descriptor = await descriptorService.describeStatic(
+        entityName,
+        metaCtx,
+      );
 
       // Set cache headers using compiledModelHash as ETag
       res.setHeader("ETag", `"${descriptor.compiledModelHash}"`);
@@ -65,7 +76,10 @@ export class StaticDescriptorHandler implements RouteHandler {
       });
     } catch (error) {
       const logger = await ctx.container.resolve<any>(TOKENS.logger);
-      logger.error({ error, entityName }, "Failed to compute static descriptor");
+      logger.error(
+        { error, entityName },
+        "Failed to compute static descriptor",
+      );
 
       if (error instanceof Error && error.message.includes("not found")) {
         res.status(404).json({
@@ -103,13 +117,18 @@ export class StaticDescriptorHandler implements RouteHandler {
  * - viewMode: "view" | "edit" | "create" (default: "view")
  */
 export class DynamicDescriptorHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entityName, id } = req.params as { entityName: string; id: string };
     const { viewMode } = req.query as { viewMode?: ViewMode };
 
-    const descriptorService = await ctx.container.resolve<EntityPageDescriptorService>(
-      META_TOKENS.descriptorService,
-    );
+    const descriptorService =
+      await ctx.container.resolve<EntityPageDescriptorService>(
+        META_TOKENS.descriptorService,
+      );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -129,7 +148,10 @@ export class DynamicDescriptorHandler implements RouteHandler {
       });
     } catch (error) {
       const logger = await ctx.container.resolve<any>(TOKENS.logger);
-      logger.error({ error, entityName, id }, "Failed to compute dynamic descriptor");
+      logger.error(
+        { error, entityName, id },
+        "Failed to compute dynamic descriptor",
+      );
 
       if (error instanceof Error && error.message.includes("not found")) {
         res.status(404).json({
@@ -166,7 +188,11 @@ export class DynamicDescriptorHandler implements RouteHandler {
  * Body: { payload?: Record<string, unknown> }
  */
 export class ActionExecutionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { entityName, id, actionCode } = req.params as {
       entityName: string;
       id: string;
@@ -205,7 +231,10 @@ export class ActionExecutionHandler implements RouteHandler {
       }
     } catch (error) {
       const logger = await ctx.container.resolve<any>(TOKENS.logger);
-      logger.error({ error, entityName, id, actionCode }, "Failed to execute action");
+      logger.error(
+        { error, entityName, id, actionCode },
+        "Failed to execute action",
+      );
 
       res.status(500).json({
         success: false,

@@ -178,12 +178,18 @@ export class EntityCapabilitiesService {
     tenantId: string,
   ): Promise<EntityCapabilities | null> {
     // 1. Load entity metadata
-    const entity = await this.db
+    const entity = (await this.db
       .selectFrom("meta.entity")
-      .select(["name", "kind", "governance_level", "entity_short", "feature_flags"])
+      .select([
+        "name",
+        "kind",
+        "governance_level",
+        "entity_short",
+        "feature_flags",
+      ])
       .where("name", "=", entityKey)
       .where("tenant_id", "=", tenantId)
-      .executeTakeFirst() as EntityRow | undefined;
+      .executeTakeFirst()) as EntityRow | undefined;
 
     if (!entity) return null;
 
@@ -212,19 +218,20 @@ export class EntityCapabilitiesService {
 
     // 5. Load operation display metadata
     const opCodes = enabled.map((r) => r.operationCode);
-    const operationMeta = opCodes.length > 0
-      ? await this.db
-          .selectFrom("core.operation as o")
-          .innerJoin("core.operation_category as c", "c.id", "o.category_id")
-          .select([
-            "o.code",
-            "o.name",
-            "o.description",
-            "c.code as category_code",
-          ])
-          .where("o.code", "in", opCodes)
-          .execute() as OperationMetaRow[]
-      : [];
+    const operationMeta =
+      opCodes.length > 0
+        ? ((await this.db
+            .selectFrom("core.operation as o")
+            .innerJoin("core.operation_category as c", "c.id", "o.category_id")
+            .select([
+              "o.code",
+              "o.name",
+              "o.description",
+              "c.code as category_code",
+            ])
+            .where("o.code", "in", opCodes)
+            .execute()) as OperationMetaRow[])
+        : [];
 
     const opMetaMap = new Map(operationMeta.map((o) => [o.code, o]));
 
@@ -299,9 +306,7 @@ export class EntityCapabilitiesService {
     tenantRows: EntityOperationRow[],
   ): MergedRow[] {
     // Index tenant rows by operation_code for O(1) lookup
-    const tenantIndex = new Map(
-      tenantRows.map((r) => [r.operation_code, r]),
-    );
+    const tenantIndex = new Map(tenantRows.map((r) => [r.operation_code, r]));
 
     return systemRows.map((sys) => {
       const override = tenantIndex.get(sys.operation_code);

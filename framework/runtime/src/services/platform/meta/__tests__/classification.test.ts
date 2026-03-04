@@ -30,7 +30,7 @@ function createMockDb(
     feature_flags: unknown;
     is_active: boolean;
     tenant_id: string;
-  }>
+  }>,
 ) {
   const selectQuery = {
     select: vi.fn().mockReturnThis(),
@@ -47,7 +47,7 @@ function createMockDb(
           (e) =>
             e.name === filters.name &&
             e.tenant_id === filters.tenant_id &&
-            e.is_active === filters.is_active
+            e.is_active === filters.is_active,
         ) ?? undefined
       );
     }),
@@ -69,7 +69,7 @@ function createMockDb(
             (e) =>
               e.name === query._filters.name &&
               e.tenant_id === query._filters.tenant_id &&
-              e.is_active === query._filters.is_active
+              e.is_active === query._filters.is_active,
           ) ?? undefined
         );
       });
@@ -203,7 +203,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.resolveFeatureFlags("CompleteFlags", tenantId);
+      const result = await service.resolveFeatureFlags(
+        "CompleteFlags",
+        tenantId,
+      );
 
       expect(result).toEqual({
         entity_class: "CONTROL",
@@ -229,7 +232,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.resolveFeatureFlags("PartialFlags", tenantId);
+      const result = await service.resolveFeatureFlags(
+        "PartialFlags",
+        tenantId,
+      );
 
       expect(result).toEqual({
         entity_class: "DOCUMENT",
@@ -300,7 +306,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.resolveFeatureFlags("InvalidVersioning", tenantId);
+      const result = await service.resolveFeatureFlags(
+        "InvalidVersioning",
+        tenantId,
+      );
 
       // Should use default "none" for invalid versioning_mode
       expect(result.versioning_mode).toBe("none");
@@ -321,7 +330,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.resolveFeatureFlags("InvalidTypes", tenantId);
+      const result = await service.resolveFeatureFlags(
+        "InvalidTypes",
+        tenantId,
+      );
 
       // Should use defaults for non-boolean values
       expect(result.approval_required).toBe(false);
@@ -342,7 +354,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.resolveFeatureFlags("SequentialVersion", tenantId);
+      const result = await service.resolveFeatureFlags(
+        "SequentialVersion",
+        tenantId,
+      );
 
       expect(result.versioning_mode).toBe("sequential");
     });
@@ -409,7 +424,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.getClassification("CombinedEntity", tenantId);
+      const result = await service.getClassification(
+        "CombinedEntity",
+        tenantId,
+      );
 
       expect(result.entityClass).toBe("DOCUMENT");
       expect(result.featureFlags).toEqual({
@@ -449,7 +467,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.getClassification("NullKindEntity", tenantId);
+      const result = await service.getClassification(
+        "NullKindEntity",
+        tenantId,
+      );
 
       expect(result.entityClass).toBeUndefined();
       expect(result.featureFlags.entity_class).toBeUndefined();
@@ -509,7 +530,10 @@ describe("EntityClassificationService", () => {
       ]);
 
       const service = new EntityClassificationServiceImpl(db);
-      const result = await service.getClassification("InactiveEntity", tenantId);
+      const result = await service.getClassification(
+        "InactiveEntity",
+        tenantId,
+      );
 
       expect(result.entityClass).toBeUndefined();
       expect(result.featureFlags.entity_class).toBeUndefined();
@@ -587,7 +611,7 @@ describe("EntityClassificationService", () => {
       const service = new EntityClassificationServiceImpl(db);
       const { entityClass, featureFlags } = await service.getClassification(
         "Customer",
-        tenantId
+        tenantId,
       );
 
       expect(entityClass).toBe("MASTER");
@@ -611,7 +635,7 @@ describe("EntityClassificationService", () => {
       const service = new EntityClassificationServiceImpl(db);
       const { entityClass, featureFlags } = await service.getClassification(
         "WorkflowTask",
-        tenantId
+        tenantId,
       );
 
       expect(entityClass).toBe("CONTROL");
@@ -640,7 +664,7 @@ describe("EntityClassificationService", () => {
       const service = new EntityClassificationServiceImpl(db);
       const { entityClass, featureFlags } = await service.getClassification(
         "Invoice",
-        tenantId
+        tenantId,
       );
 
       expect(entityClass).toBe("DOCUMENT");

@@ -6,8 +6,14 @@
  */
 
 import type { IAdminActionsService, RestartOptions } from "./admin/types.js";
-import type { IAuditTrailService, IComplianceReportingService } from "./audit/types.js";
-import type { IErrorDetectionService, IRecoveryService } from "./recovery/types.js";
+import type {
+  IAuditTrailService,
+  IComplianceReportingService,
+} from "./audit/types.js";
+import type {
+  IErrorDetectionService,
+  IRecoveryService,
+} from "./recovery/types.js";
 import type { IVersionControlService } from "./version/types.js";
 import type { Request, Response } from "express";
 
@@ -38,7 +44,12 @@ export interface ExportAuditTrailResponse {
 }
 
 export interface GetComplianceReportRequest {
-  reportType: "cycle_duration" | "sla_breach" | "escalation" | "approver_workload" | "summary";
+  reportType:
+    | "cycle_duration"
+    | "sla_breach"
+    | "escalation"
+    | "approver_workload"
+    | "summary";
   startDate?: string;
   endDate?: string;
   templateId?: string;
@@ -300,7 +311,7 @@ export class GovernanceApiController {
     private readonly adminService: IAdminActionsService,
     private readonly versionService: IVersionControlService,
     private readonly getTenantId: (req: Request) => string,
-    private readonly getUserId: (req: Request) => string
+    private readonly getUserId: (req: Request) => string,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -312,7 +323,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { instanceId } = req.params;
 
-      const auditTrail = await this.auditService.getAuditTrail(tenantId, instanceId);
+      const auditTrail = await this.auditService.getAuditTrail(
+        tenantId,
+        instanceId,
+      );
 
       res.json({ success: true, auditTrail } as GetAuditTrailResponse);
     } catch (error) {
@@ -329,7 +343,11 @@ export class GovernanceApiController {
       const { instanceId } = req.params;
       const format = (req.query.format as "json" | "csv" | "pdf") || "json";
 
-      const data = await this.auditService.exportAuditTrail(tenantId, instanceId, format);
+      const data = await this.auditService.exportAuditTrail(
+        tenantId,
+        instanceId,
+        format,
+      );
 
       const contentTypes = {
         json: "application/json",
@@ -340,7 +358,7 @@ export class GovernanceApiController {
       res.setHeader("Content-Type", contentTypes[format]);
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="audit-trail-${instanceId}.${format}"`
+        `attachment; filename="audit-trail-${instanceId}.${format}"`,
       );
       res.send(data);
     } catch (error) {
@@ -427,7 +445,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { instanceId } = req.params;
 
-      const health = await this.errorDetectionService.checkInstanceHealth(tenantId, instanceId);
+      const health = await this.errorDetectionService.checkInstanceHealth(
+        tenantId,
+        instanceId,
+      );
 
       res.json({ success: true, health } as GetWorkflowHealthResponse);
     } catch (error) {
@@ -453,10 +474,13 @@ export class GovernanceApiController {
           parameters: action.parameters,
           requiresConfirmation: false,
         },
-        userId
+        userId,
       );
 
-      res.json({ success: result.success, result } as ExecuteRecoveryActionResponse);
+      res.json({
+        success: result.success,
+        result,
+      } as ExecuteRecoveryActionResponse);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -469,14 +493,18 @@ export class GovernanceApiController {
     try {
       const tenantId = this.getTenantId(req);
       const userId = this.getUserId(req);
-      const { instanceId, reason: _reason, message } = req.body as PauseWorkflowRequest;
+      const {
+        instanceId,
+        reason: _reason,
+        message,
+      } = req.body as PauseWorkflowRequest;
 
       const pause = await this.recoveryService.pauseWorkflow(
         tenantId,
         instanceId,
         "admin_request",
         message,
-        userId
+        userId,
       );
 
       res.json({ success: true, pause } as PauseWorkflowResponse);
@@ -494,7 +522,11 @@ export class GovernanceApiController {
       const userId = this.getUserId(req);
       const { instanceId } = req.body as ResumeWorkflowRequest;
 
-      const instance = await this.recoveryService.resumeWorkflow(tenantId, instanceId, userId);
+      const instance = await this.recoveryService.resumeWorkflow(
+        tenantId,
+        instanceId,
+        userId,
+      );
 
       res.json({ success: true, instance } as ResumeWorkflowResponse);
     } catch (error) {
@@ -513,14 +545,15 @@ export class GovernanceApiController {
     try {
       const tenantId = this.getTenantId(req);
       const userId = this.getUserId(req);
-      const { instanceId, stepInstanceId, reason } = req.body as ForceApproveRequest;
+      const { instanceId, stepInstanceId, reason } =
+        req.body as ForceApproveRequest;
 
       const result = await this.adminService.forceApprove(
         tenantId,
         instanceId,
         stepInstanceId,
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: result.success, result } as ForceApproveResponse);
@@ -536,14 +569,15 @@ export class GovernanceApiController {
     try {
       const tenantId = this.getTenantId(req);
       const userId = this.getUserId(req);
-      const { instanceId, stepInstanceId, reason } = req.body as ForceRejectRequest;
+      const { instanceId, stepInstanceId, reason } =
+        req.body as ForceRejectRequest;
 
       const result = await this.adminService.forceReject(
         tenantId,
         instanceId,
         stepInstanceId,
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: result.success, result } as ForceRejectResponse);
@@ -568,10 +602,13 @@ export class GovernanceApiController {
         stepInstanceId,
         newApprovers,
         userId,
-        reason
+        reason,
       );
 
-      res.json({ success: result.success, result } as ReassignApproversResponse);
+      res.json({
+        success: result.success,
+        result,
+      } as ReassignApproversResponse);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -584,14 +621,15 @@ export class GovernanceApiController {
     try {
       const tenantId = this.getTenantId(req);
       const userId = this.getUserId(req);
-      const { instanceId, stepInstanceId, reason } = req.body as SkipStepRequest;
+      const { instanceId, stepInstanceId, reason } =
+        req.body as SkipStepRequest;
 
       const result = await this.adminService.skipStep(
         tenantId,
         instanceId,
         stepInstanceId,
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: result.success, result } as SkipStepResponse);
@@ -613,7 +651,7 @@ export class GovernanceApiController {
         tenantId,
         instanceId,
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: result.success, result } as CancelWorkflowResponse);
@@ -644,7 +682,7 @@ export class GovernanceApiController {
         tenantId,
         body.instanceId,
         options,
-        userId
+        userId,
       );
 
       res.json({ success: result.success, result } as RestartFromStepResponse);
@@ -669,7 +707,7 @@ export class GovernanceApiController {
         stepInstanceId,
         new Date(newDeadline),
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: result.success, result } as ModifyDeadlineResponse);
@@ -686,7 +724,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { instanceId } = req.params;
 
-      const history = await this.adminService.getActionHistory(tenantId, instanceId);
+      const history = await this.adminService.getActionHistory(
+        tenantId,
+        instanceId,
+      );
 
       res.json({ success: true, history });
     } catch (error) {
@@ -714,7 +755,7 @@ export class GovernanceApiController {
         definition,
         metadata,
         userId,
-        changeDescription
+        changeDescription,
       );
 
       res.json({ success: true, version } as CreateVersionResponse);
@@ -732,7 +773,11 @@ export class GovernanceApiController {
       const userId = this.getUserId(req);
       const { versionId } = req.body as PublishVersionRequest;
 
-      const version = await this.versionService.publishVersion(tenantId, versionId, userId);
+      const version = await this.versionService.publishVersion(
+        tenantId,
+        versionId,
+        userId,
+      );
 
       res.json({ success: true, version } as PublishVersionResponse);
     } catch (error) {
@@ -753,7 +798,7 @@ export class GovernanceApiController {
         tenantId,
         versionId,
         userId,
-        reason
+        reason,
       );
 
       res.json({ success: true, version } as DeprecateVersionResponse);
@@ -770,7 +815,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { templateId } = req.params;
 
-      const versions = await this.versionService.getVersionHistory(tenantId, templateId);
+      const versions = await this.versionService.getVersionHistory(
+        tenantId,
+        templateId,
+      );
 
       res.json({ success: true, versions } as GetVersionHistoryResponse);
     } catch (error) {
@@ -784,12 +832,13 @@ export class GovernanceApiController {
   async compareVersions(req: Request, res: Response): Promise<void> {
     try {
       const tenantId = this.getTenantId(req);
-      const { fromVersionId, toVersionId } = req.query as unknown as CompareVersionsRequest;
+      const { fromVersionId, toVersionId } =
+        req.query as unknown as CompareVersionsRequest;
 
       const comparison = await this.versionService.compareVersions(
         tenantId,
         fromVersionId,
-        toVersionId
+        toVersionId,
       );
 
       res.json({ success: true, comparison } as CompareVersionsResponse);
@@ -806,7 +855,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { versionId } = req.params;
 
-      const analysis = await this.versionService.analyzeImpact(tenantId, versionId);
+      const analysis = await this.versionService.analyzeImpact(
+        tenantId,
+        versionId,
+      );
 
       res.json({ success: true, analysis } as AnalyzeImpactResponse);
     } catch (error) {
@@ -822,7 +874,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { templateId } = req.params;
 
-      const version = await this.versionService.getActiveVersion(tenantId, templateId);
+      const version = await this.versionService.getActiveVersion(
+        tenantId,
+        templateId,
+      );
 
       res.json({ success: true, version });
     } catch (error) {
@@ -839,7 +894,11 @@ export class GovernanceApiController {
       const userId = this.getUserId(req);
       const { versionId } = req.params;
 
-      const version = await this.versionService.cloneVersion(tenantId, versionId, userId);
+      const version = await this.versionService.cloneVersion(
+        tenantId,
+        versionId,
+        userId,
+      );
 
       res.json({ success: true, version });
     } catch (error) {
@@ -855,7 +914,10 @@ export class GovernanceApiController {
       const tenantId = this.getTenantId(req);
       const { definition } = req.body;
 
-      const validation = await this.versionService.validateVersion(tenantId, definition);
+      const validation = await this.versionService.validateVersion(
+        tenantId,
+        definition,
+      );
 
       res.json({ success: true, validation });
     } catch (error) {
@@ -1039,7 +1101,7 @@ export function createGovernanceApiController(
   adminService: IAdminActionsService,
   versionService: IVersionControlService,
   getTenantId: (req: Request) => string,
-  getUserId: (req: Request) => string
+  getUserId: (req: Request) => string,
 ): GovernanceApiController {
   return new GovernanceApiController(
     auditService,
@@ -1049,6 +1111,6 @@ export function createGovernanceApiController(
     adminService,
     versionService,
     getTenantId,
-    getUserId
+    getUserId,
   );
 }

@@ -15,7 +15,6 @@ import type {
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
 // ============================================================================
 // Repository Interface
 // ============================================================================
@@ -25,20 +24,30 @@ import type { Kysely } from "kysely";
  */
 export interface IFieldSecurityRepository {
   // Policy CRUD
-  findPoliciesForEntity(entityId: string, tenantId: string): Promise<FieldSecurityPolicy[]>;
+  findPoliciesForEntity(
+    entityId: string,
+    tenantId: string,
+  ): Promise<FieldSecurityPolicy[]>;
   findPolicyById(id: string): Promise<FieldSecurityPolicy | null>;
   findPoliciesForField(
     entityId: string,
     fieldPath: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<FieldSecurityPolicy[]>;
-  listPolicies(tenantId: string, options?: ListFieldSecurityPoliciesOptions): Promise<FieldSecurityPolicy[]>;
+  listPolicies(
+    tenantId: string,
+    options?: ListFieldSecurityPoliciesOptions,
+  ): Promise<FieldSecurityPolicy[]>;
   createPolicy(
     input: CreateFieldSecurityPolicyInput,
     tenantId: string,
-    createdBy?: string
+    createdBy?: string,
   ): Promise<FieldSecurityPolicy>;
-  updatePolicy(id: string, input: UpdateFieldSecurityPolicyInput, updatedBy?: string): Promise<FieldSecurityPolicy>;
+  updatePolicy(
+    id: string,
+    input: UpdateFieldSecurityPolicyInput,
+    updatedBy?: string,
+  ): Promise<FieldSecurityPolicy>;
   deletePolicy(id: string): Promise<void>;
 
   // Audit logging
@@ -47,7 +56,7 @@ export interface IFieldSecurityRepository {
   getAccessLog(
     entityKey: string,
     tenantId: string,
-    options?: GetAccessLogOptions
+    options?: GetAccessLogOptions,
   ): Promise<FieldAccessAuditEntry[]>;
 }
 
@@ -69,9 +78,14 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
     return `fsp-${Date.now()}-${this.idCounter}`;
   }
 
-  async findPoliciesForEntity(entityId: string, tenantId: string): Promise<FieldSecurityPolicy[]> {
+  async findPoliciesForEntity(
+    entityId: string,
+    tenantId: string,
+  ): Promise<FieldSecurityPolicy[]> {
     return Array.from(this.policies.values())
-      .filter((p) => p.entityId === entityId && p.tenantId === tenantId && p.isActive)
+      .filter(
+        (p) => p.entityId === entityId && p.tenantId === tenantId && p.isActive,
+      )
       .sort((a, b) => a.priority - b.priority);
   }
 
@@ -82,7 +96,7 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
   async findPoliciesForField(
     entityId: string,
     fieldPath: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<FieldSecurityPolicy[]> {
     return Array.from(this.policies.values())
       .filter(
@@ -90,16 +104,18 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
           p.entityId === entityId &&
           p.fieldPath === fieldPath &&
           p.tenantId === tenantId &&
-          p.isActive
+          p.isActive,
       )
       .sort((a, b) => a.priority - b.priority);
   }
 
   async listPolicies(
     tenantId: string,
-    options?: ListFieldSecurityPoliciesOptions
+    options?: ListFieldSecurityPoliciesOptions,
   ): Promise<FieldSecurityPolicy[]> {
-    let results = Array.from(this.policies.values()).filter((p) => p.tenantId === tenantId);
+    let results = Array.from(this.policies.values()).filter(
+      (p) => p.tenantId === tenantId,
+    );
 
     // Apply filters
     if (options?.entityId) {
@@ -135,7 +151,7 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
   async createPolicy(
     input: CreateFieldSecurityPolicyInput,
     tenantId: string,
-    createdBy?: string
+    createdBy?: string,
   ): Promise<FieldSecurityPolicy> {
     const id = this.generateId();
     const now = new Date();
@@ -167,7 +183,7 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
   async updatePolicy(
     id: string,
     input: UpdateFieldSecurityPolicyInput,
-    updatedBy?: string
+    updatedBy?: string,
   ): Promise<FieldSecurityPolicy> {
     const existing = this.policies.get(id);
     if (!existing) {
@@ -206,10 +222,10 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
   async getAccessLog(
     entityKey: string,
     tenantId: string,
-    options?: GetAccessLogOptions
+    options?: GetAccessLogOptions,
   ): Promise<FieldAccessAuditEntry[]> {
     let results = this.accessLogs.filter(
-      (l) => l.entityKey === entityKey && l.tenantId === tenantId
+      (l) => l.entityKey === entityKey && l.tenantId === tenantId,
     );
 
     // Apply filters
@@ -249,7 +265,10 @@ export class InMemoryFieldSecurityRepository implements IFieldSecurityRepository
 export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository {
   constructor(private db: Kysely<DB>) {}
 
-  async findPoliciesForEntity(entityId: string, tenantId: string): Promise<FieldSecurityPolicy[]> {
+  async findPoliciesForEntity(
+    entityId: string,
+    tenantId: string,
+  ): Promise<FieldSecurityPolicy[]> {
     const results = await this.db
       .selectFrom("meta.field_security_policy" as any)
       .selectAll()
@@ -275,7 +294,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
   async findPoliciesForField(
     entityId: string,
     fieldPath: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<FieldSecurityPolicy[]> {
     const results = await this.db
       .selectFrom("meta.field_security_policy" as any)
@@ -292,7 +311,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
 
   async listPolicies(
     tenantId: string,
-    options?: ListFieldSecurityPoliciesOptions
+    options?: ListFieldSecurityPoliciesOptions,
   ): Promise<FieldSecurityPolicy[]> {
     let query = this.db
       .selectFrom("meta.field_security_policy" as any)
@@ -331,7 +350,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
   async createPolicy(
     input: CreateFieldSecurityPolicyInput,
     tenantId: string,
-    createdBy?: string
+    createdBy?: string,
   ): Promise<FieldSecurityPolicy> {
     const result = await this.db
       .insertInto("meta.field_security_policy" as any)
@@ -340,7 +359,9 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
         field_path: input.fieldPath,
         policy_type: input.policyType,
         role_list: input.roleList,
-        abac_condition: input.abacCondition ? JSON.stringify(input.abacCondition) : null,
+        abac_condition: input.abacCondition
+          ? JSON.stringify(input.abacCondition)
+          : null,
         mask_strategy: input.maskStrategy,
         mask_config: input.maskConfig ? JSON.stringify(input.maskConfig) : null,
         scope: input.scope ?? "entity",
@@ -359,7 +380,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
   async updatePolicy(
     id: string,
     input: UpdateFieldSecurityPolicyInput,
-    updatedBy?: string
+    updatedBy?: string,
   ): Promise<FieldSecurityPolicy> {
     const updateData: Record<string, unknown> = {
       updated_at: new Date(),
@@ -370,13 +391,17 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
       updateData.role_list = input.roleList;
     }
     if (input.abacCondition !== undefined) {
-      updateData.abac_condition = input.abacCondition ? JSON.stringify(input.abacCondition) : null;
+      updateData.abac_condition = input.abacCondition
+        ? JSON.stringify(input.abacCondition)
+        : null;
     }
     if (input.maskStrategy !== undefined) {
       updateData.mask_strategy = input.maskStrategy;
     }
     if (input.maskConfig !== undefined) {
-      updateData.mask_config = input.maskConfig ? JSON.stringify(input.maskConfig) : null;
+      updateData.mask_config = input.maskConfig
+        ? JSON.stringify(input.maskConfig)
+        : null;
     }
     if (input.priority !== undefined) {
       updateData.priority = input.priority;
@@ -446,7 +471,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
           request_id: entry.requestId,
           trace_id: entry.traceId,
           tenant_id: entry.tenantId,
-        }))
+        })),
       )
       .execute();
   }
@@ -454,7 +479,7 @@ export class DatabaseFieldSecurityRepository implements IFieldSecurityRepository
   async getAccessLog(
     entityKey: string,
     tenantId: string,
-    options?: GetAccessLogOptions
+    options?: GetAccessLogOptions,
   ): Promise<FieldAccessAuditEntry[]> {
     let query = this.db
       .selectFrom("audit.field_access_log" as any)

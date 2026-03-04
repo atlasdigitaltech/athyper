@@ -22,7 +22,7 @@ import type {
  */
 function computePeriodKey(
   resetPolicy: NumberingResetPolicy,
-  referenceDate: Date
+  referenceDate: Date,
 ): string {
   const yyyy = String(referenceDate.getUTCFullYear());
   const mm = String(referenceDate.getUTCMonth() + 1).padStart(2, "0");
@@ -55,7 +55,7 @@ function computePeriodKey(
 function formatNumber(
   pattern: string,
   sequenceValue: number,
-  referenceDate: Date
+  referenceDate: Date,
 ): string {
   // All date tokens use UTC for consistency with period key computation
   const yyyy = String(referenceDate.getUTCFullYear());
@@ -89,7 +89,7 @@ export class NumberingEngineService implements NumberingEngine {
   async generateNumber(
     entityName: string,
     tenantId: string,
-    referenceDate?: Date
+    referenceDate?: Date,
   ): Promise<string> {
     const date = referenceDate ?? new Date();
 
@@ -97,12 +97,12 @@ export class NumberingEngineService implements NumberingEngine {
     const rule = await this.getRule(entityName, tenantId);
     if (!rule) {
       throw new Error(
-        `No numbering rule configured for entity "${entityName}" in tenant "${tenantId}"`
+        `No numbering rule configured for entity "${entityName}" in tenant "${tenantId}"`,
       );
     }
     if (!rule.is_active) {
       throw new Error(
-        `Numbering rule "${rule.code}" is not active for entity "${entityName}"`
+        `Numbering rule "${rule.code}" is not active for entity "${entityName}"`,
       );
     }
 
@@ -122,9 +122,7 @@ export class NumberingEngineService implements NumberingEngine {
 
     const currentValue = result.rows[0]?.current_value;
     if (currentValue === undefined) {
-      throw new Error(
-        `Failed to generate number for entity "${entityName}"`
-      );
+      throw new Error(`Failed to generate number for entity "${entityName}"`);
     }
 
     return formatNumber(rule.pattern, currentValue, date);
@@ -133,7 +131,7 @@ export class NumberingEngineService implements NumberingEngine {
   async previewNextNumber(
     entityName: string,
     tenantId: string,
-    referenceDate?: Date
+    referenceDate?: Date,
   ): Promise<string | undefined> {
     const date = referenceDate ?? new Date();
 
@@ -159,7 +157,7 @@ export class NumberingEngineService implements NumberingEngine {
 
   async getRule(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<NumberingRule | undefined> {
     const row = await this.db
       .selectFrom("meta.entity")
@@ -187,9 +185,7 @@ export class NumberingEngineService implements NumberingEngine {
 
   async healthCheck(): Promise<HealthCheckResult> {
     try {
-      await sql`SELECT 1 FROM meta.numbering_sequence LIMIT 0`.execute(
-        this.db
-      );
+      await sql`SELECT 1 FROM meta.numbering_sequence LIMIT 0`.execute(this.db);
       return { healthy: true, name: "numbering-engine" };
     } catch (error) {
       return {

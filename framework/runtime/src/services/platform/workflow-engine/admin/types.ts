@@ -141,24 +141,51 @@ export type AdminActionLog = {
  */
 export interface IAdminActionRepository {
   // Action requests
-  createActionRequest(request: Omit<AdminActionRequest, "id">): Promise<AdminActionRequest>;
-  getActionRequest(tenantId: string, requestId: string): Promise<AdminActionRequest | null>;
-  getActionRequestsByInstance(tenantId: string, instanceId: string): Promise<AdminActionRequest[]>;
+  createActionRequest(
+    request: Omit<AdminActionRequest, "id">,
+  ): Promise<AdminActionRequest>;
+  getActionRequest(
+    tenantId: string,
+    requestId: string,
+  ): Promise<AdminActionRequest | null>;
+  getActionRequestsByInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminActionRequest[]>;
   getPendingActionRequests(tenantId: string): Promise<AdminActionRequest[]>;
-  updateActionRequest(tenantId: string, requestId: string, updates: Partial<AdminActionRequest>): Promise<AdminActionRequest>;
+  updateActionRequest(
+    tenantId: string,
+    requestId: string,
+    updates: Partial<AdminActionRequest>,
+  ): Promise<AdminActionRequest>;
 
   // Action logs
   createActionLog(log: Omit<AdminActionLog, "id">): Promise<AdminActionLog>;
-  getActionLogs(tenantId: string, instanceId: string): Promise<AdminActionLog[]>;
-  getActionLogsByUser(tenantId: string, userId: string, since?: Date): Promise<AdminActionLog[]>;
+  getActionLogs(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminActionLog[]>;
+  getActionLogsByUser(
+    tenantId: string,
+    userId: string,
+    since?: Date,
+  ): Promise<AdminActionLog[]>;
 
   // Reassignments
   createReassignment(reassignment: StepReassignment): Promise<StepReassignment>;
-  getReassignments(tenantId: string, stepInstanceId: string): Promise<StepReassignment[]>;
+  getReassignments(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<StepReassignment[]>;
 
   // Deadline modifications
-  createDeadlineModification(modification: DeadlineModification): Promise<DeadlineModification>;
-  getDeadlineModifications(tenantId: string, stepInstanceId: string): Promise<DeadlineModification[]>;
+  createDeadlineModification(
+    modification: DeadlineModification,
+  ): Promise<DeadlineModification>;
+  getDeadlineModifications(
+    tenantId: string,
+    stepInstanceId: string,
+  ): Promise<DeadlineModification[]>;
 }
 
 /**
@@ -173,7 +200,7 @@ export interface IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -184,7 +211,7 @@ export interface IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -196,7 +223,7 @@ export interface IAdminActionsService {
     stepInstanceId: string,
     newApprovers: Array<{ userId: string; name: string; email: string }>,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -208,7 +235,7 @@ export interface IAdminActionsService {
     stepInstanceId: string,
     approver: { userId: string; name: string; email: string },
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -220,7 +247,7 @@ export interface IAdminActionsService {
     stepInstanceId: string,
     approverId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -231,7 +258,7 @@ export interface IAdminActionsService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -241,7 +268,7 @@ export interface IAdminActionsService {
     tenantId: string,
     instanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -251,7 +278,7 @@ export interface IAdminActionsService {
     tenantId: string,
     instanceId: string,
     options: RestartOptions,
-    adminId: string
+    adminId: string,
   ): Promise<AdminActionResult>;
 
   /**
@@ -263,13 +290,16 @@ export interface IAdminActionsService {
     stepInstanceId: string,
     newDeadline: Date,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<AdminActionResult>;
 
   /**
    * Get admin action history for an instance
    */
-  getActionHistory(tenantId: string, instanceId: string): Promise<AdminActionLog[]>;
+  getActionHistory(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminActionLog[]>;
 
   /**
    * Check if admin can perform action
@@ -278,6 +308,6 @@ export interface IAdminActionsService {
     tenantId: string,
     adminId: string,
     actionType: AdminActionType,
-    instanceId: string
+    instanceId: string,
   ): Promise<{ allowed: boolean; reason?: string }>;
 }

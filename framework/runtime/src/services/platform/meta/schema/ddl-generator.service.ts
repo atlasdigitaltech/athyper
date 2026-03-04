@@ -29,7 +29,7 @@ export class DdlGeneratorService implements DdlGenerator {
    */
   generateDdl(
     model: CompiledModel,
-    options?: CoreDdlGenerationOptions
+    options?: CoreDdlGenerationOptions,
   ): CoreDdlGenerationResult {
     const opts: Required<CoreDdlGenerationOptions> = {
       schemaName: options?.schemaName ?? "ent",
@@ -45,7 +45,7 @@ export class DdlGeneratorService implements DdlGenerator {
     const createTableSql = this.generateCreateTable(
       qualifiedTableName,
       model,
-      opts
+      opts,
     );
 
     // Generate CREATE INDEX statements
@@ -71,7 +71,7 @@ export class DdlGeneratorService implements DdlGenerator {
   private generateCreateTable(
     qualifiedTableName: string,
     model: CompiledModel,
-    opts: Required<CoreDdlGenerationOptions>
+    opts: Required<CoreDdlGenerationOptions>,
   ): string {
     const ifNotExists = opts.ifNotExists ? "IF NOT EXISTS " : "";
     const lines: string[] = [];
@@ -82,7 +82,7 @@ export class DdlGeneratorService implements DdlGenerator {
     // System columns (always first, class-aware when entityClass is defined)
     const systemColumns = this.getSystemColumns(
       model.entityClass,
-      model.featureFlags
+      model.featureFlags,
     );
     lines.push(...systemColumns.map((col) => `  ${col},`));
 
@@ -116,7 +116,7 @@ export class DdlGeneratorService implements DdlGenerator {
    */
   private getSystemColumns(
     entityClass?: EntityClass,
-    featureFlags?: EntityFeatureFlags
+    featureFlags?: EntityFeatureFlags,
   ): string[] {
     const columns = [
       "id UUID NOT NULL",
@@ -138,23 +138,17 @@ export class DdlGeneratorService implements DdlGenerator {
         "entity_type_code TEXT DEFAULT ''",
         "status TEXT NOT NULL DEFAULT 'DRAFT'",
         "source_system TEXT NOT NULL DEFAULT 'internal'",
-        "metadata JSONB DEFAULT '{}'::jsonb"
+        "metadata JSONB DEFAULT '{}'::jsonb",
       );
 
       // DOCUMENT class always gets document_number and posting_date
       if (entityClass === "DOCUMENT") {
-        columns.push(
-          "document_number TEXT",
-          "posting_date TIMESTAMPTZ"
-        );
+        columns.push("document_number TEXT", "posting_date TIMESTAMPTZ");
       }
 
       // Effective dating columns (flag-driven for all classes)
       if (featureFlags?.effective_dating_enabled) {
-        columns.push(
-          "effective_from TIMESTAMPTZ",
-          "effective_to TIMESTAMPTZ"
-        );
+        columns.push("effective_from TIMESTAMPTZ", "effective_to TIMESTAMPTZ");
       }
     }
 
@@ -227,7 +221,7 @@ export class DdlGeneratorService implements DdlGenerator {
             msg: "unknown_field_type",
             fieldName: field.name,
             fieldType: field.type,
-          })
+          }),
         );
         return "JSONB"; // Safe fallback
     }
@@ -239,14 +233,14 @@ export class DdlGeneratorService implements DdlGenerator {
   private generateIndexes(
     qualifiedTableName: string,
     model: CompiledModel,
-    _opts: Required<CoreDdlGenerationOptions>
+    _opts: Required<CoreDdlGenerationOptions>,
   ): string[] {
     const indexes: string[] = [];
     const tableName = model.tableName;
 
     // Always create tenant_id index for multi-tenant isolation
     indexes.push(
-      `CREATE INDEX IF NOT EXISTS idx_${tableName}_tenant_id ON ${qualifiedTableName} (tenant_id);`
+      `CREATE INDEX IF NOT EXISTS idx_${tableName}_tenant_id ON ${qualifiedTableName} (tenant_id);`,
     );
 
     // Create indexes for indexed fields (from schema indexed: true)
@@ -254,7 +248,7 @@ export class DdlGeneratorService implements DdlGenerator {
     for (const field of indexedFields) {
       const columnName = field.columnName;
       indexes.push(
-        `CREATE INDEX IF NOT EXISTS idx_${tableName}_${columnName} ON ${qualifiedTableName} (${columnName});`
+        `CREATE INDEX IF NOT EXISTS idx_${tableName}_${columnName} ON ${qualifiedTableName} (${columnName});`,
       );
     }
 
@@ -263,38 +257,38 @@ export class DdlGeneratorService implements DdlGenerator {
     for (const field of uniqueFields) {
       const columnName = field.columnName;
       indexes.push(
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${tableName}_${columnName}_unique ON ${qualifiedTableName} (tenant_id, ${columnName});`
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${tableName}_${columnName}_unique ON ${qualifiedTableName} (tenant_id, ${columnName});`,
       );
     }
 
     // Create composite index for soft delete queries (tenant_id, deleted_at)
     indexes.push(
-      `CREATE INDEX IF NOT EXISTS idx_${tableName}_tenant_deleted ON ${qualifiedTableName} (tenant_id, deleted_at);`
+      `CREATE INDEX IF NOT EXISTS idx_${tableName}_tenant_deleted ON ${qualifiedTableName} (tenant_id, deleted_at);`,
     );
 
     // Create index for version (optimistic locking)
     indexes.push(
-      `CREATE INDEX IF NOT EXISTS idx_${tableName}_version ON ${qualifiedTableName} (version);`
+      `CREATE INDEX IF NOT EXISTS idx_${tableName}_version ON ${qualifiedTableName} (version);`,
     );
 
     // Class-specific indexes
     if (model.entityClass) {
       // Status index for all classified entities
       indexes.push(
-        `CREATE INDEX IF NOT EXISTS idx_${tableName}_status ON ${qualifiedTableName} (tenant_id, status);`
+        `CREATE INDEX IF NOT EXISTS idx_${tableName}_status ON ${qualifiedTableName} (tenant_id, status);`,
       );
 
       // DOCUMENT: document_number index
       if (model.entityClass === "DOCUMENT") {
         indexes.push(
-          `CREATE UNIQUE INDEX IF NOT EXISTS idx_${tableName}_document_number ON ${qualifiedTableName} (tenant_id, document_number) WHERE document_number IS NOT NULL;`
+          `CREATE UNIQUE INDEX IF NOT EXISTS idx_${tableName}_document_number ON ${qualifiedTableName} (tenant_id, document_number) WHERE document_number IS NOT NULL;`,
         );
       }
 
       // Effective dating indexes (flag-driven)
       if (model.featureFlags?.effective_dating_enabled) {
         indexes.push(
-          `CREATE INDEX IF NOT EXISTS idx_${tableName}_effective_range ON ${qualifiedTableName} (tenant_id, effective_from, effective_to);`
+          `CREATE INDEX IF NOT EXISTS idx_${tableName}_effective_range ON ${qualifiedTableName} (tenant_id, effective_from, effective_to);`,
         );
       }
     }
@@ -316,7 +310,7 @@ export class DdlGeneratorService implements DdlGenerator {
    */
   generateBatch(
     models: CompiledModel[],
-    options?: CoreDdlGenerationOptions
+    options?: CoreDdlGenerationOptions,
   ): CoreDdlGenerationResult[] {
     return models.map((model) => this.generateDdl(model, options));
   }
@@ -326,7 +320,7 @@ export class DdlGeneratorService implements DdlGenerator {
    */
   generateMigrationScript(
     models: CompiledModel[],
-    options?: CoreDdlGenerationOptions
+    options?: CoreDdlGenerationOptions,
   ): string {
     const opts: Required<CoreDdlGenerationOptions> = {
       schemaName: options?.schemaName ?? "ent",
@@ -350,7 +344,9 @@ export class DdlGeneratorService implements DdlGenerator {
     // Generate DDL for each model
     for (const model of models) {
       const result = this.generateDdl(model, options);
-      lines.push(`-- Table: ${result.tableName} (entity: ${result.entityName})`);
+      lines.push(
+        `-- Table: ${result.tableName} (entity: ${result.entityName})`,
+      );
       lines.push(result.fullSql);
       lines.push("");
     }

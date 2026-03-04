@@ -12,7 +12,10 @@
  */
 
 import type { Job, JobHandler } from "@athyper/core";
-import type { LifecycleTimerService, LifecycleTimerPayload } from "@athyper/core/meta";
+import type {
+  LifecycleTimerService,
+  LifecycleTimerPayload,
+} from "@athyper/core/meta";
 
 // ============================================================================
 // Job Type Constants
@@ -40,7 +43,7 @@ export const TIMER_JOB_TYPES = {
  * @returns BullMQ job handler function
  */
 export function createAutoTransitionHandler(
-  timerService: LifecycleTimerService
+  timerService: LifecycleTimerService,
 ): JobHandler<LifecycleTimerPayload, void> {
   return async (job: Job<LifecycleTimerPayload>): Promise<void> => {
     const { scheduleId, tenantId } = job.data.payload;
@@ -62,7 +65,7 @@ export function createAutoTransitionHandler(
  * @returns BullMQ job handler function
  */
 export function createReminderHandler(
-  timerService: LifecycleTimerService
+  timerService: LifecycleTimerService,
 ): JobHandler<LifecycleTimerPayload, void> {
   return async (job: Job<LifecycleTimerPayload>): Promise<void> => {
     const { scheduleId, tenantId } = job.data.payload;

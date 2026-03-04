@@ -15,7 +15,12 @@
  *   { "c": "<ciphertext>", "iv": "<iv>", "t": "<tag>", "v": <keyVersion> }
  */
 
-import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  pbkdf2Sync,
+  randomBytes,
+} from "crypto";
 
 // ============================================================================
 // Constants
@@ -28,7 +33,12 @@ const PBKDF2_ITERATIONS = 100_000;
 const KEY_LENGTH = 32; // 256-bit AES key
 
 /** Columns that are encrypted when encryption is enabled */
-export const ENCRYPTED_COLUMNS = ["ip_address", "user_agent", "comment", "attachments"] as const;
+export const ENCRYPTED_COLUMNS = [
+  "ip_address",
+  "user_agent",
+  "comment",
+  "attachments",
+] as const;
 export type EncryptedColumnName = (typeof ENCRYPTED_COLUMNS)[number];
 
 // ============================================================================
@@ -59,7 +69,10 @@ export interface TenantKeyProvider {
   getKek(tenantId: string): Promise<{ key: Buffer; version: number }>;
 
   /** Get a specific KEK version for decryption */
-  getKekByVersion(tenantId: string, version: number): Promise<{ key: Buffer; version: number }>;
+  getKekByVersion(
+    tenantId: string,
+    version: number,
+  ): Promise<{ key: Buffer; version: number }>;
 
   /** Rotate the KEK for a tenant, returning the new version */
   rotateKek(tenantId: string): Promise<number>;
@@ -83,7 +96,9 @@ export class ConfigBasedKeyProvider implements TenantKeyProvider {
 
   constructor(masterKey: string) {
     if (!masterKey || masterKey.length < 32) {
-      throw new Error("Audit encryption master key must be at least 32 characters");
+      throw new Error(
+        "Audit encryption master key must be at least 32 characters",
+      );
     }
     this.masterKey = masterKey;
   }
@@ -93,7 +108,10 @@ export class ConfigBasedKeyProvider implements TenantKeyProvider {
     return this.deriveKey(tenantId, version);
   }
 
-  async getKekByVersion(tenantId: string, version: number): Promise<{ key: Buffer; version: number }> {
+  async getKekByVersion(
+    tenantId: string,
+    version: number,
+  ): Promise<{ key: Buffer; version: number }> {
     return this.deriveKey(tenantId, version);
   }
 
@@ -104,9 +122,18 @@ export class ConfigBasedKeyProvider implements TenantKeyProvider {
     return next;
   }
 
-  private deriveKey(tenantId: string, version: number): { key: Buffer; version: number } {
+  private deriveKey(
+    tenantId: string,
+    version: number,
+  ): { key: Buffer; version: number } {
     const salt = `audit:${tenantId}:${version}`;
-    const key = pbkdf2Sync(this.masterKey, salt, PBKDF2_ITERATIONS, KEY_LENGTH, "sha512");
+    const key = pbkdf2Sync(
+      this.masterKey,
+      salt,
+      PBKDF2_ITERATIONS,
+      KEY_LENGTH,
+      "sha512",
+    );
     return { key, version };
   }
 }
@@ -123,7 +150,10 @@ export class AuditColumnEncryptionService {
    * Returns a JSON string containing the encrypted payload.
    * Returns null if the input is null/undefined.
    */
-  async encrypt(tenantId: string, plaintext: string | null | undefined): Promise<string | null> {
+  async encrypt(
+    tenantId: string,
+    plaintext: string | null | undefined,
+  ): Promise<string | null> {
     if (plaintext === null || plaintext === undefined) {
       return null;
     }
@@ -131,7 +161,9 @@ export class AuditColumnEncryptionService {
     const { key, version } = await this.keyProvider.getKek(tenantId);
     const iv = randomBytes(IV_LENGTH);
 
-    const cipher = createCipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
+    const cipher = createCipheriv(ALGORITHM, key, iv, {
+      authTagLength: TAG_LENGTH,
+    });
     const encrypted = Buffer.concat([
       cipher.update(plaintext, "utf8"),
       cipher.final(),
@@ -154,7 +186,10 @@ export class AuditColumnEncryptionService {
    * If the value is not a valid encrypted payload, returns it as-is
    * (supports reading pre-encryption data).
    */
-  async decrypt(tenantId: string, stored: string | null | undefined): Promise<string | null> {
+  async decrypt(
+    tenantId: string,
+    stored: string | null | undefined,
+  ): Promise<string | null> {
     if (stored === null || stored === undefined) {
       return null;
     }
@@ -171,8 +206,10 @@ export class AuditColumnEncryptionService {
     // Validate structure (use explicit checks — c can be "" for empty plaintext)
     if (
       typeof payload.c !== "string" ||
-      typeof payload.iv !== "string" || !payload.iv ||
-      typeof payload.t !== "string" || !payload.t ||
+      typeof payload.iv !== "string" ||
+      !payload.iv ||
+      typeof payload.t !== "string" ||
+      !payload.t ||
       typeof payload.v !== "number"
     ) {
       // Not an encrypted payload — return as-is
@@ -184,7 +221,9 @@ export class AuditColumnEncryptionService {
     const tag = Buffer.from(payload.t, "base64");
     const ciphertext = Buffer.from(payload.c, "base64");
 
-    const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
+    const decipher = createDecipheriv(ALGORITHM, key, iv, {
+      authTagLength: TAG_LENGTH,
+    });
     decipher.setAuthTag(tag);
 
     const decrypted = Buffer.concat([
@@ -268,7 +307,10 @@ export class AuditColumnEncryptionService {
    * Re-encrypt a value from an old key version to the current version.
    * Used by the key rotation worker.
    */
-  async reEncrypt(tenantId: string, stored: string | null | undefined): Promise<string | null> {
+  async reEncrypt(
+    tenantId: string,
+    stored: string | null | undefined,
+  ): Promise<string | null> {
     if (stored === null || stored === undefined) return null;
 
     // Decrypt with the old key

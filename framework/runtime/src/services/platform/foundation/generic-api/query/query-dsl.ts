@@ -90,19 +90,19 @@ export interface WhereGroup {
  * Allowed comparison operators
  */
 export type WhereOperator =
-  | "eq"         // Equal (=)
-  | "neq"        // Not equal (!=)
-  | "gt"         // Greater than (>)
-  | "gte"        // Greater than or equal (>=)
-  | "lt"         // Less than (<)
-  | "lte"        // Less than or equal (<=)
-  | "in"         // In array
-  | "nin"        // Not in array
-  | "like"       // LIKE pattern (% allowed)
-  | "ilike"      // Case-insensitive LIKE
-  | "is_null"    // IS NULL
+  | "eq" // Equal (=)
+  | "neq" // Not equal (!=)
+  | "gt" // Greater than (>)
+  | "gte" // Greater than or equal (>=)
+  | "lt" // Less than (<)
+  | "lte" // Less than or equal (<=)
+  | "in" // In array
+  | "nin" // Not in array
+  | "like" // LIKE pattern (% allowed)
+  | "ilike" // Case-insensitive LIKE
+  | "is_null" // IS NULL
   | "is_not_null" // IS NOT NULL
-  | "between";   // BETWEEN (value should be [min, max])
+  | "between"; // BETWEEN (value should be [min, max])
 
 /**
  * Order by clause
@@ -367,7 +367,7 @@ export const DEFAULT_GUARDRAILS: QueryGuardrails = {
  * Check if condition is a WhereGroup
  */
 export function isWhereGroup(
-  condition: WhereCondition | WhereGroup
+  condition: WhereCondition | WhereGroup,
 ): condition is WhereGroup {
   return "logic" in condition && "conditions" in condition;
 }
@@ -376,7 +376,7 @@ export function isWhereGroup(
  * Check if condition is a WhereCondition
  */
 export function isWhereCondition(
-  condition: WhereCondition | WhereGroup
+  condition: WhereCondition | WhereGroup,
 ): condition is WhereCondition {
   return "field" in condition && "operator" in condition;
 }
@@ -389,7 +389,9 @@ export function isWhereCondition(
  * Parse alias and field from qualified field name
  * e.g., "a.name" => { alias: "a", field: "name" }
  */
-export function parseQualifiedField(qualified: string): { alias: string; field: string } | null {
+export function parseQualifiedField(
+  qualified: string,
+): { alias: string; field: string } | null {
   const parts = qualified.split(".");
   if (parts.length !== 2) return null;
   return { alias: parts[0], field: parts[1] };

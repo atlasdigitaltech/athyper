@@ -36,7 +36,10 @@ export type {
 } from "./types.js";
 
 // Simulator Service
-export { PolicySimulatorService, createPolicySimulator } from "./simulator.service.js";
+export {
+  PolicySimulatorService,
+  createPolicySimulator,
+} from "./simulator.service.js";
 
 // Test Case Repository
 export {

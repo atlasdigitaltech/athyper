@@ -13,9 +13,12 @@ import {
 } from "@athyper/core";
 
 import type { Logger } from "../../../../kernel/logger.js";
-import type { DependencyHealth, MetricsRegistry, RequestContextStorage } from "@athyper/core";
+import type {
+  DependencyHealth,
+  MetricsRegistry,
+  RequestContextStorage,
+} from "@athyper/core";
 import type { Request, Response, NextFunction } from "express";
-
 
 /**
  * Request correlation middleware
@@ -26,7 +29,7 @@ export function correlationMiddleware(
   options?: {
     headerName?: string;
     generateIfMissing?: boolean;
-  }
+  },
 ) {
   const headerName = options?.headerName ?? CorrelationHeaders.REQUEST_ID;
   const generateIfMissing = options?.generateIfMissing ?? true;
@@ -37,7 +40,9 @@ export function correlationMiddleware(
       extractCorrelationIds(req.headers);
 
     // Generate request ID if missing
-    const requestId = existingRequestId ?? (generateIfMissing ? generateRequestId() : undefined);
+    const requestId =
+      existingRequestId ??
+      (generateIfMissing ? generateRequestId() : undefined);
 
     if (!requestId) {
       return next();
@@ -71,7 +76,10 @@ export function correlationMiddleware(
     // Add correlation headers to response
     res.setHeader(headerName, requestId);
     if (traceContext) {
-      res.setHeader(CorrelationHeaders.TRACE_PARENT, createTraceparent(traceContext));
+      res.setHeader(
+        CorrelationHeaders.TRACE_PARENT,
+        createTraceparent(traceContext),
+      );
     }
 
     // Cleanup context after response
@@ -91,7 +99,7 @@ export function metricsMiddleware(
   registry: MetricsRegistry,
   options?: {
     excludePaths?: RegExp[];
-  }
+  },
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
     // Skip excluded paths
@@ -195,7 +203,7 @@ export function createHealthEndpoints(
   healthRegistry: any,
   options?: {
     version?: string;
-  }
+  },
 ) {
   return {
     /**
@@ -260,7 +268,10 @@ export function createHealthEndpoints(
         } else {
           const health = await healthRegistry.getSystemHealth();
           const failedDeps = health.dependencies
-            .filter((d: DependencyHealth) => d.required && d.result.status !== "healthy")
+            .filter(
+              (d: DependencyHealth) =>
+                d.required && d.result.status !== "healthy",
+            )
             .map((d: DependencyHealth) => d.name);
 
           res.status(503).json({

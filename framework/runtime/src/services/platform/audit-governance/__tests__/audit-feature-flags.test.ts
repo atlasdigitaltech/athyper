@@ -63,7 +63,11 @@ describe("AuditFeatureFlagResolver", () => {
 
     it("should override writeMode from DB", async () => {
       const resolver = createResolver([
-        { flag_key: "AUDIT_WRITE_MODE", is_enabled: true, config: JSON.stringify({ mode: "sync" }) },
+        {
+          flag_key: "AUDIT_WRITE_MODE",
+          is_enabled: true,
+          config: JSON.stringify({ mode: "sync" }),
+        },
       ]);
       const flags = await resolver.resolve("tenant-1");
 
@@ -72,7 +76,11 @@ describe("AuditFeatureFlagResolver", () => {
 
     it("should override writeMode to off when is_enabled is false", async () => {
       const resolver = createResolver([
-        { flag_key: "AUDIT_WRITE_MODE", is_enabled: false, config: JSON.stringify({}) },
+        {
+          flag_key: "AUDIT_WRITE_MODE",
+          is_enabled: false,
+          config: JSON.stringify({}),
+        },
       ]);
       const flags = await resolver.resolve("tenant-1");
 
@@ -108,7 +116,11 @@ describe("AuditFeatureFlagResolver", () => {
 
     it("should apply multiple DB overrides", async () => {
       const resolver = createResolver([
-        { flag_key: "AUDIT_WRITE_MODE", is_enabled: true, config: JSON.stringify({ mode: "off" }) },
+        {
+          flag_key: "AUDIT_WRITE_MODE",
+          is_enabled: true,
+          config: JSON.stringify({ mode: "off" }),
+        },
         { flag_key: "AUDIT_HASHCHAIN", is_enabled: false, config: null },
         { flag_key: "AUDIT_TIMELINE", is_enabled: false, config: null },
       ]);
@@ -121,7 +133,11 @@ describe("AuditFeatureFlagResolver", () => {
 
     it("should ignore invalid writeMode values", async () => {
       const resolver = createResolver([
-        { flag_key: "AUDIT_WRITE_MODE", is_enabled: true, config: JSON.stringify({ mode: "invalid" }) },
+        {
+          flag_key: "AUDIT_WRITE_MODE",
+          is_enabled: true,
+          config: JSON.stringify({ mode: "invalid" }),
+        },
       ]);
       const flags = await resolver.resolve("tenant-1");
 
@@ -244,7 +260,11 @@ describe("AuditFeatureFlagResolver", () => {
 
     it("should handle config as already-parsed JSON object", async () => {
       const resolver = createResolver([
-        { flag_key: "AUDIT_WRITE_MODE", is_enabled: true, config: { mode: "sync" } },
+        {
+          flag_key: "AUDIT_WRITE_MODE",
+          is_enabled: true,
+          config: { mode: "sync" },
+        },
       ]);
       const flags = await resolver.resolve("tenant-1");
 

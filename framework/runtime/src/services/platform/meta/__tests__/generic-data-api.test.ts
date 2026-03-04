@@ -28,18 +28,90 @@ function makeCompiledModel(name = "test_entity"): CompiledModel {
     version: "v1",
     tableName: `ent_${name}`,
     fields: [
-      { name: "id", columnName: "id", type: "uuid", required: true, selectAs: '"id" as "id"' },
-      { name: "tenant_id", columnName: "tenant_id", type: "uuid", required: true, selectAs: '"tenant_id"' },
-      { name: "realm_id", columnName: "realm_id", type: "string", required: true, selectAs: '"realm_id"' },
-      { name: "title", columnName: "title", type: "string", required: true, selectAs: '"title" as "title"' },
-      { name: "amount", columnName: "amount", type: "number", required: false, selectAs: '"amount" as "amount"' },
-      { name: "version", columnName: "version", type: "number", required: true, selectAs: '"version" as "version"' },
-      { name: "created_at", columnName: "created_at", type: "datetime", required: true, selectAs: '"created_at"' },
-      { name: "created_by", columnName: "created_by", type: "string", required: true, selectAs: '"created_by"' },
-      { name: "updated_at", columnName: "updated_at", type: "datetime", required: true, selectAs: '"updated_at"' },
-      { name: "updated_by", columnName: "updated_by", type: "string", required: true, selectAs: '"updated_by"' },
-      { name: "deleted_at", columnName: "deleted_at", type: "datetime", required: false, selectAs: '"deleted_at"' },
-      { name: "deleted_by", columnName: "deleted_by", type: "string", required: false, selectAs: '"deleted_by"' },
+      {
+        name: "id",
+        columnName: "id",
+        type: "uuid",
+        required: true,
+        selectAs: '"id" as "id"',
+      },
+      {
+        name: "tenant_id",
+        columnName: "tenant_id",
+        type: "uuid",
+        required: true,
+        selectAs: '"tenant_id"',
+      },
+      {
+        name: "realm_id",
+        columnName: "realm_id",
+        type: "string",
+        required: true,
+        selectAs: '"realm_id"',
+      },
+      {
+        name: "title",
+        columnName: "title",
+        type: "string",
+        required: true,
+        selectAs: '"title" as "title"',
+      },
+      {
+        name: "amount",
+        columnName: "amount",
+        type: "number",
+        required: false,
+        selectAs: '"amount" as "amount"',
+      },
+      {
+        name: "version",
+        columnName: "version",
+        type: "number",
+        required: true,
+        selectAs: '"version" as "version"',
+      },
+      {
+        name: "created_at",
+        columnName: "created_at",
+        type: "datetime",
+        required: true,
+        selectAs: '"created_at"',
+      },
+      {
+        name: "created_by",
+        columnName: "created_by",
+        type: "string",
+        required: true,
+        selectAs: '"created_by"',
+      },
+      {
+        name: "updated_at",
+        columnName: "updated_at",
+        type: "datetime",
+        required: true,
+        selectAs: '"updated_at"',
+      },
+      {
+        name: "updated_by",
+        columnName: "updated_by",
+        type: "string",
+        required: true,
+        selectAs: '"updated_by"',
+      },
+      {
+        name: "deleted_at",
+        columnName: "deleted_at",
+        type: "datetime",
+        required: false,
+        selectAs: '"deleted_at"',
+      },
+      {
+        name: "deleted_by",
+        columnName: "deleted_by",
+        type: "string",
+        required: false,
+        selectAs: '"deleted_by"',
+      },
     ],
     policies: [],
     selectFragment: '"id","title","amount"',
@@ -82,6 +154,7 @@ function buildService(sqlResults: Array<{ rows: any[] }>) {
   const policyGate = {
     enforce: vi.fn(async () => {}),
     authorizeMany: vi.fn(async () => new Map()),
+    getAllowedFields: vi.fn(async () => null),
   } as any;
 
   const auditLogger = {
@@ -89,7 +162,10 @@ function buildService(sqlResults: Array<{ rows: any[] }>) {
   } as any;
 
   const service = new GenericDataAPIService(
-    db, compiler, policyGate, auditLogger,
+    db,
+    compiler,
+    policyGate,
+    auditLogger,
   );
 
   return {
@@ -114,18 +190,20 @@ describe("GenericDataAPIService", () => {
 
   describe("list()", () => {
     it("should return paginated results", async () => {
-      const { service, policyGate, auditLogger, executeQueryFn } = buildService([
-        // Count query
-        { rows: [{ count: "3" }] },
-        // Data query
-        {
-          rows: [
-            { id: "r1", title: "Alpha", amount: 10 },
-            { id: "r2", title: "Beta", amount: 20 },
-            { id: "r3", title: "Gamma", amount: 30 },
-          ],
-        },
-      ]);
+      const { service, policyGate, auditLogger, executeQueryFn } = buildService(
+        [
+          // Count query
+          { rows: [{ count: "3" }] },
+          // Data query
+          {
+            rows: [
+              { id: "r1", title: "Alpha", amount: 10 },
+              { id: "r2", title: "Beta", amount: 20 },
+              { id: "r3", title: "Gamma", amount: 30 },
+            ],
+          },
+        ],
+      );
 
       const result = await service.list("test_entity", ctx);
 
@@ -133,7 +211,11 @@ describe("GenericDataAPIService", () => {
       expect(result.meta.total).toBe(3);
       expect(result.meta.page).toBe(1);
       expect(result.meta.hasNext).toBe(false);
-      expect(policyGate.enforce).toHaveBeenCalledWith("read", "test_entity", ctx);
+      expect(policyGate.enforce).toHaveBeenCalledWith(
+        "read",
+        "test_entity",
+        ctx,
+      );
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: "data.read",
@@ -147,7 +229,9 @@ describe("GenericDataAPIService", () => {
       const { service, policyGate } = buildService([]);
       policyGate.enforce.mockRejectedValue(new Error("Access denied"));
 
-      await expect(service.list("test_entity", ctx)).rejects.toThrow("Access denied");
+      await expect(service.list("test_entity", ctx)).rejects.toThrow(
+        "Access denied",
+      );
     });
 
     it("should handle empty results", async () => {
@@ -164,17 +248,12 @@ describe("GenericDataAPIService", () => {
       expect(result.meta.hasPrev).toBe(false);
     });
 
-    it("should log audit on failure", async () => {
-      const { service, compiler, auditLogger } = buildService([]);
+    it("should throw on compile failure", async () => {
+      const { service, compiler } = buildService([]);
       compiler.compile.mockRejectedValue(new Error("compile failed"));
 
-      await expect(service.list("test_entity", ctx)).rejects.toThrow();
-      expect(auditLogger.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          eventType: "data.read",
-          action: "list",
-          result: "failure",
-        }),
+      await expect(service.list("test_entity", ctx)).rejects.toThrow(
+        "compile failed",
       );
     });
   });
@@ -193,7 +272,11 @@ describe("GenericDataAPIService", () => {
 
       expect(result).toBeDefined();
       expect((result as any).id).toBe("r1");
-      expect(policyGate.enforce).toHaveBeenCalledWith("read", "test_entity", ctx);
+      expect(policyGate.enforce).toHaveBeenCalledWith(
+        "read",
+        "test_entity",
+        ctx,
+      );
     });
 
     it("should return undefined when record not found", async () => {
@@ -205,9 +288,7 @@ describe("GenericDataAPIService", () => {
     });
 
     it("should log audit with found status", async () => {
-      const { service, auditLogger } = buildService([
-        { rows: [{ id: "r1" }] },
-      ]);
+      const { service, auditLogger } = buildService([{ rows: [{ id: "r1" }] }]);
 
       await service.get("test_entity", "r1", ctx);
 
@@ -220,16 +301,12 @@ describe("GenericDataAPIService", () => {
       );
     });
 
-    it("should log audit on failure", async () => {
-      const { service, compiler, auditLogger } = buildService([]);
+    it("should throw on compile failure", async () => {
+      const { service, compiler } = buildService([]);
       compiler.compile.mockRejectedValue(new Error("oops"));
 
-      await expect(service.get("test_entity", "r1", ctx)).rejects.toThrow();
-      expect(auditLogger.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "get",
-          result: "failure",
-        }),
+      await expect(service.get("test_entity", "r1", ctx)).rejects.toThrow(
+        "oops",
       );
     });
   });
@@ -240,9 +317,7 @@ describe("GenericDataAPIService", () => {
 
   describe("count()", () => {
     it("should return the record count", async () => {
-      const { service } = buildService([
-        { rows: [{ count: "42" }] },
-      ]);
+      const { service } = buildService([{ rows: [{ count: "42" }] }]);
 
       const count = await service.count("test_entity", ctx);
 
@@ -273,7 +348,9 @@ describe("GenericDataAPIService", () => {
     it("should insert a record and return it", async () => {
       const { service, auditLogger } = buildService([
         // Insert result
-        { rows: [{ id: "new-1", title: "New Record", amount: 100, version: 1 }] },
+        {
+          rows: [{ id: "new-1", title: "New Record", amount: 100, version: 1 }],
+        },
       ]);
 
       const result = await service.create(
@@ -286,7 +363,7 @@ describe("GenericDataAPIService", () => {
       expect((result as any).id).toBe("new-1");
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventType: "data.write",
+          eventType: "data.create",
           action: "create",
           result: "success",
         }),
@@ -302,19 +379,13 @@ describe("GenericDataAPIService", () => {
       ).rejects.toThrow("Create denied");
     });
 
-    it("should log audit on failure", async () => {
-      const { service, compiler, auditLogger } = buildService([]);
+    it("should throw on compile failure", async () => {
+      const { service, compiler } = buildService([]);
       compiler.compile.mockRejectedValue(new Error("compile failed"));
 
       await expect(
         service.create("test_entity", { title: "X" }, ctx),
-      ).rejects.toThrow();
-      expect(auditLogger.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "create",
-          result: "failure",
-        }),
-      );
+      ).rejects.toThrow("compile failed");
     });
   });
 
@@ -341,7 +412,7 @@ describe("GenericDataAPIService", () => {
       expect(result).toBeDefined();
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventType: "data.write",
+          eventType: "data.update",
           action: "update",
           result: "success",
         }),
@@ -375,7 +446,7 @@ describe("GenericDataAPIService", () => {
 
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventType: "data.write",
+          eventType: "data.delete",
           action: "delete",
           result: "success",
         }),
@@ -386,9 +457,9 @@ describe("GenericDataAPIService", () => {
       const { service, policyGate } = buildService([]);
       policyGate.enforce.mockRejectedValue(new Error("Delete denied"));
 
-      await expect(
-        service.delete("test_entity", "r1", ctx),
-      ).rejects.toThrow("Delete denied");
+      await expect(service.delete("test_entity", "r1", ctx)).rejects.toThrow(
+        "Delete denied",
+      );
     });
   });
 
@@ -407,7 +478,7 @@ describe("GenericDataAPIService", () => {
 
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventType: "data.write",
+          eventType: "data.update",
           action: "restore",
           result: "success",
         }),

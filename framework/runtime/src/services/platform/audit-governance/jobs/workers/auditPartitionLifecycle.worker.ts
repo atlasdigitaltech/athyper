@@ -44,7 +44,9 @@ export function createPartitionLifecycleHandler(
   db: Kysely<DB>,
   logger: Logger,
 ) {
-  return async (payload: PartitionLifecyclePayload): Promise<PartitionLifecycleResult> => {
+  return async (
+    payload: PartitionLifecyclePayload,
+  ): Promise<PartitionLifecycleResult> => {
     const { preCreateMonths = 3, retentionDays = 90, dryRun = false } = payload;
 
     logger.info(
@@ -71,14 +73,22 @@ export function createPartitionLifecycleHandler(
 
       try {
         if (!dryRun) {
-          await sql`SELECT core.create_audit_partition_for_month(${targetDate.toISOString()}::date)`.execute(db);
+          await sql`SELECT core.create_audit_partition_for_month(${targetDate.toISOString()}::date)`.execute(
+            db,
+          );
         }
         result.partitionsCreated.push(partitionName);
-        logger.info({ partition: partitionName, dryRun }, "[audit:partition] Pre-created partition");
+        logger.info(
+          { partition: partitionName, dryRun },
+          "[audit:partition] Pre-created partition",
+        );
       } catch (err) {
         // Partition may already exist — that's fine
         logger.debug(
-          { partition: partitionName, error: err instanceof Error ? err.message : String(err) },
+          {
+            partition: partitionName,
+            error: err instanceof Error ? err.message : String(err),
+          },
           "[audit:partition] Partition already exists or creation failed",
         );
       }
@@ -97,7 +107,10 @@ export function createPartitionLifecycleHandler(
       `.execute(db);
 
       for (const row of partitions.rows) {
-        const indexCheck = await sql<{ expected_index: string; exists_: boolean }>`
+        const indexCheck = await sql<{
+          expected_index: string;
+          exists_: boolean;
+        }>`
           SELECT * FROM core.check_audit_partition_indexes(${row.partition_name})
         `.execute(db);
 
@@ -126,7 +139,11 @@ export function createPartitionLifecycleHandler(
     // ── Step 3: Retention — drop old partitions ───────────────────
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-    const cutoffMonth = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), 1);
+    const cutoffMonth = new Date(
+      cutoffDate.getFullYear(),
+      cutoffDate.getMonth(),
+      1,
+    );
 
     try {
       const partitions = await sql<{ partition_name: string }>`
@@ -150,11 +167,17 @@ export function createPartitionLifecycleHandler(
 
         if (partDate < cutoffMonth) {
           if (!dryRun) {
-            await sql`SELECT core.drop_audit_partition(${partYear}, ${partMonth + 1})`.execute(db);
+            await sql`SELECT core.drop_audit_partition(${partYear}, ${partMonth + 1})`.execute(
+              db,
+            );
           }
           result.partitionsDropped.push(row.partition_name);
           logger.info(
-            { partition: row.partition_name, cutoff: cutoffMonth.toISOString(), dryRun },
+            {
+              partition: row.partition_name,
+              cutoff: cutoffMonth.toISOString(),
+              dryRun,
+            },
             "[audit:partition] Dropped old partition",
           );
         }

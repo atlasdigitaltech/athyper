@@ -36,7 +36,10 @@ function generateId(): string {
 /**
  * Calculate due date from SLA duration
  */
-function _calculateDueDate(sla: SlaDuration, startFrom: Date = new Date()): Date {
+function _calculateDueDate(
+  sla: SlaDuration,
+  startFrom: Date = new Date(),
+): Date {
   const dueDate = new Date(startFrom);
 
   switch (sla.unit) {
@@ -72,7 +75,7 @@ function _calculateDueDate(sla: SlaDuration, startFrom: Date = new Date()): Date
 function calculateWarningDate(
   startDate: Date,
   dueDate: Date,
-  warningThresholdPercent: number = 80
+  warningThresholdPercent: number = 80,
 ): Date {
   const totalMs = dueDate.getTime() - startDate.getTime();
   const warningMs = totalMs * (warningThresholdPercent / 100);
@@ -84,7 +87,7 @@ function calculateWarningDate(
  */
 function determineTaskPriority(
   stepInstance: ApprovalStepInstance,
-  instance: ApprovalInstance
+  instance: ApprovalInstance,
 ): TaskPriority {
   // Check if this is an escalated step
   const escalationCount = stepInstance.sla?.escalationCount ?? 0;
@@ -109,7 +112,7 @@ function determineTaskPriority(
  */
 function determineTaskType(
   approver: AssignedApprover,
-  stepInstance: ApprovalStepInstance
+  stepInstance: ApprovalStepInstance,
 ): TaskType {
   const escalationCount = stepInstance.sla?.escalationCount ?? 0;
   if (escalationCount > 0) {
@@ -128,7 +131,7 @@ function determineTaskType(
  */
 function calculateSlaStatus(
   dueAt: Date,
-  warningAt?: Date
+  warningAt?: Date,
 ): {
   isOverdue: boolean;
   timeRemainingMs: number;
@@ -156,7 +159,7 @@ function calculateSlaStatus(
  */
 function calculateUrgencyScore(
   task: ApprovalTask,
-  config: WorkQueueConfig
+  config: WorkQueueConfig,
 ): number {
   let score = 0;
   const weights = config.urgencyWeights;
@@ -190,11 +193,13 @@ function calculateUrgencyScore(
  */
 function getStepAllowedActions(
   stepInstance: ApprovalStepInstance,
-  instance: ApprovalInstance
+  instance: ApprovalInstance,
 ): ApprovalActionType[] {
   // Get from workflow snapshot
   const template = instance.workflowSnapshot.definition;
-  const stepDef = template.steps.find(s => s.id === stepInstance.stepDefinitionId);
+  const stepDef = template.steps.find(
+    (s) => s.id === stepInstance.stepDefinitionId,
+  );
 
   // Step-level allowed actions override template-level
   if (stepDef?.allowedActions && stepDef.allowedActions.length > 0) {
@@ -216,7 +221,7 @@ function getStepAllowedActions(
 export class ApprovalTaskService implements IApprovalTaskService {
   constructor(
     private readonly repository: IApprovalTaskRepository,
-    private readonly notificationService?: INotificationService
+    private readonly notificationService?: INotificationService,
   ) {}
 
   /**
@@ -225,15 +230,16 @@ export class ApprovalTaskService implements IApprovalTaskService {
   async createTasksForStep(
     tenantId: string,
     instance: ApprovalInstance,
-    stepInstance: ApprovalStepInstance
+    stepInstance: ApprovalStepInstance,
   ): Promise<ApprovalTask[]> {
     const tasks: ApprovalTask[] = [];
     const now = new Date();
 
     // Get SLA due date from step instance
-    const dueAt = stepInstance.sla?.responseDueAt ||
-                  stepInstance.sla?.completionDueAt ||
-                  new Date(now.getTime() + 24 * 60 * 60 * 1000); // Default 24 hours
+    const dueAt =
+      stepInstance.sla?.responseDueAt ||
+      stepInstance.sla?.completionDueAt ||
+      new Date(now.getTime() + 24 * 60 * 60 * 1000); // Default 24 hours
 
     const warningAt = calculateWarningDate(now, dueAt, 80);
 
@@ -327,7 +333,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
   async getInbox(
     tenantId: string,
     userId: string,
-    options?: InboxFilterOptions
+    options?: InboxFilterOptions,
   ): Promise<ApprovalTask[]> {
     const tasks = await this.repository.list(tenantId, userId, options);
 
@@ -344,7 +350,10 @@ export class ApprovalTaskService implements IApprovalTaskService {
   /**
    * Get inbox summary for quick overview
    */
-  async getInboxSummary(tenantId: string, userId: string): Promise<InboxSummary> {
+  async getInboxSummary(
+    tenantId: string,
+    userId: string,
+  ): Promise<InboxSummary> {
     return this.repository.getInboxSummary(tenantId, userId);
   }
 
@@ -354,7 +363,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
   async getWorkQueue(
     tenantId: string,
     userId: string,
-    config?: Partial<WorkQueueConfig>
+    config?: Partial<WorkQueueConfig>,
   ): Promise<WorkQueueItem[]> {
     const fullConfig: WorkQueueConfig = {
       ...DEFAULT_WORK_QUEUE_CONFIG,
@@ -379,7 +388,10 @@ export class ApprovalTaskService implements IApprovalTaskService {
         sla: { ...task.sla, ...slaInfo },
       };
 
-      const urgencyScore = calculateUrgencyScore(taskWithUpdatedSla, fullConfig);
+      const urgencyScore = calculateUrgencyScore(
+        taskWithUpdatedSla,
+        fullConfig,
+      );
       const ageMs = now.getTime() - task.createdAt.getTime();
       const ageHours = ageMs / (1000 * 60 * 60);
       const hoursUntilDue = slaInfo.timeRemainingMs / (1000 * 60 * 60);
@@ -401,7 +413,10 @@ export class ApprovalTaskService implements IApprovalTaskService {
   /**
    * Get a single task by ID
    */
-  async getTask(tenantId: string, taskId: string): Promise<ApprovalTask | undefined> {
+  async getTask(
+    tenantId: string,
+    taskId: string,
+  ): Promise<ApprovalTask | undefined> {
     const task = await this.repository.getById(tenantId, taskId);
     if (!task) return undefined;
 
@@ -458,7 +473,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
     tenantId: string,
     taskId: string,
     action: ApprovalActionType,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTask> {
     const task = await this.repository.getById(tenantId, taskId);
     if (!task) {
@@ -495,7 +510,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
     taskId: string,
     delegateTo: string,
     delegatedBy: string,
-    reason?: string
+    reason?: string,
   ): Promise<ApprovalTask> {
     const originalTask = await this.repository.getById(tenantId, taskId);
     if (!originalTask) {
@@ -506,7 +521,10 @@ export class ApprovalTaskService implements IApprovalTaskService {
       throw new Error("Only the assigned user can delegate this task");
     }
 
-    if (originalTask.status !== "pending" && originalTask.status !== "in_progress") {
+    if (
+      originalTask.status !== "pending" &&
+      originalTask.status !== "in_progress"
+    ) {
       throw new Error("Can only delegate pending or in-progress tasks");
     }
 
@@ -552,7 +570,10 @@ export class ApprovalTaskService implements IApprovalTaskService {
   /**
    * Cancel tasks for an instance
    */
-  async cancelTasksForInstance(tenantId: string, instanceId: string): Promise<void> {
+  async cancelTasksForInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<void> {
     await this.repository.updateByInstanceId(tenantId, instanceId, {
       status: "cancelled",
       updatedAt: new Date(),
@@ -589,7 +610,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
    */
   async scheduleReminders(
     tenantId: string,
-    task: ApprovalTask
+    task: ApprovalTask,
   ): Promise<ReminderSchedule[]> {
     const schedules: ReminderSchedule[] = [];
     const now = new Date();
@@ -637,7 +658,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
    */
   async getTasksForInstance(
     tenantId: string,
-    instanceId: string
+    instanceId: string,
   ): Promise<ApprovalTask[]> {
     return this.repository.getTasksForInstance(tenantId, instanceId);
   }
@@ -649,7 +670,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
     tenantId: string,
     taskId: string,
     newAssigneeId: string,
-    reassignedBy: string
+    reassignedBy: string,
   ): Promise<ApprovalTask> {
     const task = await this.repository.getById(tenantId, taskId);
     if (!task) {
@@ -691,7 +712,7 @@ export class ApprovalTaskService implements IApprovalTaskService {
  */
 export function createApprovalTaskService(
   repository: IApprovalTaskRepository,
-  notificationService?: INotificationService
+  notificationService?: INotificationService,
 ): IApprovalTaskService {
   return new ApprovalTaskService(repository, notificationService);
 }

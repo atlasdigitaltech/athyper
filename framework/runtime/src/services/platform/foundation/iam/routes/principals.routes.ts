@@ -41,7 +41,7 @@ export interface PrincipalsRoutesDependencies {
  */
 export function createPrincipalsRoutes(
   router: Router,
-  deps: PrincipalsRoutesDependencies
+  deps: PrincipalsRoutesDependencies,
 ): Router {
   const { db, logger, getTenantId } = deps;
 
@@ -57,7 +57,7 @@ export function createPrincipalsRoutes(
         const search = req.query.search as string | undefined;
         const limit = Math.min(
           Math.max(parseInt(String(req.query.limit || "10"), 10), 1),
-          50
+          50,
         );
 
         // Validate search query
@@ -73,12 +73,7 @@ export function createPrincipalsRoutes(
         // Query active principals
         const results = await db
           .selectFrom("core.principal")
-          .select([
-            "id",
-            "username",
-            "display_name as displayName",
-            "email",
-          ])
+          .select(["id", "username", "display_name as displayName", "email"])
           .where("tenant_id", "=", tenantId)
           .where("is_active", "=", true)
           .where((eb) =>
@@ -86,7 +81,7 @@ export function createPrincipalsRoutes(
               eb("username", "ilike", searchPattern),
               eb("display_name", "ilike", searchPattern),
               eb("email", "ilike", searchPattern),
-            ])
+            ]),
           )
           .orderBy("username", "asc")
           .limit(limit)
@@ -110,7 +105,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to search principals", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -147,7 +142,7 @@ export function createPrincipalsRoutes(
             eb.or([
               eb("pp.display_name", "ilike", `%${query.search}%`),
               eb("pp.email", "ilike", `%${query.search}%`),
-            ])
+            ]),
           );
         }
 
@@ -168,7 +163,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to list principals", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -214,7 +209,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to get principal", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -231,7 +226,13 @@ export function createPrincipalsRoutes(
         // Get cached entitlements
         const snapshot = await db
           .selectFrom("core.entitlement_snapshot")
-          .select(["effective_roles", "effective_groups", "ou_path", "attributes", "expires_at"])
+          .select([
+            "effective_roles",
+            "effective_groups",
+            "ou_path",
+            "attributes",
+            "expires_at",
+          ])
           .where("principal_id", "=", principalId)
           .where("tenant_id", "=", tenantId)
           .executeTakeFirst();
@@ -241,7 +242,11 @@ export function createPrincipalsRoutes(
           const roles = await db
             .selectFrom("core.role_binding as rb")
             .innerJoin("core.role as r", "r.id", "rb.role_id")
-            .select(["r.code", "rb.scope_mode as scopeMode", "rb.scope_ref as scopeRef"])
+            .select([
+              "r.code",
+              "rb.scope_mode as scopeMode",
+              "rb.scope_ref as scopeRef",
+            ])
             .where("rb.principal_id", "=", principalId)
             .where("rb.tenant_id", "=", tenantId)
             .where("rb.is_active", "=", true)
@@ -266,7 +271,7 @@ export function createPrincipalsRoutes(
             groups,
             attributes: attributes.reduce(
               (acc, a) => ({ ...acc, [a.key]: a.value }),
-              {}
+              {},
             ),
           });
         }
@@ -283,7 +288,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to get principal entitlements", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -319,7 +324,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to get principal roles", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -353,7 +358,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to get principal groups", { error });
         return next(error);
       }
-    }
+    },
   );
 
   /**
@@ -413,7 +418,7 @@ export function createPrincipalsRoutes(
             .onConflict((oc) =>
               oc
                 .columns(["principal_id", "attribute_key"])
-                .doUpdateSet({ attribute_value: JSON.stringify(value) })
+                .doUpdateSet({ attribute_value: JSON.stringify(value) }),
             )
             .execute();
         }
@@ -429,7 +434,7 @@ export function createPrincipalsRoutes(
         logger.error("Failed to set principal attributes", { error });
         return next(error);
       }
-    }
+    },
   );
 
   return router;

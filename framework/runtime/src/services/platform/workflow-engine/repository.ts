@@ -38,17 +38,20 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
     return `${tenantId}:${templateId}`;
   }
 
-  async getById(tenantId: string, templateId: string): Promise<StoredApprovalWorkflowTemplate | undefined> {
+  async getById(
+    tenantId: string,
+    templateId: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     return this.templates.get(this.makeKey(tenantId, templateId));
   }
 
   async getByCode(
     tenantId: string,
     code: string,
-    version?: number
+    version?: number,
   ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     const templates = Array.from(this.templates.values()).filter(
-      (t) => t.tenantId === tenantId && t.code === code
+      (t) => t.tenantId === tenantId && t.code === code,
     );
 
     if (version !== undefined) {
@@ -59,18 +62,21 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
     return templates.sort((a, b) => b.version - a.version)[0];
   }
 
-  async getActiveByCode(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate | undefined> {
+  async getActiveByCode(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     return Array.from(this.templates.values()).find(
-      (t) => t.tenantId === tenantId && t.code === code && t.isActive
+      (t) => t.tenantId === tenantId && t.code === code && t.isActive,
     );
   }
 
   async list(
     tenantId: string,
-    options?: ApprovalWorkflowQueryOptions
+    options?: ApprovalWorkflowQueryOptions,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     let results = Array.from(this.templates.values()).filter(
-      (t) => t.tenantId === tenantId
+      (t) => t.tenantId === tenantId,
     );
 
     // Apply filters
@@ -92,7 +98,9 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
 
     if (options?.searchName) {
       const searchLower = options.searchName.toLowerCase();
-      results = results.filter((t) => t.name.toLowerCase().includes(searchLower));
+      results = results.filter((t) =>
+        t.name.toLowerCase().includes(searchLower),
+      );
     }
 
     if (!options?.includeInactive) {
@@ -133,7 +141,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async create(
     tenantId: string,
     template: CreateApprovalWorkflowInput,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const id = this.generateId();
     const now = new Date();
@@ -156,7 +164,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
     tenantId: string,
     templateId: string,
     updates: UpdateApprovalWorkflowInput,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const existing = await this.getById(tenantId, templateId);
     if (!existing) {
@@ -193,7 +201,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async publish(
     tenantId: string,
     templateId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const template = await this.getById(tenantId, templateId);
     if (!template) {
@@ -202,7 +210,11 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
 
     // Deactivate other versions with same code
     for (const [key, t] of this.templates) {
-      if (t.tenantId === tenantId && t.code === template.code && t.id !== templateId) {
+      if (
+        t.tenantId === tenantId &&
+        t.code === template.code &&
+        t.id !== templateId
+      ) {
         t.isActive = false;
         this.templates.set(key, t);
       }
@@ -221,7 +233,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async unpublish(
     tenantId: string,
     templateId: string,
-    _unpublishedBy: string
+    _unpublishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const template = await this.getById(tenantId, templateId);
     if (!template) {
@@ -238,7 +250,10 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
     this.templates.delete(this.makeKey(tenantId, templateId));
   }
 
-  async getVersionHistory(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate[]> {
+  async getVersionHistory(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate[]> {
     return Array.from(this.templates.values())
       .filter((t) => t.tenantId === tenantId && t.code === code)
       .sort((a, b) => b.version - a.version);
@@ -249,7 +264,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
     templateId: string,
     newCode: string,
     newName: string,
-    clonedBy: string
+    clonedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const existing = await this.getById(tenantId, templateId);
     if (!existing) {
@@ -281,7 +296,7 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async findMatchingTemplates(
     tenantId: string,
     entityType: ApprovalEntityType,
-    triggerEvent: ApprovalTriggerEvent
+    triggerEvent: ApprovalTriggerEvent,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     return Array.from(this.templates.values())
       .filter((t) => {
@@ -317,7 +332,10 @@ export class InMemoryApprovalWorkflowRepository implements IApprovalWorkflowRepo
 export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepository {
   constructor(private readonly db: Kysely<DB>) {}
 
-  async getById(tenantId: string, templateId: string): Promise<StoredApprovalWorkflowTemplate | undefined> {
+  async getById(
+    tenantId: string,
+    templateId: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_workflow_template" as any)
       .selectAll()
@@ -332,7 +350,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async getByCode(
     tenantId: string,
     code: string,
-    version?: number
+    version?: number,
   ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     let query = this.db
       .selectFrom("meta.approval_workflow_template" as any)
@@ -351,7 +369,10 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
     return this.mapRowToTemplate(result);
   }
 
-  async getActiveByCode(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate | undefined> {
+  async getActiveByCode(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate | undefined> {
     const result = await this.db
       .selectFrom("meta.approval_workflow_template" as any)
       .selectAll()
@@ -366,7 +387,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
 
   async list(
     tenantId: string,
-    options?: ApprovalWorkflowQueryOptions
+    options?: ApprovalWorkflowQueryOptions,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     let query = this.db
       .selectFrom("meta.approval_workflow_template" as any)
@@ -410,7 +431,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async create(
     tenantId: string,
     template: CreateApprovalWorkflowInput,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const id = crypto.randomUUID();
     const now = new Date();
@@ -431,7 +452,9 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
         priority: template.priority,
         triggers: JSON.stringify(template.triggers),
         steps: JSON.stringify(template.steps),
-        global_sla: template.globalSla ? JSON.stringify(template.globalSla) : null,
+        global_sla: template.globalSla
+          ? JSON.stringify(template.globalSla)
+          : null,
         allowed_actions: JSON.stringify(template.allowedActions),
         metadata: template.metadata ? JSON.stringify(template.metadata) : null,
         created_at: now,
@@ -454,7 +477,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
     tenantId: string,
     templateId: string,
     updates: UpdateApprovalWorkflowInput,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const existing = await this.getById(tenantId, templateId);
     if (!existing) {
@@ -506,7 +529,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async publish(
     tenantId: string,
     templateId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const template = await this.getById(tenantId, templateId);
     if (!template) {
@@ -547,7 +570,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async unpublish(
     tenantId: string,
     templateId: string,
-    _unpublishedBy: string
+    _unpublishedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const template = await this.getById(tenantId, templateId);
     if (!template) {
@@ -575,7 +598,10 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
       .execute();
   }
 
-  async getVersionHistory(tenantId: string, code: string): Promise<StoredApprovalWorkflowTemplate[]> {
+  async getVersionHistory(
+    tenantId: string,
+    code: string,
+  ): Promise<StoredApprovalWorkflowTemplate[]> {
     const results = await this.db
       .selectFrom("meta.approval_workflow_template" as any)
       .selectAll()
@@ -592,7 +618,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
     templateId: string,
     newCode: string,
     newName: string,
-    clonedBy: string
+    clonedBy: string,
   ): Promise<StoredApprovalWorkflowTemplate> {
     const existing = await this.getById(tenantId, templateId);
     if (!existing) {
@@ -618,7 +644,9 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
         priority: existing.priority,
         triggers: JSON.stringify(existing.triggers),
         steps: JSON.stringify(existing.steps),
-        global_sla: existing.globalSla ? JSON.stringify(existing.globalSla) : null,
+        global_sla: existing.globalSla
+          ? JSON.stringify(existing.globalSla)
+          : null,
         allowed_actions: JSON.stringify(existing.allowedActions),
         metadata: existing.metadata ? JSON.stringify(existing.metadata) : null,
         created_at: now,
@@ -645,7 +673,7 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
   async findMatchingTemplates(
     tenantId: string,
     entityType: ApprovalEntityType,
-    triggerEvent: ApprovalTriggerEvent
+    triggerEvent: ApprovalTriggerEvent,
   ): Promise<StoredApprovalWorkflowTemplate[]> {
     // Get all active templates for this entity type
     const results = await this.db
@@ -662,7 +690,9 @@ export class DatabaseApprovalWorkflowRepository implements IApprovalWorkflowRepo
     // (JSON querying varies by database)
     return results
       .map((r: any) => this.mapRowToTemplate(r))
-      .filter((t) => t.triggers.some((trigger) => trigger.event === triggerEvent));
+      .filter((t) =>
+        t.triggers.some((trigger) => trigger.event === triggerEvent),
+      );
   }
 
   private mapRowToTemplate(row: any): StoredApprovalWorkflowTemplate {
@@ -730,6 +760,8 @@ export function createInMemoryApprovalWorkflowRepository(): InMemoryApprovalWork
 /**
  * Create database approval workflow repository
  */
-export function createDatabaseApprovalWorkflowRepository(db: Kysely<DB>): DatabaseApprovalWorkflowRepository {
+export function createDatabaseApprovalWorkflowRepository(
+  db: Kysely<DB>,
+): DatabaseApprovalWorkflowRepository {
   return new DatabaseApprovalWorkflowRepository(db);
 }

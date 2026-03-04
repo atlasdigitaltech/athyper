@@ -19,7 +19,6 @@ import type {
 import type { DB } from "@athyper/adapter-db";
 import type { Kysely } from "kysely";
 
-
 // ============================================================================
 // Repository Interface
 // ============================================================================
@@ -30,21 +29,49 @@ import type { Kysely } from "kysely";
 export interface IOverlayRepository {
   // Overlay CRUD
   findById(id: string): Promise<OverlayRecord | null>;
-  findByKey(overlayKey: string, tenantId: string): Promise<OverlayRecord | null>;
-  findByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]>;
-  findActiveByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]>;
-  list(tenantId: string, options?: ListOverlaysOptions): Promise<OverlayRecord[]>;
-  create(input: CreateOverlayInput, tenantId: string, createdBy?: string): Promise<OverlayRecord>;
-  update(id: string, input: UpdateOverlayInput, updatedBy?: string): Promise<OverlayRecord>;
+  findByKey(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayRecord | null>;
+  findByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]>;
+  findActiveByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]>;
+  list(
+    tenantId: string,
+    options?: ListOverlaysOptions,
+  ): Promise<OverlayRecord[]>;
+  create(
+    input: CreateOverlayInput,
+    tenantId: string,
+    createdBy?: string,
+  ): Promise<OverlayRecord>;
+  update(
+    id: string,
+    input: UpdateOverlayInput,
+    updatedBy?: string,
+  ): Promise<OverlayRecord>;
   delete(id: string): Promise<void>;
 
   // Overlay with changes
   findByIdWithChanges(id: string): Promise<OverlayWithChanges | null>;
-  findByKeyWithChanges(overlayKey: string, tenantId: string): Promise<OverlayWithChanges | null>;
+  findByKeyWithChanges(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayWithChanges | null>;
 
   // Change CRUD
   getChanges(overlayId: string): Promise<OverlayChangeRecord[]>;
-  addChange(overlayId: string, change: CreateOverlayChangeInput, tenantId: string, createdBy?: string): Promise<OverlayChangeRecord>;
+  addChange(
+    overlayId: string,
+    change: CreateOverlayChangeInput,
+    tenantId: string,
+    createdBy?: string,
+  ): Promise<OverlayChangeRecord>;
   removeChange(changeId: string): Promise<void>;
   reorderChanges(overlayId: string, changeIds: string[]): Promise<void>;
 }
@@ -77,28 +104,47 @@ export class InMemoryOverlayRepository implements IOverlayRepository {
     return this.overlays.get(id) ?? null;
   }
 
-  async findByKey(overlayKey: string, tenantId: string): Promise<OverlayRecord | null> {
+  async findByKey(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayRecord | null> {
     return (
       Array.from(this.overlays.values()).find(
-        (o) => o.overlayKey === overlayKey && o.tenantId === tenantId
+        (o) => o.overlayKey === overlayKey && o.tenantId === tenantId,
       ) ?? null
     );
   }
 
-  async findByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]> {
+  async findByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]> {
     return Array.from(this.overlays.values())
       .filter((o) => o.baseEntityId === baseEntityId && o.tenantId === tenantId)
       .sort((a, b) => a.priority - b.priority);
   }
 
-  async findActiveByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]> {
+  async findActiveByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]> {
     return Array.from(this.overlays.values())
-      .filter((o) => o.baseEntityId === baseEntityId && o.tenantId === tenantId && o.isActive)
+      .filter(
+        (o) =>
+          o.baseEntityId === baseEntityId &&
+          o.tenantId === tenantId &&
+          o.isActive,
+      )
       .sort((a, b) => a.priority - b.priority);
   }
 
-  async list(tenantId: string, options?: ListOverlaysOptions): Promise<OverlayRecord[]> {
-    let results = Array.from(this.overlays.values()).filter((o) => o.tenantId === tenantId);
+  async list(
+    tenantId: string,
+    options?: ListOverlaysOptions,
+  ): Promise<OverlayRecord[]> {
+    let results = Array.from(this.overlays.values()).filter(
+      (o) => o.tenantId === tenantId,
+    );
 
     // Apply filters
     if (options?.baseEntityId) {
@@ -132,7 +178,11 @@ export class InMemoryOverlayRepository implements IOverlayRepository {
     return results;
   }
 
-  async create(input: CreateOverlayInput, tenantId: string, createdBy?: string): Promise<OverlayRecord> {
+  async create(
+    input: CreateOverlayInput,
+    tenantId: string,
+    createdBy?: string,
+  ): Promise<OverlayRecord> {
     const id = this.generateOverlayId();
     const now = new Date();
 
@@ -164,7 +214,11 @@ export class InMemoryOverlayRepository implements IOverlayRepository {
     return record;
   }
 
-  async update(id: string, input: UpdateOverlayInput, updatedBy?: string): Promise<OverlayRecord> {
+  async update(
+    id: string,
+    input: UpdateOverlayInput,
+    updatedBy?: string,
+  ): Promise<OverlayRecord> {
     const existing = this.overlays.get(id);
     if (!existing) {
       throw new OverlayNotFoundError(id);
@@ -203,7 +257,10 @@ export class InMemoryOverlayRepository implements IOverlayRepository {
     return { ...overlay, changes };
   }
 
-  async findByKeyWithChanges(overlayKey: string, tenantId: string): Promise<OverlayWithChanges | null> {
+  async findByKeyWithChanges(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayWithChanges | null> {
     const overlay = await this.findByKey(overlayKey, tenantId);
     if (!overlay) return null;
 
@@ -217,9 +274,17 @@ export class InMemoryOverlayRepository implements IOverlayRepository {
       .sort((a, b) => a.changeOrder - b.changeOrder);
   }
 
-  async addChange(overlayId: string, change: CreateOverlayChangeInput, _tenantId: string, _createdBy?: string): Promise<OverlayChangeRecord> {
+  async addChange(
+    overlayId: string,
+    change: CreateOverlayChangeInput,
+    _tenantId: string,
+    _createdBy?: string,
+  ): Promise<OverlayChangeRecord> {
     const existingChanges = await this.getChanges(overlayId);
-    const maxOrder = existingChanges.length > 0 ? Math.max(...existingChanges.map((c) => c.changeOrder)) : -1;
+    const maxOrder =
+      existingChanges.length > 0
+        ? Math.max(...existingChanges.map((c) => c.changeOrder))
+        : -1;
 
     const id = this.generateChangeId();
     const record: OverlayChangeRecord = {
@@ -271,7 +336,10 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return result ? this.mapToRecord(result) : null;
   }
 
-  async findByKey(overlayKey: string, tenantId: string): Promise<OverlayRecord | null> {
+  async findByKey(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayRecord | null> {
     const result = await this.db
       .selectFrom("meta.overlay" as any)
       .selectAll()
@@ -282,7 +350,10 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return result ? this.mapToRecord(result) : null;
   }
 
-  async findByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]> {
+  async findByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]> {
     const results = await this.db
       .selectFrom("meta.overlay" as any)
       .selectAll()
@@ -294,7 +365,10 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return results.map(this.mapToRecord);
   }
 
-  async findActiveByBaseEntity(baseEntityId: string, tenantId: string): Promise<OverlayRecord[]> {
+  async findActiveByBaseEntity(
+    baseEntityId: string,
+    tenantId: string,
+  ): Promise<OverlayRecord[]> {
     const results = await this.db
       .selectFrom("meta.overlay" as any)
       .selectAll()
@@ -307,7 +381,10 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return results.map(this.mapToRecord);
   }
 
-  async list(tenantId: string, options?: ListOverlaysOptions): Promise<OverlayRecord[]> {
+  async list(
+    tenantId: string,
+    options?: ListOverlaysOptions,
+  ): Promise<OverlayRecord[]> {
     let query = this.db
       .selectFrom("meta.overlay" as any)
       .selectAll()
@@ -323,7 +400,11 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
 
     const orderBy = options?.orderBy ?? "priority";
     const orderCol =
-      orderBy === "priority" ? "priority" : orderBy === "createdAt" ? "created_at" : "updated_at";
+      orderBy === "priority"
+        ? "priority"
+        : orderBy === "createdAt"
+          ? "created_at"
+          : "updated_at";
     query = query.orderBy(orderCol, options?.orderDirection ?? "asc");
 
     if (options?.limit) {
@@ -337,7 +418,11 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return results.map(this.mapToRecord);
   }
 
-  async create(input: CreateOverlayInput, tenantId: string, createdBy?: string): Promise<OverlayRecord> {
+  async create(
+    input: CreateOverlayInput,
+    tenantId: string,
+    createdBy?: string,
+  ): Promise<OverlayRecord> {
     const result = await this.db
       .insertInto("meta.overlay" as any)
       .values({
@@ -366,7 +451,11 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return record;
   }
 
-  async update(id: string, input: UpdateOverlayInput, updatedBy?: string): Promise<OverlayRecord> {
+  async update(
+    id: string,
+    input: UpdateOverlayInput,
+    updatedBy?: string,
+  ): Promise<OverlayRecord> {
     const updateData: Record<string, unknown> = {
       updated_at: new Date(),
       updated_by: updatedBy,
@@ -415,7 +504,10 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return { ...overlay, changes };
   }
 
-  async findByKeyWithChanges(overlayKey: string, tenantId: string): Promise<OverlayWithChanges | null> {
+  async findByKeyWithChanges(
+    overlayKey: string,
+    tenantId: string,
+  ): Promise<OverlayWithChanges | null> {
     const overlay = await this.findByKey(overlayKey, tenantId);
     if (!overlay) return null;
 
@@ -434,10 +526,18 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
     return results.map(this.mapToChangeRecord);
   }
 
-  async addChange(overlayId: string, change: CreateOverlayChangeInput, tenantId: string, createdBy?: string): Promise<OverlayChangeRecord> {
+  async addChange(
+    overlayId: string,
+    change: CreateOverlayChangeInput,
+    tenantId: string,
+    createdBy?: string,
+  ): Promise<OverlayChangeRecord> {
     // Get next change order
     const existingChanges = await this.getChanges(overlayId);
-    const maxOrder = existingChanges.length > 0 ? Math.max(...existingChanges.map((c) => c.changeOrder)) : -1;
+    const maxOrder =
+      existingChanges.length > 0
+        ? Math.max(...existingChanges.map((c) => c.changeOrder))
+        : -1;
 
     const result = await this.db
       .insertInto("meta.overlay_change" as any)
@@ -507,7 +607,11 @@ export class DatabaseOverlayRepository implements IOverlayRepository {
       changeOrder: row.change_order,
       kind: row.kind,
       path: row.path,
-      value: row.value ? (typeof row.value === "string" ? JSON.parse(row.value) : row.value) : undefined,
+      value: row.value
+        ? typeof row.value === "string"
+          ? JSON.parse(row.value)
+          : row.value
+        : undefined,
       createdAt: new Date(row.created_at),
     };
   }

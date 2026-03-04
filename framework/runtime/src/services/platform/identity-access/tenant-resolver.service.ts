@@ -132,7 +132,9 @@ export class TenantResolverService {
   /**
    * Get tenant profile
    */
-  async getTenantProfile(tenantId: string): Promise<TenantProfileInfo | undefined> {
+  async getTenantProfile(
+    tenantId: string,
+  ): Promise<TenantProfileInfo | undefined> {
     const profile = await this.db
       .selectFrom("core.tenant_profile")
       .select([
@@ -152,7 +154,9 @@ export class TenantResolverService {
       locale: profile.locale,
       timezone: profile.timezone,
       fiscalYearStartMonth: profile.fiscal_year_start_month,
-      securityDefaults: (profile.metadata as Record<string, unknown> | null)?.securityDefaults as Record<string, unknown> | null ?? null,
+      securityDefaults:
+        ((profile.metadata as Record<string, unknown> | null)
+          ?.securityDefaults as Record<string, unknown> | null) ?? null,
     };
   }
 
@@ -162,7 +166,7 @@ export class TenantResolverService {
   async updateTenantProfile(
     tenantId: string,
     updates: Partial<TenantProfileInfo>,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<void> {
     const existing = await this.getTenantProfile(tenantId);
 
@@ -205,7 +209,7 @@ export class TenantResolverService {
         msg: "tenant_profile_updated",
         tenantId,
         updatedBy,
-      })
+      }),
     );
   }
 

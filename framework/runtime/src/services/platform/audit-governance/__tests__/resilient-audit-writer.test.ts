@@ -9,14 +9,26 @@ import type { AuditEvent } from "../../workflow-engine/audit/types.js";
 import type { AuditOutboxRepo } from "../persistence/AuditOutboxRepo.js";
 import type { CircuitBreaker } from "@athyper/core";
 
-function makeEvent(overrides: Partial<Omit<AuditEvent, "id">> = {}): Omit<AuditEvent, "id"> {
+function makeEvent(
+  overrides: Partial<Omit<AuditEvent, "id">> = {},
+): Omit<AuditEvent, "id"> {
   return {
     tenantId: "t-1",
     eventType: "workflow.created",
     severity: "info",
     instanceId: "inst-1",
-    entity: { type: "PO", id: "po-1", referenceCode: "PO-001", displayName: "Test PO" },
-    workflow: { templateId: "t1", templateCode: "WF1", templateVersion: 1, templateName: "Test" },
+    entity: {
+      type: "PO",
+      id: "po-1",
+      referenceCode: "PO-001",
+      displayName: "Test PO",
+    },
+    workflow: {
+      templateId: "t1",
+      templateCode: "WF1",
+      templateVersion: 1,
+      templateName: "Test",
+    },
     actor: { userId: "u-1", displayName: "Test User" },
     timestamp: new Date(),
     ...overrides,
@@ -76,14 +88,19 @@ describe("ResilientAuditWriter", () => {
 
     expect(outbox.enqueue).toHaveBeenCalledTimes(1);
     expect(metrics.eventIngested).toHaveBeenCalledWith(
-      expect.objectContaining({ tenant: "t-1", event_type: "workflow.created" }),
+      expect.objectContaining({
+        tenant: "t-1",
+        event_type: "workflow.created",
+      }),
     );
     expect(writer.bufferDepth).toBe(0);
   });
 
   it("should never throw even when outbox fails", async () => {
     const failingBreaker = createMockCircuitBreaker(true);
-    const writer = new ResilientAuditWriter(outbox, failingBreaker, { metrics });
+    const writer = new ResilientAuditWriter(outbox, failingBreaker, {
+      metrics,
+    });
 
     // Should not throw
     await expect(writer.write("t-1", makeEvent())).resolves.not.toThrow();
@@ -149,11 +166,13 @@ describe("ResilientAuditWriter", () => {
 
       // Make enqueue fail after first call
       let callCount = 0;
-      (outbox.enqueue as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-        callCount++;
-        if (callCount > 1) throw new Error("DB down");
-        return "mock-id";
-      });
+      (outbox.enqueue as ReturnType<typeof vi.fn>).mockImplementation(
+        async () => {
+          callCount++;
+          if (callCount > 1) throw new Error("DB down");
+          return "mock-id";
+        },
+      );
 
       const flushed = await writer.flushBuffer();
       expect(flushed).toBe(1);

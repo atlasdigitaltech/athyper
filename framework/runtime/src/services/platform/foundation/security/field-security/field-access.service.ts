@@ -28,13 +28,16 @@ import type { Logger } from "../../../../../kernel/logger.js";
  */
 export class FieldAccessService {
   // Cache for policies (entity-level)
-  private policyCache = new Map<string, { policies: FieldSecurityPolicy[]; expiresAt: number }>();
+  private policyCache = new Map<
+    string,
+    { policies: FieldSecurityPolicy[]; expiresAt: number }
+  >();
   private readonly cacheTtlMs = 60000; // 1 minute cache
 
   constructor(
     private repo: IFieldSecurityRepository,
     private masking: MaskingService,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   // ============================================================================
@@ -48,7 +51,7 @@ export class FieldAccessService {
     entityId: string,
     fieldPath: string,
     subject: SubjectSnapshot,
-    context?: FieldAccessContext
+    context?: FieldAccessContext,
   ): Promise<FieldAccessDecision> {
     return this.checkAccess(entityId, fieldPath, "read", subject, context);
   }
@@ -60,7 +63,7 @@ export class FieldAccessService {
     entityId: string,
     fieldPath: string,
     subject: SubjectSnapshot,
-    context?: FieldAccessContext
+    context?: FieldAccessContext,
   ): Promise<FieldAccessDecision> {
     return this.checkAccess(entityId, fieldPath, "write", subject, context);
   }
@@ -73,7 +76,7 @@ export class FieldAccessService {
     fieldPath: string,
     action: "read" | "write",
     subject: SubjectSnapshot,
-    context?: FieldAccessContext
+    context?: FieldAccessContext,
   ): Promise<FieldAccessDecision> {
     // Get applicable policies
     const policies = await this.getApplicablePolicies(
@@ -81,7 +84,7 @@ export class FieldAccessService {
       fieldPath,
       action,
       context?.tenantId ?? subject.tenantId,
-      context?.recordId
+      context?.recordId,
     );
 
     // If no policies, allow by default
@@ -124,7 +127,7 @@ export class FieldAccessService {
     entityId: string,
     record: Record<string, unknown>,
     subject: SubjectSnapshot,
-    context: FieldAccessContext
+    context: FieldAccessContext,
   ): Promise<FieldFilterResult> {
     const result: Record<string, unknown> = {};
     const allowedFields: string[] = [];
@@ -136,7 +139,12 @@ export class FieldAccessService {
     const fieldPaths = this.extractFieldPaths(record);
 
     for (const fieldPath of fieldPaths) {
-      const decision = await this.canRead(entityId, fieldPath, subject, context);
+      const decision = await this.canRead(
+        entityId,
+        fieldPath,
+        subject,
+        context,
+      );
 
       // Create audit entry
       auditEntries.push({
@@ -163,7 +171,11 @@ export class FieldAccessService {
 
       // Apply masking if needed
       if (decision.maskStrategy) {
-        const maskedValue = this.masking.mask(value, decision.maskStrategy, decision.maskConfig);
+        const maskedValue = this.masking.mask(
+          value,
+          decision.maskStrategy,
+          decision.maskConfig,
+        );
 
         if (maskedValue === undefined) {
           // 'remove' strategy
@@ -201,7 +213,7 @@ export class FieldAccessService {
     entityId: string,
     input: Record<string, unknown>,
     subject: SubjectSnapshot,
-    context: FieldAccessContext
+    context: FieldAccessContext,
   ): Promise<FieldFilterResult> {
     const result: Record<string, unknown> = {};
     const allowedFields: string[] = [];
@@ -213,7 +225,12 @@ export class FieldAccessService {
     const fieldPaths = this.extractFieldPaths(input);
 
     for (const fieldPath of fieldPaths) {
-      const decision = await this.canWrite(entityId, fieldPath, subject, context);
+      const decision = await this.canWrite(
+        entityId,
+        fieldPath,
+        subject,
+        context,
+      );
 
       // Create audit entry
       auditEntries.push({
@@ -265,12 +282,14 @@ export class FieldAccessService {
     entityId: string,
     allFields: string[],
     subject: SubjectSnapshot,
-    tenantId: string
+    tenantId: string,
   ): Promise<string[]> {
     const readable: string[] = [];
 
     for (const fieldPath of allFields) {
-      const decision = await this.canRead(entityId, fieldPath, subject, { tenantId });
+      const decision = await this.canRead(entityId, fieldPath, subject, {
+        tenantId,
+      });
       if (decision.allowed) {
         readable.push(fieldPath);
       }
@@ -286,12 +305,14 @@ export class FieldAccessService {
     entityId: string,
     allFields: string[],
     subject: SubjectSnapshot,
-    tenantId: string
+    tenantId: string,
   ): Promise<string[]> {
     const writable: string[] = [];
 
     for (const fieldPath of allFields) {
-      const decision = await this.canWrite(entityId, fieldPath, subject, { tenantId });
+      const decision = await this.canWrite(entityId, fieldPath, subject, {
+        tenantId,
+      });
       if (decision.allowed) {
         writable.push(fieldPath);
       }
@@ -312,7 +333,7 @@ export class FieldAccessService {
     fieldPath: string,
     action: "read" | "write",
     tenantId: string,
-    recordId?: string
+    recordId?: string,
   ): Promise<FieldSecurityPolicy[]> {
     // Check cache first
     const cacheKey = `${tenantId}:${entityId}`;
@@ -360,7 +381,13 @@ export class FieldAccessService {
       })
       .sort((a, b) => {
         // Sort by scope specificity first, then priority
-        const scopeOrder = { record: 0, entity_version: 1, entity: 2, module: 3, global: 4 };
+        const scopeOrder = {
+          record: 0,
+          entity_version: 1,
+          entity: 2,
+          module: 3,
+          global: 4,
+        };
         const aScopeOrder = scopeOrder[a.scope] ?? 99;
         const bScopeOrder = scopeOrder[b.scope] ?? 99;
 
@@ -377,11 +404,13 @@ export class FieldAccessService {
    */
   private evaluatePolicyConditions(
     policy: FieldSecurityPolicy,
-    subject: SubjectSnapshot
+    subject: SubjectSnapshot,
   ): boolean {
     // Check role-based access first (simpler, more common)
     if (policy.roleList && policy.roleList.length > 0) {
-      const hasRole = policy.roleList.some((role) => subject.roles.includes(role));
+      const hasRole = policy.roleList.some((role) =>
+        subject.roles.includes(role),
+      );
       if (hasRole) {
         return true;
       }
@@ -400,7 +429,10 @@ export class FieldAccessService {
   /**
    * Evaluate ABAC condition against subject
    */
-  private evaluateAbac(condition: AbacCondition, subject: SubjectSnapshot): boolean {
+  private evaluateAbac(
+    condition: AbacCondition,
+    subject: SubjectSnapshot,
+  ): boolean {
     // Handle logical operators
     if (condition.operator) {
       const subConditions = condition.conditions ?? [];
@@ -413,14 +445,23 @@ export class FieldAccessService {
           return subConditions.some((c) => this.evaluateAbac(c, subject));
 
         case "not":
-          return subConditions.length > 0 ? !this.evaluateAbac(subConditions[0], subject) : false;
+          return subConditions.length > 0
+            ? !this.evaluateAbac(subConditions[0], subject)
+            : false;
       }
     }
 
     // Handle attribute comparison
     if (condition.attribute && condition.comparison) {
-      const subjectValue = this.getSubjectAttribute(subject, condition.attribute);
-      return this.compareValues(subjectValue, condition.comparison, condition.value);
+      const subjectValue = this.getSubjectAttribute(
+        subject,
+        condition.attribute,
+      );
+      return this.compareValues(
+        subjectValue,
+        condition.comparison,
+        condition.value,
+      );
     }
 
     return false;
@@ -429,7 +470,10 @@ export class FieldAccessService {
   /**
    * Get attribute value from subject
    */
-  private getSubjectAttribute(subject: SubjectSnapshot, attributePath: string): unknown {
+  private getSubjectAttribute(
+    subject: SubjectSnapshot,
+    attributePath: string,
+  ): unknown {
     // Handle special paths
     if (attributePath === "roles") {
       return subject.roles;
@@ -465,7 +509,7 @@ export class FieldAccessService {
   private compareValues(
     subjectValue: unknown,
     comparison: string,
-    conditionValue: unknown
+    conditionValue: unknown,
   ): boolean {
     switch (comparison) {
       case "eq":
@@ -493,44 +537,54 @@ export class FieldAccessService {
         return true;
 
       case "gt":
-        return typeof subjectValue === "number" && typeof conditionValue === "number"
+        return typeof subjectValue === "number" &&
+          typeof conditionValue === "number"
           ? subjectValue > conditionValue
           : false;
 
       case "gte":
-        return typeof subjectValue === "number" && typeof conditionValue === "number"
+        return typeof subjectValue === "number" &&
+          typeof conditionValue === "number"
           ? subjectValue >= conditionValue
           : false;
 
       case "lt":
-        return typeof subjectValue === "number" && typeof conditionValue === "number"
+        return typeof subjectValue === "number" &&
+          typeof conditionValue === "number"
           ? subjectValue < conditionValue
           : false;
 
       case "lte":
-        return typeof subjectValue === "number" && typeof conditionValue === "number"
+        return typeof subjectValue === "number" &&
+          typeof conditionValue === "number"
           ? subjectValue <= conditionValue
           : false;
 
       case "contains":
-        return typeof subjectValue === "string" && typeof conditionValue === "string"
+        return typeof subjectValue === "string" &&
+          typeof conditionValue === "string"
           ? subjectValue.includes(conditionValue)
           : Array.isArray(subjectValue)
             ? subjectValue.includes(conditionValue)
             : false;
 
       case "starts":
-        return typeof subjectValue === "string" && typeof conditionValue === "string"
+        return typeof subjectValue === "string" &&
+          typeof conditionValue === "string"
           ? subjectValue.startsWith(conditionValue)
           : false;
 
       case "ends":
-        return typeof subjectValue === "string" && typeof conditionValue === "string"
+        return typeof subjectValue === "string" &&
+          typeof conditionValue === "string"
           ? subjectValue.endsWith(conditionValue)
           : false;
 
       case "matches":
-        if (typeof subjectValue === "string" && typeof conditionValue === "string") {
+        if (
+          typeof subjectValue === "string" &&
+          typeof conditionValue === "string"
+        ) {
           try {
             return new RegExp(conditionValue).test(subjectValue);
           } catch {
@@ -551,15 +605,25 @@ export class FieldAccessService {
   /**
    * Extract all field paths from a record (flattened)
    */
-  private extractFieldPaths(obj: Record<string, unknown>, prefix = ""): string[] {
+  private extractFieldPaths(
+    obj: Record<string, unknown>,
+    prefix = "",
+  ): string[] {
     const paths: string[] = [];
 
     for (const [key, value] of Object.entries(obj)) {
       const path = prefix ? `${prefix}.${key}` : key;
 
-      if (value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)) {
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        !(value instanceof Date)
+      ) {
         // Recurse into nested objects
-        paths.push(...this.extractFieldPaths(value as Record<string, unknown>, path));
+        paths.push(
+          ...this.extractFieldPaths(value as Record<string, unknown>, path),
+        );
       } else {
         paths.push(path);
       }
@@ -591,7 +655,11 @@ export class FieldAccessService {
   /**
    * Set value at a dot-notation path
    */
-  private setValueAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  private setValueAtPath(
+    obj: Record<string, unknown>,
+    path: string,
+    value: unknown,
+  ): void {
     const parts = path.split(".");
     let current = obj;
 

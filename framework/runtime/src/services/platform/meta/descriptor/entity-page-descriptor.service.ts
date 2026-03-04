@@ -13,7 +13,6 @@
  * UI orchestration decisions.
  */
 
-
 import type { EntityCapabilitiesService } from "../capabilities/entity-capabilities.service.js";
 import type { EntityOperationDescriptor } from "../capabilities/types.js";
 import type {
@@ -56,13 +55,16 @@ const SYSTEM_FIELDS = new Set([
 
 // Operation codes that produce destructive variants / require confirmation
 const DESTRUCTIVE_OPS = new Set([
-  "deny", "reject", "cancel", "void", "delete", "delete_draft",
+  "deny",
+  "reject",
+  "cancel",
+  "void",
+  "delete",
+  "delete_draft",
 ]);
 
 // Operation codes that produce primary (default) variant
-const PRIMARY_OPS = new Set([
-  "submit", "approve", "create",
-]);
+const PRIMARY_OPS = new Set(["submit", "approve", "create"]);
 
 // Category codes from core.operation_category
 const WORKFLOW_CATEGORY = "workflow";
@@ -95,7 +97,10 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
 
     // Get classification
     const { entityClass, featureFlags } =
-      await this.classificationService.getClassification(entityName, ctx.tenantId);
+      await this.classificationService.getClassification(
+        entityName,
+        ctx.tenantId,
+      );
 
     // Get capabilities for tab hints
     const capabilities = await this.capabilitiesService.getEntityCapabilities(
@@ -146,9 +151,10 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
     );
 
     // 2. Filter for DETAIL surface operations
-    const detailOps = capabilities?.operations.filter(
-      (op) => op.surface === "DETAIL" || op.surface === "BOTH",
-    ) ?? [];
+    const detailOps =
+      capabilities?.operations.filter(
+        (op) => op.surface === "DETAIL" || op.surface === "BOTH",
+      ) ?? [];
 
     // 3. Build authorization check list
     //    Always include basic CRUD for view mode resolution
@@ -175,8 +181,14 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
     ] = await Promise.all([
       this.safeGetCurrentState(entityName, entityId, ctx.tenantId),
       this.safeGetAvailableTransitions(entityName, entityId, ctx),
-      this.approvalService.getInstanceForEntity(entityName, entityId, ctx.tenantId),
-      this.approvalService.getTasksForUser(ctx.userId, ctx.tenantId, { pageSize: 100 }),
+      this.approvalService.getInstanceForEntity(
+        entityName,
+        entityId,
+        ctx.tenantId,
+      ),
+      this.approvalService.getTasksForUser(ctx.userId, ctx.tenantId, {
+        pageSize: 100,
+      }),
       this.policyGate.authorizeMany(authChecks, ctx),
     ]);
 
@@ -252,7 +264,9 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
     detailOps: EntityOperationDescriptor[],
     availableTransitions: AvailableTransition[],
     permissions: Record<string, boolean>,
-    approvalInstance: Awaited<ReturnType<ApprovalService["getInstanceForEntity"]>>,
+    approvalInstance: Awaited<
+      ReturnType<ApprovalService["getInstanceForEntity"]>
+    >,
     myTasks: Array<{ id: string; status: string }>,
   ): ActionDescriptor[] {
     const actions: ActionDescriptor[] = [];
@@ -277,7 +291,8 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
             enabled: transition.authorized,
             disabledReason: transition.authorized
               ? undefined
-              : (transition.unauthorizedReason as ReasonCode) ?? "policy_denied",
+              : ((transition.unauthorizedReason as ReasonCode) ??
+                "policy_denied"),
             requiresConfirmation: DESTRUCTIVE_OPS.has(op.code),
             confirmationMessage: DESTRUCTIVE_OPS.has(op.code)
               ? `Are you sure you want to ${op.label.toLowerCase()} this record?`
@@ -351,7 +366,9 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
   // Private: Section Building (MVP: default 2-column)
   // ==========================================================================
 
-  private buildDefaultSections(compiledModel: CompiledModel): SectionDescriptor[] {
+  private buildDefaultSections(
+    compiledModel: CompiledModel,
+  ): SectionDescriptor[] {
     // Filter out system fields
     const userFields = compiledModel.fields
       .filter((f) => !SYSTEM_FIELDS.has(f.columnName))
@@ -419,7 +436,9 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
 
   private buildBadges(
     currentState: Awaited<ReturnType<typeof this.safeGetCurrentState>>,
-    approvalInstance: Awaited<ReturnType<ApprovalService["getInstanceForEntity"]>>,
+    approvalInstance: Awaited<
+      ReturnType<ApprovalService["getInstanceForEntity"]>
+    >,
   ): BadgeDescriptor[] {
     const badges: BadgeDescriptor[] = [];
 
@@ -428,9 +447,7 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
       badges.push({
         code: "lifecycle_state",
         label: currentState.state.name,
-        variant: currentState.state.isTerminal
-          ? "outline"
-          : "default",
+        variant: currentState.state.isTerminal ? "outline" : "default",
       });
     }
 
@@ -473,7 +490,11 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
     tenantId: string,
   ) {
     try {
-      return await this.lifecycleManager.getCurrentState(entityName, entityId, tenantId);
+      return await this.lifecycleManager.getCurrentState(
+        entityName,
+        entityId,
+        tenantId,
+      );
     } catch {
       // Entity may not have lifecycle configured
       return undefined;
@@ -486,7 +507,11 @@ export class EntityPageDescriptorServiceImpl implements EntityPageDescriptorServ
     ctx: RequestContext,
   ): Promise<AvailableTransition[]> {
     try {
-      return await this.lifecycleManager.getAvailableTransitions(entityName, entityId, ctx);
+      return await this.lifecycleManager.getAvailableTransitions(
+        entityName,
+        entityId,
+        ctx,
+      );
     } catch {
       // Entity may not have lifecycle configured
       return [];

@@ -52,9 +52,13 @@ function toJob<T>(bullJob: BullJob<JobData<T>>): Job<T> {
     maxAttempts: bullJob.opts.attempts ?? 1,
     priority: priorityMap[bullJob.opts.priority ?? 3] ?? 2,
     createdAt: new Date(bullJob.timestamp),
-    processedAt: bullJob.processedOn ? new Date(bullJob.processedOn) : undefined,
+    processedAt: bullJob.processedOn
+      ? new Date(bullJob.processedOn)
+      : undefined,
     completedAt: bullJob.finishedOn ? new Date(bullJob.finishedOn) : undefined,
-    failedAt: bullJob.failedReason ? new Date(bullJob.finishedOn ?? Date.now()) : undefined,
+    failedAt: bullJob.failedReason
+      ? new Date(bullJob.finishedOn ?? Date.now())
+      : undefined,
     error: bullJob.failedReason,
   };
 }
@@ -166,7 +170,7 @@ export class RedisJobQueue implements JobQueue {
    * Add multiple jobs in bulk
    */
   async addBulk<T>(
-    jobs: Array<{ data: JobData<T>; options?: JobOptions }>
+    jobs: Array<{ data: JobData<T>; options?: JobOptions }>,
   ): Promise<Job<T>[]> {
     const bullJobs = await this.queue.addBulk(
       jobs.map((job) => ({
@@ -180,7 +184,7 @@ export class RedisJobQueue implements JobQueue {
           removeOnFail: job.options?.removeOnFail,
           backoff: job.options?.backoff,
         },
-      }))
+      })),
     );
 
     return bullJobs.map((bullJob) => toJob(bullJob)) as Job<T>[];
@@ -221,9 +225,13 @@ export class RedisJobQueue implements JobQueue {
       {
         connection: this.config.redis,
         concurrency,
-        ...(processOptions?.lockDuration ? { lockDuration: processOptions.lockDuration } : {}),
-        ...(processOptions?.lockRenewTime ? { lockRenewTime: processOptions.lockRenewTime } : {}),
-      }
+        ...(processOptions?.lockDuration
+          ? { lockDuration: processOptions.lockDuration }
+          : {}),
+        ...(processOptions?.lockRenewTime
+          ? { lockRenewTime: processOptions.lockRenewTime }
+          : {}),
+      },
     );
 
     this.workers.set(jobType, worker);

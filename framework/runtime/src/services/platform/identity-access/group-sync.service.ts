@@ -61,7 +61,7 @@ export class GroupSyncService {
     groupCode: string,
     groupName: string,
     sourceRef: string,
-    createdBy: string = "system"
+    createdBy: string = "system",
   ): Promise<GroupInfo> {
     // Check if exists by code
     const existing = await this.getGroupByCode(tenantId, groupCode);
@@ -71,7 +71,11 @@ export class GroupSyncService {
       if (existing.name !== groupName) {
         await this.db
           .updateTable("core.principal_group")
-          .set({ name: groupName, updated_by: createdBy, updated_at: new Date() })
+          .set({
+            name: groupName,
+            updated_by: createdBy,
+            updated_at: new Date(),
+          })
           .where("id", "=", existing.id)
           .execute();
       }
@@ -80,7 +84,10 @@ export class GroupSyncService {
 
     // Create new
     const id = crypto.randomUUID();
-    const metadata = JSON.stringify({ source_type: "idp", source_ref: sourceRef });
+    const metadata = JSON.stringify({
+      source_type: "idp",
+      source_ref: sourceRef,
+    });
     await this.db
       .insertInto("core.principal_group")
       .values({
@@ -101,7 +108,7 @@ export class GroupSyncService {
         tenantId,
         code: groupCode,
         sourceRef,
-      })
+      }),
     );
 
     return {
@@ -121,7 +128,7 @@ export class GroupSyncService {
     tenantId: string,
     code: string,
     name: string,
-    createdBy: string
+    createdBy: string,
   ): Promise<GroupInfo> {
     const id = crypto.randomUUID();
     const metadata = JSON.stringify({ source_type: "local" });
@@ -144,7 +151,7 @@ export class GroupSyncService {
         id,
         tenantId,
         code,
-      })
+      }),
     );
 
     return {
@@ -163,14 +170,7 @@ export class GroupSyncService {
   async getGroup(groupId: string): Promise<GroupInfo | undefined> {
     const result = await this.db
       .selectFrom("core.principal_group")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "description",
-        "metadata",
-      ])
+      .select(["id", "tenant_id", "code", "name", "description", "metadata"])
       .where("id", "=", groupId)
       .executeTakeFirst();
 
@@ -191,18 +191,11 @@ export class GroupSyncService {
    */
   private async getGroupByCode(
     tenantId: string,
-    code: string
+    code: string,
   ): Promise<GroupInfo | undefined> {
     const result = await this.db
       .selectFrom("core.principal_group")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "description",
-        "metadata",
-      ])
+      .select(["id", "tenant_id", "code", "name", "description", "metadata"])
       .where("tenant_id", "=", tenantId)
       .where("code", "=", code)
       .executeTakeFirst();
@@ -226,7 +219,7 @@ export class GroupSyncService {
     groupId: string,
     tenantId: string,
     principalIds: string[],
-    _createdBy: string = "system"
+    _createdBy: string = "system",
   ): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       // Get current members
@@ -260,7 +253,7 @@ export class GroupSyncService {
               tenant_id: tenantId,
               group_id: groupId,
               principal_id: principalId,
-            }))
+            })),
           )
           .execute();
       }
@@ -271,7 +264,7 @@ export class GroupSyncService {
           groupId,
           added: toAdd.length,
           removed: toRemove.length,
-        })
+        }),
       );
     });
   }
@@ -283,7 +276,7 @@ export class GroupSyncService {
     groupId: string,
     tenantId: string,
     principalId: string,
-    _createdBy: string
+    _createdBy: string,
   ): Promise<void> {
     await this.db
       .insertInto("core.group_member")
@@ -344,18 +337,11 @@ export class GroupSyncService {
     filters?: {
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<GroupInfo[]> {
     const query = this.db
       .selectFrom("core.principal_group")
-      .select([
-        "id",
-        "tenant_id",
-        "code",
-        "name",
-        "description",
-        "metadata",
-      ])
+      .select(["id", "tenant_id", "code", "name", "description", "metadata"])
       .where("tenant_id", "=", tenantId);
 
     const results = await query

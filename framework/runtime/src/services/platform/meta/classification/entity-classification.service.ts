@@ -27,7 +27,9 @@ const FEATURE_FLAG_DEFAULTS: EntityFeatureFlags = {
 /**
  * Map DB kind values to EntityClass
  */
-function mapKindToClass(kind: string | null | undefined): EntityClass | undefined {
+function mapKindToClass(
+  kind: string | null | undefined,
+): EntityClass | undefined {
   switch (kind) {
     case "ref":
     case "mdm":
@@ -46,7 +48,7 @@ function mapKindToClass(kind: string | null | undefined): EntityClass | undefine
  */
 function parseFeatureFlags(
   raw: unknown,
-  entityClass: EntityClass | undefined
+  entityClass: EntityClass | undefined,
 ): EntityFeatureFlags {
   const defaults = { ...FEATURE_FLAG_DEFAULTS };
   if (!raw || typeof raw !== "object") {
@@ -80,14 +82,12 @@ function parseFeatureFlags(
 /**
  * Entity Classification Service Implementation
  */
-export class EntityClassificationServiceImpl
-  implements EntityClassificationService
-{
+export class EntityClassificationServiceImpl implements EntityClassificationService {
   constructor(private readonly db: LifecycleDB_Type) {}
 
   async resolveClass(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityClass | undefined> {
     const row = await this.db
       .selectFrom("meta.entity")
@@ -103,7 +103,7 @@ export class EntityClassificationServiceImpl
 
   async resolveFeatureFlags(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<EntityFeatureFlags> {
     const { featureFlags } = await this.getClassification(entityName, tenantId);
     return featureFlags;
@@ -111,7 +111,7 @@ export class EntityClassificationServiceImpl
 
   async getClassification(
     entityName: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     entityClass: EntityClass | undefined;
     featureFlags: EntityFeatureFlags;

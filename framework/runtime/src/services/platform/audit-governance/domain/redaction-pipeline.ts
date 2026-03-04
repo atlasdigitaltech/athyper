@@ -70,7 +70,9 @@ const PII_PATTERNS: Array<{
     regex: /[A-Z]{2}\d{2}[A-Z0-9]{4,30}/g,
     replacement: (match: string) => {
       if (match.length <= 6) return match;
-      return match.substring(0, 4) + "*".repeat(match.length - 8) + match.slice(-4);
+      return (
+        match.substring(0, 4) + "*".repeat(match.length - 8) + match.slice(-4)
+      );
     },
   },
 ];
@@ -112,7 +114,9 @@ export class AuditRedactionPipeline {
 
     // 1. Sanitize `details` JSONB — strip denylist keys, mask PII
     if (redacted.details) {
-      const result = this.sanitizeObject(redacted.details as Record<string, unknown>);
+      const result = this.sanitizeObject(
+        redacted.details as Record<string, unknown>,
+      );
       redacted.details = result.obj;
       if (result.changed) wasRedacted = true;
     }
@@ -131,10 +135,14 @@ export class AuditRedactionPipeline {
     if (taxonomy) {
       for (const fieldPath of taxonomy.redactionRules) {
         if (fieldPath === "ip_address" && redacted.ipAddress) {
-          redacted.ipAddress = this.masking.mask(redacted.ipAddress, "partial", {
-            visibleChars: 6,
-            position: "start",
-          }) as string;
+          redacted.ipAddress = this.masking.mask(
+            redacted.ipAddress,
+            "partial",
+            {
+              visibleChars: 6,
+              position: "start",
+            },
+          ) as string;
           wasRedacted = true;
         }
         if (fieldPath === "user_agent" && redacted.userAgent) {
@@ -164,7 +172,10 @@ export class AuditRedactionPipeline {
   /**
    * Recursively sanitize an object: remove denylist keys, mask PII in strings.
    */
-  private sanitizeObject(obj: Record<string, unknown>): { obj: Record<string, unknown>; changed: boolean } {
+  private sanitizeObject(obj: Record<string, unknown>): {
+    obj: Record<string, unknown>;
+    changed: boolean;
+  } {
     let changed = false;
     const result: Record<string, unknown> = {};
 
@@ -180,7 +191,11 @@ export class AuditRedactionPipeline {
         const masked = this.maskPiiInString(value);
         if (masked !== value) changed = true;
         result[key] = masked;
-      } else if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      } else if (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
         const nested = this.sanitizeObject(value as Record<string, unknown>);
         if (nested.changed) changed = true;
         result[key] = nested.obj;
@@ -222,6 +237,8 @@ export class AuditRedactionPipeline {
 /**
  * Factory to create a redaction pipeline with the default masking service.
  */
-export function createRedactionPipeline(masking: MaskingService): AuditRedactionPipeline {
+export function createRedactionPipeline(
+  masking: MaskingService,
+): AuditRedactionPipeline {
   return new AuditRedactionPipeline(masking);
 }

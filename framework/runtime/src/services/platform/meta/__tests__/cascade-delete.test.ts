@@ -81,7 +81,14 @@ function createMockRegistry(entityNames: string[]) {
         updatedAt: new Date(),
         createdBy: "system",
       })),
-      meta: { page: 1, pageSize: 100, total: entityNames.length, totalPages: 1, hasNext: false, hasPrev: false },
+      meta: {
+        page: 1,
+        pageSize: 100,
+        total: entityNames.length,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
     })),
   } as any;
 }
@@ -133,7 +140,10 @@ function buildService(opts: {
 }) {
   const mockDbResult = createMockDb(opts.sqlResults);
   const compiler = createMockCompiler(opts.models);
-  const registry = opts.hasRegistry !== false ? createMockRegistry(opts.entityNames) : undefined;
+  const registry =
+    opts.hasRegistry !== false
+      ? createMockRegistry(opts.entityNames)
+      : undefined;
   const policyGate = createMockPolicyGate();
   const auditLogger = createMockAuditLogger();
 
@@ -172,7 +182,9 @@ describe("Cascade Delete Engine", () => {
       // 3. soft-delete UPDATE
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // soft-delete UPDATE
         ],
         models: {
@@ -196,7 +208,9 @@ describe("Cascade Delete Engine", () => {
       // 3. soft-delete UPDATE
       const { service, db, registry } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // soft-delete UPDATE
         ],
         models: {
@@ -216,7 +230,9 @@ describe("Cascade Delete Engine", () => {
       // line_item has referenceTo: "order" but no onDelete — should be ignored
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // soft-delete UPDATE
         ],
         models: {
@@ -242,34 +258,48 @@ describe("Cascade Delete Engine", () => {
       // 2. handleCascadeDeletes → RESTRICT COUNT query → count > 0
       const { service } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ count: 3 }] }, // RESTRICT COUNT query
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
       });
 
       await expect(service.delete("order", "rec-1", ctx)).rejects.toThrow(
-        /Cannot delete order rec-1: Referenced by line_item\.order_id \(3 records\)/
+        /Cannot delete order rec-1: Referenced by line_item\.order_id \(3 records\)/,
       );
     });
 
     it("should allow deletion when RESTRICT count is 0", async () => {
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ count: 0 }] }, // RESTRICT COUNT → 0 references
           { rows: [] }, // soft-delete UPDATE
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
@@ -284,24 +314,36 @@ describe("Cascade Delete Engine", () => {
     it("should report multiple RESTRICT violations", async () => {
       const { service } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ count: 2 }] }, // RESTRICT COUNT for line_item
           { rows: [{ count: 1 }] }, // RESTRICT COUNT for shipment
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
           shipment: makeModel("shipment", [
-            { name: "order_ref", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_ref",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
         },
         entityNames: ["order", "line_item", "shipment"],
       });
 
       await expect(service.delete("order", "rec-1", ctx)).rejects.toThrow(
-        /Cannot delete order rec-1: Referenced by line_item\.order_id.*shipment\.order_ref/
+        /Cannot delete order rec-1: Referenced by line_item\.order_id.*shipment\.order_ref/,
       );
     });
   });
@@ -319,7 +361,9 @@ describe("Cascade Delete Engine", () => {
       // 3. soft-delete UPDATE for order
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ id: "line-1" }, { id: "line-2" }] }, // CASCADE SELECT ids
           { rows: [] }, // Recursive cascade for line-1 (no children)
           { rows: [] }, // UPDATE line-1 (soft-delete)
@@ -330,7 +374,12 @@ describe("Cascade Delete Engine", () => {
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "CASCADE" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "CASCADE",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
@@ -345,14 +394,21 @@ describe("Cascade Delete Engine", () => {
     it("should handle empty cascade (no referencing records)", async () => {
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // CASCADE SELECT ids → empty
           { rows: [] }, // soft-delete UPDATE for order
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "CASCADE" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "CASCADE",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
@@ -373,14 +429,21 @@ describe("Cascade Delete Engine", () => {
       // 3. soft-delete UPDATE
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // SET_NULL UPDATE
           { rows: [] }, // soft-delete UPDATE
         ],
         models: {
           customer: makeModel("customer", [{ name: "name" }]),
           order: makeModel("order", [
-            { name: "customer_id", type: "reference", referenceTo: "customer", onDelete: "SET_NULL" },
+            {
+              name: "customer_id",
+              type: "reference",
+              referenceTo: "customer",
+              onDelete: "SET_NULL",
+            },
           ]),
         },
         entityNames: ["customer", "order"],
@@ -399,31 +462,45 @@ describe("Cascade Delete Engine", () => {
       // RESTRICT should be checked first, before any CASCADE mutations.
       const { service } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ count: 1 }] }, // RESTRICT COUNT for invoice (has reference)
           // CASCADE SELECT should NOT execute because RESTRICT threw
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "CASCADE" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "CASCADE",
+            },
           ]),
           invoice: makeModel("invoice", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
         },
         entityNames: ["order", "line_item", "invoice"],
       });
 
       await expect(service.delete("order", "rec-1", ctx)).rejects.toThrow(
-        /Cannot delete order rec-1.*invoice/
+        /Cannot delete order rec-1.*invoice/,
       );
     });
 
     it("should apply both CASCADE and SET_NULL when no RESTRICT violations", async () => {
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           // CASCADE: SELECT ids from line_item → one child
           { rows: [{ id: "child-1" }] },
           // Recursive cascade for child-1 (no references to line_item)
@@ -436,10 +513,20 @@ describe("Cascade Delete Engine", () => {
         models: {
           customer: makeModel("customer", [{ name: "name" }]),
           line_item: makeModel("line_item", [
-            { name: "customer_id", type: "reference", referenceTo: "customer", onDelete: "CASCADE" },
+            {
+              name: "customer_id",
+              type: "reference",
+              referenceTo: "customer",
+              onDelete: "CASCADE",
+            },
           ]),
           note: makeModel("note", [
-            { name: "customer_id", type: "reference", referenceTo: "customer", onDelete: "SET_NULL" },
+            {
+              name: "customer_id",
+              type: "reference",
+              referenceTo: "customer",
+              onDelete: "SET_NULL",
+            },
           ]),
         },
         entityNames: ["customer", "line_item", "note"],
@@ -458,7 +545,9 @@ describe("Cascade Delete Engine", () => {
       // emp-2 references emp-1 but emp-1 is already in visited set → skip
       const { service, db } = buildService({
         sqlResults: [
-          { rows: [{ id: "emp-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "emp-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           // CASCADE SELECT for employee referencing emp-1 → [emp-2]
           { rows: [{ id: "emp-2" }] },
           // Recursive: CASCADE SELECT for employee referencing emp-2 → [emp-1]
@@ -470,7 +559,12 @@ describe("Cascade Delete Engine", () => {
         ],
         models: {
           employee: makeModel("employee", [
-            { name: "manager_id", type: "reference", referenceTo: "employee", onDelete: "CASCADE" },
+            {
+              name: "manager_id",
+              type: "reference",
+              referenceTo: "employee",
+              onDelete: "CASCADE",
+            },
           ]),
         },
         entityNames: ["employee"],
@@ -499,11 +593,21 @@ describe("Cascade Delete Engine", () => {
         entityNames.push(name);
         if (i < 12) {
           models[name] = makeModel(name, [
-            { name: `parent_id`, type: "reference", referenceTo: i > 0 ? `entity_${i - 1}` : "none", onDelete: i > 0 ? "CASCADE" : undefined },
+            {
+              name: `parent_id`,
+              type: "reference",
+              referenceTo: i > 0 ? `entity_${i - 1}` : "none",
+              onDelete: i > 0 ? "CASCADE" : undefined,
+            },
           ]);
         } else {
           models[name] = makeModel(name, [
-            { name: `parent_id`, type: "reference", referenceTo: `entity_${i - 1}`, onDelete: "CASCADE" },
+            {
+              name: `parent_id`,
+              type: "reference",
+              referenceTo: `entity_${i - 1}`,
+              onDelete: "CASCADE",
+            },
           ]);
         }
       }
@@ -515,7 +619,9 @@ describe("Cascade Delete Engine", () => {
       const sqlResults: Array<{ rows: any[] }> = [];
 
       // get() for the initial delete
-      sqlResults.push({ rows: [{ id: "rec-0", tenant_id: "tenant-1", realm_id: "realm-1" }] });
+      sqlResults.push({
+        rows: [{ id: "rec-0", tenant_id: "tenant-1", realm_id: "realm-1" }],
+      });
 
       // For each cascade level (depth 0 through 11), we need:
       // 1. SELECT id from entity_{level+1} WHERE parent_id = rec-{level} → returns rec-{level+1}
@@ -530,7 +636,7 @@ describe("Cascade Delete Engine", () => {
       });
 
       await expect(service.delete("entity_0", "rec-0", ctx)).rejects.toThrow(
-        /Cascade delete depth exceeded/
+        /Cascade delete depth exceeded/,
       );
     });
   });
@@ -574,14 +680,21 @@ describe("Cascade Delete Engine", () => {
     it("should log audit event on successful delete with cascade", async () => {
       const { service, auditLogger } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [] }, // CASCADE SELECT (empty)
           { rows: [] }, // soft-delete
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "CASCADE" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "CASCADE",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
@@ -595,26 +708,35 @@ describe("Cascade Delete Engine", () => {
           action: "delete",
           resource: "order",
           result: "success",
-        })
+        }),
       );
     });
 
     it("should log audit failure when RESTRICT prevents deletion", async () => {
       const { service, auditLogger } = buildService({
         sqlResults: [
-          { rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }] }, // get()
+          {
+            rows: [{ id: "rec-1", tenant_id: "tenant-1", realm_id: "realm-1" }],
+          }, // get()
           { rows: [{ count: 5 }] }, // RESTRICT COUNT
         ],
         models: {
           order: makeModel("order", [{ name: "title" }]),
           line_item: makeModel("line_item", [
-            { name: "order_id", type: "reference", referenceTo: "order", onDelete: "RESTRICT" },
+            {
+              name: "order_id",
+              type: "reference",
+              referenceTo: "order",
+              onDelete: "RESTRICT",
+            },
           ]),
         },
         entityNames: ["order", "line_item"],
       });
 
-      await expect(service.delete("order", "rec-1", ctx)).rejects.toThrow(/Cannot delete/);
+      await expect(service.delete("order", "rec-1", ctx)).rejects.toThrow(
+        /Cannot delete/,
+      );
 
       expect(auditLogger.log).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -622,7 +744,7 @@ describe("Cascade Delete Engine", () => {
           action: "delete",
           resource: "order",
           result: "failure",
-        })
+        }),
       );
     });
   });

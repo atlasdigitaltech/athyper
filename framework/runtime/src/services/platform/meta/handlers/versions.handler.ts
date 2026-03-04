@@ -8,11 +8,16 @@ import { META_TOKENS } from "@athyper/core/meta";
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 
-import type { RouteHandler, HttpHandlerContext } from "../../foundation/http/types.js";
-import type { EntitySchema, MetaRegistry, RequestContext } from "@athyper/core/meta";
+import type {
+  RouteHandler,
+  HttpHandlerContext,
+} from "../../foundation/http/types.js";
+import type {
+  EntitySchema,
+  MetaRegistry,
+  RequestContext,
+} from "@athyper/core/meta";
 import type { Request, Response } from "express";
-
-
 
 // ============================================================================
 // Helper Functions
@@ -32,9 +37,16 @@ function toMetaRequestContext(ctx: HttpHandlerContext): RequestContext {
 // ============================================================================
 
 export class CreateVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
-    const { version, schema } = req.body as { version: string; schema: EntitySchema };
+    const { version, schema } = req.body as {
+      version: string;
+      schema: EntitySchema;
+    };
 
     // Validate required fields
     if (!version || !schema) {
@@ -48,7 +60,9 @@ export class CreateVersionHandler implements RouteHandler {
       return;
     }
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
@@ -65,7 +79,12 @@ export class CreateVersionHandler implements RouteHandler {
         return;
       }
 
-      const entityVersion = await registry.createVersion(name, version, schema, metaCtx);
+      const entityVersion = await registry.createVersion(
+        name,
+        version,
+        schema,
+        metaCtx,
+      );
 
       res.status(201).json({
         success: true,
@@ -113,10 +132,16 @@ export class CreateVersionHandler implements RouteHandler {
 // ============================================================================
 
 export class ListVersionsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name } = req.params as { name: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
 
     try {
       const result = await registry.listVersions(name);
@@ -149,10 +174,16 @@ export class ListVersionsHandler implements RouteHandler {
 // ============================================================================
 
 export class GetVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name, version } = req.params as { name: string; version: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
 
     try {
       const entityVersion = await registry.getVersion(name, version);
@@ -192,14 +223,24 @@ export class GetVersionHandler implements RouteHandler {
 // ============================================================================
 
 export class ActivateVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name, version } = req.params as { name: string; version: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {
-      const entityVersion = await registry.activateVersion(name, version, metaCtx);
+      const entityVersion = await registry.activateVersion(
+        name,
+        version,
+        metaCtx,
+      );
 
       res.status(200).json({
         success: true,
@@ -237,10 +278,16 @@ export class ActivateVersionHandler implements RouteHandler {
 // ============================================================================
 
 export class DeleteVersionHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const { name, version } = req.params as { name: string; version: string };
 
-    const registry = await ctx.container.resolve<MetaRegistry>(META_TOKENS.registry);
+    const registry = await ctx.container.resolve<MetaRegistry>(
+      META_TOKENS.registry,
+    );
     const metaCtx = toMetaRequestContext(ctx);
 
     try {

@@ -5,7 +5,12 @@
  * Defines PolicyInput, PolicyDecision, PolicyEvaluationOptions, and determinism rules
  */
 
-import type { ConditionGroup, Effect, ScopeType, SubjectType } from "../types.js";
+import type {
+  ConditionGroup,
+  Effect,
+  ScopeType,
+  SubjectType,
+} from "../types.js";
 
 // ============================================================================
 // Policy Input (What goes into evaluation)
@@ -210,7 +215,12 @@ export type TraceStep = {
   step: string;
 
   /** Step type */
-  type: "scope_filter" | "condition_eval" | "effect_resolution" | "obligation" | "short_circuit";
+  type:
+    | "scope_filter"
+    | "condition_eval"
+    | "effect_resolution"
+    | "obligation"
+    | "short_circuit";
 
   /** Input to this step */
   input?: unknown;
@@ -296,10 +306,10 @@ export type PolicyDecision = {
  * Conflict resolution strategy
  */
 export type ConflictResolution =
-  | "deny_overrides"     // Deny wins if any deny matches (most secure)
-  | "allow_overrides"    // Allow wins if any allow matches (most permissive)
-  | "priority_order"     // Highest priority rule wins
-  | "first_match";       // First matching rule wins (order-dependent)
+  | "deny_overrides" // Deny wins if any deny matches (most secure)
+  | "allow_overrides" // Allow wins if any allow matches (most permissive)
+  | "priority_order" // Highest priority rule wins
+  | "first_match"; // First matching rule wins (order-dependent)
 
 /**
  * Policy evaluation options
@@ -365,7 +375,10 @@ export const DEFAULT_EVALUATION_OPTIONS: Required<PolicyEvaluationOptions> = {
   },
   includeObligations: true,
   skipCache: false,
-  policyVersionOverride: undefined as unknown as { policyId: string; versionId: string },
+  policyVersionOverride: undefined as unknown as {
+    policyId: string;
+    versionId: string;
+  },
 };
 
 // ============================================================================
@@ -405,15 +418,30 @@ export const SUBJECT_SPECIFICITY_ORDER: Record<SubjectType, number> = {
  * Returns negative if a should come before b
  */
 export function compareRules(
-  a: { scopeType: ScopeType; subjectType: SubjectType; priority: number; effect: Effect; ruleId: string },
-  b: { scopeType: ScopeType; subjectType: SubjectType; priority: number; effect: Effect; ruleId: string }
+  a: {
+    scopeType: ScopeType;
+    subjectType: SubjectType;
+    priority: number;
+    effect: Effect;
+    ruleId: string;
+  },
+  b: {
+    scopeType: ScopeType;
+    subjectType: SubjectType;
+    priority: number;
+    effect: Effect;
+    ruleId: string;
+  },
 ): number {
   // 1. Scope specificity (higher = more specific)
-  const scopeDiff = SCOPE_SPECIFICITY_ORDER[b.scopeType] - SCOPE_SPECIFICITY_ORDER[a.scopeType];
+  const scopeDiff =
+    SCOPE_SPECIFICITY_ORDER[b.scopeType] - SCOPE_SPECIFICITY_ORDER[a.scopeType];
   if (scopeDiff !== 0) return scopeDiff;
 
   // 2. Subject specificity (higher = more specific)
-  const subjectDiff = SUBJECT_SPECIFICITY_ORDER[b.subjectType] - SUBJECT_SPECIFICITY_ORDER[a.subjectType];
+  const subjectDiff =
+    SUBJECT_SPECIFICITY_ORDER[b.subjectType] -
+    SUBJECT_SPECIFICITY_ORDER[a.subjectType];
   if (subjectDiff !== 0) return subjectDiff;
 
   // 3. Priority (lower = higher priority)
@@ -450,7 +478,8 @@ export const PolicyErrorCodes = {
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
 
-export type PolicyErrorCode = typeof PolicyErrorCodes[keyof typeof PolicyErrorCodes];
+export type PolicyErrorCode =
+  (typeof PolicyErrorCodes)[keyof typeof PolicyErrorCodes];
 
 /**
  * Policy evaluation error
@@ -459,7 +488,7 @@ export class PolicyEvaluationError extends Error {
   constructor(
     public readonly code: PolicyErrorCode,
     message: string,
-    public readonly details?: Record<string, unknown>
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "PolicyEvaluationError";
@@ -477,12 +506,18 @@ export interface IPolicyEvaluator {
   /**
    * Evaluate a policy decision
    */
-  evaluate(input: PolicyInput, options?: PolicyEvaluationOptions): Promise<PolicyDecision>;
+  evaluate(
+    input: PolicyInput,
+    options?: PolicyEvaluationOptions,
+  ): Promise<PolicyDecision>;
 
   /**
    * Check if action is allowed (convenience method)
    */
-  isAllowed(input: PolicyInput, options?: PolicyEvaluationOptions): Promise<boolean>;
+  isAllowed(
+    input: PolicyInput,
+    options?: PolicyEvaluationOptions,
+  ): Promise<boolean>;
 
   /**
    * Enforce policy (throws if denied)
@@ -496,6 +531,6 @@ export interface IPolicyEvaluator {
     subject: PolicySubject,
     resource: PolicyResource,
     context: PolicyContext,
-    options?: PolicyEvaluationOptions
+    options?: PolicyEvaluationOptions,
   ): Promise<Map<string, PolicyDecision>>;
 }

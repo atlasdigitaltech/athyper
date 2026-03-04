@@ -5,22 +5,26 @@
  * in approval workflows.
  */
 
-import type { ApprovalInstance, ApprovalStepInstance, AssignedApprover } from "../instance/types.js";
+import type {
+  ApprovalInstance,
+  ApprovalStepInstance,
+  AssignedApprover,
+} from "../instance/types.js";
 
 /**
  * Types of workflow errors that can be recovered
  */
 export type WorkflowErrorType =
-  | "missing_approver"      // Approver not found in system
-  | "deactivated_user"      // Approver account is deactivated
-  | "role_mismatch"         // User no longer has required role
-  | "group_empty"           // Approval group has no members
-  | "sla_expired"           // SLA deadline passed
-  | "escalation_failed"     // Escalation could not be completed
-  | "notification_failed"   // Failed to notify approvers
-  | "condition_error"       // Error evaluating conditions
-  | "quorum_unreachable"    // Not enough approvers to reach quorum
-  | "system_error";         // General system error
+  | "missing_approver" // Approver not found in system
+  | "deactivated_user" // Approver account is deactivated
+  | "role_mismatch" // User no longer has required role
+  | "group_empty" // Approval group has no members
+  | "sla_expired" // SLA deadline passed
+  | "escalation_failed" // Escalation could not be completed
+  | "notification_failed" // Failed to notify approvers
+  | "condition_error" // Error evaluating conditions
+  | "quorum_unreachable" // Not enough approvers to reach quorum
+  | "system_error"; // General system error
 
 /**
  * Severity of the workflow error
@@ -30,7 +34,12 @@ export type ErrorSeverity = "warning" | "error" | "critical";
 /**
  * Current status of an error
  */
-export type ErrorStatus = "detected" | "acknowledged" | "resolving" | "resolved" | "ignored";
+export type ErrorStatus =
+  | "detected"
+  | "acknowledged"
+  | "resolving"
+  | "resolved"
+  | "ignored";
 
 /**
  * Workflow error record
@@ -69,17 +78,17 @@ export type WorkflowError = {
  * Types of recovery actions
  */
 export type RecoveryActionType =
-  | "reassign_approver"       // Reassign to different user
-  | "reassign_to_role"        // Reassign to role members
-  | "reassign_to_manager"     // Reassign to manager
-  | "skip_approver"           // Skip this approver
-  | "skip_step"               // Skip entire step
-  | "pause_workflow"          // Pause workflow
-  | "resume_workflow"         // Resume paused workflow
-  | "retry_action"            // Retry failed action
-  | "escalate"                // Escalate to next level
-  | "admin_override"          // Admin takes direct action
-  | "cancel_workflow";        // Cancel the workflow
+  | "reassign_approver" // Reassign to different user
+  | "reassign_to_role" // Reassign to role members
+  | "reassign_to_manager" // Reassign to manager
+  | "skip_approver" // Skip this approver
+  | "skip_step" // Skip entire step
+  | "pause_workflow" // Pause workflow
+  | "resume_workflow" // Resume paused workflow
+  | "retry_action" // Retry failed action
+  | "escalate" // Escalate to next level
+  | "admin_override" // Admin takes direct action
+  | "cancel_workflow"; // Cancel the workflow
 
 /**
  * Recovery action definition
@@ -167,7 +176,12 @@ export type AdminOverrideRequest = {
   id: string;
   instanceId: string;
   stepInstanceId?: string;
-  requestType: "force_approve" | "force_reject" | "skip_step" | "cancel" | "resume";
+  requestType:
+    | "force_approve"
+    | "force_reject"
+    | "skip_step"
+    | "cancel"
+    | "resume";
   reason: string;
   requestedBy: string;
   requestedAt: Date;
@@ -208,26 +222,56 @@ export interface IRecoveryErrorRepository {
   // Error management
   createError(error: Omit<WorkflowError, "id">): Promise<WorkflowError>;
   getError(tenantId: string, errorId: string): Promise<WorkflowError | null>;
-  getErrorsByInstance(tenantId: string, instanceId: string): Promise<WorkflowError[]>;
+  getErrorsByInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<WorkflowError[]>;
   getActiveErrors(tenantId: string): Promise<WorkflowError[]>;
-  updateError(tenantId: string, errorId: string, updates: Partial<WorkflowError>): Promise<WorkflowError>;
+  updateError(
+    tenantId: string,
+    errorId: string,
+    updates: Partial<WorkflowError>,
+  ): Promise<WorkflowError>;
 
   // Pause management
   createPause(pause: Omit<WorkflowPause, "id">): Promise<WorkflowPause>;
   getPause(tenantId: string, pauseId: string): Promise<WorkflowPause | null>;
-  getActivePause(tenantId: string, instanceId: string): Promise<WorkflowPause | null>;
-  updatePause(tenantId: string, pauseId: string, updates: Partial<WorkflowPause>): Promise<WorkflowPause>;
+  getActivePause(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<WorkflowPause | null>;
+  updatePause(
+    tenantId: string,
+    pauseId: string,
+    updates: Partial<WorkflowPause>,
+  ): Promise<WorkflowPause>;
 
   // Retry management
   createRetryAttempt(attempt: Omit<RetryAttempt, "id">): Promise<RetryAttempt>;
   getRetryAttempts(tenantId: string, errorId: string): Promise<RetryAttempt[]>;
-  updateRetryAttempt(tenantId: string, attemptId: string, updates: Partial<RetryAttempt>): Promise<RetryAttempt>;
+  updateRetryAttempt(
+    tenantId: string,
+    attemptId: string,
+    updates: Partial<RetryAttempt>,
+  ): Promise<RetryAttempt>;
 
   // Admin override management
-  createOverrideRequest(request: Omit<AdminOverrideRequest, "id">): Promise<AdminOverrideRequest>;
-  getOverrideRequest(tenantId: string, requestId: string): Promise<AdminOverrideRequest | null>;
-  getOverridesByInstance(tenantId: string, instanceId: string): Promise<AdminOverrideRequest[]>;
-  updateOverrideRequest(tenantId: string, requestId: string, updates: Partial<AdminOverrideRequest>): Promise<AdminOverrideRequest>;
+  createOverrideRequest(
+    request: Omit<AdminOverrideRequest, "id">,
+  ): Promise<AdminOverrideRequest>;
+  getOverrideRequest(
+    tenantId: string,
+    requestId: string,
+  ): Promise<AdminOverrideRequest | null>;
+  getOverridesByInstance(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<AdminOverrideRequest[]>;
+  updateOverrideRequest(
+    tenantId: string,
+    requestId: string,
+    updates: Partial<AdminOverrideRequest>,
+  ): Promise<AdminOverrideRequest>;
 }
 
 /**
@@ -237,7 +281,10 @@ export interface IErrorDetectionService {
   /**
    * Run health check on a workflow instance
    */
-  checkInstanceHealth(tenantId: string, instanceId: string): Promise<WorkflowHealthCheck>;
+  checkInstanceHealth(
+    tenantId: string,
+    instanceId: string,
+  ): Promise<WorkflowHealthCheck>;
 
   /**
    * Detect errors for a specific step
@@ -245,7 +292,7 @@ export interface IErrorDetectionService {
   detectStepErrors(
     tenantId: string,
     instance: ApprovalInstance,
-    step: ApprovalStepInstance
+    step: ApprovalStepInstance,
   ): Promise<WorkflowError[]>;
 
   /**
@@ -253,8 +300,11 @@ export interface IErrorDetectionService {
    */
   validateApprovers(
     tenantId: string,
-    approvers: AssignedApprover[]
-  ): Promise<{ valid: AssignedApprover[]; invalid: Array<{ approver: AssignedApprover; reason: WorkflowErrorType }> }>;
+    approvers: AssignedApprover[],
+  ): Promise<{
+    valid: AssignedApprover[];
+    invalid: Array<{ approver: AssignedApprover; reason: WorkflowErrorType }>;
+  }>;
 }
 
 /**
@@ -264,7 +314,10 @@ export interface IRecoveryService {
   /**
    * Get suggested recovery actions for an error
    */
-  getSuggestedActions(tenantId: string, error: WorkflowError): Promise<RecoveryAction[]>;
+  getSuggestedActions(
+    tenantId: string,
+    error: WorkflowError,
+  ): Promise<RecoveryAction[]>;
 
   /**
    * Execute a recovery action
@@ -273,7 +326,7 @@ export interface IRecoveryService {
     tenantId: string,
     errorId: string,
     action: RecoveryAction,
-    performedBy: string
+    performedBy: string,
   ): Promise<RecoveryResult>;
 
   /**
@@ -284,7 +337,7 @@ export interface IRecoveryService {
     instanceId: string,
     reason: PauseReason,
     message: string,
-    pausedBy: string
+    pausedBy: string,
   ): Promise<WorkflowPause>;
 
   /**
@@ -293,13 +346,16 @@ export interface IRecoveryService {
   resumeWorkflow(
     tenantId: string,
     instanceId: string,
-    resumedBy: string
+    resumedBy: string,
   ): Promise<ApprovalInstance>;
 
   /**
    * Attempt auto-recovery for an error
    */
-  attemptAutoRecovery(tenantId: string, error: WorkflowError): Promise<RecoveryResult | null>;
+  attemptAutoRecovery(
+    tenantId: string,
+    error: WorkflowError,
+  ): Promise<RecoveryResult | null>;
 }
 
 /**
@@ -341,7 +397,7 @@ export interface IAdminOverrideService {
    */
   requestOverride(
     tenantId: string,
-    request: Omit<AdminOverrideRequest, "id" | "status" | "requestedAt">
+    request: Omit<AdminOverrideRequest, "id" | "status" | "requestedAt">,
   ): Promise<AdminOverrideRequest>;
 
   /**
@@ -350,7 +406,7 @@ export interface IAdminOverrideService {
   approveOverride(
     tenantId: string,
     requestId: string,
-    approvedBy: string
+    approvedBy: string,
   ): Promise<AdminOverrideRequest>;
 
   /**
@@ -360,13 +416,16 @@ export interface IAdminOverrideService {
     tenantId: string,
     requestId: string,
     rejectedBy: string,
-    reason: string
+    reason: string,
   ): Promise<AdminOverrideRequest>;
 
   /**
    * Execute an approved override
    */
-  executeOverride(tenantId: string, requestId: string): Promise<AdminOverrideRequest>;
+  executeOverride(
+    tenantId: string,
+    requestId: string,
+  ): Promise<AdminOverrideRequest>;
 
   /**
    * Force approve a step (admin action)
@@ -376,7 +435,7 @@ export interface IAdminOverrideService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<ApprovalStepInstance>;
 
   /**
@@ -387,7 +446,7 @@ export interface IAdminOverrideService {
     instanceId: string,
     stepInstanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<ApprovalStepInstance>;
 
   /**
@@ -397,6 +456,6 @@ export interface IAdminOverrideService {
     tenantId: string,
     instanceId: string,
     adminId: string,
-    reason: string
+    reason: string,
   ): Promise<ApprovalInstance>;
 }

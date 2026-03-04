@@ -281,7 +281,10 @@ export interface CapabilityMatrix {
 export interface CapabilityMatrixRow {
   category: OperationCategory;
   operation: Operation;
-  grants: Record<PersonaCode, { isGranted: boolean; constraintType: ConstraintType }>;
+  grants: Record<
+    PersonaCode,
+    { isGranted: boolean; constraintType: ConstraintType }
+  >;
 }
 
 // ============================================================================

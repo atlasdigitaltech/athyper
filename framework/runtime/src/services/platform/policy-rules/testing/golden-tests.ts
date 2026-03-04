@@ -11,10 +11,13 @@
  * - Regression pack for CI
  */
 
+import type { PolicyTestCase } from "./types.js";
 import type {
-  PolicyTestCase,
-} from "./types.js";
-import type { PolicyAction, PolicyContext, PolicyResource, PolicySubject } from "../evaluation/types.js";
+  PolicyAction,
+  PolicyContext,
+  PolicyResource,
+  PolicySubject,
+} from "../evaluation/types.js";
 
 // ============================================================================
 // Test Subject Fixtures
@@ -256,7 +259,9 @@ export const EXPORT_ACTION: PolicyAction = {
 // Test Context Fixtures
 // ============================================================================
 
-export function createTestContext(overrides: Partial<PolicyContext> = {}): PolicyContext {
+export function createTestContext(
+  overrides: Partial<PolicyContext> = {},
+): PolicyContext {
   return {
     tenantId: "test-tenant-001",
     realmId: "test-realm",
@@ -462,7 +467,8 @@ export const OU_SCOPE_TEST_PACK: PolicyTestCase[] = [
   {
     id: "ou-001",
     name: "Manager can read resources in their OU",
-    description: "Managers should access resources within their organizational unit",
+    description:
+      "Managers should access resources within their organizational unit",
     tags: ["ou", "scope", "manager", "read"],
     enabled: true,
     input: {
@@ -488,7 +494,8 @@ export const OU_SCOPE_TEST_PACK: PolicyTestCase[] = [
   {
     id: "ou-002",
     name: "User cannot access resources outside their OU",
-    description: "Users should not access resources in other organizational units",
+    description:
+      "Users should not access resources in other organizational units",
     tags: ["ou", "scope", "deny"],
     enabled: true,
     input: {
@@ -514,7 +521,8 @@ export const OU_SCOPE_TEST_PACK: PolicyTestCase[] = [
   {
     id: "ou-003",
     name: "User can access resources in their cost center",
-    description: "Users should access resources within their assigned cost center",
+    description:
+      "Users should access resources within their assigned cost center",
     tags: ["costcenter", "scope", "read"],
     enabled: true,
     input: {
@@ -537,7 +545,8 @@ export const OU_SCOPE_TEST_PACK: PolicyTestCase[] = [
   {
     id: "ou-004",
     name: "User cannot access resources in other cost centers",
-    description: "Users should not access financial resources in other cost centers",
+    description:
+      "Users should not access financial resources in other cost centers",
     tags: ["costcenter", "scope", "deny"],
     enabled: true,
     input: {
@@ -645,7 +654,8 @@ export const WORKFLOW_TEST_PACK: PolicyTestCase[] = [
   {
     id: "wf-004",
     name: "Cannot edit published document",
-    description: "Published documents cannot be edited (require unpublish first)",
+    description:
+      "Published documents cannot be edited (require unpublish first)",
     tags: ["workflow", "state", "published", "deny"],
     enabled: true,
     input: {
@@ -695,13 +705,9 @@ export const OBLIGATIONS_TEST_PACK: PolicyTestCase[] = [
     expected: {
       effect: "allow",
       allowed: true,
-      obligations: [
-        { type: "mask_fields" },
-      ],
+      obligations: [{ type: "mask_fields" }],
     },
-    assertions: [
-      { type: "has_obligation", obligationType: "mask_fields" },
-    ],
+    assertions: [{ type: "has_obligation", obligationType: "mask_fields" }],
     createdAt: new Date(),
     createdBy: "system",
   },
@@ -721,13 +727,9 @@ export const OBLIGATIONS_TEST_PACK: PolicyTestCase[] = [
     expected: {
       effect: "allow",
       allowed: true,
-      obligations: [
-        { type: "add_audit_tag" },
-      ],
+      obligations: [{ type: "add_audit_tag" }],
     },
-    assertions: [
-      { type: "has_obligation", obligationType: "add_audit_tag" },
-    ],
+    assertions: [{ type: "has_obligation", obligationType: "add_audit_tag" }],
     createdAt: new Date(),
     createdBy: "system",
   },
@@ -753,13 +755,9 @@ export const OBLIGATIONS_TEST_PACK: PolicyTestCase[] = [
     expected: {
       effect: "allow",
       allowed: true,
-      obligations: [
-        { type: "require_mfa" },
-      ],
+      obligations: [{ type: "require_mfa" }],
     },
-    assertions: [
-      { type: "has_obligation", obligationType: "require_mfa" },
-    ],
+    assertions: [{ type: "has_obligation", obligationType: "require_mfa" }],
     createdAt: new Date(),
     createdBy: "system",
   },
@@ -796,7 +794,8 @@ export const TIME_BASED_TEST_PACK: PolicyTestCase[] = [
   {
     id: "time-002",
     name: "Financial operations restricted after hours",
-    description: "Financial operations should be restricted after business hours",
+    description:
+      "Financial operations should be restricted after business hours",
     tags: ["time", "after_hours", "deny"],
     enabled: true,
     input: {
@@ -880,9 +879,7 @@ export const PERFORMANCE_TEST_PACK: PolicyTestCase[] = [
       effect: "allow",
       allowed: true,
     },
-    assertions: [
-      { type: "eval_time_under", maxMs: 10 },
-    ],
+    assertions: [{ type: "eval_time_under", maxMs: 10 }],
     createdAt: new Date(),
     createdBy: "system",
   },
@@ -903,16 +900,15 @@ export const PERFORMANCE_TEST_PACK: PolicyTestCase[] = [
       effect: "allow",
       allowed: true,
     },
-    assertions: [
-      { type: "eval_time_under", maxMs: 25 },
-    ],
+    assertions: [{ type: "eval_time_under", maxMs: 25 }],
     createdAt: new Date(),
     createdBy: "system",
   },
   {
     id: "perf-003",
     name: "Full evaluation with explain under 50ms",
-    description: "Full evaluation including explain tree should complete within 50ms",
+    description:
+      "Full evaluation including explain tree should complete within 50ms",
     tags: ["performance", "budget", "explain"],
     enabled: true,
     input: {
@@ -926,9 +922,7 @@ export const PERFORMANCE_TEST_PACK: PolicyTestCase[] = [
       effect: "allow",
       allowed: true,
     },
-    assertions: [
-      { type: "eval_time_under", maxMs: 50 },
-    ],
+    assertions: [{ type: "eval_time_under", maxMs: 50 }],
     createdAt: new Date(),
     createdBy: "system",
   },
@@ -943,10 +937,14 @@ export const PERFORMANCE_TEST_PACK: PolicyTestCase[] = [
  */
 export const REGRESSION_TEST_PACK: PolicyTestCase[] = [
   // Include critical tests from each category
-  ...RBAC_TEST_PACK.filter((t) => ["rbac-001", "rbac-004", "rbac-007"].includes(t.id)),
+  ...RBAC_TEST_PACK.filter((t) =>
+    ["rbac-001", "rbac-004", "rbac-007"].includes(t.id),
+  ),
   ...OU_SCOPE_TEST_PACK.filter((t) => ["ou-001", "ou-002"].includes(t.id)),
   ...WORKFLOW_TEST_PACK.filter((t) => ["wf-001", "wf-002"].includes(t.id)),
-  ...TIME_BASED_TEST_PACK.filter((t) => ["time-001", "time-002"].includes(t.id)),
+  ...TIME_BASED_TEST_PACK.filter((t) =>
+    ["time-001", "time-002"].includes(t.id),
+  ),
   ...PERFORMANCE_TEST_PACK,
 ];
 
@@ -1033,8 +1031,7 @@ export function getTestSummary(): Record<string, number> {
 
   summary.total = Object.values(packs)
     .filter((_, i, arr) => arr.indexOf(_) === i) // Dedupe
-    .flat()
-    .length;
+    .flat().length;
 
   return summary;
 }

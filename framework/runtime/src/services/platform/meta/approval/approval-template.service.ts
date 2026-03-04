@@ -25,9 +25,6 @@ import type {
 } from "@athyper/core/meta";
 import type { Redis } from "ioredis";
 
-
-
-
 /**
  * Approval Template Service Implementation
  */
@@ -35,7 +32,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
   constructor(
     private db: LifecycleDB_Type,
     private cache: Redis,
-    private approverResolver?: ApproverResolverService
+    private approverResolver?: ApproverResolverService,
   ) {}
 
   // ============================================================================
@@ -45,7 +42,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
   async create(
     input: ApprovalTemplateCreateInput,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate> {
     return await this.db.transaction().execute(async (trx) => {
       // Insert template
@@ -56,7 +53,9 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
           tenant_id: tenantId,
           code: input.code,
           name: input.name,
-          behaviors: input.behaviors ? (JSON.stringify(input.behaviors) as any) : null,
+          behaviors: input.behaviors
+            ? (JSON.stringify(input.behaviors) as any)
+            : null,
           escalation_style: input.escalationStyle ?? null,
           version_no: 1,
           is_active: true,
@@ -107,7 +106,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async get(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplate | undefined> {
     // Try by ID first
     let row = await this.db
@@ -133,7 +132,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async list(
     tenantId: string,
-    options?: ListOptions
+    options?: ListOptions,
   ): Promise<PaginatedResponse<ApprovalTemplate>> {
     const page = options?.page ?? 1;
     const pageSize = Math.min(options?.pageSize ?? 20, 100);
@@ -156,7 +155,10 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
       .selectAll()
       .where("tenant_id", "=", tenantId)
       .where("is_active", "=", true)
-      .orderBy((options?.orderBy ?? "created_at") as any, options?.orderDir ?? "desc")
+      .orderBy(
+        (options?.orderBy ?? "created_at") as any,
+        options?.orderDir ?? "desc",
+      )
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -180,7 +182,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
     idOrCode: string,
     input: ApprovalTemplateUpdateInput,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate> {
     return await this.db.transaction().execute(async (trx) => {
       // Get current active version
@@ -219,7 +221,8 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
             : current.behaviors
               ? (JSON.stringify(current.behaviors) as any)
               : null,
-          escalation_style: input.escalationStyle ?? current.escalationStyle ?? null,
+          escalation_style:
+            input.escalationStyle ?? current.escalationStyle ?? null,
           version_no: newVersionNo,
           is_active: true,
           created_at: new Date(),
@@ -243,7 +246,9 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
               stage_no: stage.stageNo,
               name: stage.name ?? null,
               mode: stage.mode,
-              quorum: stage.quorum ? (JSON.stringify(stage.quorum) as any) : null,
+              quorum: stage.quorum
+                ? (JSON.stringify(stage.quorum) as any)
+                : null,
               created_at: new Date(),
               created_by: userId,
             })
@@ -344,7 +349,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async getStages(
     templateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplateStage[]> {
     const rows = await this.db
       .selectFrom("meta.approval_template_stage")
@@ -359,7 +364,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async getRules(
     templateId: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<ApprovalTemplateRule[]> {
     const rows = await this.db
       .selectFrom("meta.approval_template_rule")
@@ -378,7 +383,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async validate(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<TemplateValidationResult> {
     const errors: Array<{ path: string; message: string }> = [];
     const warnings: Array<{ path: string; message: string }> = [];
@@ -397,7 +402,10 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
     // Validation 1: Must have at least one stage
     if (stages.length === 0) {
-      errors.push({ path: "stages", message: "Template must have at least one stage" });
+      errors.push({
+        path: "stages",
+        message: "Template must have at least one stage",
+      });
     }
 
     // Validation 2: Stage numbers must be sequential starting from 1
@@ -424,11 +432,21 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
     // Validation 4: Must have at least one rule
     if (rules.length === 0) {
-      errors.push({ path: "rules", message: "Template must have at least one routing rule" });
+      errors.push({
+        path: "rules",
+        message: "Template must have at least one routing rule",
+      });
     }
 
     // Validation 5: Rule assignTo must have valid strategy
-    const validStrategies = ["direct", "role", "group", "hierarchy", "department", "custom_field"];
+    const validStrategies = [
+      "direct",
+      "role",
+      "group",
+      "hierarchy",
+      "department",
+      "custom_field",
+    ];
     for (let i = 0; i < rules.length; i++) {
       const assignTo = rules[i].assignTo as Record<string, unknown>;
       if (!assignTo.strategy || typeof assignTo.strategy !== "string") {
@@ -464,7 +482,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async compile(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<CompiledApprovalTemplate> {
     const template = await this.get(idOrCode, tenantId);
     if (!template) {
@@ -500,7 +518,9 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
         assignTo: r.assignTo,
       })),
     });
-    compiled.compiledHash = createHash("sha256").update(hashContent).digest("hex");
+    compiled.compiledHash = createHash("sha256")
+      .update(hashContent)
+      .digest("hex");
 
     // Store compiled artifact
     await this.db
@@ -519,7 +539,10 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
   // Version Management
   // ============================================================================
 
-  async listVersions(code: string, tenantId: string): Promise<ApprovalTemplate[]> {
+  async listVersions(
+    code: string,
+    tenantId: string,
+  ): Promise<ApprovalTemplate[]> {
     const rows = await this.db
       .selectFrom("meta.approval_template")
       .selectAll()
@@ -535,7 +558,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
     code: string,
     targetVersion: number,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<ApprovalTemplate> {
     return await this.db.transaction().execute(async (trx) => {
       // Get target version
@@ -548,7 +571,9 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
         .executeTakeFirst();
 
       if (!targetRow) {
-        throw new Error(`Version ${targetVersion} not found for template ${code}`);
+        throw new Error(
+          `Version ${targetVersion} not found for template ${code}`,
+        );
       }
 
       // Deactivate current active version
@@ -647,7 +672,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
     code: string,
     v1: number,
     v2: number,
-    tenantId: string
+    tenantId: string,
   ): Promise<Record<string, unknown>> {
     const version1 = await this.db
       .selectFrom("meta.approval_template")
@@ -676,9 +701,21 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
     // Simple diff (could be enhanced with proper diff algorithm)
     return {
-      name: { v1: version1.name, v2: version2.name, changed: version1.name !== version2.name },
-      stageCount: { v1: stages1.length, v2: stages2.length, changed: stages1.length !== stages2.length },
-      ruleCount: { v1: rules1.length, v2: rules2.length, changed: rules1.length !== rules2.length },
+      name: {
+        v1: version1.name,
+        v2: version2.name,
+        changed: version1.name !== version2.name,
+      },
+      stageCount: {
+        v1: stages1.length,
+        v2: stages2.length,
+        changed: stages1.length !== stages2.length,
+      },
+      ruleCount: {
+        v1: rules1.length,
+        v2: rules2.length,
+        changed: rules1.length !== rules2.length,
+      },
       escalationStyle: {
         v1: version1.escalation_style,
         v2: version2.escalation_style,
@@ -689,7 +726,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
   async impactAnalysis(
     idOrCode: string,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     affectedTransitions: Array<{
       transitionId: string;
@@ -702,10 +739,20 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
       throw new Error(`Template not found: ${idOrCode}`);
     }
 
-    const rows = await (this.db
-      .selectFrom("meta.lifecycle_transition_gate as g")
-      .innerJoin("meta.lifecycle_transition as t", "g.transition_id", "t.id") as any)
-      .innerJoin("meta.entity_lifecycle as el", "el.lifecycle_id", "t.lifecycle_id")
+    const rows = await (
+      this.db
+        .selectFrom("meta.lifecycle_transition_gate as g")
+        .innerJoin(
+          "meta.lifecycle_transition as t",
+          "g.transition_id",
+          "t.id",
+        ) as any
+    )
+      .innerJoin(
+        "meta.entity_lifecycle as el",
+        "el.lifecycle_id",
+        "t.lifecycle_id",
+      )
       .select(["t.id as transition_id", "el.entity_name", "t.operation_code"])
       .where("g.tenant_id", "=", tenantId)
       .where("g.approval_template_id", "=", template.id)
@@ -727,7 +774,7 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
   async testResolution(
     idOrCode: string,
     context: Record<string, unknown>,
-    tenantId: string
+    tenantId: string,
   ): Promise<{
     resolvedAssignees: Array<{
       principalId?: string;
@@ -748,14 +795,14 @@ export class ApprovalTemplateServiceImpl implements ApprovalTemplateService {
 
     // Use the approver resolver to resolve assignees
     const result = await this.approverResolver.resolveAssignees(
-      rules.map(r => ({
+      rules.map((r) => ({
         id: r.id,
         conditions: r.conditions,
         assign_to: r.assignTo,
         priority: r.priority,
       })),
       context,
-      tenantId
+      tenantId,
     );
 
     return {

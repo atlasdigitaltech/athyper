@@ -45,10 +45,14 @@ export interface ArchivePartitionResult {
  * Minimal object storage interface for uploads.
  */
 export interface ArchiveObjectStorage {
-  put(key: string, body: Buffer | string, opts?: {
-    contentType?: string;
-    metadata?: Record<string, string>;
-  }): Promise<void>;
+  put(
+    key: string,
+    body: Buffer | string,
+    opts?: {
+      contentType?: string;
+      metadata?: Record<string, string>;
+    },
+  ): Promise<void>;
 }
 
 // ============================================================================
@@ -64,8 +68,15 @@ export function createAuditArchiveHandler(
   logger: Logger,
   metrics?: AuditMetrics,
 ) {
-  return async (payload: ArchivePartitionPayload): Promise<ArchivePartitionResult> => {
-    const { partitionName, partitionMonth: monthStr, detachAfterArchive = false, dryRun = false } = payload;
+  return async (
+    payload: ArchivePartitionPayload,
+  ): Promise<ArchivePartitionResult> => {
+    const {
+      partitionName,
+      partitionMonth: monthStr,
+      detachAfterArchive = false,
+      dryRun = false,
+    } = payload;
     const partitionMonth = new Date(monthStr);
 
     logger.info(
@@ -98,8 +109,18 @@ export function createAuditArchiveHandler(
     const rowCount = Number(countResult.rows[0]?.count ?? 0);
 
     if (rowCount === 0) {
-      logger.info({ partitionName }, "[audit:archive] Partition is empty — skipping");
-      return { partitionName, rowCount: 0, ndjsonKey: "", sha256: "", detached: false, dryRun };
+      logger.info(
+        { partitionName },
+        "[audit:archive] Partition is empty — skipping",
+      );
+      return {
+        partitionName,
+        rowCount: 0,
+        ndjsonKey: "",
+        sha256: "",
+        detached: false,
+        dryRun,
+      };
     }
 
     // 2. Export as NDJSON (batched)
@@ -128,7 +149,10 @@ export function createAuditArchiveHandler(
     const sha256 = createHash("sha256").update(ndjson, "utf8").digest("hex");
 
     // 4. Build storage key
-    const yearMonth = partitionMonth.toISOString().slice(0, 7).replace("-", "_"); // YYYY_MM
+    const yearMonth = partitionMonth
+      .toISOString()
+      .slice(0, 7)
+      .replace("-", "_"); // YYYY_MM
     const ndjsonKey = `audit-archives/${yearMonth}/${partitionName}.ndjson`;
 
     if (!dryRun) {
@@ -188,7 +212,10 @@ export function createAuditArchiveHandler(
         logger.info({ partitionName }, "[audit:archive] Partition detached");
       } catch (err) {
         logger.error(
-          { partitionName, error: err instanceof Error ? err.message : String(err) },
+          {
+            partitionName,
+            error: err instanceof Error ? err.message : String(err),
+          },
           "[audit:archive] Failed to detach partition",
         );
       }

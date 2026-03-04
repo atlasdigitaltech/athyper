@@ -31,7 +31,10 @@ export class WorkerPool {
       throw new Error("Worker pool is already running");
     }
 
-    this.config.logger.info({ msg: "worker_pool_starting", workerCount: this.config.workers.length });
+    this.config.logger.info({
+      msg: "worker_pool_starting",
+      workerCount: this.config.workers.length,
+    });
 
     // Setup event handlers
     const eventHandlers: JobEventHandlers = {
@@ -47,9 +50,10 @@ export class WorkerPool {
           msg: "job_completed",
           jobId: job.id,
           jobType: job.data.type,
-          duration: job.completedAt && job.processedAt
-            ? job.completedAt.getTime() - job.processedAt.getTime()
-            : undefined,
+          duration:
+            job.completedAt && job.processedAt
+              ? job.completedAt.getTime() - job.processedAt.getTime()
+              : undefined,
         });
       },
       onFail: async (job, error) => {
@@ -81,7 +85,7 @@ export class WorkerPool {
       await this.config.queue.process(
         worker.jobType,
         worker.concurrency,
-        worker.handler
+        worker.handler,
       );
 
       this.config.logger.info({

@@ -22,7 +22,11 @@ import type { Kysely } from "kysely";
  * - limit: number (optional, default 10, max 50)
  */
 export class SearchPrincipalsHandler implements RouteHandler {
-  async handle(req: Request, res: Response, ctx: HttpHandlerContext): Promise<void> {
+  async handle(
+    req: Request,
+    res: Response,
+    ctx: HttpHandlerContext,
+  ): Promise<void> {
     const search = req.query.search as string | undefined;
     const limit = req.query.limit as string | undefined;
     const tenantId = ctx.tenant.tenantKey ?? "default";
@@ -46,7 +50,10 @@ export class SearchPrincipalsHandler implements RouteHandler {
     }
 
     // Validate limit
-    const parsedLimit = Math.min(Math.max(parseInt(String(limit ?? "10"), 10) || 10, 1), 50);
+    const parsedLimit = Math.min(
+      Math.max(parseInt(String(limit ?? "10"), 10) || 10, 1),
+      50,
+    );
 
     // Execute search
     const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
@@ -54,12 +61,7 @@ export class SearchPrincipalsHandler implements RouteHandler {
 
     const results = await db
       .selectFrom("core.principal")
-      .select([
-        "id",
-        "principal_code",
-        "display_name",
-        "email",
-      ])
+      .select(["id", "principal_code", "display_name", "email"])
       .where("tenant_id", "=", tenantId)
       .where("is_active", "=", true)
       .where((eb: any) =>
@@ -67,7 +69,7 @@ export class SearchPrincipalsHandler implements RouteHandler {
           eb("principal_code", "ilike", searchPattern),
           eb("display_name", "ilike", searchPattern),
           eb("email", "ilike", searchPattern),
-        ])
+        ]),
       )
       .orderBy("principal_code", "asc")
       .limit(parsedLimit)

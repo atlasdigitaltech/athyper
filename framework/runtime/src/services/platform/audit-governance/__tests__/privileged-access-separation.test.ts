@@ -130,7 +130,16 @@ describe("SQL Migration 157: Role Separation Specification", () => {
     const functionSignature = {
       schema: "core",
       name: "audit_key_rotation_update",
-      params: ["uuid", "uuid", "timestamptz", "text", "text", "text", "text", "int"],
+      params: [
+        "uuid",
+        "uuid",
+        "timestamptz",
+        "text",
+        "text",
+        "text",
+        "text",
+        "int",
+      ],
       securityDefiner: true,
       owner: "athyper_admin",
       granteee: "athyper_audit_admin",
@@ -229,19 +238,24 @@ describe("callRetentionDelete()", () => {
     const mockDb = {} as any;
 
     await expect(
-      callRetentionDelete(mockDb, "workflow_event_log", new Date(), "not-a-uuid"),
+      callRetentionDelete(
+        mockDb,
+        "workflow_event_log",
+        new Date(),
+        "not-a-uuid",
+      ),
     ).rejects.toThrow("Invalid tenant ID format");
   });
 
   it("should accept null tenant ID (global retention)", () => {
     // callRetentionDelete allows tenantId to be undefined for global retention
-    // This test verifies the parameter is optional
-    const tableName = "workflow_event_log";
-    const cutoffDate = new Date("2025-01-01");
+    // This test verifies the parameter is optional — undefined skips UUID validation
+    const tenantId: string | undefined = undefined;
 
-    // Just verify it doesn't throw on validation
+    // When tenantId is undefined, validation is skipped entirely
     expect(() => {
-      if (undefined && !/^[0-9a-f-]+$/i.test("")) throw new Error("fail");
+      if (tenantId && !/^[0-9a-f-]+$/i.test(tenantId))
+        throw new Error("fail");
     }).not.toThrow();
   });
 });

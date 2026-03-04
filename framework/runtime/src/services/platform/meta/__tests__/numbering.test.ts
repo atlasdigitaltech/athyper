@@ -25,7 +25,12 @@ function createMockDb(options: {
   /** Value returned by the INSERT...ON CONFLICT atomic increment */
   atomicReturnValue?: number;
 }) {
-  const { namingPolicy = null, entityActive = true, sequenceCurrentValue = null, atomicReturnValue = 1 } = options;
+  const {
+    namingPolicy = null,
+    entityActive = true,
+    sequenceCurrentValue = null,
+    atomicReturnValue = 1,
+  } = options;
 
   const db: any = {
     selectFrom: vi.fn((table: string) => {
@@ -40,7 +45,12 @@ function createMockDb(options: {
         executeTakeFirst: vi.fn(async () => {
           if (table === "meta.entity") {
             if (!entityActive) return undefined;
-            return { naming_policy: namingPolicy, kind: "doc", feature_flags: null, is_active: true };
+            return {
+              naming_policy: namingPolicy,
+              kind: "doc",
+              feature_flags: null,
+              is_active: true,
+            };
           }
           if (table === "meta.numbering_sequence") {
             if (sequenceCurrentValue === null) return undefined;
@@ -74,52 +84,103 @@ describe("NumberingEngineService", () => {
   describe("1. Pattern Formatting", () => {
     it("should format {YYYY} token", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "INV", pattern: "INV-{YYYY}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "INV",
+          pattern: "INV-{YYYY}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("invoice", TENANT_ID, new Date("2024-03-15"));
+      const result = await service.generateNumber(
+        "invoice",
+        TENANT_ID,
+        new Date("2024-03-15"),
+      );
       // The result should contain "2024" from the date token
       expect(result).toContain("2024");
     });
 
     it("should format {YYYY}-{MM}-{DD} tokens", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "DO", pattern: "DO-{YYYY}-{MM}-{DD}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "DO",
+          pattern: "DO-{YYYY}-{MM}-{DD}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("delivery_order", TENANT_ID, new Date("2024-03-15"));
+      const result = await service.generateNumber(
+        "delivery_order",
+        TENANT_ID,
+        new Date("2024-03-15"),
+      );
       expect(result).toBe("DO-2024-03-15");
     });
 
     it("should format {YY} token", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "PO", pattern: "PO/{YY}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "PO",
+          pattern: "PO/{YY}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("purchase_order", TENANT_ID, new Date("2024-07-20"));
+      const result = await service.generateNumber(
+        "purchase_order",
+        TENANT_ID,
+        new Date("2024-07-20"),
+      );
       expect(result).toBe("PO/24");
     });
 
     it("should format {SEQ:N} with zero-padding", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "INV", pattern: "INV-{YYYY}-{SEQ:6}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "INV",
+          pattern: "INV-{YYYY}-{SEQ:6}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 42,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("invoice", TENANT_ID, new Date("2024-03-15"));
+      const result = await service.generateNumber(
+        "invoice",
+        TENANT_ID,
+        new Date("2024-03-15"),
+      );
       expect(result).toBe("INV-2024-000042");
     });
 
     it("should format {SEQ} without padding", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "REF", pattern: "REF-{SEQ}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "REF",
+          pattern: "REF-{SEQ}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 5,
       });
 
@@ -130,12 +191,23 @@ describe("NumberingEngineService", () => {
 
     it("should format combined pattern INV-{YYYY}-{MM}-{SEQ:4}", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "INV", pattern: "INV-{YYYY}-{MM}-{SEQ:4}", reset_policy: "monthly", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "INV",
+          pattern: "INV-{YYYY}-{MM}-{SEQ:4}",
+          reset_policy: "monthly",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 7,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("invoice", TENANT_ID, new Date("2024-11-05"));
+      const result = await service.generateNumber(
+        "invoice",
+        TENANT_ID,
+        new Date("2024-11-05"),
+      );
       expect(result).toBe("INV-2024-11-0007");
     });
   });
@@ -143,12 +215,23 @@ describe("NumberingEngineService", () => {
   describe("2. Period Key by Reset Policy", () => {
     it("should use __global__ for 'none' reset policy", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "G", pattern: "G-{SEQ}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "G",
+          pattern: "G-{SEQ}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      await service.generateNumber("generic", TENANT_ID, new Date("2024-03-15"));
+      await service.generateNumber(
+        "generic",
+        TENANT_ID,
+        new Date("2024-03-15"),
+      );
 
       // The SQL is executed via the executor, we can verify the db.getExecutor was called
       expect(db.getExecutor).toHaveBeenCalled();
@@ -156,34 +239,67 @@ describe("NumberingEngineService", () => {
 
     it("should generate correctly with yearly reset", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "Y", pattern: "Y-{YYYY}-{SEQ:3}", reset_policy: "yearly", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "Y",
+          pattern: "Y-{YYYY}-{SEQ:3}",
+          reset_policy: "yearly",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("yearly_doc", TENANT_ID, new Date("2024-06-15"));
+      const result = await service.generateNumber(
+        "yearly_doc",
+        TENANT_ID,
+        new Date("2024-06-15"),
+      );
       expect(result).toBe("Y-2024-001");
     });
 
     it("should generate correctly with monthly reset", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "M", pattern: "M-{YYYY}{MM}-{SEQ:4}", reset_policy: "monthly", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "M",
+          pattern: "M-{YYYY}{MM}-{SEQ:4}",
+          reset_policy: "monthly",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("monthly_doc", TENANT_ID, new Date("2024-09-15"));
+      const result = await service.generateNumber(
+        "monthly_doc",
+        TENANT_ID,
+        new Date("2024-09-15"),
+      );
       expect(result).toBe("M-202409-0001");
     });
 
     it("should generate correctly with daily reset", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "D", pattern: "D-{YYYY}{MM}{DD}-{SEQ:2}", reset_policy: "daily", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "D",
+          pattern: "D-{YYYY}{MM}{DD}-{SEQ:2}",
+          reset_policy: "daily",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 3,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("daily_doc", TENANT_ID, new Date("2024-12-25"));
+      const result = await service.generateNumber(
+        "daily_doc",
+        TENANT_ID,
+        new Date("2024-12-25"),
+      );
       expect(result).toBe("D-20241225-03");
     });
   });
@@ -233,7 +349,12 @@ describe("NumberingEngineService", () => {
 
     it("should default seq_start to 1 when not set", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "X", pattern: "X-{SEQ}", reset_policy: "none", is_active: true },
+        namingPolicy: {
+          code: "X",
+          pattern: "X-{SEQ}",
+          reset_policy: "none",
+          is_active: true,
+        },
       });
 
       const service = new NumberingEngineService(db);
@@ -246,7 +367,12 @@ describe("NumberingEngineService", () => {
 
     it("should validate reset_policy values", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "V", pattern: "V-{SEQ}", reset_policy: "invalid_value", is_active: true },
+        namingPolicy: {
+          code: "V",
+          pattern: "V-{SEQ}",
+          reset_policy: "invalid_value",
+          is_active: true,
+        },
       });
 
       const service = new NumberingEngineService(db);
@@ -275,7 +401,7 @@ describe("NumberingEngineService", () => {
 
       const service = new NumberingEngineService(db);
       await expect(
-        service.generateNumber("no_rule", TENANT_ID)
+        service.generateNumber("no_rule", TENANT_ID),
       ).rejects.toThrow("No numbering rule configured");
     });
 
@@ -287,18 +413,29 @@ describe("NumberingEngineService", () => {
 
       const service = new NumberingEngineService(db);
       await expect(
-        service.generateNumber("inactive_rule", TENANT_ID)
+        service.generateNumber("inactive_rule", TENANT_ID),
       ).rejects.toThrow("not active");
     });
 
     it("should use referenceDate for pattern tokens", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "D", pattern: "D-{YYYY}-{MM}-{DD}-{SEQ}", reset_policy: "daily", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "D",
+          pattern: "D-{YYYY}-{MM}-{DD}-{SEQ}",
+          reset_policy: "daily",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         atomicReturnValue: 1,
       });
 
       const service = new NumberingEngineService(db);
-      const result = await service.generateNumber("dated", TENANT_ID, new Date("2025-01-20"));
+      const result = await service.generateNumber(
+        "dated",
+        TENANT_ID,
+        new Date("2025-01-20"),
+      );
       expect(result).toBe("D-2025-01-20-1");
     });
   });
@@ -306,19 +443,36 @@ describe("NumberingEngineService", () => {
   describe("5. previewNextNumber()", () => {
     it("should preview next number when sequence exists", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "P", pattern: "P-{SEQ:3}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "P",
+          pattern: "P-{SEQ:3}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         sequenceCurrentValue: 10,
       });
 
       const service = new NumberingEngineService(db);
-      const preview = await service.previewNextNumber("preview_entity", TENANT_ID);
+      const preview = await service.previewNextNumber(
+        "preview_entity",
+        TENANT_ID,
+      );
 
       expect(preview).toBe("P-011"); // 10 + 1 = 11, zero-padded to 3
     });
 
     it("should preview with seq_start when no sequence exists", async () => {
       const db = createMockDb({
-        namingPolicy: { code: "P", pattern: "P-{SEQ:3}", reset_policy: "none", seq_start: 1, seq_increment: 1, is_active: true },
+        namingPolicy: {
+          code: "P",
+          pattern: "P-{SEQ:3}",
+          reset_policy: "none",
+          seq_start: 1,
+          seq_increment: 1,
+          is_active: true,
+        },
         sequenceCurrentValue: null, // No sequence row
       });
 

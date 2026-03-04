@@ -40,7 +40,7 @@ export class MetaRegistryService implements MetaRegistry {
       tableName?: string;
       governanceLevel?: string;
       engineTag?: string;
-    }
+    },
   ): Promise<Entity> {
     const entity = await this.db
       .insertInto("meta.entity")
@@ -49,6 +49,7 @@ export class MetaRegistryService implements MetaRegistry {
         tenant_id: ctx.tenantId ?? "default",
         module_id: options?.moduleId ?? "default",
         name,
+        description: description ?? null,
         kind: options?.kind ?? "ent",
         table_schema: options?.tableSchema ?? "ent",
         table_name: options?.tableName ?? name,
@@ -76,16 +77,14 @@ export class MetaRegistryService implements MetaRegistry {
   }
 
   async listEntities(
-    options: ListOptions = {}
+    options: ListOptions = {},
   ): Promise<PaginatedResponse<Entity>> {
     const page = options.page ?? 1;
     const pageSize = Math.min(options.pageSize ?? 100, 200);
     const offset = (page - 1) * pageSize;
 
     // Build query
-    let query = this.db
-      .selectFrom("meta.entity")
-      .selectAll();
+    let query = this.db.selectFrom("meta.entity").selectAll();
 
     // Apply ordering
     const orderBy = options.orderBy ?? "created_at";
@@ -126,7 +125,7 @@ export class MetaRegistryService implements MetaRegistry {
   async updateEntity(
     name: string,
     updates: Partial<Pick<Entity, "description" | "activeVersion">>,
-    _ctx: RequestContext
+    _ctx: RequestContext,
   ): Promise<Entity> {
     const dbUpdates: any = {};
 
@@ -145,10 +144,7 @@ export class MetaRegistryService implements MetaRegistry {
   }
 
   async deleteEntity(name: string, _ctx: RequestContext): Promise<void> {
-    await this.db
-      .deleteFrom("meta.entity")
-      .where("name", "=", name)
-      .execute();
+    await this.db.deleteFrom("meta.entity").where("name", "=", name).execute();
   }
 
   // =========================================================================
@@ -159,7 +155,7 @@ export class MetaRegistryService implements MetaRegistry {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<EntityVersion> {
     // Look up entity ID from entity name
     const entityRecord = await this.getEntity(entityName);
@@ -185,7 +181,7 @@ export class MetaRegistryService implements MetaRegistry {
 
   async getVersion(
     entityName: string,
-    version: string
+    version: string,
   ): Promise<EntityVersion | undefined> {
     const entity = await this.getEntity(entityName);
     if (!entity) return undefined;
@@ -201,7 +197,7 @@ export class MetaRegistryService implements MetaRegistry {
   }
 
   async getActiveVersion(
-    entityName: string
+    entityName: string,
   ): Promise<EntityVersion | undefined> {
     const entity = await this.getEntity(entityName);
     if (!entity) return undefined;
@@ -218,7 +214,7 @@ export class MetaRegistryService implements MetaRegistry {
 
   async listVersions(
     entityName: string,
-    options: ListOptions = {}
+    options: ListOptions = {},
   ): Promise<PaginatedResponse<EntityVersion>> {
     const entity = await this.getEntity(entityName);
     const entityId = entity?.id ?? entityName;
@@ -267,7 +263,7 @@ export class MetaRegistryService implements MetaRegistry {
   async activateVersion(
     entityName: string,
     version: string,
-    _ctx: RequestContext
+    _ctx: RequestContext,
   ): Promise<EntityVersion> {
     const entity = await this.getEntity(entityName);
     const entityId = entity?.id ?? entityName;
@@ -294,7 +290,7 @@ export class MetaRegistryService implements MetaRegistry {
   async deactivateVersion(
     entityName: string,
     version: string,
-    _ctx: RequestContext
+    _ctx: RequestContext,
   ): Promise<EntityVersion> {
     const entity = await this.getEntity(entityName);
     const entityId = entity?.id ?? entityName;
@@ -314,7 +310,7 @@ export class MetaRegistryService implements MetaRegistry {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    _ctx: RequestContext
+    _ctx: RequestContext,
   ): Promise<EntityVersion> {
     const entity = await this.getEntity(entityName);
     const entityId = entity?.id ?? entityName;
@@ -333,7 +329,7 @@ export class MetaRegistryService implements MetaRegistry {
   async deleteVersion(
     entityName: string,
     version: string,
-    _ctx: RequestContext
+    _ctx: RequestContext,
   ): Promise<void> {
     const entity = await this.getEntity(entityName);
     const entityId = entity?.id ?? entityName;
@@ -363,7 +359,9 @@ export class MetaRegistryService implements MetaRegistry {
       engineTag: dbEntity.engine_tag ?? null,
       activeVersion: dbEntity.active_version ?? undefined,
       createdAt: new Date(dbEntity.created_at),
-      updatedAt: dbEntity.updated_at ? new Date(dbEntity.updated_at) : new Date(dbEntity.created_at),
+      updatedAt: dbEntity.updated_at
+        ? new Date(dbEntity.updated_at)
+        : new Date(dbEntity.created_at),
       createdBy: dbEntity.created_by,
     };
   }
@@ -402,37 +400,46 @@ export class MetaRegistryService implements MetaRegistry {
     }
 
     // Collect version IDs for field/relation count queries
-    const versionIds = [...latestVersionByEntity.values()].map((v) => v.id as string);
+    const versionIds = [...latestVersionByEntity.values()].map(
+      (v) => v.id as string,
+    );
 
     // Batch fetch field and relation counts
-    const [fieldCountRows, relationCountRows] = versionIds.length > 0
-      ? await Promise.all([
-          this.db
-            .selectFrom("meta.field")
-            .select("entity_version_id")
-            .select((eb) => eb.fn.countAll().as("count"))
-            .where("entity_version_id", "in", versionIds)
-            .groupBy("entity_version_id")
-            .execute(),
-          this.db
-            .selectFrom("meta.relation")
-            .select("entity_version_id")
-            .select((eb) => eb.fn.countAll().as("count"))
-            .where("entity_version_id", "in", versionIds)
-            .groupBy("entity_version_id")
-            .execute(),
-        ])
-      : [[], []];
+    const [fieldCountRows, relationCountRows] =
+      versionIds.length > 0
+        ? await Promise.all([
+            this.db
+              .selectFrom("meta.field")
+              .select("entity_version_id")
+              .select((eb) => eb.fn.countAll().as("count"))
+              .where("entity_version_id", "in", versionIds)
+              .groupBy("entity_version_id")
+              .execute(),
+            this.db
+              .selectFrom("meta.relation")
+              .select("entity_version_id")
+              .select((eb) => eb.fn.countAll().as("count"))
+              .where("entity_version_id", "in", versionIds)
+              .groupBy("entity_version_id")
+              .execute(),
+          ])
+        : [[], []];
 
     // Build lookup maps
     const fieldCountByVersion = new Map<string, number>();
     for (const row of fieldCountRows) {
-      fieldCountByVersion.set(row.entity_version_id as string, Number((row as any).count));
+      fieldCountByVersion.set(
+        row.entity_version_id as string,
+        Number((row as any).count),
+      );
     }
 
     const relationCountByVersion = new Map<string, number>();
     for (const row of relationCountRows) {
-      relationCountByVersion.set(row.entity_version_id as string, Number((row as any).count));
+      relationCountByVersion.set(
+        row.entity_version_id as string,
+        Number((row as any).count),
+      );
     }
 
     // Enrich each entity
@@ -445,15 +452,21 @@ export class MetaRegistryService implements MetaRegistry {
             versionNo: latestVersion.version_no ?? 1,
             status: latestVersion.status ?? "draft",
             label: latestVersion.label ?? null,
-            publishedAt: latestVersion.published_at ? new Date(latestVersion.published_at) : null,
+            publishedAt: latestVersion.published_at
+              ? new Date(latestVersion.published_at)
+              : null,
             publishedBy: latestVersion.published_by ?? null,
             createdAt: new Date(latestVersion.created_at),
           }
         : null;
 
       const versionId = latestVersion?.id as string | undefined;
-      const fieldCount = versionId ? (fieldCountByVersion.get(versionId) ?? 0) : 0;
-      const relationCount = versionId ? (relationCountByVersion.get(versionId) ?? 0) : 0;
+      const fieldCount = versionId
+        ? (fieldCountByVersion.get(versionId) ?? 0)
+        : 0;
+      const relationCount = versionId
+        ? (relationCountByVersion.get(versionId) ?? 0)
+        : 0;
 
       return {
         ...entity,
@@ -465,15 +478,14 @@ export class MetaRegistryService implements MetaRegistry {
   }
 
   private mapVersionFromDb(dbVersion: any): EntityVersion {
+    const rawSchema = dbVersion.behaviors ?? dbVersion.schema;
     return {
       id: dbVersion.id,
-      entityName: dbVersion.entity_name,
-      version: dbVersion.version,
+      entityName: dbVersion.entity_name ?? dbVersion.entity_id,
+      version: dbVersion.label ?? dbVersion.version,
       schema:
-        typeof dbVersion.schema === "string"
-          ? JSON.parse(dbVersion.schema)
-          : dbVersion.schema,
-      isActive: dbVersion.is_active,
+        typeof rawSchema === "string" ? JSON.parse(rawSchema) : rawSchema,
+      isActive: dbVersion.is_active ?? dbVersion.status === "active",
       createdAt: new Date(dbVersion.created_at),
       createdBy: dbVersion.created_by,
     };

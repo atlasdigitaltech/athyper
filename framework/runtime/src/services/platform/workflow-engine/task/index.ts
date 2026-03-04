@@ -66,10 +66,7 @@ export {
 } from "./repository.js";
 
 // Task Service
-export {
-  ApprovalTaskService,
-  createApprovalTaskService,
-} from "./service.js";
+export { ApprovalTaskService, createApprovalTaskService } from "./service.js";
 
 // Notification Service
 export {

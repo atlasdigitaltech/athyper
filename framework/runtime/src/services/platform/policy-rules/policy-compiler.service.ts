@@ -47,7 +47,7 @@ export class PolicyCompilerService {
    */
   async getCompiledPolicy(
     tenantId: string,
-    policyVersionId: string
+    policyVersionId: string,
   ): Promise<CompiledPolicy | undefined> {
     const cacheKey = `${tenantId}:${policyVersionId}`;
 
@@ -88,7 +88,7 @@ export class PolicyCompilerService {
   async compile(
     tenantId: string,
     policyVersionId: string,
-    createdBy: string = "system"
+    createdBy: string = "system",
   ): Promise<CompiledPolicy> {
     const cacheKey = `${tenantId}:${policyVersionId}`;
 
@@ -117,12 +117,16 @@ export class PolicyCompilerService {
   private async doCompile(
     tenantId: string,
     policyVersionId: string,
-    createdBy: string
+    createdBy: string,
   ): Promise<CompiledPolicy> {
     // Get policy info
     const version = await this.db
       .selectFrom("meta.permission_policy_version as v")
-      .innerJoin("meta.permission_policy as p", "p.id", "v.permission_policy_id")
+      .innerJoin(
+        "meta.permission_policy as p",
+        "p.id",
+        "v.permission_policy_id",
+      )
       .select([
         "v.id as version_id",
         "v.permission_policy_id as policy_id",
@@ -186,10 +190,13 @@ export class PolicyCompilerService {
     const ruleIndex: CompiledPolicy["ruleIndex"] = {};
 
     for (const rule of rules) {
-      const scopeKey = this.buildScopeKey(rule.scope_type as ScopeType, rule.scope_key);
+      const scopeKey = this.buildScopeKey(
+        rule.scope_type as ScopeType,
+        rule.scope_key,
+      );
       const subjectKey = this.buildSubjectKey(
         rule.subject_type as SubjectType,
-        rule.subject_key
+        rule.subject_key,
       );
 
       // Initialize nested structure
@@ -204,7 +211,8 @@ export class PolicyCompilerService {
       const ops = ruleOpsMap.get(rule.id) ?? [];
 
       // If no specific operations, rule applies to all (use "*")
-      const operationIds = ops.length > 0 ? ops.map((o) => o.operation_id) : ["*"];
+      const operationIds =
+        ops.length > 0 ? ops.map((o) => o.operation_id) : ["*"];
 
       for (const opId of operationIds) {
         if (!ruleIndex[scopeKey][subjectKey][opId]) {
@@ -221,10 +229,8 @@ export class PolicyCompilerService {
         // Add operation constraints if present
         const opConstraints = ops.find((o) => o.operation_id === opId);
         if (opConstraints?.operation_constraints) {
-          compiledRule.operationConstraints = opConstraints.operation_constraints as Record<
-            string,
-            unknown
-          >;
+          compiledRule.operationConstraints =
+            opConstraints.operation_constraints as Record<string, unknown>;
         }
 
         ruleIndex[scopeKey][subjectKey][opId].push(compiledRule);
@@ -235,7 +241,9 @@ export class PolicyCompilerService {
     for (const scopeKey of Object.keys(ruleIndex)) {
       for (const subjectKey of Object.keys(ruleIndex[scopeKey])) {
         for (const opId of Object.keys(ruleIndex[scopeKey][subjectKey])) {
-          ruleIndex[scopeKey][subjectKey][opId].sort((a, b) => a.priority - b.priority);
+          ruleIndex[scopeKey][subjectKey][opId].sort(
+            (a, b) => a.priority - b.priority,
+          );
         }
       }
     }
@@ -264,7 +272,7 @@ export class PolicyCompilerService {
         policyVersionId,
         ruleCount: rules.length,
         hash,
-      })
+      }),
     );
 
     return compiled;
@@ -280,14 +288,19 @@ export class PolicyCompilerService {
   /**
    * Build subject key for indexing
    */
-  private buildSubjectKey(subjectType: SubjectType, subjectKey: string): string {
+  private buildSubjectKey(
+    subjectType: SubjectType,
+    subjectKey: string,
+  ): string {
     return `${subjectType}:${subjectKey}`;
   }
 
   /**
    * Compute hash of compiled rules
    */
-  private async computeHash(ruleIndex: CompiledPolicy["ruleIndex"]): Promise<string> {
+  private async computeHash(
+    ruleIndex: CompiledPolicy["ruleIndex"],
+  ): Promise<string> {
     const content = JSON.stringify(ruleIndex);
     const encoder = new TextEncoder();
     const data = encoder.encode(content);
@@ -303,7 +316,7 @@ export class PolicyCompilerService {
     tenantId: string,
     policyVersionId: string,
     compiled: CompiledPolicy,
-    createdBy: string
+    createdBy: string,
   ): Promise<void> {
     // Check if same hash already exists
     const existing = await this.db
@@ -340,7 +353,7 @@ export class PolicyCompilerService {
   async compileOnPublish(
     tenantId: string,
     policyVersionId: string,
-    publishedBy: string
+    publishedBy: string,
   ): Promise<void> {
     // Clear cache for this version
     const cacheKey = `${tenantId}:${policyVersionId}`;
@@ -372,7 +385,7 @@ export class PolicyCompilerService {
   async getOrCompile(
     tenantId: string,
     policyVersionId: string,
-    createdBy: string = "system"
+    createdBy: string = "system",
   ): Promise<CompiledPolicy | undefined> {
     // Try to get from cache/DB first
     const existing = await this.getCompiledPolicy(tenantId, policyVersionId);
@@ -390,7 +403,7 @@ export class PolicyCompilerService {
           tenantId,
           policyVersionId,
           error: String(error),
-        })
+        }),
       );
       return undefined;
     }

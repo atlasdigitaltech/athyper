@@ -72,8 +72,12 @@ export type EvaluationContext = Record<string, unknown>;
 // Type Guards
 // ============================================================================
 
-function isConditionGroup(node: Condition | ConditionGroup): node is ConditionGroup {
-  return "conditions" in node && Array.isArray((node as ConditionGroup).conditions);
+function isConditionGroup(
+  node: Condition | ConditionGroup,
+): node is ConditionGroup {
+  return (
+    "conditions" in node && Array.isArray((node as ConditionGroup).conditions)
+  );
 }
 
 // ============================================================================
@@ -145,30 +149,40 @@ export function evaluateCondition(
       return Array.isArray(compareValue) && !compareValue.includes(fieldValue);
 
     case "contains":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.includes(compareValue);
+        fieldValue.includes(compareValue)
+      );
 
     case "not_contains":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        !fieldValue.includes(compareValue);
+        !fieldValue.includes(compareValue)
+      );
 
     case "starts_with":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.startsWith(compareValue);
+        fieldValue.startsWith(compareValue)
+      );
 
     case "ends_with":
-      return typeof fieldValue === "string" &&
+      return (
+        typeof fieldValue === "string" &&
         typeof compareValue === "string" &&
-        fieldValue.endsWith(compareValue);
+        fieldValue.endsWith(compareValue)
+      );
 
     case "matches":
       try {
-        return typeof fieldValue === "string" &&
+        return (
+          typeof fieldValue === "string" &&
           typeof compareValue === "string" &&
-          new RegExp(compareValue).test(fieldValue);
+          new RegExp(compareValue).test(fieldValue)
+        );
       } catch {
         return false;
       }
@@ -180,22 +194,29 @@ export function evaluateCondition(
       return fieldValue === undefined || fieldValue === null;
 
     case "between": {
-      if (!Array.isArray(compareValue) || compareValue.length !== 2) return false;
+      if (!Array.isArray(compareValue) || compareValue.length !== 2)
+        return false;
       const num = toNumber(fieldValue);
-      return num >= toNumber(compareValue[0]) && num <= toNumber(compareValue[1]);
+      return (
+        num >= toNumber(compareValue[0]) && num <= toNumber(compareValue[1])
+      );
     }
 
     case "empty":
-      return fieldValue === undefined ||
+      return (
+        fieldValue === undefined ||
         fieldValue === null ||
         fieldValue === "" ||
-        (Array.isArray(fieldValue) && fieldValue.length === 0);
+        (Array.isArray(fieldValue) && fieldValue.length === 0)
+      );
 
     case "not_empty":
-      return fieldValue !== undefined &&
+      return (
+        fieldValue !== undefined &&
         fieldValue !== null &&
         fieldValue !== "" &&
-        !(Array.isArray(fieldValue) && fieldValue.length === 0);
+        !(Array.isArray(fieldValue) && fieldValue.length === 0)
+      );
 
     case "date_before": {
       const d = toDate(fieldValue);

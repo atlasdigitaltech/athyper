@@ -201,8 +201,18 @@ describe("AuditAccessReportService", () => {
       if (callCount === 1) {
         return {
           rows: [
-            { principal_id: "old-user", access_type: "read", count: "10", last_accessed_at: "2025-01-01T00:00:00Z" },
-            { principal_id: "new-user", access_type: "read", count: "1", last_accessed_at: "2025-01-20T00:00:00Z" },
+            {
+              principal_id: "old-user",
+              access_type: "read",
+              count: "10",
+              last_accessed_at: "2025-01-01T00:00:00Z",
+            },
+            {
+              principal_id: "new-user",
+              access_type: "read",
+              count: "1",
+              last_accessed_at: "2025-01-20T00:00:00Z",
+            },
           ],
         };
       }
@@ -231,15 +241,37 @@ describe("AuditDsarService", () => {
       // Return different counts for different tables
       // 1=wae, 2=encrypted, 3=redacted, 4=pdl, 5=fal, 6=se, 7=al, 8=security_event_log
       const counts: Record<number, any> = {
-        1: { count: "10", oldest: "2025-01-01T00:00:00Z", newest: "2025-01-15T00:00:00Z" },
+        1: {
+          count: "10",
+          oldest: "2025-01-01T00:00:00Z",
+          newest: "2025-01-15T00:00:00Z",
+        },
         2: { count: "2" },
         3: { count: "1" },
-        4: { count: "5", oldest: "2025-01-02T00:00:00Z", newest: "2025-01-14T00:00:00Z" },
-        5: { count: "3", oldest: "2025-01-03T00:00:00Z", newest: "2025-01-13T00:00:00Z" },
-        6: { count: "8", oldest: "2025-01-04T00:00:00Z", newest: "2025-01-12T00:00:00Z" },
-        7: { count: "1", oldest: "2025-01-05T00:00:00Z", newest: "2025-01-11T00:00:00Z" },
+        4: {
+          count: "5",
+          oldest: "2025-01-02T00:00:00Z",
+          newest: "2025-01-14T00:00:00Z",
+        },
+        5: {
+          count: "3",
+          oldest: "2025-01-03T00:00:00Z",
+          newest: "2025-01-13T00:00:00Z",
+        },
+        6: {
+          count: "8",
+          oldest: "2025-01-04T00:00:00Z",
+          newest: "2025-01-12T00:00:00Z",
+        },
+        7: {
+          count: "1",
+          oldest: "2025-01-05T00:00:00Z",
+          newest: "2025-01-11T00:00:00Z",
+        },
       };
-      return { rows: [counts[callCount] ?? { count: "0", oldest: null, newest: null }] };
+      return {
+        rows: [counts[callCount] ?? { count: "0", oldest: null, newest: null }],
+      };
     });
 
     const service = new AuditDsarService(db);
@@ -258,7 +290,10 @@ describe("AuditDsarService", () => {
     let callCount = 0;
     const db = createKyselyMockDb(async () => {
       callCount++;
-      if (callCount === 1) return { rows: [{ count: "100", oldest: "2025-01-01", newest: "2025-01-31" }] };
+      if (callCount === 1)
+        return {
+          rows: [{ count: "100", oldest: "2025-01-01", newest: "2025-01-31" }],
+        };
       if (callCount === 2) return { rows: [{ count: "25" }] };
       if (callCount === 3) return { rows: [{ count: "10" }] };
       return { rows: [{ count: "0", oldest: null, newest: null }] };
@@ -275,7 +310,10 @@ describe("AuditDsarService", () => {
     let callCount = 0;
     const db = createKyselyMockDb(async () => {
       callCount++;
-      if (callCount === 1) return { rows: [{ count: "50", oldest: "2025-01-01", newest: "2025-01-31" }] };
+      if (callCount === 1)
+        return {
+          rows: [{ count: "50", oldest: "2025-01-01", newest: "2025-01-31" }],
+        };
       if (callCount === 2) return { rows: [{ count: "5" }] };
       if (callCount === 3) return { rows: [{ count: "2" }] };
       return { rows: [{ count: "0", oldest: null, newest: null }] };
@@ -321,7 +359,9 @@ describe("Audit UX Handlers", () => {
       } as any;
       const handler = new ExplainEventHandler(deps);
 
-      const result = await handler.handle(regularContext, { correlationId: "corr-1" });
+      const result = await handler.handle(regularContext, {
+        correlationId: "corr-1",
+      });
       expect(result.status).toBe(403);
     });
 
@@ -334,7 +374,9 @@ describe("Audit UX Handlers", () => {
       } as any;
       const handler = new ExplainEventHandler(deps);
 
-      const result = await handler.handle(viewerContext, { correlationId: "corr-1" });
+      const result = await handler.handle(viewerContext, {
+        correlationId: "corr-1",
+      });
       expect(result.status).toBe(200);
       expect(result.body).toBe(mockExplanation);
     });
@@ -372,7 +414,9 @@ describe("Audit UX Handlers", () => {
       const mockReport = { entityType: "PO", principals: [] };
       const deps = {
         explainability: {} as any,
-        accessReport: { generateWhoSawWhat: vi.fn().mockResolvedValue(mockReport) },
+        accessReport: {
+          generateWhoSawWhat: vi.fn().mockResolvedValue(mockReport),
+        },
         dsar: {} as any,
       } as any;
       const handler = new WhoSawWhatHandler(deps);
@@ -395,7 +439,9 @@ describe("Audit UX Handlers", () => {
       } as any;
       const handler = new DsarHandler(deps);
 
-      const result = await handler.handle(viewerContext, { subjectUserId: "user-1" });
+      const result = await handler.handle(viewerContext, {
+        subjectUserId: "user-1",
+      });
       expect(result.status).toBe(403);
     });
 
@@ -404,11 +450,15 @@ describe("Audit UX Handlers", () => {
       const deps = {
         explainability: {} as any,
         accessReport: {} as any,
-        dsar: { generateDataSubjectReport: vi.fn().mockResolvedValue(mockResult) },
+        dsar: {
+          generateDataSubjectReport: vi.fn().mockResolvedValue(mockResult),
+        },
       } as any;
       const handler = new DsarHandler(deps);
 
-      const result = await handler.handle(adminContext, { subjectUserId: "user-1" });
+      const result = await handler.handle(adminContext, {
+        subjectUserId: "user-1",
+      });
       expect(result.status).toBe(200);
       expect(result.body).toBe(mockResult);
     });

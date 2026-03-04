@@ -49,7 +49,7 @@ export interface ValidationMiddlewareOptions {
   onValidationError?: (
     errors: ValidationResult,
     req: Request,
-    res: Response
+    res: Response,
   ) => void | Promise<void>;
 
   /**
@@ -62,7 +62,7 @@ export interface ValidationMiddlewareOptions {
  * Create validation middleware
  */
 export function validationMiddleware(
-  options: ValidationMiddlewareOptions
+  options: ValidationMiddlewareOptions,
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   const {
     body,
@@ -95,7 +95,7 @@ export function validationMiddleware(
               { valid: false, errors: allErrors },
               req,
               res,
-              onValidationError
+              onValidationError,
             );
           }
         }
@@ -117,7 +117,7 @@ export function validationMiddleware(
               { valid: false, errors: allErrors },
               req,
               res,
-              onValidationError
+              onValidationError,
             );
           }
         }
@@ -139,7 +139,7 @@ export function validationMiddleware(
               { valid: false, errors: allErrors },
               req,
               res,
-              onValidationError
+              onValidationError,
             );
           }
         }
@@ -155,7 +155,7 @@ export function validationMiddleware(
               { valid: false, errors: allErrors },
               req,
               res,
-              onValidationError
+              onValidationError,
             );
           }
         }
@@ -167,7 +167,7 @@ export function validationMiddleware(
           { valid: false, errors: allErrors },
           req,
           res,
-          onValidationError
+          onValidationError,
         );
       }
 
@@ -178,7 +178,7 @@ export function validationMiddleware(
           msg: "validation_middleware_error",
           path: req.path,
           err: String(error),
-        })
+        }),
       );
       next(error);
     }
@@ -192,7 +192,7 @@ function handleValidationError(
   result: ValidationResult,
   req: Request,
   res: Response,
-  customHandler?: ValidationMiddlewareOptions["onValidationError"]
+  customHandler?: ValidationMiddlewareOptions["onValidationError"],
 ): void | Promise<void> {
   if (customHandler) {
     return customHandler(result, req, res);
@@ -247,7 +247,7 @@ export function requireContentType(...allowedTypes: string[]) {
     const baseContentType = contentType.split(";")[0].trim().toLowerCase();
 
     const isAllowed = allowedTypes.some(
-      (type) => baseContentType === type.toLowerCase()
+      (type) => baseContentType === type.toLowerCase(),
     );
 
     if (!isAllowed) {
@@ -306,15 +306,21 @@ export function sanitizeRequest(deepSanitize: boolean = true) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       if (req.body) {
-        req.body = deepSanitize ? sanitizeDeep(req.body) : sanitizeObject(req.body);
+        req.body = deepSanitize
+          ? sanitizeDeep(req.body)
+          : sanitizeObject(req.body);
       }
 
       if (req.query) {
-        req.query = deepSanitize ? sanitizeDeep(req.query) : sanitizeObject(req.query);
+        req.query = deepSanitize
+          ? sanitizeDeep(req.query)
+          : sanitizeObject(req.query);
       }
 
       if (req.params) {
-        req.params = deepSanitize ? sanitizeDeep(req.params) : sanitizeObject(req.params);
+        req.params = deepSanitize
+          ? sanitizeDeep(req.params)
+          : sanitizeObject(req.params);
       }
 
       next();
@@ -324,7 +330,7 @@ export function sanitizeRequest(deepSanitize: boolean = true) {
           msg: "sanitize_request_error",
           path: req.path,
           err: String(error),
-        })
+        }),
       );
       next(error);
     }

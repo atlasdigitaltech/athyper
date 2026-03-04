@@ -45,8 +45,6 @@ export type {
   ScopeMode,
 } from "./role-binding.service.js";
 
-export type {
-  OUNodeInfo,
-} from "./ou-membership.service.js";
+export type { OUNodeInfo } from "./ou-membership.service.js";
 
 export type { EntitlementSnapshot } from "./entitlement-snapshot.service.js";

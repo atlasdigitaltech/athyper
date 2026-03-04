@@ -39,7 +39,10 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
     return `${tenantId}:${testCaseId}`;
   }
 
-  async getById(tenantId: string, testCaseId: string): Promise<StoredTestCase | undefined> {
+  async getById(
+    tenantId: string,
+    testCaseId: string,
+  ): Promise<StoredTestCase | undefined> {
     return this.testCases.get(this.makeKey(tenantId, testCaseId));
   }
 
@@ -51,10 +54,10 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
       enabled?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<StoredTestCase[]> {
     let results = Array.from(this.testCases.values()).filter(
-      (tc) => tc.tenantId === tenantId
+      (tc) => tc.tenantId === tenantId,
     );
 
     if (options?.policyId) {
@@ -63,7 +66,7 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
 
     if (options?.tags && options.tags.length > 0) {
       results = results.filter((tc) =>
-        options.tags!.some((tag) => tc.tags.includes(tag))
+        options.tags!.some((tag) => tc.tags.includes(tag)),
       );
     }
 
@@ -83,7 +86,7 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
   async create(
     tenantId: string,
     testCase: Omit<PolicyTestCase, "id" | "createdAt">,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredTestCase> {
     const id = this.generateId();
     const now = new Date();
@@ -106,7 +109,7 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
     tenantId: string,
     testCaseId: string,
     updates: Partial<PolicyTestCase>,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredTestCase> {
     const key = this.makeKey(tenantId, testCaseId);
     const existing = this.testCases.get(key);
@@ -138,7 +141,7 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
   async updateRunResult(
     tenantId: string,
     testCaseId: string,
-    result: TestCaseRunResult
+    result: TestCaseRunResult,
   ): Promise<void> {
     const key = this.makeKey(tenantId, testCaseId);
     const existing = this.testCases.get(key);
@@ -150,7 +153,11 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
     const updated: StoredTestCase = {
       ...existing,
       lastRunAt: result.runAt,
-      lastRunResult: result.passed ? "passed" : result.simulatorResult.success ? "failed" : "error",
+      lastRunResult: result.passed
+        ? "passed"
+        : result.simulatorResult.success
+          ? "failed"
+          : "error",
       lastRunDurationMs: result.durationMs,
       lastRunError: result.failureReason,
     };
@@ -158,7 +165,10 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
     this.testCases.set(key, updated);
   }
 
-  async getByPolicy(tenantId: string, policyId: string): Promise<StoredTestCase[]> {
+  async getByPolicy(
+    tenantId: string,
+    policyId: string,
+  ): Promise<StoredTestCase[]> {
     return this.list(tenantId, { policyId });
   }
 
@@ -189,7 +199,10 @@ export class InMemoryTestCaseRepository implements ITestCaseRepository {
 export class DatabaseTestCaseRepository implements ITestCaseRepository {
   constructor(private readonly db: Kysely<DB>) {}
 
-  async getById(tenantId: string, testCaseId: string): Promise<StoredTestCase | undefined> {
+  async getById(
+    tenantId: string,
+    testCaseId: string,
+  ): Promise<StoredTestCase | undefined> {
     const result = await this.db
       .selectFrom("meta.policy_testcase" as any)
       .selectAll()
@@ -210,7 +223,7 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
       enabled?: boolean;
       limit?: number;
       offset?: number;
-    }
+    },
   ): Promise<StoredTestCase[]> {
     let query = this.db
       .selectFrom("meta.policy_testcase" as any)
@@ -239,7 +252,7 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
     // Apply tag filter in application
     if (options?.tags && options.tags.length > 0) {
       testCases = testCases.filter((tc) =>
-        options.tags!.some((tag) => tc.tags.includes(tag))
+        options.tags!.some((tag) => tc.tags.includes(tag)),
       );
     }
 
@@ -249,7 +262,7 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
   async create(
     tenantId: string,
     testCase: Omit<PolicyTestCase, "id" | "createdAt">,
-    createdBy: string
+    createdBy: string,
   ): Promise<StoredTestCase> {
     const id = crypto.randomUUID();
     const now = new Date();
@@ -264,7 +277,9 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
         policy_id: testCase.policyId,
         input: JSON.stringify(testCase.input),
         expected: JSON.stringify(testCase.expected),
-        assertions: testCase.assertions ? JSON.stringify(testCase.assertions) : null,
+        assertions: testCase.assertions
+          ? JSON.stringify(testCase.assertions)
+          : null,
         tags: JSON.stringify(testCase.tags ?? []),
         is_enabled: testCase.enabled ?? true,
         created_at: now,
@@ -287,7 +302,7 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
     tenantId: string,
     testCaseId: string,
     updates: Partial<PolicyTestCase>,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<StoredTestCase> {
     const now = new Date();
     const updateData: Record<string, unknown> = {
@@ -296,12 +311,17 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
     };
 
     if (updates.name !== undefined) updateData.name = updates.name;
-    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.description !== undefined)
+      updateData.description = updates.description;
     if (updates.policyId !== undefined) updateData.policy_id = updates.policyId;
-    if (updates.input !== undefined) updateData.input = JSON.stringify(updates.input);
-    if (updates.expected !== undefined) updateData.expected = JSON.stringify(updates.expected);
-    if (updates.assertions !== undefined) updateData.assertions = JSON.stringify(updates.assertions);
-    if (updates.tags !== undefined) updateData.tags = JSON.stringify(updates.tags);
+    if (updates.input !== undefined)
+      updateData.input = JSON.stringify(updates.input);
+    if (updates.expected !== undefined)
+      updateData.expected = JSON.stringify(updates.expected);
+    if (updates.assertions !== undefined)
+      updateData.assertions = JSON.stringify(updates.assertions);
+    if (updates.tags !== undefined)
+      updateData.tags = JSON.stringify(updates.tags);
     if (updates.enabled !== undefined) updateData.is_enabled = updates.enabled;
 
     await this.db
@@ -330,13 +350,17 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
   async updateRunResult(
     tenantId: string,
     testCaseId: string,
-    result: TestCaseRunResult
+    result: TestCaseRunResult,
   ): Promise<void> {
     await this.db
       .updateTable("meta.policy_testcase" as any)
       .set({
         last_run_at: result.runAt,
-        last_run_result: result.passed ? "passed" : result.simulatorResult.success ? "failed" : "error",
+        last_run_result: result.passed
+          ? "passed"
+          : result.simulatorResult.success
+            ? "failed"
+            : "error",
         last_run_duration_ms: result.durationMs,
         last_run_error: result.failureReason,
       })
@@ -345,7 +369,10 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
       .execute();
   }
 
-  async getByPolicy(tenantId: string, policyId: string): Promise<StoredTestCase[]> {
+  async getByPolicy(
+    tenantId: string,
+    policyId: string,
+  ): Promise<StoredTestCase[]> {
     return this.list(tenantId, { policyId });
   }
 
@@ -361,7 +388,10 @@ export class DatabaseTestCaseRepository implements ITestCaseRepository {
       description: row.description,
       policyId: row.policy_id,
       input: typeof row.input === "string" ? JSON.parse(row.input) : row.input,
-      expected: typeof row.expected === "string" ? JSON.parse(row.expected) : row.expected,
+      expected:
+        typeof row.expected === "string"
+          ? JSON.parse(row.expected)
+          : row.expected,
       assertions: row.assertions
         ? typeof row.assertions === "string"
           ? JSON.parse(row.assertions)
@@ -395,6 +425,8 @@ export function createInMemoryTestCaseRepository(): InMemoryTestCaseRepository {
 /**
  * Create database test case repository
  */
-export function createDatabaseTestCaseRepository(db: Kysely<DB>): DatabaseTestCaseRepository {
+export function createDatabaseTestCaseRepository(
+  db: Kysely<DB>,
+): DatabaseTestCaseRepository {
   return new DatabaseTestCaseRepository(db);
 }

@@ -152,16 +152,15 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined, // lifecycleManager
         mocks.classificationService,
-        undefined // numberingEngine
+        undefined, // numberingEngine
       );
 
       await service.list("test_entity", ctx);
 
       // Verify classificationService.getClassification was called
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
     });
 
     it("should include effective dating filter when effective_dating_enabled", async () => {
@@ -179,7 +178,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const asOfDate = new Date("2024-06-01");
@@ -189,10 +188,9 @@ describe("GenericDataAPIService - Effective Dating", () => {
       expect(executeFn).toHaveBeenCalled();
 
       // The service should have called getClassification to check the flag
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
     });
 
     it("should not include effective dating filter when effective_dating_enabled is false", async () => {
@@ -210,7 +208,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const asOfDate = new Date("2024-06-01");
@@ -220,10 +218,9 @@ describe("GenericDataAPIService - Effective Dating", () => {
       expect(executeFn).toHaveBeenCalled();
 
       // Even though asOfDate was provided, classification service should still be called
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
     });
   });
 
@@ -243,17 +240,16 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       // Call without asOfDate option
       await service.list("test_entity", ctx);
 
       // Verify classificationService was called (which means effective dating logic ran)
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
 
       // Verify SQL was executed (effective dating filter would use default now)
       expect(executeFn).toHaveBeenCalled();
@@ -274,17 +270,16 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const customDate = new Date("2023-01-15");
       await service.list("test_entity", ctx, { asOfDate: customDate });
 
       // Verify classificationService was called
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
 
       // Verify SQL was executed
       expect(executeFn).toHaveBeenCalled();
@@ -306,7 +301,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         undefined, // No classification service
-        undefined
+        undefined,
       );
 
       // Provide asOfDate but without classificationService, it should be ignored
@@ -338,7 +333,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         undefined,
-        undefined
+        undefined,
       );
 
       const result = await service.list("test_entity", ctx);
@@ -366,7 +361,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       // Even with asOfDate provided, effective dating should not be applied
@@ -374,10 +369,9 @@ describe("GenericDataAPIService - Effective Dating", () => {
       await service.list("test_entity", ctx, { asOfDate });
 
       // Verify classificationService was called to check the flag
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "test_entity",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("test_entity", ctx.tenantId);
 
       // Verify SQL was executed (without effective dating filter)
       expect(executeFn).toHaveBeenCalled();
@@ -415,7 +409,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.list("test_entity", ctx, {
@@ -445,15 +439,14 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       await service.list("customer", ctx, { asOfDate: new Date("2024-01-01") });
 
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "customer",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("customer", ctx.tenantId);
       expect(executeFn).toHaveBeenCalled();
     });
 
@@ -473,15 +466,14 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       await service.list("invoice", ctx);
 
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "invoice",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("invoice", ctx.tenantId);
       expect(executeFn).toHaveBeenCalled();
     });
 
@@ -501,15 +493,14 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       await service.list("workflow_task", ctx);
 
-      expect(mocks.classificationService!.getClassification).toHaveBeenCalledWith(
-        "workflow_task",
-        ctx.tenantId
-      );
+      expect(
+        mocks.classificationService!.getClassification,
+      ).toHaveBeenCalledWith("workflow_task", ctx.tenantId);
       expect(executeFn).toHaveBeenCalled();
     });
 
@@ -533,7 +524,7 @@ describe("GenericDataAPIService - Effective Dating", () => {
         mocks.auditLogger,
         undefined,
         mocks.classificationService,
-        undefined
+        undefined,
       );
 
       const result = await service.list("test_entity", ctx, {

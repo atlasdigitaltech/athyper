@@ -9,44 +9,53 @@ import type { AuditWriter } from "../../../../kernel/audit.js";
 import type { RedisSessionStore } from "../security/session-store.js";
 
 export class SessionInvalidationService {
-    constructor(
-        private readonly sessionStore: RedisSessionStore,
-        private readonly auditWriter: AuditWriter,
-    ) {}
+  constructor(
+    private readonly sessionStore: RedisSessionStore,
+    private readonly auditWriter: AuditWriter,
+  ) {}
 
-    /**
-     * Called when an IAM change occurs (role binding, group membership, OU assignment).
-     * Destroys all sessions for the affected user to force re-auth with new entitlements.
-     *
-     * @returns Number of sessions destroyed
-     */
-    async onIAMChange(tenantId: string, userId: string, reason: string): Promise<number> {
-        const count = await this.sessionStore.destroyAllForUser(tenantId, userId);
+  /**
+   * Called when an IAM change occurs (role binding, group membership, OU assignment).
+   * Destroys all sessions for the affected user to force re-auth with new entitlements.
+   *
+   * @returns Number of sessions destroyed
+   */
+  async onIAMChange(
+    tenantId: string,
+    userId: string,
+    reason: string,
+  ): Promise<number> {
+    const count = await this.sessionStore.destroyAllForUser(tenantId, userId);
 
-        if (count > 0) {
-            await emitAuthAudit(this.auditWriter, {
-                event: AuthAuditEvent.SESSION_KILLED,
-                tenantId,
-                userId,
-                reason: `iam_change: ${reason}`,
-                meta: { sessionsDestroyed: count },
-            });
-        }
-
-        return count;
+    if (count > 0) {
+      await emitAuthAudit(this.auditWriter, {
+        event: AuthAuditEvent.SESSION_KILLED,
+        tenantId,
+        userId,
+        reason: `iam_change: ${reason}`,
+        meta: { sessionsDestroyed: count },
+      });
     }
 
-    /**
-     * Bump authzVersion for a principal's entitlement snapshot.
-     * Sessions with older authzVersion will be forced to re-verify.
-     */
-    async bumpAuthzVersion(
-        db: { query(sql: string, params: unknown[]): Promise<{ rows: Record<string, unknown>[] }> },
-        tenantId: string,
-        principalId: string,
-    ): Promise<void> {
-        await db.query(
-            `UPDATE core.entitlement_snapshot
+    return count;
+  }
+
+  /**
+   * Bump authzVersion for a principal's entitlement snapshot.
+   * Sessions with older authzVersion will be forced to re-verify.
+   */
+  async bumpAuthzVersion(
+    db: {
+      query(
+        sql: string,
+        params: unknown[],
+      ): Promise<{ rows: Record<string, unknown>[] }>;
+    },
+    tenantId: string,
+    principalId: string,
+  ): Promise<void> {
+    await db.query(
+      `UPDATE core.entitlement_snapshot
              SET snapshot = jsonb_set(
                  snapshot,
                  '{authzVersion}',
@@ -54,7 +63,7 @@ export class SessionInvalidationService {
              ),
              updated_at = NOW()
              WHERE principal_id = $1 AND tenant_id = $2`,
-            [principalId, tenantId],
-        );
-    }
+      [principalId, tenantId],
+    );
+  }
 }

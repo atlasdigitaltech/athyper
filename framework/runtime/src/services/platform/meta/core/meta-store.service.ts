@@ -33,7 +33,7 @@ export interface MetaStore {
    */
   getCompiledModel(
     entityName: string,
-    version?: string
+    version?: string,
   ): Promise<CompiledModel>;
 
   /**
@@ -44,7 +44,7 @@ export interface MetaStore {
     description: string | undefined,
     initialVersion: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     entity: Entity;
     version: EntityVersion;
@@ -58,7 +58,7 @@ export interface MetaStore {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     version: EntityVersion;
     compiledModel: CompiledModel;
@@ -75,7 +75,7 @@ export interface MetaStore {
   switchVersion(
     entityName: string,
     newVersion: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     version: EntityVersion;
     compiledModel: CompiledModel;
@@ -94,12 +94,12 @@ export class MetaStoreService implements MetaStore {
   constructor(
     private readonly registry: MetaRegistry,
     private readonly compiler: MetaCompiler,
-    private readonly auditLogger: AuditLogger
+    private readonly auditLogger: AuditLogger,
   ) {}
 
   async getCompiledModel(
     entityName: string,
-    version?: string
+    version?: string,
   ): Promise<CompiledModel> {
     try {
       // If no version specified, get active version
@@ -119,7 +119,7 @@ export class MetaStoreService implements MetaStore {
       return await this.compiler.compile(entityName, targetVersion);
     } catch (error) {
       throw new Error(
-        `Failed to get compiled model for ${entityName}@${version}: ${String(error)}`
+        `Failed to get compiled model for ${entityName}@${version}: ${String(error)}`,
       );
     }
   }
@@ -129,7 +129,7 @@ export class MetaStoreService implements MetaStore {
     description: string | undefined,
     initialVersion: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     entity: Entity;
     version: EntityVersion;
@@ -140,7 +140,7 @@ export class MetaStoreService implements MetaStore {
       const validation = await this.compiler.validate(schema);
       if (!validation.valid) {
         throw new Error(
-          `Schema validation failed: ${JSON.stringify(validation.errors)}`
+          `Schema validation failed: ${JSON.stringify(validation.errors)}`,
         );
       }
 
@@ -152,7 +152,7 @@ export class MetaStoreService implements MetaStore {
         name,
         initialVersion,
         schema,
-        ctx
+        ctx,
       );
 
       // 4. Activate version
@@ -196,9 +196,7 @@ export class MetaStoreService implements MetaStore {
         errorMessage: String(error),
       });
 
-      throw new Error(
-        `Failed to create entity with version: ${String(error)}`
-      );
+      throw new Error(`Failed to create entity with version: ${String(error)}`);
     }
   }
 
@@ -206,7 +204,7 @@ export class MetaStoreService implements MetaStore {
     entityName: string,
     version: string,
     schema: EntitySchema,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     version: EntityVersion;
     compiledModel: CompiledModel;
@@ -216,7 +214,7 @@ export class MetaStoreService implements MetaStore {
       const validation = await this.compiler.validate(schema);
       if (!validation.valid) {
         throw new Error(
-          `Schema validation failed: ${JSON.stringify(validation.errors)}`
+          `Schema validation failed: ${JSON.stringify(validation.errors)}`,
         );
       }
 
@@ -231,7 +229,7 @@ export class MetaStoreService implements MetaStore {
         entityName,
         version,
         schema,
-        ctx
+        ctx,
       );
 
       // 4. Activate version
@@ -293,13 +291,13 @@ export class MetaStoreService implements MetaStore {
       // Get active version
       const version = await this.registry.getVersion(
         entityName,
-        entity.activeVersion
+        entity.activeVersion,
       );
 
       return version?.schema;
     } catch (error) {
       throw new Error(
-        `Failed to get active schema for ${entityName}: ${String(error)}`
+        `Failed to get active schema for ${entityName}: ${String(error)}`,
       );
     }
   }
@@ -307,7 +305,7 @@ export class MetaStoreService implements MetaStore {
   async switchVersion(
     entityName: string,
     newVersion: string,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<{
     version: EntityVersion;
     compiledModel: CompiledModel;
@@ -322,9 +320,7 @@ export class MetaStoreService implements MetaStore {
       // 2. Verify new version exists
       const version = await this.registry.getVersion(entityName, newVersion);
       if (!version) {
-        throw new Error(
-          `Version not found: ${entityName}@${newVersion}`
-        );
+        throw new Error(`Version not found: ${entityName}@${newVersion}`);
       }
 
       const previousVersion = entity.activeVersion;
@@ -333,7 +329,7 @@ export class MetaStoreService implements MetaStore {
       const activatedVersion = await this.registry.activateVersion(
         entityName,
         newVersion,
-        ctx
+        ctx,
       );
 
       // 4. Invalidate old compiled model cache
