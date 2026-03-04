@@ -58,8 +58,8 @@ export function DocumentVersionTimeline({
         }
 
         setVersions(data.data.versions);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setIsLoading(false);
       }
@@ -93,8 +93,8 @@ export function DocumentVersionTimeline({
 
       // Refresh version list
       window.location.reload();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setRestoringVersion(null);
     }
@@ -154,7 +154,10 @@ export function DocumentVersionTimeline({
         {/* Version list */}
         <div className="space-y-4">
           {versions.map((version) => (
-            <div key={version.id} className="relative flex items-start gap-4 pl-10">
+            <div
+              key={version.id}
+              className="relative flex items-start gap-4 pl-10"
+            >
               {/* Timeline dot */}
               <div
                 className={`absolute left-2.5 top-2 w-3 h-3 rounded-full ${
@@ -179,7 +182,9 @@ export function DocumentVersionTimeline({
                       )}
                     </div>
 
-                    <p className="text-sm text-gray-600 mt-1">{version.fileName}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {version.fileName}
+                    </p>
 
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <span>{formatFileSize(version.sizeBytes)}</span>
@@ -216,7 +221,9 @@ export function DocumentVersionTimeline({
                         disabled={restoringVersion === version.versionNo}
                         className="px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
                       >
-                        {restoringVersion === version.versionNo ? "Restoring..." : "Restore"}
+                        {restoringVersion === version.versionNo
+                          ? "Restoring..."
+                          : "Restore"}
                       </button>
                     )}
                   </div>

@@ -1,10 +1,11 @@
-"use client"
+"use client";
 
-import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
-import * as React from "react"
+import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
+import * as React from "react";
 
-import { cn } from "../lib/utils"
+import { cn } from "../lib/utils";
 
+/** Custom-styled scrollable container with auto-hiding scrollbars. */
 function ScrollArea({
   className,
   children,
@@ -25,9 +26,10 @@ function ScrollArea({
       <ScrollBar />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
-  )
+  );
 }
 
+/** Styled scrollbar track and thumb. Supports vertical and horizontal orientations. */
 function ScrollBar({
   className,
   orientation = "vertical",
@@ -43,7 +45,7 @@ function ScrollBar({
           "h-full w-2.5 border-l border-l-transparent",
         orientation === "horizontal" &&
           "h-2.5 flex-col border-t border-t-transparent",
-        className
+        className,
       )}
       {...props}
     >
@@ -52,7 +54,7 @@ function ScrollBar({
         className="bg-border relative flex-1 rounded-full"
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
-  )
+  );
 }
 
-export { ScrollArea, ScrollBar }
+export { ScrollArea, ScrollBar };

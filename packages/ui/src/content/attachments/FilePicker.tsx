@@ -15,7 +15,13 @@ import {
   type DocumentKind,
   type UploadProgress,
 } from "@athyper/api-client/content";
-import { useRef, useState, useCallback, type ChangeEvent, type DragEvent } from "react";
+import {
+  useRef,
+  useState,
+  useCallback,
+  type ChangeEvent,
+  type DragEvent,
+} from "react";
 
 export interface FilePickerProps {
   entityType: string;
@@ -80,7 +86,11 @@ export function FilePicker({
       try {
         // Step 1: Initiate upload
         setUploads((prev) =>
-          prev.map((u) => (u.fileId === fileId ? { ...u, status: "initiating", progress: 10 } : u)),
+          prev.map((u) =>
+            u.fileId === fileId
+              ? { ...u, status: "initiating", progress: 10 }
+              : u,
+          ),
         );
 
         const initResult = await initiateUpload({
@@ -94,7 +104,11 @@ export function FilePicker({
 
         // Step 2: Upload to S3
         setUploads((prev) =>
-          prev.map((u) => (u.fileId === fileId ? { ...u, status: "uploading", progress: 30 } : u)),
+          prev.map((u) =>
+            u.fileId === fileId
+              ? { ...u, status: "uploading", progress: 30 }
+              : u,
+          ),
         );
 
         const uploadRes = await fetch(initResult.presignedUrl, {
@@ -111,7 +125,11 @@ export function FilePicker({
 
         // Step 3: Compute checksum
         setUploads((prev) =>
-          prev.map((u) => (u.fileId === fileId ? { ...u, status: "completing", progress: 70 } : u)),
+          prev.map((u) =>
+            u.fileId === fileId
+              ? { ...u, status: "completing", progress: 70 }
+              : u,
+          ),
         );
 
         const sha256 = await computeFileHash(file);
@@ -124,7 +142,9 @@ export function FilePicker({
 
         // Success!
         setUploads((prev) =>
-          prev.map((u) => (u.fileId === fileId ? { ...u, status: "done", progress: 100 } : u)),
+          prev.map((u) =>
+            u.fileId === fileId ? { ...u, status: "done", progress: 100 } : u,
+          ),
         );
 
         // Create attachment object for callback
@@ -138,10 +158,13 @@ export function FilePicker({
         };
 
         return attachment;
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
         setUploads((prev) =>
           prev.map((u) =>
-            u.fileId === fileId ? { ...u, status: "failed", progress: 0, error: err.message } : u,
+            u.fileId === fileId
+              ? { ...u, status: "failed", progress: 0, error: message }
+              : u,
           ),
         );
         throw err;
@@ -180,15 +203,17 @@ export function FilePicker({
 
       // Upload all valid files
       try {
-        const uploadedAttachments = await Promise.all(validFiles.map(uploadFile));
+        const uploadedAttachments = await Promise.all(
+          validFiles.map(uploadFile),
+        );
         onUploaded?.(uploadedAttachments.filter(Boolean) as Attachment[]);
 
         // Clear completed uploads after callback
         setTimeout(() => {
           setUploads((prev) => prev.filter((u) => u.status !== "done"));
         }, 2000);
-      } catch (err: any) {
-        onError?.(err.message);
+      } catch (err: unknown) {
+        onError?.(err instanceof Error ? err.message : "Unknown error");
       }
     },
     [uploadFile, onUploaded, onError, maxSizeBytes],
@@ -237,7 +262,9 @@ export function FilePicker({
     handleFiles(e.dataTransfer.files);
   };
 
-  const hasActiveUploads = uploads.some((u) => u.status !== "done" && u.status !== "failed");
+  const hasActiveUploads = uploads.some(
+    (u) => u.status !== "done" && u.status !== "failed",
+  );
 
   return (
     <div className="space-y-4">
@@ -287,19 +314,25 @@ export function FilePicker({
               className="flex items-center gap-3 p-3 bg-gray-50 rounded border"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{upload.fileName}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {upload.fileName}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                     <div
                       className={`h-1.5 rounded-full transition-all ${
-                        upload.status === "failed" ? "bg-red-500" : "bg-blue-500"
+                        upload.status === "failed"
+                          ? "bg-red-500"
+                          : "bg-blue-500"
                       }`}
                       style={{ width: `${upload.progress}%` }}
                     />
                   </div>
                   <span className="text-xs text-gray-500">{upload.status}</span>
                 </div>
-                {upload.error && <p className="text-xs text-red-600 mt-1">{upload.error}</p>}
+                {upload.error && (
+                  <p className="text-xs text-red-600 mt-1">{upload.error}</p>
+                )}
               </div>
             </div>
           ))}

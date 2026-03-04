@@ -6,7 +6,11 @@
 
 "use client";
 
-import { getDownloadUrl, deleteAttachment, type Attachment } from "@athyper/api-client/content";
+import {
+  getDownloadUrl,
+  deleteAttachment,
+  type Attachment,
+} from "@athyper/api-client/content";
 import { useState } from "react";
 
 export interface AttachmentCardProps {
@@ -55,8 +59,8 @@ export function AttachmentCard({
 
       // Redirect to presigned URL
       window.location.href = result.url;
-    } catch (err: any) {
-      setError(err.message || "Download failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Download failed");
     }
   };
 
@@ -76,8 +80,8 @@ export function AttachmentCard({
       await deleteAttachment(item.id);
 
       onDeleted?.(item.id);
-    } catch (err: any) {
-      setError(err.message || "Delete failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -99,8 +103,8 @@ export function AttachmentCard({
       const result = await getDownloadUrl(item.id);
       await navigator.clipboard.writeText(result.url);
       // TODO: Show toast notification
-    } catch (err: any) {
-      setError(err.message || "Copy link failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Copy link failed");
     }
   };
 
@@ -113,12 +117,16 @@ export function AttachmentCard({
       <div className="flex items-start gap-4">
         {/* File icon */}
         <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
-          <span className="text-xs font-bold text-blue-700">{fileExtension}</span>
+          <span className="text-xs font-bold text-blue-700">
+            {fileExtension}
+          </span>
         </div>
 
         {/* File info */}
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-gray-900 truncate">{item.fileName}</h4>
+          <h4 className="text-sm font-medium text-gray-900 truncate">
+            {item.fileName}
+          </h4>
 
           <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
             <span>{formattedSize}</span>
