@@ -1,0 +1,9 @@
+﻿{
+    "code":  "POLICY",
+    "name":  "Policy \u0026 Rules Engine",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

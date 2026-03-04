@@ -1,0 +1,10 @@
+{
+  "dashboard.MFG.overview.title": "உற்பத்தி மேலோட்டம்",
+  "dashboard.MFG.overview.description": "உற்பத்தி நிலை மற்றும் திறன் பயன்பாடு",
+  "dashboard.MFG.overview.kpi.production_orders": "உற்பத்தி ஆர்டர்கள்",
+  "dashboard.MFG.overview.kpi.oee": "ஒட்டுமொத்த உபகரண செயல்திறன்",
+  "dashboard.MFG.overview.kpi.yield_rate": "விளைச்சல் விகிதம்",
+  "dashboard.MFG.overview.kpi.scrap_rate": "கழிவு விகிதம்",
+  "dashboard.MFG.overview.list.active_production": "செயலில் உள்ள உற்பத்தி",
+  "dashboard.MFG.overview.chart.output_trend": "உற்பத்தி போக்கு"
+}

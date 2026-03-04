@@ -1,0 +1,45 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : mesh-logging-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  logging:
+    image: grafana/loki:3.6.3
+    profiles: ["mesh", "telemetry"]
+    mem_limit: "${LOGGING_MEMORY_LIMIT}"
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ${MESH_CONFIG}/telemetry/logging/config.yml:/etc/loki/loki.yml:ro
+      - ${MESH_DATA}/telemetry/logging:/loki
+    networks: [edge, internal]
+    healthcheck:
+      test: ["CMD", "loki", "-version"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.docker.network=athyper-mesh-edge
+      - traefik.enable=true
+      - traefik.http.routers.logging.entrypoints=websecure
+      - traefik.http.routers.logging.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.logging.rule=Host(`${LOGS_HOST}`)
+      - traefik.http.routers.logging.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.logging.tls=true
+      - traefik.http.services.logging.loadbalancer.server.port=3100

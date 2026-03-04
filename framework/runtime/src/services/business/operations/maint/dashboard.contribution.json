@@ -1,0 +1,35 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "MAINT",
+  "module_name": "Maintenance Management",
+  "dashboards": [
+    {
+      "code": "maint_overview",
+      "title_key": "dashboard.MAINT.overview.title",
+      "description_key": "dashboard.MAINT.overview.description",
+      "icon": "wrench",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.MAINT.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.MAINT.overview.kpi.open_work_orders", "query_key": "maint.open_work_orders", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.MAINT.overview.kpi.preventive_due", "query_key": "maint.preventive_due", "format": "number" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.MAINT.overview.kpi.mtbf", "query_key": "maint.mtbf", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.MAINT.overview.kpi.backlog_hours", "query_key": "maint.backlog_hours", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.MAINT.overview.chart.maintenance_trend", "query_key": "maint.maintenance_trend", "chart_type": "bar" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.MAINT.overview.list.recent_work_orders", "query_key": "maint.recent_work_orders", "columns": ["date", "asset", "type", "status"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

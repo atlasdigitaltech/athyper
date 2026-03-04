@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETFM.overview.title": "வசதி மேலாண்மை மேலோட்டம்",
+  "dashboard.ASSETFM.overview.description": "வசதி செயல்பாடுகள் மற்றும் இட மேலாண்மை",
+  "dashboard.ASSETFM.overview.kpi.total_facilities": "மொத்த வசதிகள்",
+  "dashboard.ASSETFM.overview.kpi.occupancy_rate": "நிரப்பு விகிதம்",
+  "dashboard.ASSETFM.overview.kpi.open_requests": "திறந்த கோரிக்கைகள்",
+  "dashboard.ASSETFM.overview.kpi.energy_consumption": "ஆற்றல் நுகர்வு",
+  "dashboard.ASSETFM.overview.list.service_requests": "சேவை கோரிக்கைகள்",
+  "dashboard.ASSETFM.overview.chart.space_utilization": "இட பயன்பாடு"
+}

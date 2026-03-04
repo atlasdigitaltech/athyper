@@ -1,0 +1,10 @@
+{
+  "dashboard.SRM.overview.title": "Pengurusan Pembekal",
+  "dashboard.SRM.overview.description": "Kitaran hayat dan pengurusan prestasi pembekal",
+  "dashboard.SRM.overview.kpi.active_suppliers": "Pembekal Aktif",
+  "dashboard.SRM.overview.kpi.pending_evaluations": "Penilaian Tertangguh",
+  "dashboard.SRM.overview.kpi.avg_score": "Skor Purata",
+  "dashboard.SRM.overview.kpi.expiring_contracts": "Kontrak Akan Tamat",
+  "dashboard.SRM.overview.list.recent_evaluations": "Penilaian Terkini",
+  "dashboard.SRM.overview.chart.score_distribution": "Taburan Skor"
+}

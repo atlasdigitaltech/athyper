@@ -1,0 +1,10 @@
+{
+  "dashboard.LOGISTICS.overview.title": "Papan Pemuka Logistik",
+  "dashboard.LOGISTICS.overview.description": "Penghantaran, pengangkutan, dan pengesanan",
+  "dashboard.LOGISTICS.overview.kpi.in_transit": "Dalam Transit",
+  "dashboard.LOGISTICS.overview.kpi.delivered_today": "Dihantar Hari Ini",
+  "dashboard.LOGISTICS.overview.kpi.on_time_rate": "Kadar Tepat Masa",
+  "dashboard.LOGISTICS.overview.kpi.pending_dispatch": "Menunggu Penghantaran",
+  "dashboard.LOGISTICS.overview.list.recent_shipments": "Penghantaran Terkini",
+  "dashboard.LOGISTICS.overview.chart.delivery_performance": "Prestasi Penghantaran"
+}

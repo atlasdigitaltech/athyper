@@ -1,0 +1,10 @@
+{
+  "dashboard.REF.overview.title": "குறிப்புத் தரவு மேலோட்டம்",
+  "dashboard.REF.overview.description": "குறிப்புத் தரவு மேலாண்மை மற்றும் தரம்",
+  "dashboard.REF.overview.kpi.total_records": "மொத்த பதிவுகள்",
+  "dashboard.REF.overview.kpi.data_quality_score": "தரவு தரமதிப்பெண்",
+  "dashboard.REF.overview.kpi.pending_reviews": "நிலுவையிலுள்ள மதிப்பாய்வுகள்",
+  "dashboard.REF.overview.kpi.duplicates": "நகல்கள்",
+  "dashboard.REF.overview.list.recent_changes": "சமீபத்திய மாற்றங்கள்",
+  "dashboard.REF.overview.chart.data_quality_trend": "தரவு தர போக்கு"
+}

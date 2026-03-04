@@ -1,0 +1,35 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "PAYG",
+  "module_name": "Payment Gateways",
+  "dashboards": [
+    {
+      "code": "payg_overview",
+      "title_key": "dashboard.PAYG.overview.title",
+      "description_key": "dashboard.PAYG.overview.description",
+      "icon": "zap",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.PAYG.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.PAYG.overview.kpi.txn_volume", "query_key": "payg.txn_volume", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.PAYG.overview.kpi.success_rate", "query_key": "payg.success_rate", "format": "percent" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.PAYG.overview.kpi.avg_processing", "query_key": "payg.avg_processing", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.PAYG.overview.kpi.failed_txns", "query_key": "payg.failed_txns", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.PAYG.overview.chart.volume_trend", "query_key": "payg.volume_trend", "chart_type": "area" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.PAYG.overview.list.recent_transactions", "query_key": "payg.recent_transactions", "columns": ["date", "gateway", "status", "amount"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

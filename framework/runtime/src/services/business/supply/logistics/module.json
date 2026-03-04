@@ -1,0 +1,10 @@
+﻿{
+    "code":  "LOGISTICS",
+    "name":  "Transportation \u0026 Logistics",
+    "dependsOn":  [
+                      "WMS",
+                      "INVENTORY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

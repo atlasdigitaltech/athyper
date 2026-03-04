@@ -1,0 +1,10 @@
+{
+  "dashboard.SVC.overview.title": "Service Desk",
+  "dashboard.SVC.overview.description": "Tickets, SLAs, and service workflows",
+  "dashboard.SVC.overview.kpi.open_tickets": "Open Tickets",
+  "dashboard.SVC.overview.kpi.sla_compliance": "SLA Compliance",
+  "dashboard.SVC.overview.kpi.avg_resolution": "Avg Resolution Time",
+  "dashboard.SVC.overview.kpi.escalated": "Escalated Tickets",
+  "dashboard.SVC.overview.list.recent_tickets": "Recent Tickets",
+  "dashboard.SVC.overview.chart.ticket_trend": "Ticket Volume Trend"
+}

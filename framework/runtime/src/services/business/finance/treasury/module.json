@@ -1,0 +1,10 @@
+﻿{
+    "code":  "TREASURY",
+    "name":  "Treasury \u0026 Cash Management",
+    "dependsOn":  [
+                      "ACC",
+                      "PAY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

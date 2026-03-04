@@ -1,0 +1,10 @@
+{
+  "dashboard.CRM.overview.title": "வாடிக்கையாளர் உறவு மேலோட்டம்",
+  "dashboard.CRM.overview.description": "வாடிக்கையாளர் ஈடுபாடு மற்றும் விற்பனை வாய்ப்புகள்",
+  "dashboard.CRM.overview.kpi.active_leads": "செயலில் உள்ள வாய்ப்புகள்",
+  "dashboard.CRM.overview.kpi.conversion_rate": "மாற்ற விகிதம்",
+  "dashboard.CRM.overview.kpi.open_opportunities": "திறந்த வாய்ப்புகள்",
+  "dashboard.CRM.overview.kpi.customer_satisfaction": "வாடிக்கையாளர் திருப்தி",
+  "dashboard.CRM.overview.list.recent_activities": "சமீபத்திய நடவடிக்கைகள்",
+  "dashboard.CRM.overview.chart.pipeline_stages": "விற்பனைக் குழாய் நிலைகள்"
+}

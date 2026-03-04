@@ -1,0 +1,14 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : production
+# Version     : 1.0.0
+# Compose     : mesh-override-production-config
+#
+# Description :
+#   Production environment overrides for athyper Mesh stack.
+#   Add production-specific service configurations here.
+#
+# =======================================================================
+
+services: {}

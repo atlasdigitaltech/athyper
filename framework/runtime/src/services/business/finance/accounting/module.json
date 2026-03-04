@@ -1,0 +1,9 @@
+﻿{
+    "code":  "ACC",
+    "name":  "Finance (Core Accounting)",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

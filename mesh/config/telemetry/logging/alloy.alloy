@@ -1,0 +1,24 @@
+discovery.docker "linux" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.process "normalize" {
+  forward_to = [loki.write.loki.receiver]
+
+  stage.label_drop {
+    values = ["stream", "container_name"]
+  }
+}
+
+loki.source.docker "docker_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.linux.targets
+  labels     = { "platform" = "docker" }
+  forward_to = [loki.process.normalize.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://logging:3100/loki/api/v1/push"
+  }
+}

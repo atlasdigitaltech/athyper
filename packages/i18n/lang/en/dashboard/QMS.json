@@ -1,0 +1,10 @@
+{
+  "dashboard.QMS.overview.title": "Quality Dashboard",
+  "dashboard.QMS.overview.description": "Inspections, QC processes, and compliance",
+  "dashboard.QMS.overview.kpi.inspections_due": "Inspections Due",
+  "dashboard.QMS.overview.kpi.pass_rate": "Pass Rate",
+  "dashboard.QMS.overview.kpi.ncrs_open": "Open NCRs",
+  "dashboard.QMS.overview.kpi.avg_cycle": "Avg Inspection Cycle",
+  "dashboard.QMS.overview.list.recent_inspections": "Recent Inspections",
+  "dashboard.QMS.overview.chart.quality_trend": "Quality Trend"
+}

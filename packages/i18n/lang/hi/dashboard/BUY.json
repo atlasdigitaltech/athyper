@@ -1,0 +1,16 @@
+{
+  "dashboard.BUY.overview.title": "क्रय अवलोकन",
+  "dashboard.BUY.overview.description": "क्रय आदेश और व्यय विश्लेषण",
+  "dashboard.BUY.overview.kpi.open_orders": "खुले आदेश",
+  "dashboard.BUY.overview.kpi.pending_approvals": "लंबित अनुमोदन",
+  "dashboard.BUY.overview.kpi.total_spend": "कुल व्यय",
+  "dashboard.BUY.overview.kpi.savings": "बचत",
+  "dashboard.BUY.overview.list.recent_orders": "हालिया आदेश",
+  "dashboard.BUY.overview.chart.spend_by_category": "श्रेणी के अनुसार व्यय",
+  "dashboard.BUY.partner.title": "आपूर्तिकर्ता क्रय पोर्टल",
+  "dashboard.BUY.partner.description": "क्रय आदेश और चालान",
+  "dashboard.BUY.partner.kpi.open_pos": "खुले क्रय आदेश",
+  "dashboard.BUY.partner.kpi.pending_invoices": "लंबित चालान",
+  "dashboard.BUY.partner.list.my_orders": "मेरे आदेश",
+  "dashboard.BUY.partner.chart.order_history": "आदेश इतिहास"
+}

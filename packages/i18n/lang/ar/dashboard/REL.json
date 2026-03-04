@@ -1,0 +1,10 @@
+{
+  "dashboard.REL.overview.title": "نظرة عامة على إدارة الإصدارات",
+  "dashboard.REL.overview.description": "تخطيط الإصدارات وحالة النشر",
+  "dashboard.REL.overview.kpi.planned_releases": "الإصدارات المخططة",
+  "dashboard.REL.overview.kpi.in_progress": "قيد التنفيذ",
+  "dashboard.REL.overview.kpi.deployed": "تم النشر",
+  "dashboard.REL.overview.kpi.rollback_count": "عدد التراجعات",
+  "dashboard.REL.overview.list.release_calendar": "تقويم الإصدارات",
+  "dashboard.REL.overview.chart.release_velocity": "سرعة الإصدار"
+}

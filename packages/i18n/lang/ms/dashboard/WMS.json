@@ -1,0 +1,10 @@
+{
+  "dashboard.WMS.overview.title": "Pengurusan Gudang",
+  "dashboard.WMS.overview.description": "Operasi gudang, penerimaan, dan pengeluaran",
+  "dashboard.WMS.overview.kpi.pending_receipts": "Penerimaan Tertangguh",
+  "dashboard.WMS.overview.kpi.pending_picks": "Kutipan Tertangguh",
+  "dashboard.WMS.overview.kpi.utilization": "Penggunaan Gudang",
+  "dashboard.WMS.overview.kpi.orders_shipped": "Pesanan Dihantar",
+  "dashboard.WMS.overview.list.recent_activities": "Aktiviti Gudang Terkini",
+  "dashboard.WMS.overview.chart.throughput": "Daya Pemprosesan"
+}

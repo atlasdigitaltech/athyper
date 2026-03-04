@@ -1,0 +1,10 @@
+{
+  "dashboard.SVC.overview.title": "சேவை மேலாண்மை மேலோட்டம்",
+  "dashboard.SVC.overview.description": "சேவை கோரிக்கைகள் மற்றும் SLA கண்காணிப்பு",
+  "dashboard.SVC.overview.kpi.open_tickets": "திறந்த டிக்கெட்டுகள்",
+  "dashboard.SVC.overview.kpi.avg_resolution_time": "சராசரி தீர்வு நேரம்",
+  "dashboard.SVC.overview.kpi.sla_compliance": "SLA இணக்கம்",
+  "dashboard.SVC.overview.kpi.customer_satisfaction": "வாடிக்கையாளர் திருப்தி",
+  "dashboard.SVC.overview.list.recent_tickets": "சமீபத்திய டிக்கெட்டுகள்",
+  "dashboard.SVC.overview.chart.ticket_trend": "டிக்கெட் போக்கு"
+}

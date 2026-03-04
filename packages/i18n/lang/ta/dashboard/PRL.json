@@ -1,0 +1,10 @@
+{
+  "dashboard.PRL.overview.title": "ஊதியப்பட்டி மேலோட்டம்",
+  "dashboard.PRL.overview.description": "ஊதியப்பட்டி செயலாக்கம் மற்றும் செலவு பகுப்பாய்வு",
+  "dashboard.PRL.overview.kpi.total_payroll": "மொத்த ஊதியப்பட்டி",
+  "dashboard.PRL.overview.kpi.employees_processed": "செயலாக்கப்பட்ட பணியாளர்கள்",
+  "dashboard.PRL.overview.kpi.pending_approvals": "நிலுவையிலுள்ள ஒப்புதல்கள்",
+  "dashboard.PRL.overview.kpi.tax_liability": "வரி பொறுப்பு",
+  "dashboard.PRL.overview.list.recent_runs": "சமீபத்திய செயலாக்கங்கள்",
+  "dashboard.PRL.overview.chart.payroll_trend": "ஊதியப்பட்டி போக்கு"
+}

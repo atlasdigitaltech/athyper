@@ -1,0 +1,10 @@
+{
+  "dashboard.SRM.overview.title": "आपूर्तिकर्ता संबंध अवलोकन",
+  "dashboard.SRM.overview.description": "आपूर्तिकर्ता प्रदर्शन और मूल्यांकन",
+  "dashboard.SRM.overview.kpi.active_suppliers": "सक्रिय आपूर्तिकर्ता",
+  "dashboard.SRM.overview.kpi.avg_lead_time": "औसत लीड समय",
+  "dashboard.SRM.overview.kpi.quality_score": "गुणवत्ता स्कोर",
+  "dashboard.SRM.overview.kpi.pending_evaluations": "लंबित मूल्यांकन",
+  "dashboard.SRM.overview.list.top_suppliers": "शीर्ष आपूर्तिकर्ता",
+  "dashboard.SRM.overview.chart.performance_trend": "प्रदर्शन प्रवृत्ति"
+}

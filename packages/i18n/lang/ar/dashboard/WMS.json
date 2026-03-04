@@ -1,0 +1,10 @@
+{
+  "dashboard.WMS.overview.title": "نظرة عامة على إدارة المستودعات",
+  "dashboard.WMS.overview.description": "عمليات المستودع واستخدام السعة",
+  "dashboard.WMS.overview.kpi.capacity_utilization": "استخدام السعة",
+  "dashboard.WMS.overview.kpi.pending_receipts": "الإيصالات المعلقة",
+  "dashboard.WMS.overview.kpi.pending_shipments": "الشحنات المعلقة",
+  "dashboard.WMS.overview.kpi.pick_accuracy": "دقة الالتقاط",
+  "dashboard.WMS.overview.list.pending_tasks": "المهام المعلقة",
+  "dashboard.WMS.overview.chart.throughput": "الإنتاجية"
+}

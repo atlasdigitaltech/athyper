@@ -1,0 +1,10 @@
+{
+  "dashboard.INV.overview.title": "Kawalan Stok",
+  "dashboard.INV.overview.description": "Tahap inventori, penilaian, dan pergerakan",
+  "dashboard.INV.overview.kpi.total_skus": "Jumlah SKU",
+  "dashboard.INV.overview.kpi.stock_value": "Nilai Stok",
+  "dashboard.INV.overview.kpi.below_reorder": "Bawah Paras Pesanan Semula",
+  "dashboard.INV.overview.kpi.slow_moving": "Item Pergerakan Perlahan",
+  "dashboard.INV.overview.list.recent_movements": "Pergerakan Stok Terkini",
+  "dashboard.INV.overview.chart.stock_by_category": "Stok Mengikut Kategori"
+}

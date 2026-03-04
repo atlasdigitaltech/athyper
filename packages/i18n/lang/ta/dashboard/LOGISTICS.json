@@ -1,0 +1,16 @@
+{
+  "dashboard.LOGISTICS.overview.title": "தளவாட மேலோட்டம்",
+  "dashboard.LOGISTICS.overview.description": "ஏற்றுமதி கண்காணிப்பு மற்றும் விநியோக செயல்திறன்",
+  "dashboard.LOGISTICS.overview.kpi.in_transit": "போக்குவரத்தில் உள்ளவை",
+  "dashboard.LOGISTICS.overview.kpi.on_time_delivery": "சரியான நேர விநியோகம்",
+  "dashboard.LOGISTICS.overview.kpi.freight_cost": "சரக்கு போக்குவரத்து செலவு",
+  "dashboard.LOGISTICS.overview.kpi.pending_shipments": "நிலுவையிலுள்ள ஏற்றுமதிகள்",
+  "dashboard.LOGISTICS.overview.list.active_shipments": "செயலில் உள்ள ஏற்றுமதிகள்",
+  "dashboard.LOGISTICS.overview.chart.delivery_performance": "விநியோக செயல்திறன்",
+  "dashboard.LOGISTICS.partner.title": "போக்குவரத்து பங்குதாரர் போர்ட்டல்",
+  "dashboard.LOGISTICS.partner.description": "ஏற்றுமதி பணிகள் மற்றும் அட்டவணை",
+  "dashboard.LOGISTICS.partner.kpi.assigned_shipments": "ஒதுக்கப்பட்ட ஏற்றுமதிகள்",
+  "dashboard.LOGISTICS.partner.kpi.completed_deliveries": "நிறைவடைந்த விநியோகங்கள்",
+  "dashboard.LOGISTICS.partner.list.my_shipments": "எனது ஏற்றுமதிகள்",
+  "dashboard.LOGISTICS.partner.chart.delivery_schedule": "விநியோக அட்டவணை"
+}

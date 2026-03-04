@@ -1,0 +1,10 @@
+{
+  "dashboard.QMS.overview.title": "தர மேலாண்மை மேலோட்டம்",
+  "dashboard.QMS.overview.description": "தர அளவீடுகள் மற்றும் ஆய்வு நிலை",
+  "dashboard.QMS.overview.kpi.open_ncrs": "திறந்த இணக்கமின்மை அறிக்கைகள்",
+  "dashboard.QMS.overview.kpi.inspections_due": "நிலுவையிலுள்ள ஆய்வுகள்",
+  "dashboard.QMS.overview.kpi.defect_rate": "குறைபாட்டு விகிதம்",
+  "dashboard.QMS.overview.kpi.audit_score": "தணிக்கை மதிப்பெண்",
+  "dashboard.QMS.overview.list.recent_inspections": "சமீபத்திய ஆய்வுகள்",
+  "dashboard.QMS.overview.chart.quality_trend": "தர போக்கு"
+}

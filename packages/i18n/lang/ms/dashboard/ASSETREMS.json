@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETREMS.overview.title": "Sistem Pengurusan Hartanah",
+  "dashboard.ASSETREMS.overview.description": "Pengurusan hartanah, sewa, dan penyewa",
+  "dashboard.ASSETREMS.overview.kpi.total_properties": "Jumlah Hartanah",
+  "dashboard.ASSETREMS.overview.kpi.occupancy_rate": "Kadar Penghunian",
+  "dashboard.ASSETREMS.overview.kpi.rental_income": "Pendapatan Sewa",
+  "dashboard.ASSETREMS.overview.kpi.lease_expiring": "Sewa Akan Tamat",
+  "dashboard.ASSETREMS.overview.list.recent_leases": "Sewa Terkini",
+  "dashboard.ASSETREMS.overview.chart.occupancy_trend": "Trend Penghunian"
+}

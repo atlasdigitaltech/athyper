@@ -1,0 +1,22 @@
+{
+  "name": "@neon/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./tailwind.preset": {
+      "types": "./tailwind.preset.ts",
+      "default": "./tailwind.preset.ts"
+    }
+  },
+  "dependencies": {
+    "@athyper/theme": "workspace:*"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

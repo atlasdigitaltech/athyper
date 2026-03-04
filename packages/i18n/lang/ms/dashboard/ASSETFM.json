@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETFM.overview.title": "Pengurusan Fasiliti",
+  "dashboard.ASSETFM.overview.description": "Penyelenggaraan bangunan, perkhidmatan, dan ruang",
+  "dashboard.ASSETFM.overview.kpi.open_requests": "Permintaan Terbuka",
+  "dashboard.ASSETFM.overview.kpi.space_utilization": "Penggunaan Ruang",
+  "dashboard.ASSETFM.overview.kpi.maintenance_cost": "Kos Penyelenggaraan",
+  "dashboard.ASSETFM.overview.kpi.energy_consumption": "Penggunaan Tenaga",
+  "dashboard.ASSETFM.overview.list.recent_requests": "Permintaan Terkini",
+  "dashboard.ASSETFM.overview.chart.cost_by_building": "Kos Mengikut Bangunan"
+}

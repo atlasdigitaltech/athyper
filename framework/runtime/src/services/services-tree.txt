@@ -1,0 +1,1050 @@
+﻿Folder PATH listing for volume Data
+Volume serial number is E40D-BA00
+D:\DEVELOPMENT\ATHYPER-PRIVATE - COPY\FRAMEWORK\RUNTIME\SERVICES
+�   index.ts
+�   registry.ts
+�   services-tree.txt
+�   
++---business
+�   +---assets
+�   �   +---asset-management
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---facilities
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---real-estate
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---customer
+�   �   +---crm
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---selling
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---finance
+�   �   +---accounting
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---budget-funds
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---payment-gateways
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---payments
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---treasury
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---itsm
+�   �   +---service-management
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---operations
+�   �   +---maintenance
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---manufacturing
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---people
+�   �   +---human-resources
+�   �   �   �   index.ts
+�   �   �   �   module.json
+�   �   �   �   
+�   �   �   +---adapters
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---api
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---domain
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---jobs
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---observability
+�   �   �   �       .gitkeep
+�   �   �   �       
+�   �   �   +---persistence
+�   �   �           .gitkeep
+�   �   �           
+�   �   +---payroll
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---projects
+�   �   +---project-costing
+�   �       �   index.ts
+�   �       �   module.json
+�   �       �   
+�   �       +---adapters
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---api
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---domain
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---jobs
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---observability
+�   �       �       .gitkeep
+�   �       �       
+�   �       +---persistence
+�   �               .gitkeep
+�   �               
+�   +---supply
+�       +---buying
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---contracts
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---demand-planning
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---inventory
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---logistics
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---quality
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---sourcing
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---subcontracting
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---supplier-management
+�       �   �   index.ts
+�       �   �   module.json
+�       �   �   
+�       �   +---adapters
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---api
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---domain
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---jobs
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---observability
+�       �   �       .gitkeep
+�       �   �       
+�       �   +---persistence
+�       �           .gitkeep
+�       �           
+�       +---warehouse
+�           �   index.ts
+�           �   module.json
+�           �   
+�           +---adapters
+�           �       .gitkeep
+�           �       
+�           +---api
+�           �       .gitkeep
+�           �       
+�           +---domain
+�           �       .gitkeep
+�           �       
+�           +---jobs
+�           �       .gitkeep
+�           �       
+�           +---observability
+�           �       .gitkeep
+�           �       
+�           +---persistence
+�                   .gitkeep
+�                   
++---enterprise-services
+�   +---applied-intelligence
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---collaboration
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---content
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---in-app-messaging
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---insights-analytics
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---regulatory
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---sharing-delegation
+�       �   index.ts
+�       �   module.json
+�       �   
+�       +---adapters
+�       �       .gitkeep
+�       �       
+�       +---api
+�       �       .gitkeep
+�       �       
+�       +---domain
+�       �       .gitkeep
+�       �       
+�       +---jobs
+�       �       .gitkeep
+�       �       
+�       +---observability
+�       �       .gitkeep
+�       �       
+�       +---persistence
+�               .gitkeep
+�               
++---platform
+�   +---audit-governance
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---automation-jobs
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---foundation
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---identity-access
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---metadata-studio
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---policy-rules
+�   �   �   index.ts
+�   �   �   module.json
+�   �   �   
+�   �   +---adapters
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---api
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---domain
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---jobs
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---observability
+�   �   �       .gitkeep
+�   �   �       
+�   �   +---persistence
+�   �           .gitkeep
+�   �           
+�   +---workflow-engine
+�       �   index.ts
+�       �   module.json
+�       �   
+�       +---adapters
+�       �       .gitkeep
+�       �       
+�       +---api
+�       �       .gitkeep
+�       �       
+�       +---domain
+�       �       .gitkeep
+�       �       
+�       +---jobs
+�       �       .gitkeep
+�       �       
+�       +---observability
+�       �       .gitkeep
+�       �       
+�       +---persistence
+�               .gitkeep
+�               
++---platform-services
+    +---document
+    �   �   index.ts
+    �   �   module.json
+    �   �   
+    �   +---adapters
+    �   �       .gitkeep
+    �   �       
+    �   +---api
+    �   �       .gitkeep
+    �   �       
+    �   +---domain
+    �   �       .gitkeep
+    �   �       
+    �   +---jobs
+    �   �       .gitkeep
+    �   �       
+    �   +---observability
+    �   �       .gitkeep
+    �   �       
+    �   +---persistence
+    �           .gitkeep
+    �           
+    +---enterprise-connectors
+    �   �   index.ts
+    �   �   module.json
+    �   �   
+    �   +---adapters
+    �   �       .gitkeep
+    �   �       
+    �   +---api
+    �   �       .gitkeep
+    �   �       
+    �   +---domain
+    �   �       .gitkeep
+    �   �       
+    �   +---jobs
+    �   �       .gitkeep
+    �   �       
+    �   +---observability
+    �   �       .gitkeep
+    �   �       
+    �   +---persistence
+    �           .gitkeep
+    �           
+    +---integration-hub
+    �   �   index.ts
+    �   �   module.json
+    �   �   
+    �   +---adapters
+    �   �       .gitkeep
+    �   �       
+    �   +---api
+    �   �   �   .gitkeep
+    �   �   �   
+    �   �   +---controllers
+    �   �           execution.controller.ts
+    �   �           registry.controller.ts
+    �   �           webhook.controller.ts
+    �   �           
+    �   +---connectors
+    �   �   +---http
+    �   �       �   HttpConnectorClient.ts
+    �   �       �   
+    �   �       +---auth
+    �   �               apiKey.ts
+    �   �               basic.ts
+    �   �               hmac.ts
+    �   �               oauth2.ts
+    �   �               
+    �   +---domain
+    �   �   �   .gitkeep
+    �   �   �   
+    �   �   +---models
+    �   �   �       DeliveryPolicy.ts
+    �   �   �       IntegrationEndpoint.ts
+    �   �   �       IntegrationFlow.ts
+    �   �   �       WebhookSubscription.ts
+    �   �   �       
+    �   �   +---services
+    �   �           DeliveryScheduler.ts
+    �   �           MappingEngine.ts
+    �   �           OrchestrationRuntime.ts
+    �   �           
+    �   +---jobs
+    �   �   �   .gitkeep
+    �   �   �   
+    �   �   +---queue
+    �   �   �       Queue.ts
+    �   �   �       Worker.ts
+    �   �   �       
+    �   �   +---schedulers
+    �   �   +---workers
+    �   �           deliverOutboxItem.job.ts
+    �   �           processWebhookInbox.job.ts
+    �   �           
+    �   +---observability
+    �   �       .gitkeep
+    �   �       logger.ts
+    �   �       metrics.ts
+    �   �       tracing.ts
+    �   �       
+    �   +---persistence
+    �           .gitkeep
+    �           DeliveryLogRepo.ts
+    �           JobLogRepo.ts
+    �           OutboxRepo.ts
+    �           
+    +---notification
+    �   �   index.ts
+    �   �   module.json
+    �   �   
+    �   +---adapters
+    �   �       .gitkeep
+    �   �       
+    �   +---api
+    �   �       .gitkeep
+    �   �       
+    �   +---domain
+    �   �       .gitkeep
+    �   �       
+    �   +---jobs
+    �   �       .gitkeep
+    �   �       
+    �   +---observability
+    �   �       .gitkeep
+    �   �       
+    �   +---persistence
+    �           .gitkeep
+    �           
+    +---voice-channels
+        �   index.ts
+        �   module.json
+        �   
+        +---adapters
+        �       .gitkeep
+        �       
+        +---api
+        �       .gitkeep
+        �       
+        +---domain
+        �       .gitkeep
+        �       
+        +---jobs
+        �       .gitkeep
+        �       
+        +---observability
+        �       .gitkeep
+        �       
+        +---persistence
+                .gitkeep
+                

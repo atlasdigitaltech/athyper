@@ -1,0 +1,10 @@
+{
+  "dashboard.SUBCON.overview.title": "उप-अनुबंध अवलोकन",
+  "dashboard.SUBCON.overview.description": "उप-ठेकेदार प्रदर्शन और कार्य",
+  "dashboard.SUBCON.overview.kpi.active_subcontracts": "सक्रिय उप-अनुबंध",
+  "dashboard.SUBCON.overview.kpi.pending_deliveries": "लंबित डिलीवरी",
+  "dashboard.SUBCON.overview.kpi.total_value": "कुल मूल्य",
+  "dashboard.SUBCON.overview.kpi.completion_rate": "पूर्णता दर",
+  "dashboard.SUBCON.overview.list.active_work_orders": "सक्रिय कार्य आदेश",
+  "dashboard.SUBCON.overview.chart.progress_tracking": "प्रगति ट्रैकिंग"
+}

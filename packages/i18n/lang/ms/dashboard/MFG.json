@@ -1,0 +1,10 @@
+{
+  "dashboard.MFG.overview.title": "Papan Pemuka Pembuatan",
+  "dashboard.MFG.overview.description": "Pesanan pengeluaran, kecekapan, dan hasil",
+  "dashboard.MFG.overview.kpi.active_orders": "Pesanan Pengeluaran Aktif",
+  "dashboard.MFG.overview.kpi.oee": "Keberkesanan Keseluruhan Peralatan",
+  "dashboard.MFG.overview.kpi.yield_rate": "Kadar Hasil",
+  "dashboard.MFG.overview.kpi.scrap_rate": "Kadar Sisa",
+  "dashboard.MFG.overview.list.recent_production": "Pesanan Pengeluaran Terkini",
+  "dashboard.MFG.overview.chart.output_trend": "Trend Keluaran"
+}

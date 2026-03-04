@@ -1,0 +1,10 @@
+{
+  "dashboard.REF.overview.title": "संदर्भ डेटा अवलोकन",
+  "dashboard.REF.overview.description": "संदर्भ डेटा प्रबंधन और गुणवत्ता",
+  "dashboard.REF.overview.kpi.total_records": "कुल रिकॉर्ड",
+  "dashboard.REF.overview.kpi.data_quality_score": "डेटा गुणवत्ता स्कोर",
+  "dashboard.REF.overview.kpi.pending_reviews": "लंबित समीक्षाएँ",
+  "dashboard.REF.overview.kpi.duplicates": "डुप्लिकेट",
+  "dashboard.REF.overview.list.recent_changes": "हालिया परिवर्तन",
+  "dashboard.REF.overview.chart.data_quality_trend": "डेटा गुणवत्ता प्रवृत्ति"
+}

@@ -1,0 +1,9 @@
+﻿{
+    "code":  "QMS",
+    "name":  "Quality Management",
+    "dependsOn":  [
+                      "INVENTORY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

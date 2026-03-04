@@ -1,0 +1,10 @@
+{
+  "dashboard.SVC.overview.title": "نظرة عامة على إدارة الخدمات",
+  "dashboard.SVC.overview.description": "طلبات الخدمة وتتبع اتفاقية مستوى الخدمة",
+  "dashboard.SVC.overview.kpi.open_tickets": "التذاكر المفتوحة",
+  "dashboard.SVC.overview.kpi.avg_resolution_time": "متوسط وقت الحل",
+  "dashboard.SVC.overview.kpi.sla_compliance": "الامتثال لاتفاقية مستوى الخدمة",
+  "dashboard.SVC.overview.kpi.customer_satisfaction": "رضا العملاء",
+  "dashboard.SVC.overview.list.recent_tickets": "التذاكر الأخيرة",
+  "dashboard.SVC.overview.chart.ticket_trend": "اتجاه التذاكر"
+}

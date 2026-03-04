@@ -1,0 +1,10 @@
+{
+  "dashboard.INV.overview.title": "Stock Control",
+  "dashboard.INV.overview.description": "Inventory levels, valuation, and movements",
+  "dashboard.INV.overview.kpi.total_skus": "Total SKUs",
+  "dashboard.INV.overview.kpi.stock_value": "Stock Value",
+  "dashboard.INV.overview.kpi.below_reorder": "Below Reorder Level",
+  "dashboard.INV.overview.kpi.slow_moving": "Slow Moving Items",
+  "dashboard.INV.overview.list.recent_movements": "Recent Stock Movements",
+  "dashboard.INV.overview.chart.stock_by_category": "Stock by Category"
+}

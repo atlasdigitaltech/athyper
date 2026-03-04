@@ -1,0 +1,12 @@
+/* Dynamic score visualization — property values driven by CSS custom properties */
+
+.circularScoreRing {
+    background: conic-gradient(
+        var(--score-fill) calc(var(--score-pct) * 3.6deg),
+        hsl(var(--muted)) calc(var(--score-pct) * 3.6deg) 360deg
+    );
+}
+
+.scoreBarFill {
+    width: calc(var(--score-pct) * 1%);
+}

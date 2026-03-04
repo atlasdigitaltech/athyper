@@ -1,0 +1,10 @@
+{
+  "dashboard.ACC.overview.title": "நிதி மேலோட்டம்",
+  "dashboard.ACC.overview.description": "முக்கிய நிதி அளவீடுகள் மற்றும் சமீபத்திய நடவடிக்கை",
+  "dashboard.ACC.overview.kpi.total_revenue": "மொத்த வருவாய்",
+  "dashboard.ACC.overview.kpi.accounts_receivable": "பெறத்தக்க கணக்குகள்",
+  "dashboard.ACC.overview.kpi.accounts_payable": "செலுத்தத்தக்க கணக்குகள்",
+  "dashboard.ACC.overview.kpi.net_income": "நிகர வருமானம்",
+  "dashboard.ACC.overview.list.recent_journals": "சமீபத்திய குறிப்பேடு பதிவுகள்",
+  "dashboard.ACC.overview.chart.revenue_trend": "வருவாய் போக்கு"
+}

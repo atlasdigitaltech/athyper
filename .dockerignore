@@ -1,0 +1,12 @@
+# =======================================================================
+# Docker build context exclusions
+# Keeps the athyper-api dev image build fast and small.
+# =======================================================================
+
+.git
+.next
+**/.next
+**/node_modules
+**/dist
+**/.turbo
+mesh/data

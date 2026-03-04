@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Turbo
+**/.turbo
+
+# Builds
+**/dist/**
+**/build/**
+**/out/**
+**/coverage/**
+
+# Next.js
+.next
+
+# Docker / Mesh
+mesh/data
+mesh/volumes
+mesh/tmp
+
+# Logs
+*.log
+
+# Generated
+**/generated/**
+**/*.gen.ts
+
+# Prisma
+**/prisma/migrations
+**/prisma/generated
+**/.prisma/**
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+
+# Lock files
+pnpm-lock.yaml
+
+# TypeScript build info
+**/*.tsbuildinfo

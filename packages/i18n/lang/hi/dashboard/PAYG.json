@@ -1,0 +1,10 @@
+{
+  "dashboard.PAYG.overview.title": "भुगतान गेटवे अवलोकन",
+  "dashboard.PAYG.overview.description": "भुगतान गेटवे लेनदेन और स्थिति",
+  "dashboard.PAYG.overview.kpi.transactions_today": "आज के लेनदेन",
+  "dashboard.PAYG.overview.kpi.success_rate": "सफलता दर",
+  "dashboard.PAYG.overview.kpi.total_processed": "कुल संसाधित",
+  "dashboard.PAYG.overview.kpi.chargebacks": "चार्जबैक",
+  "dashboard.PAYG.overview.list.recent_transactions": "हालिया लेनदेन",
+  "dashboard.PAYG.overview.chart.transaction_volume": "लेनदेन मात्रा"
+}

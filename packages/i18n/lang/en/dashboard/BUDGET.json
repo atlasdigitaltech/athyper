@@ -1,0 +1,10 @@
+{
+  "dashboard.BUDGET.overview.title": "Budget Control",
+  "dashboard.BUDGET.overview.description": "Budget planning, allocation, and consumption tracking",
+  "dashboard.BUDGET.overview.kpi.total_budget": "Total Budget",
+  "dashboard.BUDGET.overview.kpi.committed": "Committed Amount",
+  "dashboard.BUDGET.overview.kpi.available": "Available Balance",
+  "dashboard.BUDGET.overview.kpi.utilization": "Utilization Rate",
+  "dashboard.BUDGET.overview.list.budget_exceptions": "Budget Exceptions",
+  "dashboard.BUDGET.overview.chart.budget_vs_actual": "Budget vs Actual"
+}

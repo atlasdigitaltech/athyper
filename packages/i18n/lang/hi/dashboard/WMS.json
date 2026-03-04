@@ -1,0 +1,10 @@
+{
+  "dashboard.WMS.overview.title": "गोदाम प्रबंधन अवलोकन",
+  "dashboard.WMS.overview.description": "गोदाम संचालन और क्षमता उपयोग",
+  "dashboard.WMS.overview.kpi.capacity_utilization": "क्षमता उपयोग",
+  "dashboard.WMS.overview.kpi.pending_receipts": "लंबित रसीदें",
+  "dashboard.WMS.overview.kpi.pending_shipments": "लंबित शिपमेंट",
+  "dashboard.WMS.overview.kpi.pick_accuracy": "पिकिंग सटीकता",
+  "dashboard.WMS.overview.list.pending_tasks": "लंबित कार्य",
+  "dashboard.WMS.overview.chart.throughput": "थ्रूपुट"
+}

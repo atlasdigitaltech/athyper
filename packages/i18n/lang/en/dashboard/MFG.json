@@ -1,0 +1,10 @@
+{
+  "dashboard.MFG.overview.title": "Production Dashboard",
+  "dashboard.MFG.overview.description": "Manufacturing orders and production metrics",
+  "dashboard.MFG.overview.kpi.active_work_orders": "Active Work Orders",
+  "dashboard.MFG.overview.kpi.completion_rate": "Completion Rate",
+  "dashboard.MFG.overview.kpi.yield_rate": "Yield Rate",
+  "dashboard.MFG.overview.kpi.mrp_exceptions": "MRP Exceptions",
+  "dashboard.MFG.overview.list.recent_work_orders": "Recent Work Orders",
+  "dashboard.MFG.overview.chart.production_output": "Production Output"
+}

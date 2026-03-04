@@ -1,0 +1,10 @@
+{
+  "dashboard.PRL.overview.title": "Papan Pemuka Gaji",
+  "dashboard.PRL.overview.description": "Pemprosesan gaji, potongan, dan pematuhan",
+  "dashboard.PRL.overview.kpi.total_payroll": "Jumlah Gaji",
+  "dashboard.PRL.overview.kpi.pending_runs": "Proses Gaji Tertangguh",
+  "dashboard.PRL.overview.kpi.statutory_due": "Bayaran Berkanun Perlu Dibuat",
+  "dashboard.PRL.overview.kpi.exceptions": "Pengecualian",
+  "dashboard.PRL.overview.list.recent_runs": "Proses Gaji Terkini",
+  "dashboard.PRL.overview.chart.payroll_trend": "Trend Gaji"
+}

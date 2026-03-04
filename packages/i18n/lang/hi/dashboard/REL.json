@@ -1,0 +1,10 @@
+{
+  "dashboard.REL.overview.title": "रिलीज़ प्रबंधन अवलोकन",
+  "dashboard.REL.overview.description": "रिलीज़ योजना और तैनाती स्थिति",
+  "dashboard.REL.overview.kpi.planned_releases": "नियोजित रिलीज़",
+  "dashboard.REL.overview.kpi.in_progress": "प्रगति में",
+  "dashboard.REL.overview.kpi.deployed": "तैनात",
+  "dashboard.REL.overview.kpi.rollback_count": "रोलबैक संख्या",
+  "dashboard.REL.overview.list.release_calendar": "रिलीज़ कैलेंडर",
+  "dashboard.REL.overview.chart.release_velocity": "रिलीज़ गति"
+}

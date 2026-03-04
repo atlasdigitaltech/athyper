@@ -1,0 +1,151 @@
+# =========================
+# Logs
+# =========================
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# =========================
+# Diagnostic reports
+# =========================
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# =========================
+# Runtime data
+# =========================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# Coverage / Test
+# =========================
+**/coverage/
+*.lcov
+.nyc_output/
+
+# =========================
+# Build / Output
+# =========================
+**/dist/
+**/build/
+**/out/
+**/.next/
+**/storybook-static/
+
+# =========================
+# Turbo
+# =========================
+**/.turbo/
+
+# =========================
+# Dependency directories
+# =========================
+**/node_modules/
+
+# pnpm store (sometimes appears in CI/WSL)
+.pnpm-store/
+
+# =========================
+# TypeScript / Tooling
+# =========================
+*.tsbuildinfo
+.npm/
+.eslintcache
+.stylelintcache
+**/.cache/
+**/.parcel-cache/
+**/.vite/
+
+# Next.js
+.next-env.d.ts
+
+# =========================
+# Archives
+# =========================
+*.tgz
+
+# =========================
+# claude
+# =========================
+.claude
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Vite / VitePress
+# =========================
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+**/.vitepress/dist/
+**/.vitepress/cache/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+*.iml
+
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.vscode-test/
+
+# =========================
+# Athyper / Mesh (IMPORTANT)
+# =========================
+
+# Docker volume data / runtime data
+mesh/data/
+mesh/**/data/
+mesh/logs/
+mesh/tmp/
+
+# Generated TLS / secrets (if any)
+mesh/config/**/certs/*.key
+mesh/config/**/certs/*.crt
+mesh/config/**/certs/*.pem
+mesh/config/**/certs/*.pfx
+mesh/config/**/certs/*.p12
+mesh/config/**/certs/ca.*
+
+# Tool outputs
+tools/**/tmp/
+tools/**/output/
+tools/SAMPLE TEMPLATES
+
+# =========================
+# Prisma / DB artifacts
+# =========================
+**/prisma/dev.db
+**/prisma/.env
+**/prisma/migrations/**/migration_lock.toml
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
+
+# =========================
+# Misc
+# =========================
+nul
+
+# Generated (output dirs only — do NOT ignore source packages)
+**/generated/
+!framework/adapters/db/src/generated/
+**/codegen/
+!tools/codegen/
+**/.prisma/

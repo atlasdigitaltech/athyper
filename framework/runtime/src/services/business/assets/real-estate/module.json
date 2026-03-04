@@ -1,0 +1,11 @@
+﻿{
+    "code":  "ASSETREMS",
+    "name":  "Real Estate Asset Management",
+    "dependsOn":  [
+                      "ASSET",
+                      "ACC",
+                      "CONTRACT"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

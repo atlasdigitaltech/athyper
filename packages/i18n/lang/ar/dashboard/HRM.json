@@ -1,0 +1,10 @@
+{
+  "dashboard.HRM.overview.title": "نظرة عامة على الموارد البشرية",
+  "dashboard.HRM.overview.description": "مقاييس الموظفين وأنشطة الموارد البشرية",
+  "dashboard.HRM.overview.kpi.total_employees": "إجمالي الموظفين",
+  "dashboard.HRM.overview.kpi.open_positions": "الوظائف الشاغرة",
+  "dashboard.HRM.overview.kpi.attrition_rate": "معدل التناقص",
+  "dashboard.HRM.overview.kpi.avg_tenure": "متوسط مدة الخدمة",
+  "dashboard.HRM.overview.list.recent_hires": "التعيينات الأخيرة",
+  "dashboard.HRM.overview.chart.headcount_trend": "اتجاه عدد الموظفين"
+}

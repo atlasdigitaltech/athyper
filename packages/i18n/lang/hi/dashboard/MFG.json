@@ -1,0 +1,10 @@
+{
+  "dashboard.MFG.overview.title": "विनिर्माण अवलोकन",
+  "dashboard.MFG.overview.description": "उत्पादन स्थिति और क्षमता उपयोग",
+  "dashboard.MFG.overview.kpi.production_orders": "उत्पादन आदेश",
+  "dashboard.MFG.overview.kpi.oee": "समग्र उपकरण प्रभावशीलता",
+  "dashboard.MFG.overview.kpi.yield_rate": "उपज दर",
+  "dashboard.MFG.overview.kpi.scrap_rate": "अपशिष्ट दर",
+  "dashboard.MFG.overview.list.active_production": "सक्रिय उत्पादन",
+  "dashboard.MFG.overview.chart.output_trend": "उत्पादन प्रवृत्ति"
+}

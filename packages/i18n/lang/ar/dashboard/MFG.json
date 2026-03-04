@@ -1,0 +1,10 @@
+{
+  "dashboard.MFG.overview.title": "نظرة عامة على التصنيع",
+  "dashboard.MFG.overview.description": "حالة الإنتاج واستخدام السعة",
+  "dashboard.MFG.overview.kpi.production_orders": "أوامر الإنتاج",
+  "dashboard.MFG.overview.kpi.oee": "الفعالية الإجمالية للمعدات",
+  "dashboard.MFG.overview.kpi.yield_rate": "معدل العائد",
+  "dashboard.MFG.overview.kpi.scrap_rate": "معدل الهدر",
+  "dashboard.MFG.overview.list.active_production": "الإنتاج النشط",
+  "dashboard.MFG.overview.chart.output_trend": "اتجاه الإنتاج"
+}

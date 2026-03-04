@@ -1,0 +1,10 @@
+{
+  "dashboard.BUDGET.overview.title": "Kawalan Belanjawan",
+  "dashboard.BUDGET.overview.description": "Perancangan, peruntukan, dan penjejakan penggunaan belanjawan",
+  "dashboard.BUDGET.overview.kpi.total_budget": "Jumlah Belanjawan",
+  "dashboard.BUDGET.overview.kpi.committed": "Jumlah Komited",
+  "dashboard.BUDGET.overview.kpi.available": "Baki Tersedia",
+  "dashboard.BUDGET.overview.kpi.utilization": "Kadar Penggunaan",
+  "dashboard.BUDGET.overview.list.budget_exceptions": "Pengecualian Belanjawan",
+  "dashboard.BUDGET.overview.chart.budget_vs_actual": "Belanjawan vs Sebenar"
+}

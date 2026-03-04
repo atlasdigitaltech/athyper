@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Lint & Validate ─────────────────────────────────────────────
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          required_files=(
+            "README.md"
+            "CHANGELOG.md"
+            "LICENSE"
+            ".gitignore"
+          )
+          missing=()
+          for f in "${required_files[@]}"; do
+            if [ ! -f "$f" ]; then
+              missing+=("$f")
+            fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Missing required files: ${missing[*]}"
+            exit 1
+          fi
+          echo "All required files present."
+
+      - name: Validate CHANGELOG has Unreleased section
+        run: |
+          if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
+            echo "CHANGELOG.md must have an [Unreleased] section"
+            exit 1
+          fi
+          echo "CHANGELOG.md is valid."
+
+  # ─── Build ───────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: validate
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # node-version: [18, 20, 22]   # Uncomment when runtime is defined
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Uncomment and configure for your runtime:
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: ${{ matrix.node-version }}
+      #     cache: 'npm'
+
+      # - name: Install dependencies
+      #   run: npm ci
+
+      # - name: Build
+      #   run: npm run build
+
+      - name: Build placeholder
+        run: echo "Build step — configure for your runtime"
+
+  # ─── Test ────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Uncomment and configure for your runtime:
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 20
+      #     cache: 'npm'
+
+      # - name: Install dependencies
+      #   run: npm ci
+
+      # - name: Run tests
+      #   run: npm test
+
+      # - name: Upload coverage
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Test placeholder
+        run: echo "Test step — configure for your runtime"
+
+  # ─── Security Scan ───────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript  # Change to match your stack
+        continue-on-error: true
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: true
+
+  # ─── Status Gate ─────────────────────────────────────────────────
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [validate, build, test]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.validate.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" || \
+                "${{ needs.test.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI checks passed."

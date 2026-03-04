@@ -1,0 +1,10 @@
+{
+  "dashboard.PRL.overview.title": "वेतन पत्रक अवलोकन",
+  "dashboard.PRL.overview.description": "वेतन पत्रक प्रसंस्करण और लागत विश्लेषण",
+  "dashboard.PRL.overview.kpi.total_payroll": "कुल वेतन पत्रक",
+  "dashboard.PRL.overview.kpi.employees_processed": "संसाधित कर्मचारी",
+  "dashboard.PRL.overview.kpi.pending_approvals": "लंबित अनुमोदन",
+  "dashboard.PRL.overview.kpi.tax_liability": "कर देयता",
+  "dashboard.PRL.overview.list.recent_runs": "हालिया प्रसंस्करण",
+  "dashboard.PRL.overview.chart.payroll_trend": "वेतन पत्रक प्रवृत्ति"
+}

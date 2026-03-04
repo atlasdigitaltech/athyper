@@ -1,0 +1,10 @@
+{
+  "dashboard.REL.overview.title": "Address Book",
+  "dashboard.REL.overview.description": "Contacts, organizations, and relationships",
+  "dashboard.REL.overview.kpi.total_contacts": "Total Contacts",
+  "dashboard.REL.overview.kpi.organizations": "Organizations",
+  "dashboard.REL.overview.kpi.recent_updates": "Recent Updates",
+  "dashboard.REL.overview.kpi.duplicates": "Potential Duplicates",
+  "dashboard.REL.overview.list.recent_contacts": "Recent Contacts",
+  "dashboard.REL.overview.chart.contacts_by_type": "Contacts by Type"
+}

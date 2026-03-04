@@ -1,0 +1,42 @@
+﻿{
+  "groups": [
+    {
+      "name": "global",
+      "subGroups": [
+        { "name": "tenants", "subGroups": [ { "name": "all" } ] }
+      ]
+    },
+    {
+      "name": "tenants",
+      "subGroups": [
+        {
+          "name": "demo_sa",
+          "subGroups": [
+            {
+              "name": "modules",
+              "subGroups": [
+                {
+                  "name": "all",
+                  "subGroups": [
+                    {
+                      "name": "persona",
+                      "subGroups": [
+                        { "name": "viewer" },
+                        { "name": "reporter" },
+                        { "name": "requester" },
+                        { "name": "agent" },
+                        { "name": "manager" },
+                        { "name": "module_admin" },
+                        { "name": "tenant_admin" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

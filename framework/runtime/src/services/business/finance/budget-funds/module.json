@@ -1,0 +1,11 @@
+﻿{
+    "code":  "BUDGET",
+    "name":  "Budget \u0026 Funds Control",
+    "dependsOn":  [
+                      "ACC",
+                      "WF",
+                      "MDG"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

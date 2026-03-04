@@ -1,0 +1,10 @@
+{
+  "dashboard.INV.overview.title": "نظرة عامة على المخزون",
+  "dashboard.INV.overview.description": "مستويات المخزون وحركات المخزون",
+  "dashboard.INV.overview.kpi.total_items": "إجمالي العناصر",
+  "dashboard.INV.overview.kpi.low_stock": "مخزون منخفض",
+  "dashboard.INV.overview.kpi.stock_value": "قيمة المخزون",
+  "dashboard.INV.overview.kpi.turnover_rate": "معدل الدوران",
+  "dashboard.INV.overview.list.stock_movements": "حركات المخزون",
+  "dashboard.INV.overview.chart.stock_levels": "مستويات المخزون"
+}

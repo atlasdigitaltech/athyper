@@ -1,0 +1,10 @@
+{
+  "dashboard.PAY.overview.title": "Payment Dashboard",
+  "dashboard.PAY.overview.description": "Collections, disbursements, and reconciliation",
+  "dashboard.PAY.overview.kpi.collections_mtd": "Collections MTD",
+  "dashboard.PAY.overview.kpi.disbursements_mtd": "Disbursements MTD",
+  "dashboard.PAY.overview.kpi.pending_payments": "Pending Payments",
+  "dashboard.PAY.overview.kpi.overdue_payments": "Overdue Payments",
+  "dashboard.PAY.overview.list.recent_payments": "Recent Payments",
+  "dashboard.PAY.overview.chart.payment_flow": "Payment Flow"
+}

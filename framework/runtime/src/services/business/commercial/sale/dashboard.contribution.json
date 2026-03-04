@@ -1,0 +1,60 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "SALE",
+  "module_name": "Selling",
+  "dashboards": [
+    {
+      "code": "sale_overview",
+      "title_key": "dashboard.SALE.overview.title",
+      "description_key": "dashboard.SALE.overview.description",
+      "icon": "tag",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.SALE.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.overview.kpi.open_orders", "query_key": "sale.open_orders", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.overview.kpi.shipped_orders", "query_key": "sale.shipped_orders", "format": "number" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.overview.kpi.revenue_mtd", "query_key": "sale.revenue_mtd", "format": "currency" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.overview.kpi.returns", "query_key": "sale.returns", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.SALE.overview.chart.sales_trend", "query_key": "sale.sales_trend", "chart_type": "area" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.SALE.overview.list.recent_orders", "query_key": "sale.recent_orders", "columns": ["date", "customer", "reference", "amount"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    },
+    {
+      "code": "sale_partner",
+      "title_key": "dashboard.SALE.partner.title",
+      "description_key": "dashboard.SALE.partner.description",
+      "icon": "tag",
+      "workbenches": ["partner"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "partner", "permission": "view" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.SALE.partner.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.partner.kpi.my_orders", "query_key": "sale.partner.my_orders", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.partner.kpi.deliveries", "query_key": "sale.partner.deliveries", "format": "number" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.partner.kpi.invoices", "query_key": "sale.partner.invoices", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.SALE.partner.kpi.support_tickets", "query_key": "sale.partner.support_tickets", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.SALE.partner.chart.order_history", "query_key": "sale.partner.order_history", "chart_type": "area" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.SALE.partner.list.my_orders", "query_key": "sale.partner.my_orders_list", "columns": ["date", "reference", "status", "amount"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.REF.overview.title": "نظرة عامة على البيانات المرجعية",
+  "dashboard.REF.overview.description": "إدارة البيانات المرجعية والجودة",
+  "dashboard.REF.overview.kpi.total_records": "إجمالي السجلات",
+  "dashboard.REF.overview.kpi.data_quality_score": "درجة جودة البيانات",
+  "dashboard.REF.overview.kpi.pending_reviews": "المراجعات المعلقة",
+  "dashboard.REF.overview.kpi.duplicates": "السجلات المكررة",
+  "dashboard.REF.overview.list.recent_changes": "التغييرات الأخيرة",
+  "dashboard.REF.overview.chart.data_quality_trend": "اتجاه جودة البيانات"
+}

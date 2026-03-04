@@ -1,0 +1,35 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "ASSETFM",
+  "module_name": "Facility Management",
+  "dashboards": [
+    {
+      "code": "assetfm_overview",
+      "title_key": "dashboard.ASSETFM.overview.title",
+      "description_key": "dashboard.ASSETFM.overview.description",
+      "icon": "building-2",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.ASSETFM.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.ASSETFM.overview.kpi.total_buildings", "query_key": "assetfm.total_buildings", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.ASSETFM.overview.kpi.maintenance_cost_mtd", "query_key": "assetfm.maintenance_cost_mtd", "format": "currency" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.ASSETFM.overview.kpi.open_requests", "query_key": "assetfm.open_requests", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.ASSETFM.overview.kpi.utility_cost", "query_key": "assetfm.utility_cost", "format": "currency" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.ASSETFM.overview.chart.cost_by_building", "query_key": "assetfm.cost_by_building", "chart_type": "bar" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.ASSETFM.overview.list.recent_requests", "query_key": "assetfm.recent_requests", "columns": ["date", "building", "type", "status"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

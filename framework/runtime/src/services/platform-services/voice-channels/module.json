@@ -1,0 +1,9 @@
+﻿{
+    "code":  "TEL",
+    "name":  "Voice \u0026 Channel Integrations",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

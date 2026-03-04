@@ -1,0 +1,45 @@
+# ===========================================
+# athyper Line Ending Configuration
+# ===========================================
+# Ensures consistent line endings across Windows and Linux/macOS.
+# Git normalises to LF on commit; checkout converts per rule below.
+
+# Default: auto-detect
+* text=auto
+
+# Shell scripts must be LF (bash will fail on CRLF)
+*.sh text eol=lf
+
+# Batch files must be CRLF (cmd.exe requires it)
+*.bat text eol=crlf
+
+# Environment files — LF (Docker Compose and Node both handle LF)
+*.env text eol=lf
+*.env.* text eol=lf
+*.env.example text eol=lf
+
+# Config / data files — LF
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Binary files — no conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.p12 binary
+*.pem binary

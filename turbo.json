@@ -1,0 +1,159 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+
+    "build": {
+      "dependsOn": ["^build"],
+      "env": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_*",
+
+        "DATABASE_URL",
+        "DATABASE_ADMIN_URL",
+
+        "AUTH_SECRET",
+        "AUTH_DEBUG_EXPOSE_TOKENS",
+        "KEYCLOAK_URL",
+        "KEYCLOAK_BASE_URL",
+        "KEYCLOAK_REALM",
+        "KEYCLOAK_CLIENT_ID",
+
+        "REDIS_URL",
+        "RUNTIME_API_URL",
+        "PUBLIC_BASE_URL",
+        "DEFAULT_TENANT_ID",
+        "ENVIRONMENT",
+        "TENANT_ID"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+
+        "tooling/tsconfig/**",
+        "tooling/eslint-config/**",
+
+        "src/**",
+        "assets/**",
+        "generated/**",
+
+        "prisma/**",
+        "kysely/**",
+        "sql/**",
+        "seed/**",
+        "types/**",
+
+        "*.ts",
+        "*.tsx",
+        "*.js",
+        "*.jsx",
+        "*.json",
+
+        "package.json",
+        "tsconfig*.json",
+        "next.config.*",
+        "tailwind.config.*",
+        "postcss.config.*"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**",
+        "build/**",
+        "out/**",
+        "*.tsbuildinfo"
+      ]
+    },
+
+    "lint": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+
+        "tooling/tsconfig/**",
+        "tooling/eslint-config/**",
+
+        "src/**",
+        "assets/**",
+        "generated/**",
+
+        "*.ts",
+        "*.tsx",
+        "*.js",
+        "*.jsx",
+        "*.json",
+
+        "package.json",
+        "eslint.config.*",
+        ".eslintrc*",
+        "tsconfig*.json"
+      ],
+      "outputs": []
+    },
+
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+
+        "tooling/tsconfig/**",
+        "tooling/eslint-config/**",
+
+        "src/**",
+        "assets/**",
+        "generated/**",
+
+        "*.ts",
+        "*.tsx",
+        "*.json",
+
+        "package.json",
+        "tsconfig*.json"
+      ],
+      "outputs": ["*.tsbuildinfo"]
+    },
+
+    "test": {
+      "dependsOn": ["^test"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+
+        "tooling/tsconfig/**",
+        "tooling/eslint-config/**",
+
+        "src/**",
+        "assets/**",
+        "generated/**",
+
+        "*.ts",
+        "*.tsx",
+        "*.js",
+        "*.jsx",
+        "*.json",
+
+        "package.json"
+      ],
+      "outputs": ["coverage/**"]
+    },
+
+    "clean": {
+      "cache": false
+    },
+
+    "depcheck": {
+      "cache": false
+    },
+
+    "db:generate": { "cache": false },
+    "db:migrate": { "cache": false },
+    "db:deploy": { "cache": false },
+    "db:reset": { "cache": false },
+    "db:studio": { "cache": false },
+    "kysely:codegen": { "cache": false }
+  },
+  "globalEnv": [],
+  "globalPassThroughEnv": ["CI", "FORCE_COLOR", "NODE_OPTIONS"]
+}

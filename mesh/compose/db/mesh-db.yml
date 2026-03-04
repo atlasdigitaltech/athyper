@@ -1,0 +1,49 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : mesh-db-config
+#
+# Description :
+#   PostgreSQL database server for application and IAM databases.
+#   Creates two databases: athyper_dev1 (app) and athyperauth_dev1 (IAM).
+#
+# =======================================================================
+
+services:
+  db:
+    image: postgres:16.11-bookworm
+    profiles: ["mesh", "db"]
+    mem_limit: "${DB_MEMORY_LIMIT}"
+    environment:
+      POSTGRES_USER: athyperadmin
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      POSTGRES_DB: athyper_dev1
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ${MESH_CONFIG}/db/local/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ${MESH_CONFIG}/db/local/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ${MESH_CONFIG}/db/local/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ${MESH_DATA}/db:/var/lib/postgresql/data
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U athyperadmin -d athyper_dev1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    stop_grace_period: 30s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

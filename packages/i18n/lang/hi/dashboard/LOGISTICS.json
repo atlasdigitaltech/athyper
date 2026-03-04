@@ -1,0 +1,16 @@
+{
+  "dashboard.LOGISTICS.overview.title": "लॉजिस्टिक्स अवलोकन",
+  "dashboard.LOGISTICS.overview.description": "शिपमेंट ट्रैकिंग और डिलीवरी प्रदर्शन",
+  "dashboard.LOGISTICS.overview.kpi.in_transit": "पारगमन में",
+  "dashboard.LOGISTICS.overview.kpi.on_time_delivery": "समय पर डिलीवरी",
+  "dashboard.LOGISTICS.overview.kpi.freight_cost": "माल ढुलाई लागत",
+  "dashboard.LOGISTICS.overview.kpi.pending_shipments": "लंबित शिपमेंट",
+  "dashboard.LOGISTICS.overview.list.active_shipments": "सक्रिय शिपमेंट",
+  "dashboard.LOGISTICS.overview.chart.delivery_performance": "डिलीवरी प्रदर्शन",
+  "dashboard.LOGISTICS.partner.title": "परिवहन भागीदार पोर्टल",
+  "dashboard.LOGISTICS.partner.description": "शिपमेंट कार्य और अनुसूची",
+  "dashboard.LOGISTICS.partner.kpi.assigned_shipments": "सौंपे गए शिपमेंट",
+  "dashboard.LOGISTICS.partner.kpi.completed_deliveries": "पूर्ण डिलीवरी",
+  "dashboard.LOGISTICS.partner.list.my_shipments": "मेरे शिपमेंट",
+  "dashboard.LOGISTICS.partner.chart.delivery_schedule": "डिलीवरी अनुसूची"
+}

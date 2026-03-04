@@ -1,0 +1,10 @@
+{
+  "dashboard.TREASURY.overview.title": "Papan Pemuka Perbendaharaan",
+  "dashboard.TREASURY.overview.description": "Kedudukan tunai dan pengurusan kecairan",
+  "dashboard.TREASURY.overview.kpi.cash_position": "Kedudukan Tunai",
+  "dashboard.TREASURY.overview.kpi.fx_exposure": "Pendedahan Pertukaran Asing",
+  "dashboard.TREASURY.overview.kpi.liquidity_ratio": "Nisbah Kecairan",
+  "dashboard.TREASURY.overview.kpi.bank_balance": "Jumlah Baki Bank",
+  "dashboard.TREASURY.overview.list.recent_transfers": "Pemindahan Terkini",
+  "dashboard.TREASURY.overview.chart.cash_flow": "Trend Aliran Tunai"
+}

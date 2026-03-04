@@ -1,0 +1,10 @@
+﻿{
+    "code":  "NOTIFY",
+    "name":  "Notification Services",
+    "dependsOn":  [
+                      "CORE",
+                      "DOC"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

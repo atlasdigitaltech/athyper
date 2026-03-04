@@ -1,0 +1,10 @@
+{
+  "dashboard.CONTRACT.overview.title": "نظرة عامة على العقود",
+  "dashboard.CONTRACT.overview.description": "دورة حياة العقود والامتثال",
+  "dashboard.CONTRACT.overview.kpi.active_contracts": "العقود النشطة",
+  "dashboard.CONTRACT.overview.kpi.expiring_soon": "تنتهي قريباً",
+  "dashboard.CONTRACT.overview.kpi.total_value": "القيمة الإجمالية",
+  "dashboard.CONTRACT.overview.kpi.compliance_rate": "معدل الامتثال",
+  "dashboard.CONTRACT.overview.list.pending_renewals": "التجديدات المعلقة",
+  "dashboard.CONTRACT.overview.chart.contract_status": "حالة العقود"
+}

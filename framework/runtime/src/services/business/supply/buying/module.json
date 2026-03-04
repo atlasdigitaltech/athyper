@@ -1,0 +1,10 @@
+﻿{
+    "code":  "BUY",
+    "name":  "Buying",
+    "dependsOn":  [
+                      "CORE",
+                      "REL"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

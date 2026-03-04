@@ -1,0 +1,10 @@
+{
+  "dashboard.PAY.overview.title": "கொடுப்பனவுகள் மேலோட்டம்",
+  "dashboard.PAY.overview.description": "கொடுப்பனவு செயலாக்கம் மற்றும் நிலை",
+  "dashboard.PAY.overview.kpi.pending_payments": "நிலுவையிலுள்ள கொடுப்பனவுகள்",
+  "dashboard.PAY.overview.kpi.processed_today": "இன்று செயலாக்கப்பட்டவை",
+  "dashboard.PAY.overview.kpi.failed_payments": "தோல்வியான கொடுப்பனவுகள்",
+  "dashboard.PAY.overview.kpi.total_volume": "மொத்த அளவு",
+  "dashboard.PAY.overview.list.recent_payments": "சமீபத்திய கொடுப்பனவுகள்",
+  "dashboard.PAY.overview.chart.payment_trend": "கொடுப்பனவு போக்கு"
+}

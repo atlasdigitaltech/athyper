@@ -1,0 +1,32 @@
+import { defineWorkspace } from "vitest/config";
+
+export default defineWorkspace([
+  // Framework packages
+  "framework/core",
+  "framework/runtime",
+  "framework/adapters/auth",
+  "framework/adapters/db",
+  "framework/adapters/memorycache",
+  "framework/adapters/objectstorage",
+  "framework/adapters/telemetry",
+
+  // Shared packages
+  "packages/contracts",
+  "packages/api-client",
+  "packages/auth",
+  "packages/ui",
+  "packages/theme",
+  "packages/workbench-admin",
+  "packages/workbench-partner",
+  "packages/workbench-user",
+
+  // Products can have separate config if needed
+  {
+    extends: "./vitest.config.ts",
+    test: {
+      name: "neon-web",
+      root: "./products/neon/apps/web",
+      environment: "jsdom",
+    },
+  },
+]);

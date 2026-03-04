@@ -1,0 +1,10 @@
+{
+  "dashboard.SVC.overview.title": "सेवा प्रबंधन अवलोकन",
+  "dashboard.SVC.overview.description": "सेवा अनुरोध और SLA ट्रैकिंग",
+  "dashboard.SVC.overview.kpi.open_tickets": "खुले टिकट",
+  "dashboard.SVC.overview.kpi.avg_resolution_time": "औसत समाधान समय",
+  "dashboard.SVC.overview.kpi.sla_compliance": "SLA अनुपालन",
+  "dashboard.SVC.overview.kpi.customer_satisfaction": "ग्राहक संतुष्टि",
+  "dashboard.SVC.overview.list.recent_tickets": "हालिया टिकट",
+  "dashboard.SVC.overview.chart.ticket_trend": "टिकट प्रवृत्ति"
+}

@@ -1,0 +1,21 @@
+http:
+  middlewares:
+    mesh-dashboard-auth:
+      basicAuth:
+        users:
+          - "athyperadmin:$2y$05$NVCnGffZfFqIT.gM5/QipOXFSED4v5h6edLZNtZHEfS0z46qCbltS"
+
+tls:
+  options:
+    mesh-gateway-tls12:
+      minVersion: VersionTLS12
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/mesh.tls.local.crt
+        keyFile: /certs/mesh.tls.local.key
+
+  certificates:
+    - certFile: /certs/mesh.tls.local.crt
+      keyFile: /certs/mesh.tls.local.key

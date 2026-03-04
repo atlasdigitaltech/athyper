@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ─── Validate Tag Format ─────────────────────────────────────────
+  validate-tag:
+    name: Validate Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tag format
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "Invalid tag format: $TAG. Must be vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+          echo "Tag format valid: $TAG"
+
+  # ─── Build Release Artifacts ─────────────────────────────────────
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Uncomment and configure for your runtime:
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 20
+      #     cache: 'npm'
+
+      # - name: Install dependencies
+      #   run: npm ci
+
+      # - name: Build
+      #   run: npm run build
+
+      - name: Build placeholder
+        run: echo "Build release artifacts here"
+
+      # - name: Upload artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release-artifacts
+      #     path: dist/
+
+  # ─── Extract Changelog ───────────────────────────────────────────
+  extract-changelog:
+    name: Extract Changelog
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    outputs:
+      release-notes: ${{ steps.extract.outputs.notes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG
+        id: extract
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          NOTES=$(awk "/^## \[$TAG\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          fi
+          # Multiline output
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  # ─── Create GitHub Release ───────────────────────────────────────
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, extract-changelog]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: Download artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: release-artifacts
+      #     path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ needs.extract-changelog.outputs.release-notes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          # files: dist/**   # Uncomment when artifacts are ready
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

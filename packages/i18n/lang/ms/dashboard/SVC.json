@@ -1,0 +1,10 @@
+{
+  "dashboard.SVC.overview.title": "Pengurusan Perkhidmatan",
+  "dashboard.SVC.overview.description": "Tiket sokongan, SLA, dan kepuasan pelanggan",
+  "dashboard.SVC.overview.kpi.open_tickets": "Tiket Terbuka",
+  "dashboard.SVC.overview.kpi.avg_resolution": "Purata Masa Penyelesaian",
+  "dashboard.SVC.overview.kpi.sla_compliance": "Pematuhan SLA",
+  "dashboard.SVC.overview.kpi.satisfaction_score": "Skor Kepuasan",
+  "dashboard.SVC.overview.list.recent_tickets": "Tiket Terkini",
+  "dashboard.SVC.overview.chart.ticket_trend": "Trend Tiket"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.DEMAND.overview.title": "मांग योजना अवलोकन",
+  "dashboard.DEMAND.overview.description": "मांग पूर्वानुमान और योजना",
+  "dashboard.DEMAND.overview.kpi.forecast_accuracy": "पूर्वानुमान सटीकता",
+  "dashboard.DEMAND.overview.kpi.open_requisitions": "खुली माँगपत्र",
+  "dashboard.DEMAND.overview.kpi.planned_orders": "नियोजित आदेश",
+  "dashboard.DEMAND.overview.kpi.fill_rate": "पूर्ति दर",
+  "dashboard.DEMAND.overview.list.demand_signals": "मांग संकेत",
+  "dashboard.DEMAND.overview.chart.demand_forecast": "मांग पूर्वानुमान"
+}

@@ -1,0 +1,18 @@
+{
+  "dashboard.BUY.overview.title": "Papan Pemuka Pembelian",
+  "dashboard.BUY.overview.description": "Pesanan pembelian, rekuisisi, dan perbelanjaan",
+  "dashboard.BUY.overview.kpi.open_pos": "PO Terbuka",
+  "dashboard.BUY.overview.kpi.pending_receipts": "Penerimaan Tertangguh",
+  "dashboard.BUY.overview.kpi.spend_mtd": "Perbelanjaan BTK",
+  "dashboard.BUY.overview.kpi.overdue_orders": "Pesanan Tertunggak",
+  "dashboard.BUY.overview.list.recent_pos": "Pesanan Pembelian Terkini",
+  "dashboard.BUY.overview.chart.spend_by_category": "Perbelanjaan Mengikut Kategori",
+  "dashboard.BUY.partner.title": "Portal Pembekal",
+  "dashboard.BUY.partner.description": "Pesanan pembelian dan jadual penghantaran anda",
+  "dashboard.BUY.partner.kpi.my_pos": "PO Saya",
+  "dashboard.BUY.partner.kpi.pending_deliveries": "Penghantaran Tertangguh",
+  "dashboard.BUY.partner.kpi.invoices": "Invois Terbuka",
+  "dashboard.BUY.partner.kpi.payments": "Pembayaran Terkini",
+  "dashboard.BUY.partner.list.my_orders": "Pesanan Saya",
+  "dashboard.BUY.partner.chart.delivery_schedule": "Jadual Penghantaran"
+}

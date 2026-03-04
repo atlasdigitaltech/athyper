@@ -1,0 +1,10 @@
+{
+  "dashboard.MAINT.overview.title": "Maintenance Dashboard",
+  "dashboard.MAINT.overview.description": "Preventive and corrective maintenance",
+  "dashboard.MAINT.overview.kpi.open_work_orders": "Open Work Orders",
+  "dashboard.MAINT.overview.kpi.preventive_due": "Preventive Maint. Due",
+  "dashboard.MAINT.overview.kpi.mtbf": "Mean Time Between Failures",
+  "dashboard.MAINT.overview.kpi.backlog_hours": "Backlog Hours",
+  "dashboard.MAINT.overview.list.recent_work_orders": "Recent Work Orders",
+  "dashboard.MAINT.overview.chart.maintenance_trend": "Maintenance Trend"
+}

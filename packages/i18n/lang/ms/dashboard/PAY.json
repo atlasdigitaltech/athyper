@@ -1,0 +1,10 @@
+{
+  "dashboard.PAY.overview.title": "Papan Pemuka Pembayaran",
+  "dashboard.PAY.overview.description": "Kutipan, pembayaran keluar, dan penyesuaian",
+  "dashboard.PAY.overview.kpi.collections_mtd": "Kutipan BTK",
+  "dashboard.PAY.overview.kpi.disbursements_mtd": "Pembayaran BTK",
+  "dashboard.PAY.overview.kpi.pending_payments": "Pembayaran Tertangguh",
+  "dashboard.PAY.overview.kpi.overdue_payments": "Pembayaran Tertunggak",
+  "dashboard.PAY.overview.list.recent_payments": "Pembayaran Terkini",
+  "dashboard.PAY.overview.chart.payment_flow": "Aliran Pembayaran"
+}

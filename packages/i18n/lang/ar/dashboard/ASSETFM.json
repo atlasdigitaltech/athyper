@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETFM.overview.title": "نظرة عامة على إدارة المرافق",
+  "dashboard.ASSETFM.overview.description": "عمليات المرافق وإدارة المساحات",
+  "dashboard.ASSETFM.overview.kpi.total_facilities": "إجمالي المرافق",
+  "dashboard.ASSETFM.overview.kpi.occupancy_rate": "معدل الإشغال",
+  "dashboard.ASSETFM.overview.kpi.open_requests": "الطلبات المفتوحة",
+  "dashboard.ASSETFM.overview.kpi.energy_consumption": "استهلاك الطاقة",
+  "dashboard.ASSETFM.overview.list.service_requests": "طلبات الخدمة",
+  "dashboard.ASSETFM.overview.chart.space_utilization": "استخدام المساحات"
+}

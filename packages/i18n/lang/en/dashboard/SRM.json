@@ -1,0 +1,10 @@
+{
+  "dashboard.SRM.overview.title": "Supplier Management",
+  "dashboard.SRM.overview.description": "Supplier lifecycle and performance management",
+  "dashboard.SRM.overview.kpi.active_suppliers": "Active Suppliers",
+  "dashboard.SRM.overview.kpi.pending_evaluations": "Pending Evaluations",
+  "dashboard.SRM.overview.kpi.avg_score": "Average Score",
+  "dashboard.SRM.overview.kpi.expiring_contracts": "Expiring Contracts",
+  "dashboard.SRM.overview.list.recent_evaluations": "Recent Evaluations",
+  "dashboard.SRM.overview.chart.score_distribution": "Score Distribution"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.ACC.overview.title": "Gambaran Keseluruhan Kewangan",
+  "dashboard.ACC.overview.description": "Metrik kewangan utama dan aktiviti terkini",
+  "dashboard.ACC.overview.kpi.total_revenue": "Jumlah Hasil",
+  "dashboard.ACC.overview.kpi.accounts_receivable": "Akaun Belum Terima",
+  "dashboard.ACC.overview.kpi.accounts_payable": "Akaun Belum Bayar",
+  "dashboard.ACC.overview.kpi.net_income": "Pendapatan Bersih",
+  "dashboard.ACC.overview.list.recent_journals": "Catatan Jurnal Terkini",
+  "dashboard.ACC.overview.chart.revenue_trend": "Trend Hasil"
+}

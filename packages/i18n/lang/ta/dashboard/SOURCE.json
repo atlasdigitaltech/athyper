@@ -1,0 +1,10 @@
+{
+  "dashboard.SOURCE.overview.title": "ஆதாரமூல மேலோட்டம்",
+  "dashboard.SOURCE.overview.description": "ஆதாரமூல நிகழ்வுகள் மற்றும் ஒப்பந்தப்புள்ளிகள்",
+  "dashboard.SOURCE.overview.kpi.active_events": "செயலில் உள்ள நிகழ்வுகள்",
+  "dashboard.SOURCE.overview.kpi.pending_bids": "நிலுவையிலுள்ள ஒப்பந்தப்புள்ளிகள்",
+  "dashboard.SOURCE.overview.kpi.awarded_contracts": "வழங்கப்பட்ட ஒப்பந்தங்கள்",
+  "dashboard.SOURCE.overview.kpi.savings_achieved": "அடையப்பட்ட சேமிப்புகள்",
+  "dashboard.SOURCE.overview.list.open_rfx": "திறந்த RFx கள்",
+  "dashboard.SOURCE.overview.chart.sourcing_pipeline": "ஆதாரமூல வரிசை"
+}

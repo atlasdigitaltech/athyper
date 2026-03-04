@@ -1,0 +1,10 @@
+{
+  "dashboard.PAY.overview.title": "भुगतान अवलोकन",
+  "dashboard.PAY.overview.description": "भुगतान प्रसंस्करण और स्थिति",
+  "dashboard.PAY.overview.kpi.pending_payments": "लंबित भुगतान",
+  "dashboard.PAY.overview.kpi.processed_today": "आज संसाधित",
+  "dashboard.PAY.overview.kpi.failed_payments": "विफल भुगतान",
+  "dashboard.PAY.overview.kpi.total_volume": "कुल मात्रा",
+  "dashboard.PAY.overview.list.recent_payments": "हालिया भुगतान",
+  "dashboard.PAY.overview.chart.payment_trend": "भुगतान प्रवृत्ति"
+}

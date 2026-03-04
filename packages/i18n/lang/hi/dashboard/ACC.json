@@ -1,0 +1,10 @@
+{
+  "dashboard.ACC.overview.title": "वित्त अवलोकन",
+  "dashboard.ACC.overview.description": "प्रमुख वित्तीय मीट्रिक्स और हालिया गतिविधि",
+  "dashboard.ACC.overview.kpi.total_revenue": "कुल राजस्व",
+  "dashboard.ACC.overview.kpi.accounts_receivable": "प्राप्य खाते",
+  "dashboard.ACC.overview.kpi.accounts_payable": "देय खाते",
+  "dashboard.ACC.overview.kpi.net_income": "शुद्ध आय",
+  "dashboard.ACC.overview.list.recent_journals": "हालिया जर्नल प्रविष्टियाँ",
+  "dashboard.ACC.overview.chart.revenue_trend": "राजस्व प्रवृत्ति"
+}

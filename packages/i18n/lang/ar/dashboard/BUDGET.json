@@ -1,0 +1,10 @@
+{
+  "dashboard.BUDGET.overview.title": "نظرة عامة على الميزانية",
+  "dashboard.BUDGET.overview.description": "تخصيص الميزانية والاستخدام",
+  "dashboard.BUDGET.overview.kpi.total_budget": "إجمالي الميزانية",
+  "dashboard.BUDGET.overview.kpi.utilized": "المستخدم",
+  "dashboard.BUDGET.overview.kpi.remaining": "المتبقي",
+  "dashboard.BUDGET.overview.kpi.variance": "التباين",
+  "dashboard.BUDGET.overview.list.budget_items": "بنود الميزانية",
+  "dashboard.BUDGET.overview.chart.utilization_trend": "اتجاه الاستخدام"
+}

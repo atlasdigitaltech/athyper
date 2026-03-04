@@ -1,0 +1,9 @@
+﻿{
+    "code":  "INSIGHTS",
+    "name":  "Insights \u0026 Analytics",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

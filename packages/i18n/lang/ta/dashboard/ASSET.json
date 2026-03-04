@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSET.overview.title": "சொத்து மேலாண்மை மேலோட்டம்",
+  "dashboard.ASSET.overview.description": "சொத்து பதிவேடு மற்றும் மதிப்பு கண்காணிப்பு",
+  "dashboard.ASSET.overview.kpi.total_assets": "மொத்த சொத்துக்கள்",
+  "dashboard.ASSET.overview.kpi.asset_value": "சொத்து மதிப்பு",
+  "dashboard.ASSET.overview.kpi.depreciation": "தேய்மானம்",
+  "dashboard.ASSET.overview.kpi.utilization_rate": "பயன்பாட்டு விகிதம்",
+  "dashboard.ASSET.overview.list.recent_acquisitions": "சமீபத்திய கையகப்படுத்தல்கள்",
+  "dashboard.ASSET.overview.chart.asset_lifecycle": "சொத்து வாழ்க்கைச்சுழற்சி"
+}

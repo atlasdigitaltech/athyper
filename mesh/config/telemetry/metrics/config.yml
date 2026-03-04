@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 10s
+  scrape_timeout: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["metrics:9090"]
+        labels:
+          service: prometheus
+          component: prometheus
+          env: dev
+  - job_name: redis_exporter
+    static_configs:
+      - targets: ["memorycache_exporter:9121"]
+        labels:
+          service: memorycache
+          role: primary
+          component: redis_exporter
+          env: dev
+  - job_name: loki
+    static_configs:
+      - targets: ["logging:3100"]
+        labels:
+          service: logging
+          component: loki
+          env: dev
+  - job_name: alloy
+    static_configs:
+      - targets: ["logshipper:12345"]
+        labels:
+          service: logging
+          component: alloy
+          env: dev
+  - job_name: tempo
+    static_configs:
+      - targets: ["tracing:3200"]
+        labels:
+          service: tracing
+          component: tempo
+          env: dev

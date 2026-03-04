@@ -1,0 +1,10 @@
+{
+  "dashboard.CONTRACT.overview.title": "Pengurusan Kontrak",
+  "dashboard.CONTRACT.overview.description": "Kontrak aktif, terma, dan obligasi",
+  "dashboard.CONTRACT.overview.kpi.active_contracts": "Kontrak Aktif",
+  "dashboard.CONTRACT.overview.kpi.expiring_soon": "Akan Tamat Tempoh",
+  "dashboard.CONTRACT.overview.kpi.total_value": "Jumlah Nilai Kontrak",
+  "dashboard.CONTRACT.overview.kpi.renewals_due": "Pembaharuan Perlu Dibuat",
+  "dashboard.CONTRACT.overview.list.recent_contracts": "Kontrak Terkini",
+  "dashboard.CONTRACT.overview.chart.contracts_by_status": "Kontrak Mengikut Status"
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "REL",
+  "module_name": "Relationship Management",
+  "dashboards": [
+    {
+      "code": "rel_overview",
+      "title_key": "dashboard.REL.overview.title",
+      "description_key": "dashboard.REL.overview.description",
+      "icon": "book",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.REL.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.REL.overview.kpi.total_contacts", "query_key": "rel.total_contacts", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.REL.overview.kpi.organizations", "query_key": "rel.organizations", "format": "number" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.REL.overview.kpi.recent_updates", "query_key": "rel.recent_updates", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.REL.overview.kpi.duplicates", "query_key": "rel.duplicates", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.REL.overview.chart.contacts_by_type", "query_key": "rel.contacts_by_type", "chart_type": "pie" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.REL.overview.list.recent_contacts", "query_key": "rel.recent_contacts", "columns": ["date", "name", "type", "organization"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

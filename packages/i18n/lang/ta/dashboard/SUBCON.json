@@ -1,0 +1,10 @@
+{
+  "dashboard.SUBCON.overview.title": "துணை ஒப்பந்த மேலோட்டம்",
+  "dashboard.SUBCON.overview.description": "துணை ஒப்பந்தக்காரர் செயல்திறன் மற்றும் பணிகள்",
+  "dashboard.SUBCON.overview.kpi.active_subcontracts": "செயலில் உள்ள துணை ஒப்பந்தங்கள்",
+  "dashboard.SUBCON.overview.kpi.pending_deliveries": "நிலுவையிலுள்ள விநியோகங்கள்",
+  "dashboard.SUBCON.overview.kpi.total_value": "மொத்த மதிப்பு",
+  "dashboard.SUBCON.overview.kpi.completion_rate": "நிறைவு விகிதம்",
+  "dashboard.SUBCON.overview.list.active_work_orders": "செயலில் உள்ள பணி ஆர்டர்கள்",
+  "dashboard.SUBCON.overview.chart.progress_tracking": "முன்னேற்ற கண்காணிப்பு"
+}

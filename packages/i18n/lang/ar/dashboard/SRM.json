@@ -1,0 +1,10 @@
+{
+  "dashboard.SRM.overview.title": "نظرة عامة على علاقات الموردين",
+  "dashboard.SRM.overview.description": "أداء الموردين والتقييمات",
+  "dashboard.SRM.overview.kpi.active_suppliers": "الموردون النشطون",
+  "dashboard.SRM.overview.kpi.avg_lead_time": "متوسط وقت التسليم",
+  "dashboard.SRM.overview.kpi.quality_score": "درجة الجودة",
+  "dashboard.SRM.overview.kpi.pending_evaluations": "التقييمات المعلقة",
+  "dashboard.SRM.overview.list.top_suppliers": "أفضل الموردين",
+  "dashboard.SRM.overview.chart.performance_trend": "اتجاه الأداء"
+}

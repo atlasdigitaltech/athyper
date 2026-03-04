@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETREMS.overview.title": "சொத்து நம்பகத்தன்மை மேலோட்டம்",
+  "dashboard.ASSETREMS.overview.description": "நம்பகத்தன்மை அளவீடுகள் மற்றும் செயலிழப்பு பகுப்பாய்வு",
+  "dashboard.ASSETREMS.overview.kpi.mtbf": "சராசரி செயலிழப்பு இடைவெளி",
+  "dashboard.ASSETREMS.overview.kpi.mttr": "சராசரி பழுது நேரம்",
+  "dashboard.ASSETREMS.overview.kpi.availability": "கிடைக்கும் தன்மை",
+  "dashboard.ASSETREMS.overview.kpi.failure_count": "செயலிழப்பு எண்ணிக்கை",
+  "dashboard.ASSETREMS.overview.list.failure_log": "செயலிழப்பு பதிவு",
+  "dashboard.ASSETREMS.overview.chart.reliability_trend": "நம்பகத்தன்மை போக்கு"
+}

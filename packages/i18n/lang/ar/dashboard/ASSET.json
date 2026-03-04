@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSET.overview.title": "نظرة عامة على إدارة الأصول",
+  "dashboard.ASSET.overview.description": "سجل الأصول وتتبع القيمة",
+  "dashboard.ASSET.overview.kpi.total_assets": "إجمالي الأصول",
+  "dashboard.ASSET.overview.kpi.asset_value": "قيمة الأصول",
+  "dashboard.ASSET.overview.kpi.depreciation": "الإهلاك",
+  "dashboard.ASSET.overview.kpi.utilization_rate": "معدل الاستخدام",
+  "dashboard.ASSET.overview.list.recent_acquisitions": "الاستحواذات الأخيرة",
+  "dashboard.ASSET.overview.chart.asset_lifecycle": "دورة حياة الأصول"
+}

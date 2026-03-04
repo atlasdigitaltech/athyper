@@ -1,0 +1,10 @@
+{
+  "dashboard.SUBCON.overview.title": "Subcontracting",
+  "dashboard.SUBCON.overview.description": "Job subcontract workflows and tracking",
+  "dashboard.SUBCON.overview.kpi.active_jobs": "Active Jobs",
+  "dashboard.SUBCON.overview.kpi.pending_delivery": "Pending Delivery",
+  "dashboard.SUBCON.overview.kpi.overdue": "Overdue Jobs",
+  "dashboard.SUBCON.overview.kpi.completion_rate": "Completion Rate",
+  "dashboard.SUBCON.overview.list.recent_jobs": "Recent Jobs",
+  "dashboard.SUBCON.overview.chart.job_status": "Jobs by Status"
+}

@@ -1,0 +1,11 @@
+﻿{
+    "code":  "MAINT",
+    "name":  "Maintenance Management",
+    "dependsOn":  [
+                      "BUY",
+                      "ASSET",
+                      "INVENTORY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

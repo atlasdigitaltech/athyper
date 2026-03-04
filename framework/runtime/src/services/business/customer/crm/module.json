@@ -1,0 +1,9 @@
+﻿{
+    "code":  "CRM",
+    "name":  "Customer Relationship Management",
+    "dependsOn":  [
+                      "REL"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

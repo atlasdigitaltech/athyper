@@ -1,0 +1,14 @@
+{
+  "widget.heading.label": "शीर्षक",
+  "widget.heading.description": "अनुभाग शीर्षक पाठ",
+  "widget.spacer.label": "स्पेसर",
+  "widget.spacer.description": "अनुभागों के बीच ऊर्ध्वाधर रिक्ति",
+  "widget.shortcut.label": "शॉर्टकट",
+  "widget.shortcut.description": "पृष्ठ या क्रिया के लिए त्वरित-लिंक कार्ड",
+  "widget.kpi.label": "KPI कार्ड",
+  "widget.kpi.description": "प्रमुख प्रदर्शन संकेतक संख्या कार्ड",
+  "widget.list.label": "सूची",
+  "widget.list.description": "रिकॉर्ड की तालिका या सूची दृश्य",
+  "widget.chart.label": "चार्ट",
+  "widget.chart.description": "डेटा विज़ुअलाइज़ेशन चार्ट"
+}

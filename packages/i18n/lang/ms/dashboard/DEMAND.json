@@ -1,0 +1,10 @@
+{
+  "dashboard.DEMAND.overview.title": "Perancangan Permintaan",
+  "dashboard.DEMAND.overview.description": "Ramalan permintaan, perancangan, dan analisis",
+  "dashboard.DEMAND.overview.kpi.forecast_accuracy": "Ketepatan Ramalan",
+  "dashboard.DEMAND.overview.kpi.total_demand": "Jumlah Permintaan",
+  "dashboard.DEMAND.overview.kpi.supply_gap": "Jurang Bekalan",
+  "dashboard.DEMAND.overview.kpi.plan_adherence": "Pematuhan Rancangan",
+  "dashboard.DEMAND.overview.list.recent_forecasts": "Ramalan Terkini",
+  "dashboard.DEMAND.overview.chart.demand_vs_supply": "Permintaan vs Bekalan"
+}

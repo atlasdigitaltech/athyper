@@ -1,0 +1,10 @@
+{
+  "dashboard.PRL.overview.title": "Payroll Dashboard",
+  "dashboard.PRL.overview.description": "Salary processing and statutory compliance",
+  "dashboard.PRL.overview.kpi.payroll_cost_mtd": "Payroll Cost MTD",
+  "dashboard.PRL.overview.kpi.pending_approvals": "Pending Approvals",
+  "dashboard.PRL.overview.kpi.statutory_due": "Statutory Dues",
+  "dashboard.PRL.overview.kpi.exceptions": "Payroll Exceptions",
+  "dashboard.PRL.overview.list.recent_payrolls": "Recent Payroll Runs",
+  "dashboard.PRL.overview.chart.cost_trend": "Payroll Cost Trend"
+}

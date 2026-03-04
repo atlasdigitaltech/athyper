@@ -1,0 +1,10 @@
+{
+  "dashboard.QMS.overview.title": "نظرة عامة على إدارة الجودة",
+  "dashboard.QMS.overview.description": "مقاييس الجودة وحالة التفتيش",
+  "dashboard.QMS.overview.kpi.open_ncrs": "تقارير عدم المطابقة المفتوحة",
+  "dashboard.QMS.overview.kpi.inspections_due": "عمليات التفتيش المستحقة",
+  "dashboard.QMS.overview.kpi.defect_rate": "معدل العيوب",
+  "dashboard.QMS.overview.kpi.audit_score": "درجة التدقيق",
+  "dashboard.QMS.overview.list.recent_inspections": "عمليات التفتيش الأخيرة",
+  "dashboard.QMS.overview.chart.quality_trend": "اتجاه الجودة"
+}

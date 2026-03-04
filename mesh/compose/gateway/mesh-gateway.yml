@@ -1,0 +1,72 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : mesh-gateway-config
+#
+# Description :
+#
+# =======================================================================
+services:
+  gateway:
+    image: traefik:v3.6.7
+    profiles: ["mesh", "gateway", "apps"]
+    mem_limit: "${GATEWAY_MEMORY_LIMIT}"
+    command:
+      - --accesslog=${GATEWAY_ACCESSLOG:-false}
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.http.encodeQuerySemicolons=true
+      - --entrypoints.websecure.http.tls=true
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.format=json
+      - --log.level=${GATEWAY_LOG_LEVEL:-INFO}
+      - --ping=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=athyper-mesh-edge
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serverstransport.insecureskipverify=false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${MESH_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
+      - ${MESH_CONFIG}/gateway/certs:/certs:ro
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-mesh-edge
+      - traefik.http.middlewares.gateway-redirect.redirectregex.regex=^https://([^/]+)/?$
+      - traefik.http.middlewares.gateway-redirect.redirectregex.replacement=https://$${1}/dashboard/
+      - traefik.http.routers.gateway.entrypoints=websecure
+      - traefik.http.routers.gateway.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.gateway.rule=Host(`${GATEWAY_HOST}`)
+      - traefik.http.routers.gateway.service=api@internal
+      - traefik.http.routers.gateway.tls=true
+      - traefik.http.routers.gateway.tls.options=${GATEWAY_TLS_OPTIONS}

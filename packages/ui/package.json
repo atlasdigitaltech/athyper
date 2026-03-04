@@ -1,0 +1,71 @@
+{
+  "name": "@athyper/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./messaging": {
+      "types": "./src/messaging/index.ts",
+      "default": "./src/messaging/index.ts"
+    },
+    "./button": {
+      "types": "./src/primitives/Button.tsx",
+      "default": "./src/primitives/Button.tsx"
+    },
+    "./content/attachments": {
+      "types": "./src/content/attachments/index.ts",
+      "default": "./src/content/attachments/index.ts"
+    },
+    "./platform/TenantSelector": {
+      "types": "./src/platform/TenantSelector.tsx",
+      "default": "./src/platform/TenantSelector.tsx"
+    },
+    "./platform/PlatformAdminBanner": {
+      "types": "./src/platform/PlatformAdminBanner.tsx",
+      "default": "./src/platform/PlatformAdminBanner.tsx"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist",
+    "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "peerDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "dependencies": {
+    "@athyper/api-client": "workspace:*",
+    "@athyper/theme": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.562.0",
+    "radix-ui": "^1.4.3",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tsup": "^8.3.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3"
+  }
+}

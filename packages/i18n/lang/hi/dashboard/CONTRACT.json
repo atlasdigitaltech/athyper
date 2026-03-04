@@ -1,0 +1,10 @@
+{
+  "dashboard.CONTRACT.overview.title": "अनुबंध अवलोकन",
+  "dashboard.CONTRACT.overview.description": "अनुबंध जीवनचक्र और अनुपालन",
+  "dashboard.CONTRACT.overview.kpi.active_contracts": "सक्रिय अनुबंध",
+  "dashboard.CONTRACT.overview.kpi.expiring_soon": "जल्द समाप्त होने वाले",
+  "dashboard.CONTRACT.overview.kpi.total_value": "कुल मूल्य",
+  "dashboard.CONTRACT.overview.kpi.compliance_rate": "अनुपालन दर",
+  "dashboard.CONTRACT.overview.list.pending_renewals": "लंबित नवीनीकरण",
+  "dashboard.CONTRACT.overview.chart.contract_status": "अनुबंध स्थिति"
+}

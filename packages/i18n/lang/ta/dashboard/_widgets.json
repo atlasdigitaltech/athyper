@@ -1,0 +1,14 @@
+{
+  "widget.heading.label": "தலைப்பு",
+  "widget.heading.description": "பகுதி தலைப்பு உரை",
+  "widget.spacer.label": "இடைவெளி",
+  "widget.spacer.description": "பகுதிகளுக்கிடையே செங்குத்து இடைவெளி",
+  "widget.shortcut.label": "குறுக்குவழி",
+  "widget.shortcut.description": "பக்கம் அல்லது செயலுக்கான விரைவு இணைப்பு அட்டை",
+  "widget.kpi.label": "KPI அட்டை",
+  "widget.kpi.description": "முக்கிய செயல்திறன் குறிகாட்டி எண் அட்டை",
+  "widget.list.label": "பட்டியல்",
+  "widget.list.description": "பதிவுகளின் அட்டவணை அல்லது பட்டியல் காட்சி",
+  "widget.chart.label": "விளக்கப்படம்",
+  "widget.chart.description": "தரவு காட்சிப்படுத்தல் விளக்கப்படம்"
+}

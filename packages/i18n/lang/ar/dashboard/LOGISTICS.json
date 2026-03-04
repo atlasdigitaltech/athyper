@@ -1,0 +1,16 @@
+{
+  "dashboard.LOGISTICS.overview.title": "نظرة عامة على الخدمات اللوجستية",
+  "dashboard.LOGISTICS.overview.description": "تتبع الشحنات وأداء التسليم",
+  "dashboard.LOGISTICS.overview.kpi.in_transit": "في الطريق",
+  "dashboard.LOGISTICS.overview.kpi.on_time_delivery": "التسليم في الوقت المحدد",
+  "dashboard.LOGISTICS.overview.kpi.freight_cost": "تكلفة الشحن",
+  "dashboard.LOGISTICS.overview.kpi.pending_shipments": "الشحنات المعلقة",
+  "dashboard.LOGISTICS.overview.list.active_shipments": "الشحنات النشطة",
+  "dashboard.LOGISTICS.overview.chart.delivery_performance": "أداء التسليم",
+  "dashboard.LOGISTICS.partner.title": "بوابة شريك النقل",
+  "dashboard.LOGISTICS.partner.description": "مهام الشحن والجدول الزمني",
+  "dashboard.LOGISTICS.partner.kpi.assigned_shipments": "الشحنات المسندة",
+  "dashboard.LOGISTICS.partner.kpi.completed_deliveries": "التسليمات المكتملة",
+  "dashboard.LOGISTICS.partner.list.my_shipments": "شحناتي",
+  "dashboard.LOGISTICS.partner.chart.delivery_schedule": "جدول التسليم"
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "DEMAND",
+  "module_name": "Demand Forecast & Planning",
+  "dashboards": [
+    {
+      "code": "demand_overview",
+      "title_key": "dashboard.DEMAND.overview.title",
+      "description_key": "dashboard.DEMAND.overview.description",
+      "icon": "trending-up",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.DEMAND.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.DEMAND.overview.kpi.forecast_accuracy", "query_key": "demand.forecast_accuracy", "format": "percent" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.DEMAND.overview.kpi.demand_variance", "query_key": "demand.demand_variance", "format": "percent" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.DEMAND.overview.kpi.plan_coverage", "query_key": "demand.plan_coverage", "format": "percent" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.DEMAND.overview.kpi.alerts", "query_key": "demand.alerts", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.DEMAND.overview.chart.demand_vs_actual", "query_key": "demand.demand_vs_actual", "chart_type": "line" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.DEMAND.overview.list.forecast_exceptions", "query_key": "demand.forecast_exceptions", "columns": ["date", "item", "forecast", "actual"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

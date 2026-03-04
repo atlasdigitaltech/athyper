@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSET.overview.title": "Pengurusan Aset",
+  "dashboard.ASSET.overview.description": "Daftar aset, susut nilai, dan penjejakan",
+  "dashboard.ASSET.overview.kpi.total_assets": "Jumlah Aset",
+  "dashboard.ASSET.overview.kpi.net_book_value": "Nilai Buku Bersih",
+  "dashboard.ASSET.overview.kpi.depreciation_mtd": "Susut Nilai BTK",
+  "dashboard.ASSET.overview.kpi.disposals": "Pelupusan",
+  "dashboard.ASSET.overview.list.recent_acquisitions": "Perolehan Terkini",
+  "dashboard.ASSET.overview.chart.asset_by_class": "Aset Mengikut Kelas"
+}

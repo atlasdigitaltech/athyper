@@ -1,0 +1,11 @@
+﻿{
+    "code":  "SRM",
+    "name":  "Supplier Relationship Management",
+    "dependsOn":  [
+                      "REL",
+                      "WF",
+                      "AUDIT"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

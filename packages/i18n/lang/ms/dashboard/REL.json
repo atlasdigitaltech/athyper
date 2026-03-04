@@ -1,0 +1,10 @@
+{
+  "dashboard.REL.overview.title": "Pengurusan Keluaran",
+  "dashboard.REL.overview.description": "Keluaran perisian, pelancaran, dan penjejakan versi",
+  "dashboard.REL.overview.kpi.planned_releases": "Keluaran Dirancang",
+  "dashboard.REL.overview.kpi.in_progress": "Sedang Berjalan",
+  "dashboard.REL.overview.kpi.deployed": "Telah Dilaksanakan",
+  "dashboard.REL.overview.kpi.rollback_count": "Bilangan Pengembalian",
+  "dashboard.REL.overview.list.recent_releases": "Keluaran Terkini",
+  "dashboard.REL.overview.chart.release_timeline": "Garis Masa Keluaran"
+}

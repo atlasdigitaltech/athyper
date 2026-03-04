@@ -1,0 +1,16 @@
+{
+  "dashboard.SALE.overview.title": "बिक्री अवलोकन",
+  "dashboard.SALE.overview.description": "बिक्री प्रदर्शन और आदेश स्थिति",
+  "dashboard.SALE.overview.kpi.total_sales": "कुल बिक्री",
+  "dashboard.SALE.overview.kpi.open_orders": "खुले आदेश",
+  "dashboard.SALE.overview.kpi.quotations": "कोटेशन",
+  "dashboard.SALE.overview.kpi.avg_order_value": "औसत आदेश मूल्य",
+  "dashboard.SALE.overview.list.recent_orders": "हालिया आदेश",
+  "dashboard.SALE.overview.chart.sales_trend": "बिक्री प्रवृत्ति",
+  "dashboard.SALE.partner.title": "ग्राहक बिक्री पोर्टल",
+  "dashboard.SALE.partner.description": "आदेश और कोटेशन",
+  "dashboard.SALE.partner.kpi.my_orders": "मेरे आदेश",
+  "dashboard.SALE.partner.kpi.pending_quotes": "लंबित कोटेशन",
+  "dashboard.SALE.partner.list.order_history": "आदेश इतिहास",
+  "dashboard.SALE.partner.chart.spending_trend": "व्यय प्रवृत्ति"
+}

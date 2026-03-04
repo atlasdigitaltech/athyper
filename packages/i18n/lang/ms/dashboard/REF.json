@@ -1,0 +1,10 @@
+{
+  "dashboard.REF.overview.title": "Data Rujukan",
+  "dashboard.REF.overview.description": "Kod rujukan, klasifikasi, dan jadual carian",
+  "dashboard.REF.overview.kpi.total_tables": "Jumlah Jadual",
+  "dashboard.REF.overview.kpi.active_codes": "Kod Aktif",
+  "dashboard.REF.overview.kpi.pending_reviews": "Semakan Tertangguh",
+  "dashboard.REF.overview.kpi.recently_modified": "Baru Diubahsuai",
+  "dashboard.REF.overview.list.recent_changes": "Perubahan Terkini",
+  "dashboard.REF.overview.chart.codes_by_domain": "Kod Mengikut Domain"
+}

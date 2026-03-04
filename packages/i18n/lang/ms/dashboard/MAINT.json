@@ -1,0 +1,10 @@
+{
+  "dashboard.MAINT.overview.title": "Pengurusan Penyelenggaraan",
+  "dashboard.MAINT.overview.description": "Perintah kerja, penyelenggaraan pencegahan, dan masa henti",
+  "dashboard.MAINT.overview.kpi.open_work_orders": "Perintah Kerja Terbuka",
+  "dashboard.MAINT.overview.kpi.overdue_tasks": "Tugasan Tertunggak",
+  "dashboard.MAINT.overview.kpi.mtbf": "Purata Masa Antara Kerosakan",
+  "dashboard.MAINT.overview.kpi.planned_maintenance": "Penyelenggaraan Dirancang",
+  "dashboard.MAINT.overview.list.recent_work_orders": "Perintah Kerja Terkini",
+  "dashboard.MAINT.overview.chart.downtime_trend": "Trend Masa Henti"
+}

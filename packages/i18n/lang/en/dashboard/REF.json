@@ -1,0 +1,10 @@
+{
+  "dashboard.REF.overview.title": "Reference Data",
+  "dashboard.REF.overview.description": "Countries, currencies, and configuration",
+  "dashboard.REF.overview.kpi.countries": "Countries",
+  "dashboard.REF.overview.kpi.currencies": "Currencies",
+  "dashboard.REF.overview.kpi.active_configs": "Active Configurations",
+  "dashboard.REF.overview.kpi.last_updated": "Last Updated",
+  "dashboard.REF.overview.list.recent_changes": "Recent Changes",
+  "dashboard.REF.overview.chart.data_coverage": "Data Coverage"
+}

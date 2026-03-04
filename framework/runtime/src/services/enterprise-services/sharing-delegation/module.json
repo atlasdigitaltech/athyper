@@ -1,0 +1,9 @@
+﻿{
+    "code":  "SHARE",
+    "name":  "Delegation \u0026 Sharing",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Professional"
+}

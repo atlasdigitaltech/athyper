@@ -1,0 +1,10 @@
+{
+  "dashboard.TREASURY.overview.title": "कोषागार अवलोकन",
+  "dashboard.TREASURY.overview.description": "नकदी प्रवाह और कोषागार स्थिति",
+  "dashboard.TREASURY.overview.kpi.cash_position": "नकदी स्थिति",
+  "dashboard.TREASURY.overview.kpi.liquidity_ratio": "तरलता अनुपात",
+  "dashboard.TREASURY.overview.kpi.investments": "निवेश",
+  "dashboard.TREASURY.overview.kpi.borrowings": "उधार",
+  "dashboard.TREASURY.overview.list.recent_transactions": "हालिया लेनदेन",
+  "dashboard.TREASURY.overview.chart.cashflow_forecast": "नकदी प्रवाह पूर्वानुमान"
+}

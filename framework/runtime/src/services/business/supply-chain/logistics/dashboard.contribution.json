@@ -1,0 +1,60 @@
+{
+  "$schema": "athyper://dashboard-contribution/v1",
+  "module_code": "LOGISTICS",
+  "module_name": "Transportation & Logistics",
+  "dashboards": [
+    {
+      "code": "logistics_overview",
+      "title_key": "dashboard.LOGISTICS.overview.title",
+      "description_key": "dashboard.LOGISTICS.overview.description",
+      "icon": "truck",
+      "workbenches": ["user", "admin"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "agent", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "manager", "permission": "view" },
+        { "principal_type": "persona", "principal_key": "module_admin", "permission": "edit" },
+        { "principal_type": "persona", "principal_key": "tenant_admin", "permission": "edit" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.LOGISTICS.overview.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.overview.kpi.active_shipments", "query_key": "logistics.active_shipments", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.overview.kpi.on_time_rate", "query_key": "logistics.on_time_rate", "format": "percent" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.overview.kpi.freight_cost_mtd", "query_key": "logistics.freight_cost_mtd", "format": "currency" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.overview.kpi.delayed", "query_key": "logistics.delayed", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.LOGISTICS.overview.chart.delivery_performance", "query_key": "logistics.delivery_performance", "chart_type": "line" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.LOGISTICS.overview.list.recent_shipments", "query_key": "logistics.recent_shipments", "columns": ["date", "destination", "carrier", "status"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    },
+    {
+      "code": "logistics_partner",
+      "title_key": "dashboard.LOGISTICS.partner.title",
+      "description_key": "dashboard.LOGISTICS.partner.description",
+      "icon": "truck",
+      "workbenches": ["partner"],
+      "sort_order": 100,
+      "acl": [
+        { "principal_type": "persona", "principal_key": "partner", "permission": "view" }
+      ],
+      "layout": {
+        "schema_version": 1,
+        "columns": 12,
+        "row_height": 80,
+        "items": [
+          { "id": "h1", "widget_type": "heading", "params": { "text_key": "dashboard.LOGISTICS.partner.title", "level": "h2" }, "grid": { "x": 0, "y": 0, "w": 12, "h": 1 } },
+          { "id": "kpi1", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.partner.kpi.my_shipments", "query_key": "logistics.partner.my_shipments", "format": "number" }, "grid": { "x": 0, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi2", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.partner.kpi.in_transit", "query_key": "logistics.partner.in_transit", "format": "number" }, "grid": { "x": 3, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi3", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.partner.kpi.delivered", "query_key": "logistics.partner.delivered", "format": "number" }, "grid": { "x": 6, "y": 1, "w": 3, "h": 2 } },
+          { "id": "kpi4", "widget_type": "kpi", "params": { "label_key": "dashboard.LOGISTICS.partner.kpi.exceptions", "query_key": "logistics.partner.exceptions", "format": "number" }, "grid": { "x": 9, "y": 1, "w": 3, "h": 2 } },
+          { "id": "chart1", "widget_type": "chart", "params": { "title_key": "dashboard.LOGISTICS.partner.chart.shipment_status", "query_key": "logistics.partner.shipment_status", "chart_type": "bar" }, "grid": { "x": 0, "y": 3, "w": 8, "h": 4 } },
+          { "id": "list1", "widget_type": "list", "params": { "title_key": "dashboard.LOGISTICS.partner.list.my_shipments", "query_key": "logistics.partner.my_shipments_list", "columns": ["date", "reference", "destination", "status"], "page_size": 5 }, "grid": { "x": 8, "y": 3, "w": 4, "h": 4 } }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+﻿{
+    "code":  "INVENTORY",
+    "name":  "Inventory Management",
+    "dependsOn":  [
+                      "CORE",
+                      "REL",
+                      "ACC"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

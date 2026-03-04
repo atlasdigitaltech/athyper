@@ -1,0 +1,16 @@
+{
+  "dashboard.BUY.overview.title": "கொள்முதல் மேலோட்டம்",
+  "dashboard.BUY.overview.description": "கொள்முதல் ஆர்டர்கள் மற்றும் செலவு பகுப்பாய்வு",
+  "dashboard.BUY.overview.kpi.open_orders": "திறந்த ஆர்டர்கள்",
+  "dashboard.BUY.overview.kpi.pending_approvals": "நிலுவையிலுள்ள ஒப்புதல்கள்",
+  "dashboard.BUY.overview.kpi.total_spend": "மொத்த செலவு",
+  "dashboard.BUY.overview.kpi.savings": "சேமிப்புகள்",
+  "dashboard.BUY.overview.list.recent_orders": "சமீபத்திய ஆர்டர்கள்",
+  "dashboard.BUY.overview.chart.spend_by_category": "வகை வாரியாக செலவு",
+  "dashboard.BUY.partner.title": "வழங்குநர் கொள்முதல் போர்ட்டல்",
+  "dashboard.BUY.partner.description": "கொள்முதல் ஆர்டர்கள் மற்றும் விலைப்பட்டியல்கள்",
+  "dashboard.BUY.partner.kpi.open_pos": "திறந்த கொள்முதல் ஆர்டர்கள்",
+  "dashboard.BUY.partner.kpi.pending_invoices": "நிலுவையிலுள்ள விலைப்பட்டியல்கள்",
+  "dashboard.BUY.partner.list.my_orders": "எனது ஆர்டர்கள்",
+  "dashboard.BUY.partner.chart.order_history": "ஆர்டர் வரலாறு"
+}

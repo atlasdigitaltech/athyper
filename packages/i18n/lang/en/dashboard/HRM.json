@@ -1,0 +1,10 @@
+{
+  "dashboard.HRM.overview.title": "HR Dashboard",
+  "dashboard.HRM.overview.description": "Employee lifecycle and organization structure",
+  "dashboard.HRM.overview.kpi.headcount": "Total Headcount",
+  "dashboard.HRM.overview.kpi.new_hires": "New Hires (MTD)",
+  "dashboard.HRM.overview.kpi.turnover_rate": "Turnover Rate",
+  "dashboard.HRM.overview.kpi.open_positions": "Open Positions",
+  "dashboard.HRM.overview.list.recent_changes": "Recent HR Changes",
+  "dashboard.HRM.overview.chart.headcount_trend": "Headcount Trend"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.CONTRACT.overview.title": "Contract Management",
+  "dashboard.CONTRACT.overview.description": "Active contracts, terms, and obligations",
+  "dashboard.CONTRACT.overview.kpi.active_contracts": "Active Contracts",
+  "dashboard.CONTRACT.overview.kpi.expiring_soon": "Expiring Soon",
+  "dashboard.CONTRACT.overview.kpi.total_value": "Total Contract Value",
+  "dashboard.CONTRACT.overview.kpi.renewals_due": "Renewals Due",
+  "dashboard.CONTRACT.overview.list.recent_contracts": "Recent Contracts",
+  "dashboard.CONTRACT.overview.chart.contracts_by_status": "Contracts by Status"
+}

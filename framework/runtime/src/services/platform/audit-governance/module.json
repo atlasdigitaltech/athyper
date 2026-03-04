@@ -1,0 +1,9 @@
+﻿{
+    "code":  "AUDIT",
+    "name":  "Audit \u0026 Governance",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

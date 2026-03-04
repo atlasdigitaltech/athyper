@@ -1,0 +1,10 @@
+{
+  "dashboard.PRJ.overview.title": "திட்ட மேலோட்டம்",
+  "dashboard.PRJ.overview.description": "திட்ட நிலை மற்றும் வள ஒதுக்கீடு",
+  "dashboard.PRJ.overview.kpi.active_projects": "செயலில் உள்ள திட்டங்கள்",
+  "dashboard.PRJ.overview.kpi.on_track": "சரியான பாதையில்",
+  "dashboard.PRJ.overview.kpi.at_risk": "ஆபத்தில் உள்ளவை",
+  "dashboard.PRJ.overview.kpi.budget_utilization": "வரவுசெலவுத் திட்ட பயன்பாடு",
+  "dashboard.PRJ.overview.list.milestones": "மைல்கற்கள்",
+  "dashboard.PRJ.overview.chart.project_timeline": "திட்ட காலவரிசை"
+}

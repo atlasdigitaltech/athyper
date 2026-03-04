@@ -1,0 +1,10 @@
+{
+  "dashboard.ACC.overview.title": "نظرة عامة على المالية",
+  "dashboard.ACC.overview.description": "المقاييس المالية الرئيسية والنشاط الأخير",
+  "dashboard.ACC.overview.kpi.total_revenue": "إجمالي الإيرادات",
+  "dashboard.ACC.overview.kpi.accounts_receivable": "حسابات القبض",
+  "dashboard.ACC.overview.kpi.accounts_payable": "حسابات الدفع",
+  "dashboard.ACC.overview.kpi.net_income": "صافي الدخل",
+  "dashboard.ACC.overview.list.recent_journals": "قيود اليومية الأخيرة",
+  "dashboard.ACC.overview.chart.revenue_trend": "اتجاه الإيرادات"
+}

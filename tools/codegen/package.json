@@ -1,0 +1,31 @@
+{
+  "name": "@athyper/codegen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "athyper-codegen": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts src/publish.ts --format esm --dts --sourcemap --outDir dist",
+    "dev": "tsup src/index.ts src/publish.ts --format esm --dts --sourcemap --outDir dist --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "codegen": "node dist/index.js",
+    "codegen:watch": "node dist/index.js --watch",
+    "publish": "node dist/publish.js",
+    "publish:dry-run": "node dist/publish.js --dry-run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  }
+}

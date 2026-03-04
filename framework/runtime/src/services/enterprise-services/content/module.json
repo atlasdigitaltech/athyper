@@ -1,0 +1,9 @@
+﻿{
+    "code":  "CONTENT",
+    "name":  "Content Services",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

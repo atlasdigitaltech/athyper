@@ -1,0 +1,10 @@
+{
+  "dashboard.PAYG.overview.title": "Pemantauan Gerbang Pembayaran",
+  "dashboard.PAYG.overview.description": "Jumlah transaksi dan kesihatan gerbang",
+  "dashboard.PAYG.overview.kpi.txn_volume": "Jumlah Transaksi",
+  "dashboard.PAYG.overview.kpi.success_rate": "Kadar Kejayaan",
+  "dashboard.PAYG.overview.kpi.avg_processing": "Purata Masa Pemprosesan",
+  "dashboard.PAYG.overview.kpi.failed_txns": "Transaksi Gagal",
+  "dashboard.PAYG.overview.list.recent_transactions": "Transaksi Terkini",
+  "dashboard.PAYG.overview.chart.volume_trend": "Trend Jumlah"
+}

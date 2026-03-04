@@ -1,0 +1,10 @@
+{
+  "dashboard.CRM.overview.title": "نظرة عامة على علاقات العملاء",
+  "dashboard.CRM.overview.description": "مشاركة العملاء وفرص المبيعات",
+  "dashboard.CRM.overview.kpi.active_leads": "العملاء المحتملون النشطون",
+  "dashboard.CRM.overview.kpi.conversion_rate": "معدل التحويل",
+  "dashboard.CRM.overview.kpi.open_opportunities": "الفرص المفتوحة",
+  "dashboard.CRM.overview.kpi.customer_satisfaction": "رضا العملاء",
+  "dashboard.CRM.overview.list.recent_activities": "الأنشطة الأخيرة",
+  "dashboard.CRM.overview.chart.pipeline_stages": "مراحل مسار المبيعات"
+}

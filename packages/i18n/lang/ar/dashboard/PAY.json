@@ -1,0 +1,10 @@
+{
+  "dashboard.PAY.overview.title": "نظرة عامة على المدفوعات",
+  "dashboard.PAY.overview.description": "معالجة المدفوعات والحالة",
+  "dashboard.PAY.overview.kpi.pending_payments": "المدفوعات المعلقة",
+  "dashboard.PAY.overview.kpi.processed_today": "المعالجة اليوم",
+  "dashboard.PAY.overview.kpi.failed_payments": "المدفوعات الفاشلة",
+  "dashboard.PAY.overview.kpi.total_volume": "الحجم الإجمالي",
+  "dashboard.PAY.overview.list.recent_payments": "المدفوعات الأخيرة",
+  "dashboard.PAY.overview.chart.payment_trend": "اتجاه المدفوعات"
+}

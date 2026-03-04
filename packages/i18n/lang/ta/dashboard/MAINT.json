@@ -1,0 +1,10 @@
+{
+  "dashboard.MAINT.overview.title": "பராமரிப்பு மேலோட்டம்",
+  "dashboard.MAINT.overview.description": "பராமரிப்பு அட்டவணை மற்றும் பணி ஆர்டர்கள்",
+  "dashboard.MAINT.overview.kpi.open_work_orders": "திறந்த பணி ஆர்டர்கள்",
+  "dashboard.MAINT.overview.kpi.overdue_tasks": "தாமதமான பணிகள்",
+  "dashboard.MAINT.overview.kpi.mtbf": "சராசரி செயலிழப்பு இடைவெளி",
+  "dashboard.MAINT.overview.kpi.maintenance_cost": "பராமரிப்பு செலவு",
+  "dashboard.MAINT.overview.list.upcoming_maintenance": "வரவிருக்கும் பராமரிப்பு",
+  "dashboard.MAINT.overview.chart.work_order_trend": "பணி ஆர்டர் போக்கு"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSET.overview.title": "Asset Overview",
+  "dashboard.ASSET.overview.description": "Asset lifecycle and depreciation tracking",
+  "dashboard.ASSET.overview.kpi.total_assets": "Total Assets",
+  "dashboard.ASSET.overview.kpi.net_book_value": "Net Book Value",
+  "dashboard.ASSET.overview.kpi.depreciation_mtd": "Depreciation MTD",
+  "dashboard.ASSET.overview.kpi.disposals": "Disposals",
+  "dashboard.ASSET.overview.list.recent_acquisitions": "Recent Acquisitions",
+  "dashboard.ASSET.overview.chart.asset_by_category": "Assets by Category"
+}

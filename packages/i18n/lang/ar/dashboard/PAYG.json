@@ -1,0 +1,10 @@
+{
+  "dashboard.PAYG.overview.title": "نظرة عامة على بوابة الدفع",
+  "dashboard.PAYG.overview.description": "معاملات بوابة الدفع والحالة",
+  "dashboard.PAYG.overview.kpi.transactions_today": "معاملات اليوم",
+  "dashboard.PAYG.overview.kpi.success_rate": "معدل النجاح",
+  "dashboard.PAYG.overview.kpi.total_processed": "إجمالي المعالج",
+  "dashboard.PAYG.overview.kpi.chargebacks": "المبالغ المستردة",
+  "dashboard.PAYG.overview.list.recent_transactions": "المعاملات الأخيرة",
+  "dashboard.PAYG.overview.chart.transaction_volume": "حجم المعاملات"
+}

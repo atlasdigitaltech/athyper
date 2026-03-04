@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETREMS.overview.title": "Property Management",
+  "dashboard.ASSETREMS.overview.description": "Property, lease, and tenancy management",
+  "dashboard.ASSETREMS.overview.kpi.total_properties": "Total Properties",
+  "dashboard.ASSETREMS.overview.kpi.occupancy_rate": "Occupancy Rate",
+  "dashboard.ASSETREMS.overview.kpi.rent_due": "Rent Due",
+  "dashboard.ASSETREMS.overview.kpi.lease_expiring": "Leases Expiring",
+  "dashboard.ASSETREMS.overview.list.recent_leases": "Recent Leases",
+  "dashboard.ASSETREMS.overview.chart.occupancy_trend": "Occupancy Trend"
+}

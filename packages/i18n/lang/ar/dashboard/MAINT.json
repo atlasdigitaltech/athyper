@@ -1,0 +1,10 @@
+{
+  "dashboard.MAINT.overview.title": "نظرة عامة على الصيانة",
+  "dashboard.MAINT.overview.description": "جدول الصيانة وأوامر العمل",
+  "dashboard.MAINT.overview.kpi.open_work_orders": "أوامر العمل المفتوحة",
+  "dashboard.MAINT.overview.kpi.overdue_tasks": "المهام المتأخرة",
+  "dashboard.MAINT.overview.kpi.mtbf": "متوسط الوقت بين الأعطال",
+  "dashboard.MAINT.overview.kpi.maintenance_cost": "تكلفة الصيانة",
+  "dashboard.MAINT.overview.list.upcoming_maintenance": "الصيانة القادمة",
+  "dashboard.MAINT.overview.chart.work_order_trend": "اتجاه أوامر العمل"
+}

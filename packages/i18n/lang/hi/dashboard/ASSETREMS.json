@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETREMS.overview.title": "परिसंपत्ति विश्वसनीयता अवलोकन",
+  "dashboard.ASSETREMS.overview.description": "विश्वसनीयता मीट्रिक्स और विफलता विश्लेषण",
+  "dashboard.ASSETREMS.overview.kpi.mtbf": "औसत विफलता अंतराल",
+  "dashboard.ASSETREMS.overview.kpi.mttr": "औसत मरम्मत समय",
+  "dashboard.ASSETREMS.overview.kpi.availability": "उपलब्धता",
+  "dashboard.ASSETREMS.overview.kpi.failure_count": "विफलता संख्या",
+  "dashboard.ASSETREMS.overview.list.failure_log": "विफलता लॉग",
+  "dashboard.ASSETREMS.overview.chart.reliability_trend": "विश्वसनीयता प्रवृत्ति"
+}

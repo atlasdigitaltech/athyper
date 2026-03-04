@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETFM.overview.title": "Facility Operations",
+  "dashboard.ASSETFM.overview.description": "Buildings, utilities, and space management",
+  "dashboard.ASSETFM.overview.kpi.total_buildings": "Total Buildings",
+  "dashboard.ASSETFM.overview.kpi.maintenance_cost_mtd": "Maintenance Cost MTD",
+  "dashboard.ASSETFM.overview.kpi.open_requests": "Open Requests",
+  "dashboard.ASSETFM.overview.kpi.utility_cost": "Utility Cost MTD",
+  "dashboard.ASSETFM.overview.list.recent_requests": "Recent Requests",
+  "dashboard.ASSETFM.overview.chart.cost_by_building": "Cost by Building"
+}

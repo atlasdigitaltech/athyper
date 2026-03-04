@@ -1,0 +1,10 @@
+{
+  "dashboard.TREASURY.overview.title": "கருவூல மேலோட்டம்",
+  "dashboard.TREASURY.overview.description": "பணப்புழக்கம் மற்றும் கருவூல நிலை",
+  "dashboard.TREASURY.overview.kpi.cash_position": "ரொக்க நிலை",
+  "dashboard.TREASURY.overview.kpi.liquidity_ratio": "பணப்புழக்க விகிதம்",
+  "dashboard.TREASURY.overview.kpi.investments": "முதலீடுகள்",
+  "dashboard.TREASURY.overview.kpi.borrowings": "கடன்கள்",
+  "dashboard.TREASURY.overview.list.recent_transactions": "சமீபத்திய பரிவர்த்தனைகள்",
+  "dashboard.TREASURY.overview.chart.cashflow_forecast": "பணப்புழக்க முன்னறிவிப்பு"
+}

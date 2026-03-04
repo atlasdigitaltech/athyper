@@ -1,0 +1,18 @@
+{
+  "dashboard.SALE.overview.title": "Pesanan Jualan",
+  "dashboard.SALE.overview.description": "Kitaran jualan, pesanan, dan invois",
+  "dashboard.SALE.overview.kpi.open_orders": "Pesanan Terbuka",
+  "dashboard.SALE.overview.kpi.shipped_orders": "Pesanan Dihantar",
+  "dashboard.SALE.overview.kpi.revenue_mtd": "Hasil BTK",
+  "dashboard.SALE.overview.kpi.returns": "Pemulangan",
+  "dashboard.SALE.overview.list.recent_orders": "Pesanan Jualan Terkini",
+  "dashboard.SALE.overview.chart.sales_trend": "Trend Jualan",
+  "dashboard.SALE.partner.title": "Portal Pelanggan",
+  "dashboard.SALE.partner.description": "Pesanan, penghantaran, dan invois anda",
+  "dashboard.SALE.partner.kpi.my_orders": "Pesanan Saya",
+  "dashboard.SALE.partner.kpi.deliveries": "Penghantaran",
+  "dashboard.SALE.partner.kpi.invoices": "Invois Terbuka",
+  "dashboard.SALE.partner.kpi.support_tickets": "Tiket Sokongan",
+  "dashboard.SALE.partner.list.my_orders": "Pesanan Saya",
+  "dashboard.SALE.partner.chart.order_status": "Status Pesanan"
+}

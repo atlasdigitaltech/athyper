@@ -1,0 +1,10 @@
+{
+  "dashboard.DEMAND.overview.title": "نظرة عامة على تخطيط الطلب",
+  "dashboard.DEMAND.overview.description": "التنبؤ بالطلب والتخطيط",
+  "dashboard.DEMAND.overview.kpi.forecast_accuracy": "دقة التنبؤ",
+  "dashboard.DEMAND.overview.kpi.open_requisitions": "طلبات الشراء المفتوحة",
+  "dashboard.DEMAND.overview.kpi.planned_orders": "الأوامر المخطط لها",
+  "dashboard.DEMAND.overview.kpi.fill_rate": "معدل التلبية",
+  "dashboard.DEMAND.overview.list.demand_signals": "إشارات الطلب",
+  "dashboard.DEMAND.overview.chart.demand_forecast": "توقعات الطلب"
+}

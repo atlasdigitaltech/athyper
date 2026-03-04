@@ -1,0 +1,9 @@
+﻿{
+    "code":  "WMS",
+    "name":  "Warehouse Management",
+    "dependsOn":  [
+                      "INVENTORY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Enterprise"
+}

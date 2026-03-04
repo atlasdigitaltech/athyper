@@ -1,0 +1,10 @@
+{
+  "dashboard.MDG.overview.title": "Tadbir Urus Data Induk",
+  "dashboard.MDG.overview.description": "Kualiti data induk, pendua, dan tadbir urus",
+  "dashboard.MDG.overview.kpi.total_records": "Jumlah Rekod",
+  "dashboard.MDG.overview.kpi.duplicates": "Pendua Dikesan",
+  "dashboard.MDG.overview.kpi.data_quality": "Skor Kualiti Data",
+  "dashboard.MDG.overview.kpi.pending_approvals": "Kelulusan Tertangguh",
+  "dashboard.MDG.overview.list.recent_changes": "Perubahan Terkini",
+  "dashboard.MDG.overview.chart.quality_by_domain": "Kualiti Mengikut Domain"
+}

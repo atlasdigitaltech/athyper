@@ -1,0 +1,10 @@
+{
+  "dashboard.INV.overview.title": "சரக்கு மேலோட்டம்",
+  "dashboard.INV.overview.description": "இருப்பு நிலைகள் மற்றும் சரக்கு நகர்வுகள்",
+  "dashboard.INV.overview.kpi.total_items": "மொத்த பொருட்கள்",
+  "dashboard.INV.overview.kpi.low_stock": "குறைந்த இருப்பு",
+  "dashboard.INV.overview.kpi.stock_value": "இருப்பு மதிப்பு",
+  "dashboard.INV.overview.kpi.turnover_rate": "சுழற்சி விகிதம்",
+  "dashboard.INV.overview.list.stock_movements": "இருப்பு நகர்வுகள்",
+  "dashboard.INV.overview.chart.stock_levels": "இருப்பு நிலைகள்"
+}

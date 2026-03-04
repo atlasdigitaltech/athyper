@@ -1,0 +1,10 @@
+{
+  "dashboard.MDG.overview.title": "نظرة عامة على حوكمة البيانات الرئيسية",
+  "dashboard.MDG.overview.description": "جودة البيانات الرئيسية ومقاييس الحوكمة",
+  "dashboard.MDG.overview.kpi.master_records": "السجلات الرئيسية",
+  "dashboard.MDG.overview.kpi.data_completeness": "اكتمال البيانات",
+  "dashboard.MDG.overview.kpi.governance_score": "درجة الحوكمة",
+  "dashboard.MDG.overview.kpi.pending_approvals": "الموافقات المعلقة",
+  "dashboard.MDG.overview.list.change_requests": "طلبات التغيير",
+  "dashboard.MDG.overview.chart.data_health": "صحة البيانات"
+}

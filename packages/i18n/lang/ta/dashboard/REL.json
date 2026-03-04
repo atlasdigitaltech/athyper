@@ -1,0 +1,10 @@
+{
+  "dashboard.REL.overview.title": "வெளியீட்டு மேலாண்மை மேலோட்டம்",
+  "dashboard.REL.overview.description": "வெளியீட்டு திட்டமிடல் மற்றும் வரிசைப்படுத்தல் நிலை",
+  "dashboard.REL.overview.kpi.planned_releases": "திட்டமிடப்பட்ட வெளியீடுகள்",
+  "dashboard.REL.overview.kpi.in_progress": "நடந்துகொண்டிருப்பவை",
+  "dashboard.REL.overview.kpi.deployed": "வரிசைப்படுத்தப்பட்டவை",
+  "dashboard.REL.overview.kpi.rollback_count": "திரும்பப்பெறல் எண்ணிக்கை",
+  "dashboard.REL.overview.list.release_calendar": "வெளியீட்டு காலண்டர்",
+  "dashboard.REL.overview.chart.release_velocity": "வெளியீட்டு வேகம்"
+}

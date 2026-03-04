@@ -1,0 +1,10 @@
+{
+  "dashboard.SOURCE.overview.title": "نظرة عامة على التوريد",
+  "dashboard.SOURCE.overview.description": "فعاليات التوريد والعطاءات",
+  "dashboard.SOURCE.overview.kpi.active_events": "الفعاليات النشطة",
+  "dashboard.SOURCE.overview.kpi.pending_bids": "العطاءات المعلقة",
+  "dashboard.SOURCE.overview.kpi.awarded_contracts": "العقود الممنوحة",
+  "dashboard.SOURCE.overview.kpi.savings_achieved": "الوفورات المحققة",
+  "dashboard.SOURCE.overview.list.open_rfx": "طلبات العروض المفتوحة",
+  "dashboard.SOURCE.overview.chart.sourcing_pipeline": "مسار التوريد"
+}

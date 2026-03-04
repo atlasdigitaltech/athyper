@@ -1,0 +1,10 @@
+{
+  "dashboard.PRJ.overview.title": "Project Control",
+  "dashboard.PRJ.overview.description": "Project budgets, WBS, and cost tracking",
+  "dashboard.PRJ.overview.kpi.active_projects": "Active Projects",
+  "dashboard.PRJ.overview.kpi.budget_utilization": "Budget Utilization",
+  "dashboard.PRJ.overview.kpi.tasks_overdue": "Tasks Overdue",
+  "dashboard.PRJ.overview.kpi.revenue_recognized": "Revenue Recognized",
+  "dashboard.PRJ.overview.list.recent_tasks": "Recent Tasks",
+  "dashboard.PRJ.overview.chart.budget_vs_actual": "Budget vs Actual"
+}

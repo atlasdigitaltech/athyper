@@ -1,0 +1,18 @@
+{
+  "dashboard.BUY.overview.title": "Purchasing Dashboard",
+  "dashboard.BUY.overview.description": "Purchase orders, requisitions, and spending",
+  "dashboard.BUY.overview.kpi.open_pos": "Open POs",
+  "dashboard.BUY.overview.kpi.pending_receipts": "Pending Receipts",
+  "dashboard.BUY.overview.kpi.spend_mtd": "Spend MTD",
+  "dashboard.BUY.overview.kpi.overdue_orders": "Overdue Orders",
+  "dashboard.BUY.overview.list.recent_pos": "Recent Purchase Orders",
+  "dashboard.BUY.overview.chart.spend_by_category": "Spend by Category",
+  "dashboard.BUY.partner.title": "Supplier Portal",
+  "dashboard.BUY.partner.description": "Your purchase orders and delivery schedule",
+  "dashboard.BUY.partner.kpi.my_pos": "My POs",
+  "dashboard.BUY.partner.kpi.pending_deliveries": "Pending Deliveries",
+  "dashboard.BUY.partner.kpi.invoices": "Open Invoices",
+  "dashboard.BUY.partner.kpi.payments": "Recent Payments",
+  "dashboard.BUY.partner.list.my_orders": "My Orders",
+  "dashboard.BUY.partner.chart.delivery_schedule": "Delivery Schedule"
+}

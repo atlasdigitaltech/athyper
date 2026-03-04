@@ -1,0 +1,16 @@
+{
+  "dashboard.SALE.overview.title": "விற்பனை மேலோட்டம்",
+  "dashboard.SALE.overview.description": "விற்பனை செயல்திறன் மற்றும் ஆர்டர் நிலை",
+  "dashboard.SALE.overview.kpi.total_sales": "மொத்த விற்பனை",
+  "dashboard.SALE.overview.kpi.open_orders": "திறந்த ஆர்டர்கள்",
+  "dashboard.SALE.overview.kpi.quotations": "விலை மதிப்பீடுகள்",
+  "dashboard.SALE.overview.kpi.avg_order_value": "சராசரி ஆர்டர் மதிப்பு",
+  "dashboard.SALE.overview.list.recent_orders": "சமீபத்திய ஆர்டர்கள்",
+  "dashboard.SALE.overview.chart.sales_trend": "விற்பனை போக்கு",
+  "dashboard.SALE.partner.title": "வாடிக்கையாளர் விற்பனை போர்ட்டல்",
+  "dashboard.SALE.partner.description": "ஆர்டர்கள் மற்றும் விலை மதிப்பீடுகள்",
+  "dashboard.SALE.partner.kpi.my_orders": "எனது ஆர்டர்கள்",
+  "dashboard.SALE.partner.kpi.pending_quotes": "நிலுவையிலுள்ள விலை மதிப்பீடுகள்",
+  "dashboard.SALE.partner.list.order_history": "ஆர்டர் வரலாறு",
+  "dashboard.SALE.partner.chart.spending_trend": "செலவு போக்கு"
+}

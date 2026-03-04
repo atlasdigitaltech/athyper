@@ -1,0 +1,10 @@
+{
+  "dashboard.CRM.overview.title": "Saluran Jualan",
+  "dashboard.CRM.overview.description": "Petunjuk, peluang, dan pengurusan saluran",
+  "dashboard.CRM.overview.kpi.total_leads": "Jumlah Petunjuk",
+  "dashboard.CRM.overview.kpi.open_opportunities": "Peluang Terbuka",
+  "dashboard.CRM.overview.kpi.win_rate": "Kadar Kejayaan",
+  "dashboard.CRM.overview.kpi.pipeline_value": "Nilai Saluran",
+  "dashboard.CRM.overview.list.recent_leads": "Petunjuk Terkini",
+  "dashboard.CRM.overview.chart.pipeline_stages": "Saluran Mengikut Peringkat"
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@neon/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./badge": {
+      "types": "./badge.ts",
+      "default": "./badge.ts"
+    },
+    "./button": {
+      "types": "./button.ts",
+      "default": "./button.ts"
+    },
+    "./card": {
+      "types": "./card.ts",
+      "default": "./card.ts"
+    }
+  },
+  "dependencies": {
+    "@athyper/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}

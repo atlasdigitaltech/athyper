@@ -1,0 +1,10 @@
+{
+  "dashboard.MAINT.overview.title": "रखरखाव अवलोकन",
+  "dashboard.MAINT.overview.description": "रखरखाव अनुसूची और कार्य आदेश",
+  "dashboard.MAINT.overview.kpi.open_work_orders": "खुले कार्य आदेश",
+  "dashboard.MAINT.overview.kpi.overdue_tasks": "अतिदेय कार्य",
+  "dashboard.MAINT.overview.kpi.mtbf": "औसत विफलता अंतराल",
+  "dashboard.MAINT.overview.kpi.maintenance_cost": "रखरखाव लागत",
+  "dashboard.MAINT.overview.list.upcoming_maintenance": "आगामी रखरखाव",
+  "dashboard.MAINT.overview.chart.work_order_trend": "कार्य आदेश प्रवृत्ति"
+}

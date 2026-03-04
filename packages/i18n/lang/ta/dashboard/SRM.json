@@ -1,0 +1,10 @@
+{
+  "dashboard.SRM.overview.title": "வழங்குநர் உறவு மேலோட்டம்",
+  "dashboard.SRM.overview.description": "வழங்குநர் செயல்திறன் மற்றும் மதிப்பீடுகள்",
+  "dashboard.SRM.overview.kpi.active_suppliers": "செயலில் உள்ள வழங்குநர்கள்",
+  "dashboard.SRM.overview.kpi.avg_lead_time": "சராசரி முன்னேற்பாட்டு நேரம்",
+  "dashboard.SRM.overview.kpi.quality_score": "தரமதிப்பெண்",
+  "dashboard.SRM.overview.kpi.pending_evaluations": "நிலுவையிலுள்ள மதிப்பீடுகள்",
+  "dashboard.SRM.overview.list.top_suppliers": "சிறந்த வழங்குநர்கள்",
+  "dashboard.SRM.overview.chart.performance_trend": "செயல்திறன் போக்கு"
+}

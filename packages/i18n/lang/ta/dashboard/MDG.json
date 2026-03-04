@@ -1,0 +1,10 @@
+{
+  "dashboard.MDG.overview.title": "முதன்மை தரவு ஆளுகை மேலோட்டம்",
+  "dashboard.MDG.overview.description": "முதன்மை தரவு தரம் மற்றும் ஆளுகை அளவீடுகள்",
+  "dashboard.MDG.overview.kpi.master_records": "முதன்மை பதிவுகள்",
+  "dashboard.MDG.overview.kpi.data_completeness": "தரவு முழுமை",
+  "dashboard.MDG.overview.kpi.governance_score": "ஆளுகை மதிப்பெண்",
+  "dashboard.MDG.overview.kpi.pending_approvals": "நிலுவையிலுள்ள ஒப்புதல்கள்",
+  "dashboard.MDG.overview.list.change_requests": "மாற்றக் கோரிக்கைகள்",
+  "dashboard.MDG.overview.chart.data_health": "தரவு ஆரோக்கியம்"
+}

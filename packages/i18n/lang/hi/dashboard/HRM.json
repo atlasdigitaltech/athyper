@@ -1,0 +1,10 @@
+{
+  "dashboard.HRM.overview.title": "मानव संसाधन अवलोकन",
+  "dashboard.HRM.overview.description": "कर्मचारी मीट्रिक्स और मानव संसाधन गतिविधियाँ",
+  "dashboard.HRM.overview.kpi.total_employees": "कुल कर्मचारी",
+  "dashboard.HRM.overview.kpi.open_positions": "खुली पदें",
+  "dashboard.HRM.overview.kpi.attrition_rate": "कर्मचारी विलगाव दर",
+  "dashboard.HRM.overview.kpi.avg_tenure": "औसत कार्यकाल",
+  "dashboard.HRM.overview.list.recent_hires": "हालिया भर्तियाँ",
+  "dashboard.HRM.overview.chart.headcount_trend": "कर्मचारी संख्या प्रवृत्ति"
+}

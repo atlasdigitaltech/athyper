@@ -1,0 +1,10 @@
+{
+  "dashboard.PRJ.overview.title": "Pengurusan Projek",
+  "dashboard.PRJ.overview.description": "Projek aktif, pencapaian, dan penggunaan sumber",
+  "dashboard.PRJ.overview.kpi.active_projects": "Projek Aktif",
+  "dashboard.PRJ.overview.kpi.on_track": "Mengikut Jadual",
+  "dashboard.PRJ.overview.kpi.at_risk": "Berisiko",
+  "dashboard.PRJ.overview.kpi.budget_consumed": "Belanjawan Digunakan",
+  "dashboard.PRJ.overview.list.recent_milestones": "Pencapaian Terkini",
+  "dashboard.PRJ.overview.chart.project_status": "Status Projek"
+}

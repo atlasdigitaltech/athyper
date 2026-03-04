@@ -1,0 +1,10 @@
+{
+  "dashboard.WMS.overview.title": "கிடங்கு மேலாண்மை மேலோட்டம்",
+  "dashboard.WMS.overview.description": "கிடங்கு செயல்பாடுகள் மற்றும் திறன் பயன்பாடு",
+  "dashboard.WMS.overview.kpi.capacity_utilization": "திறன் பயன்பாடு",
+  "dashboard.WMS.overview.kpi.pending_receipts": "நிலுவையிலுள்ள ரசீதுகள்",
+  "dashboard.WMS.overview.kpi.pending_shipments": "நிலுவையிலுள்ள ஏற்றுமதிகள்",
+  "dashboard.WMS.overview.kpi.pick_accuracy": "எடுப்பு துல்லியம்",
+  "dashboard.WMS.overview.list.pending_tasks": "நிலுவையிலுள்ள பணிகள்",
+  "dashboard.WMS.overview.chart.throughput": "செயலாக்க அளவு"
+}

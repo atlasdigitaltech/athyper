@@ -1,0 +1,9 @@
+﻿{
+    "code":  "COLLAB",
+    "name":  "Activity \u0026 Commentary",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

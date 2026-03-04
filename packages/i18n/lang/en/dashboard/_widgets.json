@@ -1,0 +1,14 @@
+{
+  "widget.heading.label": "Heading",
+  "widget.heading.description": "Section header text",
+  "widget.spacer.label": "Spacer",
+  "widget.spacer.description": "Vertical spacing between sections",
+  "widget.shortcut.label": "Shortcut",
+  "widget.shortcut.description": "Quick-link card to a page or action",
+  "widget.kpi.label": "KPI Card",
+  "widget.kpi.description": "Key performance indicator number card",
+  "widget.list.label": "List",
+  "widget.list.description": "Table or list view of records",
+  "widget.chart.label": "Chart",
+  "widget.chart.description": "Data visualization chart"
+}

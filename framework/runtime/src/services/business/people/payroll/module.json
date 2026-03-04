@@ -1,0 +1,11 @@
+﻿{
+    "code":  "PAYROLL",
+    "name":  "Payroll",
+    "dependsOn":  [
+                      "HR",
+                      "ACC",
+                      "REG"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.CRM.overview.title": "Sales Pipeline",
+  "dashboard.CRM.overview.description": "Leads, opportunities, and pipeline management",
+  "dashboard.CRM.overview.kpi.total_leads": "Total Leads",
+  "dashboard.CRM.overview.kpi.open_opportunities": "Open Opportunities",
+  "dashboard.CRM.overview.kpi.win_rate": "Win Rate",
+  "dashboard.CRM.overview.kpi.pipeline_value": "Pipeline Value",
+  "dashboard.CRM.overview.list.recent_leads": "Recent Leads",
+  "dashboard.CRM.overview.chart.pipeline_stages": "Pipeline by Stage"
+}

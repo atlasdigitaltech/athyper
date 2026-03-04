@@ -1,0 +1,10 @@
+{
+  "dashboard.TREASURY.overview.title": "Treasury Dashboard",
+  "dashboard.TREASURY.overview.description": "Cash positioning and liquidity management",
+  "dashboard.TREASURY.overview.kpi.cash_position": "Cash Position",
+  "dashboard.TREASURY.overview.kpi.fx_exposure": "FX Exposure",
+  "dashboard.TREASURY.overview.kpi.liquidity_ratio": "Liquidity Ratio",
+  "dashboard.TREASURY.overview.kpi.bank_balance": "Total Bank Balance",
+  "dashboard.TREASURY.overview.list.recent_transfers": "Recent Transfers",
+  "dashboard.TREASURY.overview.chart.cash_flow": "Cash Flow Trend"
+}

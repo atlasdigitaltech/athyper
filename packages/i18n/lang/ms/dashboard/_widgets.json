@@ -1,0 +1,14 @@
+{
+  "widget.heading.label": "Tajuk",
+  "widget.heading.description": "Teks tajuk bahagian",
+  "widget.spacer.label": "Ruang Kosong",
+  "widget.spacer.description": "Jarak menegak antara bahagian",
+  "widget.shortcut.label": "Pintasan",
+  "widget.shortcut.description": "Kad pautan pantas ke halaman atau tindakan",
+  "widget.kpi.label": "Kad KPI",
+  "widget.kpi.description": "Kad penunjuk prestasi utama",
+  "widget.list.label": "Senarai",
+  "widget.list.description": "Paparan jadual atau senarai rekod",
+  "widget.chart.label": "Carta",
+  "widget.chart.description": "Carta visualisasi data"
+}

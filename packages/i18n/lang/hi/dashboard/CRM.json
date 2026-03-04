@@ -1,0 +1,10 @@
+{
+  "dashboard.CRM.overview.title": "ग्राहक संबंध अवलोकन",
+  "dashboard.CRM.overview.description": "ग्राहक जुड़ाव और बिक्री के अवसर",
+  "dashboard.CRM.overview.kpi.active_leads": "सक्रिय लीड्स",
+  "dashboard.CRM.overview.kpi.conversion_rate": "रूपांतरण दर",
+  "dashboard.CRM.overview.kpi.open_opportunities": "खुले अवसर",
+  "dashboard.CRM.overview.kpi.customer_satisfaction": "ग्राहक संतुष्टि",
+  "dashboard.CRM.overview.list.recent_activities": "हालिया गतिविधियाँ",
+  "dashboard.CRM.overview.chart.pipeline_stages": "बिक्री पाइपलाइन चरण"
+}

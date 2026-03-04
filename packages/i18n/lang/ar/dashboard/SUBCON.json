@@ -1,0 +1,10 @@
+{
+  "dashboard.SUBCON.overview.title": "نظرة عامة على التعاقد من الباطن",
+  "dashboard.SUBCON.overview.description": "أداء المقاولين من الباطن والمهام",
+  "dashboard.SUBCON.overview.kpi.active_subcontracts": "العقود الفرعية النشطة",
+  "dashboard.SUBCON.overview.kpi.pending_deliveries": "التسليمات المعلقة",
+  "dashboard.SUBCON.overview.kpi.total_value": "القيمة الإجمالية",
+  "dashboard.SUBCON.overview.kpi.completion_rate": "معدل الإنجاز",
+  "dashboard.SUBCON.overview.list.active_work_orders": "أوامر العمل النشطة",
+  "dashboard.SUBCON.overview.chart.progress_tracking": "تتبع التقدم"
+}

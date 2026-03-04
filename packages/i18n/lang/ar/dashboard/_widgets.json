@@ -1,0 +1,14 @@
+{
+  "widget.heading.label": "عنوان",
+  "widget.heading.description": "نص عنوان القسم",
+  "widget.spacer.label": "فاصل",
+  "widget.spacer.description": "مسافة رأسية بين الأقسام",
+  "widget.shortcut.label": "اختصار",
+  "widget.shortcut.description": "بطاقة رابط سريع لصفحة أو إجراء",
+  "widget.kpi.label": "بطاقة مؤشر أداء",
+  "widget.kpi.description": "بطاقة رقم مؤشر الأداء الرئيسي",
+  "widget.list.label": "قائمة",
+  "widget.list.description": "عرض جدول أو قائمة السجلات",
+  "widget.chart.label": "رسم بياني",
+  "widget.chart.description": "رسم بياني لتصور البيانات"
+}

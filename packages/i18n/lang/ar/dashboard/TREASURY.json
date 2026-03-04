@@ -1,0 +1,10 @@
+{
+  "dashboard.TREASURY.overview.title": "نظرة عامة على الخزانة",
+  "dashboard.TREASURY.overview.description": "التدفق النقدي وحالة الخزانة",
+  "dashboard.TREASURY.overview.kpi.cash_position": "الوضع النقدي",
+  "dashboard.TREASURY.overview.kpi.liquidity_ratio": "نسبة السيولة",
+  "dashboard.TREASURY.overview.kpi.investments": "الاستثمارات",
+  "dashboard.TREASURY.overview.kpi.borrowings": "القروض",
+  "dashboard.TREASURY.overview.list.recent_transactions": "المعاملات الأخيرة",
+  "dashboard.TREASURY.overview.chart.cashflow_forecast": "توقعات التدفق النقدي"
+}

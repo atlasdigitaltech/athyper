@@ -1,0 +1,18 @@
+{
+  "dashboard.SALE.overview.title": "Sales Orders",
+  "dashboard.SALE.overview.description": "Sales cycle, orders, and invoicing",
+  "dashboard.SALE.overview.kpi.open_orders": "Open Orders",
+  "dashboard.SALE.overview.kpi.shipped_orders": "Shipped Orders",
+  "dashboard.SALE.overview.kpi.revenue_mtd": "Revenue MTD",
+  "dashboard.SALE.overview.kpi.returns": "Returns",
+  "dashboard.SALE.overview.list.recent_orders": "Recent Sales Orders",
+  "dashboard.SALE.overview.chart.sales_trend": "Sales Trend",
+  "dashboard.SALE.partner.title": "Customer Portal",
+  "dashboard.SALE.partner.description": "Your orders, deliveries, and invoices",
+  "dashboard.SALE.partner.kpi.my_orders": "My Orders",
+  "dashboard.SALE.partner.kpi.deliveries": "Deliveries",
+  "dashboard.SALE.partner.kpi.invoices": "Open Invoices",
+  "dashboard.SALE.partner.kpi.support_tickets": "Support Tickets",
+  "dashboard.SALE.partner.list.my_orders": "My Orders",
+  "dashboard.SALE.partner.chart.order_status": "Order Status"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.INV.overview.title": "इन्वेंटरी अवलोकन",
+  "dashboard.INV.overview.description": "स्टॉक स्तर और इन्वेंटरी गतिविधियाँ",
+  "dashboard.INV.overview.kpi.total_items": "कुल वस्तुएँ",
+  "dashboard.INV.overview.kpi.low_stock": "कम स्टॉक",
+  "dashboard.INV.overview.kpi.stock_value": "स्टॉक मूल्य",
+  "dashboard.INV.overview.kpi.turnover_rate": "टर्नओवर दर",
+  "dashboard.INV.overview.list.stock_movements": "स्टॉक गतिविधियाँ",
+  "dashboard.INV.overview.chart.stock_levels": "स्टॉक स्तर"
+}

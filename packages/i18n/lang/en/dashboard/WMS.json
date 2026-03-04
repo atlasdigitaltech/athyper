@@ -1,0 +1,10 @@
+{
+  "dashboard.WMS.overview.title": "Warehouse Operations",
+  "dashboard.WMS.overview.description": "Warehouse management and operations",
+  "dashboard.WMS.overview.kpi.putaway_pending": "Putaway Pending",
+  "dashboard.WMS.overview.kpi.pick_orders": "Pick Orders",
+  "dashboard.WMS.overview.kpi.packing": "Packing Queue",
+  "dashboard.WMS.overview.kpi.cycle_count_due": "Cycle Count Due",
+  "dashboard.WMS.overview.list.recent_operations": "Recent Operations",
+  "dashboard.WMS.overview.chart.throughput": "Warehouse Throughput"
+}

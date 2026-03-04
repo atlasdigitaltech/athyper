@@ -1,0 +1,9 @@
+﻿{
+    "code":  "COMM",
+    "name":  "In-App Messaging",
+    "dependsOn":  [
+                      "CORE"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Professional"
+}

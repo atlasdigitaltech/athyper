@@ -1,0 +1,10 @@
+{
+  "dashboard.DEMAND.overview.title": "தேவை திட்டமிடல் மேலோட்டம்",
+  "dashboard.DEMAND.overview.description": "தேவை முன்னறிவிப்பு மற்றும் திட்டமிடல்",
+  "dashboard.DEMAND.overview.kpi.forecast_accuracy": "முன்னறிவிப்பு துல்லியம்",
+  "dashboard.DEMAND.overview.kpi.open_requisitions": "திறந்த கோரிக்கைகள்",
+  "dashboard.DEMAND.overview.kpi.planned_orders": "திட்டமிடப்பட்ட ஆர்டர்கள்",
+  "dashboard.DEMAND.overview.kpi.fill_rate": "நிரப்பு விகிதம்",
+  "dashboard.DEMAND.overview.list.demand_signals": "தேவை சமிக்ஞைகள்",
+  "dashboard.DEMAND.overview.chart.demand_forecast": "தேவை முன்னறிவிப்பு"
+}

@@ -1,0 +1,16 @@
+{
+  "dashboard.BUY.overview.title": "نظرة عامة على المشتريات",
+  "dashboard.BUY.overview.description": "أوامر الشراء وتحليل الإنفاق",
+  "dashboard.BUY.overview.kpi.open_orders": "الأوامر المفتوحة",
+  "dashboard.BUY.overview.kpi.pending_approvals": "الموافقات المعلقة",
+  "dashboard.BUY.overview.kpi.total_spend": "إجمالي الإنفاق",
+  "dashboard.BUY.overview.kpi.savings": "الوفورات",
+  "dashboard.BUY.overview.list.recent_orders": "الأوامر الأخيرة",
+  "dashboard.BUY.overview.chart.spend_by_category": "الإنفاق حسب الفئة",
+  "dashboard.BUY.partner.title": "بوابة مشتريات المورد",
+  "dashboard.BUY.partner.description": "أوامر الشراء والفواتير",
+  "dashboard.BUY.partner.kpi.open_pos": "أوامر الشراء المفتوحة",
+  "dashboard.BUY.partner.kpi.pending_invoices": "الفواتير المعلقة",
+  "dashboard.BUY.partner.list.my_orders": "أوامري",
+  "dashboard.BUY.partner.chart.order_history": "سجل الأوامر"
+}

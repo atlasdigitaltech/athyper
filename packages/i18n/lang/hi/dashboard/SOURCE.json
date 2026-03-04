@@ -1,0 +1,10 @@
+{
+  "dashboard.SOURCE.overview.title": "सोर्सिंग अवलोकन",
+  "dashboard.SOURCE.overview.description": "सोर्सिंग कार्यक्रम और बोलियाँ",
+  "dashboard.SOURCE.overview.kpi.active_events": "सक्रिय कार्यक्रम",
+  "dashboard.SOURCE.overview.kpi.pending_bids": "लंबित बोलियाँ",
+  "dashboard.SOURCE.overview.kpi.awarded_contracts": "प्रदत्त अनुबंध",
+  "dashboard.SOURCE.overview.kpi.savings_achieved": "प्राप्त बचत",
+  "dashboard.SOURCE.overview.list.open_rfx": "खुले RFx",
+  "dashboard.SOURCE.overview.chart.sourcing_pipeline": "सोर्सिंग पाइपलाइन"
+}

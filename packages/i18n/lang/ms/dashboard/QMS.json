@@ -1,0 +1,10 @@
+{
+  "dashboard.QMS.overview.title": "Pengurusan Kualiti",
+  "dashboard.QMS.overview.description": "Pemeriksaan kualiti, ketidakpatuhan, dan tindakan pembetulan",
+  "dashboard.QMS.overview.kpi.open_ncrs": "NCR Terbuka",
+  "dashboard.QMS.overview.kpi.inspections_due": "Pemeriksaan Perlu Dibuat",
+  "dashboard.QMS.overview.kpi.pass_rate": "Kadar Lulus",
+  "dashboard.QMS.overview.kpi.corrective_actions": "Tindakan Pembetulan",
+  "dashboard.QMS.overview.list.recent_inspections": "Pemeriksaan Terkini",
+  "dashboard.QMS.overview.chart.quality_trend": "Trend Kualiti"
+}

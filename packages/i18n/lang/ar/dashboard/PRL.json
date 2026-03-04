@@ -1,0 +1,10 @@
+{
+  "dashboard.PRL.overview.title": "نظرة عامة على كشوف الرواتب",
+  "dashboard.PRL.overview.description": "معالجة كشوف الرواتب وتحليل التكلفة",
+  "dashboard.PRL.overview.kpi.total_payroll": "إجمالي كشوف الرواتب",
+  "dashboard.PRL.overview.kpi.employees_processed": "الموظفون المعالجون",
+  "dashboard.PRL.overview.kpi.pending_approvals": "الموافقات المعلقة",
+  "dashboard.PRL.overview.kpi.tax_liability": "الالتزام الضريبي",
+  "dashboard.PRL.overview.list.recent_runs": "عمليات المعالجة الأخيرة",
+  "dashboard.PRL.overview.chart.payroll_trend": "اتجاه كشوف الرواتب"
+}

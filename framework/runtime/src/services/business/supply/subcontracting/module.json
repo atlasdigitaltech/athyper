@@ -1,0 +1,10 @@
+﻿{
+    "code":  "SUBCON",
+    "name":  "Subcontracting",
+    "dependsOn":  [
+                      "BUY",
+                      "INVENTORY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

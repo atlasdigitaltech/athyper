@@ -1,0 +1,10 @@
+{
+  "dashboard.SOURCE.overview.title": "Aktiviti Perolehan Sumber",
+  "dashboard.SOURCE.overview.description": "RFQ, bidaan, dan pemilihan vendor",
+  "dashboard.SOURCE.overview.kpi.open_rfqs": "RFQ Terbuka",
+  "dashboard.SOURCE.overview.kpi.bids_received": "Bidaan Diterima",
+  "dashboard.SOURCE.overview.kpi.avg_cycle_time": "Purata Masa Kitaran",
+  "dashboard.SOURCE.overview.kpi.savings_achieved": "Penjimatan Dicapai",
+  "dashboard.SOURCE.overview.list.recent_rfqs": "RFQ Terkini",
+  "dashboard.SOURCE.overview.chart.sourcing_pipeline": "Saluran Perolehan Sumber"
+}

@@ -1,0 +1,10 @@
+{
+  "dashboard.MDG.overview.title": "Data Governance",
+  "dashboard.MDG.overview.description": "Master data governance and quality",
+  "dashboard.MDG.overview.kpi.pending_approvals": "Pending Approvals",
+  "dashboard.MDG.overview.kpi.change_requests": "Change Requests",
+  "dashboard.MDG.overview.kpi.compliance_rate": "Compliance Rate",
+  "dashboard.MDG.overview.kpi.quality_score": "Data Quality Score",
+  "dashboard.MDG.overview.list.pending_reviews": "Pending Reviews",
+  "dashboard.MDG.overview.chart.quality_trend": "Quality Trend"
+}

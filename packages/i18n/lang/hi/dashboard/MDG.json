@@ -1,0 +1,10 @@
+{
+  "dashboard.MDG.overview.title": "मास्टर डेटा गवर्नेंस अवलोकन",
+  "dashboard.MDG.overview.description": "मास्टर डेटा गुणवत्ता और गवर्नेंस मीट्रिक्स",
+  "dashboard.MDG.overview.kpi.master_records": "मास्टर रिकॉर्ड",
+  "dashboard.MDG.overview.kpi.data_completeness": "डेटा पूर्णता",
+  "dashboard.MDG.overview.kpi.governance_score": "गवर्नेंस स्कोर",
+  "dashboard.MDG.overview.kpi.pending_approvals": "लंबित अनुमोदन",
+  "dashboard.MDG.overview.list.change_requests": "परिवर्तन अनुरोध",
+  "dashboard.MDG.overview.chart.data_health": "डेटा स्वास्थ्य"
+}

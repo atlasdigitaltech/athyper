@@ -1,0 +1,10 @@
+{
+  "dashboard.PAYG.overview.title": "கொடுப்பனவு நுழைவாயில் மேலோட்டம்",
+  "dashboard.PAYG.overview.description": "கொடுப்பனவு நுழைவாயில் பரிவர்த்தனைகள் மற்றும் நிலை",
+  "dashboard.PAYG.overview.kpi.transactions_today": "இன்றைய பரிவர்த்தனைகள்",
+  "dashboard.PAYG.overview.kpi.success_rate": "வெற்றி விகிதம்",
+  "dashboard.PAYG.overview.kpi.total_processed": "மொத்தம் செயலாக்கப்பட்டது",
+  "dashboard.PAYG.overview.kpi.chargebacks": "திரும்பப்பெறல்கள்",
+  "dashboard.PAYG.overview.list.recent_transactions": "சமீபத்திய பரிவர்த்தனைகள்",
+  "dashboard.PAYG.overview.chart.transaction_volume": "பரிவர்த்தனை அளவு"
+}

@@ -1,0 +1,40 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : mesh-dbpool-auth-config
+#
+# Description :
+#   PgBouncer connection pooler for IAM/Keycloak database (athyperauth_dev1).
+#   Session-mode pooling on port 6433 (Keycloak requires session mode).
+#
+# =======================================================================
+
+services:
+  dbpool-auth:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    profiles: ["mesh", "db"]
+    mem_limit: "${DBPOOL_AUTH_MEMORY_LIMIT}"
+    volumes:
+      - ${MESH_CONFIG}/db/local/dbpool/pgbouncer-auth.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ${MESH_CONFIG}/db/local/dbpool/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    networks: [internal]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6433"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

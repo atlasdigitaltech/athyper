@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/atlasdigitaltech/athyper/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Organization
+    url: https://github.com/orgs/atlasdigitaltech
+    about: Visit the atlasdigitaltech organization

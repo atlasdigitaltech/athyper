@@ -1,0 +1,18 @@
+{
+  "dashboard.LOGISTICS.overview.title": "Logistics Dashboard",
+  "dashboard.LOGISTICS.overview.description": "Shipment planning and delivery tracking",
+  "dashboard.LOGISTICS.overview.kpi.active_shipments": "Active Shipments",
+  "dashboard.LOGISTICS.overview.kpi.on_time_rate": "On-Time Delivery Rate",
+  "dashboard.LOGISTICS.overview.kpi.freight_cost_mtd": "Freight Cost MTD",
+  "dashboard.LOGISTICS.overview.kpi.delayed": "Delayed Shipments",
+  "dashboard.LOGISTICS.overview.list.recent_shipments": "Recent Shipments",
+  "dashboard.LOGISTICS.overview.chart.delivery_performance": "Delivery Performance",
+  "dashboard.LOGISTICS.partner.title": "Logistics Partner Portal",
+  "dashboard.LOGISTICS.partner.description": "Assigned shipments and performance",
+  "dashboard.LOGISTICS.partner.kpi.assigned_shipments": "Assigned Shipments",
+  "dashboard.LOGISTICS.partner.kpi.pickup_schedule": "Pickup Schedule",
+  "dashboard.LOGISTICS.partner.kpi.pod_pending": "POD Pending",
+  "dashboard.LOGISTICS.partner.kpi.performance_score": "Performance Score",
+  "dashboard.LOGISTICS.partner.list.my_shipments": "My Shipments",
+  "dashboard.LOGISTICS.partner.chart.monthly_performance": "Monthly Performance"
+}

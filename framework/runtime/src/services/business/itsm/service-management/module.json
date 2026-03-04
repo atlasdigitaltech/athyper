@@ -1,0 +1,13 @@
+﻿{
+    "code":  "ITSM",
+    "name":  "Support \u0026 Service Management",
+    "dependsOn":  [
+                      "CORE",
+                      "WF",
+                      "ASSET",
+                      "NOTIFY",
+                      "AUDIT"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

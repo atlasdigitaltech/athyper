@@ -1,0 +1,10 @@
+{
+  "dashboard.DEMAND.overview.title": "Demand Planning",
+  "dashboard.DEMAND.overview.description": "Demand forecasting and planning scenarios",
+  "dashboard.DEMAND.overview.kpi.forecast_accuracy": "Forecast Accuracy",
+  "dashboard.DEMAND.overview.kpi.demand_variance": "Demand Variance",
+  "dashboard.DEMAND.overview.kpi.plan_coverage": "Plan Coverage",
+  "dashboard.DEMAND.overview.kpi.alerts": "Planning Alerts",
+  "dashboard.DEMAND.overview.list.forecast_exceptions": "Forecast Exceptions",
+  "dashboard.DEMAND.overview.chart.demand_vs_actual": "Demand vs Actual"
+}

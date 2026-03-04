@@ -1,0 +1,16 @@
+{
+  "dashboard.SALE.overview.title": "نظرة عامة على المبيعات",
+  "dashboard.SALE.overview.description": "أداء المبيعات وحالة الأوامر",
+  "dashboard.SALE.overview.kpi.total_sales": "إجمالي المبيعات",
+  "dashboard.SALE.overview.kpi.open_orders": "الأوامر المفتوحة",
+  "dashboard.SALE.overview.kpi.quotations": "عروض الأسعار",
+  "dashboard.SALE.overview.kpi.avg_order_value": "متوسط قيمة الأمر",
+  "dashboard.SALE.overview.list.recent_orders": "الأوامر الأخيرة",
+  "dashboard.SALE.overview.chart.sales_trend": "اتجاه المبيعات",
+  "dashboard.SALE.partner.title": "بوابة مبيعات العميل",
+  "dashboard.SALE.partner.description": "الأوامر وعروض الأسعار",
+  "dashboard.SALE.partner.kpi.my_orders": "أوامري",
+  "dashboard.SALE.partner.kpi.pending_quotes": "عروض الأسعار المعلقة",
+  "dashboard.SALE.partner.list.order_history": "سجل الأوامر",
+  "dashboard.SALE.partner.chart.spending_trend": "اتجاه الإنفاق"
+}

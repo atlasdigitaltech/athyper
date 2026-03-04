@@ -1,0 +1,10 @@
+{
+  "dashboard.HRM.overview.title": "மனிதவள மேலோட்டம்",
+  "dashboard.HRM.overview.description": "பணியாளர் அளவீடுகள் மற்றும் மனிதவள நடவடிக்கைகள்",
+  "dashboard.HRM.overview.kpi.total_employees": "மொத்த பணியாளர்கள்",
+  "dashboard.HRM.overview.kpi.open_positions": "திறந்த பதவிகள்",
+  "dashboard.HRM.overview.kpi.attrition_rate": "விலகல் விகிதம்",
+  "dashboard.HRM.overview.kpi.avg_tenure": "சராசரி பணிக்காலம்",
+  "dashboard.HRM.overview.list.recent_hires": "சமீபத்திய பணியமர்த்தல்கள்",
+  "dashboard.HRM.overview.chart.headcount_trend": "பணியாளர் எண்ணிக்கை போக்கு"
+}

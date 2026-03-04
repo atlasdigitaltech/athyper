@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETFM.overview.title": "सुविधा प्रबंधन अवलोकन",
+  "dashboard.ASSETFM.overview.description": "सुविधा संचालन और स्थान प्रबंधन",
+  "dashboard.ASSETFM.overview.kpi.total_facilities": "कुल सुविधाएँ",
+  "dashboard.ASSETFM.overview.kpi.occupancy_rate": "अधिभोग दर",
+  "dashboard.ASSETFM.overview.kpi.open_requests": "खुले अनुरोध",
+  "dashboard.ASSETFM.overview.kpi.energy_consumption": "ऊर्जा खपत",
+  "dashboard.ASSETFM.overview.list.service_requests": "सेवा अनुरोध",
+  "dashboard.ASSETFM.overview.chart.space_utilization": "स्थान उपयोग"
+}

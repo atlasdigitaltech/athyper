@@ -1,0 +1,10 @@
+{
+  "dashboard.BUDGET.overview.title": "बजट अवलोकन",
+  "dashboard.BUDGET.overview.description": "बजट आवंटन और उपयोग",
+  "dashboard.BUDGET.overview.kpi.total_budget": "कुल बजट",
+  "dashboard.BUDGET.overview.kpi.utilized": "उपयोग किया गया",
+  "dashboard.BUDGET.overview.kpi.remaining": "शेष",
+  "dashboard.BUDGET.overview.kpi.variance": "विचलन",
+  "dashboard.BUDGET.overview.list.budget_items": "बजट मदें",
+  "dashboard.BUDGET.overview.chart.utilization_trend": "उपयोग प्रवृत्ति"
+}

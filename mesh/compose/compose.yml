@@ -1,0 +1,33 @@
+# =======================================================================
+# Stack       : athyper Mesh – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : mesh-base-config
+#
+# Description :
+#   Shared base for the athyper Mesh stack.
+#   Defines name and common networks only.
+#
+# Notes :
+#   - No services should be defined here.
+#   - Safe to reuse across all environments.
+#   - Changes to this file affect the entire mesh stack.
+#
+# =======================================================================
+
+include:
+  - mesh.base.yml
+  - db/mesh-db.yml
+  - db/mesh-dbpool-apps.yml
+  - db/mesh-dbpool-auth.yml
+  - gateway/mesh-gateway.yml
+  - iam/mesh-iam.yml
+  - memorycache/mesh-memorycache.yml
+  - memorycache/mesh-memorycache-exporter.yml
+  - objectstorage/mesh-objectstorage.yml
+  - telemetry/mesh-logging.yml
+  - telemetry/mesh-logshipper.yml
+  - telemetry/mesh-metrics.yml
+  - telemetry/mesh-tracing.yml
+  - telemetry/mesh-telemetry.yml

@@ -1,0 +1,10 @@
+{
+  "dashboard.PAYG.overview.title": "Payment Gateway Monitor",
+  "dashboard.PAYG.overview.description": "Transaction volume and gateway health",
+  "dashboard.PAYG.overview.kpi.txn_volume": "Transaction Volume",
+  "dashboard.PAYG.overview.kpi.success_rate": "Success Rate",
+  "dashboard.PAYG.overview.kpi.avg_processing": "Avg Processing Time",
+  "dashboard.PAYG.overview.kpi.failed_txns": "Failed Transactions",
+  "dashboard.PAYG.overview.list.recent_transactions": "Recent Transactions",
+  "dashboard.PAYG.overview.chart.volume_trend": "Volume Trend"
+}

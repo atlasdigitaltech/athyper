@@ -1,0 +1,10 @@
+{
+  "dashboard.PRJ.overview.title": "نظرة عامة على المشاريع",
+  "dashboard.PRJ.overview.description": "حالة المشروع وتخصيص الموارد",
+  "dashboard.PRJ.overview.kpi.active_projects": "المشاريع النشطة",
+  "dashboard.PRJ.overview.kpi.on_track": "على المسار الصحيح",
+  "dashboard.PRJ.overview.kpi.at_risk": "معرضة للخطر",
+  "dashboard.PRJ.overview.kpi.budget_utilization": "استخدام الميزانية",
+  "dashboard.PRJ.overview.list.milestones": "المعالم الرئيسية",
+  "dashboard.PRJ.overview.chart.project_timeline": "الجدول الزمني للمشروع"
+}

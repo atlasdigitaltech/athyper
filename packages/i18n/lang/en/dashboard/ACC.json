@@ -1,0 +1,10 @@
+{
+  "dashboard.ACC.overview.title": "Finance Overview",
+  "dashboard.ACC.overview.description": "Key financial metrics and recent activity",
+  "dashboard.ACC.overview.kpi.total_revenue": "Total Revenue",
+  "dashboard.ACC.overview.kpi.accounts_receivable": "Accounts Receivable",
+  "dashboard.ACC.overview.kpi.accounts_payable": "Accounts Payable",
+  "dashboard.ACC.overview.kpi.net_income": "Net Income",
+  "dashboard.ACC.overview.list.recent_journals": "Recent Journal Entries",
+  "dashboard.ACC.overview.chart.revenue_trend": "Revenue Trend"
+}

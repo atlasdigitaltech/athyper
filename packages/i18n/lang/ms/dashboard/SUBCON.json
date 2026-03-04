@@ -1,0 +1,10 @@
+{
+  "dashboard.SUBCON.overview.title": "Pengurusan Subkontraktor",
+  "dashboard.SUBCON.overview.description": "Subkontrak, kemajuan kerja, dan pembayaran",
+  "dashboard.SUBCON.overview.kpi.active_subcontracts": "Subkontrak Aktif",
+  "dashboard.SUBCON.overview.kpi.pending_claims": "Tuntutan Tertangguh",
+  "dashboard.SUBCON.overview.kpi.work_completion": "Penyelesaian Kerja",
+  "dashboard.SUBCON.overview.kpi.retention_held": "Retensi Ditahan",
+  "dashboard.SUBCON.overview.list.recent_claims": "Tuntutan Terkini",
+  "dashboard.SUBCON.overview.chart.progress_by_trade": "Kemajuan Mengikut Bidang"
+}

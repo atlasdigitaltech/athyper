@@ -1,0 +1,187 @@
+# =======================================================================
+# Stack       : athyper Mesh - Workbench Routes Configuration
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Description : Traefik dynamic configuration for Neon App workbench routes
+#               with role-gated and IP-restricted access controls
+# =======================================================================
+
+http:
+  # ===========================================================================
+  # Middlewares for Workbench Access Control
+  # ===========================================================================
+  middlewares:
+    # Strip path prefix for workbench routes
+    workbench-strip-buyer:
+      stripPrefix:
+        prefixes:
+          - "/buyer"
+
+    workbench-strip-partner:
+      stripPrefix:
+        prefixes:
+          - "/partner"
+
+    workbench-strip-admin:
+      stripPrefix:
+        prefixes:
+          - "/admin"
+
+    workbench-strip-network:
+      stripPrefix:
+        prefixes:
+          - "/network"
+
+    workbench-strip-ops:
+      stripPrefix:
+        prefixes:
+          - "/ops"
+
+    # IP Whitelist for restricted workbenches (admin, ops)
+    # Configure allowed IPs for internal/VPN access
+    workbench-ip-whitelist:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+        # Add your VPN/corporate IP ranges here
+
+    # Forward auth middleware for role-based access
+    # Integrates with Keycloak for JWT validation
+    workbench-forward-auth:
+      forwardAuth:
+        address: "http://athyper-api:3000/api/auth/verify"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Roles"
+          - "X-Tenant-Id"
+
+    # Headers for workbench context
+    workbench-headers-buyer:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "buyer"
+
+    workbench-headers-partner:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "partner"
+
+    workbench-headers-admin:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "admin"
+
+    workbench-headers-network:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "network"
+
+    workbench-headers-ops:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "ops"
+
+  # ===========================================================================
+  # Routers for Workbench Paths
+  # ===========================================================================
+  routers:
+    # -------------------------------------------------------------------------
+    # Buyer Workbench - Public (role-gated)
+    # -------------------------------------------------------------------------
+    neon-workbench-buyer:
+      rule: "Host(`neon.athyper.local`) && PathPrefix(`/buyer`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 100
+      tls:
+        options: mesh-gateway-tls12@file
+      middlewares:
+        - workbench-strip-buyer
+        - workbench-headers-buyer
+
+    # -------------------------------------------------------------------------
+    # Partner Workbench - Public (role-gated)
+    # -------------------------------------------------------------------------
+    neon-workbench-partner:
+      rule: "Host(`neon.athyper.local`) && PathPrefix(`/partner`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 100
+      tls:
+        options: mesh-gateway-tls12@file
+      middlewares:
+        - workbench-strip-partner
+        - workbench-headers-partner
+
+    # -------------------------------------------------------------------------
+    # Admin Workbench - Restricted (role + IP)
+    # -------------------------------------------------------------------------
+    neon-workbench-admin:
+      rule: "Host(`neon.athyper.local`) && PathPrefix(`/admin`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 100
+      tls:
+        options: mesh-gateway-tls12@file
+      middlewares:
+        - workbench-ip-whitelist
+        - workbench-strip-admin
+        - workbench-headers-admin
+
+    # -------------------------------------------------------------------------
+    # Network Workbench - Public (role-gated)
+    # -------------------------------------------------------------------------
+    neon-workbench-network:
+      rule: "Host(`neon.athyper.local`) && PathPrefix(`/network`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 100
+      tls:
+        options: mesh-gateway-tls12@file
+      middlewares:
+        - workbench-strip-network
+        - workbench-headers-network
+
+    # -------------------------------------------------------------------------
+    # Ops Workbench - Restricted (role + IP)
+    # -------------------------------------------------------------------------
+    neon-workbench-ops:
+      rule: "Host(`neon.athyper.local`) && PathPrefix(`/ops`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 100
+      tls:
+        options: mesh-gateway-tls12@file
+      middlewares:
+        - workbench-ip-whitelist
+        - workbench-strip-ops
+        - workbench-headers-ops
+
+    # -------------------------------------------------------------------------
+    # Default Neon route (catch-all for root)
+    # -------------------------------------------------------------------------
+    neon-default:
+      rule: "Host(`neon.athyper.local`)"
+      entryPoints:
+        - websecure
+      service: athyper-web
+      priority: 1
+      tls:
+        options: mesh-gateway-tls12@file
+
+  # ===========================================================================
+  # Services (reference to Docker service)
+  # ===========================================================================
+  services:
+    athyper-web:
+      loadBalancer:
+        servers:
+          - url: "http://athyper-web:80"

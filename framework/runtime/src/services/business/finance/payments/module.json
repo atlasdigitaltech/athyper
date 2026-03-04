@@ -1,0 +1,9 @@
+﻿{
+    "code":  "PAY",
+    "name":  "Payment Processing",
+    "dependsOn":  [
+                      "ACC"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}

@@ -1,0 +1,9 @@
+﻿{
+    "code":  "PAYG",
+    "name":  "Payment Gateways",
+    "dependsOn":  [
+                      "PAY"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Professional"
+}

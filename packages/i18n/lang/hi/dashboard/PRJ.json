@@ -1,0 +1,10 @@
+{
+  "dashboard.PRJ.overview.title": "परियोजना अवलोकन",
+  "dashboard.PRJ.overview.description": "परियोजना स्थिति और संसाधन आवंटन",
+  "dashboard.PRJ.overview.kpi.active_projects": "सक्रिय परियोजनाएँ",
+  "dashboard.PRJ.overview.kpi.on_track": "समय पर",
+  "dashboard.PRJ.overview.kpi.at_risk": "जोखिम में",
+  "dashboard.PRJ.overview.kpi.budget_utilization": "बजट उपयोग",
+  "dashboard.PRJ.overview.list.milestones": "मील के पत्थर",
+  "dashboard.PRJ.overview.chart.project_timeline": "परियोजना समयरेखा"
+}

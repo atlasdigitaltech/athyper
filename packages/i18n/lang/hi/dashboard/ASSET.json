@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSET.overview.title": "परिसंपत्ति प्रबंधन अवलोकन",
+  "dashboard.ASSET.overview.description": "परिसंपत्ति रजिस्टर और मूल्य ट्रैकिंग",
+  "dashboard.ASSET.overview.kpi.total_assets": "कुल परिसंपत्तियाँ",
+  "dashboard.ASSET.overview.kpi.asset_value": "परिसंपत्ति मूल्य",
+  "dashboard.ASSET.overview.kpi.depreciation": "मूल्यह्रास",
+  "dashboard.ASSET.overview.kpi.utilization_rate": "उपयोग दर",
+  "dashboard.ASSET.overview.list.recent_acquisitions": "हालिया अधिग्रहण",
+  "dashboard.ASSET.overview.chart.asset_lifecycle": "परिसंपत्ति जीवनचक्र"
+}

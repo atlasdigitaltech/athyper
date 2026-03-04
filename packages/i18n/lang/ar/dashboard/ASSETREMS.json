@@ -1,0 +1,10 @@
+{
+  "dashboard.ASSETREMS.overview.title": "نظرة عامة على موثوقية الأصول",
+  "dashboard.ASSETREMS.overview.description": "مقاييس الموثوقية وتحليل الأعطال",
+  "dashboard.ASSETREMS.overview.kpi.mtbf": "متوسط الوقت بين الأعطال",
+  "dashboard.ASSETREMS.overview.kpi.mttr": "متوسط وقت الإصلاح",
+  "dashboard.ASSETREMS.overview.kpi.availability": "التوافر",
+  "dashboard.ASSETREMS.overview.kpi.failure_count": "عدد الأعطال",
+  "dashboard.ASSETREMS.overview.list.failure_log": "سجل الأعطال",
+  "dashboard.ASSETREMS.overview.chart.reliability_trend": "اتجاه الموثوقية"
+}

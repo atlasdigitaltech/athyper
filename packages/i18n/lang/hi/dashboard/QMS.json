@@ -1,0 +1,10 @@
+{
+  "dashboard.QMS.overview.title": "गुणवत्ता प्रबंधन अवलोकन",
+  "dashboard.QMS.overview.description": "गुणवत्ता मीट्रिक्स और निरीक्षण स्थिति",
+  "dashboard.QMS.overview.kpi.open_ncrs": "खुली गैर-अनुरूपता रिपोर्ट",
+  "dashboard.QMS.overview.kpi.inspections_due": "निरीक्षण शेष",
+  "dashboard.QMS.overview.kpi.defect_rate": "दोष दर",
+  "dashboard.QMS.overview.kpi.audit_score": "ऑडिट स्कोर",
+  "dashboard.QMS.overview.list.recent_inspections": "हालिया निरीक्षण",
+  "dashboard.QMS.overview.chart.quality_trend": "गुणवत्ता प्रवृत्ति"
+}

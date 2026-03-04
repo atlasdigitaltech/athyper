@@ -1,0 +1,10 @@
+{
+  "dashboard.BUDGET.overview.title": "வரவுசெலவுத் திட்ட மேலோட்டம்",
+  "dashboard.BUDGET.overview.description": "வரவுசெலவுத் திட்ட ஒதுக்கீடு மற்றும் பயன்பாடு",
+  "dashboard.BUDGET.overview.kpi.total_budget": "மொத்த வரவுசெலவுத் திட்டம்",
+  "dashboard.BUDGET.overview.kpi.utilized": "பயன்படுத்தப்பட்டது",
+  "dashboard.BUDGET.overview.kpi.remaining": "மீதமுள்ளது",
+  "dashboard.BUDGET.overview.kpi.variance": "மாறுபாடு",
+  "dashboard.BUDGET.overview.list.budget_items": "வரவுசெலவுத் திட்ட உருப்படிகள்",
+  "dashboard.BUDGET.overview.chart.utilization_trend": "பயன்பாட்டு போக்கு"
+}

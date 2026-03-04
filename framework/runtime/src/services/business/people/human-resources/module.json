@@ -1,0 +1,10 @@
+﻿{
+    "code":  "HR",
+    "name":  "Human Resources",
+    "dependsOn":  [
+                      "CORE",
+                      "REL"
+                  ],
+    "tenantScoped":  true,
+    "subscription":  "Base"
+}
