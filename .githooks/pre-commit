@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────
+# pre-commit hook — athyper
+# Blocks direct commits to the 'main' branch.
+# Use a feature/fix branch and open a Pull Request instead.
+#
+# To bypass in a genuine emergency:
+#   git commit --no-verify -m "your message"
+# ─────────────────────────────────────────────────────────────
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$BRANCH" = "main" ]; then
+  echo ""
+  echo "  ✖  Direct commits to 'main' are not allowed."
+  echo ""
+  echo "  Branch workflow:"
+  echo "    1. git checkout -b feature/your-feature"
+  echo "    2. git commit -m 'feat: your change'"
+  echo "    3. git push origin feature/your-feature"
+  echo "    4. Open a Pull Request on GitHub"
+  echo ""
+  echo "  Emergency bypass: git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0

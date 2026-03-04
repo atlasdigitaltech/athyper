@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────
+# pre-push hook — athyper
+# Blocks direct pushes to the remote 'main' branch.
+# All changes to main must go through a Pull Request.
+#
+# To bypass in a genuine emergency:
+#   git push --no-verify
+# ─────────────────────────────────────────────────────────────
+
+PROTECTED_BRANCH="main"
+REMOTE="$1"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # Extract branch name from ref (refs/heads/main → main)
+  remote_branch="${remote_ref#refs/heads/}"
+
+  if [ "$remote_branch" = "$PROTECTED_BRANCH" ]; then
+    # Allow the push only if it's coming from a CI/CD context
+    if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
+      exit 0
+    fi
+
+    echo ""
+    echo "  ✖  Direct push to 'main' on remote '$REMOTE' is not allowed."
+    echo ""
+    echo "  Branch workflow:"
+    echo "    1. Push your branch: git push origin feature/your-feature"
+    echo "    2. Open a Pull Request on GitHub"
+    echo "    3. Get at least 1 peer review"
+    echo "    4. Merge via GitHub UI"
+    echo ""
+    echo "  Emergency bypass: git push --no-verify"
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0
