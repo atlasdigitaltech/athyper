@@ -3,40 +3,63 @@
 /**
  * Type-Aware Field Renderer
  *
- * Dispatches to the correct field component based on FieldMeta.dataType.
- * Supports view, edit, and create modes.
+ * Dispatches to the correct field component based on ResolvedFieldMeta.resolvedUiType.
+ * Uses the resolution engine for deterministic UI type mapping.
+ *
+ * Resolution priority:
+ *   1. Compiled overlay uiHint
+ *   2. uiHint.viewType / editType (mode-specific)
+ *   3. uiHint.type (generic override)
+ *   4. Legacy uiType column
+ *   5. Auto-detect from dataType + format + constraints
  */
 
-import { Badge, Input, Label } from "@neon/ui";
+import { Badge, Label } from "@neon/ui";
 import { Lock } from "lucide-react";
 
+import type { ReadOnlyReason, FieldEditBehavior } from "@/lib/entity-projection";
 import type { ViewMode } from "@/lib/entity-page/types";
-import type { ReadOnlyReason } from "@/lib/entity-projection";
 import type { FieldMeta } from "@/lib/use-entity-fields";
+import { resolveFieldMeta, type ResolvedFieldMeta, type UiHintOverride } from "@/lib/entity-page/resolve-field-meta";
+import { isNumericType, isDateLikeType } from "@/lib/entity-meta-fields";
+import { READ_ONLY_REASON_LABELS } from "@/lib/entity-projection";
 
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { READ_ONLY_REASON_LABELS } from "@/lib/entity-projection";
+    TextRenderer,
+    TextareaRenderer,
+    NumberRenderer,
+    MoneyInputRenderer,
+    MoneyViewRenderer,
+    ToggleRenderer,
+    TristateSelectRenderer,
+    SelectRenderer,
+    EnumViewRenderer,
+    MultiSelectRenderer,
+    DatePickerRenderer,
+    DateTimePickerRenderer,
+    UuidViewRenderer,
+    JsonEditorRenderer,
+    ReferencePickerRenderer,
+    ReferenceMultiPickerRenderer,
+} from "./renderers";
 
 // ============================================================================
 // Props
 // ============================================================================
 
 interface FieldRendererProps {
-  field: FieldMeta;
-  value: unknown;
-  viewMode: ViewMode;
-  /** Resolved display name for FK reference fields */
-  resolvedRef?: string;
-  /** Reason code when field is forced read-only (shows lock icon + tooltip) */
-  readOnlyReason?: ReadOnlyReason;
-  onChange?: (fieldName: string, value: unknown) => void;
+    field: FieldMeta;
+    value: unknown;
+    viewMode: ViewMode;
+    /** Resolved display name for FK reference fields */
+    resolvedRef?: string;
+    /** Reason code when field is forced read-only (shows lock icon + tooltip) */
+    readOnlyReason?: ReadOnlyReason;
+    /** Pre-computed edit behavior (from section grouping) */
+    editBehavior?: FieldEditBehavior;
+    /** Overlay UI hint (from compiled overlay — highest priority) */
+    overlayHint?: UiHintOverride;
+    onChange?: (fieldName: string, value: unknown) => void;
 }
 
 // ============================================================================
@@ -44,104 +67,151 @@ interface FieldRendererProps {
 // ============================================================================
 
 export function FieldRenderer({
-  field,
-  value,
-  viewMode,
-  resolvedRef,
-  readOnlyReason,
-  onChange,
+    field,
+    value,
+    viewMode,
+    resolvedRef,
+    readOnlyReason,
+    editBehavior,
+    overlayHint,
+    onChange,
 }: FieldRendererProps) {
-  const displayLabel = formatFieldLabel(field.name);
+    // Resolve field metadata once — all decisions flow from this
+    const resolved = resolveFieldMeta(field, viewMode, overlayHint, editBehavior);
 
-  // FK reference fields: show resolved name in both view and edit modes
-  if (resolvedRef) {
-    return (
-      <ReferenceField
-        label={displayLabel}
-        displayName={resolvedRef}
-        uuid={value != null ? String(value) : null}
-        viewMode={viewMode}
-        readOnlyReason={readOnlyReason}
-      />
-    );
-  }
+    // Override readOnlyReason if passed externally (backward compat)
+    const effectiveReadOnly = readOnlyReason ? true : resolved.readOnly;
+    const effectiveReason = readOnlyReason ?? resolved.readOnlyReason;
 
-  // Read-only field with reason (forced view mode in edit/create context)
-  if (readOnlyReason && viewMode === "view") {
-    return (
-      <ReadOnlyField
-        label={displayLabel}
-        field={field}
-        value={value}
-        reason={readOnlyReason}
-      />
-    );
-  }
+    // Hidden fields render nothing
+    if (resolved.resolvedUiType === "hidden") return null;
 
-  if (viewMode === "view") {
-    return <ViewField label={displayLabel} field={field} value={value} />;
-  }
+    // Read-only field with reason (forced view mode in edit/create context)
+    if (effectiveReadOnly && effectiveReason && viewMode !== "view") {
+        return (
+            <ReadOnlyField
+                resolved={resolved}
+                value={value}
+                reason={effectiveReason}
+                resolvedRef={resolvedRef}
+            />
+        );
+    }
 
-  // Edit / Create mode
-  return (
-    <EditField
-      label={displayLabel}
-      field={field}
-      value={value}
-      onChange={onChange}
-    />
-  );
+    // View mode
+    if (viewMode === "view") {
+        return renderViewMode(resolved, value, resolvedRef);
+    }
+
+    // Edit / Create mode
+    return renderEditMode(resolved, value, resolvedRef, onChange);
 }
 
 // ============================================================================
-// View Mode Fields
+// View Mode Rendering
 // ============================================================================
 
-function ViewField({
-  label,
-  field,
-  value,
-}: {
-  label: string;
-  field: FieldMeta;
-  value: unknown;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
-      <p className="text-sm min-h-[1.5rem]">
-        {formatDisplayValue(field, value)}
-      </p>
-    </div>
-  );
+function renderViewMode(
+    resolved: ResolvedFieldMeta,
+    value: unknown,
+    resolvedRef?: string,
+): React.ReactNode {
+    const { resolvedUiType } = resolved;
+
+    // Reference view: show display label, not raw UUID
+    if (resolvedRef && (resolvedUiType === "reference-picker" || resolvedUiType === "reference-multi-picker")) {
+        return (
+            <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs">{resolved.displayLabel}</Label>
+                <p className="text-sm min-h-[1.5rem]">{resolvedRef}</p>
+            </div>
+        );
+    }
+
+    // Money view
+    if (resolvedUiType === "money-view" || resolvedUiType === "money-input") {
+        return <MoneyViewRenderer resolved={resolved} value={value} />;
+    }
+
+    // UUID view: monospace + copy
+    if (resolvedUiType === "uuid-view") {
+        return <UuidViewRenderer resolved={resolved} value={value} />;
+    }
+
+    // Enum view: badge with optional color
+    if (resolvedUiType === "select" || resolvedUiType === "multi-select") {
+        if (resolved.field.dataType === "enum" || resolved.effectiveEnumConfig) {
+            return <EnumViewRenderer resolved={resolved} value={value} />;
+        }
+    }
+
+    // Generic view
+    return (
+        <div className="space-y-1">
+            <Label className="text-muted-foreground text-xs">{resolved.displayLabel}</Label>
+            <p className="text-sm min-h-[1.5rem]">
+                {formatDisplayValue(resolved, value)}
+            </p>
+        </div>
+    );
 }
 
 // ============================================================================
-// Reference (FK) Field — shows resolved display name
+// Edit Mode Rendering
 // ============================================================================
 
-function ReferenceField({
-  label,
-  displayName,
-  uuid,
-  viewMode,
-  readOnlyReason,
-}: {
-  label: string;
-  displayName: string;
-  uuid: string | null;
-  viewMode: ViewMode;
-  readOnlyReason?: ReadOnlyReason;
-}) {
-  return (
-    <div className="space-y-1">
-      <FieldLabel label={label} readOnlyReason={readOnlyReason} />
-      <p className="text-sm min-h-[1.5rem]">{displayName}</p>
-      {viewMode !== "view" && uuid && (
-        <p className="text-[10px] text-muted-foreground truncate">{uuid}</p>
-      )}
-    </div>
-  );
+function renderEditMode(
+    resolved: ResolvedFieldMeta,
+    value: unknown,
+    resolvedRef?: string,
+    onChange?: (fieldName: string, value: unknown) => void,
+): React.ReactNode {
+    switch (resolved.resolvedUiType) {
+        case "text":
+            return <TextRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "textarea":
+            return <TextareaRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "number":
+            return <NumberRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "money-input":
+            return <MoneyInputRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "toggle":
+            return <ToggleRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "tristate-select":
+            return <TristateSelectRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "select":
+            return <SelectRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "multi-select":
+            return <MultiSelectRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "datepicker":
+            return <DatePickerRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "datetimepicker":
+            return <DateTimePickerRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "reference-picker":
+            return <ReferencePickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} onChange={onChange} />;
+
+        case "reference-multi-picker":
+            return <ReferenceMultiPickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} onChange={onChange} />;
+
+        case "json-editor":
+            return <JsonEditorRenderer resolved={resolved} value={value} onChange={onChange} />;
+
+        case "uuid-view":
+            return <UuidViewRenderer resolved={resolved} value={value} />;
+
+        default:
+            return <TextRenderer resolved={resolved} value={value} onChange={onChange} />;
+    }
 }
 
 // ============================================================================
@@ -149,24 +219,24 @@ function ReferenceField({
 // ============================================================================
 
 function ReadOnlyField({
-  label,
-  field,
-  value,
-  reason,
+    resolved,
+    value,
+    reason,
+    resolvedRef,
 }: {
-  label: string;
-  field: FieldMeta;
-  value: unknown;
-  reason: ReadOnlyReason;
+    resolved: ResolvedFieldMeta;
+    value: unknown;
+    reason: ReadOnlyReason;
+    resolvedRef?: string;
 }) {
-  return (
-    <div className="space-y-1">
-      <FieldLabel label={label} readOnlyReason={reason} />
-      <p className="text-sm min-h-[1.5rem] text-muted-foreground">
-        {formatDisplayValue(field, value)}
-      </p>
-    </div>
-  );
+    return (
+        <div className="space-y-1">
+            <FieldLabel label={resolved.displayLabel} readOnlyReason={reason} />
+            <p className="text-sm min-h-[1.5rem] text-muted-foreground">
+                {resolvedRef ?? formatDisplayValue(resolved, value)}
+            </p>
+        </div>
+    );
 }
 
 // ============================================================================
@@ -174,256 +244,95 @@ function ReadOnlyField({
 // ============================================================================
 
 function FieldLabel({
-  label,
-  readOnlyReason,
+    label,
+    readOnlyReason,
 }: {
-  label: string;
-  readOnlyReason?: ReadOnlyReason;
+    label: string;
+    readOnlyReason?: ReadOnlyReason;
 }) {
-  if (!readOnlyReason) {
-    return <Label className="text-muted-foreground text-xs">{label}</Label>;
-  }
+    if (!readOnlyReason) {
+        return <Label className="text-muted-foreground text-xs">{label}</Label>;
+    }
 
-  const reasonLabel = READ_ONLY_REASON_LABELS[readOnlyReason] ?? "Read-only";
+    const reasonLabel = READ_ONLY_REASON_LABELS[readOnlyReason] ?? "Read-only";
 
-  return (
-    <div className="flex items-center gap-1">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
-      <span title={reasonLabel} className="inline-flex">
-        <Lock className="size-3 text-muted-foreground/60" />
-      </span>
-    </div>
-  );
+    return (
+        <div className="flex items-center gap-1">
+            <Label className="text-muted-foreground text-xs">{label}</Label>
+            <span title={reasonLabel} className="inline-flex">
+                <Lock className="size-3 text-muted-foreground/60" />
+            </span>
+        </div>
+    );
 }
 
 // ============================================================================
-// Edit Mode Fields
+// Display Value Formatting
 // ============================================================================
 
-function EditField({
-  label,
-  field,
-  value,
-  onChange,
-}: {
-  label: string;
-  field: FieldMeta;
-  value: unknown;
-  onChange?: (fieldName: string, value: unknown) => void;
-}) {
-  const fieldId = field.columnName;
+function formatDisplayValue(resolved: ResolvedFieldMeta, value: unknown): React.ReactNode {
+    if (value == null) return "\u2014";
 
-  switch (field.dataType) {
-    case "boolean":
-      return (
-        <div className="flex items-center justify-between space-y-0 py-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Switch
-            id={fieldId}
-            checked={value === true || value === "true"}
-            onCheckedChange={(checked) => onChange?.(fieldId, checked)}
-          />
-        </div>
-      );
+    const { field } = resolved;
+    const dataType = field.dataType;
 
-    case "number":
-      return (
-        <div className="space-y-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            id={fieldId}
-            name={fieldId}
-            type="number"
-            defaultValue={value != null ? String(value) : ""}
-            onChange={(e) => {
-              const num = parseFloat(e.target.value);
-              onChange?.(fieldId, isNaN(num) ? null : num);
-            }}
-            step={isDecimalField(field) ? "0.01" : "1"}
-          />
-        </div>
-      );
+    // Numeric types
+    if (isNumericType(dataType)) {
+        const num = Number(value);
+        if (isNaN(num)) return String(value);
+        if (dataType === "decimal") {
+            const scale = resolved.effectiveConstraints.scale ?? 2;
+            return num.toLocaleString(undefined, {
+                minimumFractionDigits: scale,
+                maximumFractionDigits: scale,
+            });
+        }
+        return num.toLocaleString();
+    }
 
-    case "date":
-      return (
-        <div className="space-y-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            id={fieldId}
-            name={fieldId}
-            type="date"
-            defaultValue={formatDateForInput(value)}
-            onChange={(e) => onChange?.(fieldId, e.target.value || null)}
-          />
-        </div>
-      );
+    // Date types
+    if (isDateLikeType(dataType)) {
+        try {
+            const date = new Date(String(value));
+            if (isNaN(date.getTime())) return String(value);
+            if (dataType === "datetime") {
+                return date.toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            }
+            return date.toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+            });
+        } catch {
+            return String(value);
+        }
+    }
 
-    case "enum": {
-      const options = getEnumOptions(field);
-      if (options.length > 0) {
+    // Boolean
+    if (dataType === "boolean") {
         return (
-          <div className="space-y-1">
-            <Label htmlFor={fieldId}>{label}</Label>
-            <Select
-              defaultValue={value != null ? String(value) : undefined}
-              onValueChange={(v) => onChange?.(fieldId, v)}
-            >
-              <SelectTrigger id={fieldId}>
-                <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <Badge variant={value ? "default" : "secondary"}>
+                {value ? "Yes" : "No"}
+            </Badge>
         );
-      }
-      // Fallback: text input for enums without options
-      return (
-        <div className="space-y-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            id={fieldId}
-            name={fieldId}
-            defaultValue={value != null ? String(value) : ""}
-            onChange={(e) => onChange?.(fieldId, e.target.value || null)}
-          />
-        </div>
-      );
     }
 
-    case "json":
-      return (
-        <div className="space-y-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <textarea
-            id={fieldId}
-            name={fieldId}
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-            defaultValue={value != null ? JSON.stringify(value, null, 2) : ""}
-            onChange={(e) => {
-              try {
-                onChange?.(fieldId, JSON.parse(e.target.value));
-              } catch {
-                // Invalid JSON — don't update
-              }
-            }}
-          />
-        </div>
-      );
-
-    default:
-      // String and reference fields use a plain text input
-      return (
-        <div className="space-y-1">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <Input
-            id={fieldId}
-            name={fieldId}
-            defaultValue={value != null ? String(value) : ""}
-            onChange={(e) => onChange?.(fieldId, e.target.value || null)}
-          />
-        </div>
-      );
-  }
-}
-
-// ============================================================================
-// Formatting Helpers
-// ============================================================================
-
-function formatFieldLabel(name: string): string {
-  return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDisplayValue(field: FieldMeta, value: unknown): React.ReactNode {
-  if (value == null) return "\u2014";
-
-  switch (field.dataType) {
-    case "number": {
-      const num = Number(value);
-      if (isNaN(num)) return String(value);
-      if (isDecimalField(field)) {
-        return num.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-      }
-      return num.toLocaleString();
+    // JSON
+    if (dataType === "json") {
+        const json = JSON.stringify(value);
+        return (
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                {json.slice(0, 80)}
+                {json.length > 80 ? "..." : ""}
+            </code>
+        );
     }
 
-    case "date": {
-      try {
-        const date = new Date(String(value));
-        if (isNaN(date.getTime())) return String(value);
-        return date.toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      } catch {
-        return String(value);
-      }
-    }
-
-    case "boolean":
-      return (
-        <Badge variant={value ? "default" : "secondary"}>
-          {value ? "Yes" : "No"}
-        </Badge>
-      );
-
-    case "enum":
-      return <Badge variant="outline">{String(value)}</Badge>;
-
-    case "json":
-      return (
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-          {JSON.stringify(value).slice(0, 80)}
-          {JSON.stringify(value).length > 80 ? "..." : ""}
-        </code>
-      );
-
-    default:
-      return String(value);
-  }
-}
-
-function formatDateForInput(value: unknown): string {
-  if (value == null) return "";
-  try {
-    const date = new Date(String(value));
-    if (isNaN(date.getTime())) return "";
-    return date.toISOString().split("T")[0];
-  } catch {
-    return "";
-  }
-}
-
-function isDecimalField(field: FieldMeta): boolean {
-  const name = field.columnName.toLowerCase();
-  return (
-    name.includes("amount") ||
-    name.includes("price") ||
-    name.includes("rate") ||
-    name.includes("balance") ||
-    name.includes("total") ||
-    name.includes("cost")
-  );
-}
-
-function getEnumOptions(field: FieldMeta): string[] {
-  // Check validation config for enum values
-  const validation = field.validation as Record<string, unknown> | null;
-  if (validation?.enumValues && Array.isArray(validation.enumValues)) {
-    return validation.enumValues as string[];
-  }
-  if (validation?.options && Array.isArray(validation.options)) {
-    return validation.options as string[];
-  }
-  return [];
+    return String(value);
 }

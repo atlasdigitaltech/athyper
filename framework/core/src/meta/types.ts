@@ -18,11 +18,16 @@ import type { ConditionGroup } from "./validation-rules.js";
 // ============================================================================
 
 /**
- * Supported field types for entity schemas
+ * Supported field types for entity schemas.
+ * These are canonical data types — storage + validation + API contract.
+ * UI presentation is handled separately via SemanticFormat + FieldUiHint.
  */
 export type FieldType =
   | "string"
-  | "number"
+  | "text"       // long string (multi-line)
+  | "integer"    // whole numbers
+  | "number"     // floating-point (legacy compat)
+  | "decimal"    // fixed-point numeric
   | "boolean"
   | "date"
   | "datetime"
@@ -30,8 +35,188 @@ export type FieldType =
   | "enum"
   | "json"
   | "uuid"
-  | "decimal"
   | "rich_text";
+
+// ============================================================================
+// Semantic Format & Structured Configs
+// ============================================================================
+
+/**
+ * Semantic format hints — transport-layer metadata, NOT data types.
+ * Drives auto-detect UI specialization (e.g., "text" + format="email" → email input).
+ */
+export type SemanticFormat =
+  | "email"
+  | "phone"
+  | "url"
+  | "money"
+  | "percent"
+  | "password"
+  | "color"
+  | "country"
+  | "timezone"
+  | "markdown"
+  | "html"
+  | "ip_address"
+  | "slug";
+
+/**
+ * Field origin — system-managed vs business-defined.
+ * System fields are hidden in business forms by default.
+ */
+export type FieldOrigin = "system" | "business";
+
+/**
+ * Canonical field constraints — single source of truth for validation.
+ * Replaces scattered validation JSONB reads in resolve logic.
+ */
+export type FieldConstraints = {
+  nullable?: boolean;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  precision?: number;
+  scale?: number;
+};
+
+/**
+ * Structured UI hint — the override layer for UI presentation.
+ * Auto-detect provides defaults; this overrides them at field/view/tenant level.
+ */
+export type FieldUiHint = {
+  /** Generic UI type override */
+  type?: string;
+  /** Read-mode component (tables, detail views) */
+  viewType?: string;
+  /** Form edit component */
+  editType?: string;
+  /** Additional props passed to the UI component */
+  props?: Record<string, unknown>;
+  /** Hide the field entirely */
+  hidden?: boolean;
+  /** Disable editing (greyed out) */
+  disabled?: boolean;
+  /** Input placeholder text */
+  placeholder?: string;
+  /** Help text shown near field */
+  helpText?: string;
+  /** Section assignment for form layout */
+  section?: string;
+  /** Mark as read-only */
+  readOnly?: boolean;
+  /** Lock field after first save */
+  lockOnEdit?: boolean;
+  /** Layout width in form grid */
+  layout?: "full" | "half" | "third";
+  /** Visual density */
+  density?: "compact" | "normal" | "comfortable";
+};
+
+/**
+ * Structured enum configuration.
+ * Supports static values, dynamic sources, grouping, and i18n.
+ */
+export type EnumConfig = {
+  values: Array<{
+    value: string;
+    label?: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+    sortOrder?: number;
+    /** Group name for large enum sets (e.g., "Status" vs "Reason") */
+    group?: string;
+  }>;
+  /** Value source: inline static or from another entity/config */
+  source?: "static" | "dynamic";
+  /** Entity reference when source=dynamic */
+  dynamicRef?: string;
+  /** i18n key prefix for label localization */
+  i18nKey?: string;
+};
+
+/**
+ * Structured reference configuration — enterprise-grade FK handling.
+ * Includes relationship metadata, search contract, and caching strategy.
+ */
+export type ReferenceConfig = {
+  /** Target entity name */
+  entity: string;
+  /** Relationship type (drives join strategy and UI picker type) */
+  relationshipKind?: "many-to-one" | "one-to-one" | "one-to-many" | "many-to-many";
+  /** Junction/join entity for M:N relationships */
+  joinEntity?: string;
+  /** FK column in join entity pointing to this entity */
+  joinLeftKey?: string;
+  /** FK column in join entity pointing to target entity */
+  joinRightKey?: string;
+  /** Target entity field shown in display (e.g., "name", "code") */
+  displayField?: string;
+  /** Fields searched during typeahead */
+  searchFields?: string[];
+  /** Base filter applied to all lookups (e.g., scope by tenant/org) */
+  filter?: Record<string, unknown>;
+  /** Target key field (default "id") */
+  valueField?: string;
+  /** Allow creating new referenced records inline */
+  allowCreateInline?: boolean;
+  /** Caching strategy for lookup values */
+  cacheMode?: "none" | "session" | "global";
+  /** Default sort for lookup results */
+  defaultSort?: string;
+  /** Max results for typeahead queries */
+  typeaheadLimit?: number;
+  /** Server-side search mode */
+  serverSearchMode?: "contains" | "startsWith" | "fts";
+  /** How selected values are resolved for display */
+  hydrateStrategy?: "byIds" | "embedded";
+};
+
+/**
+ * JSON field configuration — distinguishes free-form from schema-validated JSON.
+ */
+export type JsonFieldConfig = {
+  /** Free-form or schema-validated */
+  mode?: "free" | "schema";
+  /** Reference to JSON Schema definition (when mode=schema) */
+  schemaRef?: string;
+};
+
+/**
+ * Money configuration — ensures consistent storage, validation, UI, and reporting.
+ * Same config used by UI, API validation, and posting engine.
+ */
+export type MoneyConfig = {
+  /** How the currency is determined for this field */
+  currencyMode: "fixed" | "rowField" | "tenantDefault";
+  /** Column name containing currency code (when mode=rowField) */
+  currencyField?: string;
+  /** How currency is stored in the row field */
+  currencyFieldType?: "string" | "reference";
+  /** Entity for currency reference (e.g., "core.currency") */
+  currencyRefEntity?: string;
+  /** Fixed ISO currency code (when mode=fixed) */
+  fixedCurrency?: string;
+  /** Rounding mode for calculations and display */
+  roundingMode?: "HALF_UP" | "HALF_EVEN" | "DOWN" | "UP";
+  /** Scale determination: use currency minor units or fixed */
+  scaleMode?: "currency" | "fixed";
+  /** Fixed decimal places (when scaleMode=fixed) */
+  fixedScale?: number;
+  /** Whether negative amounts are allowed (default true) */
+  allowNegative?: boolean;
+};
+
+/**
+ * Datetime configuration — explicit timezone handling.
+ */
+export type DatetimeConfig = {
+  /** Timezone display/storage mode */
+  timezoneMode: "tenant" | "user" | "utc";
+};
 
 /**
  * Field definition in entity schema
@@ -55,7 +240,12 @@ export type FieldDefinition = {
 
   // ===== Type-Specific Options =====
 
-  /** For reference fields: target entity name */
+  // ===== Type-Specific Options (legacy — use structured configs below) =====
+
+  /**
+   * @deprecated Use `referenceConfig.entity` instead
+   * For reference fields: target entity name
+   */
   referenceTo?: string;
 
   /**
@@ -67,10 +257,13 @@ export type FieldDefinition = {
    */
   onDelete?: "CASCADE" | "SET_NULL" | "RESTRICT";
 
-  /** For enum fields: allowed values */
+  /**
+   * @deprecated Use `enumConfig.values` instead
+   * For enum fields: allowed values
+   */
   enumValues?: string[];
 
-  // ===== Validation Rules =====
+  // ===== Validation Rules (legacy — use `constraints` for new code) =====
 
   /** Min length for string fields */
   minLength?: number;
@@ -90,12 +283,16 @@ export type FieldDefinition = {
   /** Default value (JSON-serializable) */
   defaultValue?: unknown;
 
-  // ===== UI Hints =====
+  // ===== UI Hints (legacy — use `ui` for new code) =====
 
-  /** Placeholder text for input fields */
+  /**
+   * @deprecated Use `ui.placeholder` instead
+   */
   placeholder?: string;
 
-  /** Help text shown near field */
+  /**
+   * @deprecated Use `ui.helpText` instead
+   */
   helpText?: string;
 
   /** Whether field should be indexed in database */
@@ -103,6 +300,53 @@ export type FieldDefinition = {
 
   /** Whether field is unique */
   unique?: boolean;
+
+  // ===== New Structured Properties (Phase 1) =====
+
+  /** Semantic format hint — drives UI specialization without changing data type */
+  format?: SemanticFormat;
+
+  /** Measurement unit (e.g., "kg", "hours", "meters") */
+  unit?: string;
+
+  /** Field-level multiplicity: data type is the element type, cardinality is the shape */
+  cardinality?: "one" | "many";
+
+  /** Field origin: system-managed (hidden in business forms) or business-defined */
+  origin?: FieldOrigin;
+
+  /** Canonical constraints — single source of truth for validation */
+  constraints?: FieldConstraints;
+
+  /** UI presentation overrides */
+  ui?: FieldUiHint;
+
+  /** Structured enum definition */
+  enumConfig?: EnumConfig;
+
+  /** Structured reference/FK configuration */
+  referenceConfig?: ReferenceConfig;
+
+  /** JSON field mode and schema */
+  jsonConfig?: JsonFieldConfig;
+
+  /** Money formatting, rounding, and currency strategy */
+  moneyConfig?: MoneyConfig;
+
+  /** Datetime timezone handling */
+  datetimeConfig?: DatetimeConfig;
+
+  /** Whether field is read-only */
+  isReadOnly?: boolean;
+
+  /** Whether field is deprecated (shown with warning, may be hidden) */
+  isDeprecated?: boolean;
+
+  /** Whether field is computed/derived (always read-only) */
+  isComputed?: boolean;
+
+  /** Whether field can only be set on creation (locked after first save) */
+  writeOnce?: boolean;
 };
 
 // ============================================================================
@@ -123,17 +367,17 @@ export type PolicyAction = "create" | "read" | "update" | "delete" | "*";
  * Policy condition operators
  */
 export type PolicyOperator =
-  | "eq" // Equal
-  | "ne" // Not equal
-  | "in" // In array
-  | "not_in" // Not in array
-  | "gt" // Greater than
-  | "gte" // Greater than or equal
-  | "lt" // Less than
-  | "lte" // Less than or equal
-  | "contains" // String contains
+  | "eq"          // Equal
+  | "ne"          // Not equal
+  | "in"          // In array
+  | "not_in"      // Not in array
+  | "gt"          // Greater than
+  | "gte"         // Greater than or equal
+  | "lt"          // Less than
+  | "lte"         // Less than or equal
+  | "contains"    // String contains
   | "starts_with" // String starts with
-  | "ends_with"; // String ends with
+  | "ends_with";  // String ends with
 
 /**
  * Policy condition
@@ -794,22 +1038,22 @@ export type HealthCheckResult = {
  * Defines the type of modification an overlay change applies
  */
 export type OverlayChangeKind =
-  | "addField" // Add a new field to entity
-  | "modifyField" // Modify existing field properties
-  | "removeField" // Remove a field from entity
-  | "tweakPolicy" // Modify policy configuration
-  | "addIndex" // Add database index (future)
-  | "removeIndex" // Remove database index (future)
-  | "tweakRelation"; // Modify relationship (future)
+  | "addField"          // Add a new field to entity
+  | "modifyField"       // Modify existing field properties
+  | "removeField"       // Remove a field from entity
+  | "tweakPolicy"       // Modify policy configuration
+  | "addIndex"          // Add database index (future)
+  | "removeIndex"       // Remove database index (future)
+  | "tweakRelation";    // Modify relationship (future)
 
 /**
  * Overlay conflict resolution mode
  * Defines how to handle conflicts when applying overlays
  */
 export type OverlayConflictMode =
-  | "fail" // Throw error if target already exists/conflicts
+  | "fail"      // Throw error if target already exists/conflicts
   | "overwrite" // Replace existing target completely
-  | "merge"; // Deep merge with existing target (for objects)
+  | "merge";    // Deep merge with existing target (for objects)
 
 /**
  * Overlay change definition
@@ -917,40 +1161,40 @@ export type CompiledModelWithOverlays = {
  * Defines the level at which a rule applies
  */
 export type PolicyRuleScopeType =
-  | "global" // Applies to all resources
-  | "module" // Applies to a specific module
-  | "entity" // Applies to a specific entity type
-  | "entity_version" // Applies to a specific entity version
-  | "record"; // Applies to specific records
+  | "global"           // Applies to all resources
+  | "module"           // Applies to a specific module
+  | "entity"           // Applies to a specific entity type
+  | "entity_version"   // Applies to a specific entity version
+  | "record";          // Applies to specific records
 
 /**
  * Policy rule subject type
  * Defines who the rule applies to
  */
 export type PolicyRuleSubjectType =
-  | "kc_role" // Keycloak role
-  | "kc_group" // Keycloak group
-  | "user" // Specific user
-  | "service"; // Service account
+  | "kc_role"    // Keycloak role
+  | "kc_group"   // Keycloak group
+  | "user"       // Specific user
+  | "service";   // Service account
 
 /**
  * Policy condition type
  * Different types of conditions that can be evaluated
  */
 export type PolicyConditionType =
-  | "ou_check" // Organizational unit check
-  | "numeric_threshold" // Numeric comparison (e.g., amount < 1000)
-  | "attribute_match" // Principal attribute match
-  | "record_field" // Record field check
-  | "expression"; // Custom expression (future)
+  | "ou_check"            // Organizational unit check
+  | "numeric_threshold"   // Numeric comparison (e.g., amount < 1000)
+  | "attribute_match"     // Principal attribute match
+  | "record_field"        // Record field check
+  | "expression";         // Custom expression (future)
 
 /**
  * OU (Organizational Unit) check mode
  */
 export type OUCheckMode =
-  | "single" // Must be exactly this OU
-  | "subtree" // This OU or any descendant
-  | "multi"; // Any of the specified OUs
+  | "single"    // Must be exactly this OU
+  | "subtree"   // This OU or any descendant
+  | "multi";    // Any of the specified OUs
 
 /**
  * Policy condition definition
@@ -1619,10 +1863,10 @@ export type LifecycleTransitionResult = {
  * Type of automated lifecycle timer action.
  */
 export type LifecycleTimerType =
-  | "auto_close" // Automatically close/complete entity after period
-  | "auto_cancel" // Automatically cancel entity after period
-  | "reminder" // Send reminder notification
-  | "auto_transition"; // Generic auto-transition to target state
+  | "auto_close"        // Automatically close/complete entity after period
+  | "auto_cancel"       // Automatically cancel entity after period
+  | "reminder"          // Send reminder notification
+  | "auto_transition";  // Generic auto-transition to target state
 
 /**
  * Lifecycle Timer Policy
@@ -2177,7 +2421,7 @@ export type NumberingSequence = {
   id: string;
   tenant_id: string;
   entity_name: string;
-  period_key: string; // "__global__" | "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
+  period_key: string;  // "__global__" | "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
   current_value: number;
   updated_at: Date;
 };
@@ -2233,9 +2477,7 @@ export type ApprovalTemplateCreateInput = {
 /**
  * Input for updating an approval template.
  */
-export type ApprovalTemplateUpdateInput = Partial<
-  Omit<ApprovalTemplateCreateInput, "code">
->;
+export type ApprovalTemplateUpdateInput = Partial<Omit<ApprovalTemplateCreateInput, "code">>;
 
 /**
  * Result of template structural validation.

@@ -4,166 +4,191 @@
 // These mirror the meta schema DB layer (050_meta_tables.sql).
 
 export interface EntitySummary {
-  id: string;
-  name: string;
-  kind: "ref" | "ent" | "doc" | "fin" | "cfg" | "int";
-  moduleId: string | null;
-  tableSchema: string;
-  tableName: string;
-  isActive: boolean;
-  governanceLevel?: string;
-  engineTag?: string | null;
-  currentVersion: VersionSummary | null;
-  fieldCount: number;
-  relationCount: number;
-  updatedAt: string | null;
+    id: string;
+    name: string;
+    kind: "ref" | "ent" | "doc" | "fin" | "cfg" | "int";
+    moduleId: string | null;
+    tableSchema: string;
+    tableName: string;
+    isActive: boolean;
+    governanceLevel?: string;
+    engineTag?: string | null;
+    currentVersion: VersionSummary | null;
+    fieldCount: number;
+    relationCount: number;
+    updatedAt: string | null;
 }
 
 export interface VersionSummary {
-  id: string;
-  versionNo: number;
-  status: "draft" | "published" | "archived";
-  label: string | null;
-  publishedAt: string | null;
-  publishedBy: string | null;
-  createdAt: string;
+    id: string;
+    versionNo: number;
+    status: "draft" | "published" | "archived";
+    label: string | null;
+    publishedAt: string | null;
+    publishedBy: string | null;
+    createdAt: string;
 }
 
 export interface FieldDefinition {
-  id: string;
-  name: string;
-  columnName: string;
-  dataType: string;
-  uiType: string | null;
-  isRequired: boolean;
-  isUnique: boolean;
-  isSearchable: boolean;
-  isFilterable: boolean;
-  defaultValue: unknown;
-  validation: Record<string, unknown> | null;
-  lookupConfig: Record<string, unknown> | null;
-  sortOrder: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string | null;
+    id: string;
+    name: string;
+    columnName: string;
+    dataType: string;
+    uiType: string | null;
+    isRequired: boolean;
+    isUnique: boolean;
+    isSearchable: boolean;
+    isFilterable: boolean;
+    defaultValue: unknown;
+    validation: Record<string, unknown> | null;
+    lookupConfig: Record<string, unknown> | null;
+    sortOrder: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string | null;
+
+    // ── Phase 1: Structured configs & semantic format ──
+
+    /** Semantic format hint (email, phone, url, money, percent, etc.) */
+    format: string | null;
+    /** Measurement unit */
+    unit: string | null;
+    /** Field multiplicity: "one" (scalar) or "many" (array) */
+    cardinality: string;
+    /** Field origin: "system" or "business" */
+    origin: string;
+    /** First-class display label */
+    label: string | null;
+    /** First-class description */
+    description: string | null;
+    /** Canonical constraints */
+    constraints: Record<string, unknown> | null;
+    /** Structured enum config */
+    enumConfig: Record<string, unknown> | null;
+    /** Structured reference config */
+    referenceConfig: Record<string, unknown> | null;
+    /** JSON field config */
+    jsonConfig: Record<string, unknown> | null;
+    /** Money config */
+    moneyConfig: Record<string, unknown> | null;
+    /** Datetime config */
+    datetimeConfig: Record<string, unknown> | null;
+    /** UI override layer */
+    uiHint: Record<string, unknown> | null;
+    /** Read-only flag */
+    isReadOnly: boolean;
+    /** Deprecated flag */
+    isDeprecated: boolean;
+    /** Computed/derived flag */
+    isComputed: boolean;
+    /** Write-once flag (locked after creation) */
+    writeOnce: boolean;
 }
 
 export interface RelationDefinition {
-  id: string;
-  name: string;
-  relationKind: "belongs_to" | "has_many" | "m2m";
-  targetEntity: string;
-  fkField: string | null;
-  targetKey: string | null;
-  onDelete: "restrict" | "cascade" | "set_null";
-  uiBehavior: Record<string, unknown> | null;
-  createdAt: string;
+    id: string;
+    name: string;
+    relationKind: "belongs_to" | "has_many" | "m2m";
+    targetEntity: string;
+    fkField: string | null;
+    targetKey: string | null;
+    onDelete: "restrict" | "cascade" | "set_null";
+    uiBehavior: Record<string, unknown> | null;
+    createdAt: string;
 }
 
 export interface IndexDefinition {
-  id: string;
-  name: string;
-  isUnique: boolean;
-  method: "btree" | "gin" | "gist" | "hash";
-  columns: unknown;
-  whereClause: string | null;
-  createdAt: string;
+    id: string;
+    name: string;
+    isUnique: boolean;
+    method: "btree" | "gin" | "gist" | "hash";
+    columns: unknown;
+    whereClause: string | null;
+    createdAt: string;
 }
 
 export interface EntityPolicy {
-  id: string;
-  accessMode: string;
-  ouScopeMode: string;
-  auditMode: string;
-  retentionPolicy: Record<string, unknown> | null;
-  defaultFilters: Record<string, unknown> | null;
-  cacheFlags: Record<string, unknown> | null;
-  createdAt: string;
+    id: string;
+    accessMode: string;
+    ouScopeMode: string;
+    auditMode: string;
+    retentionPolicy: Record<string, unknown> | null;
+    defaultFilters: Record<string, unknown> | null;
+    cacheFlags: Record<string, unknown> | null;
+    createdAt: string;
 }
 
 export interface FieldSecurityPolicy {
-  id: string;
-  fieldPath: string;
-  policyType: "read" | "write" | "both";
-  roleList: string | null;
-  abacCondition: Record<string, unknown> | null;
-  maskStrategy: "null" | "redact" | "hash" | "partial" | "remove";
-  maskConfig: Record<string, unknown> | null;
-  scope: string;
-  priority: number;
-  isActive: boolean;
+    id: string;
+    fieldPath: string;
+    policyType: "read" | "write" | "both";
+    roleList: string | null;
+    abacCondition: Record<string, unknown> | null;
+    maskStrategy: "null" | "redact" | "hash" | "partial" | "remove";
+    maskConfig: Record<string, unknown> | null;
+    scope: string;
+    priority: number;
+    isActive: boolean;
 }
 
 export interface CompiledSnapshot {
-  id: string;
-  entityVersionId: string;
-  compiledJson: Record<string, unknown>;
-  compiledHash: string;
-  generatedAt: string;
+    id: string;
+    entityVersionId: string;
+    compiledJson: Record<string, unknown>;
+    compiledHash: string;
+    generatedAt: string;
 }
 
 export interface OverlayDefinition {
-  id: string;
-  overlayKey: string;
-  baseEntityId: string;
-  baseVersionId: string;
-  priority: number;
-  conflictMode: "fail" | "overwrite" | "merge";
-  isActive: boolean;
-  changes: OverlayChange[];
+    id: string;
+    overlayKey: string;
+    baseEntityId: string;
+    baseVersionId: string;
+    priority: number;
+    conflictMode: "fail" | "overwrite" | "merge";
+    isActive: boolean;
+    changes: OverlayChange[];
 }
 
 export interface OverlayChange {
-  id: string;
-  changeOrder: number;
-  kind:
-    | "addField"
-    | "removeField"
-    | "modifyField"
-    | "tweakPolicy"
-    | "overrideValidation"
-    | "overrideUi";
-  path: string;
-  value: unknown;
+    id: string;
+    changeOrder: number;
+    kind: "addField" | "removeField" | "modifyField" | "tweakPolicy" | "overrideValidation" | "overrideUi";
+    path: string;
+    value: unknown;
 }
 
 // ─── Concurrency Control ──────────────────────────────────────
 
 export interface MutationOptions {
-  ifMatch?: string;
+    ifMatch?: string;
 }
 
 export interface ConflictError {
-  code: "CONFLICT";
-  message: string;
-  serverVersion?: string;
-  serverData?: unknown;
+    code: "CONFLICT";
+    message: string;
+    serverVersion?: string;
+    serverData?: unknown;
 }
 
 export interface MutationResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?:
-    | ConflictError
-    | {
-        code: string;
-        message: string;
-        fieldErrors?: Array<{ path: string; message: string }>;
-      };
+    success: boolean;
+    data?: T;
+    error?: ConflictError | { code: string; message: string; fieldErrors?: Array<{ path: string; message: string }> };
 }
 
 // ─── Audit ────────────────────────────────────────────────────
 
 export interface MeshAuditEntry {
-  ts: string;
-  event: string;
-  tenantId: string;
-  sidHash?: string;
-  entityName: string;
-  entityId?: string;
-  versionId?: string;
-  correlationId?: string;
-  before?: unknown;
-  after?: unknown;
-  meta?: Record<string, unknown>;
+    ts: string;
+    event: string;
+    tenantId: string;
+    sidHash?: string;
+    entityName: string;
+    entityId?: string;
+    versionId?: string;
+    correlationId?: string;
+    before?: unknown;
+    after?: unknown;
+    meta?: Record<string, unknown>;
 }

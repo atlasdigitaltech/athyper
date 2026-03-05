@@ -13,8 +13,8 @@
 
 /** Resolved FK reference entry */
 export interface ResolvedRef {
-  id: string;
-  label: string;
+    id: string;
+    label: string;
 }
 
 /**
@@ -30,19 +30,19 @@ export type RefsCache = Record<string, Record<string, ResolvedRef>>;
 // ============================================================================
 
 export interface EntityListResponse {
-  data: Record<string, unknown>[];
-  meta: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-    /** True when FK resolution was capped or timed out — some columns may show raw UUIDs */
-    refsPartial?: boolean;
-  };
-  /** Canonical refs join cache — authoritative source for FK labels */
-  refs?: RefsCache;
+    data: Record<string, unknown>[];
+    meta: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+        /** True when FK resolution was capped or timed out — some columns may show raw UUIDs */
+        refsPartial?: boolean;
+    };
+    /** Canonical refs join cache — authoritative source for FK labels */
+    refs?: RefsCache;
 }
 
 // ============================================================================
@@ -51,17 +51,21 @@ export interface EntityListResponse {
 
 /** Reason codes for read-only field enforcement */
 export type ReadOnlyReason =
-  | "DERIVED_HIERARCHY"
-  | "LIFECYCLE_MANAGED"
-  | "SYSTEM_MANAGED"
-  | "EXPLICIT_META"
-  | "PRIMARY_KEY"
-  | "LOCK_ON_EDIT";
+    | "DERIVED_HIERARCHY"
+    | "LIFECYCLE_MANAGED"
+    | "SYSTEM_MANAGED"
+    | "EXPLICIT_META"
+    | "PRIMARY_KEY"
+    | "LOCK_ON_EDIT"
+    | "COMPUTED"
+    | "WRITE_ONCE"
+    | "DEPRECATED"
+    | "SYSTEM_ORIGIN";
 
 /** Read-only decision with reason code for tooltip display */
 export interface FieldEditBehavior {
-  readOnly: boolean;
-  reason?: ReadOnlyReason;
+    readOnly: boolean;
+    reason?: ReadOnlyReason;
 }
 
 // ============================================================================
@@ -69,12 +73,16 @@ export interface FieldEditBehavior {
 // ============================================================================
 
 export const READ_ONLY_REASON_LABELS: Record<ReadOnlyReason, string> = {
-  DERIVED_HIERARCHY: "Derived from parent hierarchy",
-  LIFECYCLE_MANAGED: "Managed by lifecycle engine",
-  SYSTEM_MANAGED: "System-managed field",
-  EXPLICIT_META: "Read-only per entity configuration",
-  PRIMARY_KEY: "Primary key field",
-  LOCK_ON_EDIT: "Locked after creation",
+    DERIVED_HIERARCHY: "Derived from parent hierarchy",
+    LIFECYCLE_MANAGED: "Managed by lifecycle engine",
+    SYSTEM_MANAGED: "System-managed field",
+    EXPLICIT_META: "Read-only per entity configuration",
+    PRIMARY_KEY: "Primary key field",
+    LOCK_ON_EDIT: "Locked after creation",
+    COMPUTED: "Computed/derived field",
+    WRITE_ONCE: "Can only be set on creation",
+    DEPRECATED: "Deprecated field",
+    SYSTEM_ORIGIN: "System-managed field",
 };
 
 // ============================================================================
@@ -83,16 +91,16 @@ export const READ_ONLY_REASON_LABELS: Record<ReadOnlyReason, string> = {
 
 /** How to display FK references for a given target table */
 export interface DisplayPolicy {
-  /** Template string: "{{code}} - {{name}}" */
-  template?: string;
-  /** Ordered field list: ["code", "name"] */
-  fields?: string[];
-  /** Actual columns that exist on the target table (verified against schema) */
-  resolvedColumns: string[];
-  /** Primary key column name (detected from DB schema) */
-  primaryKey: string;
-  /** True if the table has a composite PK (FK resolution is skipped) */
-  isCompositePk?: boolean;
+    /** Template string: "{{code}} - {{name}}" */
+    template?: string;
+    /** Ordered field list: ["code", "name"] */
+    fields?: string[];
+    /** Actual columns that exist on the target table (verified against schema) */
+    resolvedColumns: string[];
+    /** Primary key column name (detected from DB schema) */
+    primaryKey: string;
+    /** True if the table has a composite PK (FK resolution is skipped) */
+    isCompositePk?: boolean;
 }
 
 // ============================================================================
@@ -100,10 +108,10 @@ export interface DisplayPolicy {
 // ============================================================================
 
 export const FK_RESOLUTION_LIMITS = {
-  /** Max unique UUIDs per FK column */
-  perColumnCap: 200,
-  /** Max total UUIDs across all FK columns in a single request */
-  perRequestCap: 600,
-  /** Timeout budget for FK resolution in ms */
-  timeoutMs: 250,
+    /** Max unique UUIDs per FK column */
+    perColumnCap: 200,
+    /** Max total UUIDs across all FK columns in a single request */
+    perRequestCap: 600,
+    /** Timeout budget for FK resolution in ms */
+    timeoutMs: 250,
 } as const;
