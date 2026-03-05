@@ -21,7 +21,7 @@ import type { ReadOnlyReason, FieldEditBehavior } from "@/lib/entity-projection"
 import type { ViewMode } from "@/lib/entity-page/types";
 import type { FieldMeta } from "@/lib/use-entity-fields";
 import { resolveFieldMeta, type ResolvedFieldMeta, type UiHintOverride } from "@/lib/entity-page/resolve-field-meta";
-import { isNumericType, isDateLikeType } from "@/lib/entity-meta-fields";
+import { isNumericType, isDateLikeType } from "@/lib/entity-meta-utils";
 import { READ_ONLY_REASON_LABELS } from "@/lib/entity-projection";
 
 import {

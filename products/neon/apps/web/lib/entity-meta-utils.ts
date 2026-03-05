@@ -30,3 +30,17 @@ export function entityNameToDisplayName(name: string): string {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
 }
+
+// ── Type category helpers ──
+// Client-safe versions of the helpers from entity-meta-fields.ts.
+// Use these instead of direct === checks to handle the expanded type system.
+
+/** Returns true for integer, decimal, number (any numeric data type) */
+export function isNumericType(dataType: string): boolean {
+  return dataType === "integer" || dataType === "decimal" || dataType === "number";
+}
+
+/** Returns true for date and datetime */
+export function isDateLikeType(dataType: string): boolean {
+  return dataType === "date" || dataType === "datetime";
+}

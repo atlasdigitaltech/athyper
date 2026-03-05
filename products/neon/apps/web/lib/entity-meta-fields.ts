@@ -144,18 +144,8 @@ const PG_TYPE_MAP: Record<string, string> = {
     "USER-DEFINED": "enum",
 };
 
-// ── Type category helpers ──
-// Use these instead of direct === checks to handle the expanded type system.
-
-/** Returns true for integer, decimal, number (any numeric data type) */
-export function isNumericType(dataType: string): boolean {
-    return dataType === "integer" || dataType === "decimal" || dataType === "number";
-}
-
-/** Returns true for date and datetime */
-export function isDateLikeType(dataType: string): boolean {
-    return dataType === "date" || dataType === "datetime";
-}
+// Re-export client-safe type helpers so existing server-side imports keep working
+export { isNumericType, isDateLikeType } from "./entity-meta-utils";
 
 // ============================================================================
 // L1 Cache (10-minute TTL)
@@ -238,7 +228,9 @@ export async function getMetaFields(
     }
 
     // ── Compute from DB ──
-    const fieldResult = await sql<{
+    // Try full query (with Phase 1 columns), fall back to base columns
+    // if the new columns haven't been migrated yet.
+    type FieldRow = {
         name: string;
         column_name: string | null;
         data_type: string;
@@ -249,38 +241,57 @@ export async function getMetaFields(
         sort_order: number;
         validation: Record<string, unknown> | null;
         lookup_config: Record<string, unknown> | null;
-        format: string | null;
-        unit: string | null;
-        cardinality: string | null;
-        origin: string | null;
-        label: string | null;
-        description: string | null;
-        constraints: Record<string, unknown> | null;
-        enum_config: Record<string, unknown> | null;
-        reference_config: Record<string, unknown> | null;
-        json_config: Record<string, unknown> | null;
-        money_config: Record<string, unknown> | null;
-        datetime_config: Record<string, unknown> | null;
-        ui_hint: Record<string, unknown> | null;
-        is_read_only: boolean;
-        is_computed: boolean;
-        write_once: boolean;
-    }>`
-        SELECT name, column_name, data_type, ui_type,
-               is_required, is_searchable, is_filterable,
-               sort_order, validation, lookup_config,
-               format, unit, cardinality, origin, label, description,
-               constraints, enum_config, reference_config, json_config,
-               money_config, datetime_config, ui_hint,
-               is_read_only, is_computed, write_once
-        FROM meta.field
-        WHERE entity_version_id = ${versionId}
-          AND tenant_id = ${tenantId}
-          AND is_active = true
-        ORDER BY sort_order ASC, name ASC
-    `.execute(db);
+        format?: string | null;
+        unit?: string | null;
+        cardinality?: string | null;
+        origin?: string | null;
+        label?: string | null;
+        description?: string | null;
+        constraints?: Record<string, unknown> | null;
+        enum_config?: Record<string, unknown> | null;
+        reference_config?: Record<string, unknown> | null;
+        json_config?: Record<string, unknown> | null;
+        money_config?: Record<string, unknown> | null;
+        datetime_config?: Record<string, unknown> | null;
+        ui_hint?: Record<string, unknown> | null;
+        is_read_only?: boolean;
+        is_computed?: boolean;
+        write_once?: boolean;
+    };
 
-    const fields = fieldResult.rows
+    let fieldRows: FieldRow[];
+    try {
+        const fullResult = await sql<FieldRow>`
+            SELECT name, column_name, data_type, ui_type,
+                   is_required, is_searchable, is_filterable,
+                   sort_order, validation, lookup_config,
+                   format, unit, cardinality, origin, label, description,
+                   constraints, enum_config, reference_config, json_config,
+                   money_config, datetime_config, ui_hint,
+                   is_read_only, is_computed, write_once
+            FROM meta.field
+            WHERE entity_version_id = ${versionId}
+              AND tenant_id = ${tenantId}
+              AND is_active = true
+            ORDER BY sort_order ASC, name ASC
+        `.execute(db);
+        fieldRows = fullResult.rows;
+    } catch {
+        // Phase 1 columns not yet migrated — retry with base columns only
+        const baseResult = await sql<FieldRow>`
+            SELECT name, column_name, data_type, ui_type,
+                   is_required, is_searchable, is_filterable,
+                   sort_order, validation, lookup_config
+            FROM meta.field
+            WHERE entity_version_id = ${versionId}
+              AND tenant_id = ${tenantId}
+              AND is_active = true
+            ORDER BY sort_order ASC, name ASC
+        `.execute(db);
+        fieldRows = baseResult.rows;
+    }
+
+    const fields = fieldRows
         .filter((r) => !SYSTEM_COLUMNS.has(r.column_name ?? r.name))
         .map((r) => ({
             name: r.name,
@@ -295,20 +306,20 @@ export async function getMetaFields(
             sortOrder: r.sort_order,
             validation: r.validation,
             lookupConfig: r.lookup_config,
-            // ── New structured fields ──
-            format: r.format,
-            unit: r.unit,
+            // ── New structured fields (safe defaults for pre-migration DBs) ──
+            format: r.format ?? null,
+            unit: r.unit ?? null,
             cardinality: r.cardinality ?? "one",
             origin: r.origin ?? "business",
-            label: r.label,
-            description: r.description,
-            constraints: r.constraints,
-            enumConfig: r.enum_config,
-            referenceConfig: r.reference_config,
-            jsonConfig: r.json_config,
-            moneyConfig: r.money_config,
-            datetimeConfig: r.datetime_config,
-            uiHint: r.ui_hint,
+            label: r.label ?? null,
+            description: r.description ?? null,
+            constraints: r.constraints ?? null,
+            enumConfig: r.enum_config ?? null,
+            referenceConfig: r.reference_config ?? null,
+            jsonConfig: r.json_config ?? null,
+            moneyConfig: r.money_config ?? null,
+            datetimeConfig: r.datetime_config ?? null,
+            uiHint: r.ui_hint ?? null,
             isReadOnly: r.is_read_only ?? false,
             isComputed: r.is_computed ?? false,
             writeOnce: r.write_once ?? false,
@@ -483,7 +494,6 @@ export async function getForeignKeyMap(
     } catch {
         if (metrics) metrics.redis_errors++;
     }
-    }
 
     // ── Compute from DB ──
     const result = await sql<{
@@ -553,10 +563,10 @@ export async function resolveFieldsWithFKs(
     tableName: string,
     metrics?: CacheMetrics,
 ): Promise<ServerFieldMeta[]> {
-    // Try meta.field first
+    // Try meta.field first (internally handles pre-migration column fallback)
     let fields = await getMetaFields(db, entityName, tenantId, metrics);
 
-    // Fallback to information_schema
+    // Fallback to information_schema if no meta.field rows exist
     if (fields.length === 0) {
         fields = await getColumnsFromSchema(db, tableSchema, tableName, metrics);
     }

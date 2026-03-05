@@ -483,7 +483,7 @@ function resolveEnumConfig(field: FieldMeta): EffectiveEnumConfig | undefined {
 function resolveReferenceConfig(field: FieldMeta): EffectiveReferenceConfig | undefined {
     // Prefer structured referenceConfig
     if (field.referenceConfig) {
-        return field.referenceConfig as EffectiveReferenceConfig;
+        return field.referenceConfig as unknown as EffectiveReferenceConfig;
     }
 
     // Legacy: lookupConfig

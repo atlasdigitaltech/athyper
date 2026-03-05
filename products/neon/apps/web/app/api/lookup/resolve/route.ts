@@ -181,13 +181,24 @@ export async function POST(req: Request) {
           ? sql`AND tenant_id = ${tenantUuid}`
           : sql``;
 
-        const selectCols = [...new Set(["id", ...policy.resolvedColumns])];
+        const pkCol = policy.primaryKey ?? "id";
+        const selectCols = [...new Set([pkCol, ...policy.resolvedColumns])];
         const selectExpr = sql.join(selectCols.map((c) => sql.ref(c)));
+
+        // Detect PK data type to use correct array cast (uuid vs text)
+        const isUuidPk =
+          uncachedIds.length > 0 &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            uncachedIds[0],
+          );
+        const idArray = isUuidPk
+          ? sql`${uncachedIds}::uuid[]`
+          : sql`${uncachedIds}::text[]`;
 
         const rows = await sql<Record<string, unknown>>`
                     SELECT ${selectExpr}
                     FROM ${sql.table(fullTable)}
-                    WHERE id = ANY(${uncachedIds}::uuid[])
+                    WHERE ${sql.ref(pkCol)} = ANY(${idArray})
                       ${tenantClause}
                 `.execute(db);
 
@@ -197,7 +208,7 @@ export async function POST(req: Request) {
           ttl: number;
         }> = [];
         for (const row of rows.rows) {
-          const id = String(row.id);
+          const id = String(row[pkCol]);
           const label = buildDisplayLabel(policy, row);
           const resolved: ResolvedRef = { id, label: label || id };
           map[id] = resolved;
