@@ -135,32 +135,14 @@ if errorlevel 1 (
 
 REM ----------------------------
 REM Compose files list
+REM   compose.yml uses `include:` which resolves each file's relative
+REM   paths from that file's own directory.
 REM ----------------------------
-set "COMPOSE_FILES="
+set "COMPOSE_FILES=-f "%COMPOSE_DIR%\compose.yml""
 
-call :addfile "%COMPOSE_DIR%\mesh.base.yml"
-call :addfile "%COMPOSE_DIR%\gateway\mesh-gateway.yml"
-call :addfile "%COMPOSE_DIR%\iam\mesh-iam.yml"
-call :addfile "%COMPOSE_DIR%\objectstorage\mesh-objectstorage.yml"
-call :addfile "%COMPOSE_DIR%\memorycache\mesh-memorycache.yml"
-call :addfile "%COMPOSE_DIR%\memorycache\mesh-memorycache-exporter.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-metrics.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-tracing.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-logging.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-logshipper.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-telemetry.yml"
-call :addfile "%COMPOSE_DIR%\apps\mesh-athyper.yml"
-call :addfile "!OVERRIDE!"
-
-goto :after_addfile
-
-:addfile
-if exist "%~1" (
-  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%~1""
+if exist "!OVERRIDE!" (
+  set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
 )
-exit /b 0
-
-:after_addfile
 
 REM ----------------------------
 REM Build logs command
@@ -185,11 +167,11 @@ echo ==========================
 echo.
 
 if exist "%ENV_FILE%" (
-  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!MESH_PROFILE!" %COMPOSE_FILES% !LOGS_ARGS!
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!MESH_PROFILE!" %COMPOSE_FILES% !LOGS_ARGS!
+  echo Running: docker compose --env-file "%ENV_FILE%" --profile "!MESH_PROFILE!" !COMPOSE_FILES! !LOGS_ARGS!
+  docker compose --env-file "%ENV_FILE%" --profile "!MESH_PROFILE!" !COMPOSE_FILES! !LOGS_ARGS!
 ) else (
-  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --profile "!MESH_PROFILE!" %COMPOSE_FILES% !LOGS_ARGS!
-  docker compose --project-directory "%COMPOSE_DIR%" --profile "!MESH_PROFILE!" %COMPOSE_FILES% !LOGS_ARGS!
+  echo Running: docker compose --profile "!MESH_PROFILE!" !COMPOSE_FILES! !LOGS_ARGS!
+  docker compose --profile "!MESH_PROFILE!" !COMPOSE_FILES! !LOGS_ARGS!
 )
 
 endlocal

@@ -157,51 +157,28 @@ if errorlevel 1 (
 )
 
 REM ----------------------------
-REM Compose files list (skip missing files)
+REM Compose files list
+REM   compose.yml uses `include:` which resolves each file's relative
+REM   paths from that file's own directory — so volume paths like
+REM   ../../data resolve correctly to mesh/data.
 REM ----------------------------
-set "COMPOSE_FILES="
+set "COMPOSE_FILES=-f "%COMPOSE_DIR%\compose.yml""
 
-call :addfile "%COMPOSE_DIR%\mesh.base.yml"
-call :addfile "%COMPOSE_DIR%\db\mesh-db.yml"
-call :addfile "%COMPOSE_DIR%\db\mesh-dbpool-apps.yml"
-call :addfile "%COMPOSE_DIR%\db\mesh-dbpool-auth.yml"
-call :addfile "%COMPOSE_DIR%\gateway\mesh-gateway.yml"
-call :addfile "%COMPOSE_DIR%\iam\mesh-iam.yml"
-call :addfile "%COMPOSE_DIR%\objectstorage\mesh-objectstorage.yml"
-call :addfile "%COMPOSE_DIR%\memorycache\mesh-memorycache.yml"
-call :addfile "%COMPOSE_DIR%\memorycache\mesh-memorycache-exporter.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-metrics.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-tracing.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-logging.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-logshipper.yml"
-call :addfile "%COMPOSE_DIR%\telemetry\mesh-telemetry.yml"
-call :addfile "%COMPOSE_DIR%\apps\mesh-athyper.yml"
-call :addfile "!OVERRIDE!"
-
-goto :after_addfile
-
-:addfile
-if exist "%~1" (
-  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%~1""
+if exist "!OVERRIDE!" (
+  set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
 ) else (
-  echo WARNING: compose file missing, skipping: %~1
+  echo WARNING: override file missing, skipping: !OVERRIDE!
 )
-exit /b 0
-
-:after_addfile
-
 
 REM ----------------------------
 REM Bring up stack (PROFILE-AWARE)
-REM Matches your working command pattern:
-REM   docker compose --env-file ../env/.env --profile mesh up -d
 REM ----------------------------
 if "!USE_PROFILE!"=="1" (
-  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" %COMPOSE_FILES% up -d --remove-orphans
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" %COMPOSE_FILES% up -d --remove-orphans
+  echo Running: docker compose --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" !COMPOSE_FILES! up -d --remove-orphans
+  docker compose --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" !COMPOSE_FILES! up -d --remove-orphans
 ) else (
-  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" %COMPOSE_FILES% up -d --remove-orphans
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" %COMPOSE_FILES% up -d --remove-orphans
+  echo Running: docker compose --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d --remove-orphans
+  docker compose --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d --remove-orphans
 )
 
 if errorlevel 1 (
@@ -214,9 +191,9 @@ echo Mesh is UP (profile=!RUN_PROFILE!, env=!ENVIRONMENT!)
 
 REM Show status (same profile rules)
 if "!USE_PROFILE!"=="1" (
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" %COMPOSE_FILES% ps
+  docker compose --env-file "%ENV_FILE%" --profile "!RUN_PROFILE!" !COMPOSE_FILES! ps
 ) else (
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" %COMPOSE_FILES% ps
+  docker compose --env-file "%ENV_FILE%" !COMPOSE_FILES! ps
 )
 
 echo.

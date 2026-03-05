@@ -60,7 +60,7 @@ services:
   # -------------------------------------------------------------------------
   athyper-api:
     build:
-      context: ../..
+      context: ../../..
       dockerfile: framework/runtime/Dockerfile.dev
     profiles: ["mesh", "gateway", "apps"]
     mem_limit: "${APPS_ATHYPER_MEMORY_LIMIT}"
