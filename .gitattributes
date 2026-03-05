@@ -18,6 +18,11 @@
 *.env.* text eol=lf
 *.env.example text eol=lf
 
+# Database config files — LF (Postgres/PgBouncer fail on CRLF)
+mesh/config/db/**/*.conf text eol=lf
+mesh/config/db/**/*.ini text eol=lf
+mesh/config/db/**/*.txt text eol=lf
+
 # Config / data files — LF
 *.json text eol=lf
 *.yml text eol=lf
