@@ -113,6 +113,14 @@ if "%MESH_DATA%"=="" (
 REM Normalize slashes
 set "MESH_DATA=%MESH_DATA:/=\%"
 
+REM Resolve relative MESH_DATA against MESH_DIR
+pushd "%MESH_DIR%" >nul
+if not exist "%MESH_DATA%" mkdir "%MESH_DATA%" >nul 2>&1
+pushd "%MESH_DATA%" >nul
+set "MESH_DATA=%CD%"
+popd >nul
+popd >nul
+
 echo ==========================
 echo ENV_FILE  = %ENV_FILE%
 echo ENVIRONMENT  = %ENVIRONMENT%
