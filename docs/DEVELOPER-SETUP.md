@@ -54,7 +54,12 @@ cd mesh/scripts
 ./generate-mesh-certs.sh
 ```
 
-This creates certificates under `mesh/config/gateway/certs/`. You only need to run this once.
+This does two things:
+
+1. **Installs the mkcert CA** into your system/browser trust store (`mkcert -install`) — so your browser trusts `*.mesh.athyper.local` certificates without warnings
+2. **Generates certificate files** under `mesh/config/gateway/certs/` for the Traefik gateway
+
+> **Important**: Every developer must run this on their own machine. The cert files may already exist in the repo, but the CA trust is per-machine — without it, your browser will silently block redirects to `https://iam.mesh.athyper.local` (e.g., the Keycloak login redirect won't work). Restart your browser after running the script.
 
 ## 4. Set Up Environment File
 
@@ -289,6 +294,30 @@ Or reset everything: stop the mesh, run `init-data` to wipe data, then start the
 **Cause**: `API_MESH_URL` is not set.
 
 **Fix**: Add `API_MESH_URL=https://api.athyper.local` to `.env.local`.
+
+### Login button does nothing / browser stuck on redirect
+
+**Cause**: Clicking "Sign in with Keycloak" redirects to `https://iam.mesh.athyper.local`, but the browser silently refuses to connect because it doesn't trust the self-signed TLS certificate.
+
+**Fix**:
+
+1. **Run the cert generator** (if you haven't already). This installs the mkcert CA into your system trust store:
+
+   ```bash
+   # Windows
+   cd mesh/scripts
+   ./generate-mesh-certs.bat
+
+   # macOS / Linux
+   cd mesh/scripts
+   ./generate-mesh-certs.sh
+   ```
+
+   The script calls `mkcert -install` which adds the local CA to your browser's trust store. **Each developer must run this on their own machine** — the generated `.crt`/`.key` files in the repo are not enough; the CA must be installed locally.
+
+2. **Restart your browser** after running the script (some browsers cache certificate decisions).
+
+3. If it still doesn't work, verify the CA is installed by opening `https://iam.mesh.athyper.local` directly — you should see the Keycloak page without any certificate warning. If you see a warning, click "Advanced" → "Proceed" as a temporary workaround, then re-run `mkcert -install`.
 
 ### TLS / certificate errors
 

@@ -1962,7 +1962,7 @@ model attachment_comment {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model brand_profile {
   id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id         String          @unique(map: "idx_brand_profile_tenant_default") @db.Uuid
+  tenant_id         String          @db.Uuid
   code              String
   name              String
   palette           Json?
@@ -1981,6 +1981,7 @@ model brand_profile {
   render_output     render_output[]
 
   @@unique([tenant_id, code], map: "idx_brand_profile_tenant_code")
+  @@unique([tenant_id], map: "idx_brand_profile_tenant_default", where: raw("(is_default = true)"))
   @@schema("doc")
 }
 
@@ -2048,7 +2049,7 @@ model entity_document_link {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model letterhead {
   id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id         String          @unique(map: "idx_letterhead_tenant_default") @db.Uuid
+  tenant_id         String          @db.Uuid
   code              String
   name              String
   org_unit_id       String?         @db.Uuid
@@ -2069,6 +2070,7 @@ model letterhead {
   render_output     render_output[]
 
   @@unique([tenant_id, code], map: "idx_letterhead_tenant_code")
+  @@unique([tenant_id], map: "idx_letterhead_tenant_default", where: raw("(is_default = true)"))
   @@schema("doc")
 }
 
@@ -4975,6 +4977,7 @@ model entity {
   updated_at            DateTime?               @db.Timestamptz(6)
   updated_by            String?
   entity_short          String?
+  identity_config       Json?
   tenant                tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   entity_policy         entity_policy[]
   entity_version        entity_version[]
@@ -4983,9 +4986,13 @@ model entity {
 
   @@unique([tenant_id, name], map: "entity_name_uniq")
   @@unique([tenant_id, entity_short], map: "idx_entity_short_uniq", where: raw("(entity_short IS NOT NULL)"))
+  @@unique([tenant_id, id], map: "idx_entity_tenant_id_uniq")
   @@index([tenant_id, engine_tag], map: "idx_entity_engine_tag", where: raw("(engine_tag IS NOT NULL)"))
   @@index([tenant_id, kind], map: "idx_entity_kind")
   @@index([tenant_id, module_id], map: "idx_entity_module")
+  @@index([tenant_id, name], map: "idx_entity_active_name", where: raw("(is_active = true)"))
+  @@index([tenant_id], map: "idx_entity_identity_config", where: raw("(identity_config IS NOT NULL)"))
+  @@index([tenant_id, table_schema, table_name], map: "idx_entity_table_lookup", where: raw("(is_active = true)"))
   @@schema("meta")
 }
 
@@ -5134,45 +5141,85 @@ model entity_version {
   entity_compiled         entity_compiled[]
   entity_compiled_overlay entity_compiled_overlay[]
   entity_policy           entity_policy[]
-  entity                  entity                    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tenant                  tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity                  entity                    @relation(fields: [tenant_id, entity_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_entity_version_entity_tenant")
   field                   field[]
   index_def               index_def[]
   overlay                 overlay[]
   relation                relation[]
 
   @@unique([tenant_id, entity_id, version_no], map: "entity_version_uniq")
+  @@unique([tenant_id, id], map: "idx_entity_version_tenant_id_uniq")
   @@index([tenant_id, entity_id, status], map: "idx_entity_version_entity_status")
+  @@index([tenant_id, entity_id, version_no(sort: Desc)], map: "idx_entity_version_published_latest", where: raw("(status = 'published'::text)"))
   @@schema("meta")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model field {
-  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id         String         @db.Uuid
-  entity_version_id String         @db.Uuid
-  name              String
-  column_name       String?
-  data_type         String
-  ui_type           String?
-  is_required       Boolean        @default(false)
-  is_unique         Boolean        @default(false)
-  is_searchable     Boolean        @default(false)
-  is_filterable     Boolean        @default(false)
-  default_value     Json?
-  validation        Json?
-  lookup_config     Json?
-  sort_order        Int            @default(0)
-  is_active         Boolean        @default(true)
-  created_at        DateTime       @default(now()) @db.Timestamptz(6)
-  created_by        String
-  updated_at        DateTime?      @db.Timestamptz(6)
-  updated_by        String?
-  entity_version    entity_version @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tenant            tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id           String         @db.Uuid
+  entity_version_id   String         @db.Uuid
+  name                String
+  column_name         String         @default("")
+  data_type           String
+  ui_type             String?
+  is_required         Boolean        @default(false)
+  is_unique           Boolean        @default(false)
+  is_searchable       Boolean        @default(false)
+  is_filterable       Boolean        @default(false)
+  default_value       Json?
+  validation          Json?
+  lookup_config       Json?
+  sort_order          Int            @default(0)
+  is_active           Boolean        @default(true)
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
+  created_by          String
+  updated_at          DateTime?      @db.Timestamptz(6)
+  updated_by          String?
+  format              String?
+  unit                String?
+  cardinality         String         @default("one")
+  origin              String         @default("business")
+  label               String?
+  description         String?
+  constraints         Json?
+  enum_config         Json?
+  reference_config    Json?
+  json_config         Json?
+  money_config        Json?
+  datetime_config     Json?
+  ui_hint             Json?
+  is_read_only        Boolean        @default(false)
+  is_deprecated       Boolean        @default(false)
+  is_computed         Boolean        @default(false)
+  write_once          Boolean        @default(false)
+  visibility          Json?
+  editability         Json?
+  is_sortable         Boolean        @default(false)
+  is_groupable        Boolean        @default(false)
+  is_aggregatable     Boolean        @default(false)
+  compute_mode        String?
+  compute_expr        Json?
+  child_entity_name   String?
+  child_fk_field      String?
+  collection_behavior Json?
+  lookup_profile      Json?
+  tenant              tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_version      entity_version @relation(fields: [tenant_id, entity_version_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_field_entity_version_tenant")
 
   @@unique([tenant_id, entity_version_id, name], map: "field_name_uniq")
+  @@unique([tenant_id, entity_version_id, column_name], map: "field_column_uniq", where: raw("(NOT ((is_computed = true) AND (compute_mode = 'virtual'::text)))"))
   @@index([tenant_id, entity_version_id], map: "idx_field_entity_version")
+  @@index([tenant_id, entity_version_id, sort_order, name], map: "idx_field_active_ordered", where: raw("(is_active = true)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_aggregatable", where: raw("(is_aggregatable = true)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_collection", where: raw("(cardinality = 'many'::text)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_computed", where: raw("(is_computed = true)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_groupable", where: raw("(is_groupable = true)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_lookup_profile", where: raw("(lookup_profile IS NOT NULL)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_reference", where: raw("((reference_config IS NOT NULL) OR (data_type = 'reference'::text))"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_searchable", where: raw("(is_searchable = true)"))
+  @@index([tenant_id, entity_version_id], map: "idx_field_sortable", where: raw("(is_sortable = true)"))
   @@schema("meta")
 }
 
@@ -5226,7 +5273,7 @@ model index_def {
   where_clause      String?
   created_at        DateTime       @default(now()) @db.Timestamptz(6)
   created_by        String
-  entity_version    entity_version @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_version    entity_version @relation(fields: [tenant_id, entity_version_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_index_def_entity_version_tenant")
   tenant            tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, entity_version_id, name], map: "index_def_name_uniq")
@@ -5641,7 +5688,7 @@ model relation {
   ui_behavior       Json?
   created_at        DateTime       @default(now()) @db.Timestamptz(6)
   created_by        String
-  entity_version    entity_version @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_version    entity_version @relation(fields: [tenant_id, entity_version_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fk_relation_entity_version_tenant")
   tenant            tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, entity_version_id, name], map: "relation_name_uniq")

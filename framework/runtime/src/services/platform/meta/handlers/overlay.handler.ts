@@ -7,7 +7,8 @@
  * validation, and change management operations.
  */
 
-import { META_TOKENS } from "@athyper/core/meta";
+import { META_TOKENS, FIELD_OVERLAY_SAFETY } from "@athyper/core/meta";
+import type { OverlaySafetyLevel } from "@athyper/core/meta";
 
 import type {
   RouteHandler,
@@ -24,6 +25,62 @@ import type {
 } from "../../foundation/overlay-system/types.js";
 import type { AuditLogger, MetaRegistry } from "@athyper/core/meta";
 import type { Request, Response } from "express";
+
+// ============================================================================
+// Overlay Safety Validation
+// ============================================================================
+
+/**
+ * Validate overlay change against FIELD_OVERLAY_SAFETY policy.
+ *
+ * Returns an array of violation messages. Empty = valid.
+ *
+ * Rules:
+ *   - immutable properties cannot be changed by overlays
+ *   - narrowable properties can only be made MORE restrictive
+ *   - replaceable properties can be changed freely
+ */
+function validateOverlaySafety(
+  kind: string,
+  value: unknown,
+): string[] {
+  // Only validate field modifications — addField/removeField are structural
+  if (kind !== "modifyField" || !value || typeof value !== "object") return [];
+
+  const violations: string[] = [];
+  const props = value as Record<string, unknown>;
+
+  for (const [prop, newValue] of Object.entries(props)) {
+    const safety = FIELD_OVERLAY_SAFETY[prop] as OverlaySafetyLevel | undefined;
+    if (!safety) continue; // Unknown properties pass through (no policy defined)
+
+    if (safety === "immutable") {
+      violations.push(
+        `Property '${prop}' is immutable and cannot be modified by overlays`,
+      );
+    }
+
+    // Narrowable enforcement: overlays can restrict but never relax.
+    // For boolean flags (isSortable, isFilterable, etc.): only false overrides are allowed.
+    // For visibility/editability: handled by resolution functions, but block obvious violations.
+    if (safety === "narrowable") {
+      if (newValue === true && isBooleanCapabilityFlag(prop)) {
+        violations.push(
+          `Property '${prop}' is narrowable — overlays can disable (false) but not enable (true)`,
+        );
+      }
+    }
+  }
+
+  return violations;
+}
+
+/** Boolean capability flags that overlays can only set to false (narrow) */
+function isBooleanCapabilityFlag(prop: string): boolean {
+  return [
+    "isFilterable", "isSearchable", "isSortable", "isGroupable", "isAggregatable",
+  ].includes(prop);
+}
 
 // ============================================================================
 // CRUD Handlers
@@ -561,6 +618,20 @@ export class AddChangeHandler implements RouteHandler {
       const changeInput = req.body as CreateOverlayChangeInput;
       const tenantId = ctx.tenant.tenantKey ?? "default";
       const createdBy = ctx.auth.userId ?? ctx.auth.subject ?? "system";
+
+      // Validate overlay safety policy (FIELD_OVERLAY_SAFETY enforcement)
+      const safetyViolations = validateOverlaySafety(changeInput.kind, changeInput.value);
+      if (safetyViolations.length > 0) {
+        res.status(422).json({
+          success: false,
+          error: {
+            code: "OVERLAY_SAFETY_VIOLATION",
+            message: "Overlay change violates field safety policy",
+            violations: safetyViolations,
+          },
+        });
+        return;
+      }
 
       // Add change
       const change = await overlayRepository.addChange(

@@ -9,6 +9,9 @@ import type { FieldMeta } from "@/lib/use-entity-fields";
 
 import { Card } from "@/components/ui/card";
 import { groupFieldsIntoSections } from "@/lib/entity-page/section-grouping";
+import { isFieldVisible, resolveFieldMeta } from "@/lib/entity-page/resolve-field-meta";
+import { useCollectionField } from "@/lib/use-collection-field";
+import { CollectionFieldRenderer } from "./fields/renderers";
 
 interface DetailsTabProps {
   sections: SectionDescriptor[];
@@ -18,6 +21,10 @@ interface DetailsTabProps {
   resolvedRefs?: Map<string, string>;
   /** Entity feature flags for section override resolution */
   featureFlags?: Record<string, unknown> | null;
+  /** Entity name (for collection field context) */
+  entityName?: string;
+  /** Record ID (for collection field context) */
+  entityId?: string;
   onFieldChange?: (fieldName: string, value: unknown) => void;
 }
 
@@ -28,6 +35,8 @@ export function DetailsTab({
   fieldMeta,
   resolvedRefs,
   featureFlags,
+  entityName,
+  entityId,
   onFieldChange,
 }: DetailsTabProps) {
   // Auto-generate sections when none are provided but field metadata exists
@@ -68,6 +77,8 @@ export function DetailsTab({
             viewMode={viewMode}
             fieldMetaMap={fieldMetaMap}
             resolvedRefs={resolvedRefs}
+            entityName={entityName}
+            entityId={entityId}
             onFieldChange={onFieldChange}
           />
         </div>
@@ -82,6 +93,8 @@ interface SectionRendererProps {
   viewMode: ViewMode;
   fieldMetaMap: Map<string, FieldMeta>;
   resolvedRefs?: Map<string, string>;
+  entityName?: string;
+  entityId?: string;
   onFieldChange?: (fieldName: string, value: unknown) => void;
 }
 
@@ -91,6 +104,8 @@ function SectionRenderer({
   viewMode,
   fieldMetaMap,
   resolvedRefs,
+  entityName,
+  entityId,
   onFieldChange,
 }: SectionRendererProps) {
   const gridCols = section.columns === 2 ? "grid-cols-2" : "grid-cols-1";
@@ -102,8 +117,24 @@ function SectionRenderer({
         {section.fields.map((fieldName) => {
           const meta = fieldMetaMap.get(fieldName);
 
+          // Skip fields hidden in this context (FR-4 visibility)
+          if (meta && !isFieldVisible(meta, viewMode)) return null;
+
           // Use type-aware renderer when metadata is available
           if (meta) {
+            // Collection fields use a dedicated wrapper for hook management
+            if (meta.childEntityName && meta.childFkField && entityName) {
+              return (
+                <CollectionFieldWrapper
+                  key={fieldName}
+                  field={meta}
+                  viewMode={viewMode}
+                  parentEntity={entityName}
+                  parentId={entityId}
+                />
+              );
+            }
+
             return (
               <TypeAwareField
                 key={fieldName}
@@ -111,6 +142,8 @@ function SectionRenderer({
                 value={record?.[fieldName]}
                 viewMode={viewMode}
                 resolvedRef={resolvedRefs?.get(fieldName)}
+                parentEntity={entityName}
+                parentId={entityId}
                 onChange={onFieldChange}
               />
             );
@@ -128,6 +161,41 @@ function SectionRenderer({
         })}
       </div>
     </Card>
+  );
+}
+
+// ── Collection field wrapper (manages hook lifecycle) ──
+
+interface CollectionFieldWrapperProps {
+  field: FieldMeta;
+  viewMode: ViewMode;
+  parentEntity: string;
+  parentId?: string;
+}
+
+function CollectionFieldWrapper({
+  field,
+  viewMode,
+  parentEntity,
+  parentId,
+}: CollectionFieldWrapperProps) {
+  const collection = useCollectionField(
+    parentEntity,
+    parentId,
+    field.columnName,
+    field.childEntityName!,
+  );
+
+  const resolved = resolveFieldMeta(field, viewMode);
+
+  return (
+    <CollectionFieldRenderer
+      resolved={resolved}
+      parentEntity={parentEntity}
+      parentId={parentId}
+      collection={collection}
+      viewMode={viewMode}
+    />
   );
 }
 

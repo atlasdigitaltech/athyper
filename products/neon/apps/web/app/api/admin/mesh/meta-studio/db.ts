@@ -266,6 +266,7 @@ export async function createEntityDirect(data: {
   tableName?: string;
   governanceLevel?: string;
   engineTag?: string;
+  identityConfig?: Record<string, unknown> | null;
 }): Promise<{ success: boolean; data: unknown }> {
   const db = await getDb();
 
@@ -283,6 +284,7 @@ export async function createEntityDirect(data: {
       table_name: data.tableName ?? data.name,
       governance_level: data.governanceLevel ?? "full",
       engine_tag: data.engineTag ?? null,
+      identity_config: data.identityConfig ? JSON.stringify(data.identityConfig) : null,
       is_active: true,
       created_by: "admin",
     } as any)
@@ -332,6 +334,8 @@ export async function updateEntityDirect(
   if (updates.governanceLevel !== undefined)
     dbUpdates.governance_level = updates.governanceLevel;
   if (updates.engineTag !== undefined) dbUpdates.engine_tag = updates.engineTag;
+  if (updates.identityConfig !== undefined)
+    dbUpdates.identity_config = updates.identityConfig ? JSON.stringify(updates.identityConfig) : null;
 
   const entity = await db
     .updateTable("meta.entity")
@@ -397,6 +401,40 @@ function mapField(row: any): Record<string, unknown> {
     isActive: row.is_active ?? true,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? null,
+
+    // ── Phase 1: Structured configs & semantic format ──
+    format: row.format ?? null,
+    unit: row.unit ?? null,
+    cardinality: row.cardinality ?? "one",
+    origin: row.origin ?? "business",
+    label: row.label ?? null,
+    description: row.description ?? null,
+    constraints: row.constraints ?? null,
+    enumConfig: row.enum_config ?? null,
+    referenceConfig: row.reference_config ?? null,
+    jsonConfig: row.json_config ?? null,
+    moneyConfig: row.money_config ?? null,
+    datetimeConfig: row.datetime_config ?? null,
+    uiHint: row.ui_hint ?? null,
+    isReadOnly: row.is_read_only ?? false,
+    isDeprecated: row.is_deprecated ?? false,
+    isComputed: row.is_computed ?? false,
+    writeOnce: row.write_once ?? false,
+
+    // ── Enhancement 043: Visibility, editability, list caps, computed, collection ──
+    visibility: row.visibility ?? null,
+    editability: row.editability ?? null,
+    isSortable: row.is_sortable ?? false,
+    isGroupable: row.is_groupable ?? false,
+    isAggregatable: row.is_aggregatable ?? false,
+    computeMode: row.compute_mode ?? null,
+    computeExpr: row.compute_expr ?? null,
+    childEntityName: row.child_entity_name ?? null,
+    childFkField: row.child_fk_field ?? null,
+    collectionBehavior: row.collection_behavior ?? null,
+
+    // ── Lookup system (044) ──
+    lookupProfile: row.lookup_profile ?? null,
   };
 }
 

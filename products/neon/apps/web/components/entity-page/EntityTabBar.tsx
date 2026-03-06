@@ -83,6 +83,8 @@ function renderTabContent(
         fieldMeta={fieldMeta}
         resolvedRefs={resolvedRefs}
         featureFlags={featureFlags}
+        entityName={pluginProps.entityName}
+        entityId={pluginProps.entityId}
       />
     );
   }

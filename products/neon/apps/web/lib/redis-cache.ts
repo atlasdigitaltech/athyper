@@ -160,6 +160,15 @@ export function queryCountKey(
   return `ep:qc:ns${ns}:${tenantId}:${entity}:g${gen}:${filterHash}`;
 }
 
+export function lookupKey(
+  ns: number,
+  tenantId: string,
+  entity: string,
+  queryHash: string,
+): string {
+  return `ep:lk:ns${ns}:${tenantId}:${entity}:${queryHash}`;
+}
+
 // ============================================================================
 // TTL Constants
 // ============================================================================
@@ -172,6 +181,7 @@ export const REDIS_TTL = {
   refLabel: 1800, // 30 min (stale label tolerance)
   queryResult: 120, // 2 min (server-side filtered query results)
   queryCount: 300, // 5 min (filtered COUNT — changes less often)
+  lookupResult: 60, // 1 min (typeahead results — ephemeral)
 } as const;
 
 // ============================================================================

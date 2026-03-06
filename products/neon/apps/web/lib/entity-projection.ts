@@ -49,7 +49,22 @@ export interface EntityListResponse {
 // Read-Only Behavior
 // ============================================================================
 
-/** Reason codes for read-only field enforcement */
+/**
+ * Reason codes for read-only field enforcement.
+ *
+ * Precedence order (highest → lowest):
+ *   1. COMPUTED       — is_computed=true → always read-only, no override
+ *   2. SYSTEM_MANAGED — is_read_only=true or system_managed editability
+ *   3. SYSTEM_ORIGIN  — origin="system" → hidden from business forms
+ *   4. WRITE_ONCE     — write_once=true → editable only on create
+ *   5. EXPLICIT_META  — editability context rule = read_only
+ *   6. LIFECYCLE_MANAGED / DERIVED_HIERARCHY / PRIMARY_KEY — convention-based
+ *   7. DEPRECATED     — deprecated fields are read-only as a safety measure
+ *   8. UI_ADVISORY    — ui_hint.readOnly / ui_hint.lockOnEdit (rendering only, never overrides domain truth)
+ *
+ * Higher-precedence reasons cannot be relaxed by lower layers.
+ * UI advisory flags (ui_hint.readOnly, ui_hint.lockOnEdit) NEVER override domain/security truth.
+ */
 export type ReadOnlyReason =
     | "DERIVED_HIERARCHY"
     | "LIFECYCLE_MANAGED"
@@ -60,7 +75,8 @@ export type ReadOnlyReason =
     | "COMPUTED"
     | "WRITE_ONCE"
     | "DEPRECATED"
-    | "SYSTEM_ORIGIN";
+    | "SYSTEM_ORIGIN"
+    | "UI_ADVISORY";
 
 /** Read-only decision with reason code for tooltip display */
 export interface FieldEditBehavior {
@@ -83,6 +99,7 @@ export const READ_ONLY_REASON_LABELS: Record<ReadOnlyReason, string> = {
     WRITE_ONCE: "Can only be set on creation",
     DEPRECATED: "Deprecated field",
     SYSTEM_ORIGIN: "System-managed field",
+    UI_ADVISORY: "Read-only (display preference)",
 };
 
 // ============================================================================

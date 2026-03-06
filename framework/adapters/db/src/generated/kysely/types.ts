@@ -1433,6 +1433,7 @@ export type entity = {
     updated_at: Timestamp | null;
     updated_by: string | null;
     entity_short: string | null;
+    identity_config: unknown | null;
 };
 export type entity_comment = {
     id: Generated<string>;
@@ -1685,7 +1686,7 @@ export type field = {
     tenant_id: string;
     entity_version_id: string;
     name: string;
-    column_name: string | null;
+    column_name: Generated<string>;
     data_type: string;
     ui_type: string | null;
     is_required: Generated<boolean>;
@@ -1701,6 +1702,34 @@ export type field = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    format: string | null;
+    unit: string | null;
+    cardinality: Generated<string>;
+    origin: Generated<string>;
+    label: string | null;
+    description: string | null;
+    constraints: unknown | null;
+    enum_config: unknown | null;
+    reference_config: unknown | null;
+    json_config: unknown | null;
+    money_config: unknown | null;
+    datetime_config: unknown | null;
+    ui_hint: unknown | null;
+    is_read_only: Generated<boolean>;
+    is_deprecated: Generated<boolean>;
+    is_computed: Generated<boolean>;
+    write_once: Generated<boolean>;
+    visibility: unknown | null;
+    editability: unknown | null;
+    is_sortable: Generated<boolean>;
+    is_groupable: Generated<boolean>;
+    is_aggregatable: Generated<boolean>;
+    compute_mode: string | null;
+    compute_expr: unknown | null;
+    child_entity_name: string | null;
+    child_fk_field: string | null;
+    collection_behavior: unknown | null;
+    lookup_profile: unknown | null;
 };
 export type field_access_log = {
     id: Generated<string>;

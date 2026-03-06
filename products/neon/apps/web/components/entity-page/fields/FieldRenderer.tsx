@@ -41,7 +41,9 @@ import {
     JsonEditorRenderer,
     ReferencePickerRenderer,
     ReferenceMultiPickerRenderer,
+    CollectionFieldRenderer,
 } from "./renderers";
+import type { UseCollectionFieldResult } from "@/lib/use-collection-field";
 
 // ============================================================================
 // Props
@@ -60,6 +62,12 @@ interface FieldRendererProps {
     /** Overlay UI hint (from compiled overlay — highest priority) */
     overlayHint?: UiHintOverride;
     onChange?: (fieldName: string, value: unknown) => void;
+    /** Parent entity name — required for collection fields */
+    parentEntity?: string;
+    /** Parent record ID — required for collection fields */
+    parentId?: string;
+    /** Pre-initialized collection hook result (for collection fields) */
+    collectionHook?: UseCollectionFieldResult;
 }
 
 // ============================================================================
@@ -75,6 +83,9 @@ export function FieldRenderer({
     editBehavior,
     overlayHint,
     onChange,
+    parentEntity,
+    parentId,
+    collectionHook,
 }: FieldRendererProps) {
     // Resolve field metadata once — all decisions flow from this
     const resolved = resolveFieldMeta(field, viewMode, overlayHint, editBehavior);
@@ -85,6 +96,19 @@ export function FieldRenderer({
 
     // Hidden fields render nothing
     if (resolved.resolvedUiType === "hidden") return null;
+
+    // Collection fields render an inline grid (requires parent context)
+    if (resolved.resolvedUiType === "collection" && collectionHook && parentEntity) {
+        return (
+            <CollectionFieldRenderer
+                resolved={resolved}
+                parentEntity={parentEntity}
+                parentId={parentId}
+                collection={collectionHook}
+                viewMode={viewMode}
+            />
+        );
+    }
 
     // Read-only field with reason (forced view mode in edit/create context)
     if (effectiveReadOnly && effectiveReason && viewMode !== "view") {
@@ -98,13 +122,16 @@ export function FieldRenderer({
         );
     }
 
-    // View mode
+    // View mode — reference-picker delegates to LookupTypeahead for consistent display
     if (viewMode === "view") {
+        if (resolved.resolvedUiType === "reference-picker" && resolved.effectiveRefConfig?.entity) {
+            return <ReferencePickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} viewMode={viewMode} />;
+        }
         return renderViewMode(resolved, value, resolvedRef);
     }
 
     // Edit / Create mode
-    return renderEditMode(resolved, value, resolvedRef, onChange);
+    return renderEditMode(resolved, value, resolvedRef, onChange, viewMode);
 }
 
 // ============================================================================
@@ -165,6 +192,7 @@ function renderEditMode(
     value: unknown,
     resolvedRef?: string,
     onChange?: (fieldName: string, value: unknown) => void,
+    viewMode?: ViewMode,
 ): React.ReactNode {
     switch (resolved.resolvedUiType) {
         case "text":
@@ -198,7 +226,7 @@ function renderEditMode(
             return <DateTimePickerRenderer resolved={resolved} value={value} onChange={onChange} />;
 
         case "reference-picker":
-            return <ReferencePickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} onChange={onChange} />;
+            return <ReferencePickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} viewMode={viewMode} onChange={onChange} />;
 
         case "reference-multi-picker":
             return <ReferenceMultiPickerRenderer resolved={resolved} value={value} resolvedRef={resolvedRef} onChange={onChange} />;

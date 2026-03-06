@@ -23,6 +23,9 @@ import {
   groupFieldsIntoSections,
   getFieldEditBehavior,
 } from "@/lib/entity-page/section-grouping";
+import { isFieldVisible, resolveFieldMeta } from "@/lib/entity-page/resolve-field-meta";
+import { useCollectionField } from "@/lib/use-collection-field";
+import { CollectionFieldRenderer } from "./fields/renderers";
 
 // ============================================================================
 // Types
@@ -178,11 +181,17 @@ export function EntityForm({
   );
 
   // ── Determine which fields to render per section ──
-  // Filter sections to only include editable (non-system) fields
+  // Filter sections to only include editable (non-system) fields that are visible in this context
+  const vmForFilter: ViewMode = viewMode === "create" ? "create" : "edit";
   const editableSections = sections
     .map((section) => ({
       ...section,
-      fields: section.fields.filter((f) => !SYSTEM_FIELDS.has(f)),
+      fields: section.fields.filter((f) => {
+        if (SYSTEM_FIELDS.has(f)) return false;
+        const meta = fieldMetaMap.get(f);
+        if (meta && !isFieldVisible(meta, vmForFilter)) return false;
+        return true;
+      }),
     }))
     .filter((section) => section.fields.length > 0);
 
@@ -248,6 +257,19 @@ export function EntityForm({
                 const meta = fieldMetaMap.get(fieldName);
                 if (!meta) return null;
 
+                // Collection fields use a dedicated wrapper
+                if (meta.childEntityName && meta.childFkField) {
+                  return (
+                    <FormCollectionFieldWrapper
+                      key={fieldName}
+                      field={meta}
+                      viewMode={viewMode === "create" ? "create" : "edit"}
+                      parentEntity={entityName}
+                      parentId={entityId}
+                    />
+                  );
+                }
+
                 const currentVal = getValues(fieldName);
                 const vmForField: ViewMode =
                   viewMode === "create" ? "create" : "edit";
@@ -301,5 +323,38 @@ export function EntityForm({
         </div>
       )}
     </form>
+  );
+}
+
+// ── Collection field wrapper (manages hook lifecycle within form) ──
+
+function FormCollectionFieldWrapper({
+  field,
+  viewMode,
+  parentEntity,
+  parentId,
+}: {
+  field: FieldMeta;
+  viewMode: ViewMode;
+  parentEntity: string;
+  parentId?: string;
+}) {
+  const collection = useCollectionField(
+    parentEntity,
+    parentId,
+    field.columnName,
+    field.childEntityName!,
+  );
+
+  const resolved = resolveFieldMeta(field, viewMode);
+
+  return (
+    <CollectionFieldRenderer
+      resolved={resolved}
+      parentEntity={parentEntity}
+      parentId={parentId}
+      collection={collection}
+      viewMode={viewMode}
+    />
   );
 }

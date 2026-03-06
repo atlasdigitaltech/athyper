@@ -42,8 +42,16 @@ export type FieldType =
 // ============================================================================
 
 /**
- * Semantic format hints — transport-layer metadata, NOT data types.
- * Drives auto-detect UI specialization (e.g., "text" + format="email" → email input).
+ * Core semantic format hints — platform-level, DB-constrained.
+ *
+ * These are the canonical formats that the platform understands natively.
+ * They drive auto-detect UI specialization (e.g., "text" + format="email" → email input)
+ * and are validated by a DB CHECK constraint on meta.field.format.
+ *
+ * For tenant-extensible semantic tags (e.g., "tax_id", "bank_account", "iban",
+ * "bic_swift", "attachment", "image", "signature", "duration", "rating"),
+ * use `ui_hint.props.semanticTag` — which is unconstrained JSONB and can be
+ * extended per-tenant without DDL changes.
  */
 export type SemanticFormat =
   | "email"
@@ -61,6 +69,15 @@ export type SemanticFormat =
   | "slug";
 
 /**
+ * Core format values as a runtime array — used by Zod schemas and DB constraints.
+ */
+export const CORE_SEMANTIC_FORMATS: readonly string[] = [
+  "email", "phone", "url", "money", "percent", "password",
+  "color", "country", "timezone", "markdown", "html",
+  "ip_address", "slug",
+] as const;
+
+/**
  * Field origin — system-managed vs business-defined.
  * System fields are hidden in business forms by default.
  */
@@ -69,24 +86,99 @@ export type FieldOrigin = "system" | "business";
 /**
  * Canonical field constraints — single source of truth for validation.
  * Replaces scattered validation JSONB reads in resolve logic.
+ *
+ * The flat shape is intentional (stored as JSONB in meta.field.constraints).
+ * Type-family validation ensures only valid combinations are persisted:
+ *
+ * | Data Type Family       | Valid Keys                                           |
+ * |------------------------|------------------------------------------------------|
+ * | base (all types)       | required, nullable                                   |
+ * | string, text, rich_text| + minLength, maxLength, pattern                      |
+ * | integer, number, decimal| + min, max, precision, scale                        |
+ * | date, datetime         | + minDate, maxDate                                   |
+ * | enum                   | + allowedValues                                      |
+ * | boolean, uuid, json,   | base only (no extra keys)                            |
+ * |   reference            |                                                      |
+ *
+ * Invalid combinations (e.g., pattern on decimal, precision on boolean)
+ * are rejected at the Zod validation layer and by DB CHECK constraints.
  */
 export type FieldConstraints = {
+  // ── Base (all types) ──
   nullable?: boolean;
   required?: boolean;
-  min?: number;
-  max?: number;
+
+  // ── String family (string, text, rich_text) ──
   minLength?: number;
   maxLength?: number;
   pattern?: string;
+
+  // ── Numeric family (integer, number, decimal) ──
+  min?: number;
+  max?: number;
   precision?: number;
   scale?: number;
+
+  // ── Date family (date, datetime) ──
+  minDate?: string;
+  maxDate?: string;
+
+  // ── Enum family ──
+  allowedValues?: string[];
 };
+
+/**
+ * Data-type families for constraint validation.
+ * Maps each FieldType to the set of constraint keys it allows beyond base.
+ */
+export const CONSTRAINT_KEYS_BY_FAMILY: Record<string, readonly string[]> = {
+  // String family
+  string:    ["minLength", "maxLength", "pattern"],
+  text:      ["minLength", "maxLength", "pattern"],
+  rich_text: ["minLength", "maxLength", "pattern"],
+
+  // Numeric family
+  integer:   ["min", "max", "precision", "scale"],
+  number:    ["min", "max", "precision", "scale"],
+  decimal:   ["min", "max", "precision", "scale"],
+
+  // Date family
+  date:      ["minDate", "maxDate"],
+  datetime:  ["minDate", "maxDate"],
+
+  // Enum family
+  enum:      ["allowedValues"],
+
+  // Base-only types (no extra constraint keys allowed)
+  boolean:   [],
+  uuid:      [],
+  reference: [],
+  json:      [],
+};
+
+/** Base constraint keys valid for all data types. */
+export const BASE_CONSTRAINT_KEYS: readonly string[] = ["required", "nullable"];
 
 /**
  * Structured UI hint — the override layer for UI presentation.
  * Auto-detect provides defaults; this overrides them at field/view/tenant level.
+ *
+ * Storage: flat JSONB in meta.field.ui_hint (backward-compatible).
+ * Consumption: components should consume ResolvedFieldUiMeta (logically grouped),
+ *   never read this raw type ad hoc.
+ *
+ * Logical sub-groups (for documentation and future splitting):
+ *   renderer:  type, viewType, editType, props
+ *   form:      placeholder, helpText, hidden, disabled, readOnly, lockOnEdit
+ *   layout:    section, group, layout, density, icon
+ *   list:      listColumnWidth, listColumnAlignment
+ *
+ * Note: readOnly and lockOnEdit are Layer 8 (UI advisory) in the mutability
+ * precedence chain. They influence rendering but NEVER override domain/security
+ * truth from higher layers (is_computed, is_read_only, editability, etc).
  */
 export type FieldUiHint = {
+  // ── Renderer (which component to use) ──
   /** Generic UI type override */
   type?: string;
   /** Read-mode component (tables, detail views) */
@@ -95,24 +187,115 @@ export type FieldUiHint = {
   editType?: string;
   /** Additional props passed to the UI component */
   props?: Record<string, unknown>;
+
+  // ── Form behavior (how the field behaves in forms) ──
   /** Hide the field entirely */
   hidden?: boolean;
-  /** Disable editing (greyed out) */
+  /** Disable editing (greyed out) — Layer 8 advisory */
   disabled?: boolean;
   /** Input placeholder text */
   placeholder?: string;
   /** Help text shown near field */
   helpText?: string;
+  /** Mark as read-only — Layer 8 advisory, never overrides domain truth */
+  readOnly?: boolean;
+  /** Lock field after first save — Layer 8 advisory */
+  lockOnEdit?: boolean;
+
+  // ── Layout (form positioning and density) ──
   /** Section assignment for form layout */
   section?: string;
-  /** Mark as read-only */
-  readOnly?: boolean;
-  /** Lock field after first save */
-  lockOnEdit?: boolean;
+  /** Group/section name for form layout grouping */
+  group?: string;
   /** Layout width in form grid */
   layout?: "full" | "half" | "third";
   /** Visual density */
   density?: "compact" | "normal" | "comfortable";
+  /** Icon identifier for field */
+  icon?: string;
+
+  // ── List (table/list view config) ──
+  /** List column width (px or "auto") */
+  listColumnWidth?: number | "auto";
+  /** List column alignment */
+  listColumnAlignment?: "left" | "center" | "right";
+};
+
+// ============================================================================
+// Resolved Field UI Meta (consumed by components — never raw ui_hint)
+// ============================================================================
+
+/**
+ * Renderer sub-group — which component to use for this field.
+ */
+export type UiRendererConfig = {
+  /** Resolved UI type (generic) */
+  type?: string;
+  /** View-mode component override */
+  viewType?: string;
+  /** Edit-mode component override */
+  editType?: string;
+  /** Additional props for the component */
+  props: Record<string, unknown>;
+};
+
+/**
+ * Form behavior sub-group — how the field behaves in entity forms.
+ */
+export type UiFormConfig = {
+  /** Placeholder text for inputs */
+  placeholder?: string;
+  /** Help text / description shown near field */
+  helpText?: string;
+  /** Whether the field is visually hidden */
+  hidden: boolean;
+  /** Whether the field input is disabled (greyed out) */
+  disabled: boolean;
+};
+
+/**
+ * Layout sub-group — form positioning and visual density.
+ */
+export type UiLayoutConfig = {
+  /** Section assignment for form grouping */
+  section?: string;
+  /** Group name for form sub-grouping */
+  group?: string;
+  /** Width in form grid: full (12 cols), half (6), third (4) */
+  layout: "full" | "half" | "third";
+  /** Visual density */
+  density: "compact" | "normal" | "comfortable";
+  /** Icon identifier */
+  icon?: string;
+};
+
+/**
+ * List/table sub-group — how the field appears in list views.
+ */
+export type UiListConfig = {
+  /** Column width (px or "auto") */
+  columnWidth: number | "auto";
+  /** Column alignment */
+  columnAlignment: "left" | "center" | "right";
+};
+
+/**
+ * Fully resolved UI metadata — logically grouped, with defaults filled.
+ *
+ * This is what components should consume. It normalizes the flat FieldUiHint
+ * into typed sub-groups so renderers, forms, and tables never parse raw JSONB.
+ *
+ * Produced by resolveFieldUiMeta() at resolution time.
+ */
+export type ResolvedFieldUiMeta = {
+  /** Renderer selection config */
+  renderer: UiRendererConfig;
+  /** Form behavior config */
+  form: UiFormConfig;
+  /** Layout/positioning config */
+  layout: UiLayoutConfig;
+  /** List/table view config */
+  list: UiListConfig;
 };
 
 /**
@@ -139,11 +322,22 @@ export type EnumConfig = {
 };
 
 /**
- * Structured reference configuration — enterprise-grade FK handling.
- * Includes relationship metadata, search contract, and caching strategy.
+ * Structured reference configuration — **structural relationship contract**.
+ *
+ * Owns: what entity, how joined, FK wiring, value resolution strategy.
+ * Does NOT own: search UX, display formatting, relevance ranking, debounce,
+ *   page size, or anything the user sees in a picker dropdown — that belongs
+ *   to LookupProfile (on meta.field) and IdentityConfig (on meta.entity).
+ *
+ * Legacy search/display fields (displayField, searchFields, filter, cacheMode,
+ * defaultSort, typeaheadLimit, serverSearchMode) are retained for backward
+ * compatibility but are **deprecated in favor of LookupProfile**. The resolution
+ * engine reads them as fallback hints only when lookupProfile is absent.
  */
 export type ReferenceConfig = {
-  /** Target entity name */
+  // ── Structural (authoritative) ──────────────────────────────────────
+
+  /** Target entity name (logical, not physical table) */
   entity: string;
   /** Relationship type (drives join strategy and UI picker type) */
   relationshipKind?: "many-to-one" | "one-to-one" | "one-to-many" | "many-to-many";
@@ -153,27 +347,599 @@ export type ReferenceConfig = {
   joinLeftKey?: string;
   /** FK column in join entity pointing to target entity */
   joinRightKey?: string;
-  /** Target entity field shown in display (e.g., "name", "code") */
-  displayField?: string;
-  /** Fields searched during typeahead */
-  searchFields?: string[];
-  /** Base filter applied to all lookups (e.g., scope by tenant/org) */
-  filter?: Record<string, unknown>;
   /** Target key field (default "id") */
   valueField?: string;
-  /** Allow creating new referenced records inline */
-  allowCreateInline?: boolean;
-  /** Caching strategy for lookup values */
-  cacheMode?: "none" | "session" | "global";
-  /** Default sort for lookup results */
-  defaultSort?: string;
-  /** Max results for typeahead queries */
-  typeaheadLimit?: number;
-  /** Server-side search mode */
-  serverSearchMode?: "contains" | "startsWith" | "fts";
   /** How selected values are resolved for display */
   hydrateStrategy?: "byIds" | "embedded";
+  /** Allow creating new referenced records inline */
+  allowCreateInline?: boolean;
+
+  // ── Legacy search/display hints (deprecated → use LookupProfile) ───
+
+  /** @deprecated Use LookupProfile.displayTemplate or IdentityConfig.primaryLabelField */
+  displayField?: string;
+  /** @deprecated Use LookupProfile.searchFields */
+  searchFields?: string[];
+  /** @deprecated Use LookupProfile.filters */
+  filter?: Record<string, unknown>;
+  /** @deprecated Use LookupProfile.cacheMode */
+  cacheMode?: "none" | "session" | "global";
+  /** @deprecated Use LookupProfile.orderBy */
+  defaultSort?: string;
+  /** @deprecated Use LookupProfile.pageSize */
+  typeaheadLimit?: number;
+  /** @deprecated Use LookupProfile.matchMode */
+  serverSearchMode?: "contains" | "startsWith" | "fts";
 };
+
+// ============================================================================
+// Lookup System Types
+// ============================================================================
+
+/**
+ * Identity configuration — **entity-level self-description** for lookups.
+ *
+ * Declares how an entity identifies itself when used as a lookup target.
+ * Consumed server-side by the Lookup Search API to auto-derive search fields
+ * and display labels when no field-level LookupProfile exists.
+ *
+ * Stored in meta.entity.identity_config JSONB.
+ *
+ * Boundary:
+ *   - IdentityConfig = "I am Supplier. My code is 'code', my name is 'name'."
+ *   - LookupProfile  = "When picking a Supplier from invoice.supplier_id,
+ *                        search code first (weight 10), name second (weight 5),
+ *                        show '{{code}} — {{name}}', debounce 200ms."
+ */
+export type IdentityConfig = {
+  /** Primary human-readable label field (e.g., "name") */
+  primaryLabelField: string;
+  /** Primary code/mnemonic field (e.g., "code", "supplier_code") */
+  primaryCodeField?: string;
+  /** Alternate unique key fields for search (e.g., ["tax_id", "duns_number"]) */
+  alternateKeys?: string[];
+  /** Search aliases / synonyms (e.g., ["vendor", "provider"] for Supplier) */
+  searchAliases?: string[];
+  /** Display template override at entity level: "{{code}} — {{name}}" */
+  displayTemplate?: string;
+};
+
+/**
+ * Search field entry with weight for relevance ranking.
+ * Higher weight = higher ranking when matched.
+ */
+export type LookupSearchField = {
+  /** Column name to search */
+  field: string;
+  /** Weight multiplier for ranking (default 1). Code fields typically get higher weight. */
+  weight?: number;
+  /** Match modes this field participates in (defaults to all) */
+  matchModes?: Array<"exact" | "prefix" | "contains" | "token">;
+};
+
+/**
+ * Lookup profile — **search/display UX contract** for a reference field.
+ *
+ * Owns: how the user searches (fields, weights, match modes), how results
+ * are displayed (template, sublabel), and all UX tuning (debounce, pageSize,
+ * minChars, context-aware filters, caching, security scope).
+ *
+ * Does NOT own: which entity is referenced, how the FK is joined, value
+ * resolution — that belongs to ReferenceConfig (structural relationship).
+ *
+ * Resolution chain (highest → lowest):
+ *   1. field.lookupProfile   — explicit per-field override
+ *   2. referenceConfig hints — deprecated fallback (displayField, searchFields, etc.)
+ *   3. target entity IdentityConfig — server-side merge in lookup API
+ *   4. heuristic defaults    — auto-detect from column naming patterns
+ *
+ * Merge semantics (see OverlayMergeSemantics for formalization):
+ *   - searchFields: UNION (deduplicate by field name, keep highest weight)
+ *   - filters/filtersByContext: DEEP_MERGE (keys from higher layer win)
+ *   - all scalars: REPLACE (first non-null from highest layer wins)
+ */
+export type LookupProfile = {
+  /** Display template: "{{code}} — {{name}}" */
+  displayTemplate?: string;
+  /** Ordered search fields with weights */
+  searchFields?: LookupSearchField[];
+  /** Default match mode */
+  matchMode?: "exact" | "prefix" | "contains" | "token";
+  /** Static filters always applied to lookup queries */
+  filters?: Record<string, unknown>;
+  /** Context-aware filters: { create: { is_active: true }, edit: {}, view: {} } */
+  filtersByContext?: Record<string, Record<string, unknown>>;
+  /** Default result ordering (column name, prepend "-" for desc) */
+  orderBy?: string;
+  /** Minimum characters before search triggers (default 2) */
+  minChars?: number;
+  /** Client debounce in milliseconds (default 300) */
+  debounceMs?: number;
+  /** Results per page (default 20) */
+  pageSize?: number;
+  /** Cache mode for lookup results */
+  cacheMode?: "none" | "session" | "global";
+  /** Security scope: "tenant" | "ou" | "custom" */
+  securityScope?: string;
+};
+
+// ============================================================================
+// Overlay Merge Semantics
+// ============================================================================
+
+/**
+ * Canonical merge strategy for a single property during overlay resolution.
+ *
+ * When multiple layers contribute a value for the same property (e.g., field
+ * lookupProfile vs tenant override vs enterprise overlay), the merge strategy
+ * determines which value survives.
+ */
+export type MergeStrategy =
+  /** Higher layer wins outright. Default for scalars. */
+  | "replace"
+  /** Arrays are concatenated and deduplicated (by key field). Used for searchFields. */
+  | "union"
+  /** Objects are deep-merged: keys from higher layer overwrite, lower keys preserved. */
+  | "deep_merge"
+  /** Lower layer value is kept — higher layer can only fill gaps. */
+  | "fill";
+
+/**
+ * Merge rule for a named property — binds a strategy to an optional dedup key.
+ */
+export type MergeRule = {
+  strategy: MergeStrategy;
+  /** For "union" strategy on arrays of objects: field used to deduplicate (e.g., "field" for searchFields). */
+  unionKey?: string;
+  /** For "union" strategy: when duplicates collide, keep the entry with the higher value of this field (e.g., "weight"). */
+  unionPrefer?: "higher" | "lower" | "first";
+};
+
+/**
+ * Overlay merge semantics — declares per-property merge rules for a config type.
+ *
+ * This is the canonical, pre-deployment contract that prevents ambiguity
+ * when tenant/customer overlays extend base configs. Every JSONB config
+ * column (lookup_profile, identity_config, ui_hint, etc.) should have
+ * a corresponding MergeSemantics declaration.
+ *
+ * Example usage in resolution code:
+ *   const rules = LOOKUP_PROFILE_MERGE;
+ *   for (const [prop, rule] of Object.entries(rules)) {
+ *     merged[prop] = applyMergeRule(rule, higher[prop], lower[prop]);
+ *   }
+ */
+export type OverlayMergeSemantics = Record<string, MergeRule>;
+
+/**
+ * Canonical merge rules for LookupProfile overlays.
+ *
+ * Applied when resolving: tenant overlay > field.lookupProfile > referenceConfig hints > defaults.
+ */
+export const LOOKUP_PROFILE_MERGE: OverlayMergeSemantics = {
+  displayTemplate:  { strategy: "replace" },
+  searchFields:     { strategy: "union", unionKey: "field", unionPrefer: "higher" },
+  matchMode:        { strategy: "replace" },
+  filters:          { strategy: "deep_merge" },
+  filtersByContext:  { strategy: "deep_merge" },
+  orderBy:          { strategy: "replace" },
+  minChars:         { strategy: "replace" },
+  debounceMs:       { strategy: "replace" },
+  pageSize:         { strategy: "replace" },
+  cacheMode:        { strategy: "replace" },
+  securityScope:    { strategy: "replace" },
+};
+
+/**
+ * Canonical merge rules for IdentityConfig overlays.
+ */
+export const IDENTITY_CONFIG_MERGE: OverlayMergeSemantics = {
+  primaryLabelField: { strategy: "replace" },
+  primaryCodeField:  { strategy: "replace" },
+  alternateKeys:     { strategy: "union", unionKey: undefined, unionPrefer: "first" },
+  searchAliases:     { strategy: "union", unionKey: undefined, unionPrefer: "first" },
+  displayTemplate:   { strategy: "replace" },
+};
+
+/**
+ * Canonical merge rules for FieldUiHint overlays.
+ *
+ * Applied when resolving: compiled overlay > field.uiHint > legacy validation.ui.
+ *
+ * Organized by logical sub-group:
+ *   renderer: type, viewType, editType, props
+ *   form:     placeholder, helpText, hidden, disabled, readOnly, lockOnEdit
+ *   layout:   section, group, layout, density, icon
+ *   list:     listColumnWidth, listColumnAlignment
+ */
+export const UI_HINT_MERGE: OverlayMergeSemantics = {
+  // ── Renderer ──
+  type:                { strategy: "replace" },
+  viewType:            { strategy: "replace" },
+  editType:            { strategy: "replace" },
+  props:               { strategy: "deep_merge" },
+
+  // ── Form behavior ──
+  placeholder:         { strategy: "replace" },
+  helpText:            { strategy: "replace" },
+  hidden:              { strategy: "replace" },
+  disabled:            { strategy: "replace" },
+  readOnly:            { strategy: "replace" },
+  lockOnEdit:          { strategy: "replace" },
+
+  // ── Layout ──
+  section:             { strategy: "replace" },
+  group:               { strategy: "replace" },
+  layout:              { strategy: "replace" },
+  density:             { strategy: "replace" },
+  icon:                { strategy: "replace" },
+
+  // ── List ──
+  listColumnWidth:     { strategy: "replace" },
+  listColumnAlignment: { strategy: "replace" },
+};
+
+/**
+ * Apply a single merge rule to produce a resolved value.
+ *
+ * @param rule - The merge rule for this property
+ * @param higher - Value from higher-priority layer (overlay / field-level)
+ * @param lower - Value from lower-priority layer (base / heuristic)
+ * @returns The resolved value
+ */
+export function applyMergeRule(rule: MergeRule, higher: unknown, lower: unknown): unknown {
+  switch (rule.strategy) {
+    case "replace":
+      return higher ?? lower;
+
+    case "fill":
+      return lower ?? higher;
+
+    case "deep_merge": {
+      if (higher == null) return lower;
+      if (lower == null) return higher;
+      if (typeof higher !== "object" || typeof lower !== "object") return higher;
+      return { ...(lower as Record<string, unknown>), ...(higher as Record<string, unknown>) };
+    }
+
+    case "union": {
+      if (higher == null) return lower;
+      if (lower == null) return higher;
+      if (!Array.isArray(higher) || !Array.isArray(lower)) return higher;
+
+      if (!rule.unionKey) {
+        // Primitive arrays: concat + deduplicate
+        return [...new Set([...higher, ...lower])];
+      }
+
+      // Object arrays: merge by unionKey, prefer higher on collision
+      const merged = new Map<string, unknown>();
+      for (const item of lower) {
+        const key = (item as Record<string, unknown>)[rule.unionKey];
+        if (key != null) merged.set(String(key), item);
+      }
+      for (const item of higher) {
+        const key = (item as Record<string, unknown>)[rule.unionKey];
+        if (key != null) merged.set(String(key), item);
+      }
+      return [...merged.values()];
+    }
+
+    default:
+      return higher ?? lower;
+  }
+}
+
+/**
+ * Apply a full OverlayMergeSemantics to merge two layers.
+ *
+ * @param semantics - Per-property merge rules
+ * @param higher - Higher-priority layer (values win on collision)
+ * @param lower - Lower-priority layer (base/defaults)
+ * @returns Merged result
+ */
+export function mergeWithSemantics<T extends Record<string, unknown>>(
+  semantics: OverlayMergeSemantics,
+  higher: Partial<T> | null | undefined,
+  lower: Partial<T> | null | undefined,
+): T {
+  if (!higher && !lower) return {} as T;
+  if (!higher) return (lower ?? {}) as T;
+  if (!lower) return (higher ?? {}) as T;
+
+  const result: Record<string, unknown> = {};
+
+  // Process all keys from semantics
+  for (const [prop, rule] of Object.entries(semantics)) {
+    result[prop] = applyMergeRule(
+      rule,
+      (higher as Record<string, unknown>)[prop],
+      (lower as Record<string, unknown>)[prop],
+    );
+  }
+
+  // Pass through any keys not in semantics (from higher layer only — safety valve)
+  for (const key of Object.keys(higher)) {
+    if (!(key in semantics)) {
+      result[key] = (higher as Record<string, unknown>)[key];
+    }
+  }
+
+  return result as T;
+}
+
+// ============================================================================
+// Capability Flag Defaults (per data type)
+// ============================================================================
+//
+// List-page capabilities (isSortable, isGroupable, isAggregatable) should not
+// require manual curation per field. Instead, derive effective capabilities as:
+//
+//   type default  →  system restrictions  →  explicit field override  →  overlay narrowing
+//
+// This reduces hand-maintenance and improves consistency.
+//
+
+/**
+ * Per-type default capability flags.
+ *
+ * The effective capability is computed as:
+ *   1. Start from CAPABILITY_DEFAULTS[dataType]
+ *   2. Apply system restrictions (computed/system fields → not aggregatable)
+ *   3. Apply explicit field override (field.isSortable overrides default)
+ *   4. Apply overlay narrowing (can disable, never enable)
+ */
+export const CAPABILITY_DEFAULTS: Record<FieldType, {
+  sortable: boolean;
+  groupable: boolean;
+  aggregatable: boolean;
+}> = {
+  string:    { sortable: true,  groupable: true,  aggregatable: false },
+  text:      { sortable: false, groupable: false, aggregatable: false },
+  integer:   { sortable: true,  groupable: true,  aggregatable: true  },
+  number:    { sortable: true,  groupable: false, aggregatable: true  },
+  decimal:   { sortable: true,  groupable: false, aggregatable: true  },
+  boolean:   { sortable: true,  groupable: true,  aggregatable: false },
+  date:      { sortable: true,  groupable: true,  aggregatable: false },
+  datetime:  { sortable: true,  groupable: false, aggregatable: false },
+  reference: { sortable: false, groupable: true,  aggregatable: false },
+  enum:      { sortable: true,  groupable: true,  aggregatable: false },
+  json:      { sortable: false, groupable: false, aggregatable: false },
+  uuid:      { sortable: false, groupable: false, aggregatable: false },
+  rich_text: { sortable: false, groupable: false, aggregatable: false },
+};
+
+/**
+ * Resolve effective capability flags for a field.
+ *
+ * Priority chain:
+ *   1. Type defaults from CAPABILITY_DEFAULTS
+ *   2. System restrictions (computed → not aggregatable, system origin → not groupable)
+ *   3. Explicit field override (isSortable/isGroupable/isAggregatable)
+ *
+ * Overlay narrowing happens downstream via FIELD_OVERLAY_SAFETY narrowable rules.
+ */
+export function resolveCapabilityDefaults(
+  dataType: FieldType,
+  opts?: {
+    isComputed?: boolean;
+    origin?: FieldOrigin;
+    isSortable?: boolean;
+    isGroupable?: boolean;
+    isAggregatable?: boolean;
+  },
+): { sortable: boolean; groupable: boolean; aggregatable: boolean } {
+  const defaults = CAPABILITY_DEFAULTS[dataType] ?? {
+    sortable: false, groupable: false, aggregatable: false,
+  };
+
+  // Start from type defaults
+  let { sortable, groupable, aggregatable } = defaults;
+
+  // System restrictions — computed fields should not be aggregatable by default
+  if (opts?.isComputed) {
+    aggregatable = false;
+  }
+
+  // System origin — suppress grouping (system fields are not business-meaningful groups)
+  if (opts?.origin === "system") {
+    groupable = false;
+  }
+
+  // Explicit field overrides — can both enable and restrict
+  if (opts?.isSortable !== undefined) sortable = opts.isSortable;
+  if (opts?.isGroupable !== undefined) groupable = opts.isGroupable;
+  if (opts?.isAggregatable !== undefined) aggregatable = opts.isAggregatable;
+
+  return { sortable, groupable, aggregatable };
+}
+
+// ============================================================================
+// Overlay Safety Policy
+// ============================================================================
+//
+// Classifies field properties by what overlay operations are permitted.
+// Used by the overlay resolution engine and compiler to enforce safety.
+//
+// Overlays can modify UX concerns freely but must never weaken domain/security truth.
+//
+
+/**
+ * Overlay safety classification for a field property.
+ *
+ * - `replaceable`: Overlay can freely replace the value (UX concerns)
+ * - `narrowable`: Overlay can make more restrictive, never less (business rules)
+ * - `immutable`: Overlay cannot change this value (domain/security truth)
+ */
+export type OverlaySafetyLevel = "replaceable" | "narrowable" | "immutable";
+
+/**
+ * Canonical overlay safety policy for field properties.
+ *
+ * This is the single source of truth for what overlays can do to field metadata.
+ * The compiler validates overlay changes against this policy.
+ */
+export const FIELD_OVERLAY_SAFETY: Record<string, OverlaySafetyLevel> = {
+  // ── Freely replaceable (UX concerns) ──
+  label:                "replaceable",
+  description:          "replaceable",
+  placeholder:          "replaceable",   // via ui_hint
+  helpText:             "replaceable",   // via ui_hint
+  section:              "replaceable",   // via ui_hint
+  group:                "replaceable",   // via ui_hint
+  icon:                 "replaceable",   // via ui_hint
+  layout:               "replaceable",   // via ui_hint
+  density:              "replaceable",   // via ui_hint
+  listColumnWidth:      "replaceable",   // via ui_hint
+  listColumnAlignment:  "replaceable",   // via ui_hint
+  displayTemplate:      "replaceable",   // via lookup_profile
+  defaultSort:          "replaceable",   // via lookup_profile.orderBy
+  debounceMs:           "replaceable",   // via lookup_profile
+  minChars:             "replaceable",   // via lookup_profile
+  pageSize:             "replaceable",   // via lookup_profile
+  defaultValue:         "replaceable",
+
+  // ── Narrowable only (can restrict, never relax) ──
+  visibility:           "narrowable",    // can hide, cannot un-hide
+  editability:          "narrowable",    // can make read-only, cannot make editable
+  isFilterable:         "narrowable",    // can disable filtering, cannot enable
+  isSearchable:         "narrowable",    // can disable search, cannot enable
+  isSortable:           "narrowable",    // can disable sort, cannot enable
+  isGroupable:          "narrowable",    // can disable grouping, cannot enable
+  isAggregatable:       "narrowable",    // can disable aggregation, cannot enable
+
+  // ── Immutable (domain/security truth — overlays cannot change) ──
+  dataType:             "immutable",
+  cardinality:          "immutable",
+  columnName:           "immutable",
+  origin:               "immutable",
+  isComputed:           "immutable",
+  isReadOnly:           "immutable",
+  writeOnce:            "immutable",
+  computeMode:          "immutable",
+  computeExpr:          "immutable",
+  referenceConfig:      "immutable",     // structural relationship
+  constraints:          "immutable",     // validation semantics
+  moneyConfig:          "immutable",     // currency governance
+  datetimeConfig:       "immutable",     // timezone governance
+  enumConfig:           "immutable",     // enum definition
+  collectionBehavior:   "immutable",     // ownership/lifecycle
+};
+
+// ============================================================================
+// Version-Diff Change Classification
+// ============================================================================
+//
+// When publishing a new entity version, each field change must be classified
+// for safe migration. This prevents accidental breaking changes in production.
+//
+
+/**
+ * Change impact classification for a single field modification
+ * between two published entity versions.
+ */
+export type ChangeImpact =
+  /** UX-only — no migration needed (label, description, ui_hint, etc.) */
+  | "non_breaking"
+  /** Data-compatible but may affect queries/views — needs review */
+  | "migration_required"
+  /** Incompatible change — requires explicit migration plan */
+  | "breaking"
+  /** Cannot be published without resolving — blocks publish */
+  | "publish_blocking";
+
+/**
+ * A single classified change between two field versions.
+ */
+export type FieldVersionDiff = {
+  /** Field name (may differ between versions for renames) */
+  fieldName: string;
+  /** Property that changed */
+  property: string;
+  /** Previous value (from old version) */
+  previousValue?: unknown;
+  /** New value (in draft version) */
+  newValue?: unknown;
+  /** Impact classification */
+  impact: ChangeImpact;
+  /** Human-readable reason for the classification */
+  reason: string;
+};
+
+/**
+ * Classification of an entire entity version diff.
+ */
+export type EntityVersionDiff = {
+  entityName: string;
+  fromVersion: string;
+  toVersion: string;
+  /** All field-level changes */
+  changes: FieldVersionDiff[];
+  /** Highest severity across all changes */
+  maxImpact: ChangeImpact;
+  /** Summary counts by impact level */
+  summary: Record<ChangeImpact, number>;
+};
+
+/**
+ * Rules for classifying field property changes.
+ * Maps property names to their impact when modified on a published version.
+ */
+export const FIELD_CHANGE_IMPACT: Record<string, ChangeImpact> = {
+  // ── Non-breaking (UX-only) ──
+  label:                "non_breaking",
+  description:          "non_breaking",
+  ui:                   "non_breaking",
+  placeholder:          "non_breaking",
+  helpText:             "non_breaking",
+  visibility:           "non_breaking",
+  editability:          "non_breaking",
+  isSortable:           "non_breaking",
+  isGroupable:          "non_breaking",
+  isAggregatable:       "non_breaking",
+  lookupProfile:        "non_breaking",
+  sortOrder:            "non_breaking",
+
+  // ── Migration-required (data-compatible but query/view impact) ──
+  isSearchable:         "migration_required",
+  isFilterable:         "migration_required",
+  isReadOnly:           "migration_required",
+  writeOnce:            "migration_required",
+  defaultValue:         "migration_required",
+  constraints:          "migration_required",
+  isDeprecated:         "migration_required",
+
+  // ── Breaking (structural, schema-level) ──
+  dataType:             "breaking",
+  cardinality:          "breaking",
+  columnName:           "breaking",
+  referenceConfig:      "breaking",
+  computeMode:          "breaking",
+  computeExpr:          "breaking",
+  collectionBehavior:   "breaking",
+  childEntityName:      "breaking",
+  childFkField:         "breaking",
+  moneyConfig:          "breaking",
+  datetimeConfig:       "breaking",
+  enumConfig:           "breaking",
+};
+
+/**
+ * Adding a new required field to a published schema is publish-blocking
+ * unless a default value is provided.
+ */
+export const PUBLISH_BLOCKING_RULES = {
+  /** New required field without default on published schema */
+  newRequiredFieldWithoutDefault: "publish_blocking" as ChangeImpact,
+  /** Removing a field that exists in published version */
+  removedField: "breaking" as ChangeImpact,
+  /** Adding an optional field (always safe) */
+  addedOptionalField: "non_breaking" as ChangeImpact,
+} as const;
+
+// ============================================================================
+// JSON Field Configuration
+// ============================================================================
 
 /**
  * JSON field configuration — distinguishes free-form from schema-validated JSON.
@@ -216,6 +982,503 @@ export type MoneyConfig = {
 export type DatetimeConfig = {
   /** Timezone display/storage mode */
   timezoneMode: "tenant" | "user" | "utc";
+};
+
+// ============================================================================
+// Mutability Resolution Order
+// ============================================================================
+//
+// Multiple flags can affect whether a field is editable. They are resolved
+// in a strict precedence chain — higher levels CANNOT be relaxed by lower levels.
+//
+// ┌─────────────────────────────────────────────────────────────────────────────┐
+// │ Layer │ Source                  │ Effect                │ Overridable?      │
+// ├───────┼─────────────────────────┼───────────────────────┼───────────────────┤
+// │  1    │ is_computed = true      │ always read-only      │ NO — hardcoded    │
+// │  2    │ is_read_only = true     │ read-only all contexts│ NO — domain flag  │
+// │  3    │ origin = "system"       │ read-only in business │ NO — domain rule  │
+// │  4    │ write_once = true       │ editable only on      │ NO — domain flag  │
+// │       │                         │ create (empty value)  │                   │
+// │  5    │ editability { ctx }     │ per-context control   │ YES — by overlay  │
+// │       │ + editability overlay   │ (replace / extend)    │                   │
+// │  6    │ convention columns      │ lifecycle_managed,    │ NO — convention   │
+// │       │                         │ derived_hierarchy, PK │                   │
+// │  7    │ is_deprecated = true    │ read-only (safety)    │ NO — domain flag  │
+// │  8    │ ui_hint.readOnly /      │ ADVISORY ONLY —       │ n/a — never       │
+// │       │ ui_hint.lockOnEdit      │ influences rendering, │ overrides domain  │
+// │       │                         │ never overrides above │                   │
+// └─────────────────────────────────────────────────────────────────────────────┘
+//
+// KEY PRINCIPLE: ui_hint flags are RENDERING ADVISORIES. They affect how a field
+// looks (greyed out, disabled attribute) but never override domain/security truth.
+// If is_computed=true and ui_hint.readOnly=false, the field is still read-only.
+//
+
+// ============================================================================
+// Context-Aware Visibility & Editability (FR-4)
+// ============================================================================
+
+/**
+ * Visibility values per UI context.
+ * - visible: shown to all users
+ * - hidden: not rendered in that context
+ * - internal: shown only to admins/internal workbench (policy-gated)
+ */
+export type FieldVisibilityValue = "visible" | "hidden" | "internal";
+
+/**
+ * Per-context visibility map. Contexts: create, view, edit.
+ * If a context key is omitted, defaults to "visible".
+ */
+export type FieldVisibility = {
+  create?: FieldVisibilityValue;
+  view?: FieldVisibilityValue;
+  edit?: FieldVisibilityValue;
+};
+
+/**
+ * Overlay merge mode for visibility/editability policy.
+ *
+ * - "replace": Overlay completely replaces base values for specified contexts.
+ *              Unspecified contexts inherit from base.
+ * - "extend":  Overlay can only add restrictions — never relax.
+ *              hidden > internal > visible (visibility restrictiveness order).
+ *              computed > system_managed > read_only > editable (editability order).
+ *              The more restrictive value wins.
+ */
+export type OverlayMode = "replace" | "extend";
+
+/**
+ * Visibility overlay — customer/tenant override with explicit merge strategy.
+ *
+ * Three-layer model:
+ *   Layer 1: base standard (field.visibility on meta.field)
+ *   Layer 2: customer overlay (field.visibilityOverlay on overlay change)
+ *   Layer 3: runtime resolved (computed by resolveVisibilityWithOverlay)
+ *
+ * Example — extend mode (can only make MORE restrictive):
+ *   base:    { create: "visible", view: "visible", edit: "visible" }
+ *   overlay: { mode: "extend", rules: { create: "hidden", edit: "internal" } }
+ *   result:  { create: "hidden",  view: "visible", edit: "internal" }
+ *
+ * Example — replace mode (full takeover of specified contexts):
+ *   base:    { create: "hidden",  view: "visible", edit: "hidden" }
+ *   overlay: { mode: "replace", rules: { create: "visible" } }
+ *   result:  { create: "visible", view: "visible", edit: "hidden" }
+ */
+export type FieldVisibilityOverlay = {
+  mode: OverlayMode;
+  rules: FieldVisibility;
+};
+
+/**
+ * Editability values per UI context.
+ * - editable: user can input/change
+ * - read_only: displayed but not editable
+ * - system_managed: server owns value (UI shows but disables input)
+ * - computed: derived — never editable
+ */
+export type FieldEditabilityValue = "editable" | "read_only" | "system_managed" | "computed";
+
+/**
+ * Per-context editability map. Contexts: create, edit.
+ * If a context key is omitted, defaults to "editable".
+ */
+export type FieldEditability = {
+  create?: FieldEditabilityValue;
+  edit?: FieldEditabilityValue;
+};
+
+/**
+ * Editability overlay — customer/tenant override with explicit merge strategy.
+ *
+ * Example — extend mode (can only make MORE restrictive):
+ *   base:    { create: "editable", edit: "editable" }
+ *   overlay: { mode: "extend", rules: { edit: "read_only" } }
+ *   result:  { create: "editable", edit: "read_only" }
+ *
+ * Example — replace mode:
+ *   base:    { create: "editable", edit: "system_managed" }
+ *   overlay: { mode: "replace", rules: { edit: "editable" } }
+ *   result:  { create: "editable", edit: "editable" }
+ */
+export type FieldEditabilityOverlay = {
+  mode: OverlayMode;
+  rules: FieldEditability;
+};
+
+// ── Restrictiveness ordinals (higher = more restrictive) ──
+
+/** @internal Restrictiveness ranking for visibility values. */
+export const VISIBILITY_RESTRICTIVENESS: Record<FieldVisibilityValue, number> = {
+  visible: 0,
+  internal: 1,
+  hidden: 2,
+};
+
+/** @internal Restrictiveness ranking for editability values. */
+export const EDITABILITY_RESTRICTIVENESS: Record<FieldEditabilityValue, number> = {
+  editable: 0,
+  read_only: 1,
+  system_managed: 2,
+  computed: 3,
+};
+
+/**
+ * Resolve a visibility value with overlay, respecting the merge mode.
+ *
+ * - replace: overlay value wins for specified contexts, base for unspecified.
+ * - extend:  more restrictive value wins (hidden > internal > visible).
+ */
+export function resolveVisibilityValue(
+  base: FieldVisibilityValue,
+  overlay: FieldVisibilityValue | undefined,
+  mode: OverlayMode,
+): FieldVisibilityValue {
+  if (overlay == null) return base;
+  if (mode === "replace") return overlay;
+  // extend: pick most restrictive
+  return VISIBILITY_RESTRICTIVENESS[overlay] >= VISIBILITY_RESTRICTIVENESS[base]
+    ? overlay
+    : base;
+}
+
+/**
+ * Resolve an editability value with overlay, respecting the merge mode.
+ *
+ * - replace: overlay value wins for specified contexts, base for unspecified.
+ * - extend:  more restrictive value wins (computed > system_managed > read_only > editable).
+ */
+export function resolveEditabilityValue(
+  base: FieldEditabilityValue,
+  overlay: FieldEditabilityValue | undefined,
+  mode: OverlayMode,
+): FieldEditabilityValue {
+  if (overlay == null) return base;
+  if (mode === "replace") return overlay;
+  // extend: pick most restrictive
+  return EDITABILITY_RESTRICTIVENESS[overlay] >= EDITABILITY_RESTRICTIVENESS[base]
+    ? overlay
+    : base;
+}
+
+/**
+ * Merge base visibility with an overlay to produce fully resolved visibility.
+ */
+export function resolveVisibilityWithOverlay(
+  base: FieldVisibility | undefined,
+  overlay: FieldVisibilityOverlay | undefined,
+): Required<FieldVisibility> {
+  const defaults: Required<FieldVisibility> = { create: "visible", view: "visible", edit: "visible" };
+  const effective: Required<FieldVisibility> = {
+    create: base?.create ?? defaults.create,
+    view: base?.view ?? defaults.view,
+    edit: base?.edit ?? defaults.edit,
+  };
+
+  if (!overlay) return effective;
+
+  return {
+    create: resolveVisibilityValue(effective.create, overlay.rules.create, overlay.mode),
+    view: resolveVisibilityValue(effective.view, overlay.rules.view, overlay.mode),
+    edit: resolveVisibilityValue(effective.edit, overlay.rules.edit, overlay.mode),
+  };
+}
+
+/**
+ * Merge base editability with an overlay to produce fully resolved editability.
+ */
+export function resolveEditabilityWithOverlay(
+  base: FieldEditability | undefined,
+  overlay: FieldEditabilityOverlay | undefined,
+): Required<FieldEditability> {
+  const defaults: Required<FieldEditability> = { create: "editable", edit: "editable" };
+  const effective: Required<FieldEditability> = {
+    create: base?.create ?? defaults.create,
+    edit: base?.edit ?? defaults.edit,
+  };
+
+  if (!overlay) return effective;
+
+  return {
+    create: resolveEditabilityValue(effective.create, overlay.rules.create, overlay.mode),
+    edit: resolveEditabilityValue(effective.edit, overlay.rules.edit, overlay.mode),
+  };
+}
+
+// ============================================================================
+// Validation Overlay (customer override model)
+// ============================================================================
+
+/**
+ * Validation rules overlay — customer/tenant override with explicit merge strategy.
+ *
+ * Three-layer model (same as visibility/editability):
+ *   Layer 1: base standard (entity version's validation rules)
+ *   Layer 2: customer overlay (validationOverlay on overlay change)
+ *   Layer 3: runtime resolved (computed by resolveValidationWithOverlay)
+ *
+ * - replace: overlay's rules completely replace base rules for specified field paths.
+ * - extend:  overlay's rules are ADDED to base rules. Duplicate rule IDs from
+ *            overlay win (overlay rule replaces base rule with same ID).
+ *            This allows customers to add stricter validations without losing base ones.
+ *
+ * Example — extend mode (add customer-specific validations on top of standard):
+ *   base:    [{ id: "r1", kind: "required", fieldPath: "name" }]
+ *   overlay: { mode: "extend", rules: [{ id: "r2", kind: "regex", fieldPath: "code", pattern: "^CUST-" }] }
+ *   result:  [r1, r2]  // both rules active
+ *
+ * Example — replace mode (customer fully overrides validation for targeted fields):
+ *   base:    [{ id: "r1", kind: "required", fieldPath: "name" }, { id: "r2", kind: "length", fieldPath: "code" }]
+ *   overlay: { mode: "replace", rules: [{ id: "r3", kind: "length", fieldPath: "code", maxLength: 50 }] }
+ *   result:  [r1, r3]  // r2 replaced by r3 (same fieldPath "code")
+ */
+export type ValidationOverlay = {
+  mode: OverlayMode;
+  rules: Array<{
+    id: string;
+    fieldPath: string;
+    [key: string]: unknown;
+  }>;
+};
+
+/**
+ * Merge base validation rules with an overlay.
+ *
+ * - replace: removes all base rules for field paths covered by overlay,
+ *            then inserts overlay rules. Base rules for other paths are kept.
+ * - extend:  merges by rule ID — overlay rules with matching IDs replace base,
+ *            overlay rules with new IDs are added.
+ */
+export function resolveValidationWithOverlay(
+  baseRules: Array<{ id: string; fieldPath: string; [key: string]: unknown }>,
+  overlay: ValidationOverlay | undefined,
+): Array<{ id: string; fieldPath: string; [key: string]: unknown }> {
+  if (!overlay || overlay.rules.length === 0) return baseRules;
+
+  if (overlay.mode === "replace") {
+    // Identify field paths covered by overlay
+    const overlayPaths = new Set(overlay.rules.map(r => r.fieldPath));
+    // Keep base rules for uncovered paths, add all overlay rules
+    return [
+      ...baseRules.filter(r => !overlayPaths.has(r.fieldPath)),
+      ...overlay.rules,
+    ];
+  }
+
+  // extend: merge by rule ID
+  const merged = new Map<string, { id: string; fieldPath: string; [key: string]: unknown }>();
+  for (const rule of baseRules) {
+    merged.set(rule.id, rule);
+  }
+  for (const rule of overlay.rules) {
+    merged.set(rule.id, rule); // overlay wins on ID collision
+  }
+  return [...merged.values()];
+}
+
+// ============================================================================
+// Computed Field Wiring (FR-9) — Dependency Governance
+// ============================================================================
+//
+// Expression Language Constraints:
+// ┌──────────┬────────────────────────────────────────────────────────────────┐
+// │ type     │ Semantics                                                      │
+// ├──────────┼────────────────────────────────────────────────────────────────┤
+// │ formula  │ Arithmetic over same-row fields. Only field refs (snake_case), │
+// │          │ numeric literals, and operators (+, -, *, /). No function      │
+// │          │ calls, no string ops, no conditionals. dependsOn must list     │
+// │          │ every referenced field.                                        │
+// │ aggregate│ Declarative aggregation over a child collection. expr is       │
+// │          │ ignored — wiring is via aggregateOf + aggregateOp.             │
+// │ system   │ Platform-provided named function from closed allowlist.        │
+// │          │ expr must be a key in SYSTEM_COMPUTE_FUNCTIONS.                │
+// └──────────┴────────────────────────────────────────────────────────────────┘
+//
+// Dependency Graph:
+//   Compiler builds DAG from dependsOn → topological sort → rejects cycles.
+//   Evaluation order stored on compiled model.
+//
+// Materialized Governance (computeMode = "materialized"):
+//   recomputeTrigger: when to rewrite the stored value
+//   stalePolicy: what to serve when dependencies changed before recompute
+//   scheduleInterval: cron/interval for "scheduled" trigger
+// ============================================================================
+
+/**
+ * Computed field mode.
+ * - virtual: computed at read time (default)
+ * - materialized: stored and recomputed on write/job
+ */
+export type ComputeMode = "virtual" | "materialized";
+
+/**
+ * Closed allowlist of platform-provided system compute functions.
+ * For type="system", expr must be one of these values.
+ */
+export const SYSTEM_COMPUTE_FUNCTIONS = [
+  "now",
+  "current_user",
+  "current_tenant",
+  "row_version",
+  "gen_random_uuid",
+] as const;
+export type SystemComputeFunction = (typeof SYSTEM_COMPUTE_FUNCTIONS)[number];
+
+/**
+ * When a materialized computed field should be recomputed.
+ * - on_dependency_change: recompute when any dependsOn field is written (trigger/hook)
+ * - on_save: recompute when the parent record is saved
+ * - scheduled: recompute on a cron/interval schedule
+ */
+export type RecomputeTrigger = "on_dependency_change" | "on_save" | "scheduled";
+
+/**
+ * What to serve when a materialized value may be stale.
+ * - serve_stale: return the cached value (eventual consistency)
+ * - null_until_recomputed: return null until fresh value is computed
+ * - recompute_sync: recompute within the same transaction (expensive)
+ */
+export type StalePolicy = "serve_stale" | "null_until_recomputed" | "recompute_sync";
+
+/**
+ * Regex for validating formula expressions.
+ * Allows: field references (snake_case), numeric literals (int/decimal),
+ * arithmetic operators (+, -, *, /), parentheses, and whitespace.
+ * Rejects: function calls, string literals, comparisons, conditionals.
+ */
+export const FORMULA_EXPR_PATTERN = /^[a-z_][a-z0-9_]*(?:\s*[+\-*/]\s*(?:[a-z_][a-z0-9_]*|\d+(?:\.\d+)?))*$|^\(.*\)$/;
+
+/**
+ * Stricter tokenizer: extracts field references from a formula expression.
+ * Returns all snake_case identifiers that are not numeric literals.
+ */
+export function extractFormulaFieldRefs(expr: string): string[] {
+  const tokens = expr.match(/[a-z_][a-z0-9_]*/g) ?? [];
+  return [...new Set(tokens)];
+}
+
+/**
+ * Computed field expression definition.
+ * References same-record fields, related collections, or system context.
+ */
+export type ComputeExpression = {
+  /** Expression type */
+  type: "formula" | "aggregate" | "system";
+  /** Expression string or template (e.g., "quantity * unit_price") */
+  expr: string;
+  /** Fields this expression depends on (for reactivity/invalidation) */
+  dependsOn?: string[];
+  /** For aggregate type: child entity/collection field to aggregate */
+  aggregateOf?: string;
+  /** For aggregate type: aggregation operation */
+  aggregateOp?: "count" | "sum" | "avg" | "min" | "max";
+  /** For aggregate type: optional filter on child rows */
+  aggregateFilter?: Record<string, unknown>;
+  /** For materialized: when to rewrite the stored value */
+  recomputeTrigger?: RecomputeTrigger;
+  /** For materialized: what to serve when dependencies changed before recompute */
+  stalePolicy?: StalePolicy;
+  /** For scheduled trigger: cron expression or interval (e.g., "0 0 * * *", "1h") */
+  scheduleInterval?: string;
+};
+
+// ============================================================================
+// Collection (many) Field Wiring — Option B: Join Table (FR-3)
+// ============================================================================
+
+/**
+ * Ownership mode for collection children.
+ * - `owned`:  Child rows belong to this parent; lifecycle coupled (default).
+ * - `linked`: Child rows are independent entities referenced via join; lifecycle decoupled.
+ */
+export type CollectionOwnership = "owned" | "linked";
+
+/**
+ * Persistence mode for collection rows.
+ * - `inline`:        Child rows are created/updated/deleted inline with the parent form (default for owned).
+ * - `reference_only`: Only FK links are managed; child records are managed independently (default for linked).
+ */
+export type CollectionPersistenceMode = "inline" | "reference_only";
+
+/**
+ * Delete behavior when a parent row is removed.
+ * - `cascade`: Delete all child rows (default for owned).
+ * - `restrict`: Prevent parent deletion while children exist.
+ * - `detach`:  Null-out the FK on children, orphaning them (default for linked).
+ */
+export type CollectionDeleteMode = "cascade" | "restrict" | "detach";
+
+/**
+ * How aggregate values are kept in sync.
+ * - `live`: Recomputed on every child change (reactive / trigger-based).
+ * - `on_save`: Recomputed when the parent form is saved.
+ * - `manual`: Only recomputed on explicit user action or scheduled job.
+ */
+export type CollectionAggregateStrategy = "live" | "on_save" | "manual";
+
+/**
+ * Row-level validation strategy for collection children.
+ * - `on_change`: Validate each row immediately on field change (default).
+ * - `on_save`: Validate all rows when the parent form is saved.
+ * - `on_submit`: Validate only on final form submission (most lenient).
+ */
+export type CollectionRowValidation = "on_change" | "on_save" | "on_submit";
+
+/**
+ * Collection behavior configuration for cardinality=many fields.
+ *
+ * ┌──────────────────────┬──────────────────────────────────────────────────┐
+ * │ Property             │ Purpose                                          │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ ownership            │ owned (lifecycle coupled) / linked (decoupled)   │
+ * │ persistenceMode      │ inline CRUD vs reference-only                    │
+ * │ deleteMode           │ cascade / restrict / detach                      │
+ * │ ordering             │ Enable row reordering                            │
+ * │ orderField           │ Column for sort position                         │
+ * │ editorStyle          │ grid / subform / tags                            │
+ * │ minItems / maxItems  │ Cardinality bounds                               │
+ * │ allowDuplicates      │ Permit duplicate child references (linked mode)  │
+ * │ aggregates           │ Summary computations over children               │
+ * │ aggregateStrategy    │ live / on_save / manual                          │
+ * │ allowDraftRows       │ Permit unsaved rows in the editor                │
+ * │ rowValidation        │ on_change / on_save / on_submit                  │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ */
+export type CollectionBehavior = {
+  /** Ownership mode: owned (default) or linked */
+  ownership?: CollectionOwnership;
+  /** Persistence mode: inline (default for owned) or reference_only (default for linked) */
+  persistenceMode?: CollectionPersistenceMode;
+  /** Delete behavior: cascade (default for owned), restrict, or detach (default for linked) */
+  deleteMode?: CollectionDeleteMode;
+  /** Enable row ordering within the collection */
+  ordering?: boolean;
+  /** Field used for ordering (e.g., "sort_order", "line_number") */
+  orderField?: string;
+  /** UI editor style for the collection */
+  editorStyle?: "grid" | "subform" | "tags";
+  /** Minimum number of child rows */
+  minItems?: number;
+  /** Maximum number of child rows */
+  maxItems?: number;
+  /** Allow duplicate child references (only meaningful for linked mode) */
+  allowDuplicates?: boolean;
+  /** Aggregate definitions for list-page display */
+  aggregates?: Array<{
+    /** Child field to aggregate */
+    field: string;
+    /** Aggregation operation */
+    op: "count" | "sum" | "avg" | "min" | "max";
+    /** Label for the aggregate column */
+    label?: string;
+  }>;
+  /** How aggregate values are kept in sync */
+  aggregateStrategy?: CollectionAggregateStrategy;
+  /** Allow unsaved/draft rows in the collection editor */
+  allowDraftRows?: boolean;
+  /** When to validate individual child rows */
+  rowValidation?: CollectionRowValidation;
 };
 
 /**
@@ -347,6 +1610,49 @@ export type FieldDefinition = {
 
   /** Whether field can only be set on creation (locked after first save) */
   writeOnce?: boolean;
+
+  // ===== Context-Aware Visibility & Editability (FR-4) =====
+
+  /** Per-context visibility (create/view/edit) — defaults to visible everywhere */
+  visibility?: FieldVisibility;
+
+  /** Per-context editability (create/edit) — defaults to editable */
+  editability?: FieldEditability;
+
+  // ===== List Page Capabilities (FR-8) =====
+
+  /** Field participates in list-page sorting */
+  isSortable?: boolean;
+
+  /** Field participates in list-page grouping */
+  isGroupable?: boolean;
+
+  /** Field participates in list-page aggregation (count, sum, avg, etc.) */
+  isAggregatable?: boolean;
+
+  // ===== Computed Field Wiring (FR-9) =====
+
+  /** Computed field mode: virtual (read-time) or materialized (stored) */
+  computeMode?: ComputeMode;
+
+  /** Computed field expression (references fields, collections, or system context) */
+  computeExpr?: ComputeExpression;
+
+  // ===== Collection (many) Field Wiring — Option B: Join Table (FR-3) =====
+
+  /** For cardinality=many: logical child entity name */
+  childEntityName?: string;
+
+  /** For cardinality=many: parent FK field on child table */
+  childFkField?: string;
+
+  /** For cardinality=many: ordering, editor style, cascade rules, aggregates */
+  collectionBehavior?: CollectionBehavior;
+
+  // ===== Lookup System (044) =====
+
+  /** Lookup profile for reference field typeahead search behavior */
+  lookupProfile?: LookupProfile;
 };
 
 // ============================================================================
@@ -530,6 +1836,128 @@ export type CompiledField = {
   max?: number;
 };
 
+// ============================================================================
+// Resolved Field Meta (Publish-time Compilation Contract — FR-13)
+// ============================================================================
+
+/**
+ * Resolved per-field contract produced at publish time.
+ * Runtime + UI must consume this (not raw meta tables) for performance and determinism.
+ */
+export type ResolvedFieldMeta = {
+  /** Field name (logical identity, camelCase) */
+  name: string;
+
+  /** Physical DB column name (null for computed/virtual/collection) */
+  columnName: string | null;
+
+  /** Display label (resolved: explicit label > humanized name) */
+  label: string;
+
+  /** Help text / description */
+  description?: string;
+
+  // ===== Data Layer =====
+
+  /** Canonical data type */
+  dataType: FieldType;
+
+  /** Semantic format hint */
+  format?: SemanticFormat;
+
+  /** Measurement unit */
+  unit?: string;
+
+  /** Field cardinality */
+  cardinality: "one" | "many";
+
+  /** Resolved constraints */
+  constraints: FieldConstraints;
+
+  /** Default value */
+  defaultValue?: unknown;
+
+  // ===== Resolved Renderer =====
+
+  /** Resolved UI type (from ui_hint.type or auto-detected from dataType + format) */
+  uiType: string;
+
+  /** Resolved view-mode component */
+  viewType?: string;
+
+  /** Resolved edit-mode component */
+  editType?: string;
+
+  /** UI config (merged ui_hint) */
+  uiConfig?: FieldUiHint;
+
+  // ===== Effective Visibility & Editability per Context =====
+
+  /** Effective visibility per context (create/view/edit) */
+  visibility: Required<FieldVisibility>;
+
+  /** Effective editability per context (create/edit) */
+  editability: Required<FieldEditability>;
+
+  // ===== Resolved Validation =====
+
+  /** Resolved validation rules (merged constraints + validation jsonb) */
+  validation?: Record<string, unknown>;
+
+  // ===== Lookup / Reference Wiring =====
+
+  /** Resolved lookup config (for reference/enum fields) */
+  lookupConfig?: ReferenceConfig;
+
+  /** Resolved lookup profile (for reference field typeahead search) */
+  lookupProfile?: LookupProfile;
+
+  /** Resolved enum config */
+  enumConfig?: EnumConfig;
+
+  // ===== Collection Wiring (for cardinality=many) =====
+
+  /** Child entity name */
+  childEntityName?: string;
+
+  /** Parent FK field on child table */
+  childFkField?: string;
+
+  /** Collection behavior (ordering, editor, cascade, aggregates) */
+  collectionBehavior?: CollectionBehavior;
+
+  // ===== Computed Wiring =====
+
+  /** Whether field is computed */
+  isComputed: boolean;
+
+  /** Computed mode (virtual/materialized) */
+  computeMode?: ComputeMode;
+
+  /** Computed expression */
+  computeExpr?: ComputeExpression;
+
+  // ===== List Page Capabilities =====
+
+  isSearchable: boolean;
+  isFilterable: boolean;
+  isSortable: boolean;
+  isGroupable: boolean;
+  isAggregatable: boolean;
+
+  // ===== Behavior Flags =====
+
+  isRequired: boolean;
+  isUnique: boolean;
+  isReadOnly: boolean;
+  isDeprecated: boolean;
+  writeOnce: boolean;
+  isActive: boolean;
+
+  /** Sort order for display */
+  sortOrder: number;
+};
+
 /**
  * Compiled policy definition
  * Optimized version of PolicyDefinition for runtime evaluation
@@ -626,6 +2054,81 @@ export type CompiledModel = {
 
   /** Entity feature flags */
   featureFlags?: EntityFeatureFlags;
+};
+
+// ============================================================================
+// Compiled Snapshot (Recommendation 17)
+// ============================================================================
+//
+// The canonical immutable snapshot produced by the compiler. This is the
+// single artifact that UI, runtime, and search consumers should read —
+// never raw field rows.
+//
+// Snapshot guarantees:
+//   - All defaults filled (visibility, editability, capabilities, configs)
+//   - All legacy compatibility resolved (validation → constraints, uiType → uiHint)
+//   - All overlay merges applied
+//   - All provenance retained for debuggability
+//   - All contradictions diagnosed
+//   - Stable content hash for cache invalidation
+//
+
+/**
+ * Immutable compiled metadata snapshot for an entity version.
+ *
+ * This is the boundary between meta-authoring and meta-consuming.
+ * All consumers (UI, runtime, search, DDL generators) should consume
+ * this snapshot rather than raw DB rows.
+ */
+export type CompiledSnapshot = {
+  /** Entity name (slug) */
+  entityName: string;
+
+  /** Published version identifier */
+  version: string;
+
+  /** Physical DB table name */
+  tableName: string;
+
+  /** Physical DB schema */
+  tableSchema: string;
+
+  /** Fully resolved field metadata — all defaults filled, all overlays applied */
+  resolvedFields: ResolvedFieldMeta[];
+
+  /** SQL-optimized compiled fields (for query building) */
+  compiledFields: CompiledField[];
+
+  /** Compiled policies */
+  policies: CompiledPolicy[];
+
+  /** Pre-built SQL query fragments */
+  queryFragments: {
+    selectFragment: string;
+    fromFragment: string;
+    tenantFilterFragment: string;
+  };
+
+  /** Entity classification */
+  entityClass?: EntityClass;
+
+  /** Entity feature flags */
+  featureFlags?: EntityFeatureFlags;
+
+  /** Compilation diagnostics (retained for observability) */
+  diagnostics: CompileDiagnostic[];
+
+  /** Stable content hash — changes when any input changes */
+  contentHash: string;
+
+  /** Input hash of raw compilation inputs */
+  inputHash: string;
+
+  /** Compilation timestamp (ISO 8601) */
+  compiledAt: string;
+
+  /** Who/what compiled this snapshot */
+  compiledBy: string;
 };
 
 // ============================================================================
@@ -2344,6 +3847,9 @@ export type EntityFeatureFlags = {
 
   /** Versioning mode */
   versioning_mode?: "none" | "sequential" | "major_minor";
+
+  /** Identity config for how this entity presents itself in lookups */
+  identity?: IdentityConfig;
 };
 
 /**
@@ -2355,6 +3861,7 @@ export const DEFAULT_ENTITY_FEATURE_FLAGS: Required<EntityFeatureFlags> = {
   numbering_enabled: false,
   effective_dating_enabled: false,
   versioning_mode: "none",
+  identity: undefined as unknown as IdentityConfig,
 };
 
 // ============================================================================

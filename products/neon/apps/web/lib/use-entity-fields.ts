@@ -58,10 +58,37 @@ export interface FieldMeta {
     uiHint: Record<string, unknown> | null;
     /** Read-only */
     isReadOnly: boolean;
+    /** Deprecated */
+    isDeprecated: boolean;
     /** Computed/derived */
     isComputed: boolean;
     /** Write-once (locked after creation) */
     writeOnce: boolean;
+
+    // ── Enhancement 043: Visibility, editability, list caps, computed, collection ──
+
+    /** Context-aware visibility: { create, view, edit } */
+    visibility: Record<string, unknown> | null;
+    /** Context-aware editability: { create, edit } */
+    editability: Record<string, unknown> | null;
+    /** Sortable in list pages */
+    isSortable: boolean;
+    /** Groupable in list pages */
+    isGroupable: boolean;
+    /** Aggregatable in list pages */
+    isAggregatable: boolean;
+    /** Computed field mode: virtual or materialized */
+    computeMode: string | null;
+    /** Computed field expression */
+    computeExpr: Record<string, unknown> | null;
+    /** For cardinality=many: child entity name */
+    childEntityName: string | null;
+    /** For cardinality=many: parent FK field on child */
+    childFkField: string | null;
+    /** For cardinality=many: collection behavior config */
+    collectionBehavior: Record<string, unknown> | null;
+    /** Lookup search profile for reference field typeahead */
+    lookupProfile: Record<string, unknown> | null;
 }
 
 export interface EntityFieldsMeta {

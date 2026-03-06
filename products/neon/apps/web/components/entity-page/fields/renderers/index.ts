@@ -8,3 +8,5 @@ export { DatePickerRenderer, DateTimePickerRenderer } from "./DatePickerRenderer
 export { UuidViewRenderer } from "./UuidRenderer";
 export { JsonEditorRenderer } from "./JsonEditorRenderer";
 export { ReferencePickerRenderer, ReferenceMultiPickerRenderer } from "./ReferencePickerRenderer";
+export { LookupTypeahead } from "./LookupTypeahead";
+export { CollectionFieldRenderer } from "./CollectionFieldRenderer";

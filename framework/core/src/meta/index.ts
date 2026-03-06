@@ -29,6 +29,62 @@ export type {
   // Field types
   FieldType,
   FieldDefinition,
+  SemanticFormat,
+  FieldOrigin,
+  FieldConstraints,
+  FieldUiHint,
+  UiRendererConfig,
+  UiFormConfig,
+  UiLayoutConfig,
+  UiListConfig,
+  ResolvedFieldUiMeta,
+  EnumConfig,
+  ReferenceConfig,
+  IdentityConfig,
+  LookupSearchField,
+  LookupProfile,
+  MergeStrategy,
+  MergeRule,
+  OverlayMergeSemantics,
+  JsonFieldConfig,
+  MoneyConfig,
+  DatetimeConfig,
+
+  // Context-aware visibility & editability (FR-4)
+  FieldVisibilityValue,
+  FieldVisibility,
+  FieldEditabilityValue,
+  FieldEditability,
+  OverlayMode,
+  FieldVisibilityOverlay,
+  FieldEditabilityOverlay,
+  ValidationOverlay,
+
+  // Computed field wiring (FR-9) — dependency governance
+  ComputeMode,
+  ComputeExpression,
+  SystemComputeFunction,
+  RecomputeTrigger,
+  StalePolicy,
+
+  // Overlay safety policy
+  OverlaySafetyLevel,
+
+  // Version-diff change classification
+  ChangeImpact,
+  FieldVersionDiff,
+  EntityVersionDiff,
+
+  // Collection field wiring (FR-3)
+  CollectionBehavior,
+  CollectionOwnership,
+  CollectionPersistenceMode,
+  CollectionDeleteMode,
+  CollectionAggregateStrategy,
+  CollectionRowValidation,
+
+  // Resolved field meta (publish-time compilation — FR-13)
+  ResolvedFieldMeta,
 
   // Policy types
   PolicyEffect,
@@ -44,6 +100,7 @@ export type {
   CompiledField,
   CompiledPolicy,
   CompiledModel,
+  CompiledSnapshot,
 
   // Context types
   RequestContext,
@@ -235,6 +292,35 @@ export {
 } from "./tokens.js";
 
 export { DEFAULT_ENTITY_FEATURE_FLAGS } from "./types.js";
+export {
+  LOOKUP_PROFILE_MERGE,
+  IDENTITY_CONFIG_MERGE,
+  UI_HINT_MERGE,
+  applyMergeRule,
+  mergeWithSemantics,
+  CONSTRAINT_KEYS_BY_FAMILY,
+  BASE_CONSTRAINT_KEYS,
+  CORE_SEMANTIC_FORMATS,
+  VISIBILITY_RESTRICTIVENESS,
+  EDITABILITY_RESTRICTIVENESS,
+  resolveVisibilityValue,
+  resolveEditabilityValue,
+  resolveVisibilityWithOverlay,
+  resolveEditabilityWithOverlay,
+  resolveValidationWithOverlay,
+  CAPABILITY_DEFAULTS,
+  resolveCapabilityDefaults,
+  FIELD_OVERLAY_SAFETY,
+  FIELD_CHANGE_IMPACT,
+  PUBLISH_BLOCKING_RULES,
+  SYSTEM_COMPUTE_FUNCTIONS,
+  FORMULA_EXPR_PATTERN,
+  extractFormulaFieldRefs,
+} from "./types.js";
+
+// Version diff engine
+export type { FieldSnapshot } from "./version-diff.js";
+export { diffField, computeEntityVersionDiff, checkEnumStability } from "./version-diff.js";
 
 // Validation rules (Dynamic Rule Engine)
 export type {

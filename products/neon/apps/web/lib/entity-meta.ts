@@ -32,6 +32,7 @@ export interface EntityTableMeta {
   governanceLevel: string;
   entityShort: string | null;
   featureFlags: Record<string, unknown> | null;
+  identityConfig: Record<string, unknown> | null;
 }
 
 // ============================================================================
@@ -71,8 +72,9 @@ export async function resolveEntityMeta(
       governance_level: string;
       entity_short: string | null;
       feature_flags: Record<string, unknown> | null;
+      identity_config: Record<string, unknown> | null;
     }>`
-            SELECT name, table_schema, table_name, kind, governance_level, entity_short, feature_flags
+            SELECT name, table_schema, table_name, kind, governance_level, entity_short, feature_flags, identity_config
             FROM meta.entity
             WHERE name = ${name}
               AND tenant_id = ${tenantId}
@@ -90,6 +92,7 @@ export async function resolveEntityMeta(
         governanceLevel: r.governance_level,
         entityShort: r.entity_short,
         featureFlags: r.feature_flags ?? null,
+        identityConfig: r.identity_config ?? null,
       };
       // Cache under both the input key and the normalized name
       const entry: CacheEntry = { meta, expiresAt: Date.now() + CACHE_TTL_MS };
@@ -125,8 +128,9 @@ export async function resolveEntityMetaByTable(
     governance_level: string;
     entity_short: string | null;
     feature_flags: Record<string, unknown> | null;
+    identity_config: Record<string, unknown> | null;
   }>`
-        SELECT name, table_schema, table_name, kind, governance_level, entity_short, feature_flags
+        SELECT name, table_schema, table_name, kind, governance_level, entity_short, feature_flags, identity_config
         FROM meta.entity
         WHERE table_schema = ${tableSchema}
           AND table_name = ${tableName}
@@ -146,6 +150,7 @@ export async function resolveEntityMetaByTable(
     governanceLevel: r.governance_level,
     entityShort: r.entity_short,
     featureFlags: r.feature_flags ?? null,
+    identityConfig: r.identity_config ?? null,
   };
   const entry: CacheEntry = { meta, expiresAt: Date.now() + CACHE_TTL_MS };
   entityMetaCache.set(cacheKey, entry);

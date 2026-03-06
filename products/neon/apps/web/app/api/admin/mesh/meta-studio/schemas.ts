@@ -34,6 +34,18 @@ const nonReservedName = snakeCaseName.refine(
   "This name is reserved by the system",
 );
 
+// ─── Identity Config (must be declared before entity schemas) ─
+
+const identityConfigSchema = z
+  .object({
+    primaryLabelField: z.string().min(1),
+    primaryCodeField: z.string().nullish(),
+    alternateKeys: z.array(z.string()).max(10).optional(),
+    searchAliases: z.array(z.string()).max(20).optional(),
+    displayTemplate: z.string().max(512).nullish(),
+  })
+  .nullish();
+
 // ─── Entity Schemas ───────────────────────────────────────────
 
 export const createEntitySchema = z.object({
@@ -44,6 +56,7 @@ export const createEntitySchema = z.object({
   moduleId: z.string().nullish(),
   governanceLevel: z.enum(["full", "light", "audit_only"]).default("full"),
   engineTag: z.string().max(128).nullish(),
+  identityConfig: identityConfigSchema,
 });
 
 export const updateEntitySchema = z.object({
@@ -55,6 +68,7 @@ export const updateEntitySchema = z.object({
   isActive: z.boolean().optional(),
   governanceLevel: z.enum(["full", "light", "audit_only"]).optional(),
   engineTag: z.string().max(128).nullish(),
+  identityConfig: identityConfigSchema,
 });
 
 // ─── Field Schemas ────────────────────────────────────────────
@@ -72,6 +86,7 @@ const DATA_TYPES = [
   "reference",
   "enum",
   "json",
+  "rich_text",
 ] as const;
 
 const UI_TYPES = [
@@ -86,6 +101,401 @@ const UI_TYPES = [
   "hidden",
 ] as const;
 
+// ── Shared sub-schemas for structured configs ──
+
+const visibilityValueSchema = z.enum(["visible", "hidden", "internal"]);
+const editabilityValueSchema = z.enum([
+  "editable",
+  "read_only",
+  "system_managed",
+  "computed",
+]);
+
+const visibilityRulesSchema = z.object({
+  create: visibilityValueSchema.optional(),
+  view: visibilityValueSchema.optional(),
+  edit: visibilityValueSchema.optional(),
+});
+
+const visibilitySchema = visibilityRulesSchema.nullish();
+
+const editabilityRulesSchema = z.object({
+  create: editabilityValueSchema.optional(),
+  edit: editabilityValueSchema.optional(),
+});
+
+const editabilitySchema = editabilityRulesSchema.nullish();
+
+const overlayModeSchema = z.enum(["replace", "extend"]);
+
+/** Visibility overlay: { mode: "replace"|"extend", rules: { create?, view?, edit? } } */
+export const visibilityOverlaySchema = z
+  .object({
+    mode: overlayModeSchema,
+    rules: visibilityRulesSchema,
+  })
+  .nullish();
+
+/** Editability overlay: { mode: "replace"|"extend", rules: { create?, edit? } } */
+export const editabilityOverlaySchema = z
+  .object({
+    mode: overlayModeSchema,
+    rules: editabilityRulesSchema,
+  })
+  .nullish();
+
+/** Validation rules overlay: { mode: "replace"|"extend", rules: [...] } */
+export const validationOverlaySchema = z
+  .object({
+    mode: overlayModeSchema,
+    rules: z.array(z.record(z.unknown())),
+  })
+  .nullish();
+
+const collectionBehaviorSchema = z
+  .object({
+    ownership: z.enum(["owned", "linked"]).optional(),
+    persistenceMode: z.enum(["inline", "reference_only"]).optional(),
+    deleteMode: z.enum(["cascade", "restrict", "detach"]).optional(),
+    ordering: z.boolean().optional(),
+    orderField: z.string().optional(),
+    editorStyle: z.enum(["grid", "subform", "tags"]).optional(),
+    minItems: z.number().int().min(0).optional(),
+    maxItems: z.number().int().min(1).optional(),
+    allowDuplicates: z.boolean().optional(),
+    aggregates: z
+      .array(
+        z.object({
+          field: z.string(),
+          op: z.enum(["count", "sum", "avg", "min", "max"]),
+          label: z.string().optional(),
+        }),
+      )
+      .optional(),
+    aggregateStrategy: z.enum(["live", "on_save", "manual"]).optional(),
+    allowDraftRows: z.boolean().optional(),
+    rowValidation: z.enum(["on_change", "on_save", "on_submit"]).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val) {
+      // allowDuplicates only meaningful for linked mode
+      if (val.allowDuplicates === true && val.ownership === "owned") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "allowDuplicates is only valid for linked ownership mode",
+          path: ["allowDuplicates"],
+        });
+      }
+      // minItems must be <= maxItems when both set
+      if (val.minItems != null && val.maxItems != null && val.minItems > val.maxItems) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "minItems must be ≤ maxItems",
+          path: ["minItems"],
+        });
+      }
+      // orderField requires ordering=true
+      if (val.orderField && val.ordering !== true) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "orderField requires ordering to be true",
+          path: ["orderField"],
+        });
+      }
+    }
+  })
+  .nullish();
+
+const lookupSearchFieldSchema = z.object({
+  field: z.string().min(1),
+  weight: z.number().min(0).max(100).optional(),
+  matchModes: z.array(z.enum(["exact", "prefix", "contains", "token"])).optional(),
+});
+
+const lookupProfileSchema = z
+  .object({
+    displayTemplate: z.string().max(512).nullish(),
+    searchFields: z.array(lookupSearchFieldSchema).max(20).optional(),
+    matchMode: z.enum(["exact", "prefix", "contains", "token"]).optional(),
+    filters: z.record(z.unknown()).nullish(),
+    filtersByContext: z.record(z.record(z.unknown())).nullish(),
+    orderBy: z.string().max(128).nullish(),
+    minChars: z.number().int().min(1).max(10).optional(),
+    debounceMs: z.number().int().min(50).max(2000).optional(),
+    pageSize: z.number().int().min(5).max(100).optional(),
+    cacheMode: z.enum(["none", "session", "global"]).optional(),
+    securityScope: z.string().max(64).nullish(),
+  })
+  .nullish();
+
+// ── Type-safe constraint schemas per data-type family ──
+
+const baseConstraintsSchema = z.object({
+  required: z.boolean().optional(),
+  nullable: z.boolean().optional(),
+});
+
+const stringConstraintsSchema = baseConstraintsSchema.extend({
+  minLength: z.number().int().min(0).optional(),
+  maxLength: z.number().int().min(0).optional(),
+  pattern: z.string().max(1024).optional(),
+});
+
+const numericConstraintsSchema = baseConstraintsSchema.extend({
+  min: z.number().optional(),
+  max: z.number().optional(),
+  precision: z.number().int().min(1).max(38).optional(),
+  scale: z.number().int().min(0).max(20).optional(),
+});
+
+const dateConstraintsSchema = baseConstraintsSchema.extend({
+  minDate: z.string().max(64).optional(),
+  maxDate: z.string().max(64).optional(),
+});
+
+const enumConstraintsSchema = baseConstraintsSchema.extend({
+  allowedValues: z.array(z.string()).max(500).optional(),
+});
+
+/**
+ * Constraint schema map by data-type family.
+ * Used by superRefine to reject invalid constraint+dataType combinations.
+ */
+const CONSTRAINTS_SCHEMA_BY_FAMILY: Record<string, z.ZodType<Record<string, unknown>>> = {
+  string:    stringConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  text:      stringConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  rich_text: stringConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  integer:   numericConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  number:    numericConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  decimal:   numericConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  date:      dateConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  datetime:  dateConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  enum:      enumConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  boolean:   baseConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  uuid:      baseConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  reference: baseConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+  json:      baseConstraintsSchema as unknown as z.ZodType<Record<string, unknown>>,
+};
+
+/** Validate constraints are compatible with the field's dataType. */
+function validateConstraintsForDataType(
+  data: { dataType?: string; constraints?: Record<string, unknown> | null },
+  ctx: z.RefinementCtx,
+) {
+  if (!data.constraints || !data.dataType) return;
+
+  const schema = CONSTRAINTS_SCHEMA_BY_FAMILY[data.dataType];
+  if (!schema) return;
+
+  const result = schema.safeParse(data.constraints);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      ctx.addIssue({
+        ...issue,
+        path: ["constraints", ...(issue.path || [])],
+        message: `Invalid constraint for data type "${data.dataType}": ${issue.message}`,
+      });
+    }
+  }
+
+  // Reject unknown keys that don't belong to this data-type family
+  const allowedKeys = new Set(Object.keys(
+    CONSTRAINTS_SCHEMA_BY_FAMILY[data.dataType] === baseConstraintsSchema
+      ? baseConstraintsSchema.shape
+      : (schema as z.ZodObject<z.ZodRawShape>).shape,
+  ));
+  for (const key of Object.keys(data.constraints)) {
+    if (!allowedKeys.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.unrecognized_keys,
+        keys: [key],
+        path: ["constraints"],
+        message: `Constraint key "${key}" is not valid for data type "${data.dataType}"`,
+      });
+    }
+  }
+}
+
+/**
+ * Validate mutability flags don't contradict each other.
+ *
+ * Precedence: is_computed > is_read_only > write_once > editability > ui_hint
+ * Contradictions:
+ *   - is_computed + editability.{ctx}="editable" → Layer 1 vs Layer 5
+ *   - is_read_only + editability.{ctx}="editable" → Layer 2 vs Layer 5
+ *   - is_computed + write_once → both claim value lifecycle ownership
+ *   - is_read_only + write_once → write_once implies writable on create
+ */
+function validateMutabilityFlags(
+  data: {
+    isComputed?: boolean;
+    isReadOnly?: boolean;
+    writeOnce?: boolean;
+    editability?: { create?: string; edit?: string } | null;
+    computeMode?: string | null;
+    computeExpr?: { type?: string; recomputeTrigger?: string; stalePolicy?: string } | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const editability = data.editability;
+
+  // is_computed + editability.{ctx}="editable" → contradiction
+  if (data.isComputed) {
+    if (editability?.create === "editable") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["editability", "create"],
+        message: "Cannot set editability to 'editable' when is_computed=true (computed fields are always read-only)",
+      });
+    }
+    if (editability?.edit === "editable") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["editability", "edit"],
+        message: "Cannot set editability to 'editable' when is_computed=true (computed fields are always read-only)",
+      });
+    }
+  }
+
+  // is_read_only + editability.{ctx}="editable" → contradiction
+  if (data.isReadOnly) {
+    if (editability?.create === "editable") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["editability", "create"],
+        message: "Cannot set editability to 'editable' when is_read_only=true",
+      });
+    }
+    if (editability?.edit === "editable") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["editability", "edit"],
+        message: "Cannot set editability to 'editable' when is_read_only=true",
+      });
+    }
+  }
+
+  // is_computed + write_once → contradiction
+  if (data.isComputed && data.writeOnce) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["writeOnce"],
+      message: "write_once and is_computed are mutually exclusive (computed fields never accept user input)",
+    });
+  }
+
+  // is_read_only + write_once → contradiction
+  if (data.isReadOnly && data.writeOnce) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["writeOnce"],
+      message: "write_once and is_read_only are mutually exclusive (write_once implies writable on create)",
+    });
+  }
+
+  // Materialized governance: recomputeTrigger/stalePolicy only valid for materialized mode
+  if (data.computeExpr?.recomputeTrigger && data.computeMode !== "materialized") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["computeExpr", "recomputeTrigger"],
+      message: "recomputeTrigger is only valid when computeMode is 'materialized'",
+    });
+  }
+  if (data.computeExpr?.stalePolicy && data.computeMode !== "materialized") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["computeExpr", "stalePolicy"],
+      message: "stalePolicy is only valid when computeMode is 'materialized'",
+    });
+  }
+}
+
+const SYSTEM_COMPUTE_FNS = ["now", "current_user", "current_tenant", "row_version", "uuid_generate"] as const;
+const FORMULA_SAFE_PATTERN = /^[\sa-z_][a-z0-9_\s+\-*/().]*$/;
+
+const computeExprSchema = z
+  .object({
+    type: z.enum(["formula", "aggregate", "system"]),
+    expr: z.string(),
+    dependsOn: z.array(z.string()).optional(),
+    aggregateOf: z.string().optional(),
+    aggregateOp: z.enum(["count", "sum", "avg", "min", "max"]).optional(),
+    aggregateFilter: z.record(z.unknown()).optional(),
+    recomputeTrigger: z.enum(["on_dependency_change", "on_save", "scheduled"]).optional(),
+    stalePolicy: z.enum(["serve_stale", "null_until_recomputed", "recompute_sync"]).optional(),
+    scheduleInterval: z.string().max(64).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (!val) return;
+
+    // Formula: expr must be safe DSL (no function calls, no string literals)
+    if (val.type === "formula") {
+      if (!FORMULA_SAFE_PATTERN.test(val.expr)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Formula expr must contain only field references, numeric literals, and arithmetic operators (+, -, *, /)",
+          path: ["expr"],
+        });
+      }
+      // dependsOn is required for formula
+      if (!val.dependsOn || val.dependsOn.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Formula type requires dependsOn listing all referenced fields",
+          path: ["dependsOn"],
+        });
+      }
+    }
+
+    // Aggregate: requires aggregateOf + aggregateOp
+    if (val.type === "aggregate") {
+      if (!val.aggregateOf) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Aggregate type requires aggregateOf (child entity/collection field)",
+          path: ["aggregateOf"],
+        });
+      }
+      if (!val.aggregateOp) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Aggregate type requires aggregateOp",
+          path: ["aggregateOp"],
+        });
+      }
+    }
+
+    // System: expr must be in the allowlist
+    if (val.type === "system") {
+      if (!SYSTEM_COMPUTE_FNS.includes(val.expr as any)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `System compute function must be one of: ${SYSTEM_COMPUTE_FNS.join(", ")}`,
+          path: ["expr"],
+        });
+      }
+    }
+
+    // scheduleInterval only valid with scheduled trigger
+    if (val.scheduleInterval && val.recomputeTrigger !== "scheduled") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "scheduleInterval requires recomputeTrigger to be 'scheduled'",
+        path: ["scheduleInterval"],
+      });
+    }
+
+    // scheduled trigger requires scheduleInterval
+    if (val.recomputeTrigger === "scheduled" && !val.scheduleInterval) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Scheduled recompute requires scheduleInterval",
+        path: ["scheduleInterval"],
+      });
+    }
+  })
+  .nullish();
+
 export const createFieldSchema = z.object({
   name: nonReservedName,
   columnName: nonReservedName,
@@ -98,7 +508,41 @@ export const createFieldSchema = z.object({
   defaultValue: z.unknown().optional(),
   validation: z.record(z.unknown()).nullish(),
   lookupConfig: z.record(z.unknown()).nullish(),
-});
+
+  // ── Phase 1: Structured configs & semantic format ──
+  format: z.string().max(64).nullish(),
+  unit: z.string().max(64).nullish(),
+  cardinality: z.enum(["one", "many"]).default("one"),
+  origin: z.enum(["system", "business"]).default("business"),
+  label: z.string().max(256).nullish(),
+  description: z.string().max(2048).nullish(),
+  constraints: z.record(z.unknown()).nullish(),
+  enumConfig: z.record(z.unknown()).nullish(),
+  referenceConfig: z.record(z.unknown()).nullish(),
+  jsonConfig: z.record(z.unknown()).nullish(),
+  moneyConfig: z.record(z.unknown()).nullish(),
+  datetimeConfig: z.record(z.unknown()).nullish(),
+  uiHint: z.record(z.unknown()).nullish(),
+  isReadOnly: z.boolean().default(false),
+  isDeprecated: z.boolean().default(false),
+  isComputed: z.boolean().default(false),
+  writeOnce: z.boolean().default(false),
+
+  // ── Enhancement 043: Visibility, editability, list caps, computed, collection ──
+  visibility: visibilitySchema,
+  editability: editabilitySchema,
+  isSortable: z.boolean().default(false),
+  isGroupable: z.boolean().default(false),
+  isAggregatable: z.boolean().default(false),
+  computeMode: z.enum(["virtual", "materialized"]).nullish(),
+  computeExpr: computeExprSchema,
+  childEntityName: z.string().max(128).nullish(),
+  childFkField: z.string().max(128).nullish(),
+  collectionBehavior: collectionBehaviorSchema,
+
+  // ── Lookup system (044) ──
+  lookupProfile: lookupProfileSchema,
+}).superRefine(validateConstraintsForDataType).superRefine(validateMutabilityFlags);
 
 export const updateFieldSchema = z.object({
   fieldId: z.string().uuid(),
@@ -113,7 +557,41 @@ export const updateFieldSchema = z.object({
   defaultValue: z.unknown().optional(),
   validation: z.record(z.unknown()).nullish(),
   lookupConfig: z.record(z.unknown()).nullish(),
-});
+
+  // ── Phase 1: Structured configs & semantic format ──
+  format: z.string().max(64).nullish(),
+  unit: z.string().max(64).nullish(),
+  cardinality: z.enum(["one", "many"]).optional(),
+  origin: z.enum(["system", "business"]).optional(),
+  label: z.string().max(256).nullish(),
+  description: z.string().max(2048).nullish(),
+  constraints: z.record(z.unknown()).nullish(),
+  enumConfig: z.record(z.unknown()).nullish(),
+  referenceConfig: z.record(z.unknown()).nullish(),
+  jsonConfig: z.record(z.unknown()).nullish(),
+  moneyConfig: z.record(z.unknown()).nullish(),
+  datetimeConfig: z.record(z.unknown()).nullish(),
+  uiHint: z.record(z.unknown()).nullish(),
+  isReadOnly: z.boolean().optional(),
+  isDeprecated: z.boolean().optional(),
+  isComputed: z.boolean().optional(),
+  writeOnce: z.boolean().optional(),
+
+  // ── Enhancement 043: Visibility, editability, list caps, computed, collection ──
+  visibility: visibilitySchema,
+  editability: editabilitySchema,
+  isSortable: z.boolean().optional(),
+  isGroupable: z.boolean().optional(),
+  isAggregatable: z.boolean().optional(),
+  computeMode: z.enum(["virtual", "materialized"]).nullish(),
+  computeExpr: computeExprSchema,
+  childEntityName: z.string().max(128).nullish(),
+  childFkField: z.string().max(128).nullish(),
+  collectionBehavior: collectionBehaviorSchema,
+
+  // ── Lookup system (044) ──
+  lookupProfile: lookupProfileSchema,
+}).superRefine(validateConstraintsForDataType).superRefine(validateMutabilityFlags);
 
 export const deleteFieldSchema = z.object({
   fieldId: z.string().uuid(),

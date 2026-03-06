@@ -71,10 +71,37 @@ export interface ServerFieldMeta {
     uiHint: Record<string, unknown> | null;
     /** Read-only */
     isReadOnly: boolean;
+    /** Deprecated */
+    isDeprecated: boolean;
     /** Computed/derived */
     isComputed: boolean;
     /** Write-once (locked after creation) */
     writeOnce: boolean;
+
+    // ── Enhancement 043: Visibility, editability, list caps, computed, collection ──
+
+    /** Context-aware visibility: { create, view, edit } */
+    visibility: Record<string, unknown> | null;
+    /** Context-aware editability: { create, edit } */
+    editability: Record<string, unknown> | null;
+    /** Sortable in list pages */
+    isSortable: boolean;
+    /** Groupable in list pages */
+    isGroupable: boolean;
+    /** Aggregatable in list pages */
+    isAggregatable: boolean;
+    /** Computed field mode: virtual or materialized */
+    computeMode: string | null;
+    /** Computed field expression */
+    computeExpr: Record<string, unknown> | null;
+    /** For cardinality=many: child entity name */
+    childEntityName: string | null;
+    /** For cardinality=many: parent FK field on child */
+    childFkField: string | null;
+    /** For cardinality=many: collection behavior config */
+    collectionBehavior: Record<string, unknown> | null;
+    /** Lookup search profile for reference field typeahead */
+    lookupProfile: Record<string, unknown> | null;
 }
 
 export interface ForeignKeyInfo {
@@ -255,8 +282,22 @@ export async function getMetaFields(
         datetime_config?: Record<string, unknown> | null;
         ui_hint?: Record<string, unknown> | null;
         is_read_only?: boolean;
+        is_deprecated?: boolean;
         is_computed?: boolean;
         write_once?: boolean;
+        // Enhancement 043
+        visibility?: Record<string, unknown> | null;
+        editability?: Record<string, unknown> | null;
+        is_sortable?: boolean;
+        is_groupable?: boolean;
+        is_aggregatable?: boolean;
+        compute_mode?: string | null;
+        compute_expr?: Record<string, unknown> | null;
+        child_entity_name?: string | null;
+        child_fk_field?: string | null;
+        collection_behavior?: Record<string, unknown> | null;
+        // Lookup system (044)
+        lookup_profile?: Record<string, unknown> | null;
     };
 
     let fieldRows: FieldRow[];
@@ -268,7 +309,12 @@ export async function getMetaFields(
                    format, unit, cardinality, origin, label, description,
                    constraints, enum_config, reference_config, json_config,
                    money_config, datetime_config, ui_hint,
-                   is_read_only, is_computed, write_once
+                   is_read_only, is_deprecated, is_computed, write_once,
+                   visibility, editability,
+                   is_sortable, is_groupable, is_aggregatable,
+                   compute_mode, compute_expr,
+                   child_entity_name, child_fk_field, collection_behavior,
+                   lookup_profile
             FROM meta.field
             WHERE entity_version_id = ${versionId}
               AND tenant_id = ${tenantId}
@@ -321,8 +367,21 @@ export async function getMetaFields(
             datetimeConfig: r.datetime_config ?? null,
             uiHint: r.ui_hint ?? null,
             isReadOnly: r.is_read_only ?? false,
+            isDeprecated: r.is_deprecated ?? false,
             isComputed: r.is_computed ?? false,
             writeOnce: r.write_once ?? false,
+            // Enhancement 043
+            visibility: r.visibility ?? null,
+            editability: r.editability ?? null,
+            isSortable: r.is_sortable ?? false,
+            isGroupable: r.is_groupable ?? false,
+            isAggregatable: r.is_aggregatable ?? false,
+            computeMode: r.compute_mode ?? null,
+            computeExpr: r.compute_expr ?? null,
+            childEntityName: r.child_entity_name ?? null,
+            childFkField: r.child_fk_field ?? null,
+            collectionBehavior: r.collection_behavior ?? null,
+            lookupProfile: r.lookup_profile ?? null,
         }));
 
     // ── Write L1 + L2 ──
@@ -428,8 +487,21 @@ export async function getColumnsFromSchema(
             datetimeConfig: null,
             uiHint: null,
             isReadOnly: false,
+            isDeprecated: false,
             isComputed: false,
             writeOnce: false,
+            // Enhancement 043 defaults
+            visibility: null,
+            editability: null,
+            isSortable: false,
+            isGroupable: false,
+            isAggregatable: false,
+            computeMode: null,
+            computeExpr: null,
+            childEntityName: null,
+            childFkField: null,
+            collectionBehavior: null,
+            lookupProfile: null,
         }));
 
     // ── Write L1 + L2 ──

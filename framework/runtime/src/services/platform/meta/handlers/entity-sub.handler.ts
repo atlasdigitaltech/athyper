@@ -9,6 +9,8 @@
  */
 
 import { TOKENS } from "../../../../kernel/tokens.js";
+import { computeEntityVersionDiff } from "@athyper/core/meta";
+import type { FieldSnapshot } from "@athyper/core/meta";
 
 import type {
   RouteHandler,
@@ -24,7 +26,7 @@ import type { Kysely } from "kysely";
 async function resolveLatestVersionId(
   db: Kysely<any>,
   entityName: string,
-): Promise<{ entityId: string; versionId: string } | null> {
+): Promise<{ entityId: string; versionId: string; versionStatus: string } | null> {
   // Look up entity
   const entity = await db
     .selectFrom("meta.entity")
@@ -37,7 +39,7 @@ async function resolveLatestVersionId(
   // Find latest version (prefer published, then draft, ordered by version_no desc)
   const version = await db
     .selectFrom("meta.entity_version")
-    .select(["id"])
+    .select(["id", "status"])
     .where("entity_id", "=", entity.id)
     .orderBy("version_no", "desc")
     .limit(1)
@@ -45,7 +47,32 @@ async function resolveLatestVersionId(
 
   if (!version) return null;
 
-  return { entityId: entity.id as string, versionId: version.id as string };
+  return {
+    entityId: entity.id as string,
+    versionId: version.id as string,
+    versionStatus: (version.status as string) ?? "draft",
+  };
+}
+
+/**
+ * Guard: reject mutations on published/archived entity versions.
+ * Returns true if mutation was blocked (response already sent).
+ */
+function guardPublishedVersion(
+  res: Response,
+  resolved: { versionStatus: string },
+): boolean {
+  if (resolved.versionStatus === "published" || resolved.versionStatus === "archived") {
+    res.status(409).json({
+      success: false,
+      error: {
+        code: "VERSION_IMMUTABLE",
+        message: `Cannot mutate fields on a ${resolved.versionStatus} entity version. Create a new draft version instead.`,
+      },
+    });
+    return true;
+  }
+  return false;
 }
 
 // ============================================================================
@@ -540,15 +567,103 @@ export class ListEntityVersionsHandler implements RouteHandler {
 
 export class GetDiffHandler implements RouteHandler {
   async handle(
-    _req: Request,
+    req: Request,
     res: Response,
-    _ctx: HttpHandlerContext,
+    ctx: HttpHandlerContext,
   ): Promise<void> {
-    // Diff is a complex operation — return empty for now
-    res.status(200).json({
-      success: true,
-      data: { changes: [] },
+    const { name } = req.params as { name: string };
+    const db = await ctx.container.resolve<Kysely<any>>(TOKENS.db);
+
+    // Find entity
+    const entity = await db
+      .selectFrom("meta.entity")
+      .select(["id", "name"])
+      .where("name", "=", name)
+      .executeTakeFirst();
+
+    if (!entity) {
+      res.status(404).json({
+        success: false,
+        error: { code: "ENTITY_NOT_FOUND", message: `Entity '${name}' not found` },
+      });
+      return;
+    }
+
+    // Get the two most recent versions (latest = draft, previous = published)
+    const versions = await db
+      .selectFrom("meta.entity_version")
+      .select(["id", "version_no", "status"])
+      .where("entity_id", "=", entity.id)
+      .orderBy("version_no", "desc")
+      .limit(2)
+      .execute();
+
+    if (versions.length < 2) {
+      // No previous version to diff against
+      res.status(200).json({
+        success: true,
+        data: { changes: [], maxImpact: "non_breaking", summary: { non_breaking: 0, migration_required: 0, breaking: 0, publish_blocking: 0 } },
+      });
+      return;
+    }
+
+    const [current, previous] = versions;
+
+    // Load fields for both versions
+    const [currentFields, previousFields] = await Promise.all([
+      db.selectFrom("meta.field").selectAll().where("entity_version_id", "=", current.id).execute(),
+      db.selectFrom("meta.field").selectAll().where("entity_version_id", "=", previous.id).execute(),
+    ]);
+
+    const toSnapshot = (row: any): FieldSnapshot => ({
+      name: row.name,
+      columnName: row.column_name ?? row.name,
+      dataType: row.data_type,
+      label: row.label ?? null,
+      description: row.description ?? null,
+      uiType: row.ui_type ?? null,
+      isRequired: row.is_required ?? false,
+      isUnique: row.is_unique ?? false,
+      isSearchable: row.is_searchable ?? false,
+      isFilterable: row.is_filterable ?? false,
+      isSortable: row.is_sortable ?? false,
+      isGroupable: row.is_groupable ?? false,
+      isAggregatable: row.is_aggregatable ?? false,
+      isReadOnly: row.is_read_only ?? false,
+      isComputed: row.is_computed ?? false,
+      isDeprecated: row.is_deprecated ?? false,
+      writeOnce: row.write_once ?? false,
+      cardinality: row.cardinality ?? null,
+      defaultValue: row.default_value ?? null,
+      constraints: row.constraints ?? null,
+      validation: row.validation ?? null,
+      referenceConfig: row.reference_config ?? null,
+      lookupConfig: row.lookup_config ?? null,
+      lookupProfile: row.lookup_profile ?? null,
+      enumConfig: row.enum_config ?? null,
+      moneyConfig: row.money_config ?? null,
+      datetimeConfig: row.datetime_config ?? null,
+      computeMode: row.compute_mode ?? null,
+      computeExpr: row.compute_expr ?? null,
+      collectionBehavior: row.collection_behavior ?? null,
+      childEntityName: row.child_entity_name ?? null,
+      childFkField: row.child_fk_field ?? null,
+      visibility: row.visibility ?? null,
+      editability: row.editability ?? null,
+      uiHint: row.ui_hint ?? null,
+      sortOrder: row.sort_order ?? 0,
+      origin: row.origin ?? null,
     });
+
+    const diff = computeEntityVersionDiff(
+      entity.name as string,
+      String(previous.version_no),
+      String(current.version_no),
+      previousFields.map(toSnapshot),
+      currentFields.map(toSnapshot),
+    );
+
+    res.status(200).json({ success: true, data: diff });
   }
 }
 
@@ -671,6 +786,9 @@ export class MutateFieldsHandler implements RouteHandler {
       return;
     }
 
+    // Guard: block mutations on published/archived versions
+    if (guardPublishedVersion(res, resolved)) return;
+
     const body = req.body as Record<string, unknown>;
 
     // Handle reorder
@@ -709,6 +827,26 @@ export class MutateFieldsHandler implements RouteHandler {
         updates.validation = JSON.stringify(body.validation);
       if (body.lookupConfig !== undefined)
         updates.lookup_config = JSON.stringify(body.lookupConfig);
+
+      // ── Auto-promote legacy → canonical on write ──
+      // When writing to a canonical column, also null out the legacy column
+      // to prevent dual-source drift.
+      if (body.constraints !== undefined) {
+        updates.constraints = JSON.stringify(body.constraints);
+      }
+      if (body.referenceConfig !== undefined) {
+        updates.reference_config = JSON.stringify(body.referenceConfig);
+      }
+      if (body.lookupProfile !== undefined) {
+        updates.lookup_profile = JSON.stringify(body.lookupProfile);
+      }
+      if (body.uiHint !== undefined) {
+        updates.ui_hint = JSON.stringify(body.uiHint);
+      }
+      if (body.enumConfig !== undefined) {
+        updates.enum_config = JSON.stringify(body.enumConfig);
+      }
+
       updates.updated_at = new Date();
 
       const updated = await db
@@ -787,6 +925,9 @@ export class DeleteFieldHandler implements RouteHandler {
       return;
     }
 
+    // Guard: block mutations on published/archived versions
+    if (guardPublishedVersion(res, resolved)) return;
+
     const body = req.body as { fieldId: string };
     await db
       .deleteFrom("meta.field")
@@ -822,6 +963,9 @@ export class MutateRelationsHandler implements RouteHandler {
       });
       return;
     }
+
+    // Guard: block mutations on published/archived versions
+    if (guardPublishedVersion(res, resolved)) return;
 
     const body = req.body as Record<string, unknown>;
 

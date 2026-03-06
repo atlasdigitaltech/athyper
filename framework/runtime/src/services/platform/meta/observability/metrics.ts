@@ -49,6 +49,14 @@ const METRIC = {
 
   // Approval
   approvalResolutionLatency: "meta_approval_resolution_latency_ms",
+
+  // Compilation diagnostics
+  diagnosticWarnings: "meta_diagnostic_warnings_total",
+
+  // Lookup
+  lookupLatency: "meta_lookup_latency_ms",
+  lookupTotal: "meta_lookup_total",
+  lookupZeroResults: "meta_lookup_zero_results_total",
 } as const;
 
 // ============================================================================
@@ -238,6 +246,45 @@ export class MetaMetrics {
     this.registry.recordHistogram(
       METRIC.approvalResolutionLatency,
       durationMs,
+      labels as MetricLabels,
+    );
+  }
+
+  // ── Compilation Diagnostics ────────────────────────────────────
+
+  /** Record compilation diagnostic warnings by code. */
+  diagnosticWarning(labels: { entity: string; code: string }): void {
+    this.registry.incrementCounter(
+      METRIC.diagnosticWarnings,
+      1,
+      labels as MetricLabels,
+    );
+  }
+
+  // ── Lookup Search ─────────────────────────────────────────────
+
+  /** Record lookup search latency in milliseconds. */
+  lookupLatency(
+    durationMs: number,
+    labels: { entity: string; context: string },
+  ): void {
+    this.registry.recordHistogram(
+      METRIC.lookupLatency,
+      durationMs,
+      labels as MetricLabels,
+    );
+    this.registry.incrementCounter(
+      METRIC.lookupTotal,
+      1,
+      labels as MetricLabels,
+    );
+  }
+
+  /** Record a lookup search that returned zero results. */
+  lookupZeroResults(labels: { entity: string; context: string }): void {
+    this.registry.incrementCounter(
+      METRIC.lookupZeroResults,
+      1,
       labels as MetricLabels,
     );
   }

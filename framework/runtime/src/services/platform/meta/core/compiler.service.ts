@@ -10,15 +10,30 @@ import { createHash } from "node:crypto";
 import { META_SPANS, withSpan } from "../observability/tracing.js";
 
 import type { MetaMetrics } from "../observability/metrics.js";
+import {
+  SYSTEM_COMPUTE_FUNCTIONS,
+  extractFormulaFieldRefs,
+  resolveCapabilityDefaults,
+} from "@athyper/core/meta";
 import type {
+  CollectionBehavior,
   CompileDiagnostic,
   CompiledField,
   CompiledModel,
   CompiledModelWithOverlays,
   CompiledPolicy,
+  CompiledSnapshot,
+  ComputeExpression,
+  ComputeMode,
   DiagnosticSeverity,
   EntitySchema,
+  EnumConfig,
+  FieldConstraints,
   FieldDefinition,
+  FieldEditability,
+  FieldType,
+  FieldUiHint,
+  FieldVisibility,
   HealthCheckResult,
   MetaCompiler,
   MetaRegistry,
@@ -26,6 +41,9 @@ import type {
   OverlaySet,
   PolicyCondition,
   PolicyDefinition,
+  ReferenceConfig,
+  ResolvedFieldMeta,
+  SemanticFormat,
   ValidationError,
   ValidationResult,
 } from "@athyper/core/meta";
@@ -572,6 +590,12 @@ export class MetaCompilerService implements MetaCompiler {
       const infoCount =
         compiled.diagnostics?.filter((d) => d.severity === "INFO").length || 0;
 
+      // Diagnostic code breakdown for observability
+      const diagnosticCodes: Record<string, number> = {};
+      for (const d of compiled.diagnostics ?? []) {
+        diagnosticCodes[d.code] = (diagnosticCodes[d.code] ?? 0) + 1;
+      }
+
       console.log(
         JSON.stringify({
           msg: "compilation_success",
@@ -581,10 +605,12 @@ export class MetaCompilerService implements MetaCompiler {
           output_hash: compiled.outputHash,
           duration_ms: totalDuration,
           compile_duration_ms: compileDuration,
+          field_count: compiled.fields?.length ?? 0,
           diagnostics: {
             errors: 0,
             warnings: warnCount,
             info: infoCount,
+            codes: diagnosticCodes,
           },
         }),
       );
@@ -677,6 +703,68 @@ export class MetaCompilerService implements MetaCompiler {
     };
   }
 
+  /**
+   * Build a canonical CompiledSnapshot from a CompiledModel + original schema.
+   *
+   * The snapshot is the immutable boundary between meta-authoring and
+   * meta-consuming. All consumers (UI, runtime, search) should read
+   * this snapshot rather than raw field rows.
+   *
+   * @param compiled - The compiled model IR
+   * @param schema - Original entity schema (needed for full field resolution)
+   * @param tableSchema - DB schema name (default: "public")
+   */
+  buildSnapshot(
+    compiled: CompiledModel,
+    schema: EntitySchema,
+    tableSchema: string = "public",
+  ): CompiledSnapshot {
+    // Resolve all fields from the original schema (preserves full metadata)
+    const resolvedFields = this.resolveFields(schema);
+
+    // Compute stable content hash of the full snapshot
+    const contentPayload = JSON.stringify({
+      entityName: compiled.entityName,
+      version: compiled.version,
+      fields: resolvedFields,
+      policies: compiled.policies?.map((p) => ({
+        name: p.name,
+        effect: p.effect,
+        action: p.action,
+        resource: p.resource,
+        fields: p.fields,
+      })),
+      entityClass: compiled.entityClass,
+      featureFlags: compiled.featureFlags,
+    });
+    const contentHash = createHash("sha256")
+      .update(contentPayload)
+      .digest("hex")
+      .slice(0, 16);
+
+    return {
+      entityName: compiled.entityName,
+      version: compiled.version,
+      tableName: compiled.tableName,
+      tableSchema,
+      resolvedFields,
+      compiledFields: compiled.fields,
+      policies: compiled.policies,
+      queryFragments: {
+        selectFragment: compiled.selectFragment,
+        fromFragment: compiled.fromFragment,
+        tenantFilterFragment: compiled.tenantFilterFragment,
+      },
+      entityClass: compiled.entityClass,
+      featureFlags: compiled.featureFlags,
+      diagnostics: compiled.diagnostics ?? [],
+      contentHash,
+      inputHash: compiled.inputHash ?? "",
+      compiledAt: compiled.compiledAt.toISOString(),
+      compiledBy: compiled.compiledBy,
+    };
+  }
+
   private compileField(field: FieldDefinition): CompiledField {
     const columnName = this.toSnakeCase(field.name);
     const selectAs = `"${columnName}" as "${field.name}"`;
@@ -700,6 +788,241 @@ export class MetaCompilerService implements MetaCompiler {
       max: field.max,
       // Validator and transformer can be added here
     };
+  }
+
+  // =========================================================================
+  // Field Resolution (Enhancement 043 — ResolvedFieldMeta)
+  // =========================================================================
+
+  /**
+   * Resolve a FieldDefinition into a fully-resolved ResolvedFieldMeta.
+   * This is the publish-time compilation contract that runtime + UI consume.
+   *
+   * Resolution pipeline:
+   *   1. Identity & column name
+   *   2. Label resolution (explicit > humanized name)
+   *   3. Constraints merge (legacy fields + structured constraints)
+   *   4. UI type auto-detection (dataType + format → uiType)
+   *   5. Visibility/editability defaults
+   *   6. Computed/collection wiring pass-through
+   *   7. List capabilities pass-through
+   */
+  resolveField(field: FieldDefinition): ResolvedFieldMeta {
+    const columnName = field.isComputed && field.computeMode === "virtual"
+      ? null
+      : this.toSnakeCase(field.name);
+
+    // ── 1. Label resolution ──
+    const label = field.label ?? this.humanize(field.name);
+
+    // ── 2. Constraints merge ──
+    const constraints: FieldConstraints = {
+      ...(field.constraints ?? {}),
+      required: field.constraints?.required ?? field.required,
+      nullable: field.constraints?.nullable ?? !field.required,
+    };
+    // Back-fill legacy fields into constraints if not already present
+    if (field.minLength != null && constraints.minLength == null)
+      constraints.minLength = field.minLength;
+    if (field.maxLength != null && constraints.maxLength == null)
+      constraints.maxLength = field.maxLength;
+    if (field.min != null && constraints.min == null)
+      constraints.min = field.min;
+    if (field.max != null && constraints.max == null)
+      constraints.max = field.max;
+    if (field.pattern != null && constraints.pattern == null)
+      constraints.pattern = field.pattern;
+
+    // ── 3. UI type auto-detection ──
+    const uiType = field.ui?.type ?? this.autoDetectUiType(field.type, field.format);
+    const viewType = field.ui?.viewType;
+    const editType = field.ui?.editType;
+
+    // ── 4. Visibility defaults ──
+    const visibility: Required<FieldVisibility> = {
+      create: field.visibility?.create ?? "visible",
+      view: field.visibility?.view ?? "visible",
+      edit: field.visibility?.edit ?? "visible",
+    };
+    // System fields default to hidden in create/edit
+    if (field.origin === "system") {
+      if (!field.visibility?.create) visibility.create = "hidden";
+      if (!field.visibility?.edit) visibility.edit = "hidden";
+    }
+    // Computed fields are always hidden in create, read-only in edit
+    if (field.isComputed) {
+      visibility.create = "hidden";
+    }
+
+    // ── 5. Editability defaults ──
+    const editability: Required<FieldEditability> = {
+      create: field.editability?.create ?? "editable",
+      edit: field.editability?.edit ?? "editable",
+    };
+    if (field.isReadOnly) {
+      editability.create = "read_only";
+      editability.edit = "read_only";
+    }
+    if (field.isComputed) {
+      editability.create = "computed";
+      editability.edit = "computed";
+    }
+    if (field.writeOnce) {
+      editability.edit = "read_only";
+    }
+
+    // ── 6. Reference/enum config resolution ──
+    const lookupConfig: ReferenceConfig | undefined = field.referenceConfig
+      ?? (field.referenceTo
+        ? { entity: field.referenceTo, relationshipKind: "many-to-one" as const }
+        : undefined);
+
+    const enumConfig: EnumConfig | undefined = field.enumConfig
+      ?? (field.enumValues
+        ? { values: field.enumValues.map((v) => ({ value: v })), source: "static" as const }
+        : undefined);
+
+    // ── 7. Validation merge ──
+    const validation: Record<string, unknown> | undefined =
+      (field.constraints || field.minLength != null || field.maxLength != null ||
+        field.min != null || field.max != null || field.pattern != null)
+        ? { ...constraints }
+        : undefined;
+
+    return {
+      name: field.name,
+      columnName,
+      label,
+      description: field.description,
+
+      // Data layer
+      dataType: field.type,
+      format: field.format,
+      unit: field.unit,
+      cardinality: field.cardinality ?? "one",
+      constraints,
+      defaultValue: field.defaultValue,
+
+      // Resolved renderer
+      uiType,
+      viewType,
+      editType,
+      uiConfig: field.ui,
+
+      // Visibility & editability
+      visibility,
+      editability,
+
+      // Validation
+      validation,
+
+      // Lookup / reference wiring
+      lookupConfig,
+      enumConfig,
+
+      // Collection wiring
+      childEntityName: field.childEntityName,
+      childFkField: field.childFkField,
+      collectionBehavior: field.collectionBehavior,
+
+      // Computed wiring
+      isComputed: field.isComputed ?? false,
+      computeMode: field.computeMode,
+      computeExpr: field.computeExpr,
+
+      // List capabilities — derived from type defaults + system restrictions + field overrides
+      isSearchable: field.indexed ?? false,
+      isFilterable: false,
+      ...(() => {
+        const caps = resolveCapabilityDefaults(field.type, {
+          isComputed: field.isComputed,
+          origin: field.origin,
+          isSortable: field.isSortable,
+          isGroupable: field.isGroupable,
+          isAggregatable: field.isAggregatable,
+        });
+        return {
+          isSortable: caps.sortable,
+          isGroupable: caps.groupable,
+          isAggregatable: caps.aggregatable,
+        };
+      })(),
+
+      // Behavior flags
+      isRequired: field.required,
+      isUnique: field.unique ?? false,
+      isReadOnly: field.isReadOnly ?? false,
+      isDeprecated: field.isDeprecated ?? false,
+      writeOnce: field.writeOnce ?? false,
+      isActive: true,
+      sortOrder: 0,
+    };
+  }
+
+  /**
+   * Batch-resolve all fields in a schema to ResolvedFieldMeta[].
+   * Includes sort order assignment.
+   */
+  resolveFields(schema: EntitySchema): ResolvedFieldMeta[] {
+    return schema.fields.map((field, index) => {
+      const resolved = this.resolveField(field);
+      resolved.sortOrder = index;
+      return resolved;
+    });
+  }
+
+  /**
+   * Auto-detect UI type from data type + semantic format.
+   * This is the single source of truth for the default data-type → UI-component mapping.
+   */
+  private autoDetectUiType(dataType: FieldType, format?: SemanticFormat): string {
+    // Format-specific overrides
+    if (format) {
+      switch (format) {
+        case "email": return "email-input";
+        case "phone": return "phone-input";
+        case "url": return "url-input";
+        case "money": return "money-input";
+        case "percent": return "percent-input";
+        case "password": return "password-input";
+        case "color": return "color-picker";
+        case "markdown": return "markdown-editor";
+        case "html": return "rich-text-editor";
+        case "country": return "country-select";
+        case "timezone": return "timezone-select";
+        case "slug": return "slug-input";
+        case "ip_address": return "text";
+      }
+    }
+
+    // Data type defaults
+    switch (dataType) {
+      case "string": return "text";
+      case "text": return "textarea";
+      case "rich_text": return "rich-text-editor";
+      case "integer":
+      case "number":
+      case "decimal": return "number";
+      case "boolean": return "toggle";
+      case "date": return "datepicker";
+      case "datetime": return "datetimepicker";
+      case "reference": return "reference-picker";
+      case "enum": return "select";
+      case "json": return "json-editor";
+      case "uuid": return "text";
+      default: return "text";
+    }
+  }
+
+  /**
+   * Humanize a camelCase field name into a display label.
+   * "invoiceLineTotal" → "Invoice Line Total"
+   */
+  private humanize(name: string): string {
+    return name
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (s) => s.toUpperCase())
+      .trim();
   }
 
   private compilePolicy(policy: PolicyDefinition): CompiledPolicy {
@@ -970,7 +1293,10 @@ export class MetaCompilerService implements MetaCompiler {
       // ERROR: Unknown data type
       const validTypes = [
         "string",
+        "text",
+        "integer",
         "number",
+        "decimal",
         "boolean",
         "date",
         "datetime",
@@ -978,6 +1304,7 @@ export class MetaCompilerService implements MetaCompiler {
         "enum",
         "json",
         "uuid",
+        "rich_text",
       ];
       if (!validTypes.includes(field.type)) {
         diagnostics.push(
@@ -1042,6 +1369,119 @@ export class MetaCompilerService implements MetaCompiler {
           ),
         );
       }
+
+      // ERROR: Computed field without compute wiring
+      if (field.isComputed && (!field.computeMode || !field.computeExpr)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "ERROR",
+            "computed_missing_wiring",
+            `Computed field '${field.name}' missing computeMode or computeExpr`,
+            field.name,
+          ),
+        );
+      }
+
+      // ERROR: Non-computed field with stale compute wiring
+      if (!field.isComputed && (field.computeMode || field.computeExpr)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "ERROR",
+            "non_computed_has_wiring",
+            `Non-computed field '${field.name}' has stale computeMode/computeExpr`,
+            field.name,
+          ),
+        );
+      }
+
+      // ERROR: cardinality=many without child entity wiring
+      if (field.cardinality === "many" && (!field.childEntityName || !field.childFkField)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "ERROR",
+            "many_missing_wiring",
+            `Collection field '${field.name}' (cardinality=many) missing childEntityName or childFkField`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Deprecated field
+      if (field.isDeprecated) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "field_deprecated",
+            `Field '${field.name}' is deprecated`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Reference field without referenceConfig or referenceTo
+      if (field.type === "reference" && !field.referenceConfig && !field.referenceTo) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "reference_no_config",
+            `Reference field '${field.name}' has no referenceConfig or referenceTo`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Enum field without enumConfig or enumValues
+      if (field.type === "enum" && !field.enumConfig && (!field.enumValues || field.enumValues.length === 0)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "enum_no_config",
+            `Enum field '${field.name}' has no enumConfig or enumValues`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Enum config with duplicate values
+      if (field.enumConfig?.values && Array.isArray(field.enumConfig.values)) {
+        const seen = new Set<string>();
+        const dupes: string[] = [];
+        for (const entry of field.enumConfig.values) {
+          const val = typeof entry === "string" ? entry : (entry as Record<string, unknown>)?.value;
+          if (typeof val === "string") {
+            if (seen.has(val)) dupes.push(val);
+            seen.add(val);
+          }
+        }
+        if (dupes.length > 0) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "ERROR",
+              "enum_duplicate_values",
+              `Enum field '${field.name}' has duplicate values: [${dupes.join(", ")}]`,
+              field.name,
+            ),
+          );
+        }
+      }
+
+      // WARN: Empty enum values in enumConfig
+      if (field.enumConfig?.values && Array.isArray(field.enumConfig.values)) {
+        const hasEmpty = field.enumConfig.values.some((entry: unknown) => {
+          const val = typeof entry === "string" ? entry : (entry as Record<string, unknown>)?.value;
+          return val === "" || val === null || val === undefined;
+        });
+        if (hasEmpty) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "enum_empty_value",
+              `Enum field '${field.name}' has empty/null values in enumConfig`,
+              field.name,
+            ),
+          );
+        }
+      }
     }
 
     // Check policies
@@ -1082,7 +1522,571 @@ export class MetaCompilerService implements MetaCompiler {
       }
     }
 
+    // ── Legacy/new field overlap diagnostics ──
+    for (const field of schema.fields || []) {
+      // WARN: is_required conflicts with constraints.required / constraints.nullable
+      if (field.constraints) {
+        const c = field.constraints;
+        if (field.required && c.nullable === true) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "ERROR",
+              "required_nullable_conflict",
+              `Field '${field.name}': is_required=true but constraints.nullable=true — contradictory`,
+              field.name,
+            ),
+          );
+        }
+        if (c.required !== undefined && field.required !== c.required) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "required_constraints_mismatch",
+              `Field '${field.name}': required=${field.required} but constraints.required=${c.required} — prefer constraints as canonical source`,
+              field.name,
+            ),
+          );
+        }
+      }
+
+      // WARN: Legacy validation fields alongside constraints
+      const hasLegacyValidation = field.minLength !== undefined || field.maxLength !== undefined
+        || field.pattern !== undefined || field.min !== undefined || field.max !== undefined;
+      if (hasLegacyValidation && field.constraints) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "legacy_validation_overlap",
+            `Field '${field.name}' has both legacy validation fields (min/max/pattern/minLength/maxLength) and constraints — prefer constraints as canonical source`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Legacy enum values alongside enumConfig
+      if (field.enumValues && field.enumValues.length > 0 && field.enumConfig) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "legacy_enum_overlap",
+            `Field '${field.name}' has both legacy enumValues and enumConfig — prefer enumConfig`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Legacy referenceTo alongside referenceConfig
+      if (field.referenceTo && field.referenceConfig) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "legacy_reference_overlap",
+            `Field '${field.name}' has both legacy referenceTo and referenceConfig — prefer referenceConfig.entity`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Legacy UI hints alongside structured ui
+      const hasLegacyUi = field.placeholder !== undefined || field.helpText !== undefined;
+      if (hasLegacyUi && field.ui) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "legacy_ui_overlap",
+            `Field '${field.name}' has both legacy UI hints (placeholder/helpText) and ui — prefer ui`,
+            field.name,
+          ),
+        );
+      }
+
+      // ── Deprecation warnings: legacy properties without canonical replacement ──
+
+      // WARN: Legacy validation fields present without structured constraints
+      const hasLegacyConstraintFields = field.minLength !== undefined || field.maxLength !== undefined
+        || field.pattern !== undefined || field.min !== undefined || field.max !== undefined;
+      if (hasLegacyConstraintFields && !field.constraints) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "deprecated_validation_no_constraints",
+            `Field '${field.name}' uses legacy validation fields (min/max/pattern/minLength/maxLength) without structured 'constraints'. Migrate to constraints for type-safe enforcement.`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Legacy referenceTo without referenceConfig
+      if (field.referenceTo && !field.referenceConfig) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "deprecated_reference_to",
+            `Field '${field.name}' uses deprecated 'referenceTo' without 'referenceConfig'. Migrate FK wiring to referenceConfig + lookupProfile.`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: Legacy placeholder/helpText without ui hint
+      if ((field.placeholder || field.helpText) && !field.ui) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "deprecated_ui_fields",
+            `Field '${field.name}' uses legacy placeholder/helpText without structured 'ui' hint. Migrate to ui.placeholder / ui.helpText.`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: required=true without constraints.required (should be consistent)
+      if (field.required && field.constraints && field.constraints.required === undefined) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "requiredness_not_in_constraints",
+            `Field '${field.name}' has required=true but constraints.required is not set. Add required:true to constraints for consistency.`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: format='money' without moneyConfig
+      if (field.format === "money" && !field.moneyConfig) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "money_format_no_config",
+            `Field '${field.name}' has format='money' but no moneyConfig — currency and rounding behavior undefined`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: is_sortable on json/rich_text (no natural ordering)
+      if (field.isSortable && (field.type === "json" || field.type === "rich_text")) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "sortable_unsupported_type",
+            `Field '${field.name}' has isSortable=true but type='${field.type}' has no natural sort order`,
+            field.name,
+          ),
+        );
+      }
+
+      // WARN: is_aggregatable on non-numeric/unsupported types
+      if (field.isAggregatable && ["json", "rich_text", "boolean"].includes(field.type)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "aggregatable_unsupported_type",
+            `Field '${field.name}' has isAggregatable=true but type='${field.type}' does not support aggregation`,
+            field.name,
+          ),
+        );
+      }
+
+      // ── Relationship wiring consistency ──
+
+      // ERROR: cardinality=many + relationshipKind mismatch
+      if (field.cardinality === "many" && field.referenceConfig) {
+        const rc = field.referenceConfig;
+        if (rc.relationshipKind && rc.relationshipKind !== "one-to-many" && rc.relationshipKind !== "many-to-many") {
+          diagnostics.push(
+            this.createDiagnostic(
+              "ERROR",
+              "cardinality_relationship_mismatch",
+              `Field '${field.name}': cardinality=many but referenceConfig.relationshipKind='${rc.relationshipKind}' — expected one-to-many or many-to-many`,
+              field.name,
+            ),
+          );
+        }
+      }
+
+      // WARN: child_entity_name set but referenceConfig.entity points elsewhere
+      if (field.childEntityName && field.referenceConfig?.entity) {
+        if (field.childEntityName !== field.referenceConfig.entity) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "child_entity_reference_mismatch",
+              `Field '${field.name}': childEntityName='${field.childEntityName}' but referenceConfig.entity='${field.referenceConfig.entity}' — potential inconsistency`,
+              field.name,
+            ),
+          );
+        }
+      }
+
+      // WARN: cardinality=one but has collection_behavior
+      if (field.cardinality !== "many" && field.collectionBehavior) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "scalar_with_collection_behavior",
+            `Field '${field.name}' has cardinality='one' but collectionBehavior is set — collectionBehavior only applies to many-cardinality fields`,
+            field.name,
+          ),
+        );
+      }
+
+      // ── Collection semantic consistency checks (Recommendation 14) ──
+      if (field.cardinality === "many" && field.collectionBehavior) {
+        const cb = field.collectionBehavior;
+
+        // WARN: ownership='owned' + deleteMode='detach' is contradictory
+        if (cb.ownership === "owned" && cb.deleteMode === "detach") {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "collection_owned_detach",
+              `Field '${field.name}': ownership='owned' with deleteMode='detach' — owned children should cascade or restrict, not detach`,
+              field.name,
+            ),
+          );
+        }
+
+        // WARN: persistenceMode='reference_only' with owned children is suspicious
+        if (cb.ownership === "owned" && cb.persistenceMode === "reference_only") {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "collection_owned_reference_only",
+              `Field '${field.name}': ownership='owned' with persistenceMode='reference_only' — owned children are typically managed inline`,
+              field.name,
+            ),
+          );
+        }
+
+        // WARN: editorStyle='tags' only valid for simple linked references
+        if (cb.editorStyle === "tags" && cb.ownership === "owned") {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "collection_tags_owned",
+              `Field '${field.name}': editorStyle='tags' is designed for simple linked references, not owned children`,
+              field.name,
+            ),
+          );
+        }
+
+        // ERROR: minItems > maxItems
+        if (cb.minItems != null && cb.maxItems != null && cb.minItems > cb.maxItems) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "ERROR",
+              "collection_min_exceeds_max",
+              `Field '${field.name}': minItems (${cb.minItems}) exceeds maxItems (${cb.maxItems})`,
+              field.name,
+            ),
+          );
+        }
+
+        // WARN: ordering=true without orderField
+        if (cb.ordering && !cb.orderField) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "collection_ordering_no_field",
+              `Field '${field.name}': ordering=true but no orderField specified — will default to 'sort_order' which may not exist on the child entity`,
+              field.name,
+            ),
+          );
+        }
+
+        // WARN: allowDuplicates on owned children makes no sense
+        if (cb.ownership === "owned" && cb.allowDuplicates) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "collection_owned_duplicates",
+              `Field '${field.name}': allowDuplicates=true on ownership='owned' — owned children are unique by identity`,
+              field.name,
+            ),
+          );
+        }
+      }
+
+      // WARN: lookup_profile.orderBy might not be indexed
+      if (field.lookupProfile) {
+        const lp = field.lookupProfile;
+        if (lp.orderBy) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "INFO",
+              "lookup_orderby_index_check",
+              `Field '${field.name}': lookupProfile.orderBy='${lp.orderBy}' — ensure this column is indexed on the target entity for performance`,
+              field.name,
+            ),
+          );
+        }
+      }
+    }
+
+    // ── Lookup system diagnostics (044) ──
+    const fieldNames = new Set((schema.fields || []).map((f) => f.name));
+
+    for (const field of schema.fields || []) {
+      if (field.type !== "reference") continue;
+
+      // WARN: Reference field with no search fields configured
+      const refConfig = field.referenceConfig as Record<string, unknown> | undefined;
+      const lookupProfile = field.lookupProfile as Record<string, unknown> | undefined;
+      const hasSearchFields =
+        (lookupProfile?.searchFields && Array.isArray(lookupProfile.searchFields) && (lookupProfile.searchFields as unknown[]).length > 0) ||
+        (refConfig?.searchFields && Array.isArray(refConfig.searchFields) && (refConfig.searchFields as unknown[]).length > 0);
+
+      if (!hasSearchFields) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "reference_missing_search_fields",
+            `Reference field '${field.name}' has no searchFields defined in lookupProfile or referenceConfig`,
+            field.name,
+          ),
+        );
+      }
+
+      // ERROR: Display template references unknown fields (basic check)
+      const displayTemplate = (lookupProfile?.displayTemplate as string | undefined);
+      if (displayTemplate) {
+        const templateTokens = displayTemplate.match(/\{\{([a-zA-Z0-9_]+)\}\}/g) ?? [];
+        for (const token of templateTokens) {
+          const tokenField = token.replace(/\{\{|\}\}/g, "");
+          // Note: we can only validate against the current entity's fields here,
+          // not the target entity's fields (that requires registry lookup)
+          if (field.referenceTo && !fieldNames.has(tokenField)) {
+            diagnostics.push(
+              this.createDiagnostic(
+                "INFO",
+                "reference_display_template_token",
+                `Display template for '${field.name}' references '${tokenField}' — ensure it exists on target entity '${field.referenceTo}'`,
+                field.name,
+                { template: displayTemplate, token: tokenField },
+              ),
+            );
+          }
+        }
+      }
+
+      // WARN: allowCreateInline without explicit security consideration
+      if (refConfig?.allowCreateInline === true) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "reference_allow_create_inline_without_permission",
+            `Reference field '${field.name}' allows inline creation — ensure target entity '${field.referenceTo}' has appropriate create permissions`,
+            field.name,
+            { targetEntity: field.referenceTo },
+          ),
+        );
+      }
+    }
+
+    // ── Computed field dependency governance ──
+    this.validateComputeDependencyGraph(schema, fieldNames, diagnostics);
+
     return diagnostics;
+  }
+
+  /**
+   * Validate computed field dependency graph.
+   * - Builds DAG from dependsOn across all computed fields
+   * - Topological sort to detect cycles
+   * - Validates all references resolve to real fields
+   * - Validates formula expressions match declared dependsOn
+   * - Validates system compute functions are in allowlist
+   * - Checks materialized governance completeness
+   */
+  private validateComputeDependencyGraph(
+    schema: EntitySchema,
+    fieldNames: Set<string>,
+    diagnostics: CompileDiagnostic[],
+  ): void {
+    const computedFields = (schema.fields || []).filter(
+      (f) => f.isComputed && f.computeExpr,
+    );
+    if (computedFields.length === 0) return;
+
+    // --- Per-field validation ---
+    for (const field of computedFields) {
+      const expr = field.computeExpr!;
+
+      // Validate dependsOn references exist
+      if (expr.dependsOn) {
+        for (const dep of expr.dependsOn) {
+          if (!fieldNames.has(dep)) {
+            diagnostics.push(
+              this.createDiagnostic(
+                "ERROR",
+                "computed_unknown_dependency",
+                `Computed field '${field.name}' depends on unknown field '${dep}'`,
+                field.name,
+                { dependency: dep },
+              ),
+            );
+          }
+        }
+      }
+
+      // Formula: validate expr references match dependsOn
+      if (expr.type === "formula") {
+        const referencedFields = extractFormulaFieldRefs(expr.expr);
+        const declaredDeps = new Set(expr.dependsOn ?? []);
+        for (const ref of referencedFields) {
+          if (!declaredDeps.has(ref)) {
+            diagnostics.push(
+              this.createDiagnostic(
+                "ERROR",
+                "computed_depends_on_incomplete",
+                `Formula field '${field.name}' references '${ref}' in expr but it is not listed in dependsOn`,
+                field.name,
+                { missingDep: ref, expr: expr.expr },
+              ),
+            );
+          }
+        }
+      }
+
+      // System: validate expr is in allowlist
+      if (expr.type === "system") {
+        if (!SYSTEM_COMPUTE_FUNCTIONS.includes(expr.expr as any)) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "ERROR",
+              "computed_unknown_system_function",
+              `System compute field '${field.name}' uses unknown function '${expr.expr}'. Allowed: ${SYSTEM_COMPUTE_FUNCTIONS.join(", ")}`,
+              field.name,
+              { function: expr.expr },
+            ),
+          );
+        }
+      }
+
+      // Aggregate: validate aggregateOf is present
+      if (expr.type === "aggregate" && (!expr.aggregateOf || !expr.aggregateOp)) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "ERROR",
+            "computed_aggregate_incomplete",
+            `Aggregate field '${field.name}' missing aggregateOf or aggregateOp`,
+            field.name,
+          ),
+        );
+      }
+
+      // Materialized governance
+      if (field.computeMode === "materialized") {
+        if (!expr.recomputeTrigger) {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "computed_materialized_no_trigger",
+              `Materialized field '${field.name}' has no recomputeTrigger — value may become stale with no recompute strategy`,
+              field.name,
+            ),
+          );
+        }
+        if (expr.recomputeTrigger === "on_dependency_change" && expr.stalePolicy === "recompute_sync" && expr.type === "aggregate") {
+          diagnostics.push(
+            this.createDiagnostic(
+              "WARN",
+              "computed_sync_recompute_perf",
+              `Materialized aggregate field '${field.name}' uses recompute_sync — this is expensive as it runs within the write transaction`,
+              field.name,
+            ),
+          );
+        }
+      }
+    }
+
+    // --- Dependency graph cycle detection (topological sort) ---
+    const adjacency = new Map<string, string[]>();
+    const computedFieldNames = new Set<string>();
+
+    for (const field of computedFields) {
+      computedFieldNames.add(field.name);
+      const deps = (field.computeExpr!.dependsOn ?? []).filter((d) =>
+        computedFields.some((cf) => cf.name === d),
+      );
+      adjacency.set(field.name, deps);
+    }
+
+    // Kahn's algorithm for topological sort
+    const inDegree = new Map<string, number>();
+    for (const name of computedFieldNames) {
+      inDegree.set(name, 0);
+    }
+    for (const [, deps] of adjacency) {
+      for (const dep of deps) {
+        if (inDegree.has(dep)) {
+          inDegree.set(dep, (inDegree.get(dep) ?? 0) + 1);
+        }
+      }
+    }
+
+    const queue: string[] = [];
+    for (const [name, degree] of inDegree) {
+      if (degree === 0) queue.push(name);
+    }
+
+    const sorted: string[] = [];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      sorted.push(current);
+      for (const dep of adjacency.get(current) ?? []) {
+        if (inDegree.has(dep)) {
+          const newDegree = (inDegree.get(dep) ?? 1) - 1;
+          inDegree.set(dep, newDegree);
+          if (newDegree === 0) queue.push(dep);
+        }
+      }
+    }
+
+    if (sorted.length < computedFieldNames.size) {
+      const cycleFields = [...computedFieldNames].filter(
+        (n) => !sorted.includes(n),
+      );
+      diagnostics.push(
+        this.createDiagnostic(
+          "ERROR",
+          "computed_circular_dependency",
+          `Circular dependency detected among computed fields: ${cycleFields.join(" → ")}`,
+          cycleFields[0],
+          { involvedFields: cycleFields },
+        ),
+      );
+    }
+
+    // Warn on deep dependency chains (> 5 levels)
+    const MAX_DEPTH = 5;
+    const depthCache = new Map<string, number>();
+    const getDepth = (name: string, visited: Set<string>): number => {
+      if (depthCache.has(name)) return depthCache.get(name)!;
+      if (visited.has(name)) return 0; // cycle, already reported
+      visited.add(name);
+      const deps = adjacency.get(name) ?? [];
+      const depth = deps.length === 0
+        ? 0
+        : 1 + Math.max(...deps.map((d) => getDepth(d, visited)));
+      depthCache.set(name, depth);
+      return depth;
+    };
+    for (const name of computedFieldNames) {
+      const depth = getDepth(name, new Set());
+      if (depth > MAX_DEPTH) {
+        diagnostics.push(
+          this.createDiagnostic(
+            "WARN",
+            "computed_deep_chain",
+            `Computed field '${name}' has dependency chain depth ${depth} (threshold: ${MAX_DEPTH})`,
+            name,
+            { depth, threshold: MAX_DEPTH },
+          ),
+        );
+      }
+    }
   }
 
   /**
