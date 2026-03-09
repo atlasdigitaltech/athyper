@@ -481,6 +481,7 @@ function mapRowToInvoice(row: any): PurchaseInvoice {
     entityCode: row.entity_code,
     txnId: row.txn_id,
     invoiceNumber: row.invoice_number,
+    invoiceType: row.invoice_type ?? "NON_PO",
     supplierId: row.supplier_id,
     supplierInvoiceRef: row.supplier_invoice_ref ?? null,
     description: row.description ?? null,
