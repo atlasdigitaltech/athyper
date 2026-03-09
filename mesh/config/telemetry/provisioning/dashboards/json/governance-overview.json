@@ -1,0 +1,244 @@
+{
+  "uid": "athyper-governance",
+  "title": "Athyper Governance Overview",
+  "description": "Archive lifecycle, legal holds, quotas, privacy guard, and explainability metrics",
+  "tags": ["athyper", "governance", "compliance"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "tenant",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(gov_archive_job_backlog, tenant)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Archive Job Backlog",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "gov_archive_job_backlog", "legendFormat": "Backlog" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Held Manifests",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        { "expr": "gov_manifests_held", "legendFormat": "Held" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Active Legal Holds",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        { "expr": "gov_legal_holds_active", "legendFormat": "Active" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Purge-Ready Manifests",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "gov_manifests_purge_ready", "legendFormat": "Purge Ready" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Quota Breaches",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [
+        { "expr": "increase(gov_quota_breach_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Breaches (1h)" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Privacy Rejections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [
+        { "expr": "increase(gov_privacy_guard_rejected_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Rejected (1h)" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Archive Jobs Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "rate(gov_archive_jobs_completed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Completed/s" },
+        { "expr": "rate(gov_archive_jobs_failed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Failed/s" },
+        { "expr": "rate(gov_archive_jobs_queued_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Queued/s" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Legal Hold Events",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "increase(gov_legal_hold_created_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Created" },
+        { "expr": "increase(gov_legal_hold_released_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Released" },
+        { "expr": "increase(gov_legal_hold_overlap_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Overlaps" }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Quota Utilization by Key",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "gov_quota_utilization_pct{tenant=~\"$tenant\"}", "legendFormat": "{{ quota_key }}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "max": 120,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Privacy Guard Activity",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        { "expr": "rate(gov_privacy_guard_inspected_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Inspected/s" },
+        { "expr": "rate(gov_privacy_guard_redacted_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Redacted/s" },
+        { "expr": "rate(gov_privacy_guard_rejected_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Rejected/s" },
+        { "expr": "rate(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Warned/s" }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Explainability API Latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, rate(gov_explain_api_latency_ms[5m]))", "legendFormat": "p95 {{ type }}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 31,
+      "title": "Restore Request Workflow",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "increase(gov_restore_requested_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Requested" },
+        { "expr": "increase(gov_restore_approved_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Approved" },
+        { "expr": "increase(gov_restore_completed_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Completed" },
+        { "expr": "increase(gov_restore_failed_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Failed" }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Purge Certificates",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "targets": [
+        { "expr": "increase(gov_purge_certificate_issued_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Issued" },
+        { "expr": "increase(gov_purge_certificate_verified_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Verified" }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Quota Enforcement Decisions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "targets": [
+        { "expr": "rate(gov_quota_check_total{tenant=~\"$tenant\",allowed=\"true\"}[5m])", "legendFormat": "Allowed/s" },
+        { "expr": "rate(gov_quota_check_denied_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Denied/s" },
+        { "expr": "rate(gov_quota_fail_open_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Fail-Open/s" },
+        { "expr": "rate(gov_quota_fail_closed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Fail-Closed/s" }
+      ]
+    }
+  ]
+}

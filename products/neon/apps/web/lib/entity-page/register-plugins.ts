@@ -5,6 +5,7 @@
 // to make lifecycle + approvals tabs available.
 
 import { registerTabPlugin } from "./plugin-registry";
+import { accountingDetailsPlugin } from "./plugins/accounting-details-plugin";
 import { documentsTabPlugin } from "./plugins/documents-plugin";
 import {
   invoiceLinesPlugin,
@@ -12,6 +13,7 @@ import {
   paymentAllocationsPlugin,
   decisionScorePlugin,
 } from "./plugins/finance-plugin";
+import { relatedDocumentsPlugin } from "./plugins/related-documents-plugin";
 
 import { ApprovalsTab } from "@/components/entity-page/ApprovalsTab";
 import { LifecycleTab } from "@/components/entity-page/LifecycleTab";
@@ -39,4 +41,8 @@ export function registerBuiltInPlugins(): void {
   registerTabPlugin(journalLinesPlugin);
   registerTabPlugin(paymentAllocationsPlugin);
   registerTabPlugin(decisionScorePlugin);
+
+  // Cross-entity finance relationship tabs
+  registerTabPlugin(relatedDocumentsPlugin);
+  registerTabPlugin(accountingDetailsPlugin);
 }

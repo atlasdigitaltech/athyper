@@ -1,7 +1,7 @@
 // framework/runtime/src/services/business/engines/posting-engine/persistence/gl-balance-repo.ts
 
-import type { GLBalance } from "../domain/types.js";
-import type { TransactionContext } from "../services/posting-service.js";
+import type { GLBalance } from "../domain/types";
+import type { TransactionContext } from "../services/posting-service";
 
 export interface GLBalanceRepo {
   upsert(balance: Omit<GLBalance, "id" | "updatedAt">): Promise<GLBalance>;
@@ -38,5 +38,7 @@ export interface GLBalanceRepo {
     debitDelta: string,
     creditDelta: string,
     tx?: TransactionContext,
+    /** Resolved dimension set — new balance grain axis */
+    dimensionSetId?: string | null,
   ): Promise<void>;
 }

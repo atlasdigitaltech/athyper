@@ -1,6 +1,6 @@
 // framework/runtime/src/services/business/finance/accounting/domain/types.ts
 //
-// Domain types for Purchase Non-PO Invoice + Manual Journal Entry + GL Inquiry.
+// Domain types for Purchase Invoice + Manual Journal Entry + GL Inquiry.
 // MC-4 compliant: all monetary fields are string (DECIMAL in DB).
 
 import type { ApprovalRoute } from "../../shared/decision-grid-evaluator.js";
@@ -34,6 +34,7 @@ export interface PurchaseInvoice {
   entityCode: string;
   txnId: string;
   invoiceNumber: string;
+  invoiceType: "PO_BASED" | "NON_PO";
   supplierId: string;
   supplierInvoiceRef: string | null;
   description: string | null;

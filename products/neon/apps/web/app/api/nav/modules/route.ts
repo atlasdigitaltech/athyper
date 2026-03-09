@@ -84,31 +84,16 @@ const FALLBACK_TREE: NavTree = {
       sortOrder: 2,
       modules: [
         {
-          code: "core-accounting",
-          label: "Core Accounting",
-          icon: "Landmark",
+          code: "payables",
+          label: "Payables",
+          icon: "Receipt",
           sortOrder: 1,
-          requiredRole: "neon:MODULE:core-accounting",
+          requiredRole: "neon:MODULE:payables",
           entities: [
             {
-              slug: "account",
-              label: "Accounts",
-              icon: "BookOpen",
-              sortOrder: 1,
-            },
-          ],
-        },
-        {
-          code: "accounting",
-          label: "Accounting",
-          icon: "Calculator",
-          sortOrder: 2,
-          requiredRole: "neon:MODULE:accounting",
-          entities: [
-            {
-              slug: "invoice",
-              label: "Invoices",
-              icon: "Receipt",
+              slug: "purchase-invoice",
+              label: "Purchase Invoices",
+              icon: "FileText",
               sortOrder: 1,
             },
             {
@@ -118,9 +103,120 @@ const FALLBACK_TREE: NavTree = {
               sortOrder: 2,
             },
             {
+              slug: "supplier",
+              label: "Suppliers",
+              icon: "Building2",
+              sortOrder: 3,
+            },
+          ],
+        },
+        {
+          code: "general-ledger",
+          label: "General Ledger",
+          icon: "Landmark",
+          sortOrder: 2,
+          requiredRole: "neon:MODULE:general-ledger",
+          entities: [
+            {
+              slug: "account",
+              label: "Chart of Accounts",
+              icon: "BookOpen",
+              sortOrder: 1,
+            },
+            {
               slug: "journal-entry",
               label: "Journal Entries",
-              icon: "BookOpen",
+              icon: "ScrollText",
+              sortOrder: 2,
+            },
+            {
+              slug: "fiscal-period",
+              label: "Fiscal Periods",
+              icon: "Calendar",
+              sortOrder: 3,
+            },
+            {
+              slug: "cost-center",
+              label: "Cost Centers",
+              icon: "Building",
+              sortOrder: 4,
+            },
+          ],
+        },
+        {
+          code: "budgets",
+          label: "Budgets",
+          icon: "Wallet",
+          sortOrder: 3,
+          requiredRole: "neon:MODULE:budgets",
+          entities: [
+            {
+              slug: "funding-profile",
+              label: "Funding Profiles",
+              icon: "Wallet",
+              sortOrder: 1,
+            },
+          ],
+        },
+        {
+          code: "banking",
+          label: "Banking",
+          icon: "Banknote",
+          sortOrder: 4,
+          requiredRole: "neon:MODULE:banking",
+          entities: [
+            {
+              slug: "bank-statement",
+              label: "Bank Statements",
+              icon: "FileText",
+              sortOrder: 1,
+            },
+            {
+              slug: "bank-reconciliation",
+              label: "Reconciliation",
+              icon: "Scale",
+              sortOrder: 2,
+            },
+          ],
+        },
+        {
+          code: "assets",
+          label: "Assets",
+          icon: "HardDrive",
+          sortOrder: 5,
+          requiredRole: "neon:MODULE:assets",
+          entities: [
+            {
+              slug: "asset",
+              label: "Fixed Assets",
+              icon: "HardDrive",
+              sortOrder: 1,
+            },
+          ],
+        },
+        {
+          code: "reports",
+          label: "Reports",
+          icon: "BarChart3",
+          sortOrder: 6,
+          requiredRole: "neon:MODULE:reports",
+          entities: [
+            {
+              slug: "gl-report",
+              label: "GL Balance Report",
+              icon: "BarChart3",
+              sortOrder: 1,
+            },
+            {
+              slug: "financial-statements",
+              label: "Financial Statements",
+              icon: "FileText",
+              sortOrder: 2,
+            },
+            {
+              slug: "report-packs",
+              label: "Report Packs",
+              icon: "Layers",
               sortOrder: 3,
             },
           ],
@@ -138,14 +234,7 @@ const FALLBACK_TREE: NavTree = {
           icon: "Handshake",
           sortOrder: 1,
           requiredRole: "neon:MODULE:customer-experience",
-          entities: [
-            {
-              slug: "purchase-invoice",
-              label: "Purchase Invoices",
-              icon: "FileText",
-              sortOrder: 1,
-            },
-          ],
+          entities: [],
         },
       ],
     },

@@ -13,10 +13,24 @@ export interface EntitySummary {
     isActive: boolean;
     governanceLevel?: string;
     engineTag?: string | null;
+    entityClass?: string;
     currentVersion: VersionSummary | null;
     fieldCount: number;
     relationCount: number;
     updatedAt: string | null;
+    // Display metadata
+    labelSingular?: string | null;
+    labelPlural?: string | null;
+    description?: string | null;
+    iconKey?: string | null;
+    colorToken?: string | null;
+    // Data policy
+    dataPolicy?: Record<string, unknown> | null;
+    // Operational
+    publishedVersionId?: string | null;
+    lastCompiledAt?: string | null;
+    lastCompiledHash?: string | null;
+    lastSchemaChangeAt?: string | null;
 }
 
 export interface VersionSummary {

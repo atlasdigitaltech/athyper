@@ -86,7 +86,7 @@ function discoverSqlFiles(): SqlFile[] {
   for (const dir of directories) {
     const dirPath = join(sqlDir, dir);
     const files = readdirSync(dirPath)
-      .filter((f) => /^\d{3}_.+\.sql$/.test(f))
+      .filter((f) => /^\d{3}[a-z]?_.+\.sql$/.test(f))
       .sort();
 
     for (const fileName of files) {

@@ -3850,6 +3850,9 @@ export type EntityFeatureFlags = {
 
   /** Identity config for how this entity presents itself in lookups */
   identity?: IdentityConfig;
+
+  /** Governed versioning policy (controls draft/approve/effective flow) */
+  versioning_policy?: VersioningPolicy;
 };
 
 /**
@@ -3862,6 +3865,7 @@ export const DEFAULT_ENTITY_FEATURE_FLAGS: Required<EntityFeatureFlags> = {
   effective_dating_enabled: false,
   versioning_mode: "none",
   identity: undefined as unknown as IdentityConfig,
+  versioning_policy: undefined as unknown as VersioningPolicy,
 };
 
 // ============================================================================
@@ -4049,6 +4053,374 @@ export type GateDecision = {
     passed: boolean;
     reason?: string;
   }>;
+};
+
+// ============================================================================
+// Governed Versioning Types
+// ============================================================================
+
+/**
+ * Version status for governed entity versions.
+ * Distinct from lifecycle state — lifecycle handles workflow,
+ * version status handles publication/deployment semantics.
+ */
+export type VersionStatus =
+  | "draft"       // editable working copy
+  | "in_review"   // submitted for approval, locked for edits
+  | "approved"    // approval complete, not yet effective
+  | "effective"   // live/active version
+  | "superseded"  // replaced by newer effective version
+  | "archived"    // historical, no longer relevant
+  | "rejected"    // review/approval failed
+  | "withdrawn"   // submitter canceled before approval completed
+  | "published";  // backward compat (migrating to 'effective')
+
+/**
+ * Change classification for version diffs.
+ */
+export type VersionChangeType = "minor" | "major" | "breaking" | "editorial";
+
+/**
+ * Versioning policy stored in meta.entity.feature_flags.versioning_policy.
+ * Controls how version governance behaves per entity type.
+ */
+export type VersioningPolicy = {
+  /** Versioning rigor level */
+  mode: "none" | "simple" | "governed";
+
+  /** What happens when editing an approved/effective version */
+  editAfterApproval: "clone_new_draft" | "blocked" | "direct_edit";
+
+  /** Maximum concurrent draft versions per entity (typically 1) */
+  maxConcurrentDrafts: number;
+
+  /** Whether approval workflow is required for publish/activate */
+  approvalRequired: boolean;
+
+  /** Whether effective dating (future activation) is enabled */
+  effectiveDating: boolean;
+
+  /** Automatically archive superseded versions */
+  autoArchiveSuperseded: boolean;
+
+  /** Allow rollback to previous effective version */
+  allowRollback: boolean;
+
+  /** Lifecycle code to use for version workflow */
+  lifecycleCode?: string;
+};
+
+/**
+ * Default versioning policy.
+ */
+export const DEFAULT_VERSIONING_POLICY: VersioningPolicy = {
+  mode: "simple",
+  editAfterApproval: "clone_new_draft",
+  maxConcurrentDrafts: 1,
+  approvalRequired: false,
+  effectiveDating: false,
+  autoArchiveSuperseded: true,
+  allowRollback: false,
+};
+
+/**
+ * Lifecycle transition hook timing.
+ */
+export type HookTiming = "on_enter" | "on_exit" | "on_success" | "on_failure";
+
+/**
+ * Lifecycle transition hook action.
+ * These are the configurable actions that can fire after a transition.
+ *
+ * BuiltInHookAction is the closed set of actions handled by the switch/case
+ * in LifecycleManagerService.  HookAction is open to allow registry-based
+ * extensibility (Phase 2: Action Registry).
+ */
+export type BuiltInHookAction =
+  | "freeze_version"
+  | "mark_version_approved"
+  | "promote_to_effective"
+  | "archive_previous_effective"
+  | "spawn_next_draft"
+  | "update_version_status"
+  | "emit_event"
+  | "notify"
+  | "cancel_approval"
+  | "schedule_activation"
+  // Finance document actions (previously orphaned by closed CHECK constraint)
+  | "lock_document"
+  | "unlock_document"
+  | "sync_document_registry"
+  | "create_journal_entry"
+  | "create_reversal_entry";
+
+/**
+ * Open hook action type — includes built-in actions and any registered custom actions.
+ * The `(string & {})` branch allows custom action keys without losing autocomplete.
+ */
+export type HookAction = BuiltInHookAction | (string & {});
+
+// ── Hook Governance Types ──────────────────────────────────────────────────
+
+/**
+ * Hook origin: who owns this hook.
+ *
+ * - `system`:  Platform-shipped hook, seeded by framework. Immutable origin.
+ * - `tenant`:  Customer-defined hook. Sort order range: 1000–1999.
+ * - `overlay`: Created via governed overlay change. Requires overlay_id.
+ */
+export type HookOrigin = "system" | "tenant" | "overlay";
+
+/**
+ * Hook contract role — determines structural overridability.
+ *
+ * - `contract`:  Enforces a locked invariant or engine boundary behavior.
+ *                Non-overridable by any layer (tenant or overlay).
+ *                Must be system-origin. Cannot be deactivated or deleted.
+ *                Examples: version freeze, promote_to_effective, lineage archival.
+ *
+ * - `extension`: Adds notifications, derived actions, integration side effects,
+ *                or advisory enrichment. Subject to safety_level governance.
+ *                Examples: notify, emit_event (non-governance), schedule_activation.
+ */
+export type HookContractRole = "contract" | "extension";
+
+/**
+ * Hook safety level — governs what tenant/overlay overrides can do.
+ * Only meaningful for extension hooks (contract hooks are non-overridable).
+ *
+ * - `narrowable`:   Override can add restrictions/actions, never remove system ones.
+ *                   suppress is blocked; only extend is allowed.
+ * - `replaceable`:  Tenant/overlay can fully replace or suppress this hook.
+ */
+export type HookSafetyLevel = "narrowable" | "replaceable";
+
+/**
+ * Deterministic layer rank values — locked to origin.
+ * Controls execution order: system hooks run first, then tenant, then overlay.
+ */
+export const HOOK_LAYER_RANK: Record<HookOrigin, number> = {
+  system: 10,
+  tenant: 20,
+  overlay: 30,
+} as const;
+
+/**
+ * Canonical hook action safety policy.
+ *
+ * Maps built-in actions to their default contract_role and safety_level.
+ * Used by seed backfill and by the admin API to classify new hook registrations.
+ *
+ * This is the hook equivalent of FIELD_OVERLAY_SAFETY for fields.
+ */
+export const HOOK_ACTION_SAFETY: Record<
+  string,
+  { contractRole: HookContractRole; safetyLevel: HookSafetyLevel }
+> = {
+  // ── Contract hooks — enforce locked invariants ──
+  freeze_version:             { contractRole: "contract",  safetyLevel: "narrowable"  },
+  mark_version_approved:      { contractRole: "contract",  safetyLevel: "narrowable"  },
+  promote_to_effective:       { contractRole: "contract",  safetyLevel: "narrowable"  },
+  archive_previous_effective: { contractRole: "contract",  safetyLevel: "narrowable"  },
+
+  // ── Narrowable extensions — can add, cannot remove ──
+  emit_event:                 { contractRole: "extension", safetyLevel: "narrowable"  },
+  notify:                     { contractRole: "extension", safetyLevel: "narrowable"  },
+  cancel_approval:            { contractRole: "extension", safetyLevel: "narrowable"  },
+
+  // ── Replaceable extensions — tenant can fully override ──
+  update_version_status:      { contractRole: "extension", safetyLevel: "replaceable" },
+  spawn_next_draft:           { contractRole: "extension", safetyLevel: "replaceable" },
+  schedule_activation:        { contractRole: "extension", safetyLevel: "replaceable" },
+
+  // ── Finance document actions — narrowable extensions ──
+  lock_document:              { contractRole: "extension", safetyLevel: "narrowable"  },
+  unlock_document:            { contractRole: "extension", safetyLevel: "narrowable"  },
+  sync_document_registry:     { contractRole: "extension", safetyLevel: "narrowable"  },
+  create_journal_entry:       { contractRole: "extension", safetyLevel: "narrowable"  },
+  create_reversal_entry:      { contractRole: "extension", safetyLevel: "narrowable"  },
+};
+
+/**
+ * Lifecycle transition hook definition.
+ */
+export type LifecycleTransitionHook = {
+  id: string;
+  tenantId: string;
+  transitionId: string;
+  timing: HookTiming;
+  action: HookAction;
+  config?: Record<string, unknown>;
+  sortOrder: number;
+  isActive: boolean;
+
+  // ── Governance (Phase 1: Foundation) ──
+  origin: HookOrigin;
+  layerRank: number;
+  contractRole: HookContractRole;
+  safetyLevel: HookSafetyLevel;
+  overlayId?: string;
+
+  createdAt: Date;
+  createdBy: string;
+};
+
+// ── Hook Action Registry (Phase 2) ──────────────────────────────────────────
+
+/**
+ * Handler type for a registered hook action.
+ *
+ * - `built_in`:   Dispatched via switch/case in LifecycleManagerService.
+ * - `emit_event`: Publishes a domain event to MetaEventBus / outbox.
+ *
+ * External integrations (webhooks, scripts) are NOT handler types —
+ * they route through EventGateway → wf.outbox → DeliveryScheduler.
+ */
+export type HookHandlerType = "built_in" | "emit_event";
+
+/**
+ * A registered hook action in `meta.hook_action_registry`.
+ */
+export type HookActionRegistration = {
+  id: string;
+  tenantId: string | null;
+  actionKey: string;
+  origin: "system" | "tenant";
+  label: string;
+  description?: string;
+  handlerType: HookHandlerType;
+  handlerConfig?: Record<string, unknown>;
+  defaultContractRole: HookContractRole;
+  defaultSafetyLevel: HookSafetyLevel;
+  isActive: boolean;
+  createdAt: Date;
+  createdBy: string;
+};
+
+// ── Hook Override Directives (Phase 3) ──────────────────────────────────────
+
+/**
+ * Override operation type.
+ *
+ * - `suppress`:    Skip the target hook entirely. Blocked for narrowable hooks.
+ * - `replace`:     Execute replacement_action instead. Blocked for narrowable hooks.
+ * - `add_before`:  Inject a new action before the target hook.
+ * - `add_after`:   Inject a new action after the target hook.
+ */
+export type HookOverrideKind = "suppress" | "replace" | "add_before" | "add_after";
+
+/**
+ * A hook override directive in `meta.lifecycle_hook_override`.
+ * Resolved at runtime by the hook resolution engine.
+ */
+export type HookOverrideDirective = {
+  id: string;
+  tenantId: string;
+  targetHookId: string;
+  overrideKind: HookOverrideKind;
+  replacementAction?: string;
+  replacementConfig?: Record<string, unknown>;
+  sortOrder: number;
+  reason?: string;
+  isActive: boolean;
+  createdAt: Date;
+  createdBy: string;
+};
+
+// ── Hook Resolution Plan (Phase 3: Resolve-then-Execute) ────────────────────
+
+/**
+ * A single node in a resolved hook execution plan.
+ * Produced by the pure resolver, consumed by the executor.
+ */
+export type HookPlanNode = {
+  /** Source hook ID (null for injected add_before/add_after nodes) */
+  sourceHookId: string | null;
+  /** The action to execute */
+  action: HookAction;
+  /** Action-specific config */
+  config: Record<string, unknown> | null;
+  /** Origin of the hook (for diagnostics) */
+  origin: HookOrigin;
+  /** Layer rank (deterministic ordering) */
+  layerRank: number;
+  /** Sort order within layer */
+  sortOrder: number;
+  /** Whether this node was modified by an override */
+  overrideApplied?: HookOverrideKind;
+  /** Override ID that modified this node (for audit) */
+  overrideId?: string;
+};
+
+/**
+ * A resolved hook execution plan.
+ * Contains the ordered list of actions to execute for a single transition+timing.
+ */
+export type HookExecutionPlan = {
+  transitionId: string;
+  timing: HookTiming;
+  nodes: HookPlanNode[];
+  /** Diagnostics: hooks that were suppressed */
+  suppressed: Array<{ hookId: string; overrideId: string; reason?: string }>;
+  /** Diagnostics: hooks that were replaced */
+  replaced: Array<{
+    hookId: string;
+    originalAction: string;
+    replacementAction: string;
+    overrideId: string;
+  }>;
+};
+
+/**
+ * Request to revise an existing version (create new draft from approved/effective).
+ */
+export type ReviseVersionRequest = {
+  /** Entity ID (document root) */
+  entityId: string;
+
+  /** Version to base the new draft on (typically the effective version) */
+  basedOnVersionId: string;
+
+  /** Description of what will change */
+  changeSummary?: string;
+
+  /** Change classification */
+  changeType?: VersionChangeType;
+
+  /** Request context */
+  ctx: RequestContext;
+};
+
+/**
+ * Result of a reviseVersion operation.
+ */
+export type ReviseVersionResult = {
+  success: boolean;
+
+  /** The newly created draft version */
+  newVersion?: {
+    id: string;
+    versionNo: number;
+    status: VersionStatus;
+  };
+
+  /** Error message if failed */
+  error?: string;
+};
+
+/**
+ * Result of promoting a version to effective.
+ */
+export type PromoteVersionResult = {
+  success: boolean;
+
+  /** The version that became effective */
+  effectiveVersionId?: string;
+
+  /** The version that was superseded (if any) */
+  supersededVersionId?: string;
+
+  error?: string;
 };
 
 // Note: All types are already exported inline above

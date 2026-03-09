@@ -3,11 +3,8 @@
 // lib/finance/use-decision-score.ts
 //
 // Data-fetching hook for the Decision Grid evaluation of a finance document.
-// The decision score is typically embedded in the entity detail response
-// under a `decisionEvaluation` key. This hook fetches the entity detail
-// and parses out the evaluation.
-//
-// GET /api/fin/:docType/:docId -> { ..., decisionEvaluation?: DecisionEvaluationDTO }
+// Fetches entity detail from /api/data/:entity/:id and extracts the
+// decision_score and approval_route fields.
 //
 // Follows the same useState + useEffect + useCallback + AbortController
 // pattern established in use-entity-data.ts.
@@ -18,24 +15,6 @@ import { FinanceHttpError } from "./errors";
 import { finGet } from "./fetcher";
 
 import type { DecisionEvaluationDTO } from "./types";
-
-// ---------------------------------------------------------------------------
-// The entity detail response shape (only the decision fields we need)
-// ---------------------------------------------------------------------------
-
-interface EntityDetailWithDecision {
-  decisionEvaluation?: DecisionEvaluationDTO | null;
-}
-
-// ---------------------------------------------------------------------------
-// Mapping from docType to the API path segment
-// ---------------------------------------------------------------------------
-
-const DOC_TYPE_PATH: Record<string, string> = {
-  "purchase-invoice": "purchase-invoices",
-  "payment-entry": "payments",
-  "journal-entry": "journal-entries",
-};
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -81,16 +60,28 @@ export function useDecisionScore(
     setError(null);
 
     try {
-      const pathSegment = DOC_TYPE_PATH[docType] ?? docType;
-      const url = `/api/fin/${encodeURIComponent(pathSegment)}/${encodeURIComponent(docId)}`;
-      const data = await finGet<EntityDetailWithDecision>(
+      // Fetch the entity detail from the generic data API
+      const url = `/api/data/${encodeURIComponent(docType)}/${encodeURIComponent(docId)}`;
+      const data = await finGet<Record<string, unknown>>(
         url,
         controller.signal,
       );
 
       if (controller.signal.aborted) return;
 
-      setEvaluation(data.decisionEvaluation ?? null);
+      // Extract decision fields from the raw entity record
+      const decisionScore = data.decision_score;
+      if (decisionScore == null) {
+        // Entity doesn't have a decision_score field — not an error
+        setEvaluation(null);
+      } else {
+        setEvaluation({
+          compositeScore: Number(decisionScore),
+          approvalRoute: (data.approval_route as string) ?? "standard",
+          pipelineId: (data.id as string) ?? docId,
+          exceptions: [],
+        });
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       if (controller.signal.aborted) return;

@@ -1,0 +1,182 @@
+# ============================================================================
+# Athyper Governance Alert Rules
+# Prometheus alerting rules for the governance subsystem.
+#
+# Targets: archive backlog, legal holds, quotas, privacy, explainability
+# Grafana datasource: Prometheus (default)
+# ============================================================================
+
+groups:
+  - name: governance_archive
+    interval: 30s
+    rules:
+      - alert: ArchiveJobBacklogHigh
+        expr: gov_archive_job_backlog > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Archive job backlog is high ({{ $value }} pending)"
+          description: "The archive job queue has exceeded 100 pending jobs for 5+ minutes. Check archiver worker health."
+
+      - alert: ArchiveJobBacklogCritical
+        expr: gov_archive_job_backlog > 500
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Archive job backlog is critical ({{ $value }} pending)"
+          description: "The archive job queue has exceeded 500 pending jobs. Immediate investigation required."
+
+      - alert: ArchiveJobFailureRate
+        expr: rate(gov_archive_jobs_failed_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Archive job failure rate elevated"
+          description: "Archive jobs are failing at >0.1/s for 3+ minutes."
+
+  - name: governance_legal_holds
+    interval: 30s
+    rules:
+      - alert: LegalHoldCreated
+        expr: increase(gov_legal_hold_created_total[5m]) > 0
+        labels:
+          severity: info
+          team: compliance
+        annotations:
+          summary: "New legal hold created"
+          description: "A new legal hold was issued (source={{ $labels.source }}, scope={{ $labels.scope }}). Retention/tiering frozen for affected scope."
+
+      - alert: LegalHoldReleased
+        expr: increase(gov_legal_hold_released_total[5m]) > 0
+        labels:
+          severity: info
+          team: compliance
+        annotations:
+          summary: "Legal hold released"
+          description: "A legal hold was released (source={{ $labels.source }}). Affected manifests may now be eligible for lifecycle transitions."
+
+      - alert: HighHeldManifestCount
+        expr: gov_manifests_held > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: compliance
+        annotations:
+          summary: "Large number of held manifests ({{ $value }})"
+          description: "Over 100 archive manifests are under legal hold. Review hold scopes for potential over-retention."
+
+      - alert: LegalHoldOverlapDetected
+        expr: increase(gov_legal_hold_overlap_total[1h]) > 5
+        labels:
+          severity: warning
+          team: compliance
+        annotations:
+          summary: "Frequent legal hold overlaps detected"
+          description: "Multiple holds covering the same scope detected. Review hold management for conflicts."
+
+  - name: governance_quotas
+    interval: 15s
+    rules:
+      - alert: QuotaBreached
+        expr: increase(gov_quota_breach_total[5m]) > 0
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Quota breach detected ({{ $labels.quota_key }})"
+          description: "Tenant {{ $labels.tenant }} has breached quota {{ $labels.quota_key }}."
+
+      - alert: QuotaUtilizationHigh
+        expr: gov_quota_utilization_pct > 90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Quota utilization >90% ({{ $labels.quota_key }})"
+          description: "Tenant {{ $labels.tenant }} quota {{ $labels.quota_key }} at {{ $value }}%. Consider limit increase or usage review."
+
+      - alert: QuotaFailClosedSpike
+        expr: rate(gov_quota_fail_closed_total[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Quota enforcement failing closed at high rate"
+          description: "Quota checks are failing closed (rejecting requests due to enforcement errors) at >0.5/s. Users may be blocked."
+
+  - name: governance_privacy
+    interval: 30s
+    rules:
+      - alert: PrivacyGuardRejectionSpike
+        expr: rate(gov_privacy_guard_rejected_total[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Privacy guard rejecting events at high rate"
+          description: "The privacy guard is rejecting >1 event/s due to PII violations. Check event producers for PII leaks."
+
+      - alert: PrivacyGuardRedactionRate
+        expr: rate(gov_privacy_guard_redacted_total[5m]) / rate(gov_privacy_guard_inspected_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Over 50% of events require PII redaction"
+          description: "High redaction rate may indicate missing privacy controls at the source."
+
+  - name: governance_explainability
+    interval: 30s
+    rules:
+      - alert: ExplainApiErrorRate
+        expr: rate(gov_explain_api_errors_total[5m]) / rate(gov_explain_api_calls_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Explainability API error rate >10%"
+          description: "The governance explain API is returning errors at >10%. Admin dashboards may show stale data."
+
+      - alert: ExplainApiLatencyHigh
+        expr: histogram_quantile(0.95, rate(gov_explain_api_latency_ms[5m])) > 2000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Explainability API p95 latency >2s"
+          description: "Governance explain queries are slow. Check DB query plans and index health."
+
+  - name: governance_purge
+    interval: 60s
+    rules:
+      - alert: PurgeReadyManifestsStale
+        expr: gov_manifests_purge_ready > 20
+        for: 1h
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "{{ $value }} manifests are purge-ready but not purged"
+          description: "Archive manifests have been eligible for purge for >1h. Check purge worker health or approval queues."
+
+      - alert: PurgeCertificateUnverified
+        expr: increase(gov_purge_certificate_issued_total[24h]) > increase(gov_purge_certificate_verified_total[24h])
+        for: 6h
+        labels:
+          severity: warning
+          team: compliance
+        annotations:
+          summary: "Purge certificates issued but not verified within 6h"
+          description: "Some purge certificates have not been independently verified. Manual verification may be required."

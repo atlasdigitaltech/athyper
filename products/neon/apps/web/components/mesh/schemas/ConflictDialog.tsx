@@ -75,7 +75,7 @@ export function ConflictDialog({
             Cancel
           </Button>
           {onForceOverwrite && (
-            <Button variant="destructive" onClick={handleForce}>
+            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleForce}>
               Force Overwrite
             </Button>
           )}

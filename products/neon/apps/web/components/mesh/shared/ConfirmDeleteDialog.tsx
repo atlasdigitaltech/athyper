@@ -45,10 +45,10 @@ export function ConfirmDeleteDialog({
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            variant="outline"
             onClick={onConfirm}
             disabled={loading}
-            className="gap-1.5"
+            className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
           >
             {loading ? (
               <Loader2 className="size-3.5 animate-spin" />

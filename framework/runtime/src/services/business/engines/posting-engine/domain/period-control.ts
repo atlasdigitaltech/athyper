@@ -1,10 +1,11 @@
 // framework/runtime/src/services/business/engines/posting-engine/domain/period-control.ts
 
-import { validateTransition } from "../../shared/engine-base.js";
+import { validateTransition } from "../../shared/engine-base";
 
-import { PERIOD_TRANSITIONS } from "./types.js";
+import { PERIOD_TRANSITIONS } from "./types";
+import { isGatedTransition, evaluateGate } from "./period-close-governance";
 
-import type { PeriodStatus, FiscalPeriod } from "./types.js";
+import type { PeriodStatus, FiscalPeriod, CloseGateResult } from "./types";
 
 /**
  * Validate a period status transition.
@@ -80,4 +81,48 @@ export function getPeriodTimestamps(
     default:
       return {};
   }
+}
+
+/**
+ * Determine side effects required after a period transition succeeds.
+ * The caller (service layer) is responsible for executing these.
+ */
+export function getTransitionSideEffects(target: PeriodStatus): {
+  materializeChecklist: boolean;
+} {
+  return {
+    // When a period opens, materialize the close checklist so the ops team
+    // can see the full close plan immediately.
+    materializeChecklist: target === "OPEN",
+  };
+}
+
+/**
+ * Validate a period transition including close governance gate check.
+ * Combines the basic state machine check with the checklist gate.
+ *
+ * @param gateResult - Result from PeriodCloseChecklistRepo.checkGate().
+ *                     Pass null to skip gate check (e.g., when no checklist
+ *                     has been materialized for the period).
+ */
+export function canTransitionPeriod(
+  current: PeriodStatus,
+  target: PeriodStatus,
+  gateResult: CloseGateResult | null,
+): { allowed: boolean; reason: string | null } {
+  if (!isValidPeriodTransition(current, target)) {
+    return {
+      allowed: false,
+      reason: `Invalid period transition: ${current} → ${target}`,
+    };
+  }
+
+  if (gateResult && isGatedTransition(target)) {
+    const gate = evaluateGate(gateResult, target);
+    if (!gate.allowed) {
+      return gate;
+    }
+  }
+
+  return { allowed: true, reason: null };
 }

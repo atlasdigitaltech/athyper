@@ -3,11 +3,14 @@
  *
  * Dynamic entity page descriptor endpoint.
  * Returns per-record metadata: badges, actions, current lifecycle state, and permissions.
- * Resolves status from the shared mock data store to keep descriptor and data in sync.
  *
- * In production this will evaluate entity policies, lifecycle rules, and approval state.
+ * Resolution order:
+ *   1. DB-driven builder for entities backed by real tables
+ *   2. Mock-data builder for legacy/demo entities
+ *   3. Generic fallback for unknown entities
  */
 
+import { sql } from "kysely";
 import { NextResponse } from "next/server";
 
 import type {
@@ -18,6 +21,11 @@ import type {
 } from "@/lib/entity-page/types";
 import type { NextRequest } from "next/server";
 
+import {
+  getApiContext,
+  resolveTenantUuid,
+} from "@/lib/api-context";
+import { getDb } from "@/lib/db";
 import {
   ACCOUNTS_BY_ID,
   PURCHASE_INVOICES_BY_ID,
@@ -219,10 +227,121 @@ function buildGenericDescriptor(
 }
 
 // ---------------------------------------------------------------------------
+// DB-driven document descriptor builder
+// ---------------------------------------------------------------------------
+
+/** Entities whose status is resolved from the database */
+const DB_DOCUMENT_ENTITIES: Record<string, { qualifiedTable: string }> = {
+  "purchase-non-po-invoice": { qualifiedTable: "fin.purchase_invoice" },
+  "credit-note": { qualifiedTable: "fin.credit_note" },
+  "debit-note": { qualifiedTable: "fin.debit_note" },
+};
+
+function buildDocumentDescriptorFromStatus(
+  entitySlug: string,
+  entityId: string,
+  status: string,
+  viewMode: ViewMode,
+): EntityPageDynamicDescriptor {
+  const stateVariant: Record<string, BadgeDescriptor["variant"]> = {
+    DRAFT: "secondary",
+    SUBMITTED: "default",
+    APPROVED: "success",
+    POSTED: "success",
+    PAID: "success",
+    CANCELLED: "destructive",
+    REVERSED: "destructive",
+  };
+
+  const badges: BadgeDescriptor[] = [
+    { code: "class", label: "Document", variant: "outline" },
+    {
+      code: "state",
+      label: status,
+      variant: stateVariant[status] ?? "secondary",
+    },
+  ];
+
+  const actions: ActionDescriptor[] = [];
+
+  if (status === "DRAFT") {
+    actions.push({
+      code: "submit",
+      label: "Submit",
+      handler: "lifecycle.submit",
+      variant: "default",
+      enabled: true,
+      requiresConfirmation: true,
+      confirmationMessage: "Submit this document for approval?",
+    });
+    actions.push({
+      code: "edit",
+      label: "Edit",
+      handler: "entity.edit",
+      variant: "outline",
+      enabled: true,
+      requiresConfirmation: false,
+    });
+  }
+
+  if (status === "SUBMITTED") {
+    actions.push({
+      code: "approve",
+      label: "Approve",
+      handler: "lifecycle.approve",
+      variant: "default",
+      enabled: true,
+      requiresConfirmation: true,
+      confirmationMessage: "Approve this document?",
+    });
+  }
+
+  if (status === "APPROVED") {
+    actions.push({
+      code: "post",
+      label: "Post",
+      handler: "posting.post",
+      variant: "default",
+      enabled: true,
+      requiresConfirmation: true,
+      confirmationMessage: "Post this document to the ledger?",
+    });
+  }
+
+  const isTerminal = ["PAID", "CANCELLED", "REVERSED", "POSTED"].includes(status);
+  const resolvedViewMode =
+    isTerminal || status !== "DRAFT" ? ("view" as ViewMode) : viewMode;
+  const viewModeReason = isTerminal
+    ? ("terminal_state" as const)
+    : status !== "DRAFT"
+      ? ("approval_pending" as const)
+      : undefined;
+
+  return {
+    entityName: entitySlug,
+    entityId,
+    resolvedViewMode,
+    viewModeReason,
+    currentState: {
+      stateId: `state-${status.toLowerCase()}`,
+      stateCode: status.toLowerCase(),
+      stateName: status,
+      isTerminal,
+    },
+    badges,
+    actions,
+    permissions: {
+      canEdit: status === "DRAFT",
+      canDelete: status === "DRAFT",
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 
-const BUILDERS: Record<
+const MOCK_BUILDERS: Record<
   string,
   (id: string, vm: ViewMode) => EntityPageDynamicDescriptor
 > = {
@@ -240,14 +359,76 @@ export async function GET(
   try {
     const viewMode =
       (req.nextUrl.searchParams.get("viewMode") as ViewMode) ?? "view";
-    const builder = BUILDERS[entity];
 
-    // Use specific builder if available, otherwise return a generic descriptor
-    const descriptor = builder
-      ? builder(id, viewMode)
-      : buildGenericDescriptor(entity, id, viewMode);
+    // 1. Mock-data builders (legacy/demo)
+    const mockBuilder = MOCK_BUILDERS[entity];
+    if (mockBuilder) {
+      return NextResponse.json({ data: mockBuilder(id, viewMode) });
+    }
 
-    return NextResponse.json({ data: descriptor });
+    // 2. DB-driven document entities
+    const dbEntity = DB_DOCUMENT_ENTITIES[entity];
+    if (dbEntity) {
+      const db = getDb();
+      if (db) {
+        let redis: { quit: () => Promise<void> } | null = null;
+        try {
+          const apiCtx = await getApiContext();
+          redis = apiCtx.redis;
+          if (apiCtx.context) {
+            const tenantUuid = await resolveTenantUuid(db, apiCtx.context.tenantId);
+            const result = await sql<{ status: string; approval_instance_id: string | null }>`
+              select status, approval_instance_id from ${sql.table(dbEntity.qualifiedTable)}
+              where tenant_id = ${tenantUuid}::uuid and id = ${id}::uuid
+            `.execute(db);
+
+            if (result.rows.length > 0) {
+              const descriptor = buildDocumentDescriptorFromStatus(
+                entity, id, result.rows[0].status, viewMode,
+              );
+
+              // Hydrate approval data if linked
+              const approvalInstanceId = result.rows[0].approval_instance_id;
+              if (approvalInstanceId) {
+                const approvalResult = await sql<{ id: string; status: string }>`
+                  select id, status from wf.approval_instance
+                  where id = ${approvalInstanceId}::uuid and tenant_id = ${tenantUuid}::uuid
+                `.execute(db);
+
+                if (approvalResult.rows.length > 0) {
+                  const ai = approvalResult.rows[0];
+                  const taskResult = await sql<{ id: string; status: string }>`
+                    select id, status from wf.approval_task
+                    where approval_instance_id = ${approvalInstanceId}::uuid
+                      and tenant_id = ${tenantUuid}::uuid
+                      and status IN ('pending', 'assigned', 'in_progress')
+                  `.execute(db);
+
+                  descriptor.approval = {
+                    instanceId: ai.id,
+                    status: ai.status === "approved" ? "completed"
+                          : ai.status === "rejected" ? "rejected"
+                          : ai.status === "canceled" ? "canceled"
+                          : "open",
+                    myTasks: taskResult.rows.map((t) => ({ id: t.id, status: t.status })),
+                  };
+                }
+              }
+
+              return NextResponse.json({ data: descriptor });
+            }
+          }
+        } finally {
+          await redis?.quit();
+        }
+      }
+      // DB unavailable or record not found — fall through to generic
+    }
+
+    // 3. Generic fallback
+    return NextResponse.json({
+      data: buildGenericDescriptor(entity, id, viewMode),
+    });
   } catch (error) {
     console.error(`[GET /api/entity-page/${entity}/${id}] Error:`, error);
     return NextResponse.json(

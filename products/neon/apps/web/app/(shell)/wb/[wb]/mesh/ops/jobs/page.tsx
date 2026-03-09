@@ -336,7 +336,8 @@ function JobDetailDrawer({
               )}
               <Button
                 size="sm"
-                variant="destructive"
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
                 onClick={() => onRemove(job.id)}
               >
                 <Trash2 className="mr-1.5 size-3.5" />

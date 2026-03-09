@@ -33,6 +33,7 @@ export const TOKENS = {
   // Runtime
   httpServer: "runtime.httpServer",
   jobQueue: "runtime.jobQueue",
+  eventBus: "runtime.eventBus",
   scheduler: "runtime.scheduler",
   workerPool: "runtime.workerPool",
   circuitBreakers: "runtime.circuitBreakers",
@@ -304,6 +305,12 @@ export const TOKENS = {
   federationFxRevaluationRepo: "engine.federation.fxRevaluationRepo",
   federationNettingBatchRepo: "engine.federation.nettingBatchRepo",
 
+  // Document Registry Engine
+  documentRegistryRepo: "engine.documentRegistry.repo",
+  documentRegistryService: "engine.documentRegistry.service",
+  documentRegistryMetrics: "engine.documentRegistry.metrics",
+  documentRegistryGuard: "engine.documentRegistry.guard",
+
   // Production Engine
   productionWorkOrderService: "engine.production.workOrderService",
   productionBomService: "engine.production.bomService",
@@ -325,10 +332,24 @@ export const TOKENS = {
   atlasReversalService: "engine.atlas.reversalService",
   atlasDriftMonitorService: "engine.atlas.driftMonitorService",
   atlasModelRegistryRepo: "engine.atlas.modelRegistryRepo",
+  atlasNarrativeService: "engine.atlas.narrativeService",
+  atlasBaselineComputeService: "engine.atlas.baselineComputeService",
+  atlasAnomalyRepo: "engine.atlas.anomalyRepo",
+  atlasBaselineRepo: "engine.atlas.baselineRepo",
+  atlasInsightGraphService: "engine.atlas.insightGraphService",
+  atlasFeedbackService: "engine.atlas.feedbackService",
 
   // Platform Control
   platformAdminContext: "platform.adminContext",
   platformTenantRegistry: "platform.tenantRegistry",
+
+  // Operational Governance (data retention, tiering, quotas, legal hold)
+  retentionPolicyService: "governance.retentionPolicy",
+  quotaEnforcementService: "governance.quotaEnforcement",
+  quotaMeasurementJob: "governance.quotaMeasurement",
+  legalHoldService: "governance.legalHold",
+  policyExplainabilityService: "governance.policyExplainability",
+  governanceMetrics: "governance.metrics",
 } as const;
 
 export type TokenName = (typeof TOKENS)[keyof typeof TOKENS]; // "kernel.config" | ...

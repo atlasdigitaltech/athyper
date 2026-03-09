@@ -4,10 +4,17 @@
  * Periodically cleans up old audit logs based on tenant retention policies.
  * Phase 15.2: High-volume audit/decision log strategy
  *
+ * Policy integration (Phase 15.3):
+ *   Reads per-tenant retention rules from core.data_retention_policy via
+ *   core.resolve_retention_policy(). Falls back to retentionDays job param
+ *   (default: 90) if no policy exists.
+ *
+ *   Legal hold check: If any matching retention policy has legal_hold = true,
+ *   the job skips that tenant entirely and logs a warning.
+ *
  * Future enhancements:
  * - Partitioning strategy: tenant_id + month partitions
  * - Archive to cold storage before deletion
- * - Per-tenant retention policies from meta.entity_policy.retention_policy
  */
 
 import { sql } from "kysely";
@@ -25,7 +32,11 @@ export type AuditLogRetentionJobData = {
   /** Tenant ID to clean logs for */
   tenantId?: string;
 
-  /** Retention days (default: 90) */
+  /**
+   * Retention days (fallback: 90).
+   * Overridden by core.data_retention_policy if a matching policy exists.
+   * Policy precedence: entity > table > schema (see core.resolve_retention_policy).
+   */
   retentionDays?: number;
 
   /** Dry run mode (don't actually delete) */

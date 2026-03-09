@@ -55,26 +55,83 @@ const SYSTEM_FIELDS = new Set([
   "version",
 ]);
 
+/**
+ * Build a set of column names that are NOT writable by clients.
+ * Derived from child entity field metadata:
+ *   - isReadOnly fields
+ *   - isComputed fields (virtual or materialized)
+ *   - writeOnce fields (on update — locked after creation)
+ *   - system-origin fields
+ *
+ * Returns null when field metadata is unavailable (fallback to SYSTEM_FIELDS only).
+ */
+async function resolveNonWritableColumns(
+  db: any,
+  childEntityName: string,
+  tenantUuid: string,
+  isUpdate: boolean,
+): Promise<Set<string> | null> {
+  try {
+    const metrics = createCacheMetrics();
+    const fields = await getMetaFields(db, childEntityName, tenantUuid, metrics);
+    if (fields.length === 0) {
+      console.warn(
+        `[children-post] No field metadata for child entity "${childEntityName}". ` +
+          `Writable-column filter using SYSTEM_FIELDS only. ` +
+          `Seed field dictionaries to enable full filtering.`,
+      );
+      return null;
+    }
+
+    const nonWritable = new Set<string>();
+    for (const f of fields) {
+      if (f.isReadOnly) nonWritable.add(f.columnName);
+      if (f.isComputed) nonWritable.add(f.columnName);
+      if (f.origin === "system") nonWritable.add(f.columnName);
+      if (isUpdate && f.writeOnce) nonWritable.add(f.columnName);
+    }
+    return nonWritable;
+  } catch {
+    // Graceful degradation — log and continue with SYSTEM_FIELDS only
+    console.warn(
+      `[children-post] Failed to resolve writable columns for "${childEntityName}". ` +
+        `Falling back to SYSTEM_FIELDS filter. Reason: field metadata query failed.`,
+    );
+    return null;
+  }
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
 
+interface CollectionWiring {
+  childEntityName: string;
+  childFkField: string;
+  ordering: boolean;
+  orderField: string;
+  deleteMode: "cascade" | "restrict" | "detach";
+}
+
 /**
  * Resolve collection field wiring from parent entity meta.
- * Returns null if the field doesn't exist or isn't a collection field.
+ *
+ * Resolution order:
+ *   1. Exact match by columnName or field name
+ *   2. If multiple cardinality='many' fields match (ambiguous),
+ *      prefer the one with collection_behavior.role matching fieldName
+ *   3. If single unambiguous collection field exists, use it
+ *   4. Otherwise, return null (safe fallback) and log the ambiguity
+ *
+ * Returns null if the field doesn't exist, isn't a collection field,
+ * or is ambiguous without a role discriminator.
  */
 async function resolveCollectionWiring(
   db: any,
   parentEntityName: string,
   tenantUuid: string,
   fieldName: string,
-): Promise<{
-  childEntityName: string;
-  childFkField: string;
-  ordering: boolean;
-  orderField: string;
-  deleteMode: "cascade" | "restrict" | "detach";
-} | null> {
+): Promise<CollectionWiring | null> {
   const metrics = createCacheMetrics();
   const fields = await getMetaFields(
     db,
@@ -83,30 +140,66 @@ async function resolveCollectionWiring(
     metrics,
   );
 
-  const collectionField = fields.find(
+  // 1. Exact match by column name or field name
+  const exactMatch = fields.find(
     (f) => f.columnName === fieldName || f.name === fieldName,
   );
 
-  if (!collectionField) return null;
+  if (exactMatch) {
+    const result = extractWiring(exactMatch);
+    if (result) return result;
+  }
 
-  const childEntityName = (collectionField as any).childEntityName as
-    | string
-    | undefined;
-  const childFkField = (collectionField as any).childFkField as
-    | string
-    | undefined;
+  // 2. Gather all cardinality='many' fields (collection fields)
+  const collectionFields = fields.filter(
+    (f) =>
+      f.cardinality === "many" &&
+      (f as any).childEntityName &&
+      (f as any).childFkField,
+  );
+
+  if (collectionFields.length === 0) return null;
+
+  // 3. Try role-based match: collection_behavior.role === fieldName
+  const roleMatch = collectionFields.find((f) => {
+    const cb = (f as any).collectionBehavior as Record<string, unknown> | null;
+    return cb?.role === fieldName;
+  });
+  if (roleMatch) {
+    return extractWiring(roleMatch);
+  }
+
+  // 4. If only one collection field exists, use it (unambiguous)
+  if (collectionFields.length === 1) {
+    return extractWiring(collectionFields[0]);
+  }
+
+  // 5. Ambiguous: multiple collections, no role discriminator
+  console.warn(
+    `[collection-wiring] AMBIGUITY: parent="${parentEntityName}" has ${collectionFields.length} ` +
+      `cardinality='many' fields but none matched fieldName="${fieldName}" by name or role. ` +
+      `Fields: [${collectionFields.map((f) => f.columnName).join(", ")}]. ` +
+      `Add collection_behavior.role to disambiguate.`,
+  );
+  return null;
+}
+
+function extractWiring(
+  field: any,
+): CollectionWiring | null {
+  const childEntityName = field.childEntityName as string | undefined;
+  const childFkField = field.childFkField as string | undefined;
   if (!childEntityName || !childFkField) return null;
 
-  const cb = (collectionField as any).collectionBehavior as Record<
-    string,
-    unknown
-  > | null;
+  const cb = field.collectionBehavior as Record<string, unknown> | null;
   return {
     childEntityName,
     childFkField,
     ordering: (cb?.ordering as boolean) ?? false,
     orderField: (cb?.orderField as string) ?? "sort_order",
-    deleteMode: (cb?.deleteMode as "cascade" | "restrict" | "detach") ?? ((cb?.ownership as string) === "linked" ? "detach" : "cascade"),
+    deleteMode:
+      (cb?.deleteMode as "cascade" | "restrict" | "detach") ??
+      ((cb?.ownership as string) === "linked" ? "detach" : "cascade"),
   };
 }
 
@@ -316,6 +409,21 @@ export async function POST(
       ? sql`AND tenant_id = ${tenantUuid}`
       : sql``;
 
+    // Resolve non-writable columns from child field metadata.
+    // Insert and update use different writeOnce semantics.
+    const nonWritableForInsert = await resolveNonWritableColumns(
+      db,
+      wiring.childEntityName,
+      tenantUuid,
+      false,
+    );
+    const nonWritableForUpdate = await resolveNonWritableColumns(
+      db,
+      wiring.childEntityName,
+      tenantUuid,
+      true,
+    );
+
     const now = new Date();
     const inserted: Record<string, unknown>[] = [];
     const updated: Record<string, unknown>[] = [];
@@ -352,11 +460,14 @@ export async function POST(
       const row = body.rows[i];
       const existingId = row.id as string | undefined;
 
-      // Strip system fields from the payload
+      // Strip system, read-only, computed, and write-once fields from the payload.
+      // Uses meta-derived non-writable set when available, SYSTEM_FIELDS as fallback.
+      const nonWritable = existingId ? nonWritableForUpdate : nonWritableForInsert;
       const cleanRow: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(row)) {
         if (SYSTEM_FIELDS.has(key)) continue;
         if (key === "id") continue;
+        if (nonWritable?.has(key)) continue;
         cleanRow[key] = val === "" ? null : val;
       }
 

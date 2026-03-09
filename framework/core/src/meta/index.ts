@@ -205,6 +205,31 @@ export type {
   LifecycleTimerRules,
   LifecycleTimerSchedule,
   LifecycleTimerPayload,
+
+  // Governed Versioning
+  VersionStatus,
+  VersionChangeType,
+  VersioningPolicy,
+  HookTiming,
+  BuiltInHookAction,
+  HookAction,
+  HookOrigin,
+  HookContractRole,
+  HookSafetyLevel,
+  LifecycleTransitionHook,
+  ReviseVersionRequest,
+  ReviseVersionResult,
+  PromoteVersionResult,
+
+  // Hook Action Registry (Phase 2)
+  HookHandlerType,
+  HookActionRegistration,
+
+  // Hook Override Directives (Phase 3)
+  HookOverrideKind,
+  HookOverrideDirective,
+  HookPlanNode,
+  HookExecutionPlan,
 } from "./types.js";
 
 export type {
@@ -280,6 +305,12 @@ export type {
 
   // Template authoring (EPIC G)
   ApprovalTemplateService,
+
+  // Governed Versioning
+  VersionedDocumentService,
+
+  // Hook Admin Service (Hook Customization Architecture)
+  HookAdminService,
 } from "./contracts.js";
 
 // ============================================================================
@@ -291,7 +322,7 @@ export {
   META_TOKENS,
 } from "./tokens.js";
 
-export { DEFAULT_ENTITY_FEATURE_FLAGS } from "./types.js";
+export { DEFAULT_ENTITY_FEATURE_FLAGS, DEFAULT_VERSIONING_POLICY } from "./types.js";
 export {
   LOOKUP_PROFILE_MERGE,
   IDENTITY_CONFIG_MERGE,
@@ -311,6 +342,8 @@ export {
   CAPABILITY_DEFAULTS,
   resolveCapabilityDefaults,
   FIELD_OVERLAY_SAFETY,
+  HOOK_LAYER_RANK,
+  HOOK_ACTION_SAFETY,
   FIELD_CHANGE_IMPACT,
   PUBLISH_BLOCKING_RULES,
   SYSTEM_COMPUTE_FUNCTIONS,

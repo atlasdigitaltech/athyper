@@ -6,6 +6,7 @@
 import { CronScheduler } from "../services/platform/automation-jobs/cron-scheduler.js";
 import { RedisJobQueue } from "../services/platform/automation-jobs/redis-queue.js";
 import { WorkerPool } from "../services/platform/automation-jobs/worker-pool.js";
+import { InMemoryEventBus } from "@athyper/core";
 
 import { TOKENS } from "./tokens";
 
@@ -82,6 +83,21 @@ export async function registerRuntimeServices(
       );
 
       return queue;
+    },
+    "singleton",
+  );
+
+  // ── Event Bus (in-memory domain event pub/sub) ─────────────────────
+  //
+  // Singleton bus used for domain events within the runtime.
+  // Modules publish DomainEvent<T> via eventBus.publish();
+  // the NotificationOrchestrator and other subscribers consume via eventBus.subscribe().
+  container.register(
+    TOKENS.eventBus,
+    async () => {
+      const bus = new InMemoryEventBus();
+      logger.info("[runtime] event bus registered");
+      return bus;
     },
     "singleton",
   );

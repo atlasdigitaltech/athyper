@@ -3,14 +3,14 @@
 import type {
   PaginationParams,
   PaginatedResult,
-} from "../../shared/engine-base.js";
+} from "../../shared/engine-base";
 import type {
   JournalEntry,
   JournalLine,
   CreateJournalEntryInput,
   JEStatus,
-} from "../domain/types.js";
-import type { TransactionContext } from "../services/posting-service.js";
+} from "../domain/types";
+import type { TransactionContext } from "../services/posting-service";
 
 export interface JournalEntryRepo {
   create(

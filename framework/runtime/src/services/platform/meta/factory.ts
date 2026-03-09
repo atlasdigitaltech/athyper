@@ -31,6 +31,8 @@ import {
 import { LifecycleManagerService } from "./lifecycle/lifecycle-manager.service.js";
 import { LifecycleRouteCompilerService } from "./lifecycle/lifecycle-route-compiler.service.js";
 import { LifecycleTimerServiceImpl } from "./lifecycle/lifecycle-timer.service.js";
+import { HookAdminServiceImpl } from "./lifecycle/hook-admin.service.js";
+import { VersionedDocumentServiceImpl } from "./lifecycle/versioned-document.service.js";
 import { NumberingEngineService } from "./numbering/numbering-engine.service.js";
 import { MetaMetrics } from "./observability/metrics.js";
 import { DdlGeneratorService } from "./schema/ddl-generator.service.js";
@@ -120,6 +122,7 @@ export type MetaServices = {
   validationEngine: ValidationEngineService;
   overlayRepository: IOverlayRepository;
   schemaComposer: SchemaComposerService;
+  hookAdminService: HookAdminServiceImpl;
 };
 
 /**
@@ -220,8 +223,20 @@ export function createMetaServices(config: MetaServicesConfig): MetaServices {
     config.db as unknown as LifecycleDB_Type,
   );
 
+  // 8.1 Versioned Document Service (depends on db)
+  const versionedDocService = new VersionedDocumentServiceImpl(
+    config.db as unknown as LifecycleDB_Type,
+  );
+
+  // 8.2 Hook Admin Service (depends on db)
+  const hookAdminService = new HookAdminServiceImpl(
+    config.db as unknown as LifecycleDB_Type,
+  );
+
   // 11. Wire circular dependencies
   lifecycleManager.setApprovalService(approvalService);
+  lifecycleManager.setEventBus(eventBus);
+  lifecycleManager.setVersionedDocumentService(versionedDocService);
   approvalService.setLifecycleManager(lifecycleManager);
   lifecycleManager.setTimerService(lifecycleTimerService);
   lifecycleTimerService.setLifecycleManager(lifecycleManager);
@@ -365,6 +380,7 @@ export function createMetaServices(config: MetaServicesConfig): MetaServices {
     validationEngine,
     overlayRepository,
     schemaComposer,
+    hookAdminService,
   };
 }
 

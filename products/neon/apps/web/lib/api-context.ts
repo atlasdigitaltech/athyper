@@ -209,33 +209,74 @@ export async function resolveTenantUuid(
   return uuid;
 }
 
+// ─── Response Helpers ────────────────────────────────────────
+//
+// Delegates to the canonical helpers in api-response.ts.
+// Existing routes can keep using these names — they produce the
+// exact same { success, data } / { success, error } envelope.
+//
+// New routes should import directly from "@/lib/api-response".
+
+import {
+  ok,
+  fail,
+  unauthorized as _unauthorized,
+  type PaginationMeta,
+  paginated as _paginated,
+  buildPaginationMeta,
+  extractPagination,
+  extractSort,
+  extractSearch,
+} from "@/lib/api-response";
+
+// Re-export new helpers so routes can migrate incrementally
+export {
+  ok,
+  fail,
+  buildPaginationMeta,
+  extractPagination,
+  extractSort,
+  extractSearch,
+};
+export type { PaginationMeta };
+
 /**
  * Standard unauthorized response for API routes
+ * @deprecated Use `unauthorized()` from "@/lib/api-response" instead
  */
 export function unauthorizedResponse(message = "Unauthorized") {
-  return NextResponse.json(
-    { success: false, error: { code: "UNAUTHORIZED", message } },
-    { status: 401 },
-  );
+  return _unauthorized(message);
 }
 
 /**
  * Standard error response for API routes
+ * @deprecated Use `fail()` from "@/lib/api-response" instead
  */
 export function errorResponse(code: string, message: string, status = 500) {
-  return NextResponse.json(
-    { success: false, error: { code, message } },
-    { status },
-  );
+  return fail(code, message, status);
 }
 
 /**
  * Standard success response for API routes
+ * @deprecated Use `ok()` from "@/lib/api-response" instead
  */
 export function successResponse<T>(
   data: T,
   status = 200,
   headers?: Record<string, string>,
 ) {
-  return NextResponse.json({ success: true, data }, { status, headers });
+  if (headers) {
+    return NextResponse.json({ success: true, data } as const, { status, headers });
+  }
+  return ok(data, status);
+}
+
+/**
+ * Standard paginated list response for API routes
+ */
+export function paginatedResponse<T>(
+  data: T[],
+  meta: PaginationMeta,
+) {
+  return _paginated(data, meta);
 }

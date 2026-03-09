@@ -1,8 +1,8 @@
 // framework/runtime/src/services/business/finance/accounting/module.ts
 //
 // RuntimeModule: business.finance.accounting
-// Registers: PurchaseInvoiceService, ManualJEService, GLInquiryService
-// Routes: /api/fin/purchase-invoices/**, /api/fin/journal-entries/**, /api/fin/gl/**
+// Registers: PurchaseInvoiceService, ManualJEService, GLInquiryService, PeriodCloseService
+// Routes: /api/fin/purchase-invoices/**, /api/fin/journal-entries/**, /api/fin/gl/**, /api/fin/period-close/**
 
 import { TOKENS } from "../../../../kernel/tokens.js";
 import { DecisionGridEvaluator } from "../shared/decision-grid-evaluator.js";
@@ -36,6 +36,44 @@ import {
   GLDetailHandler,
   TrialBalanceHandler,
 } from "./api/handlers.js";
+import {
+  GetCloseChecklistHandler,
+  GetCloseProgressHandler,
+  MaterializeChecklistHandler,
+  CompleteTaskHandler,
+  WaiveTaskHandler,
+  FailTaskHandler,
+  BlockTaskHandler,
+  ExecuteSystemHandlerTaskHandler,
+  CheckGateHandler,
+  TransitionPeriodHandler,
+} from "./api/period-close-handlers.js";
+import {
+  RequestTaskWaiverHandler,
+  ApproveTaskWaiverHandler,
+  RejectTaskWaiverHandler,
+  GetWaiverStatusHandler,
+  AssignTaskHandler,
+  BulkAssignTasksHandler,
+  GetTimelineHandler,
+  GetTaskTimelineHandler,
+  RecheckGateHandler,
+} from "./api/period-close-phase3-handlers.js";
+import { CloseHandlerRegistry } from "../../engines/posting-engine/domain/close-handler-registry.js";
+import {
+  TrialBalanceCloseHandler,
+  DepreciationCheckHandler,
+  FxRevaluationCheckHandler,
+  BankReconCheckHandler,
+} from "../../engines/posting-engine/handlers/close-system-handlers.js";
+import { DefaultPeriodCloseService } from "../../engines/posting-engine/services/period-close-service.js";
+import { DefaultPeriodCloseGraphService } from "../../engines/posting-engine/services/period-close-graph-service.js";
+import { DefaultCloseRiskSignalOperationsService } from "../../engines/posting-engine/services/close-risk-signal-operations.js";
+import { DefaultCloseRiskSignalDispatcher, DefaultActiveCloseContextDiscovery } from "../../engines/posting-engine/services/close-risk-signal-dispatcher.js";
+import type { RiskEvaluationContextLoader } from "../../engines/posting-engine/services/close-risk-signal-operations.js";
+import type { RiskSignalEventEmitter } from "../../engines/posting-engine/services/risk-signal-event-publisher.js";
+import { createEventBusEmitter, NO_OP_EMITTER } from "../../engines/posting-engine/services/risk-signal-event-publisher.js";
+import { createDrainDomainOutboxHandler } from "../../engines/posting-engine/services/domain-event-outbox-consumer.js";
 import {
   DefaultPurchaseInvoiceRepo,
   DefaultPurchaseInvoiceLineRepo,
@@ -212,6 +250,185 @@ export const module: RuntimeModule = {
       "singleton",
     );
 
+    // ── Period Close Governance ──
+    c.register(
+      "fin.accounting.closeHandlerRegistry",
+      async () => {
+        const registry = new CloseHandlerRegistry();
+        registry.register(new TrialBalanceCloseHandler(c));
+        registry.register(new DepreciationCheckHandler(c));
+        registry.register(new FxRevaluationCheckHandler(c));
+        registry.register(new BankReconCheckHandler(c));
+        return registry;
+      },
+      "singleton",
+    );
+
+    c.register(
+      "fin.accounting.periodCloseService",
+      async () => {
+        const taskRepo = await c.resolve<any>("fin.accounting.periodCloseTaskRepo");
+        const checklistRepo = await c.resolve<any>("fin.accounting.periodCloseChecklistRepo");
+        const periodRepo = await c.resolve<any>(TOKENS.postingFiscalPeriodRepo);
+        const handlerRegistry = await c.resolve<CloseHandlerRegistry>(
+          "fin.accounting.closeHandlerRegistry",
+        );
+        // Phase 3: optional dependencies (graceful degradation with explicit logging)
+        let activityRepo: any = undefined;
+        try { activityRepo = await c.resolve<any>("fin.accounting.periodCloseActivityRepo"); } catch {
+          logger.warn("[fin.accounting] periodCloseActivityRepo not registered — timeline features degraded");
+        }
+        let approvalOps: any = undefined;
+        try { approvalOps = await c.resolve<any>("fin.accounting.closeApprovalOps"); } catch {
+          logger.warn("[fin.accounting] closeApprovalOps not registered — approval-required waivers will fail explicitly");
+        }
+
+        return new DefaultPeriodCloseService(
+          taskRepo,
+          checklistRepo,
+          periodRepo,
+          handlerRegistry,
+          activityRepo,
+          approvalOps,
+        );
+      },
+      "singleton",
+    );
+
+    // ── Close Orchestration Graph ──
+    c.register(
+      "fin.accounting.periodCloseGraphService",
+      async () => {
+        const taskRepo = await c.resolve<any>("fin.accounting.periodCloseTaskRepo");
+        const checklistRepo = await c.resolve<any>("fin.accounting.periodCloseChecklistRepo");
+        return new DefaultPeriodCloseGraphService(taskRepo, checklistRepo);
+      },
+      "singleton",
+    );
+
+    // ── Phase 6.2: Risk Signal Operations Service ──
+    c.register(
+      "fin.accounting.riskSignalOperationsService",
+      async () => {
+        let ruleRepo: any;
+        let signalRepo: any;
+        let snapshotRepo: any;
+        let activityRepo: any;
+        let eventEmitter: RiskSignalEventEmitter;
+        let contextLoader: RiskEvaluationContextLoader;
+
+        try { ruleRepo = await c.resolve<any>("fin.accounting.closeRiskRuleRepo"); } catch {
+          logger.warn("[fin.accounting] closeRiskRuleRepo not registered — risk signal operations degraded");
+          return null;
+        }
+        try { signalRepo = await c.resolve<any>("fin.accounting.closeRiskSignalRepo"); } catch {
+          logger.warn("[fin.accounting] closeRiskSignalRepo not registered — risk signal operations degraded");
+          return null;
+        }
+        try { snapshotRepo = await c.resolve<any>("fin.accounting.closeOrchestrationSnapshotRepo"); } catch {
+          logger.warn("[fin.accounting] closeOrchestrationSnapshotRepo not registered — risk signal operations degraded");
+          return null;
+        }
+        try { activityRepo = await c.resolve<any>("fin.accounting.periodCloseActivityRepo"); } catch {
+          logger.warn("[fin.accounting] periodCloseActivityRepo not registered — risk signal operations degraded");
+          return null;
+        }
+
+        // Event emitter — use platform EventBus if available, else no-op
+        try {
+          const eventBus = await c.resolve<any>(TOKENS.eventBus);
+          eventEmitter = createEventBusEmitter(eventBus);
+        } catch {
+          eventEmitter = NO_OP_EMITTER;
+          logger.warn("[fin.accounting] EventBus not available — risk signal events will not be emitted");
+        }
+
+        // Context loader — uses repos to assemble RiskEvaluationContext
+        contextLoader = {
+          async load(tenantId, entityCode, fiscalYear, periodNumber, targetStatus) {
+            const snapshots = await snapshotRepo.listByPeriod(
+              tenantId, entityCode, fiscalYear, periodNumber, targetStatus, { limit: 10 },
+            );
+            if (!snapshots || snapshots.length === 0) return null;
+
+            const activeSignals = await signalRepo.listActive(
+              tenantId, entityCode, fiscalYear, periodNumber,
+            );
+
+            // Load checklist tasks as graph nodes
+            const checklistRepo = await c.resolve<any>("fin.accounting.periodCloseChecklistRepo");
+            const graphNodes = await checklistRepo.listByPeriod(
+              tenantId, entityCode, fiscalYear, periodNumber,
+            );
+
+            // Load close calendar targets
+            let closeCalendar: { softCloseTarget: Date; hardCloseTarget: Date } | null = null;
+            try {
+              const db = await c.resolve<any>(TOKENS.db);
+              const { sql: sqlTag } = await import("kysely");
+              const calResult = await sqlTag`
+                SELECT soft_close_target, hard_close_target
+                FROM fin.close_calendar
+                WHERE tenant_id = ${tenantId}
+                  AND entity_code = ${entityCode}
+                  AND fiscal_year = ${fiscalYear}
+                  AND period_number = ${periodNumber}
+              `.execute(db);
+              const calRow = (calResult.rows as any[])[0];
+              if (calRow) {
+                closeCalendar = {
+                  softCloseTarget: new Date(calRow.soft_close_target),
+                  hardCloseTarget: new Date(calRow.hard_close_target),
+                };
+              }
+            } catch {
+              // Close calendar not available — close_target_at_risk rule won't fire
+            }
+
+            return {
+              tenantId,
+              entityCode,
+              fiscalYear,
+              periodNumber,
+              currentSnapshot: snapshots[0],
+              priorSnapshots: snapshots.slice(1),
+              activeSignals,
+              closeCalendar,
+              graphNodes: graphNodes ?? [],
+            };
+          },
+        };
+
+        return new DefaultCloseRiskSignalOperationsService(
+          ruleRepo, signalRepo, snapshotRepo, activityRepo,
+          eventEmitter, contextLoader,
+        );
+      },
+      "singleton",
+    );
+
+    // ── Phase 6.2: Risk Signal Dispatcher ──
+    c.register(
+      "fin.accounting.riskSignalDispatcher",
+      async () => {
+        const opsService = await c.resolve<any>("fin.accounting.riskSignalOperationsService");
+        if (!opsService) return null;
+
+        // Discovery — queries fiscal_period + close_calendar + close_risk_schedule
+        let discovery: InstanceType<typeof DefaultActiveCloseContextDiscovery>;
+        try {
+          const db = await c.resolve<any>(TOKENS.db);
+          discovery = new DefaultActiveCloseContextDiscovery(db);
+        } catch {
+          logger.warn("[fin.accounting] Database not available — risk signal discovery disabled");
+          return null;
+        }
+
+        return new DefaultCloseRiskSignalDispatcher(discovery, opsService);
+      },
+      "singleton",
+    );
+
     // ── HTTP Handlers ──
     // Purchase Invoice
     c.register(
@@ -306,6 +523,105 @@ export const module: RuntimeModule = {
     c.register(
       "fin.handler.gl.trialBalance",
       async () => new TrialBalanceHandler(),
+      "singleton",
+    );
+
+    // Period Close
+    c.register(
+      "fin.handler.close.checklist",
+      async () => new GetCloseChecklistHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.progress",
+      async () => new GetCloseProgressHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.materialize",
+      async () => new MaterializeChecklistHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.completeTask",
+      async () => new CompleteTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.waiveTask",
+      async () => new WaiveTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.failTask",
+      async () => new FailTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.blockTask",
+      async () => new BlockTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.executeHandler",
+      async () => new ExecuteSystemHandlerTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.checkGate",
+      async () => new CheckGateHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.transition",
+      async () => new TransitionPeriodHandler(),
+      "singleton",
+    );
+
+    // Period Close Phase 3
+    c.register(
+      "fin.handler.close.waiverRequest",
+      async () => new RequestTaskWaiverHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.waiverApprove",
+      async () => new ApproveTaskWaiverHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.waiverReject",
+      async () => new RejectTaskWaiverHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.waiverStatus",
+      async () => new GetWaiverStatusHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.assign",
+      async () => new AssignTaskHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.bulkAssign",
+      async () => new BulkAssignTasksHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.timeline",
+      async () => new GetTimelineHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.taskTimeline",
+      async () => new GetTaskTimelineHandler(),
+      "singleton",
+    );
+    c.register(
+      "fin.handler.close.recheckGate",
+      async () => new RecheckGateHandler(),
       "singleton",
     );
 
@@ -448,8 +764,194 @@ export const module: RuntimeModule = {
       tags: ["fin", "gl-inquiry"],
     });
 
+    // ── Period Close Governance Routes ──
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/checklist",
+      handlerToken: "fin.handler.close.checklist",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/progress",
+      handlerToken: "fin.handler.close.progress",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/materialize",
+      handlerToken: "fin.handler.close.materialize",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/complete",
+      handlerToken: "fin.handler.close.completeTask",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/waive",
+      handlerToken: "fin.handler.close.waiveTask",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/fail",
+      handlerToken: "fin.handler.close.failTask",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/block",
+      handlerToken: "fin.handler.close.blockTask",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/execute",
+      handlerToken: "fin.handler.close.executeHandler",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/gate/:targetStatus",
+      handlerToken: "fin.handler.close.checkGate",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/transition",
+      handlerToken: "fin.handler.close.transition",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+
+    // ── Period Close Phase 3 Routes ──
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/waiver/request",
+      handlerToken: "fin.handler.close.waiverRequest",
+      authRequired: true,
+      tags: ["fin", "period-close", "waiver"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/waiver/:checklistId/approve",
+      handlerToken: "fin.handler.close.waiverApprove",
+      authRequired: true,
+      tags: ["fin", "period-close", "waiver"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/waiver/:checklistId/reject",
+      handlerToken: "fin.handler.close.waiverReject",
+      authRequired: true,
+      tags: ["fin", "period-close", "waiver"],
+    });
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/waiver/:checklistId",
+      handlerToken: "fin.handler.close.waiverStatus",
+      authRequired: true,
+      tags: ["fin", "period-close", "waiver"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/:taskCode/assign",
+      handlerToken: "fin.handler.close.assign",
+      authRequired: true,
+      tags: ["fin", "period-close", "assignment"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/tasks/assign/bulk",
+      handlerToken: "fin.handler.close.bulkAssign",
+      authRequired: true,
+      tags: ["fin", "period-close", "assignment"],
+    });
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/timeline",
+      handlerToken: "fin.handler.close.timeline",
+      authRequired: true,
+      tags: ["fin", "period-close", "timeline"],
+    });
+    routes.add({
+      method: "GET",
+      path: "/api/fin/period-close/tasks/:checklistId/timeline",
+      handlerToken: "fin.handler.close.taskTimeline",
+      authRequired: true,
+      tags: ["fin", "period-close", "timeline"],
+    });
+    routes.add({
+      method: "POST",
+      path: "/api/fin/period-close/:fiscalYear/:periodNumber/gate/:targetStatus/recheck",
+      handlerToken: "fin.handler.close.recheckGate",
+      authRequired: true,
+      tags: ["fin", "period-close"],
+    });
+
+    // ── Phase 6.2: Register risk signal dispatcher job ──
+    try {
+      const jobRegistry = await c.resolve<any>(TOKENS.jobRegistry);
+      const dispatcher = await c.resolve<any>("fin.accounting.riskSignalDispatcher");
+      if (jobRegistry && dispatcher) {
+        jobRegistry.addJob({
+          name: "fin.job.riskSignalDispatcher",
+          queue: "fin.risk-signals",
+          handlerToken: "fin.accounting.riskSignalDispatcher",
+          concurrency: 1,
+        });
+        jobRegistry.addSchedule({
+          name: "fin.schedule.riskSignalEvaluation",
+          cron: "*/30 * * * *", // every 30 minutes
+          jobName: "fin.job.riskSignalDispatcher",
+        });
+        logger.info("[fin.accounting] Risk signal dispatcher job registered (every 30 min)");
+      }
+    } catch {
+      logger.warn("[fin.accounting] JobRegistry not available — risk signal scheduling disabled");
+    }
+
+    // ── Phase 6.2b: Register domain event outbox drain job ──
+    try {
+      const jobRegistry = await c.resolve<any>(TOKENS.jobRegistry);
+      const jobQueue = await c.resolve<any>(TOKENS.jobQueue);
+      const db = await c.resolve<any>(TOKENS.db);
+      const eventBus = await c.resolve<any>(TOKENS.eventBus);
+
+      const handler = createDrainDomainOutboxHandler(db, eventBus, logger);
+
+      await jobQueue.process("fin.drain-domain-event-outbox", 1, handler);
+
+      jobRegistry.addJob({
+        name: "fin.drain-domain-event-outbox",
+        queue: "fin.domain-events",
+        handlerToken: "fin.drain-domain-event-outbox",
+        concurrency: 1,
+      });
+      jobRegistry.addSchedule({
+        name: "fin.schedule.drainDomainEventOutbox",
+        cron: "*/15 * * * * *", // every 15 seconds
+        jobName: "fin.drain-domain-event-outbox",
+      });
+      logger.info("[fin.accounting] Domain event outbox drain registered (every 15s)");
+    } catch {
+      logger.warn("[fin.accounting] Domain event outbox drain not available — BFF events will accumulate until drained");
+    }
+
     logger.info(
-      "[fin.accounting] Finance accounting routes registered: 18 endpoints",
+      "[fin.accounting] Finance accounting routes registered: 37 endpoints",
     );
   },
 };

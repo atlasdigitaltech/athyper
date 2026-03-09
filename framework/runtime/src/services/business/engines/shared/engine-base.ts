@@ -4,7 +4,7 @@
  * Shared engine patterns and base types.
  */
 
-import type { Container } from "../../../../kernel/container.js";
+import type { Container } from "../../../../kernel/container";
 
 /** Standard engine module interface (extends RuntimeModule pattern) */
 export interface EngineModule {

@@ -231,8 +231,8 @@ export function ChangeRequestPanel({
                             </Button>
                             <Button
                               size="sm"
-                              variant="destructive"
-                              className="gap-1.5 h-7 text-xs"
+                              variant="outline"
+                              className="gap-1.5 h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
                               onClick={() => {
                                 onReject?.(cr.id, reviewComment);
                                 setReviewComment("");

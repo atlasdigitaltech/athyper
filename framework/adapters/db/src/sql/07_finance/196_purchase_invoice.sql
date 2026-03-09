@@ -1,5 +1,5 @@
 /* ============================================================================
-   Athyper v2.1 — Purchase Non-PO Invoice & Lines
+   Athyper v2.1 — Purchase Invoice & Lines
    Schema: fin
    Dependencies: core.tenant, ref.currency, ref.uom,
                  fin.operating_unit, fin.business_intent, fin.funding_profile,
@@ -25,7 +25,7 @@ create table if not exists fin.document_sequence (
 );
 
 -- ============================================================================
--- fin.purchase_invoice — Purchase (Non-PO) Invoice header
+-- fin.purchase_invoice — Purchase Invoice header
 -- ============================================================================
 create table if not exists fin.purchase_invoice (
     id                  uuid primary key default gen_random_uuid(),
@@ -35,6 +35,8 @@ create table if not exists fin.purchase_invoice (
 
     -- Document identity
     invoice_number      varchar(50) not null,
+    invoice_type        varchar(20) not null default 'NON_PO'
+                        check (invoice_type in ('PO_BASED','NON_PO')),
     supplier_id         uuid not null references ent.supplier(id),
     supplier_invoice_ref varchar(100),
     description         text,
@@ -139,6 +141,8 @@ create index if not exists idx_fin_pi_status_date
     on fin.purchase_invoice(tenant_id, entity_code, status, invoice_date desc);
 create index if not exists idx_fin_pi_supplier_date
     on fin.purchase_invoice(tenant_id, supplier_id, invoice_date desc);
+create index if not exists idx_fin_pi_type
+    on fin.purchase_invoice(tenant_id, entity_code, invoice_type);
 
 -- ============================================================================
 -- fin.purchase_invoice_line — Invoice line items
@@ -175,7 +179,7 @@ create table if not exists fin.purchase_invoice_line (
     profit_center_id    uuid references fin.profit_center(id),
     fp_id               uuid references fin.funding_profile(id),
 
-    -- Commitment link (Non-PO may still reference existing commitment)
+    -- Commitment link (may reference existing commitment)
     commitment_id       uuid references fin.commitment(id),
     commitment_schedule_id uuid references fin.commitment_schedule(id),
 

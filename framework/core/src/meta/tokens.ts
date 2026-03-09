@@ -19,6 +19,7 @@ import type {
   EntityClassificationService,
   EntityPageDescriptorService,
   GenericDataAPI,
+  HookAdminService,
   LifecycleManager,
   LifecycleTimerService,
   MetaCompiler,
@@ -119,6 +120,11 @@ export const META_TOKENS = {
 
   /** Schema Composer Service - overlay composition and validation */
   schemaComposer: "meta.schemaComposer",
+
+  // ===== Hook Customization (Phase 2+3) =====
+
+  /** Hook Admin Service - registry & override CRUD */
+  hookAdminService: "meta.hookAdminService",
 } as const;
 
 // ============================================================================
@@ -190,6 +196,9 @@ export interface MetaTokenTypes {
   // Overlay System
   [META_TOKENS.overlayRepository]: unknown; // IOverlayRepository from runtime
   [META_TOKENS.schemaComposer]: unknown; // SchemaComposerService from runtime
+
+  // Hook Customization
+  [META_TOKENS.hookAdminService]: HookAdminService;
 }
 
 /**

@@ -10,7 +10,7 @@ import type {
   DocType,
   ActorType,
   UniversalEventEnvelope,
-} from "../event-store/domain/types.js";
+} from "../event-store/domain/types";
 
 /**
  * Compute deterministic partition key from domain + identifiers.

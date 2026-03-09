@@ -4,9 +4,9 @@ import {
   sumAmounts,
   subtractAmounts,
   compareAmounts,
-} from "../../shared/money.js";
+} from "../../shared/money";
 
-import type { CreateJournalLineInput } from "./types.js";
+import type { CreateJournalLineInput } from "./types";
 
 /**
  * Validate double-entry invariant: total debits = total credits.

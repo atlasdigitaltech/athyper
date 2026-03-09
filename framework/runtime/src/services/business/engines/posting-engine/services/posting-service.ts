@@ -4,22 +4,23 @@
 // Enforces: double-entry balance, period control, no-post-twice,
 // idempotency, and optional caller-provided transaction context.
 
-import { ok, fail } from "../../shared/engine-base.js";
+import { ok, fail } from "../../shared/engine-base";
 import {
   validateDoubleEntry,
   validateJournalLines,
-} from "../domain/double-entry-validator.js";
-import { canPostToPeriod } from "../domain/period-control.js";
+} from "../domain/double-entry-validator";
+import { canPostToPeriod } from "../domain/period-control";
 
 import type {
   ServiceResult,
   OperationContext,
-} from "../../shared/engine-base.js";
-import type { JournalEntry, CreateJournalEntryInput } from "../domain/types.js";
-import type { ChartOfAccountsRepo } from "../persistence/chart-of-accounts-repo.js";
-import type { FiscalPeriodRepo } from "../persistence/fiscal-period-repo.js";
-import type { GLBalanceRepo } from "../persistence/gl-balance-repo.js";
-import type { JournalEntryRepo } from "../persistence/journal-entry-repo.js";
+} from "../../shared/engine-base";
+import type { JournalEntry, CreateJournalEntryInput } from "../domain/types";
+import type { ChartOfAccountsRepo } from "../persistence/chart-of-accounts-repo";
+import type { FiscalPeriodRepo } from "../persistence/fiscal-period-repo";
+import type { GLBalanceRepo } from "../persistence/gl-balance-repo";
+import type { JournalEntryRepo } from "../persistence/journal-entry-repo";
+import type { DimensionResolutionService } from "./dimension-resolution-service";
 
 /**
  * Opaque transaction handle. In production this wraps a DB transaction
@@ -67,6 +68,7 @@ export class DefaultPostingService implements PostingService {
     private readonly periodRepo: FiscalPeriodRepo,
     private readonly glBalanceRepo: GLBalanceRepo,
     private readonly coaRepo: ChartOfAccountsRepo,
+    private readonly dimService?: DimensionResolutionService,
   ) {}
 
   async createAndPost(
@@ -132,8 +134,58 @@ export class DefaultPostingService implements PostingService {
       }
     }
 
-    // ── 5. Find and validate fiscal period ──────────────────────
+    // ── 5. Resolve dimensions (if dimension service is available) ─
     const entityCode = ctx.entityCode ?? input.entityCode;
+    const resolvedDimensions = new Map<number, string | null>();
+    // Resolution metadata to persist after JE creation (need line IDs)
+    const pendingResolutionMeta: Array<{
+      lineIndex: number;
+      dimensionSetId: string | null;
+      resolutionLog: unknown[];
+      resolutionHash: string;
+      evaluatedPolicies: unknown[];
+    }> = [];
+
+    if (this.dimService) {
+      for (let i = 0; i < input.lines.length; i++) {
+        const line = input.lines[i];
+        // Skip if caller already resolved the dimension set
+        if (line.dimensionSetId) {
+          resolvedDimensions.set(i, line.dimensionSetId);
+          continue;
+        }
+
+        if (line.dimensionInput) {
+          const dimResult = await this.dimService.resolveForLine(
+            ctx.tenantId,
+            entityCode,
+            line.dimensionInput,
+            tx,
+          );
+
+          if (dimResult.errors.length > 0) {
+            return fail(
+              "DIMENSION_VALIDATION",
+              `Line ${i + 1}: ${dimResult.errors.join("; ")}`,
+            );
+          }
+          resolvedDimensions.set(i, dimResult.dimensionSetId);
+
+          // Queue resolution metadata for persistence after JE creation
+          if (dimResult.resolutionHash) {
+            pendingResolutionMeta.push({
+              lineIndex: i,
+              dimensionSetId: dimResult.dimensionSetId,
+              resolutionLog: dimResult.derivationLog,
+              resolutionHash: dimResult.resolutionHash,
+              evaluatedPolicies: dimResult.evaluatedPolicies,
+            });
+          }
+        }
+      }
+    }
+
+    // ── 6. Find and validate fiscal period ──────────────────────
     const period = await this.periodRepo.getForDate(
       ctx.tenantId,
       entityCode,
@@ -151,7 +203,7 @@ export class DefaultPostingService implements PostingService {
       return fail("PERIOD_CLOSED", periodCheck.reason!);
     }
 
-    // ── 6. Create JE (within caller's tx if provided) ──────────
+    // ── 7. Create JE (within caller's tx if provided) ──────────
     const je = await this.jeRepo.create(
       {
         ...input,
@@ -164,8 +216,10 @@ export class DefaultPostingService implements PostingService {
       tx,
     );
 
-    // ── 7. Update GL balances ───────────────────────────────────
-    for (const line of input.lines) {
+    // ── 8. Update GL balances ───────────────────────────────────
+    for (let i = 0; i < input.lines.length; i++) {
+      const line = input.lines[i];
+      const dimSetId = resolvedDimensions.get(i) ?? line.dimensionSetId ?? null;
       await this.glBalanceRepo.incrementPeriodAmounts(
         ctx.tenantId,
         entityCode,
@@ -177,10 +231,11 @@ export class DefaultPostingService implements PostingService {
         line.debitAmount,
         line.creditAmount,
         tx,
+        dimSetId,
       );
     }
 
-    // ── 8. Mark as posted ───────────────────────────────────────
+    // ── 9. Mark as posted ───────────────────────────────────────
     const posted = await this.jeRepo.updateStatus(
       ctx.tenantId,
       je.id,
@@ -212,7 +267,8 @@ export class DefaultPostingService implements PostingService {
       );
     }
 
-    // Get original lines and reverse them
+    // Get original lines and reverse them — dimensions are carried forward
+    // from the original line (reversal must post to same dimension set)
     const originalLines = await this.jeRepo.getLinesByJeId(ctx.tenantId, jeId);
     const reversedLines = originalLines.map((line) => ({
       accountId: line.accountId,
@@ -225,6 +281,9 @@ export class DefaultPostingService implements PostingService {
       subledgerType: line.subledgerType ?? undefined,
       subledgerRefId: line.subledgerRefId ?? undefined,
       sourceDocLineId: line.sourceDocLineId ?? undefined,
+      // Dimension safety: reversal inherits exact dimension set from original
+      // This is governed by rule, not accident — no re-resolution needed
+      dimensionSetId: line.dimensionSetId ?? undefined,
       tags: line.tags,
     }));
 

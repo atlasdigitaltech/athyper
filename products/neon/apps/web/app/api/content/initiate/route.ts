@@ -99,13 +99,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data: result });
   } catch (err: unknown) {
     console.error("Upload initiation error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    const code = (err as Record<string, unknown>)?.code;
+    // Capture as much detail as possible for debugging
+    let message: string;
+    if (err instanceof Error) {
+      message = err.message;
+      if (err.stack) console.error("Stack:", err.stack);
+    } else if (typeof err === "string") {
+      message = err;
+    } else {
+      message = `Unknown error (type=${typeof err}): ${String(err)}`;
+    }
+    const code =
+      (err as Record<string, unknown>)?.code ??
+      (message.includes("RUNTIME_API_URL") ? "CONFIG_ERROR" : "INTERNAL_ERROR");
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: code ?? "INTERNAL_ERROR",
+          code: code as string,
           message,
         },
       },

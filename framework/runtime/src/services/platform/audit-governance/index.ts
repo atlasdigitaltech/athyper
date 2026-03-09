@@ -11,6 +11,9 @@ import { ActivityTimelineService } from "./domain/activity-timeline.service.js";
 import { AuditAccessReportService } from "./domain/audit-access-report.service.js";
 import { AuditDsarService } from "./domain/audit-dsar.service.js";
 import { AuditExplainabilityService } from "./domain/audit-explainability.service.js";
+import { LegalHoldService } from "./domain/legal-hold.service.js";
+import { PolicyExplainabilityService } from "./domain/policy-explainability.service.js";
+import { QuotaEnforcementService } from "./domain/quota-enforcement.guard.js";
 import { createAuditFeatureFlagResolver } from "./domain/audit-feature-flags.js";
 import { AuditIntegrityService } from "./domain/audit-integrity.service.js";
 import { createAuditLoadSheddingService } from "./domain/audit-load-shedding.service.js";
@@ -29,6 +32,10 @@ import {
   AuditMetrics,
   createAuditHealthChecker,
 } from "./observability/metrics.js";
+import {
+  GovernanceMetrics,
+  createGovernanceHealthChecker,
+} from "./observability/governance-metrics.js";
 import { AuditArchiveMarkerRepo } from "./persistence/AuditArchiveMarkerRepo.js";
 import { AuditDlqRepo } from "./persistence/AuditDlqRepo.js";
 import { AuditOutboxRepo } from "./persistence/AuditOutboxRepo.js";
@@ -560,6 +567,45 @@ export const module: RuntimeModule = {
       },
       "singleton",
     );
+
+    // ── Legal Hold Service ──────────────────────────────────────
+    c.register(
+      TOKENS.legalHoldService,
+      async () => {
+        return new LegalHoldService(db);
+      },
+      "singleton",
+    );
+
+    // ── Policy Explainability Service ───────────────────────────
+    c.register(
+      TOKENS.policyExplainabilityService,
+      async () => {
+        return new PolicyExplainabilityService(db);
+      },
+      "singleton",
+    );
+
+    // ── Quota Enforcement Service ───────────────────────────────
+    c.register(
+      TOKENS.quotaEnforcementService,
+      async () => {
+        return new QuotaEnforcementService(db);
+      },
+      "singleton",
+    );
+
+    // ── Governance Metrics ──────────────────────────────────────
+    c.register(
+      TOKENS.governanceMetrics,
+      async () => {
+        const metricsRegistry = await c.resolve<MetricsRegistry>(
+          TOKENS.metricsRegistry,
+        );
+        return new GovernanceMetrics(metricsRegistry);
+      },
+      "singleton",
+    );
   },
 
   async contribute(c: Container) {
@@ -586,6 +632,58 @@ export const module: RuntimeModule = {
       logger.warn(
         { error: String(err) },
         "[audit-governance] Could not register health check",
+      );
+    }
+
+    // ── Governance Health Check ──────────────────────────────────
+    try {
+      const healthRegistry = await c.resolve<HealthCheckRegistry>(
+        TOKENS.healthRegistry,
+      );
+      const govDb = await c.resolve<Kysely<DB>>(TOKENS.db);
+
+      healthRegistry.register(
+        "governance",
+        createGovernanceHealthChecker({
+          getArchiveBacklog: async () => {
+            const { sql } = await import("kysely");
+            const r = await sql<{ cnt: string }>`
+              SELECT COUNT(*)::text AS cnt FROM evt.archive_manifest
+              WHERE verified_at IS NULL AND detached_at IS NULL
+            `.execute(govDb);
+            return Number(r.rows[0]?.cnt ?? 0);
+          },
+          getHeldManifestCount: async () => {
+            const { sql } = await import("kysely");
+            const r = await sql<{ cnt: string }>`
+              SELECT COUNT(DISTINCT manifest_id)::text AS cnt
+              FROM core.legal_hold_manifest WHERE released_at IS NULL
+            `.execute(govDb);
+            return Number(r.rows[0]?.cnt ?? 0);
+          },
+          getActiveHoldCount: async () => {
+            const { sql } = await import("kysely");
+            const r = await sql<{ cnt: string }>`
+              SELECT COUNT(*)::text AS cnt FROM core.legal_hold
+              WHERE released_at IS NULL
+            `.execute(govDb);
+            return Number(r.rows[0]?.cnt ?? 0);
+          },
+          getQuotaBreachCount: async () => {
+            const { sql } = await import("kysely");
+            const r = await sql<{ cnt: string }>`
+              SELECT COUNT(*)::text AS cnt FROM core.tenant_resource_quota
+              WHERE current_value > limit_value AND is_active = true
+            `.execute(govDb);
+            return Number(r.rows[0]?.cnt ?? 0);
+          },
+        }),
+        { type: "internal", required: false },
+      );
+    } catch (err) {
+      logger.warn(
+        { error: String(err) },
+        "[audit-governance] Could not register governance health check",
       );
     }
 
@@ -667,6 +765,12 @@ export const module: RuntimeModule = {
         cron: "0 2 * * *", // daily at 2 AM
         jobName: "audit-log-retention",
       });
+      // Quota measurement: hourly snapshot of tenant resource usage
+      jobRegistry.addSchedule({
+        name: "quota-measurement",
+        cron: "15 * * * *", // 15 minutes past every hour
+        jobName: "quota-measurement",
+      });
     } catch (err) {
       logger.warn(
         { error: String(err) },
@@ -683,3 +787,19 @@ export const moduleName = "Audit & Governance";
 
 // Re-export for barrel imports
 export * from "./audit-log-retention.job.js";
+export { LegalHoldService } from "./domain/legal-hold.service.js";
+export { PolicyExplainabilityService } from "./domain/policy-explainability.service.js";
+export {
+  QuotaEnforcementService,
+  quotaMiddleware,
+} from "./domain/quota-enforcement.guard.js";
+export type {
+  QuotaCheckResult,
+  QuotaViolation,
+  QuotaGuardOptions,
+  FailMode,
+} from "./domain/quota-enforcement.guard.js";
+export {
+  GovernanceMetrics,
+  createGovernanceHealthChecker,
+} from "./observability/governance-metrics.js";

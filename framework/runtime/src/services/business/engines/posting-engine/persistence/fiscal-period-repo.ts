@@ -1,6 +1,6 @@
 // framework/runtime/src/services/business/engines/posting-engine/persistence/fiscal-period-repo.ts
 
-import type { FiscalPeriod, PeriodStatus } from "../domain/types.js";
+import type { FiscalPeriod, PeriodStatus } from "../domain/types";
 
 export interface FiscalPeriodRepo {
   create(

@@ -83,7 +83,7 @@ UPDATE meta.entity SET entity_short = 'TXRT'  WHERE name = 'TaxRate'            
 UPDATE meta.entity SET entity_short = 'CASN'  WHERE name = 'CommissionAssignment'  AND entity_short IS NULL;
 
 -- FIN Document entities (full governance — lifecycle-managed)
-UPDATE meta.entity SET entity_short = 'PINV'  WHERE name = 'PurchaseNonPoInvoice'  AND entity_short IS NULL;
+UPDATE meta.entity SET entity_short = 'PINV'  WHERE name = 'PurchaseInvoice'  AND entity_short IS NULL;
 UPDATE meta.entity SET entity_short = 'MJE'   WHERE name = 'ManualJournalEntry'    AND entity_short IS NULL;
 UPDATE meta.entity SET entity_short = 'PAY'   WHERE name = 'PaymentEntry'          AND entity_short IS NULL;
 UPDATE meta.entity SET entity_short = 'BSTM'  WHERE name = 'BankStatement'         AND entity_short IS NULL;
@@ -267,22 +267,22 @@ SELECT pg_temp.seed_entity_op('WorkOrder', 'print',        'BOTH',   'TOOLBAR', 
 SELECT pg_temp.seed_entity_op('WorkOrder', 'export',       'LIST',   'TOOLBAR',  'API',      NULL, false, 10);
 
 -- ============================================================================
--- Finance Document Entities (v2.2): PurchaseNonPoInvoice, ManualJournalEntry,
+-- Finance Document Entities (v2.2): PurchaseInvoice, ManualJournalEntry,
 --   PaymentEntry, BankStatement
 -- Pattern: full lifecycle with approval workflows + post/reverse/reconcile ops
 -- ============================================================================
 
--- PurchaseNonPoInvoice (DRAFT → SUBMITTED → APPROVED → POSTED → PAID)
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', NULL, false, 1,  'New Invoice');
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'read',    'DETAIL', 'TOOLBAR',  'NAVIGATE', NULL, true,  2);
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'update',  'DETAIL', 'TOOLBAR',  'NAVIGATE', NULL, true,  3);
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'submit',  'DETAIL', 'PRIMARY',  'API',      NULL, true,  4,  'Submit Invoice');
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'approve', 'DETAIL', 'PRIMARY',  'API',      NULL, true,  5,  'Approve Invoice');
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'deny',    'DETAIL', 'PRIMARY',  'API',      NULL, true,  6,  'Reject Invoice');
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'post',    'DETAIL', 'PRIMARY',  'API',      NULL, true,  7,  'Post Invoice');
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'cancel',  'DETAIL', 'OVERFLOW', 'API',      NULL, true,  8);
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'print',   'DETAIL', 'TOOLBAR',  'MODAL',    'print_dialog', true, 9);
-SELECT pg_temp.seed_entity_op('PurchaseNonPoInvoice', 'export',  'LIST',   'TOOLBAR',  'API',      NULL, false, 10);
+-- PurchaseInvoice (DRAFT → SUBMITTED → APPROVED → POSTED → PAID)
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', NULL, false, 1,  'New Invoice');
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'read',    'DETAIL', 'TOOLBAR',  'NAVIGATE', NULL, true,  2);
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'update',  'DETAIL', 'TOOLBAR',  'NAVIGATE', NULL, true,  3);
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'submit',  'DETAIL', 'PRIMARY',  'API',      NULL, true,  4,  'Submit Invoice');
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'approve', 'DETAIL', 'PRIMARY',  'API',      NULL, true,  5,  'Approve Invoice');
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'deny',    'DETAIL', 'PRIMARY',  'API',      NULL, true,  6,  'Reject Invoice');
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'post',    'DETAIL', 'PRIMARY',  'API',      NULL, true,  7,  'Post Invoice');
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'cancel',  'DETAIL', 'OVERFLOW', 'API',      NULL, true,  8);
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'print',   'DETAIL', 'TOOLBAR',  'MODAL',    'print_dialog', true, 9);
+SELECT pg_temp.seed_entity_op('PurchaseInvoice', 'export',  'LIST',   'TOOLBAR',  'API',      NULL, false, 10);
 
 -- ManualJournalEntry (CREATED → POSTED → REVERSED)
 SELECT pg_temp.seed_entity_op('ManualJournalEntry', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', NULL, false, 1,  'New Manual JE');

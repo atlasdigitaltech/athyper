@@ -1,9 +1,9 @@
-# Athyper v2.2 — Finance Module Functional Specification
+# Athyper v2.3 — Finance Module Functional Specification
 
-> **Version**: 2.2
-> **Date**: 2026-03-03
+> **Version**: 2.3
+> **Date**: 2026-03-07
 > **Status**: Living Document
-> **Scope**: 13 financial engines, 4 document services, bank reconciliation, outbox pattern, HTTP API layer, UI components, and 69-test coverage
+> **Scope**: 14 financial engines, 6 runtime modules, 4 document services, bank reconciliation, period close governance, outbox pattern, HTTP API layer, 5 dashboard contributions, 15 UI components (8 detail + 3 list explorers + 4 shared renderers), list-page config system, and 69-test coverage
 
 ---
 
@@ -26,6 +26,7 @@
    - 4.11 [Federation Engine](#411-federation-engine)
    - 4.12 [Production Engine](#412-production-engine)
    - 4.13 [Atlas AI Engine](#413-atlas-ai-engine)
+   - 4.14 [Period Close Governance Engine](#414-period-close-governance-engine)
 5. [Transaction Pipeline (13-Step Decision Grid)](#5-transaction-pipeline-13-step-decision-grid)
 6. [Document Services](#6-document-services)
    - 6.1 [Purchase Invoice Service](#61-purchase-invoice-service)
@@ -35,21 +36,28 @@
 7. [Bank Reconciliation](#7-bank-reconciliation)
 8. [Outbox Pattern & Post-Action Handlers](#8-outbox-pattern--post-action-handlers)
 9. [HTTP API Reference](#9-http-api-reference)
-10. [UI Components](#10-ui-components)
-11. [Shared Foundations](#11-shared-foundations)
-12. [Data Model Summary](#12-data-model-summary)
-13. [Blueprint Seed Data Specifications](#13-blueprint-seed-data-specifications)
-14. [Configuration & Feature Flags](#14-configuration--feature-flags)
-15. [Cross-Cutting Concerns](#15-cross-cutting-concerns)
-16. [Appendices](#16-appendices)
+10. [Module Registry & Subscription Tiers](#10-module-registry--subscription-tiers)
+11. [Dashboard Contributions](#11-dashboard-contributions)
+12. [UI Components](#12-ui-components)
+    - 12.1 [Detail Components](#121-detail-components)
+    - 12.2 [List Explorer Components](#122-list-explorer-components)
+    - 12.3 [Shared Cell Renderers](#123-shared-cell-renderers)
+    - 12.4 [ListPageConfig System](#124-listpageconfig-system)
+    - 12.5 [Tab Plugin Integration](#125-tab-plugin-integration)
+13. [Shared Foundations](#13-shared-foundations)
+14. [Data Model Summary](#14-data-model-summary)
+15. [Blueprint Seed Data Specifications](#15-blueprint-seed-data-specifications)
+16. [Configuration & Feature Flags](#16-configuration--feature-flags)
+17. [Cross-Cutting Concerns](#17-cross-cutting-concerns)
+18. [Appendices](#18-appendices)
 
 ---
 
 ## 1. Executive Summary
 
-The Athyper v2.2 Finance Platform is a modular, event-sourced financial processing system designed for multi-tenant SaaS deployment. It supports business sizes ranging from solo freelancers to multi-country enterprises through a **blueprint-based architecture** that scales organizational complexity, chart of accounts depth, approval workflows, and regulatory compliance per tenant tier.
+The Athyper v2.3 Finance Platform is a modular, event-sourced financial processing system designed for multi-tenant SaaS deployment. It supports business sizes ranging from solo freelancers to multi-country enterprises through a **blueprint-based architecture** that scales organizational complexity, chart of accounts depth, approval workflows, and regulatory compliance per tenant tier.
 
-The platform comprises three layers: **13 financial engines** (core computation), **4 document services** (business document lifecycle orchestration), and a **presentation layer** (HTTP API + UI components).
+The platform comprises three layers: **14 financial engines** (core computation), **4 document services** (business document lifecycle orchestration), and a **presentation layer** (HTTP API + UI components).
 
 ### Key Capabilities
 
@@ -68,7 +76,10 @@ The platform comprises three layers: **13 financial engines** (core computation)
 | **Outbox Pattern**               | Post-commit side effects (inventory, asset, commission, federation) via idempotent handlers with retry and dead-letter |
 | **Blueprint Differentiation**    | 6 blueprints (A-F) scaling from 1 OU/15 accounts to 13 OUs/168 accounts per tenant                                     |
 | **HTTP API**                     | 36 RESTful endpoints across 4 modules (accounting, payments, banking, GL inquiry)                                      |
-| **UI Components**                | 5 presentational components + 4 tab plugins with data-fetching hooks                                                   |
+| **Module Registry**              | 6 runtime modules (ACC, PAY, BUDGET, TREASURY, PAYG, plus planned modules) with dependency chains and subscription tiers |
+| **Dashboard Contributions**      | 5 dashboard layouts with KPI widgets, trend charts, and recent-activity lists per module                               |
+| **UI Components**                | 8 detail components + 3 list explorers + 4 shared cell renderers + 4 tab plugins with data-fetching hooks              |
+| **List Explorer System**         | Filterable, searchable, paginated list pages with ListPageConfig factory, KPI summaries, view presets, and card/table modes |
 
 ### Design Mandates
 
@@ -84,7 +95,7 @@ The platform comprises three layers: **13 financial engines** (core computation)
 
 ### 2.1 Engine Phases
 
-The 13 engines are deployed in 4 phases reflecting their dependency chain:
+The 14 engines are deployed in 4 phases reflecting their dependency chain (Period Close Governance engine runs cross-phase):
 
 ```
 Phase 1 (Core)          Phase 2 (Extended)      Phase 3 (Enterprise)    Phase 4 (Autonomous)
@@ -128,7 +139,7 @@ export const engineModule: RuntimeModule = {
 };
 ```
 
-All 13 engines are composed in `framework/runtime/src/services/business/index.ts` and wired into the kernel via DI tokens defined in `framework/runtime/src/kernel/tokens.ts`.
+All 14 engines are composed in `framework/runtime/src/services/business/index.ts` and wired into the kernel via DI tokens defined in `framework/runtime/src/kernel/tokens.ts`.
 
 ### 2.4 Service Result Pattern
 
@@ -179,6 +190,8 @@ This eliminates exception-driven control flow and makes error handling explicit 
 | **Fiscal Periods**    | 13  | 13  | 13  | 13  | 13  | 52 (13×4)   |
 | **Cost Centers**      | 1   | 3   | 6   | 8   | 6   | 10          |
 | **Profit Centers**    | 0   | 1   | 2   | 3   | 3   | 4           |
+| **Dimension Types**   | 2   | 2   | 3   | 4   | 3   | 4           |
+| **Dimension Values**  | 1   | 4   | 10  | 16  | 12  | 30          |
 | **Tax Jurisdictions** | 1   | 1   | 1   | 4   | 4   | 5           |
 | **Funding Profiles**  | 0   | 0   | 5   | 12  | 7   | 16          |
 | **Approval Stages**   | 1   | 2   | 3   | 3   | 2   | 3           |
@@ -586,7 +599,7 @@ DRAFT → PENDING → ACTIVE → PARTIALLY_FULFILLED → FULFILLED
 
 ### 4.6 Posting Engine (General Ledger)
 
-**Schema**: `fin` | **Tables**: 8 | **DDL**: `190_posting.sql`
+**Schema**: `fin` | **Tables**: 8 (GL Core) + 7 (Ledger Dimensions) | **DDL**: `190_posting.sql`, `191_ledger_dimensions.sql`
 **Runtime**: `framework/runtime/src/services/business/engines/posting-engine/`
 
 #### Purpose
@@ -640,24 +653,99 @@ FUTURE → OPEN → SOFT_CLOSE → HARD_CLOSE
 | Table                    | Purpose                                   | Key Constraint                                                                                                        |
 | ------------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `fin.chart_of_accounts`  | GL account master                         | UNIQUE `(tenant_id, entity_code, account_code)`                                                                       |
-| `fin.cost_center`        | Cost allocation dimension                 | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
-| `fin.profit_center`      | Revenue/P&L reporting dimension           | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
+| `fin.cost_center`        | Cost allocation dimension (legacy)        | UNIQUE `(tenant_id, entity_code, code)` — superseded by `dimension_value`                                             |
+| `fin.profit_center`      | Revenue/P&L reporting dimension (legacy)  | UNIQUE `(tenant_id, entity_code, code)` — superseded by `dimension_value`                                             |
 | `fin.fiscal_period`      | Period open/close control                 | UNIQUE `(tenant_id, entity_code, fiscal_year, period_number)`                                                         |
 | `fin.accounting_profile` | GL posting pattern templates              | UNIQUE `(tenant_id, entity_code, code)`                                                                               |
 | `fin.journal_entry`      | Journal entry headers                     | UNIQUE `(tenant_id, entity_code, je_number)`                                                                          |
 | `fin.journal_line`       | Journal entry line items                  | UNIQUE `(tenant_id, je_id, line_no)`                                                                                  |
 | `fin.gl_balance`         | Denormalized period balances (projection) | UNIQUE composite on `(tenant_id, entity_code, account_id, fiscal_year, period_number, cost_center_id, currency_code)` |
 
+#### Universal Ledger Dimension Tables (v2.3)
+
+| Table                          | Purpose                                              | Key Constraint                                                |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------- |
+| `fin.dimension_type`           | Registry of dimension kinds per tenant (with `source_kind`) | UNIQUE `(tenant_id, entity_code, code)`                |
+| `fin.dimension_value`          | Internal master data (lifecycle: ACTIVE/INACTIVE/BLOCKED/ARCHIVED) | UNIQUE `(tenant_id, entity_code, dimension_type_id, code)` |
+| `fin.dimension_policy`         | Governance rules (policy module pattern, 6 behaviors) | UNIQUE `(tenant_id, entity_code, policy_code, policy_version)` |
+| `fin.dimension_set`            | Hash-normalized dimension combinations (deduplication) | UNIQUE `(tenant_id, entity_code, set_hash)`              |
+| `fin.dimension_set_item`       | Individual members of a dimension set (immutable)     | UNIQUE `(dimension_set_id, dimension_type_id)`                |
+| `fin.ou_dimension_default`     | Default dimension values per OU                       | UNIQUE `(tenant_id, entity_code, ou_id, dimension_type_id)`  |
+| `fin.document_line_dimension`  | Dimension capture at document entry (header vs line)  | UNIQUE `(tenant_id, doc_type, doc_line_id, dimension_type_id)` |
+
+**Schema Extensions** (ALTER TABLE on existing tables):
+- `fin.journal_line.dimension_set_id` — each JE line resolves to one canonical dimension set
+- `fin.gl_balance.dimension_set_id` — balance grain keyed by dimension set (NULL = undimensioned)
+- `fin.transaction_pipeline.resolved_dimension_set_id` — frozen dimension snapshot in `txn.finalized`
+- `fin.transaction_pipeline.dimension_derivation_log` — JSONB audit trail of how each dimension was resolved
+
+**Dimension Set Normalization** — The key scalability pattern:
+- A journal line resolves to one canonical `dimension_set` via `fin.resolve_dimension_set()`
+- The set is SHA-256 hash-normalized by sorted `(dimension_type_id, dimension_value_id)` pairs
+- Identical combinations reuse the same `set_id` — no duplication
+- `gl_balance` stores one row per `(account, period, dimension_set_id, currency)` — no row explosion
+- Same principle used in SAP Universal Journal, Oracle GL Segments, NetSuite Custom Segments
+
+**Source-Aware Dimension Types** (`dimension_type.source_kind`):
+- `INTERNAL` — values mastered in `fin.dimension_value` (Cost Center, Profit Center, Project)
+- `EXTERNAL_ENTITY` — values reference external master tables (Fund → `fin.funding_profile`)
+- `DERIVED` — values computed from context (Region derived from OU geography)
+- `SYSTEM` — values managed by platform (Intercompany Partner from Federation Engine)
+
+**System-Seeded Dimension Types**: `COST_CENTER`, `PROFIT_CENTER` (migrate existing data)
+
+**Blueprint-Specific Dimension Types**:
+
+| Blueprint | Dimension Types                                  |
+| --------- | ------------------------------------------------ |
+| A         | Cost Center, Profit Center                       |
+| B         | Cost Center, Profit Center                       |
+| C         | Cost Center, Profit Center, **Project**          |
+| D         | Cost Center, Profit Center, **Region** (DERIVED), **Function** |
+| E         | Cost Center, Profit Center, **Location**         |
+| F         | Cost Center, Profit Center, **Segment**, **Intercompany** (SYSTEM) |
+
+**Dimension Policy Engine** — Governance module (not passive rule table):
+
+| Behavior             | Description                                             |
+| -------------------- | ------------------------------------------------------- |
+| `REQUIRED`           | Must be provided on matching lines                      |
+| `OPTIONAL`           | Can be provided                                         |
+| `FORBIDDEN`          | Must NOT be provided (e.g., PC on balance sheet control)|
+| `DERIVE_IF_MISSING`  | Auto-derive from context (`ou_default`, `intent_mapping`, `federation_context`) |
+| `INHERIT_FROM_HEADER`| Inherit from document header default                    |
+| `FIXED_VALUE`        | Always use a specific dimension value                   |
+
+Policy scope supports: `scope_account_type`, `scope_account_code`, `scope_account_range_lo/hi`, `scope_subledger_type`, `scope_ou_id`, `scope_intent_code`, `scope_doc_type`, `scope_domain`. Also supports dependency (`depends_on_type_id`) and mutual exclusion (`mutually_exclusive_with`).
+
+**Header Defaults, Line-Level Authority**:
+- Document header/OU carries suggested/default dimension context
+- Final posting authority is at line level
+- Posting Engine resolves and freezes `dimension_set_id` at JE line creation
+
 #### Posting Flow
 
 ```
-AccountingProfileResolver.resolve(intent, category)
-  → PostingService.createAndPost(lines)
-    → DoubleEntryValidator.validate(lines) — must balance
-    → PeriodControl.canPost(date) — must be OPEN
-    → JournalEntryRepo.create(je + lines)
-    → GLBalanceService.updateBalances(lines)
-    → EventPublisher.publish("posting.created")
+Smart Default Engine (SMART_DEFAULTS step):
+  OU + Intent + document context
+    → ou_dimension_default lookup
+    → dimension_policy evaluation (DERIVE_IF_MISSING, INHERIT_FROM_HEADER)
+    → candidate dimension values attached to txn context
+
+Finalization (FINALIZATION step):
+  DimensionPolicyEngine.validate(lines, policies)
+    → enforce REQUIRED/FORBIDDEN/dependency/combination constraints
+    → resolve_dimension_set() → canonical dimension_set_id
+    → txn.resolved_dimension_set_id frozen on transaction_pipeline
+
+Posting Engine:
+  AccountingProfileResolver.resolve(intent, category)
+    → PostingService.createAndPost(lines)
+      → DoubleEntryValidator.validate(lines) — must balance
+      → PeriodControl.canPost(date) — must be OPEN
+      → JournalEntryRepo.create(je + lines) — with dimension_set_id per line
+      → GLBalanceService.updateBalances(lines) — by dimension_set_id grain
+      → EventPublisher.publish("posting.created")
 ```
 
 ---
@@ -1028,6 +1116,322 @@ PROPOSED → EXECUTED → REVERSED (within reversal window)
 
 ---
 
+### 4.14 Period Close Governance Engine
+
+**Schema**: `fin` | **Tables**: 2 | **DDL**: `191_period_close_governance.sql`
+**Runtime**: `framework/runtime/src/services/business/engines/posting-engine/domain/period-close-governance.ts`
+
+#### Purpose
+
+Implements an orchestrated financial close process that prevents premature period closure and ensures audit compliance. Gates period transitions (`OPEN → SOFT_CLOSE → HARD_CLOSE`) on completion of mandatory close tasks, with waiver governance, evidence capture, and support for manual, system-validated, and hybrid task completion modes.
+
+#### Core Concepts
+
+**Close Task Catalogue** — Master task templates per (tenant, entity_code):
+
+Each task declares:
+- **Gate**: Which period transition it blocks (`SOFT_CLOSE` or `HARD_CLOSE`)
+- **Mandatory/Waivable**: Whether the task can be waived and under what conditions
+- **Completion Mode**: `MANUAL` (user-attested), `SYSTEM` (auto-validated by handler), or `HYBRID` (system-assisted, user-confirmed)
+- **Blueprint Filter**: Which tenant tiers include this task (null = all)
+
+**Checklist Materialization** — When a period transitions `FUTURE → OPEN`, the runtime calls `fin.materialize_close_checklist()` to stamp one checklist row per active task template. This gives the ops team immediate visibility into the full close plan. The function is idempotent (safe to call multiple times).
+
+**Checklist Status Lifecycle**:
+
+```
+PENDING → IN_PROGRESS → COMPLETED
+                      → WAIVED (with governance)
+                      → FAILED (system validation failure)
+                      → BLOCKED (upstream dependency)
+
+BLOCKED → PENDING → IN_PROGRESS (unblocked, retried)
+FAILED  → IN_PROGRESS → ... (retried after investigation)
+```
+
+**Status Semantics** (drives dashboard treatment and escalation):
+
+| Status        | Meaning                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| `PENDING`     | Task not yet started                                                    |
+| `IN_PROGRESS` | Work underway (manual attestation or system check running)              |
+| `COMPLETED`   | Task executed and passed; evidence captured                             |
+| `WAIVED`      | Intentionally bypassed with governance (reason + optional approval ref) |
+| `FAILED`      | Task **executed/validated and did NOT pass** (e.g., trial balance imbalanced, AR recon mismatch). Requires retry or investigation. |
+| `BLOCKED`     | Task **cannot be attempted** — prerequisite or upstream dependency missing. Differs from FAILED: the task was never executed. |
+
+**Transition Gating** — Period cannot advance past a gate until all mandatory checklist items for that gate are COMPLETED or WAIVED:
+
+```
+OPEN ──→ SOFT_CLOSE
+         Gate: AR_RECON, AP_RECON, INV_VALUATION, ASSET_DEPRECIATION,
+               BANK_RECON, TRIAL_BALANCE, TAX_PROVISION, ...
+
+         SOFT_CLOSE ──→ HARD_CLOSE
+                        Gate: MGMT_SIGNOFF
+```
+
+**Waiver Governance** — Controlled bypass for exceptional situations:
+
+| Task Field                 | Purpose                                         |
+| -------------------------- | ----------------------------------------------- |
+| `is_waivable`              | Whether the task permits waivers at all          |
+| `waiver_requires_approval` | Whether a waiver needs an approval reference     |
+| `waiver_reason_required`   | Whether a textual justification is mandatory     |
+
+Checklist waiver fields: `waived_by`, `waived_at`, `waiver_reason`, `waiver_approval_ref`
+
+**Evidence Capture** — Audit-grade completion records:
+
+| Checklist Field      | Purpose                                                   |
+| -------------------- | --------------------------------------------------------- |
+| `completion_notes`   | Free-text explanation of what was done                    |
+| `evidence_payload`   | JSONB — batch IDs, JE refs, report hashes, recon numbers |
+| `failure_reason`     | Why a system check failed                                 |
+
+**Standard Close Tasks** (blueprint-scaled):
+
+| Task Code            | Category       | Gate         | Mode   | Blueprints | Description                                          |
+| -------------------- | -------------- | ------------ | ------ | ---------- | ---------------------------------------------------- |
+| `AR_RECON`           | SUBLEDGER      | SOFT_CLOSE   | HYBRID | All        | AR subledger to GL reconciliation                    |
+| `AP_RECON`           | SUBLEDGER      | SOFT_CLOSE   | HYBRID | All        | AP subledger to GL reconciliation                    |
+| `INV_VALUATION`      | SUBLEDGER      | SOFT_CLOSE   | HYBRID | C+         | Inventory valuation check                            |
+| `ASSET_DEPRECIATION` | SUBLEDGER      | SOFT_CLOSE   | SYSTEM | C+         | Period depreciation run                              |
+| `WIP_CLEARANCE`      | SUBLEDGER      | SOFT_CLOSE   | HYBRID | D+         | WIP account clearance                                |
+| `COMMISSION_ACCRUAL` | SUBLEDGER      | SOFT_CLOSE   | HYBRID | D+         | Commission accrual/settlement                        |
+| `BANK_RECON`         | CASH           | SOFT_CLOSE   | HYBRID | All        | Bank reconciliation completion                       |
+| `IC_ELIMINATION`     | CONSOLIDATION  | SOFT_CLOSE   | SYSTEM | E+         | Intercompany elimination entries                     |
+| `FX_REVALUATION`     | CONSOLIDATION  | SOFT_CLOSE   | SYSTEM | D+         | FX revaluation at period-end rates                   |
+| `TAX_PROVISION`      | TAX            | SOFT_CLOSE   | HYBRID | C+         | Tax provision calculation                            |
+| `REVENUE_RECOGNITION`| REVENUE        | SOFT_CLOSE   | MANUAL | D+         | Revenue recognition cutoff (ASC 606 / IFRS 15)       |
+| `ACCRUAL_REVERSAL`   | ADJUSTMENTS    | SOFT_CLOSE   | SYSTEM | C+         | Auto-reverse prior period accruals                   |
+| `TRIAL_BALANCE`      | VALIDATION     | SOFT_CLOSE   | SYSTEM | All        | Trial balance validation (debits = credits)          |
+| `CUTOFF_REVIEW`      | VALIDATION     | SOFT_CLOSE   | MANUAL | C+         | Revenue/expense cutoff verification                  |
+| `MGMT_SIGNOFF`       | APPROVAL       | HARD_CLOSE   | MANUAL | All        | Controller/CFO sign-off                              |
+
+#### Tables
+
+| Table                        | Purpose                                  | Key Constraint                                                                 |
+| ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `fin.period_close_task`      | Master catalogue of close tasks          | UNIQUE `(tenant_id, entity_code, task_code)`                                   |
+| `fin.period_close_checklist` | Per-period checklist instances            | UNIQUE `(tenant_id, entity_code, fiscal_year, period_number, task_code)`, FK to `fin.fiscal_period` |
+
+#### Database Functions
+
+| Function                           | Purpose                                                    |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `fin.check_close_gate()`           | Returns gate pass/fail + blocking task list for a transition |
+| `fin.get_close_progress()`         | Dashboard summary: counts by status + completion percentage |
+| `fin.materialize_close_checklist()`| Populate checklist from task catalogue (idempotent)         |
+
+#### Runtime Integration
+
+The `canTransitionPeriod()` function in `period-control.ts` combines the basic state machine check with the checklist gate:
+
+```
+PeriodCloseChecklistRepo.checkGate(targetStatus)
+  → canTransitionPeriod(current, target, gateResult)
+    → isValidPeriodTransition(current, target)   — state machine
+    → evaluateGate(gateResult, target)           — checklist gate
+```
+
+The `getTransitionSideEffects()` function signals the caller to materialize the checklist when a period opens:
+
+```
+getTransitionSideEffects("OPEN")
+  → { materializeChecklist: true }
+  → caller invokes PeriodCloseChecklistRepo.materialize()
+```
+
+Domain functions in `period-close-governance.ts`:
+
+| Function                     | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `isValidChecklistTransition` | Validate checklist task status change               |
+| `canWaiveTask`               | Check waiver eligibility against governance rules   |
+| `canCompleteTask`            | Validate completion requirements                    |
+| `canFailTask`                | Validate failure transition + reason required       |
+| `canBlockTask`               | Validate block transition                           |
+| `isGatedTransition`          | Whether a period target status requires gate check  |
+| `evaluateGate`               | Evaluate gate result and produce descriptive error  |
+
+#### Service Layer (Phase 2)
+
+`DefaultPeriodCloseService` implements the full period close workflow:
+
+| Method                  | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `materializeChecklist`  | Stamp checklist rows from task catalogue (idempotent)          |
+| `getChecklist`          | List all checklist items for a period                          |
+| `getProgress`           | Dashboard summary: counts by status + completion %             |
+| `completeTask`          | Mark task COMPLETED with evidence capture                      |
+| `waiveTask`             | Waive task with governance checks (reason, approval ref)       |
+| `failTask`              | Mark task FAILED with failure reason                           |
+| `blockTask`             | Mark task BLOCKED (upstream dependency missing)                |
+| `executeSystemHandler`  | Dispatch SYSTEM/HYBRID task to registered handler              |
+| `checkTransitionGate`   | Evaluate gate readiness for SOFT_CLOSE or HARD_CLOSE           |
+| `transitionPeriod`      | Gate-enforced period transition with structured denial response |
+
+**Structured Gate Denial** — When `transitionPeriod()` is blocked by incomplete tasks, the error includes a `GateDenialResponse`:
+
+```typescript
+interface GateDenialResponse {
+  targetStatus: "SOFT_CLOSE" | "HARD_CLOSE";
+  gatePassed: false;
+  pendingCount: number;
+  pendingTasks: GateDenialDetail[];
+}
+interface GateDenialDetail {
+  taskCode: string;
+  taskName: string;
+  taskStatus: ChecklistTaskStatus;
+  category: CloseTaskCategory;
+  completionMode: CloseTaskCompletionMode;
+  assignedTo: string | null;
+}
+```
+
+**System Handler Registry** — `CloseHandlerRegistry` dispatches SYSTEM/HYBRID tasks to registered `CloseHandler` implementations:
+
+```
+CloseHandler.execute(ctx, { entityCode, fiscalYear, periodNumber })
+  → { passed: boolean; message: string; evidence: Record<string, unknown> }
+```
+
+Handlers are registered in the accounting module's DI container and invoked via the `executeSystemHandler` endpoint.
+
+#### API Endpoints (Phase 2)
+
+| Method | Path                                                              | Handler                    | Purpose                      |
+| ------ | ----------------------------------------------------------------- | -------------------------- | ---------------------------- |
+| GET    | `/api/fin/period-close/:fy/:pn/checklist`                         | `GetCloseChecklist`        | List checklist items         |
+| GET    | `/api/fin/period-close/:fy/:pn/progress`                          | `GetCloseProgress`         | Dashboard progress summary   |
+| POST   | `/api/fin/period-close/:fy/:pn/materialize`                       | `MaterializeChecklist`     | Stamp checklist from catalogue |
+| POST   | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/complete`          | `CompleteTask`             | Complete a task              |
+| POST   | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/waive`             | `WaiveTask`                | Waive a task                 |
+| POST   | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/fail`              | `FailTask`                 | Fail a task                  |
+| POST   | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/block`             | `BlockTask`                | Block a task                 |
+| POST   | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/execute`           | `ExecuteSystemHandler`     | Run system handler           |
+| GET    | `/api/fin/period-close/:fy/:pn/gate/:targetStatus`                | `CheckGate`                | Check gate readiness         |
+| POST   | `/api/fin/period-close/:fy/:pn/transition`                        | `TransitionPeriod`         | Gate-enforced transition     |
+
+**Error code → HTTP status mapping:**
+
+| HTTP | Error Codes                                      | Semantics               |
+| ---- | ------------------------------------------------ | ----------------------- |
+| 400  | `MISSING_REASON`, `MISSING_TARGET`, `INVALID_TARGET` | Malformed input     |
+| 403  | `WAIVER_DENIED`                                  | Authorization denied    |
+| 404  | `*_NOT_FOUND`                                    | Resource not found      |
+| 409  | `INVALID_TRANSITION`                             | State machine conflict  |
+| 422  | `NOT_SYSTEM_TASK`, `NO_HANDLER`, `GATE_DENIED`   | Business rule violation |
+| 501  | `HANDLER_NOT_REGISTERED`                         | Not implemented         |
+
+**Structured gate denial** — When `GATE_DENIED`, the error `details.gateDenial` contains a `GateDenialResponse` with per-task `GateDenialDetail` entries. Each detail includes:
+
+| Field            | Type                      | Purpose                                      |
+| ---------------- | ------------------------- | -------------------------------------------- |
+| `reasonCode`     | `GateDenialReasonCode`    | Machine-readable: `TASK_PENDING` / `TASK_IN_PROGRESS` / `TASK_FAILED` / `TASK_BLOCKED` |
+| `taskCode`       | `string`                  | Task identifier                              |
+| `taskName`       | `string`                  | Human-readable name                          |
+| `taskStatus`     | `ChecklistTaskStatus`     | Current status (narrow union)                |
+| `category`       | `CloseTaskCategory`       | Task category                                |
+| `completionMode` | `CloseTaskCompletionMode` | MANUAL / SYSTEM / HYBRID                     |
+| `assignedTo`     | `string \| null`          | Responsible party                            |
+| `actionHint`     | `string \| null`          | UI-friendly resolution hint                  |
+
+**Materialization idempotency** — The `materialize` endpoint returns `MaterializeResult { tasksCreated, alreadyMaterialized }`. On re-call, `tasksCreated: 0, alreadyMaterialized: true` (backed by `ON CONFLICT DO NOTHING` in SQL).
+
+#### Database Integrity Constraints
+
+| Constraint                  | Rule                                                                      |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `chk_system_handler`        | SYSTEM/HYBRID tasks must declare a `system_check_handler`                 |
+| `chk_waiver`                | WAIVED items must have `waived_by`, `waived_at`, and `waiver_reason`      |
+| `chk_waiver_fields_clean`   | Waiver fields must NOT be populated unless status = WAIVED                |
+| `chk_completion`            | COMPLETED items must have `completed_by` and `completed_at`               |
+| `chk_completion_fields_clean`| Completion fields must NOT be populated unless status = COMPLETED        |
+| `chk_failure`               | FAILED items must have `failure_reason` and `failed_at`                   |
+| `chk_failure_fields_clean`  | Failure fields must NOT be populated unless status = FAILED               |
+
+#### Phase 3: Operational Governance Extensions
+
+**Schema additions** (`192_period_close_phase3.sql`):
+
+| Table/Extension | Purpose |
+| --- | --- |
+| `fin.period_close_task` + 5 columns | Default ownership (`default_owner_role`, `default_owner_user_id`), SLA (`sla_hours`, `reminder_lead_hours`), `severity` |
+| `fin.period_close_checklist` + 16 columns | Assignment, waiver approval linkage, handler telemetry, escalation markers |
+| `fin.period_close_activity` (new) | Append-only close timeline / read model (immutable via trigger) |
+
+**Waiver approval integration** — Uses the same `ApprovalOps` facade pattern as purchase invoices:
+
+```
+requestTaskWaiver()
+  → canRequestWaiver() domain validation
+  → if requiresWaiverApproval():
+      CloseApprovalOps.createInstance(entityType: "fin_period_close_waiver")
+      → waiverStatus = "pending_approval"
+  → else:
+      waiverStatus = "approved" → immediate WAIVED transition
+```
+
+Approval decisions arrive via event-driven callback (`approval.instance.approved/rejected`) and invoke `approveTaskWaiver()` / `rejectTaskWaiver()`.
+
+**Task assignment** — Materialization populates `assigned_role`, `assigned_user_id`, and `due_at` from task template defaults. Runtime assignment via `assignTask()` / `bulkAssignTasks()`.
+
+**Activity timeline** — `fin.period_close_activity` captures 17 event types (task state changes, waivers, handlers, transitions, reminders). Append-only table with trigger-enforced immutability. Complements `audit.workflow_event_log` for compliance.
+
+**Handler execution hardening** — `executeSystemHandler()` and `recheckTransitionTasks()` now persist handler telemetry (`last_handler_run_at`, `last_handler_result`, `handler_run_count`) and log activity events.
+
+**Phase 3 API endpoints** (9 new, 37 total):
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| POST | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/waiver/request` | Request a waiver |
+| POST | `/api/fin/period-close/waiver/:checklistId/approve` | Approve waiver |
+| POST | `/api/fin/period-close/waiver/:checklistId/reject` | Reject waiver |
+| GET | `/api/fin/period-close/waiver/:checklistId` | Get waiver status |
+| POST | `/api/fin/period-close/:fy/:pn/tasks/:taskCode/assign` | Assign task |
+| POST | `/api/fin/period-close/:fy/:pn/tasks/assign/bulk` | Bulk assign |
+| GET | `/api/fin/period-close/:fy/:pn/timeline` | Period close timeline |
+| GET | `/api/fin/period-close/tasks/:checklistId/timeline` | Task timeline |
+| POST | `/api/fin/period-close/:fy/:pn/gate/:targetStatus/recheck` | Recheck gate readiness |
+
+**Architecture alignment**:
+- Approval: `wf.approval_instance` via `CloseApprovalOps` facade (same pattern as `ApprovalOps` in purchase invoices)
+- Notifications: dispatched via `TOKENS.notificationOrchestrator` (no custom notification table)
+- Reminders: BullMQ scheduler via `TOKENS.scheduler` (same as approval SLA timers)
+- Audit: dual-write to `fin.period_close_activity` (read model) + `audit.workflow_event_log` (compliance)
+- Assignment: `core.principal(id)` FKs for user/group (no custom team table)
+
+#### Concrete System Check Handlers
+
+Four first-class SYSTEM close handlers implemented in `posting-engine/handlers/close-system-handlers.ts`. Each implements the `CloseHandler` interface and resolves dependencies via DI container.
+
+| Handler Code | Class | DB Tables | Check Logic | Severity |
+| --- | --- | --- | --- | --- |
+| `close.trial_balance_validation` | `TrialBalanceCloseHandler` | `fin.gl_balance` | Sum(closing_debit) === Sum(closing_credit) within 0.01 tolerance | critical |
+| `close.asset_depreciation` | `DepreciationCheckHandler` | `fin.depreciation_run`, `fin.asset`, `fin.asset_book` | COMPLETED run exists for each book type with active assets; fails if any run FAILED or missing | critical |
+| `close.fx_revaluation` | `FxRevaluationCheckHandler` | `fin.fx_revaluation`, `fin.gl_balance`, `fin.legal_entity`, `fin.chart_of_accounts` | Revaluation entries exist for all foreign-currency GL accounts; all have posted JE references | critical |
+| `close.bank_reconciliation` | `BankReconCheckHandler` | `fin.bank_statement`, `fin.reconciliation_session`, `fin.fiscal_period` | All statements overlapping period have COMPLETED recon sessions with zero unmatched lines and discrepancy <= 0.01 | high |
+
+**Handler behavior patterns**:
+- **Trivial pass**: If no applicable data exists (no assets, no FC balances, no bank statements), handler passes with a "not applicable" message. This prevents blocking close for entities that don't use the feature.
+- **Structured evidence**: Every result includes machine-readable `evidence` payload for dashboard display and audit trail (account codes, run IDs, amounts, discrepancies).
+- **Tolerance**: Trial balance and bank recon use 0.01 (sub-cent) tolerance to avoid floating-point false positives.
+- **Multi-book awareness**: Depreciation handler checks all book types (STATUTORY, TAX, MANAGEMENT, INSURANCE) that have active assets, not just the default book.
+
+**Seed data** — `293b_seed_period_close_tasks.sql` defines all 15 close tasks with Phase 3 defaults:
+
+| Field | System Handlers | Manual/Hybrid Tasks |
+| --- | --- | --- |
+| `default_owner_role` | `CONTROLLER` or null | `ACCOUNTANT`, `TAX_ACCOUNTANT`, `CFO` |
+| `sla_hours` | 2–8 hours (fast automated checks) | 24–72 hours (human review) |
+| `severity` | `critical` | `high` or `medium` |
+| `reminder_lead_hours` | 1–2 hours | 4–24 hours |
+
+---
+
 ## 5. Transaction Pipeline (13-Step Decision Grid)
 
 The Decision Grid orchestrates every financial transaction through a deterministic 13-step pipeline:
@@ -1078,8 +1482,9 @@ Smart defaults auto-populate 10 fields using configurable rules:
 | `intent`                  | Rules engine (category + context → intent) | `fin.category_intent_rule`, `fin.spend_category` |
 | `domain`                  | Rules engine (capitalization threshold)    | `fin.spend_category` thresholds                  |
 | `gl_account`              | Rules engine (OU + Intent → GL mapping)    | `fin.ou_intent_mapping`, `fin.business_intent`   |
-| `cost_center`             | Direct lookup (OU default)                 | `fin.operating_unit.default_cost_center_id`      |
-| `profit_center`           | Direct lookup (OU default)                 | `fin.operating_unit.default_profit_center_id`    |
+| `cost_center`             | Dimension policy + OU default lookup       | `fin.ou_dimension_default` (type=COST_CENTER) + `fin.dimension_policy` |
+| `profit_center`           | Dimension policy + OU default lookup       | `fin.ou_dimension_default` (type=PROFIT_CENTER) + `fin.dimension_policy` |
+| `dimension_set`           | All dimension defaults → resolved set      | `fin.ou_dimension_default` + `fin.dimension_policy` → `fin.resolve_dimension_set()` |
 | `fund_center`             | Direct lookup (OU default FP)              | `fin.operating_unit.default_fp_id`               |
 | `tax_code`                | Rules engine (country + category)          | `fin.tax_jurisdiction`, `fin.business_intent`    |
 | `currency_code`           | Direct lookup (OU default)                 | `fin.operating_unit.default_currency_code`       |
@@ -1578,34 +1983,187 @@ All endpoints require authentication (`authRequired: true`). Error responses fol
 
 ---
 
-## 10. UI Components
+## 10. Module Registry & Subscription Tiers
+
+Every finance sub-domain is declared as a **RuntimeModule** via a `module.json` manifest. These manifests drive DI registration, dependency ordering, feature-flag gating, and subscription-tier enforcement.
+
+### 10.1 Module Definitions
+
+| Code       | Name                          | Depends On              | Subscription    | Description                                                                                         |
+| ---------- | ----------------------------- | ----------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| `ACC`      | Finance (Core Accounting)     | `CORE`                  | **Base**        | Chart of accounts, journal entries, GL balances, fiscal periods, purchase invoices, manual JEs       |
+| `PAY`      | Payment Processing            | `ACC`                   | **Base**        | Payment entries, allocations, gross settlement, reconciliation marking                               |
+| `BUDGET`   | Budget & Funds Control        | `ACC`, `WF`, `MDG`      | **Enterprise**  | Funding profiles, hierarchical budgets, reserve/commit/consume/release lifecycle                     |
+| `TREASURY` | Treasury & Cash Management    | `ACC`, `PAY`            | **Base**        | Cash position monitoring, bank reconciliation, FX exposure tracking, liquidity management            |
+| `PAYG`     | Payment Gateways              | `PAY`                   | **Professional** | External gateway integration, transaction routing, success rate monitoring, retry orchestration      |
+
+### 10.2 Dependency Chain
+
+```
+CORE (platform)
+  └─ ACC (Base)
+       ├─ PAY (Base)
+       │    └─ PAYG (Professional)
+       ├─ BUDGET (Enterprise) ← also depends on WF + MDG
+       └─ TREASURY (Base) ← also depends on PAY
+```
+
+### 10.3 Subscription Tier Model
+
+| Tier             | Modules Included              | Target Segment                    |
+| ---------------- | ----------------------------- | --------------------------------- |
+| **Base**         | ACC, PAY, TREASURY            | All tenants (Blueprints A–F)      |
+| **Professional** | Base + PAYG                   | Tenants needing gateway routing   |
+| **Enterprise**   | Professional + BUDGET         | Tenants needing fund control (C+) |
+
+### 10.4 Module Lifecycle (RuntimeModule Pattern)
+
+Each module.json is loaded at boot and wired into the DI container:
+
+```typescript
+// Phase 1: register() — DI bindings (repos, services, factories)
+// Phase 2: contribute() — health checks, event consumers, background jobs, HTTP routes
+```
+
+All finance modules are composed in `framework/runtime/src/services/business/index.ts` and resolved via DI tokens in `framework/runtime/src/kernel/tokens.ts`.
+
+### 10.5 Planned Modules (Scaffolded)
+
+The following modules have directory structure and `.gitkeep` placeholders but no implementation yet:
+
+| Directory           | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
+| `finance/budget-funds/`   | Extended budget features (fund transfers, reallocation) |
+| `finance/payment-gateways/` | Gateway adapter implementations (Stripe, PayPal, etc.) |
+
+---
+
+## 11. Dashboard Contributions
+
+Each finance module contributes a dashboard layout via `dashboard.contribution.json`. These declarations follow the `athyper://dashboard-contribution/v1` schema and are registered into the workbench dashboard system.
+
+### 11.1 Dashboard Registry
+
+| Module     | Dashboard Code      | Icon          | Chart Type | KPI Count | List Widget                |
+| ---------- | ------------------- | ------------- | ---------- | --------- | -------------------------- |
+| ACC        | `acc_overview`      | `calculator`  | Area       | 4         | Recent Journals            |
+| PAY        | `pay_overview`      | `credit-card` | Bar        | 4         | Recent Payments            |
+| BUDGET     | `budget_overview`   | `pie-chart`   | Bar        | 4         | Budget Exceptions          |
+| TREASURY   | `treasury_overview` | `landmark`    | Line       | 4         | Recent Transfers           |
+| PAYG       | `payg_overview`     | `zap`         | Area       | 4         | Recent Transactions        |
+
+### 11.2 Common Layout Structure
+
+All dashboards share a 12-column grid layout with `row_height: 80`:
+
+```
+Row 0:      [─────────── Heading (12 cols) ───────────]
+Row 1–2:    [KPI 1 (3)] [KPI 2 (3)] [KPI 3 (3)] [KPI 4 (3)]
+Row 3–6:    [──── Chart (8 cols) ────] [─ List (4 cols) ─]
+```
+
+### 11.3 KPI Widgets by Module
+
+**ACC (Core Accounting)**:
+
+| Widget       | Query Key                | Format     |
+| ------------ | ------------------------ | ---------- |
+| Total Revenue | `acc.total_revenue`     | `currency` |
+| Accounts Receivable | `acc.accounts_receivable` | `currency` |
+| Accounts Payable | `acc.accounts_payable` | `currency` |
+| Net Income   | `acc.net_income`         | `currency` |
+
+**PAY (Payment Processing)**:
+
+| Widget             | Query Key               | Format     |
+| ------------------ | ----------------------- | ---------- |
+| Collections MTD    | `pay.collections_mtd`   | `currency` |
+| Disbursements MTD  | `pay.disbursements_mtd` | `currency` |
+| Pending Payments   | `pay.pending_payments`  | `number`   |
+| Overdue Payments   | `pay.overdue_payments`  | `number`   |
+
+**BUDGET (Budget & Funds Control)**:
+
+| Widget        | Query Key              | Format    |
+| ------------- | ---------------------- | --------- |
+| Total Budget  | `budget.total_budget`  | `currency`|
+| Committed     | `budget.committed`     | `currency`|
+| Available     | `budget.available`     | `currency`|
+| Utilization   | `budget.utilization`   | `percent` |
+
+**TREASURY (Treasury & Cash Management)**:
+
+| Widget          | Query Key                  | Format     |
+| --------------- | -------------------------- | ---------- |
+| Cash Position   | `treasury.cash_position`   | `currency` |
+| FX Exposure     | `treasury.fx_exposure`     | `currency` |
+| Liquidity Ratio | `treasury.liquidity_ratio` | `percent`  |
+| Bank Balance    | `treasury.bank_balance`    | `currency` |
+
+**PAYG (Payment Gateways)**:
+
+| Widget          | Query Key              | Format    |
+| --------------- | ---------------------- | --------- |
+| Txn Volume      | `payg.txn_volume`      | `number`  |
+| Success Rate    | `payg.success_rate`    | `percent` |
+| Avg Processing  | `payg.avg_processing`  | `number`  |
+| Failed Txns     | `payg.failed_txns`     | `number`  |
+
+### 11.4 ACL Model
+
+All dashboards share a consistent ACL pattern with 4 principal mappings:
+
+| Principal Type | Principal Key   | Permission |
+| -------------- | --------------- | ---------- |
+| `persona`      | `agent`         | `view`     |
+| `persona`      | `manager`       | `view`     |
+| `persona`      | `module_admin`  | `edit`     |
+| `persona`      | `tenant_admin`  | `edit`     |
+
+### 11.5 Chart & List Widgets
+
+| Module   | Chart Title           | Chart Type | List Title              | List Columns                                |
+| -------- | --------------------- | ---------- | ----------------------- | ------------------------------------------- |
+| ACC      | Revenue Trend         | `area`     | Recent Journals         | date, reference, description, amount        |
+| PAY      | Payment Flow          | `bar`      | Recent Payments         | date, reference, type, amount               |
+| BUDGET   | Budget vs Actual      | `bar`      | Budget Exceptions       | date, department, type, amount              |
+| TREASURY | Cash Flow             | `line`     | Recent Transfers        | date, from_account, to_account, amount      |
+| PAYG     | Volume Trend          | `area`     | Recent Transactions     | date, gateway, status, amount               |
+
+---
+
+## 12. UI Components
 
 **Location**: `products/neon/apps/web/components/finance/`
 **Plugin Integration**: `products/neon/apps/web/lib/entity-page/plugins/finance-plugin.tsx`
+**List Explorers**: `products/neon/apps/web/components/finance/list/`
 
-### 10.1 Component Catalogue
+### 12.1 Detail Components
 
-| Component                 | File                          | Purpose                                           |
-| ------------------------- | ----------------------------- | ------------------------------------------------- |
-| `InvoiceLineGrid`         | `InvoiceLineGrid.tsx`         | Editable table grid for purchase invoice lines    |
-| `JournalLineGrid`         | `JournalLineGrid.tsx`         | Debit/credit grid for journal entry lines         |
-| `PaymentAllocationPicker` | `PaymentAllocationPicker.tsx` | Two-section gross settlement picker               |
-| `GLBalanceReport`         | `GLBalanceReport.tsx`         | Tabbed GL report (summary, detail, trial balance) |
-| `DecisionScorePanel`      | `DecisionScorePanel.tsx`      | Decision Grid evaluation audit panel              |
+| Component                  | File                             | Purpose                                                   |
+| -------------------------- | -------------------------------- | --------------------------------------------------------- |
+| `InvoiceLineGrid`          | `InvoiceLineGrid.tsx`            | Editable table grid for purchase invoice lines            |
+| `JournalLineGrid`          | `JournalLineGrid.tsx`            | Debit/credit grid for journal entry lines                 |
+| `PaymentAllocationPicker`  | `PaymentAllocationPicker.tsx`    | Two-section gross settlement picker                       |
+| `GLBalanceReport`          | `GLBalanceReport.tsx`            | Tabbed GL report (summary, detail, trial balance)         |
+| `GLBalanceReportContainer` | `GLBalanceReportContainer.tsx`   | Data-fetching wrapper that hydrates `GLBalanceReport`     |
+| `DecisionScorePanel`       | `DecisionScorePanel.tsx`         | Decision Grid evaluation audit panel                      |
+| `BankReconciliation`       | `BankReconciliation.tsx`         | Interactive reconciliation workspace (match/unmatch/complete) |
+| `ReconciliationReport`     | `ReconciliationReport.tsx`       | Read-only post-reconciliation summary with match statistics |
 
-### 10.2 InvoiceLineGrid
+### 12.1.1 InvoiceLineGrid
 
 **Props**: `lines`, `mode` (view/edit), `totalLineAmount`, `totalTaxAmount`, `currencyCode`, `onLineChange`, `onAddLine`, `onRemoveLine`
 
 Displays: Line number, description, quantity, unit price, line amount, tax code, tax rate, tax amount, GL account, cost center, and asset/inventory flag badges. In edit mode, cells become inputs with per-row delete and "Add Line" button. Footer row shows totals with currency code.
 
-### 10.3 JournalLineGrid
+### 12.1.2 JournalLineGrid
 
 **Props**: `lines`, `mode` (view/edit), `totalDebits`, `totalCredits`, `balanceDifference`, `isBalanced`, `onLineChange`, `onAddLine`, `onRemoveLine`
 
 Displays: Line number, account, description, debit amount, credit amount, subledger info. Footer shows debit/credit totals and a balance indicator badge (green "Balanced" or red "Out of Balance: {difference}").
 
-### 10.4 PaymentAllocationPicker
+### 12.1.3 PaymentAllocationPicker
 
 **Props**: `availableInvoices`, `allocations`, `paymentTotal`, `totalAllocated`, `unallocatedAmount`, `isFullyAllocated`, `currencyCode`, `onAddInvoice`, `onRemoveAllocation`, `onAllocationChange`, `readOnly`
 
@@ -1616,7 +2174,7 @@ Two-section layout:
 
 Summary bar shows: Payment Total, Allocated, Unallocated, and a status badge ("Fully allocated" green / "Allocation mismatch" amber).
 
-### 10.5 GLBalanceReport
+### 12.1.4 GLBalanceReport
 
 **Props**: `summaryRows`, `detailRows`, `trialBalanceRows`, `summaryTotals`, `trialBalanceTotals`, `trialBalanceIsBalanced`, `reversalMode`, `onReversalModeChange`, `onAccountFilter`, `onDateRangeChange`, `currencyCode`, `loading`
 
@@ -1626,15 +2184,258 @@ Three tabs:
 2. **GL Detail**: Individual posting lines with JE number, date, doc type badge, running balance (red if negative), reversal mode toggle (NETTED/SEPARATE/EXCLUDED)
 3. **Trial Balance**: Account-level debit/credit with balance check indicator (green/red)
 
-### 10.6 DecisionScorePanel
+### 12.1.5 GLBalanceReportContainer
+
+**File**: `GLBalanceReportContainer.tsx`
+
+Data-fetching container that hydrates the `GLBalanceReport` presentational component. Manages API calls for GL summary, GL detail, and trial balance endpoints, handles loading/error states, and passes formatted data into `GLBalanceReport`. Separates data orchestration from presentation per the container/presentational pattern.
+
+### 12.1.6 BankReconciliation
+
+**File**: `BankReconciliation.tsx`
+
+Interactive reconciliation workspace for matching bank statement lines against posted payments. Provides:
+
+- Statement line display with amount, reference, date, and direction (DEBIT/CREDIT)
+- Match actions (auto-match trigger, manual match, unmatch)
+- Session progress tracking (matched vs unmatched counts)
+- Complete reconciliation action with confirmation
+
+### 12.1.7 ReconciliationReport
+
+**File**: `ReconciliationReport.tsx`
+
+Read-only post-reconciliation summary. MC-4 compliant (all monetary values are opaque strings).
+
+**Props**: `statement: StatementSummary`, `session: SessionSummary`, `matchedLines: MatchedLineRow[]`
+
+**Sections**:
+
+1. **Summary Card**: Statement number, bank name, period (start–end), opening/closing balance, currency, session timestamps, and status badge (COMPLETED/OPEN/CANCELLED — green/blue/gray)
+2. **Match Statistics**: Stacked progress bar with 4 segments (auto=blue, manual=green, excluded=gray, unmatched=background), legend with counts, and discrepancy indicator (green "Balanced" badge when zero, red badge with amount when non-zero)
+3. **Matched Lines Table**: 8-column table (line #, date, amount with red/green coloring by direction, direction badge, reference, match type badge, confidence percentage, linked payment ID)
+
+**Status Configs**: `COMPLETED` (green), `OPEN` (blue), `CANCELLED` (gray)
+**Match Status Badges**: `AUTO_MATCHED` (blue "Auto"), `MANUAL_MATCHED` (green "Manual"), `CONFIRMED` (emerald "Confirmed")
+
+### 12.1.8 DecisionScorePanel
 
 **Props**: `result: DecisionEvaluationResult | null`, `loading`
 
 Displays: Circular score gauge (color-coded), approval route badge, per-module horizontal bar charts, exceptions warning panel, pipeline ID and evaluation timestamp. Shows skeleton loader when loading.
 
-### 10.7 Tab Plugin Integration
+### 12.2 List Explorer Components
 
-Four `TabPlugin` objects in `finance-plugin.tsx` wire components into the entity page system:
+**Location**: `products/neon/apps/web/components/finance/list/`
+
+List explorers provide filterable, searchable, paginated table views for finance document collections. Each explorer is a standalone `"use client"` component with built-in state management.
+
+#### 12.2.1 PurchaseInvoiceExplorer
+
+**File**: `list/PurchaseInvoiceExplorer.tsx`
+**Hook**: `usePurchaseInvoiceList(filters)` from `@/lib/finance/use-finance-list`
+
+| Feature         | Detail                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| Page Size       | 25 items per page                                                                         |
+| Search          | Full-text search across invoice numbers and supplier names                                |
+| Status Filter   | Dropdown: All, Draft, Submitted, Approved, Posted, Partially Paid, Paid, Cancelled        |
+| Default Sort    | `invoiceDate` descending                                                                  |
+| Columns         | Invoice #, Supplier, Invoice Date, Due Date, Total (right-aligned mono), Paid, Status badge, Approval route badge |
+| States          | Loading spinner, error with retry, empty state, data table + pagination                   |
+
+#### 12.2.2 PaymentEntryExplorer
+
+**File**: `list/PaymentEntryExplorer.tsx`
+**Hook**: `usePaymentEntryList(filters)` from `@/lib/finance/use-finance-list`
+
+| Feature         | Detail                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| Page Size       | 25 items per page                                                                         |
+| Search          | Full-text search across payment numbers and supplier names                                |
+| Status Filter   | Dropdown: All, Draft, Submitted, Approved, Posted, Reconciled, Cancelled, Voided          |
+| Default Sort    | `paymentDate` descending                                                                  |
+| Columns         | Payment #, Supplier, Payment Date, Amount (right-aligned mono), Method badge, Status badge, Approval route badge |
+| Payment Methods | CHECK, WIRE, ACH, CARD, CASH, NETTING — rendered as slate-colored badges                  |
+
+#### 12.2.3 JournalEntryExplorer
+
+**File**: `list/JournalEntryExplorer.tsx`
+**Hook**: `useJournalEntryList(filters)` from `@/lib/finance/use-finance-list`
+
+| Feature         | Detail                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| Page Size       | 25 items per page                                                                         |
+| Search          | Full-text search across JE numbers and descriptions                                       |
+| Status Filter   | Dropdown: All, Created, Posted, Reversed                                                  |
+| Default Sort    | `postingDate` descending                                                                  |
+| Columns         | JE #, Doc Type badge, Posting Date, Fiscal Year, Period, Debit (right-aligned mono), Credit (right-aligned mono), Status badge, Description (truncated 250px) |
+
+#### 12.2.4 Common Explorer Patterns
+
+All three explorers share identical architectural patterns:
+
+```
+┌─ Header ─────────────────────────────────────────────────────┐
+│  [Icon] Title (total count)                    [Refresh btn] │
+├─ Filters ────────────────────────────────────────────────────┤
+│  [🔍 Search input ............]  [Status dropdown ▾]         │
+├─ Table ──────────────────────────────────────────────────────┤
+│  Column headers with fixed widths                            │
+│  Data rows with cell renderers from finance-shared           │
+│  Empty state: "No {documents} found."                        │
+├─ Pagination ─────────────────────────────────────────────────┤
+│  Page X of Y                          [← Previous] [Next →] │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**State management**: `useState` for search, status, offset. `useMemo` for filter object construction. Offset resets to 0 on any filter change.
+
+**Pagination**: Computed from `data.total` and `data.hasMore`. Previous disabled at offset 0, Next disabled when `!hasMore`.
+
+### 12.3 Shared Cell Renderers
+
+**File**: `list/finance-shared.tsx`
+
+Reusable cell renderer components used across all list explorers and list configs:
+
+| Renderer             | Props                        | Rendering                                                                                  |
+| -------------------- | ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `StatusBadgeCell`    | `status: string`             | Colored pill badge. Replaces underscores with spaces. Color-mapped for 11 statuses.       |
+| `MoneyCell`          | `amount: string`, `currency?`| Right-aligned, monospace, tabular-nums. Formats via `Intl.NumberFormat` (2dp). MC-4 safe. |
+| `DateCell`           | `date: string \| null`        | Formatted via `Intl.DateTimeFormat` (short month). Shows `--` for null.                   |
+| `ApprovalRouteBadge` | `route: string \| null`       | Small colored badge. Renders nothing for null. 5 route colors.                            |
+
+**Status Color Map** (11 statuses):
+
+| Status           | Background       | Text Color       |
+| ---------------- | ---------------- | ---------------- |
+| `DRAFT`          | `bg-gray-100`    | `text-gray-700`  |
+| `CREATED`        | `bg-gray-100`    | `text-gray-700`  |
+| `SUBMITTED`      | `bg-blue-100`    | `text-blue-700`  |
+| `APPROVED`       | `bg-green-100`   | `text-green-700` |
+| `POSTED`         | `bg-purple-100`  | `text-purple-700`|
+| `PARTIALLY_PAID` | `bg-amber-100`   | `text-amber-700` |
+| `PAID`           | `bg-emerald-100` | `text-emerald-700`|
+| `CANCELLED`      | `bg-red-100`     | `text-red-700`   |
+| `RECONCILED`     | `bg-teal-100`    | `text-teal-700`  |
+| `VOIDED`         | `bg-red-100`     | `text-red-700`   |
+| `REVERSED`       | `bg-orange-100`  | `text-orange-700`|
+
+**Approval Route Colors**:
+
+| Route            | Background       | Text Color       |
+| ---------------- | ---------------- | ---------------- |
+| `ZERO_APPROVAL`  | `bg-gray-100`    | `text-gray-600`  |
+| `STANDARD`       | `bg-blue-100`    | `text-blue-700`  |
+| `ENHANCED`       | `bg-amber-100`   | `text-amber-700` |
+| `EXECUTIVE`      | `bg-red-100`     | `text-red-700`   |
+| `BLOCKED`        | `bg-red-100`     | `text-red-700`   |
+
+### 12.4 ListPageConfig System
+
+**File**: `list/purchase-invoice-list-config.tsx` (and similar for payments, JEs)
+**Type**: `ListPageConfig<T>` from `@/components/mesh/list`
+
+The `ListPageConfig` factory pattern provides a declarative configuration for rendering finance list pages within the Mesh list framework. Each config defines the full page structure without custom component code.
+
+#### Config Structure
+
+```typescript
+interface ListPageConfig<T> {
+  // Identity
+  pageTitle: string;
+  entityLabel: string;
+  entityLabelPlural: string;
+  icon: LucideIcon;
+  basePath: string;
+  getId: (item: T) => string;
+  getItemHref: (item: T) => string;
+
+  // Zone 2 — KPI summary cards
+  kpis: Array<{
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    compute: (items: T[]) => number;
+    format: "number" | "currency" | "percent";
+    filterOnClick?: Record<string, string>;      // Click KPI → apply filter
+    variantFn?: (value: number) => "default" | "warning" | "critical";
+  }>;
+
+  // Zone 3 — Command bar
+  searchPlaceholder: string;
+  searchFn: (item: T, query: string) => boolean;
+  quickFilters: Array<{
+    id: string;
+    label: string;
+    defaultValue: string;
+    options: Array<{ value: string; label: string }>;
+  }>;
+  filterFn: (item: T, filters: Record<string, string>) => boolean;
+
+  // Zone 4 — Columns + card renderer
+  columns: Array<{
+    id: string;
+    header: string;
+    sortKey?: string;
+    width?: string;
+    align?: "left" | "right";
+    accessor: (item: T) => ReactNode;
+    filterable?: boolean;
+    filterType?: "text" | "select";
+    filterOptions?: Array<{ value: string; label: string }>;
+    sortFn?: (a: T, b: T) => number;
+  }>;
+  cardRenderer: (item: T) => ReactNode;
+
+  // View configuration
+  availableViews: Array<"table" | "table-columns" | "card-grid">;
+  defaultViewMode: string;
+  defaultViewModeDesktop: string;
+  defaultDensity: "comfortable" | "compact";
+  defaultDensityDesktop: "comfortable" | "compact";
+
+  // Presets
+  presets: Array<{
+    id: string;
+    label: string;
+    isDefault?: boolean;
+    filters?: Record<string, string>;
+  }>;
+
+  // Primary action
+  primaryAction?: {
+    label: string;
+    icon: LucideIcon;
+    onClick: () => void;
+  };
+}
+```
+
+#### Purchase Invoice ListPageConfig
+
+| Zone    | Feature                   | Detail                                                                 |
+| ------- | ------------------------- | ---------------------------------------------------------------------- |
+| KPIs    | Total Invoices            | Count of all items                                                     |
+| KPIs    | Drafts                    | Filtered count. Warning variant when > 10. Click → filter to DRAFT    |
+| KPIs    | Pending Approval          | Filtered count. Critical when > 20, warning when > 5. Click → SUBMITTED |
+| Search  | —                         | Matches `invoiceNumber` or `supplierName` (case-insensitive)           |
+| Filters | Status                    | 8 options (All + 7 statuses)                                           |
+| Columns | Invoice #                 | Monospace, 140px, sortable                                             |
+| Columns | Supplier                  | Text filterable, sortable by `supplierName`                            |
+| Columns | Date                      | `DateCell`, 120px, sortable                                            |
+| Columns | Total                     | `MoneyCell` right-aligned, 130px, numeric sortFn                       |
+| Columns | Status                    | `StatusBadgeCell`, 140px, select-filterable                            |
+| Card    | —                         | Invoice #, status badge, supplier, date + amount row                   |
+| Views   | Mobile default            | `card-grid` / comfortable density                                      |
+| Views   | Desktop default           | `table` / compact density                                              |
+| Presets | Default, My Drafts, Pending Approval | Pre-configured filter sets                                   |
+| Action  | New Invoice               | `Plus` icon. Target: create form / dialog                              |
+
+### 12.5 Tab Plugin Integration
+
+Four `TabPlugin` objects in `finance-plugin.tsx` wire detail components into the entity page system:
 
 | Plugin                     | Hook                              | Component                            |
 | -------------------------- | --------------------------------- | ------------------------------------ |
@@ -1647,9 +2448,9 @@ Each plugin maps DTOs from `@/lib/finance/types` to component domain types and c
 
 ---
 
-## 11. Shared Foundations
+## 13. Shared Foundations
 
-### 11.1 Money Type (MC-4 Compliance)
+### 13.1 Money Type (MC-4 Compliance)
 
 All monetary calculations use string-based decimal arithmetic via `engines/shared/money.ts`:
 
@@ -1669,7 +2470,7 @@ Internal arithmetic uses `BigInt` scaling to eliminate floating-point errors:
 - `compareMoney(a, b)` — Returns −1 | 0 | 1
 - `formatMoney(m, displayPrecision)` — Display formatting (default: 2 places)
 
-### 11.2 Engine Base
+### 13.2 Engine Base
 
 All services share common interfaces from `engines/shared/engine-base.ts`:
 
@@ -1679,7 +2480,7 @@ All services share common interfaces from `engines/shared/engine-base.ts`:
 - `EntityStatus` — Common lifecycle: `DRAFT | ACTIVE | INACTIVE | ARCHIVED`
 - `validateTransition()` — Generic state machine validator
 
-### 11.3 Event Helpers
+### 13.3 Event Helpers
 
 Shared utilities in `engines/shared/event-helpers.ts`:
 
@@ -1690,9 +2491,9 @@ Shared utilities in `engines/shared/event-helpers.ts`:
 
 ---
 
-## 12. Data Model Summary
+## 14. Data Model Summary
 
-### 12.1 Table Count by Engine/Module
+### 14.1 Table Count by Engine/Module
 
 | Engine/Module                | Schema        | Tables | Key Tables                                                                                             |
 | ---------------------------- | ------------- | ------ | ------------------------------------------------------------------------------------------------------ |
@@ -1701,7 +2502,8 @@ Shared utilities in `engines/shared/event-helpers.ts`:
 | Decision Grid                | `fin`         | 5      | `transaction_pipeline`, `policy_module`, `exception`                                                   |
 | Budget                       | `fin`         | 3      | `funding_profile`, `funding_transaction`                                                               |
 | Commitment                   | `fin`         | 3      | `commitment`, `commitment_schedule`                                                                    |
-| Posting                      | `fin`         | 8      | `chart_of_accounts`, `journal_entry`, `journal_line`, `gl_balance`                                     |
+| Posting (GL Core)            | `fin`         | 8      | `chart_of_accounts`, `journal_entry`, `journal_line`, `gl_balance`                                     |
+| Ledger Dimensions            | `fin`         | 7      | `dimension_type`, `dimension_value`, `dimension_policy`, `dimension_set`, `dimension_set_item`         |
 | Tax                          | `fin`         | 4      | `tax_jurisdiction`, `tax_rate`, `tax_calculation`                                                      |
 | Asset                        | `fin`         | 4      | `asset`, `asset_book`, `depreciation_run`                                                              |
 | Inventory                    | `fin`         | 7      | `item_master`, `inventory_balance`, `valuation_layer`                                                  |
@@ -1709,13 +2511,15 @@ Shared utilities in `engines/shared/event-helpers.ts`:
 | Federation                   | `fin`         | 7      | `legal_entity`, `fx_rate`, `consolidation_elimination`                                                 |
 | Production                   | `fin`         | 7      | `bill_of_materials`, `work_order`, `production_variance`                                               |
 | Atlas AI                     | `fin`         | 4      | `ai_model_registry`, `ai_prediction`, `ai_action`                                                      |
+| Period Close Governance      | `fin`         | 2      | `period_close_task`, `period_close_checklist`                                                           |
 | Approval (meta)              | `meta`        | 4      | `approval_template`, `approval_template_stage`, `approval_template_rule`                               |
 | **Purchase Invoice**         | `fin`         | **3**  | `document_sequence`, `purchase_invoice`, `purchase_invoice_line`                                       |
 | **Payment Entry**            | `fin`         | **2**  | `payment_entry`, `payment_allocation`                                                                  |
 | **Bank Reconciliation**      | `fin`         | **3**  | `bank_statement`, `bank_statement_line`, `reconciliation_session`                                      |
-| **Total**                    |               | **76** |                                                                                                        |
+| **Reporting Analytics**      | `fin`         | **3+1mv** | `rpt_cube_definition`, `rpt_balance_cube`, `rpt_cube_refresh_run` + `dimension_set_flat` (materialized view) |
+| **Total**                    |               | **89+1mv** |                                                                                                        |
 
-### 12.2 New Tables (v2.2)
+### 14.2 New Tables (v2.2)
 
 | Table                        | DDL File                      | Purpose                                   | Key Constraint                                      |
 | ---------------------------- | ----------------------------- | ----------------------------------------- | --------------------------------------------------- |
@@ -1728,7 +2532,195 @@ Shared utilities in `engines/shared/event-helpers.ts`:
 | `fin.bank_statement_line`    | `199_bank_reconciliation.sql` | Individual bank transactions              | UNIQUE `(tenant_id, statement_id, line_no)`         |
 | `fin.reconciliation_session` | `199_bank_reconciliation.sql` | Reconciliation work tracking              | UNIQUE `(tenant_id, statement_id)`                  |
 
-### 12.3 Schema Delta: journal_line.source_doc_line_id
+### 14.2b Period Close Governance (v2.3)
+
+| Table                        | DDL File                           | Purpose                          | Key Constraint                                                          |
+| ---------------------------- | ---------------------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| `fin.period_close_task`      | `191_period_close_governance.sql`  | Master close task catalogue      | UNIQUE `(tenant_id, entity_code, task_code)`                            |
+| `fin.period_close_checklist` | `191_period_close_governance.sql`  | Per-period checklist instances    | UNIQUE `(tenant_id, entity_code, fiscal_year, period_number, task_code)` |
+
+### 14.2c Ledger Dimension Engine (v2.3)
+
+**Core Registry and Master Data** (3 tables):
+
+| Table                   | DDL File                    | Purpose                                              | Key Constraint                                                 |
+| ----------------------- | --------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- |
+| `fin.dimension_type`    | `191_ledger_dimensions.sql` | Registry of dimension kinds (with `source_kind`)      | UNIQUE `(tenant_id, entity_code, code)`                        |
+| `fin.dimension_value`   | `191_ledger_dimensions.sql` | Internal master data with lifecycle/effective dates    | UNIQUE `(tenant_id, entity_code, dimension_type_id, code)`     |
+| `fin.dimension_policy`  | `191_ledger_dimensions.sql` | Governance rules (6 behaviors, multi-scope, versioned) | UNIQUE `(tenant_id, entity_code, policy_code, policy_version)` |
+
+**Canonical Resolved Combinations** (2 tables):
+
+| Table                     | DDL File                    | Purpose                                        | Key Constraint                                 |
+| ------------------------- | --------------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| `fin.dimension_set`       | `191_ledger_dimensions.sql` | Hash-normalized dimension combinations. Stores `signature` (pre-hash canonical string for debugging/validation), `dimension_count` (analytics shortcut) | UNIQUE `(tenant_id, entity_code, set_hash)`    |
+| `fin.dimension_set_item`  | `191_ledger_dimensions.sql` | Immutable members of a dimension set (1:type)   | UNIQUE `(dimension_set_id, dimension_type_id)` |
+
+**Upstream Capture and Defaulting** (2 tables):
+
+| Table                          | DDL File                    | Purpose                           | Key Constraint                                                 |
+| ------------------------------ | --------------------------- | --------------------------------- | -------------------------------------------------------------- |
+| `fin.ou_dimension_default`     | `191_ledger_dimensions.sql` | Default dimension values per OU    | UNIQUE `(tenant_id, entity_code, ou_id, dimension_type_id)`   |
+| `fin.document_line_dimension`  | `191_ledger_dimensions.sql` | Dimension capture at document entry| UNIQUE `(tenant_id, doc_type, doc_line_id, dimension_type_id)` |
+
+**Existing Tables Extended** (3 ALTER TABLEs):
+- `fin.journal_line` + `dimension_set_id UUID` — FK to `fin.dimension_set`
+- `fin.gl_balance` + `dimension_set_id UUID` — replaces `cost_center_id` as balance grain
+- `fin.transaction_pipeline` + `resolved_dimension_set_id UUID` — `txn.finalized` contract
+- `fin.transaction_pipeline` + `dimension_derivation_log JSONB` — audit trail of derivation decisions
+
+**Helper Function**: `fin.resolve_dimension_set(tenant_id, entity_code, pairs JSONB) → UUID` — hash-normalizes sorted dimension pairs, deduplicates, returns existing or new set_id. Validates sort order, rejects duplicate type_ids, handles concurrent creation via `ON CONFLICT`.
+
+#### Dimension Set Immutability Contract
+
+- Once a `dimension_set` is created, it is **never modified or deleted**
+- If a `dimension_value` becomes INACTIVE or ARCHIVED, existing sets referencing it remain valid for historical postings
+- New postings that would produce the same combination minus the inactive value resolve to a different set with a different hash
+- This guarantees ledger integrity and historical reporting accuracy
+
+**Database-enforced immutability** (triggers in `191_ledger_dimensions.sql`):
+
+| Trigger | Table | Scope | Behavior |
+| ------- | ----- | ----- | -------- |
+| `trg_dimension_set_immutable` | `fin.dimension_set` | `BEFORE UPDATE` | Rejects any change to `set_hash`, `signature`, or `dimension_count` — the three canonical identity columns. `display_label` remains updatable. |
+| `trg_dimension_set_item_no_update` | `fin.dimension_set_item` | `BEFORE UPDATE` | Rejects all updates — items are write-once. |
+| `trg_dimension_set_item_no_delete` | `fin.dimension_set_item` | `BEFORE DELETE` | Rejects all deletes — items are permanent. |
+
+#### Hash Canonicalization Rules
+
+1. Input pairs **MUST** be sorted ascending by `dimension_type_id::text`
+2. NULL/empty values **MUST** be excluded before hashing
+3. One value per `dimension_type` per set (enforced by `uq_fin_dim_set_item`)
+4. Hash format: SHA-256 of `"type_id_1:value_id_1|type_id_2:value_id_2|..."`
+5. Hash is tenant+entity scoped via the `uq_fin_dim_set` constraint
+6. `resolve_dimension_set()` rejects unsorted input and duplicate type_ids with exceptions
+7. The pre-hash canonical string is persisted in `signature` for debugging, validation (`sha256(signature) = set_hash`), and diagnostics
+8. `dimension_count` stores the number of dimensions in the set for analytics queries without joining `dimension_set_item`
+
+#### Policy Precedence (highest to lowest specificity)
+
+| Rank | Scope Field               | Example                  |
+| ---- | ------------------------- | ------------------------ |
+| 1    | `scope_account_code`      | Exact GL account `6100`  |
+| 2    | `scope_account_range`     | Range `6000`–`6999`      |
+| 3    | `scope_subledger_type`    | AP, AR, ASSET            |
+| 4    | `scope_account_type`      | EXPENSE, REVENUE         |
+| 5    | `scope_intent_code`       | OPEX-TRAVEL              |
+| 6    | `scope_doc_type`          | PURCHASE_INVOICE         |
+| 7    | `scope_ou_id`             | Specific OU              |
+| 8    | `scope_domain`            | CAPEX, OPEX              |
+| 9    | (all NULL)                | Global default           |
+
+Ties at same specificity: resolved by `priority` (higher wins), then newest `policy_version`.
+
+**Behavior conflict resolution**: `FORBIDDEN` > `FIXED_VALUE` > `REQUIRED` > `DERIVE_IF_MISSING` > `INHERIT_FROM_HEADER` > `OPTIONAL`. More-specific scope always outranks less-specific. Unresolvable conflicts → validation error for human review.
+
+#### Derivation Audit Trail
+
+Stored as `dimension_derivation_log` JSONB array on `fin.transaction_pipeline`:
+
+```json
+[
+  {
+    "dimension_type_code": "COST_CENTER",
+    "dimension_value_code": "CC-SALES",
+    "source": "ou_default",
+    "policy_code": "CC-EXPENSE-DERIVE",
+    "policy_version": 1,
+    "confidence": 1.0,
+    "warnings": []
+  },
+  {
+    "dimension_type_code": "PROJECT",
+    "dimension_value_code": "PROJ-ALPHA",
+    "source": "user_entered",
+    "policy_code": null,
+    "policy_version": null,
+    "confidence": 1.0,
+    "warnings": ["value overrode header default PROJ-BETA"]
+  }
+]
+```
+
+Source values: `user_entered`, `header_inherited`, `ou_default`, `policy_fixed`, `derived`, `federation_context`, `intent_mapping`.
+
+#### Derived Dimension Materialization
+
+Dimensions with `source_kind = 'DERIVED'` (e.g., Region from OU geography) are **always materialized** into `dimension_set_item` at posting/finalization time. Reporting never recalculates past finance dimensions from changing master data logic. This ensures historical ledger stability across reorgs and master data changes.
+
+### 14.2d Reporting Analytics Engine (v2.3)
+
+Two-layer read-optimized projection for multi-dimensional reporting, dashboards, and near-real-time finance analytics without hammering `gl_balance`.
+
+**Layer 1 — Dimension Compression Projection** (1 materialized view):
+
+| Object                       | DDL File                      | Purpose                                              | Key Constraint                    |
+| ---------------------------- | ----------------------------- | ---------------------------------------------------- | --------------------------------- |
+| `fin.dimension_set_flat` (MV) | `193_reporting_analytics.sql` | Pivots `dimension_set_item` into named columns (CC, PC, Project, Region, Segment, Location, Function, Intercompany) + JSONB overflow for custom types | UNIQUE on `dimension_set_id` (for `REFRESH CONCURRENTLY`) |
+
+**Layer 2 — Reporting Cube Materialization** (3 tables):
+
+| Table                          | DDL File                      | Purpose                                              | Key Constraint                                                          |
+| ------------------------------ | ----------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `fin.rpt_cube_definition`     | `193_reporting_analytics.sql` | Meta-driven cube family registry (type, grain, dimensions, refresh mode) | UNIQUE `(tenant_id, entity_code, cube_code)` |
+| `fin.rpt_balance_cube`        | `193_reporting_analytics.sql` | Pre-aggregated monthly balance cube (wide analytic table) | UNIQUE `(tenant_id, entity_code, cube_code, book_code, fiscal_year, period_number, currency_code, account_id, dimension_set_id)` |
+| `fin.rpt_cube_refresh_run`    | `193_reporting_analytics.sql` | Tracks incremental/batch/reconciliation refresh jobs | — |
+
+**Helper Functions** (2):
+- `fin.refresh_balance_cube(tenant_id, entity_code, cube_code, ...)` — Full rebuild from `gl_balance` + `dimension_set_flat`
+- `fin.reconcile_cube(tenant_id, entity_code, cube_code, year, period)` — Verify cube vs. `gl_balance` integrity
+
+#### Design Guardrails
+
+1. **Cubes are projections only** — all corrections, reversals, and audit lineage stay in `journal_entry` / `gl_balance`
+2. **Fully rebuildable** — every cube can be deleted and repopulated from `gl_balance` + `dimension_set` + masters at any time
+3. **Book-aware** — cubes include `book_code` (from `192_ledger_book.sql`); multi-book tenants get separate cube rows per book
+4. **Period-close aware** — frozen periods snapshot `period_status` and `close_snapshot_version`; reconciliation runs verify integrity at hard close
+5. **Blueprint-selective** — cube families enabled per blueprint tier via `rpt_cube_definition`
+
+#### Cube Families
+
+| Cube Type | Code | Purpose | Typical Dimensions | Blueprint Fit |
+| --------- | ---- | ------- | ------------------ | ------------- |
+| `FS` | `FS_MONTHLY` | Financial Statement (P&L, BS, CF) | CC, PC | All (A→F) |
+| `MGMT` | `MGMT_MONTHLY` | Management Analytics (internal) | CC, PC, Project/Region/Location/Segment | C, D, E, F |
+| `OPS` | `OPS_MONTHLY` | Operational Cost (manufacturing, projects) | CC, Region/Function/Segment | D, F |
+| `IC` | `IC_MONTHLY` | Intercompany / Consolidation | CC, Segment, Intercompany | F |
+
+#### Refresh Modes
+
+| Mode | Strategy | Best For |
+| ---- | -------- | -------- |
+| `EVENT` | Incremental via event-driven projection (subscribes to posting events) | Near-real-time dashboards (C, D, E, F) |
+| `BATCH` | Nightly or on-demand full rebuild | Low-volume tenants (A, B) |
+| `HYBRID` | Event-driven + periodic full reconciliation | Operational cubes needing eventual consistency guarantees (D, F) |
+
+#### Query Pattern Improvement
+
+**Without cube** (raw ledger query):
+```
+gl_balance → dimension_set → dimension_set_item (×N) → dimension_value → filter/group
+```
+
+**With dimension_set_flat only** (Layer 1):
+```sql
+SELECT b.fiscal_year, b.period_number, coa.account_code,
+       f.cost_center_value_id, SUM(b.period_debit - b.period_credit)
+FROM fin.gl_balance b
+JOIN fin.chart_of_accounts coa ON coa.id = b.account_id
+LEFT JOIN fin.dimension_set_flat f ON f.dimension_set_id = b.dimension_set_id
+WHERE b.tenant_id = ? GROUP BY 1, 2, 3, 4;
+```
+
+**With cube** (Layer 2):
+```sql
+SELECT fiscal_year, period_number, account_code,
+       cost_center_value_id, amount_net
+FROM fin.rpt_balance_cube
+WHERE tenant_id = ? AND cube_code = 'FS_MONTHLY';
+```
+
+### 14.3 Schema Delta: journal_line.source_doc_line_id
 
 Added in `196_purchase_invoice.sql`:
 
@@ -1738,7 +2730,7 @@ ALTER TABLE fin.journal_line ADD COLUMN IF NOT EXISTS source_doc_line_id uuid;
 
 Links each JE line back to the specific source document line that generated it, enabling GL drill-through: GL Balance → JE Line → Source Invoice/Payment Line.
 
-### 12.4 Generated Columns (Computed at Database Level)
+### 14.4 Generated Columns (Computed at Database Level)
 
 | Table                   | Column             | Formula                                 |
 | ----------------------- | ------------------ | --------------------------------------- |
@@ -1749,7 +2741,7 @@ Links each JE line back to the specific source document line that generated it, 
 | `fin.tax_credit_ledger` | `net_position`     | `input_credits − output_liability`      |
 | `fin.stocktake_line`    | `variance_qty`     | `counted_qty − system_qty`              |
 
-### 12.5 PostgreSQL Enum Types
+### 14.5 PostgreSQL Enum Types
 
 | Type                   | Values                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -1757,7 +2749,7 @@ Links each JE line back to the specific source document line that generated it, 
 | `fin.movement_type`    | `RECEIPT`, `ISSUE_SALES`, `ISSUE_PRODUCTION`, `TRANSFER_OUT`, `TRANSFER_IN`, `ADJUSTMENT`, `SCRAP`, `RETURN` |
 | `fin.stocktake_status` | `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`                                                           |
 
-### 12.6 Hierarchical Structures
+### 14.6 Hierarchical Structures
 
 | Entity                  | Max Depth                       | Parent Column       | Use                  |
 | ----------------------- | ------------------------------- | ------------------- | -------------------- |
@@ -1765,7 +2757,8 @@ Links each JE line back to the specific source document line that generated it, 
 | `fin.business_intent`   | Unlimited                       | `parent_id`         | Intent taxonomy      |
 | `fin.funding_profile`   | 4                               | `parent_id`         | Budget hierarchy     |
 | `fin.chart_of_accounts` | Unlimited                       | `parent_id`         | GL account tree      |
-| `fin.cost_center`       | Unlimited                       | `parent_id`         | Cost allocation tree |
+| `fin.cost_center`       | Unlimited                       | `parent_id`         | Cost allocation tree (legacy) |
+| `fin.dimension_value`   | Unlimited (per `dimension_type.max_depth`) | `parent_id` | Universal dimension hierarchy |
 | `fin.tax_jurisdiction`  | Unlimited                       | `parent_id`         | Jurisdiction nesting |
 | `fin.legal_entity`      | Unlimited                       | `parent_entity_id`  | Corporate structure  |
 | `fin.asset`             | Unlimited                       | `parent_asset_id`   | Component assets     |
@@ -1773,9 +2766,9 @@ Links each JE line back to the specific source document line that generated it, 
 
 ---
 
-## 13. Blueprint Seed Data Specifications
+## 15. Blueprint Seed Data Specifications
 
-### 13.1 Seed File Inventory
+### 15.1 Seed File Inventory
 
 | File                                | Domain                       | Tables Seeded                                                                                   |
 | ----------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -1783,7 +2776,10 @@ Links each JE line back to the specific source document line that generated it, 
 | `291_seed_demo_org_units.sql`       | Org hierarchy                | `core.organizational_unit`, `fin.operating_unit` (+ DDL patch)                                  |
 | `292_seed_demo_coa.sql`             | Chart of accounts            | `fin.chart_of_accounts`                                                                         |
 | `293_seed_demo_fiscal.sql`          | Fiscal periods               | `fin.fiscal_period`                                                                             |
-| `294_seed_demo_cost_profit.sql`     | Cost/profit centers          | `fin.cost_center`, `fin.profit_center` (+ OU default updates)                                   |
+| `293b_seed_period_close_tasks.sql`  | Period close task catalogue  | `fin.period_close_task` (15 tasks, blueprint-scaled)                                            |
+| `294_seed_demo_cost_profit.sql`     | Cost/profit centers (legacy) | `fin.cost_center`, `fin.profit_center` (+ OU default updates)                                   |
+| `294b_seed_demo_dimensions.sql`    | Universal ledger dimensions  | `fin.dimension_type`, `fin.dimension_value`, `fin.dimension_policy`, `fin.ou_dimension_default`  |
+| `294c_seed_demo_cubes.sql`         | Reporting cube definitions   | `fin.rpt_cube_definition` (A:1, B:1, C:2, D:3, E:2, F:4 cubes per blueprint)                   |
 | `295_seed_demo_tax.sql`             | Tax jurisdictions & rates    | `fin.tax_jurisdiction`, `fin.tax_rate`                                                          |
 | `296_seed_demo_accounting.sql`      | Accounting profiles          | `fin.accounting_profile`                                                                        |
 | `297_seed_demo_funding.sql`         | Funding profiles             | `fin.funding_profile`                                                                           |
@@ -1792,7 +2788,7 @@ Links each JE line back to the specific source document line that generated it, 
 | `301_seed_demo_classification.sql`  | Classification engine        | `ent.classification_config`, `fin.spend_category`, `fin.category_intent_rule`                   |
 | `325_seed_approval_definitions.sql` | Finance approval definitions | `wf.approval_definition` (6 templates for PI/PAY/MJE)                                           |
 
-### 13.2 Base Finance Data (290 — All Tenants)
+### 15.2 Base Finance Data (290 — All Tenants)
 
 Identical for all 9 tenants:
 
@@ -1801,7 +2797,7 @@ Identical for all 9 tenants:
 - **6 Smart Default Rules**: GL account, cost center, profit center, fund center, tax code, currency
 - **8 Event Projections**: GL balance, funding state, commitment lifecycle, inventory, assets, commission, IC netting, WIP
 
-### 13.3 OU Hierarchy by Blueprint (291)
+### 15.3 OU Hierarchy by Blueprint (291)
 
 **Blueprint A** (Freelancer):
 
@@ -1885,7 +2881,7 @@ COMPANY (Level 1, Group shell)
        └─ DEPT-IN-SALES (Level 3)
 ```
 
-### 13.4 Chart of Accounts Structure (292)
+### 15.4 Chart of Accounts Structure (292)
 
 All blueprints use subsets of a common numbering scheme:
 
@@ -1906,7 +2902,7 @@ All blueprints use subsets of a common numbering scheme:
 
 Blueprint F replicates the C-level COA per legal entity entity_code (LE-CA, LE-MY, LE-SA, LE-IN).
 
-### 13.5 Approval Workflows by Blueprint (298)
+### 15.5 Approval Workflows by Blueprint (298)
 
 | Blueprint | Template        | Stages | Flow                                  | Threshold        |
 | --------- | --------------- | ------ | ------------------------------------- | ---------------- |
@@ -1921,7 +2917,7 @@ Blueprint F replicates the C-level COA per legal entity entity_code (LE-CA, LE-M
 
 Approvals resolve to role codes (not user IDs). No HR organization dependency.
 
-### 13.6 Finance Approval Definitions (325)
+### 15.6 Finance Approval Definitions (325)
 
 The `325_seed_approval_definitions.sql` seeds 6 approval templates into `wf.approval_definition`:
 
@@ -1948,7 +2944,7 @@ The `325_seed_approval_definitions.sql` seeds 6 approval templates into `wf.appr
 
 All templates enforce SOD: submitter cannot approve. Seeds to all tenants via replication.
 
-### 13.7 Seed Data Row Counts
+### 15.7 Seed Data Row Counts
 
 | Seed File | Tables                  | Approx Rows |
 | --------- | ----------------------- | ----------- |
@@ -1966,9 +2962,9 @@ All templates enforce SOD: submitter cannot approve. Seeds to all tenants via re
 
 ---
 
-## 14. Configuration & Feature Flags
+## 16. Configuration & Feature Flags
 
-### 14.1 Runtime Configuration
+### 16.1 Runtime Configuration
 
 The finance engines are configured through `framework/runtime/src/kernel/config.schema.ts`:
 
@@ -1983,7 +2979,7 @@ The finance engines are configured through `framework/runtime/src/kernel/config.
 }
 ```
 
-### 14.2 Key Feature Flags
+### 16.2 Key Feature Flags
 
 | Flag                        | Default | Description                                                                                |
 | --------------------------- | ------- | ------------------------------------------------------------------------------------------ |
@@ -1994,7 +2990,7 @@ The finance engines are configured through `framework/runtime/src/kernel/config.
 | `financeEngines.inventory`  | `false` | Enable inventory subledger.                                                                |
 | `financeEngines.commission` | `false` | Enable commission engine.                                                                  |
 
-### 14.3 Database Provisioning
+### 16.3 Database Provisioning
 
 The seed system (`framework/adapters/db/src/seed/seed.ts`) manages all schema and data provisioning:
 
@@ -2011,16 +3007,16 @@ Files are tracked via `public.schema_provisions` with checksum-based change dete
 
 ---
 
-## 15. Cross-Cutting Concerns
+## 17. Cross-Cutting Concerns
 
-### 15.1 Multi-Tenancy
+### 17.1 Multi-Tenancy
 
 - Every table includes `tenant_id` as the primary isolation dimension
 - All unique constraints are tenant-scoped
 - All indexes include `tenant_id` for efficient tenant-specific queries
 - Cross-tenant queries are never permitted
 
-### 15.2 Audit Trail
+### 17.2 Audit Trail
 
 Multiple audit mechanisms operate simultaneously:
 
@@ -2033,7 +3029,7 @@ Multiple audit mechanisms operate simultaneously:
 | Tax Calculations         | Per-transaction tax audit      | `fin.tax_calculation`                         |
 | AI Predictions + Actions | AI decision trail              | `fin.ai_prediction`, `fin.ai_action`          |
 
-### 15.3 Idempotency
+### 17.3 Idempotency
 
 All write operations support idempotency through one of:
 
@@ -2042,13 +3038,13 @@ All write operations support idempotency through one of:
 - `ON CONFLICT DO NOTHING` (tables without `updated_at`)
 - `IF NOT EXISTS` guard with `md5()` hash comparison (approval template rules)
 
-### 15.4 Monetary Precision
+### 17.4 Monetary Precision
 
 **MC-4 Mandate**: All monetary amounts use `DECIMAL(18,4)` in the database and string-based `BigInt` arithmetic in the runtime. No floating-point operations exist anywhere in the financial processing chain.
 
 **FX Rate Precision**: `DECIMAL(18,10)` for exchange rates to preserve sufficient precision across currency pairs.
 
-### 15.5 Boundary Rules
+### 17.5 Boundary Rules
 
 | Engine      | Rule                                                              |
 | ----------- | ----------------------------------------------------------------- |
@@ -2061,7 +3057,7 @@ All write operations support idempotency through one of:
 
 ---
 
-## 16. Appendices
+## 18. Appendices
 
 ### A. Upsert Key Reference
 
@@ -2072,6 +3068,7 @@ All write operations support idempotency through one of:
 | `fin.business_intent`          | `(tenant_id, code)`                                      | DO UPDATE SET updated_at |
 | `fin.chart_of_accounts`        | `(tenant_id, entity_code, account_code)`                 | DO UPDATE SET updated_at |
 | `fin.fiscal_period`            | `(tenant_id, entity_code, fiscal_year, period_number)`   | DO NOTHING               |
+| `fin.period_close_task`        | `(tenant_id, entity_code, task_code)`                    | DO NOTHING               |
 | `fin.cost_center`              | `(tenant_id, entity_code, code)`                         | DO UPDATE SET name       |
 | `fin.profit_center`            | `(tenant_id, entity_code, code)`                         | DO UPDATE SET name       |
 | `fin.tax_jurisdiction`         | `(tenant_id, code)`                                      | DO UPDATE SET name       |
@@ -2142,8 +3139,15 @@ All write operations support idempotency through one of:
 | Finance Shared            | `framework/runtime/src/services/business/finance/shared/`                          |
 | Finance Tests             | `framework/runtime/src/services/business/finance/__tests__/`                       |
 | Budget Tests              | `framework/runtime/src/services/business/engines/budget-engine/__tests__/`         |
-| UI Components             | `products/neon/apps/web/components/finance/`                                       |
+| UI Detail Components      | `products/neon/apps/web/components/finance/`                                       |
+| UI List Explorers         | `products/neon/apps/web/components/finance/list/`                                  |
+| List Config Factories     | `products/neon/apps/web/components/finance/list/*-list-config.tsx`                  |
+| Shared Cell Renderers     | `products/neon/apps/web/components/finance/list/finance-shared.tsx`                 |
 | Tab Plugins               | `products/neon/apps/web/lib/entity-page/plugins/finance-plugin.tsx`                |
+| Finance Hooks             | `products/neon/apps/web/lib/finance/use-finance-list.ts`                           |
+| Finance Types (Web)       | `products/neon/apps/web/lib/finance/types.ts`                                      |
+| Module Definitions        | `framework/runtime/src/services/business/finance/*/module.json`                    |
+| Dashboard Contributions   | `framework/runtime/src/services/business/finance/*/dashboard.contribution.json`    |
 | DI Tokens                 | `framework/runtime/src/kernel/tokens.ts`                                           |
 | Config Schema             | `framework/runtime/src/kernel/config.schema.ts`                                    |
 | Seed CLI                  | `framework/adapters/db/src/seed/seed.ts`                                           |
@@ -2156,6 +3160,7 @@ SELECT 'fin.business_intent' as tbl, COUNT(*) FROM fin.business_intent
 UNION ALL SELECT 'fin.operating_unit', COUNT(*) FROM fin.operating_unit
 UNION ALL SELECT 'fin.chart_of_accounts', COUNT(*) FROM fin.chart_of_accounts
 UNION ALL SELECT 'fin.fiscal_period', COUNT(*) FROM fin.fiscal_period
+UNION ALL SELECT 'fin.period_close_task', COUNT(*) FROM fin.period_close_task
 UNION ALL SELECT 'fin.cost_center', COUNT(*) FROM fin.cost_center
 UNION ALL SELECT 'fin.profit_center', COUNT(*) FROM fin.profit_center
 UNION ALL SELECT 'fin.tax_jurisdiction', COUNT(*) FROM fin.tax_jurisdiction
@@ -2204,6 +3209,33 @@ ORDER BY 1;
 ### E. Test Coverage Matrix (69 tests)
 
 **Run**: `npx vitest run --reporter=verbose` from project root
+
+#### Test Suite Summary
+
+| Test File                           | Tests | Domain                        | Key Validations                                               |
+| ----------------------------------- | ----- | ----------------------------- | ------------------------------------------------------------- |
+| `purchase-invoice-lifecycle.test.ts`| 16    | Invoice CRUD + Posting        | 12-step lifecycle, budget ops, tax splits, outbox events      |
+| `payment-lifecycle.test.ts`         | 7     | Payment Posting               | Gross settlement JE, WHT, discounts, concurrent overpay lock  |
+| `manual-je-lifecycle.test.ts`       | 2     | Journal Entries               | Fractional precision, period enforcement                      |
+| `gl-inquiry.test.ts`               | 3     | GL Reporting                  | Trial balance, drill-down chain, reversal modes               |
+| `money-library.test.ts`            | 12    | MC-4 Arithmetic               | No-float-drift, HALF_UP rounding, rate precision              |
+| `handler-contracts.test.ts`        | 3     | HTTP Error Mapping             | INVALID_STATUS, CROSS_SUPPLIER, OVERPAYMENT codes             |
+| `bank-reconciliation.test.ts`      | 13    | Bank Matching                  | 3-pass algorithm, confidence scoring, session lifecycle       |
+| Budget lifecycle (engine tests)     | 6     | Budget Operations              | RESERVE/COMMIT/CONSUME/RELEASE, over-budget rejection         |
+| **Total**                           | **69**|                               |                                                               |
+
+#### Architectural Patterns Validated Across Tests
+
+| Pattern                      | Tests Covering It                                                        |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| Multi-engine orchestration   | Invoice lifecycle (budget + tax + approval + posting + outbox)            |
+| Decimal-string arithmetic    | Money library (12 tests), JE balance validation, payment JE proof        |
+| GL drill-down chain          | GL inquiry (sourceDocLineId → allocation → invoice)                      |
+| Transaction boundaries       | Payment post (BEGIN/COMMIT/ROLLBACK), invoice post (atomic core)         |
+| Outbox pattern               | Invoice lifecycle (inventory, asset, commission, federation handlers)     |
+| Decision grid scoring        | Invoice submit (composite score → approval route determination)          |
+| Idempotent operations        | Bank reconciliation (idempotent session start), document creation         |
+| Optimistic concurrency       | Invoice update (assertVersion), line set (version parameter)             |
 
 #### Purchase Invoice Lifecycle (16 tests)
 
@@ -2344,3 +3376,90 @@ ORDER BY 1;
    Import bank statement → auto-match PAY-2026-00001 (EXACT, conf=97)
    → Complete → payment status → RECONCILED
 ```
+
+### G. End-to-End Payment with WHT & Discount Example
+
+**Scenario**: Payment for two invoices with WHT and early-payment discount, Blueprint C (demo_fr)
+
+```
+1. CREATE (DRAFT)
+   POST /api/fin/payments
+   → PAY-2026-00015, supplier=ACME-FR, method=WIRE, total=€10,000
+
+2. ADD ALLOCATIONS
+   POST /api/fin/payments/:id/allocations
+   → Allocation 1: INV-2026-00081, allocated=€6,000, WHT=€300, discount=€120
+   → Allocation 2: INV-2026-00085, allocated=€4,000, WHT=€200, discount=€0
+   → Sum check: 6,000 + 4,000 = 10,000 ✓
+
+3. SUBMIT (DRAFT → SUBMITTED)
+   POST /api/fin/payments/:id/submit
+   → Decision Grid: composite=0.32, route=STANDARD
+   → Approval: route to TREASURY_ANALYST
+
+4. APPROVE (SUBMITTED → APPROVED)
+   onApprovalComplete(approved)
+
+5. POST (APPROVED → POSTED) — Transactional
+   POST /api/fin/payments/:id/post
+   BEGIN TRANSACTION
+     → SELECT ... FOR UPDATE on INV-2026-00081, INV-2026-00085
+     → Validate: same supplier ✓, allocations ≤ remaining ✓
+     → Build gross settlement JE:
+       Dr 2110 AP Control  €6,000  (alloc 1)
+       Dr 2110 AP Control  €4,000  (alloc 2)
+       Cr 2200 WHT Payable   €500  (300 + 200)
+       Cr 7100 Disc Income   €120  (120 + 0)
+       Cr 1010 Bank Account €9,380 (10,000 − 500 − 120)
+       Proof: Dr 10,000 = Cr 10,000 ✓
+     → PostingService.createAndPost() within same TX
+     → INV-2026-00081: paidAmount += 6,000 → PARTIALLY_PAID
+     → INV-2026-00085: paidAmount += 4,000 → PAID
+   COMMIT
+
+6. RECONCILIATION
+   Import statement → auto-match €9,380 wire (EXACT, conf=97)
+   → Complete → PAY-2026-00015 status → RECONCILED
+```
+
+### H. Bank Reconciliation 3-Pass Algorithm Detail
+
+**Scenario**: Statement with 5 lines matched against 4 posted payments
+
+```
+Input:
+  Statement Lines:             Payments:
+  L1: -€1,000  REF-001  Jan-15   P1: €1,000  REF-001  Jan-14 (1 day diff)
+  L2: -€2,500  REF-X02  Jan-16   P2: €2,500  REF-002  Jan-16 (Levenshtein=2)
+  L3: -€750    REF-003  Jan-18   P3: €750    ---      Jan-20 (no ref, 2 day)
+  L4: +€500    (credit)          P4: €3,000  REF-004  Jan-22
+  L5: -€3,100  REF-999  Jan-25
+
+Pass 1 — EXACT:
+  L1 ↔ P1: amount ✓, ref exact ✓, date ≤3 days ✓ → confidence=97 → AUTO_APPLIED
+  Result: L1=AUTO_MATCHED
+
+Pass 2 — FUZZY_REF:
+  L2 ↔ P2: amount ✓, Levenshtein("REF-X02","REF-002")=1 ≤ 3 ✓ → confidence=87
+  Result: L2=AUTO_MATCHED (≥90 threshold? 87 < 90 → flagged for review)
+
+Pass 3 — AMOUNT_ONLY:
+  L3 ↔ P3: amount ✓, date diff=2 days ≤ 5 ✓ → confidence=72
+  Result: L3=flagged for review (72 < 90)
+
+Skipped:
+  L4: CREDIT line → not eligible (only DEBIT matched)
+  L5: no payment match for €3,100
+
+Session Counts:
+  total=5, auto_matched=1, manual_matched=0, unmatched=3, excluded=1 (credit)
+```
+
+### I. Version History
+
+| Version | Date       | Changes                                                                                             |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| 2.0     | 2026-02-01 | Initial specification: 13 engines, event store, decision grid, budget, commitment, posting, tax     |
+| 2.1     | 2026-02-15 | Added document services (PI, Payment, Manual JE, GL Inquiry), bank reconciliation, outbox pattern   |
+| 2.2     | 2026-03-03 | Added HTTP API reference (36 endpoints), UI components (5 detail + 4 tab plugins), test matrix (69) |
+| 2.3     | 2026-03-07 | Added 14th engine (Period Close Governance), module registry (6 modules, subscription tiers), 5 dashboard contributions (KPIs, charts, ACL), list explorer system (3 explorers + shared renderers + ListPageConfig factory), ReconciliationReport component, enhanced test coverage matrix with architectural pattern validation, expanded file locations, end-to-end payment example with WHT/discount, bank reconciliation algorithm walkthrough |

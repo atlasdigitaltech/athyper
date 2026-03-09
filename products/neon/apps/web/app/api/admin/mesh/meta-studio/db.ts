@@ -54,8 +54,8 @@ export async function listEntitiesDirect(): Promise<{
 }> {
   const db = await getDb();
 
-  // Fetch all entities
-  const [countResult, entities] = await Promise.all([
+  // Fetch all entities + satellite tables
+  const [countResult, entities, publishStates, uiProfiles, numberingPolicies, runtimeProfiles] = await Promise.all([
     db
       .selectFrom("meta.entity")
       .select((eb) => eb.fn.countAll().as("count"))
@@ -65,7 +65,43 @@ export async function listEntitiesDirect(): Promise<{
       .selectAll()
       .orderBy("created_at", "desc")
       .execute(),
+    db
+      .selectFrom("meta.entity_publish_state" as any)
+      .selectAll()
+      .execute() as Promise<any[]>,
+    db
+      .selectFrom("meta.entity_ui_profile" as any)
+      .selectAll()
+      .execute() as Promise<any[]>,
+    db
+      .selectFrom("meta.entity_numbering_policy" as any)
+      .selectAll()
+      .execute() as Promise<any[]>,
+    db
+      .selectFrom("meta.entity_runtime_profile" as any)
+      .selectAll()
+      .execute() as Promise<any[]>,
   ]);
+
+  const publishStateByEntity = new Map<string, any>();
+  for (const ps of publishStates) {
+    publishStateByEntity.set(ps.entity_id as string, ps);
+  }
+
+  const uiProfileByEntity = new Map<string, any>();
+  for (const up of uiProfiles) {
+    uiProfileByEntity.set(up.entity_id as string, up);
+  }
+
+  const numberingByEntity = new Map<string, any>();
+  for (const np of numberingPolicies) {
+    numberingByEntity.set(np.entity_id as string, np);
+  }
+
+  const runtimeByEntity = new Map<string, any>();
+  for (const rp of runtimeProfiles) {
+    runtimeByEntity.set(rp.entity_id as string, rp);
+  }
 
   const total = Number(countResult.count);
   const entityIds = entities.map((e) => e.id);
@@ -133,7 +169,12 @@ export async function listEntitiesDirect(): Promise<{
   const data = entities.map((e) => {
     const latestVersion = latestVersionByEntity.get(e.id);
     const versionId = latestVersion?.id as string | undefined;
+    const ps = publishStateByEntity.get(e.id as string);
+    const up = uiProfileByEntity.get(e.id as string);
+    const np = numberingByEntity.get(e.id as string);
+    const rp = runtimeByEntity.get(e.id as string);
 
+    const ea = e as any;
     return {
       id: e.id,
       name: e.name,
@@ -142,8 +183,10 @@ export async function listEntitiesDirect(): Promise<{
       tableSchema: e.table_schema ?? "ent",
       tableName: e.table_name ?? e.name,
       isActive: e.is_active ?? true,
-      governanceLevel: (e as any).governance_level ?? "full",
-      engineTag: (e as any).engine_tag ?? null,
+      // Runtime profile (from entity_runtime_profile satellite)
+      governanceLevel: rp?.governance_level ?? ea.governance_level ?? "full",
+      engineTag: rp?.engine_tag ?? ea.engine_tag ?? null,
+      entityClass: ea.entity_class ?? "MASTER",
       currentVersion: latestVersion
         ? {
             id: latestVersion.id,
@@ -160,6 +203,26 @@ export async function listEntitiesDirect(): Promise<{
         ? (relationCountByVersion.get(versionId) ?? 0)
         : 0,
       updatedAt: e.updated_at ?? e.created_at,
+      // Display metadata (from entity_ui_profile satellite)
+      labelSingular: up?.label_singular ?? null,
+      labelPlural: up?.label_plural ?? null,
+      description: up?.description ?? null,
+      iconKey: up?.icon_key ?? null,
+      colorToken: up?.color_token ?? null,
+      displayConfig: up?.display_config ?? null,
+      // Runtime profile (from entity_runtime_profile satellite)
+      featureFlags: rp?.feature_flags ?? ea.feature_flags ?? null,
+      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
+      dataPolicy: rp?.data_policy ?? ea.data_policy ?? null,
+      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "system",
+      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
+      // Numbering (from entity_numbering_policy satellite)
+      namingPolicy: np?.naming_policy ?? null,
+      // Operational (from entity_publish_state satellite)
+      publishedVersionId: ps?.published_version_id ?? null,
+      lastCompiledAt: ps?.last_compiled_at ?? null,
+      lastCompiledHash: ps?.last_compiled_hash ?? null,
+      lastSchemaChangeAt: ps?.last_schema_change_at ?? null,
     };
   });
 
@@ -194,6 +257,34 @@ export async function getEntityDirect(entityName: string): Promise<{
 
   if (!entity) return { success: false, data: null };
 
+  // Satellite tables
+  const [publishState, uiProfile, numberingPolicy, runtimeProfile] = await Promise.all([
+    db
+      .selectFrom("meta.entity_publish_state" as any)
+      .selectAll()
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.entity_ui_profile" as any)
+      .selectAll()
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.entity_numbering_policy" as any)
+      .selectAll()
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.entity_runtime_profile" as any)
+      .selectAll()
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+  ]);
+  const ps = publishState;
+  const up = uiProfile;
+  const np = numberingPolicy;
+  const rp = runtimeProfile;
+
   // Latest version
   const latestVersion = await db
     .selectFrom("meta.entity_version")
@@ -225,6 +316,7 @@ export async function getEntityDirect(entityName: string): Promise<{
     relationCount = Number((rc as any)?.count ?? 0);
   }
 
+  const ea = entity as any;
   return {
     success: true,
     data: {
@@ -235,8 +327,10 @@ export async function getEntityDirect(entityName: string): Promise<{
       tableSchema: entity.table_schema ?? "ent",
       tableName: entity.table_name ?? entity.name,
       isActive: entity.is_active ?? true,
-      governanceLevel: (entity as any).governance_level ?? "full",
-      engineTag: (entity as any).engine_tag ?? null,
+      // Runtime profile (from entity_runtime_profile satellite)
+      governanceLevel: rp?.governance_level ?? ea.governance_level ?? "full",
+      engineTag: rp?.engine_tag ?? ea.engine_tag ?? null,
+      entityClass: ea.entity_class ?? "MASTER",
       currentVersion: latestVersion
         ? {
             id: latestVersion.id,
@@ -251,6 +345,26 @@ export async function getEntityDirect(entityName: string): Promise<{
       fieldCount,
       relationCount,
       updatedAt: entity.updated_at ?? entity.created_at,
+      // Display metadata (from entity_ui_profile satellite)
+      labelSingular: up?.label_singular ?? null,
+      labelPlural: up?.label_plural ?? null,
+      description: up?.description ?? null,
+      iconKey: up?.icon_key ?? null,
+      colorToken: up?.color_token ?? null,
+      displayConfig: up?.display_config ?? null,
+      // Runtime profile (from entity_runtime_profile satellite)
+      featureFlags: rp?.feature_flags ?? ea.feature_flags ?? null,
+      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
+      dataPolicy: rp?.data_policy ?? ea.data_policy ?? null,
+      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "system",
+      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
+      // Numbering (from entity_numbering_policy satellite)
+      namingPolicy: np?.naming_policy ?? null,
+      // Operational (from entity_publish_state satellite)
+      publishedVersionId: ps?.published_version_id ?? null,
+      lastCompiledAt: ps?.last_compiled_at ?? null,
+      lastCompiledHash: ps?.last_compiled_hash ?? null,
+      lastSchemaChangeAt: ps?.last_schema_change_at ?? null,
     },
   };
 }
@@ -313,6 +427,11 @@ export async function createEntityDirect(data: {
 
 /**
  * Update an entity in meta.entity by name.
+ *
+ * Enforces the schema evolution guard: columns that form the entity's
+ * stable identity and physical binding (entity_code, table_schema,
+ * table_name, kind, entity_class, mapping_mode, backing_type) are
+ * immutable once any version has been published.
  */
 export async function updateEntityDirect(
   entityName: string,
@@ -320,6 +439,7 @@ export async function updateEntityDirect(
 ): Promise<{
   success: boolean;
   data: unknown | null;
+  error?: string;
 }> {
   const db = await getDb();
 
@@ -331,11 +451,73 @@ export async function updateEntityDirect(
   if (updates.tableName !== undefined) dbUpdates.table_name = updates.tableName;
   if (updates.moduleId !== undefined) dbUpdates.module_id = updates.moduleId;
   if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+
+  // ── Satellite updates ──
+  // Runtime profile → entity_runtime_profile
+  const runtimeUpdates: Record<string, unknown> = {};
   if (updates.governanceLevel !== undefined)
-    dbUpdates.governance_level = updates.governanceLevel;
-  if (updates.engineTag !== undefined) dbUpdates.engine_tag = updates.engineTag;
+    runtimeUpdates.governance_level = updates.governanceLevel;
+  if (updates.engineTag !== undefined) runtimeUpdates.engine_tag = updates.engineTag;
+  if (updates.featureFlags !== undefined)
+    runtimeUpdates.feature_flags = updates.featureFlags ? JSON.stringify(updates.featureFlags) : null;
   if (updates.identityConfig !== undefined)
-    dbUpdates.identity_config = updates.identityConfig ? JSON.stringify(updates.identityConfig) : null;
+    runtimeUpdates.identity_config = updates.identityConfig ? JSON.stringify(updates.identityConfig) : null;
+  if (updates.dataPolicy !== undefined)
+    runtimeUpdates.data_policy = updates.dataPolicy ? JSON.stringify(updates.dataPolicy) : null;
+  if (updates.ownershipModel !== undefined)
+    runtimeUpdates.ownership_model = updates.ownershipModel;
+  if (updates.mutability !== undefined)
+    runtimeUpdates.mutability = updates.mutability;
+
+  // Display metadata → entity_ui_profile
+  const uiUpdates: Record<string, unknown> = {};
+  if (updates.labelSingular !== undefined) uiUpdates.label_singular = updates.labelSingular;
+  if (updates.labelPlural !== undefined) uiUpdates.label_plural = updates.labelPlural;
+  if (updates.description !== undefined) uiUpdates.description = updates.description;
+  if (updates.iconKey !== undefined) uiUpdates.icon_key = updates.iconKey;
+  if (updates.colorToken !== undefined) uiUpdates.color_token = updates.colorToken;
+  if (updates.displayConfig !== undefined)
+    uiUpdates.display_config = updates.displayConfig ? JSON.stringify(updates.displayConfig) : null;
+
+  // Numbering → entity_numbering_policy
+  const numberingUpdates: Record<string, unknown> = {};
+  if (updates.namingPolicy !== undefined)
+    numberingUpdates.naming_policy = updates.namingPolicy ? JSON.stringify(updates.namingPolicy) : null;
+
+  // Provenance → entity_publish_state
+  const provenanceUpdate = updates.provenance !== undefined
+    ? (updates.provenance ? JSON.stringify(updates.provenance) : null)
+    : undefined;
+
+  // ── Evolution guard: check immutable columns before touching the DB ──
+  const { checkEvolutionGuard, ENTITY_UPDATE_KEY_TO_COLUMN } = await import("@/lib/entity-meta-utils");
+
+  const changingColumns = Object.keys(dbUpdates)
+    .filter((k) => k !== "updated_at");
+
+  if (changingColumns.length > 0) {
+    // Check if any published version exists
+    const entity = await db
+      .selectFrom("meta.entity")
+      .select(["id"])
+      .where("name", "=", entityName)
+      .executeTakeFirst();
+
+    if (entity) {
+      const published = await db
+        .selectFrom("meta.entity_version")
+        .select(["id"])
+        .where("entity_id", "=", entity.id)
+        .where("status", "=", "published")
+        .limit(1)
+        .executeTakeFirst();
+
+      const guard = checkEvolutionGuard(changingColumns, !!published);
+      if (!guard.allowed) {
+        return { success: false, data: null, error: guard.reason };
+      }
+    }
+  }
 
   const entity = await db
     .updateTable("meta.entity")
@@ -345,6 +527,53 @@ export async function updateEntityDirect(
     .executeTakeFirst();
 
   if (!entity) return { success: false, data: null };
+
+  // Write satellite table updates in parallel
+  const satelliteWrites: Promise<unknown>[] = [];
+
+  if (Object.keys(runtimeUpdates).length > 0) {
+    satelliteWrites.push(
+      db
+        .updateTable("meta.entity_runtime_profile" as any)
+        .set({ ...runtimeUpdates, updated_at: new Date() } as any)
+        .where("entity_id", "=", entity.id)
+        .execute(),
+    );
+  }
+
+  if (Object.keys(uiUpdates).length > 0) {
+    satelliteWrites.push(
+      db
+        .updateTable("meta.entity_ui_profile" as any)
+        .set({ ...uiUpdates, updated_at: new Date() } as any)
+        .where("entity_id", "=", entity.id)
+        .execute(),
+    );
+  }
+
+  if (Object.keys(numberingUpdates).length > 0) {
+    satelliteWrites.push(
+      db
+        .updateTable("meta.entity_numbering_policy" as any)
+        .set({ ...numberingUpdates, updated_at: new Date() } as any)
+        .where("entity_id", "=", entity.id)
+        .execute(),
+    );
+  }
+
+  if (provenanceUpdate !== undefined) {
+    satelliteWrites.push(
+      db
+        .updateTable("meta.entity_publish_state" as any)
+        .set({ provenance: provenanceUpdate, updated_at: new Date() } as any)
+        .where("entity_id", "=", entity.id)
+        .execute(),
+    );
+  }
+
+  if (satelliteWrites.length > 0) {
+    await Promise.all(satelliteWrites);
+  }
 
   return getEntityDirect(entity.name);
 }
@@ -604,6 +833,111 @@ export async function getCompiledDirect(entityName: string) {
       compiledHash: (compiled as any).compiled_hash,
       generatedAt: (compiled as any).generated_at,
     },
+  };
+}
+
+/**
+ * Fetch the data needed for publish-time cross-entity consistency checks.
+ * Returns null if the entity or version doesn't exist.
+ */
+export async function fetchPublishValidationData(
+  entityName: string,
+  versionId: string,
+): Promise<{
+  entityName: string;
+  entityClass: string;
+  governanceLevel: string;
+  featureFlags: Record<string, unknown> | null;
+  namingPolicy: unknown | null;
+  displayConfig: Record<string, unknown> | null;
+  entityCode: string | null;
+  slug: string | null;
+  backingType: string;
+  mappingMode: string;
+  hasCompiledArtifact: boolean;
+  hasLifecycleBinding: boolean;
+  hasActiveOverlays: boolean;
+  overlayConflictModes: string[];
+  hasFieldSecurityPolicies: boolean;
+  fieldNames: Set<string>;
+} | null> {
+  const db = await getDb();
+
+  const entity = await db
+    .selectFrom("meta.entity")
+    .selectAll()
+    .where("name", "=", entityName)
+    .executeTakeFirst();
+
+  if (!entity) return null;
+
+  const e = entity as any;
+
+  // Run all lookups in parallel (including satellite tables)
+  const [compiled, lifecycleBindings, overlays, numberingPolicy, runtimeProfile, displayConfig, fieldSecurityPolicies, versionFields] = await Promise.all([
+    db
+      .selectFrom("meta.entity_compiled")
+      .select(["id"])
+      .where("entity_version_id", "=", versionId)
+      .limit(1)
+      .executeTakeFirst(),
+    db
+      .selectFrom("meta.entity_lifecycle" as any)
+      .select(["id"])
+      .where("entity_name", "=", entityName)
+      .limit(1)
+      .executeTakeFirst(),
+    db
+      .selectFrom("meta.overlay" as any)
+      .select(["id", "conflict_mode"])
+      .where("base_entity_id", "=", entity.id)
+      .where("is_active", "=", true)
+      .execute(),
+    db
+      .selectFrom("meta.entity_numbering_policy" as any)
+      .select(["naming_policy"])
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.entity_runtime_profile" as any)
+      .select(["feature_flags", "governance_level"])
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.entity_ui_profile" as any)
+      .select(["display_config"])
+      .where("entity_id", "=", entity.id)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.field_security_policy" as any)
+      .select(["id"])
+      .where("entity_id", "=", entity.id)
+      .limit(1)
+      .executeTakeFirst() as Promise<any>,
+    db
+      .selectFrom("meta.field" as any)
+      .select(["name"])
+      .where("entity_version_id", "=", versionId)
+      .execute() as Promise<any[]>,
+  ]);
+
+  return {
+    entityName,
+    entityClass: e.entity_class ?? "REFERENCE",
+    governanceLevel: runtimeProfile?.governance_level ?? e.governance_level ?? "full",
+    featureFlags: runtimeProfile?.feature_flags ?? e.feature_flags ?? null,
+    namingPolicy: numberingPolicy?.naming_policy ?? null,
+    displayConfig: displayConfig?.display_config ?? null,
+    entityCode: e.entity_code ?? null,
+    slug: e.slug ?? null,
+    backingType: e.backing_type ?? "table",
+    mappingMode: e.mapping_mode ?? "exclusive",
+    hasCompiledArtifact: !!compiled,
+    hasLifecycleBinding: !!lifecycleBindings,
+    hasActiveOverlays: (overlays as any[]).length > 0,
+    overlayConflictModes: (overlays as any[]).map((o: any) => o.conflict_mode ?? ""),
+    hasFieldSecurityPolicies: !!fieldSecurityPolicies,
+    fieldNames: new Set((versionFields ?? []).map((f: any) => f.name as string)),
   };
 }
 

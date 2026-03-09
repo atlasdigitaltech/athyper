@@ -14,7 +14,12 @@
     }
   },
   "dependencies": {
+    "@athyper/adapter-objectstorage": "workspace:*",
+    "pg": "^8.13.1",
     "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0"
   },
   "peerDependencies": {
     "next": "^16.0.0"

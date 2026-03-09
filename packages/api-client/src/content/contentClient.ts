@@ -20,6 +20,26 @@ type ApiResponse<T = unknown> = {
   error?: { code: string; message: string };
 };
 
+/**
+ * Build headers for mutating requests, including the CSRF token.
+ * Reads the token from the `__csrf` cookie (JS-readable by design).
+ */
+function mutatingHeaders(
+  extra?: Record<string, string>,
+): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const doc = (globalThis as Record<string, unknown>).document as
+    | { cookie: string }
+    | undefined;
+  if (doc) {
+    const match = doc.cookie.match(/(?:^|;\s*)__csrf=([^;]*)/);
+    if (match?.[1]) {
+      headers["x-csrf-token"] = match[1];
+    }
+  }
+  return headers;
+}
+
 export class ContentApiError extends Error {
   constructor(
     public code: string,
@@ -43,7 +63,7 @@ export async function initiateUpload(
 ): Promise<InitiateUploadResult> {
   const res = await fetch("/api/content/initiate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: mutatingHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(input),
     credentials: "include",
   });
@@ -72,7 +92,7 @@ export async function completeUpload(
 ): Promise<void> {
   const res = await fetch("/api/content/complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: mutatingHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(input),
     credentials: "include",
   });
@@ -125,6 +145,7 @@ export async function getDownloadUrl(
 export async function deleteAttachment(attachmentId: string): Promise<void> {
   const res = await fetch(`/api/content/delete/${attachmentId}`, {
     method: "DELETE",
+    headers: mutatingHeaders(),
     credentials: "include",
   });
 

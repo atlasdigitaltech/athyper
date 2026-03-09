@@ -44,6 +44,18 @@
     "./services/platform/ui/saved-view.service": {
       "types": "./src/services/platform/ui/saved-view.service.ts",
       "default": "./src/services/platform/ui/saved-view.service.ts"
+    },
+    "./services/business/engines/posting-engine": {
+      "types": "./src/services/business/engines/posting-engine/index.ts",
+      "default": "./src/services/business/engines/posting-engine/index.ts"
+    },
+    "./kernel/container": {
+      "types": "./src/kernel/container.ts",
+      "default": "./src/kernel/container.ts"
+    },
+    "./services/business/engines/shared/money": {
+      "types": "./src/services/business/engines/shared/money.ts",
+      "default": "./src/services/business/engines/shared/money.ts"
     }
   },
   "files": [

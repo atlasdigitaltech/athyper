@@ -109,8 +109,9 @@ import type { JobRegistry } from "../../platform/foundation/registries/jobs.regi
 import type { RouteRegistry } from "../../platform/foundation/registries/routes.registry.js";
 import type { RuntimeModule } from "../../types.js";
 import type { DB } from "@athyper/adapter-db";
-import type { JobQueue, MetricsRegistry } from "@athyper/core";
+import type { EventBus, JobQueue, MetricsRegistry } from "@athyper/core";
 import type Redis from "ioredis";
+import { sql } from "kysely";
 import type { Kysely } from "kysely";
 
 // ============================================================================
@@ -1134,6 +1135,40 @@ export const module: RuntimeModule = {
       cron: "0 4 * * *", // daily at 4 AM
       jobName: "cleanup-expired",
     });
+
+    // ================================================================
+    // EventBus Subscription — data-driven from notification_rule
+    // ================================================================
+
+    try {
+      const eventBus = await c.resolve<EventBus>(TOKENS.eventBus);
+
+      // Query distinct enabled event types from notification rules
+      const result = await sql`
+        SELECT DISTINCT event_type
+        FROM meta.notification_rule
+        WHERE is_enabled = true
+      `.execute(db);
+
+      const eventTypes = (result.rows as { event_type: string }[]).map(
+        (r) => r.event_type,
+      );
+
+      if (eventTypes.length > 0) {
+        orchestrator.subscribeToEvents(eventBus, eventTypes);
+        logger.info(
+          { count: eventTypes.length, eventTypes },
+          "Notification orchestrator subscribed to domain events",
+        );
+      } else {
+        logger.info("No enabled notification rules found — skipping EventBus subscription");
+      }
+    } catch (err) {
+      logger.warn(
+        { error: String(err) },
+        "EventBus subscription failed — notifications will not be triggered by domain events",
+      );
+    }
 
     logger.info(
       "Notification module contributed — routes, workers, and schedules registered",

@@ -1,6 +1,6 @@
 // framework/runtime/src/services/business/finance/accounting/services/purchase-invoice-service.ts
 //
-// Purchase Non-PO Invoice Service — the central hub connecting ALL 12 engines.
+// Purchase Invoice Service — the central hub connecting ALL 12 engines.
 // Orchestrates: OU+Intent, Classification, Decision Grid, Budget, Commitment,
 // Posting, Tax, Inventory, Asset, Commission, Federation, Production (indirect),
 // plus Approval Workflow.

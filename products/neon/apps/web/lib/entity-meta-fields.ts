@@ -639,8 +639,15 @@ export async function resolveFieldsWithFKs(
     let fields = await getMetaFields(db, entityName, tenantId, metrics);
 
     // Fallback to information_schema if no meta.field rows exist
+    let resolutionPath: "meta" | "schema_fallback" = "meta";
     if (fields.length === 0) {
+        resolutionPath = "schema_fallback";
         fields = await getColumnsFromSchema(db, tableSchema, tableName, metrics);
+        console.warn(
+            `[entity-meta-fields] FALLBACK: entity="${entityName}" resolved via information_schema ` +
+                `(${fields.length} columns). meta.field is empty — seed field dictionaries for ` +
+                `"${tableSchema}.${tableName}" to enable full type/visibility/writeability metadata.`,
+        );
     }
 
     // Enrich with FK lookups — DB constraints fill gaps

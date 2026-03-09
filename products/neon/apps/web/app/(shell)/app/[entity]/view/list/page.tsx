@@ -44,6 +44,7 @@ import { EntityCard } from "@/components/mesh/list/EntityCard";
 import { useEntityCapabilities } from "@/lib/entity-capabilities";
 import { useEntityListActions } from "@/lib/entity-list-actions";
 import { buildEntityListConfig } from "@/lib/entity-list-config";
+import { applyListOverrides } from "@/lib/entity-list-overrides";
 import {
   slugToEntityName,
   entityNameToDisplayName,
@@ -407,6 +408,9 @@ export default function ListViewPage() {
       rowActions,
       bulkActions,
     });
+
+    // Apply entity-specific overrides (finance column formatting, icons, etc.)
+    applyListOverrides(entityMeta?.entityName ?? entityName, cfg);
 
     // Override cardRenderer with EntityCard that has access to fields
     cfg.cardRenderer = (item: Record<string, unknown>) => (

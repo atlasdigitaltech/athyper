@@ -31,7 +31,8 @@ ALTER TABLE meta.field ADD CONSTRAINT chk_field_data_type
         data_type IN (
             'string', 'text', 'integer', 'number', 'decimal',
             'boolean', 'date', 'datetime',
-            'reference', 'enum', 'json', 'uuid', 'rich_text'
+            'reference', 'enum', 'json', 'uuid', 'rich_text',
+            'collection'
         )
         -- Physical PG types from DDL-generated entity fields (system-authored)
         OR data_type IN (
@@ -62,6 +63,8 @@ ALTER TABLE meta.field ADD CONSTRAINT chk_field_ui_type
             'datepicker', 'reference-picker', 'json-editor', 'hidden',
             'money', 'percent', 'rich-text', 'color-picker',
             'phone', 'email', 'url',
+            -- Collection UI types
+            'grid', 'inline-list',
             -- Legacy UI types (from system-generated entities)
             'boolean', 'code', 'currency', 'date', 'datetime',
             'json', 'lookup', 'percentage', 'tags'

@@ -379,4 +379,40 @@ export default [
       "boundaries/no-unknown": "off",
     },
   },
+
+  /* ---------------------------
+   * MC-4: Forbid parseFloat in finance services & reporting routes
+   * Unless the call site is marked // DISPLAY_ONLY_FLOAT_OK
+   * ---------------------------
+   * ESLint built-in `no-restricted-syntax` catches direct calls.
+   * Display-only uses (toLocaleString formatting) must be annotated
+   * with an inline disable comment:
+   *   // eslint-disable-next-line athyper/no-float-money -- DISPLAY_ONLY_FLOAT_OK
+   */
+  {
+    files: [
+      "framework/runtime/src/services/business/**/*.{ts,tsx}",
+      "products/*/apps/*/app/api/fin/**/*.{ts,tsx}",
+      "products/*/apps/*/components/finance/**/*.{ts,tsx}",
+      "products/*/apps/*/lib/finance/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.name='parseFloat']",
+          message:
+            "MC-4: Do not use parseFloat() for monetary arithmetic. " +
+            "Use sumAmounts/subtractAmounts/compareAmounts from shared/money. " +
+            "If this is display-only formatting, add: // eslint-disable-next-line no-restricted-syntax -- DISPLAY_ONLY_FLOAT_OK",
+        },
+        {
+          selector: "CallExpression[callee.object.name='Number'][callee.property.name='parseFloat']",
+          message:
+            "MC-4: Do not use Number.parseFloat() for monetary arithmetic. " +
+            "Use sumAmounts/subtractAmounts/compareAmounts from shared/money.",
+        },
+      ],
+    },
+  },
 ];

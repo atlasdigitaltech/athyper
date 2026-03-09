@@ -3,12 +3,12 @@
 import type {
   PaginationParams,
   PaginatedResult,
-} from "../../shared/engine-base.js";
+} from "../../shared/engine-base";
 import type {
   ChartOfAccounts,
   CreateAccountInput,
   AccountType,
-} from "../domain/types.js";
+} from "../domain/types";
 
 export interface ChartOfAccountsRepo {
   create(input: CreateAccountInput): Promise<ChartOfAccounts>;

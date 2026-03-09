@@ -43,6 +43,8 @@ export type LifecycleDB = DB & {
     description: string | null;
     version_no: number;
     is_active: boolean;
+    definition_hash: string | null;
+    updated_at: Date | null;
     created_at: Date;
     created_by: string;
   };
@@ -165,6 +167,50 @@ export type LifecycleDB = DB & {
     created_by: string;
     updated_at: Date | null;
     updated_by: string | null;
+  };
+
+  "meta.entity_version": {
+    id: string;
+    tenant_id: string;
+    entity_id: string;
+    version_no: number;
+    status: string; // VersionStatus
+    label: string | null;
+    behaviors: unknown | null; // jsonb
+    published_at: Date | null;
+    published_by: string | null;
+    // Governance columns (068_governed_versioning)
+    derived_from_version_id: string | null;
+    supersedes_version_id: string | null;
+    is_effective: boolean;
+    effective_from: Date | null;
+    effective_to: Date | null;
+    approved_at: Date | null;
+    approved_by: string | null;
+    change_summary: string | null;
+    change_type: string | null; // VersionChangeType
+    is_working_copy: boolean;
+    lock_version: number;
+    lifecycle_instance_id: string | null;
+    version_hash: string | null;
+    created_at: Date;
+    created_by: string;
+    updated_at: Date | null;
+    updated_by: string | null;
+  };
+
+  "meta.entity_publish_state": {
+    entity_id: string;
+    tenant_id: string;
+    published_version_id: string | null;
+    current_draft_version_id: string | null;
+    latest_version_no: number;
+    status_summary: string | null;
+    last_compiled_at: Date | null;
+    last_compiled_hash: string | null;
+    last_schema_change_at: Date | null;
+    provenance: unknown | null; // jsonb
+    updated_at: Date;
   };
 
   // ===== Numbering Sequence (Approvable Core Engine) =====
@@ -295,6 +341,55 @@ export type LifecycleDB = DB & {
   };
 
   // ===== Lifecycle Timer (Timer Service) =====
+
+  "meta.lifecycle_transition_hook": {
+    id: string;
+    tenant_id: string;
+    transition_id: string;
+    timing: string; // 'on_enter' | 'on_exit' | 'on_success' | 'on_failure'
+    action: string; // HookAction
+    config: unknown | null; // jsonb
+    sort_order: number;
+    is_active: boolean;
+    // Governance columns (Phase 1: Hook Foundation)
+    origin: string; // 'system' | 'tenant' | 'overlay'
+    layer_rank: number; // 10=system, 20=tenant, 30=overlay
+    contract_role: string; // 'contract' | 'extension'
+    safety_level: string; // 'narrowable' | 'replaceable'
+    overlay_id: string | null;
+    created_at: Date;
+    created_by: string;
+  };
+
+  "meta.hook_action_registry": {
+    id: string;
+    tenant_id: string | null;
+    action_key: string;
+    origin: string; // 'system' | 'tenant'
+    label: string;
+    description: string | null;
+    handler_type: string; // 'built_in' | 'emit_event'
+    handler_config: unknown | null; // jsonb
+    default_contract_role: string; // 'contract' | 'extension'
+    default_safety_level: string; // 'narrowable' | 'replaceable'
+    is_active: boolean;
+    created_at: Date;
+    created_by: string;
+  };
+
+  "meta.lifecycle_hook_override": {
+    id: string;
+    tenant_id: string;
+    target_hook_id: string;
+    override_kind: string; // 'suppress' | 'replace' | 'add_before' | 'add_after'
+    replacement_action: string | null;
+    replacement_config: unknown | null; // jsonb
+    sort_order: number;
+    reason: string | null;
+    is_active: boolean;
+    created_at: Date;
+    created_by: string;
+  };
 
   "meta.lifecycle_timer_policy": {
     id: string;

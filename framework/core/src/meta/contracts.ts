@@ -59,6 +59,18 @@ import type {
   RequestContext,
   TemplateValidationResult,
   ValidationResult,
+  VersionStatus,
+  ReviseVersionRequest,
+  ReviseVersionResult,
+  PromoteVersionResult,
+  HookHandlerType,
+  HookContractRole,
+  HookSafetyLevel,
+  HookOverrideKind,
+  HookActionRegistration,
+  HookOverrideDirective,
+  HookExecutionPlan,
+  HookTiming,
 } from "./types.js";
 import type { JobQueue } from "../jobs/types.js";
 
@@ -1546,6 +1558,50 @@ export type MetaEvent =
       type: "descriptor.cache_invalidated";
       entityName: string;
       tenantId: string;
+    }
+  | {
+      type: "version.created";
+      entityName: string;
+      entityId: string;
+      versionId: string;
+      versionNo: number;
+      tenantId: string;
+    }
+  | {
+      type: "version.approved";
+      entityName: string;
+      entityId: string;
+      versionId: string;
+      userId: string;
+      tenantId: string;
+    }
+  | {
+      type: "version.effective";
+      entityName: string;
+      entityId: string;
+      versionId: string;
+      tenantId: string;
+    }
+  | {
+      type: "version.superseded";
+      entityName: string;
+      entityId: string;
+      versionId: string;
+      supersededBy: string;
+      tenantId: string;
+    }
+  | {
+      type: "version.archived";
+      entityName: string;
+      entityId: string;
+      versionId: string;
+      tenantId: string;
+    }
+  | {
+      type: "lifecycle.definition_changed";
+      lifecycleId: string;
+      tenantId: string;
+      newHash: string;
     };
 
 export type MetaEventType = MetaEvent["type"];
@@ -1750,6 +1806,253 @@ export interface ApprovalTemplateService {
       strategy: string;
     }>;
   }>;
+}
+
+// ============================================================================
+// Governed Versioning Service
+// ============================================================================
+
+/**
+ * Versioned Document Service
+ *
+ * Manages governed version lifecycle for meta entities:
+ * - Draft creation (reviseVersion)
+ * - Version freezing (submit for review)
+ * - Approval marking
+ * - Promotion to effective
+ * - Supersession of previous effective
+ * - Hook execution on transitions
+ *
+ * This service is the domain command layer for version governance.
+ * It coordinates between meta.entity_version, lifecycle instances,
+ * and the hook system.
+ */
+export interface VersionedDocumentService {
+  /**
+   * Create a new draft version by cloning an existing version.
+   * This is the explicit "edit approved" command.
+   *
+   * Enforces:
+   * - Only one active draft per entity (maxConcurrentDrafts)
+   * - Source version must be approved/effective
+   * - Copies fields, relations, indexes to new version
+   * - Links lineage (derived_from_version_id)
+   * - Updates entity_publish_state.current_draft_version_id
+   */
+  reviseVersion(
+    request: ReviseVersionRequest,
+  ): Promise<ReviseVersionResult>;
+
+  /**
+   * Freeze a version (mark as immutable, lock for edits).
+   * Called when version enters review/approval.
+   *
+   * After freeze:
+   * - Fields, relations, indexes cannot be modified
+   * - Version status transitions to 'in_review'
+   * - lock_version is captured for optimistic locking
+   */
+  freezeVersion(
+    versionId: string,
+    reason: string,
+    ctx: RequestContext,
+  ): Promise<void>;
+
+  /**
+   * Mark a version as approved.
+   * Sets approved_at/by, transitions status to 'approved'.
+   * Does NOT make the version effective — that's a separate step.
+   */
+  markApproved(
+    versionId: string,
+    ctx: RequestContext,
+  ): Promise<void>;
+
+  /**
+   * Promote a version to effective.
+   * - Sets is_effective = true, effective_from = now
+   * - Supersedes previous effective version (if any)
+   * - Updates entity_publish_state pointers
+   *
+   * Can be called immediately after approval or on a scheduled date.
+   */
+  promoteToEffective(
+    versionId: string,
+    ctx: RequestContext,
+    effectiveFrom?: Date,
+  ): Promise<PromoteVersionResult>;
+
+  /**
+   * Archive (supersede) a version.
+   * Called when a newer version becomes effective.
+   * Sets effective_to, status = 'superseded', is_effective = false.
+   */
+  archivePreviousEffective(
+    entityId: string,
+    newEffectiveVersionId: string,
+    ctx: RequestContext,
+  ): Promise<string | undefined>; // returns superseded version ID
+
+  /**
+   * Update version status (generic status change).
+   * Used by hook actions for status transitions.
+   */
+  updateVersionStatus(
+    versionId: string,
+    targetStatus: VersionStatus,
+    ctx: RequestContext,
+  ): Promise<void>;
+
+  /**
+   * Check if a version is frozen (immutable).
+   * Returns true if version status is NOT 'draft'.
+   */
+  isFrozen(
+    versionId: string,
+    tenantId: string,
+  ): Promise<boolean>;
+
+  /**
+   * Get the current effective version for an entity.
+   */
+  getEffectiveVersion(
+    entityId: string,
+    tenantId: string,
+  ): Promise<EntityVersion | undefined>;
+
+  /**
+   * Get the current draft version for an entity (if any).
+   */
+  getCurrentDraft(
+    entityId: string,
+    tenantId: string,
+  ): Promise<EntityVersion | undefined>;
+
+  /**
+   * Compute and store a content-addressable hash for a version.
+   * Hash covers: fields, relations, indexes, behaviors.
+   * Used for: change detection, equality comparison, cache validation, integrity verification.
+   */
+  computeVersionHash(
+    versionId: string,
+    tenantId: string,
+  ): Promise<string>;
+}
+
+// ============================================================================
+// Hook Admin Service (Hook Customization Architecture)
+// ============================================================================
+
+/**
+ * Admin service for managing hook action registry and override directives.
+ *
+ * Provides CRUD operations for:
+ * - Hook action registry: register/deactivate custom tenant actions
+ * - Hook overrides: create/update/remove override directives on hooks
+ * - Hook plan preview: dry-run resolution for a transition
+ */
+export interface HookAdminService {
+  // ── Registry CRUD ──
+
+  /**
+   * List all registered hook actions visible to a tenant.
+   * Returns system actions + tenant-specific actions.
+   */
+  listActions(
+    tenantId: string,
+    options?: { includeInactive?: boolean },
+  ): Promise<HookActionRegistration[]>;
+
+  /**
+   * Register a new tenant-scoped hook action.
+   * System actions can only be registered via SQL seed.
+   */
+  registerAction(
+    input: {
+      tenantId: string;
+      actionKey: string;
+      label: string;
+      description?: string;
+      handlerType: HookHandlerType;
+      handlerConfig?: Record<string, unknown>;
+      defaultContractRole?: HookContractRole;
+      defaultSafetyLevel?: HookSafetyLevel;
+    },
+    ctx: RequestContext,
+  ): Promise<HookActionRegistration>;
+
+  /**
+   * Deactivate a tenant-scoped action.
+   * System actions cannot be deactivated.
+   */
+  deactivateAction(
+    actionId: string,
+    tenantId: string,
+    ctx: RequestContext,
+  ): Promise<void>;
+
+  // ── Override CRUD ──
+
+  /**
+   * List active overrides for a lifecycle's hooks.
+   */
+  listOverrides(
+    lifecycleId: string,
+    tenantId: string,
+  ): Promise<HookOverrideDirective[]>;
+
+  /**
+   * Create an override directive on a hook.
+   * Enforces safety rules (contract/narrowable guards) via DB trigger.
+   */
+  createOverride(
+    input: {
+      tenantId: string;
+      targetHookId: string;
+      overrideKind: HookOverrideKind;
+      replacementAction?: string;
+      replacementConfig?: Record<string, unknown>;
+      sortOrder?: number;
+      reason?: string;
+    },
+    ctx: RequestContext,
+  ): Promise<HookOverrideDirective>;
+
+  /**
+   * Update an existing override directive.
+   */
+  updateOverride(
+    overrideId: string,
+    input: {
+      overrideKind?: HookOverrideKind;
+      replacementAction?: string;
+      replacementConfig?: Record<string, unknown>;
+      sortOrder?: number;
+      reason?: string;
+    },
+    ctx: RequestContext,
+  ): Promise<HookOverrideDirective>;
+
+  /**
+   * Remove (deactivate) an override directive.
+   */
+  removeOverride(
+    overrideId: string,
+    tenantId: string,
+    ctx: RequestContext,
+  ): Promise<void>;
+
+  // ── Preview ──
+
+  /**
+   * Dry-run hook resolution for a transition.
+   * Returns what would execute without actually running anything.
+   */
+  previewHookPlan(
+    transitionId: string,
+    timing: HookTiming,
+    tenantId: string,
+  ): Promise<HookExecutionPlan>;
 }
 
 // Note: All interfaces are already exported inline above

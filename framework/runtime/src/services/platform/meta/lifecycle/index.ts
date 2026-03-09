@@ -6,3 +6,4 @@
 
 export { LifecycleManagerService } from "./lifecycle-manager.service.js";
 export { LifecycleRouteCompilerService } from "./lifecycle-route-compiler.service.js";
+export { VersionedDocumentServiceImpl } from "./versioned-document.service.js";

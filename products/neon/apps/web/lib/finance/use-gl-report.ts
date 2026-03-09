@@ -62,6 +62,15 @@ function buildFilterParams(filters: GLReportFilters): URLSearchParams {
   if (filters.costCenterId) params.set("costCenterId", filters.costCenterId);
   if (filters.accountType) params.set("accountType", filters.accountType);
   if (filters.reversalMode) params.set("reversalMode", filters.reversalMode);
+  // Dimension filters
+  if (filters.dimensionSetId)
+    params.set("dimensionSetId", filters.dimensionSetId);
+  if (filters.dimensionTypeCode)
+    params.set("dimensionTypeCode", filters.dimensionTypeCode);
+  if (filters.dimensionValueCode)
+    params.set("dimensionValueCode", filters.dimensionValueCode);
+  if (filters.groupByDimension)
+    params.set("groupByDimension", filters.groupByDimension);
   return params;
 }
 

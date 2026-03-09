@@ -28,7 +28,9 @@ export async function finGet<T>(url: string, signal?: AbortSignal): Promise<T> {
     throw new FinanceHttpError(res.status, body.error ?? body);
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  // API routes wrap responses as { success, data }; unwrap transparently.
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
 }
 
 /**
@@ -58,7 +60,8 @@ export async function finPost<T>(
     throw new FinanceHttpError(res.status, errBody.error ?? errBody);
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
 }
 
 /**
@@ -88,5 +91,65 @@ export async function finPatch<T>(
     throw new FinanceHttpError(res.status, errBody.error ?? errBody);
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
+}
+
+/**
+ * Typed PUT request with JSON body, CSRF headers, and FinanceHttpError on failure.
+ */
+export async function finPut<T>(
+  url: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      ...buildHeaders(),
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({
+      code: "UNKNOWN",
+      message: `Request failed (${res.status})`,
+    }));
+    throw new FinanceHttpError(res.status, errBody.error ?? errBody);
+  }
+
+  const json = await res.json();
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
+}
+
+/**
+ * Typed DELETE request with CSRF headers and FinanceHttpError on failure.
+ */
+export async function finDelete<T = void>(
+  url: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: buildHeaders(),
+    credentials: "same-origin",
+    signal,
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({
+      code: "UNKNOWN",
+      message: `Request failed (${res.status})`,
+    }));
+    throw new FinanceHttpError(res.status, errBody.error ?? errBody);
+  }
+
+  // Some DELETE endpoints return 204 with no body
+  if (res.status === 204) return undefined as T;
+  const json = await res.json();
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
 }

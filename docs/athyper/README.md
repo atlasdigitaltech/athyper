@@ -28,9 +28,9 @@ Comprehensive documentation for the Athyper monorepo — a multi-tenant enterpri
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | [Framework Internals](framework/README.md)                        | Core contracts, 5 adapters, runtime kernel, bootstrap sequence          |
 | [Runtime Configuration](framework/CONFIG.md)                      | Zod config schema, environment variables, JSON parameter files          |
-| [Meta-Engine](meta-engine/README.md)                              | Schema-driven entities, compiler, lifecycle, validation, auto-numbering |
-| [Meta-Engine Advanced Features](meta-engine/ADVANCED_FEATURES.md) | Policy conditions, relationship management, RBAC                        |
-| [Compilation Determinism](meta-engine/COMPILATION_DETERMINISM.md) | Compiler diagnostics, deterministic output                              |
+| [Meta-Engine](meta-engine/README.md)                              | Overview, module structure, DI tokens, test coverage                    |
+| [META Engine: Entity System](../meta-entity-system.md)            | Canonical reference: entity registry, classification, governance, versioning, lifecycle, policies, overlays, compilation, data API, service contracts |
+| [Meta.Field System](../META_FIELD_SYSTEM.md)                      | Field dictionary (60+ columns), constraints, frontend rendering, caching, observability |
 
 ## Platform Services
 
@@ -83,4 +83,4 @@ Comprehensive documentation for the Athyper monorepo — a multi-tenant enterpri
 | Document                                                                     | Description                                                    |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | [Entity UI Framework](../neon/ENTITY_UI_FRAMEWORK.md)                        | Single-page entity rendering specification, descriptor schema  |
-| [Finance Specification](../neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md) | Finance engine v2.1: 13 engines, event sourcing, multi-tenancy |
+| [Finance Specification](../neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md) | Finance engine v2.3: 14 engines, event sourcing, multi-tenancy |

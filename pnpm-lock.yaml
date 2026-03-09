@@ -737,9 +737,19 @@ importers:
 
   products/neon/content:
     dependencies:
+      '@athyper/adapter-objectstorage':
+        specifier: workspace:*
+        version: link:../../../framework/adapters/objectstorage
+      pg:
+        specifier: ^8.13.1
+        version: 8.18.0
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.11.10
 
   products/neon/shared/ui:
     dependencies:

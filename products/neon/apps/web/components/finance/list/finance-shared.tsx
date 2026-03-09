@@ -3,7 +3,6 @@
 // components/finance/list/finance-shared.tsx
 //
 // Shared cell renderers for finance list pages.
-// Used by purchase-invoice, payment-entry, and journal-entry list configs.
 
 import React from "react";
 
@@ -33,10 +32,6 @@ interface StatusBadgeCellProps {
   status: string;
 }
 
-/**
- * Renders a status string inside a small coloured badge.
- * Falls back to neutral gray when the status is not in the colour map.
- */
 export function StatusBadgeCell({ status }: StatusBadgeCellProps) {
   const colors = STATUS_COLORS[status] ?? {
     bg: "bg-gray-100",
@@ -67,10 +62,6 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-/**
- * Right-aligned monospace formatted monetary amount.
- * Accepts a string value (MC-4 compliant) and formats it with commas.
- */
 export function MoneyCell({ amount, currency }: MoneyCellProps) {
   const num = Number(amount);
   const formatted = Number.isFinite(num) ? moneyFormatter.format(num) : amount;
@@ -99,9 +90,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-/**
- * Formatted date display. Shows a dash when the value is null/empty.
- */
 export function DateCell({ date }: DateCellProps) {
   if (!date) return <span className="text-muted-foreground">--</span>;
 
@@ -129,10 +117,6 @@ interface ApprovalRouteBadgeProps {
   route: string | null;
 }
 
-/**
- * Optional small badge for approval route. Renders nothing when null.
- * Colors: ZERO_APPROVAL=gray, STANDARD=blue, ENHANCED=amber, EXECUTIVE=red, BLOCKED=red.
- */
 export function ApprovalRouteBadge({ route }: ApprovalRouteBadgeProps) {
   if (!route) return null;
 

@@ -1,7 +1,7 @@
 /**
  * Finance Accounting Module
  *
- * Purchase Non-PO Invoice, Manual Journal Entry, GL Inquiry.
+ * Purchase Invoice, Manual Journal Entry, GL Inquiry.
  * Central integration hub connecting all 12 finance engines.
  */
 

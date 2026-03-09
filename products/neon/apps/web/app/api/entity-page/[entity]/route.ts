@@ -144,6 +144,193 @@ const ENTITY_REGISTRY: Record<string, EntityDefinition> = {
       documents: true,
     },
   },
+  "purchase-non-po-invoice": {
+    entityClass: "document",
+    tabs: [
+      { code: "details", label: "Details", enabled: true },
+      { code: "invoice-lines", label: "Line Items", enabled: true },
+      { code: "accounting-details", label: "Accounting", enabled: true },
+      { code: "related-documents", label: "Related Documents", enabled: true },
+      { code: "lifecycle", label: "Lifecycle", enabled: true },
+      { code: "approvals", label: "Approvals", enabled: true },
+      { code: "decision-score", label: "Decision Score", enabled: true },
+      { code: "documents", label: "Attachments", enabled: true },
+    ],
+    sections: [
+      {
+        code: "header",
+        label: "Invoice Header",
+        columns: 2,
+        fields: [
+          "invoice_number",
+          "supplier_id",
+          "ou_id",
+          "entity_code",
+        ],
+      },
+      {
+        code: "dates",
+        label: "Dates",
+        columns: 2,
+        fields: [
+          "invoice_date",
+          "received_date",
+          "due_date",
+          "posting_date",
+        ],
+      },
+      {
+        code: "amounts",
+        label: "Financial Summary",
+        columns: 2,
+        fields: [
+          "subtotal",
+          "tax_amount",
+          "total_amount",
+          "currency_code",
+          "paid_amount",
+          "functional_currency_code",
+          "exchange_rate",
+          "functional_amount",
+        ],
+      },
+      {
+        code: "classification",
+        label: "Classification",
+        columns: 2,
+        fields: [
+          "intent_id",
+          "spend_category_id",
+          "fp_id",
+          "accounting_profile_id",
+        ],
+      },
+      {
+        code: "workflow",
+        label: "Workflow & Status",
+        columns: 2,
+        fields: [
+          "status",
+          "decision_score",
+          "approval_route",
+          "approval_instance_id",
+        ],
+      },
+      {
+        code: "posting",
+        label: "Posting",
+        columns: 2,
+        fields: [
+          "je_id",
+          "posted_at",
+          "posted_by",
+        ],
+      },
+      {
+        code: "audit",
+        label: "Audit Trail",
+        columns: 2,
+        fields: [
+          "submitted_at",
+          "submitted_by",
+          "approved_at",
+          "approved_by",
+          "cancelled_at",
+          "cancelled_by",
+          "created_at",
+          "updated_at",
+          "version",
+        ],
+      },
+    ],
+    featureFlags: {
+      lifecycle: true,
+      approvals: true,
+      documents: true,
+    },
+  },
+  "purchase-invoice-line": {
+    entityClass: "detail",
+    tabs: [
+      { code: "details", label: "Line Details", enabled: true },
+      { code: "accounting-details", label: "Accounting", enabled: true },
+      { code: "related-documents", label: "Parent Invoice", enabled: true },
+    ],
+    sections: [
+      {
+        code: "line-header",
+        label: "Line Item",
+        columns: 2,
+        fields: [
+          "line_no",
+          "description",
+          "invoice_id",
+          "item_id",
+        ],
+      },
+      {
+        code: "quantity-pricing",
+        label: "Quantity & Pricing",
+        columns: 2,
+        fields: [
+          "quantity",
+          "uom",
+          "unit_price",
+          "amount",
+        ],
+      },
+      {
+        code: "tax",
+        label: "Tax",
+        columns: 2,
+        fields: [
+          "tax_code",
+          "tax_rate",
+          "tax_amount",
+          "tax_inclusive",
+        ],
+      },
+      {
+        code: "accounting",
+        label: "Accounting Dimensions",
+        columns: 2,
+        fields: [
+          "account_id",
+          "cost_center_id",
+          "profit_center_id",
+          "fp_id",
+        ],
+      },
+      {
+        code: "downstream",
+        label: "Downstream References",
+        columns: 2,
+        fields: [
+          "asset_id",
+          "inventory_movement_id",
+          "commitment_id",
+          "commitment_schedule_id",
+          "warehouse_id",
+        ],
+      },
+      {
+        code: "metadata",
+        label: "Metadata",
+        columns: 2,
+        fields: [
+          "spend_category_id",
+          "tags",
+          "created_at",
+          "updated_at",
+        ],
+      },
+    ],
+    featureFlags: {
+      lifecycle: false,
+      approvals: false,
+      documents: false,
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -252,7 +439,12 @@ export async function GET(
       }
     }
 
-    // 4. Ultimate fallback
+    // 4. Ultimate fallback — log for observability
+    console.warn(
+      `[entity-page] FALLBACK: entity="${entity}" resolved via DEFAULT_DEFINITION. ` +
+        `No registry entry, no DB meta, no field metadata found. ` +
+        `This indicates missing entity seed data or DB connectivity issue.`,
+    );
     const descriptor: EntityPageStaticDescriptor = {
       entityName: entity,
       entityClass: DEFAULT_DEFINITION.entityClass,
@@ -300,12 +492,19 @@ function buildFeatureFlags(meta: {
 
 function buildTabs(meta: {
   kind: string;
+  tableSchema: string;
   featureFlags: Record<string, unknown> | null;
 }): TabDescriptor[] {
   const isDocument = meta.kind === "doc";
+  const isFinance = meta.tableSchema === "fin";
   const tabs: TabDescriptor[] = [
     { code: "details", label: "Details", enabled: true },
   ];
+
+  if (isFinance && isDocument) {
+    tabs.push({ code: "accounting-details", label: "Accounting", enabled: true });
+    tabs.push({ code: "related-documents", label: "Related Documents", enabled: true });
+  }
 
   if (isDocument) {
     tabs.push({ code: "lifecycle", label: "Lifecycle", enabled: true });

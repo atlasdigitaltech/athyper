@@ -11,8 +11,25 @@ export const eventStoreModule: RuntimeModule = {
     // Implementations are bound at bootstrap time based on adapter configuration
   },
 
-  contribute(c: Container) {
+  async contribute(c: Container) {
     // Register health checks, projections, and background jobs
+
+    // Schedule tiering job: weekly at 4 AM UTC on Sundays
+    // Reads policy from evt.data_tiering_policy, checks legal hold from
+    // core.data_retention_policy, and executes HOT→WARM→COLD transitions.
+    try {
+      const { TOKENS } = await import("../../../../kernel/tokens.js");
+      const jobRegistry = await c.resolve<any>(TOKENS.jobRegistry);
+      if (jobRegistry?.addSchedule) {
+        jobRegistry.addSchedule({
+          name: "event-store-tiering",
+          cron: "0 4 * * 0", // Weekly at 4 AM UTC on Sundays
+          jobName: "event-store-tiering",
+        });
+      }
+    } catch {
+      // Job registry not available — tiering runs on-demand only
+    }
   },
 };
 
@@ -48,8 +65,12 @@ export { DefaultProjectionManager } from "./services/projection-manager.js";
 export type {
   TieringService,
   TieringConfig,
+  ResolvedTieringPolicy,
 } from "./services/tiering-service.js";
-export { DefaultTieringService } from "./services/tiering-service.js";
+export {
+  DefaultTieringService,
+  policyToConfig,
+} from "./services/tiering-service.js";
 
 // Re-export persistence interfaces
 export type { EventRepo } from "./persistence/event-repo.js";

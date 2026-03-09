@@ -49,7 +49,14 @@ services:
       - traefik.http.routers.objectstorage-s3.service=objectstorage-s3
       - traefik.http.routers.objectstorage-s3.tls=true
       - traefik.http.routers.objectstorage-s3.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.objectstorage-s3.middlewares=objectstorage-cors
       - traefik.http.services.objectstorage-s3.loadbalancer.server.port=9000
+      # CORS middleware — allows browser presigned-URL uploads from the web app
+      - traefik.http.middlewares.objectstorage-cors.headers.accessControlAllowOriginList=http://localhost:3001,https://neon.athyper.local
+      - traefik.http.middlewares.objectstorage-cors.headers.accessControlAllowMethods=GET,PUT,POST,DELETE,OPTIONS,HEAD
+      - traefik.http.middlewares.objectstorage-cors.headers.accessControlAllowHeaders=Content-Type,Authorization,X-Amz-Date,X-Amz-Content-Sha256,X-Amz-Security-Token
+      - traefik.http.middlewares.objectstorage-cors.headers.accessControlExposeHeaders=ETag,Content-Length
+      - traefik.http.middlewares.objectstorage-cors.headers.accessControlMaxAge=3600
       - traefik.http.routers.objectstorage-console.rule=Host(`${OBJECTSTORAGE_CONSOLE_HOST}`)
       - traefik.http.routers.objectstorage-console.entrypoints=websecure
       - traefik.http.routers.objectstorage-console.service=objectstorage-console
