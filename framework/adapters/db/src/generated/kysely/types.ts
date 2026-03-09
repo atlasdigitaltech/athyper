@@ -5393,7 +5393,6 @@ export type purchase_invoice = {
     entity_code: string;
     txn_id: string;
     invoice_number: string;
-    invoice_type: Generated<string>;
     supplier_id: string;
     supplier_invoice_ref: string | null;
     description: string | null;
@@ -5432,6 +5431,7 @@ export type purchase_invoice = {
     cancelled_by: string | null;
     created_at: Generated<Timestamp>;
     updated_at: Generated<Timestamp>;
+    invoice_type: Generated<string>;
 };
 export type purchase_invoice_line = {
     id: Generated<string>;

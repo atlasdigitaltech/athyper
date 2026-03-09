@@ -8001,7 +8001,6 @@ model purchase_invoice {
   entity_code                                                  String                    @db.VarChar(20)
   txn_id                                                       String                    @db.Uuid
   invoice_number                                               String                    @db.VarChar(50)
-  invoice_type                                                 String                    @default("NON_PO") @db.VarChar(20)
   supplier_id                                                  String                    @db.Uuid
   supplier_invoice_ref                                         String?                   @db.VarChar(100)
   description                                                  String?
@@ -8040,6 +8039,7 @@ model purchase_invoice {
   cancelled_by                                                 String?                   @db.Uuid
   created_at                                                   DateTime                  @default(now()) @db.Timestamptz(6)
   updated_at                                                   DateTime                  @default(now()) @db.Timestamptz(6)
+  invoice_type                                                 String                    @default("NON_PO") @db.VarChar(20)
   credit_note                                                  credit_note[]
   debit_note                                                   debit_note[]
   payment_allocation                                           payment_allocation[]
@@ -8069,6 +8069,7 @@ model purchase_invoice {
   @@index([tenant_id, entity_code, supplier_id, supplier_invoice_ref], map: "idx_fin_pi_supplier_ref", where: raw("(supplier_invoice_ref IS NOT NULL)"))
   @@index([tenant_id], map: "idx_fin_pi_tenant")
   @@index([txn_id], map: "idx_fin_pi_txn")
+  @@index([tenant_id, entity_code, invoice_type], map: "idx_fin_pi_type")
   @@schema("fin")
 }
 
@@ -10287,7 +10288,7 @@ model lifecycle_transition_hook {
 model hook_action_registry {
   id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id             String?  @db.Uuid
-  action_key            String
+  action_key            String   @unique(map: "uq_registry_system_action")
   origin                String   @default("system")
   label                 String
   description           String?
