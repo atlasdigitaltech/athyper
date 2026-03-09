@@ -9,13 +9,7 @@ import { decodeJwtPayload, exchangeCodeForTokens } from "@neon/auth/keycloak";
 import { setCsrfCookie, setSessionCookie } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 function hashValue(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -84,7 +78,7 @@ export async function GET(req: Request) {
   const clientIp = req.headers.get("x-forwarded-for") ?? "unknown";
   const clientUa = req.headers.get("user-agent") ?? "unknown";
 
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
   try {
     // ─── Step 1: Validate PKCE state ────────────────────────────
@@ -100,7 +94,7 @@ export async function GET(req: Request) {
     }
 
     const pkceState = JSON.parse(stateRaw);
-    const { codeVerifier, workbench, returnUrl } = pkceState;
+    const { codeVerifier, returnUrl } = pkceState;
     const isPlatformLogin: boolean = pkceState.isPlatformLogin === true;
     await redis.del(stateKey); // One-time use: delete immediately to prevent replay
 
@@ -243,6 +237,7 @@ export async function GET(req: Request) {
       try {
         const { Client } = await import("pg");
         const db = new Client({ connectionString: process.env.DATABASE_URL });
+        db.on("error", () => {}); // prevent async ECONNRESET from becoming uncaughtException
         await db.connect();
         const result = await db.query(
           "SELECT display_name FROM core.tenant WHERE code = $1 LIMIT 1",
@@ -285,7 +280,10 @@ export async function GET(req: Request) {
       email,
       principalId: sub,
       realmKey: realm,
-      workbench: isPlatformLogin ? "admin" : workbench,
+      // Platform admins get a fixed workbench; tenant-flow sessions start
+      // unresolved (null) and go through /auth/resolving post-login.
+      workbench: isPlatformLogin ? "admin" : null,
+      workspaceResolutionState: isPlatformLogin ? "resolved" : "pending",
       roles,
       clientRoles,
       groups,
@@ -376,7 +374,7 @@ export async function GET(req: Request) {
       ip: clientIp,
       userAgent: clientUa,
       realm,
-      workbench,
+      workbench: isPlatformLogin ? "admin" : "none",
       meta: {
         username: preferredUsername,
         roles,
@@ -425,8 +423,11 @@ export async function GET(req: Request) {
       });
       return mfaResponse;
     }
-    const target = new URL(returnUrl || "/", url.origin);
-    return buildRegularResponse(target);
+    // Redirect to the resolving handoff page. returnUrl is preserved so the
+    // resolver can honour the original deep-link after workspace is set.
+    const resolvingUrl = new URL("/auth/resolving", url.origin);
+    if (returnUrl) resolvingUrl.searchParams.set("returnUrl", returnUrl);
+    return buildRegularResponse(resolvingUrl);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Callback error";
 
@@ -442,7 +443,5 @@ export async function GET(req: Request) {
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(message)}`, url.origin),
     );
-  } finally {
-    await redis.quit();
   }
 }

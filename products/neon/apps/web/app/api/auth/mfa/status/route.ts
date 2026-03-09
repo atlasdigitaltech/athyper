@@ -3,13 +3,7 @@ import "server-only";
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * GET /api/auth/mfa/status
@@ -27,7 +21,7 @@ export async function GET() {
   const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
   const runtimeApiUrl =
     process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
   try {
     const raw = await redis.get(`sess:${tenantId}:${sid}`);
@@ -65,7 +59,5 @@ export async function GET() {
         sessionMfaVerifiedAt: session.mfaVerifiedAt,
       },
     });
-  } finally {
-    await redis.quit();
   }
 }

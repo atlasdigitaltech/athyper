@@ -7,13 +7,7 @@ import { getSessionId } from "@neon/auth/session";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * Idle timeout in seconds. Must match IDLE_TIMEOUT_SEC in:
@@ -61,7 +55,7 @@ export async function POST() {
     realmCookie === "platform"
       ? "platform"
       : (process.env.DEFAULT_TENANT_ID ?? "default");
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
   try {
     const key = `sess:${sessionNamespace}:${sid}`;
@@ -98,7 +92,5 @@ export async function POST() {
     await redis.set(key, JSON.stringify(session), { EX: 28800 });
 
     return NextResponse.json({ ok: true });
-  } finally {
-    await redis.quit();
   }
 }

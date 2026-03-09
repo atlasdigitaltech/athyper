@@ -26,9 +26,11 @@ export interface ApiContext {
   userId: string;
   username: string;
   displayName: string;
-  workbench: string;
+  /** null when workspaceResolutionState is "pending" */
+  workbench: string | null;
   roles: string[];
   persona: string | null;
+  workspaceResolutionState: "pending" | "resolved";
 }
 
 export interface SessionData {
@@ -36,7 +38,9 @@ export interface SessionData {
   userId: string;
   username: string;
   displayName: string;
-  workbench: string;
+  /** null when workspaceResolutionState is "pending" */
+  workbench: string | null;
+  workspaceResolutionState?: "pending" | "resolved";
   roles?: string[];
   persona?: string | null;
   ipHash?: string;
@@ -157,9 +161,11 @@ export async function getApiContext(): Promise<
         userId: session.userId,
         username: session.username,
         displayName: session.displayName,
-        workbench: session.workbench,
+        workbench: session.workbench ?? null,
         roles: session.roles ?? [],
         persona: session.persona ?? null,
+        workspaceResolutionState:
+          session.workspaceResolutionState === "pending" ? "pending" : "resolved",
       },
       redis,
     };

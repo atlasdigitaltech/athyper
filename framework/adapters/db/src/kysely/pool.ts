@@ -28,10 +28,11 @@ export type PoolConfig = {
   connectionTimeoutMillis?: number;
 
   /**
-   * Statement timeout in milliseconds (PgBouncer transaction mode compatible)
+   * Statement timeout in milliseconds (passed as pg config option)
    * @default 30000 (30 seconds)
    */
   statement_timeout?: number;
+
 };
 
 /**
@@ -51,8 +52,7 @@ export function createPool(config: PoolConfig): pg.Pool {
     max: config.max ?? 10,
     idleTimeoutMillis: config.idleTimeoutMillis ?? 30000,
     connectionTimeoutMillis: config.connectionTimeoutMillis ?? 10000,
-    // PgBouncer transaction mode: statement_timeout is safe as it's per-transaction
-    statement_timeout: config.statement_timeout ?? 30000,
+    statement_timeout: config.statement_timeout,
     // Disable application_name to avoid PgBouncer issues
     application_name: undefined,
   });

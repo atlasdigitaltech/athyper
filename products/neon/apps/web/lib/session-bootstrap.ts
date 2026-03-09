@@ -14,6 +14,7 @@ import {
   serializeModules,
   serializePersonas,
 } from "./auth/claims-normalizer";
+import { getSessionRedis } from "./auth/session-redis";
 import { WORKBENCHES } from "./auth/types";
 
 import type { Workbench } from "./auth/types";
@@ -24,7 +25,14 @@ export interface SessionBootstrap {
   displayName: string;
   roles: string[];
   persona: string;
-  workbench: string;
+  /** Active workbench. null when workspaceResolutionState is "pending". */
+  workbench: string | null;
+  /**
+   * "pending"  — user has authenticated but workspace has not been resolved yet.
+   * "resolved" — workspace is active and the user can access /wb/* routes.
+   * Missing field in pre-existing sessions is treated as "resolved".
+   */
+  workspaceResolutionState: "pending" | "resolved";
   featureFlags: Record<string, boolean>;
   /** Epoch seconds when the access token expires. Used by useSessionRefresh. */
   accessExpiresAt: number;
@@ -62,14 +70,6 @@ export interface SessionBootstrap {
   selectedTenantId: string | null;
 }
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
-
 /**
  * Reads the Redis session and returns a safe public subset for client hydration.
  *
@@ -86,9 +86,8 @@ export async function getSessionBootstrap(): Promise<SessionBootstrap | null> {
       ? "platform"
       : (process.env.DEFAULT_TENANT_ID ?? "default");
 
-  let redis;
   try {
-    redis = await getRedisClient();
+    const redis = await getSessionRedis();
     const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
     if (!raw) return null;
 
@@ -112,7 +111,9 @@ export async function getSessionBootstrap(): Promise<SessionBootstrap | null> {
       displayName: session.displayName ?? session.username ?? "",
       roles: session.roles ?? [],
       persona: session.persona ?? "viewer",
-      workbench: session.workbench ?? "user",
+      workbench: session.workbench ?? null,
+      workspaceResolutionState:
+        session.workspaceResolutionState === "pending" ? "pending" : "resolved",
       featureFlags: {},
       accessExpiresAt: session.accessExpiresAt ?? 0,
       idleTimeoutSec: IDLE_TIMEOUT_SEC,
@@ -139,7 +140,5 @@ export async function getSessionBootstrap(): Promise<SessionBootstrap | null> {
     };
   } catch {
     return null;
-  } finally {
-    await redis?.quit();
   }
 }

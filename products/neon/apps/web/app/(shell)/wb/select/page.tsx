@@ -1,7 +1,10 @@
 "use client";
 
-// /wb/select — Workbench selection page
-// Shown when a user has multiple workbench roles and no default is resolved.
+// /wb/select — DEPRECATED (B.2)
+// Middleware permanently redirects /wb/select → /workspace (B.1).
+// This file is unreachable in production. Tagged for deletion after
+// the redirect has been confirmed stable across all environments.
+// Replacement: app/(shell)/workspace/page.tsx
 
 import { Command } from "lucide-react";
 import { useRouter } from "next/navigation";

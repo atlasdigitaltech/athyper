@@ -2,24 +2,16 @@
 
 import { Command } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { WORKBENCHES, type Workbench } from "@/lib/auth/types";
-import { WORKBENCH_CONFIGS } from "@/lib/auth/workbench-config";
-
-const WORKBENCH_LIST = WORKBENCHES.map((wb) => WORKBENCH_CONFIGS[wb]);
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const returnUrl = searchParams.get("returnUrl") ?? "/wb/home";
+  const returnUrl = searchParams.get("returnUrl") ?? "/workspace";
   const errorParam = searchParams.get("error");
 
-  const [workbench, setWorkbench] = useState<Workbench>("user");
-
   function handleLogin() {
-    const params = new URLSearchParams({ workbench, returnUrl });
+    const params = new URLSearchParams({ returnUrl });
     window.location.href = `/api/auth/login?${params.toString()}`;
   }
 
@@ -53,35 +45,12 @@ export default function LoginPage() {
             </div>
             <h2 className="text-2xl font-medium tracking-tight">Sign in</h2>
             <p className="text-sm text-muted-foreground">
-              Choose your workbench and sign in with your identity provider.
+              Sign in with your identity provider. Your workspace will be
+              determined after sign-in.
             </p>
           </div>
 
-          {/* Workbench selector */}
           <div className="space-y-6">
-            <div className="space-y-3">
-              <Label>Workbench</Label>
-              <div className="grid gap-2">
-                {WORKBENCH_LIST.map((wb) => (
-                  <button
-                    key={wb.id}
-                    type="button"
-                    onClick={() => setWorkbench(wb.id)}
-                    className={`flex flex-col items-start rounded-lg border p-3 text-left transition-colors ${
-                      workbench === wb.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-accent"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{wb.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {wb.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Error display */}
             {errorParam && (
               <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
@@ -116,9 +85,17 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <p className="text-center text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} athyper. All rights reserved.
-          </p>
+          <div className="space-y-1 text-center">
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} athyper. All rights reserved.
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              Platform admin?{" "}
+              <a href="/ops_login" className="underline underline-offset-2 hover:text-muted-foreground">
+                Sign in here
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

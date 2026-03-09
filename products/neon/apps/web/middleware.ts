@@ -19,17 +19,26 @@ const DEFAULT_LOCALE = "en";
 const PUBLIC_PATHS = new Set([
   "/",
   "/login",
-  "/user_login",
-  "/admin_login",
-  "/partner_login",
+  // /ops_login is the platform-control (Keycloak realm: platform-control) login entry.
+  // It is intentionally NOT touched by the legacy redirect rules (A.6) below.
+  // Platform routes (/platform/*) redirect here, not to /login.
   "/ops_login",
   "/callback",
   "/logout",
   "/health",
-  "/wb/select",
+  "/auth/resolving",
+  "/workspace",
   "/wb/unauthorized",
   "/wb/forbidden",
   "/platform-login",
+]);
+
+// Legacy tenant-flow login paths — 301 redirect to /login.
+// /ops_login is excluded: it is platform-control realm, not a tenant login.
+const LEGACY_LOGIN_REDIRECTS = new Map([
+  ["/user_login", "/login"],
+  ["/admin_login", "/login"],
+  ["/partner_login", "/login"],
 ]);
 
 // Routes that are allowed while MFA is pending (not yet verified).
@@ -48,6 +57,9 @@ const CSRF_EXEMPT_PATHS = new Set([
   "/api/auth/login",
   "/api/auth/platform-login",
   "/api/auth/callback",
+  // resolve-workspace is called by /auth/resolving immediately after callback,
+  // before the client has had a chance to read the CSRF cookie from JS.
+  "/api/auth/resolve-workspace",
 ]);
 
 // HTTP methods that modify state — only these require CSRF protection.
@@ -61,6 +73,33 @@ export function middleware(req: NextRequest) {
   // (e.g. the shell layout session gate) can read it without client-side JS.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
+
+  // ─── Legacy login redirects (A.6) ───────────────────────────
+  // /user_login, /admin_login, /partner_login → /login (301 permanent).
+  // /ops_login is deliberately excluded — it is the platform-control login.
+  const legacyTarget = LEGACY_LOGIN_REDIRECTS.get(pathname);
+  if (legacyTarget) {
+    // E.3: structured log for sunset tracking — ingest via log aggregation.
+    console.log(
+      JSON.stringify({
+        t: "TELEMETRY:legacy_login_hit",
+        path: pathname,
+        ts: new Date().toISOString(),
+      }),
+    );
+    const url = req.nextUrl.clone();
+    url.pathname = legacyTarget;
+    url.search = req.nextUrl.search; // forward any query params (e.g. returnUrl)
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
+  // ─── Transitional: /wb/select → /workspace (B.1) ────────────
+  // Tagged for removal once all /wb/select references are migrated.
+  if (pathname === "/wb/select") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/workspace";
+    return NextResponse.redirect(url, { status: 301 });
+  }
 
   // ─── CSRF enforcement for mutating API requests ──────────────
   if (
@@ -110,10 +149,16 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Redirect to root landing page so users can choose their login type
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    // Redirect to /login and preserve the original URL so deep-links survive
+    // re-authentication (D.1).
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    const originalPath = pathname + req.nextUrl.search;
+    if (originalPath !== "/") {
+      loginUrl.searchParams.set("returnUrl", originalPath);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   // ─── MFA gate for protected routes ────────────────────────────

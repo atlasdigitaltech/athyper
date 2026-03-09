@@ -10,13 +10,7 @@ import { NextResponse } from "next/server";
 
 import type { NextRequest } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * POST /api/auth/mfa/verify (CSRF-protected via middleware)
@@ -37,7 +31,7 @@ export async function POST(req: NextRequest) {
   const runtimeApiUrl =
     process.env.RUNTIME_API_URL ?? "https://api.athyper.local";
   const env = process.env.ENVIRONMENT ?? "local";
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
   try {
     const raw = await redis.get(`sess:${tenantId}:${sid}`);
@@ -150,7 +144,5 @@ export async function POST(req: NextRequest) {
       { error: "MFA verification failed", message: String(error) },
       { status: 500 },
     );
-  } finally {
-    await redis.quit();
   }
 }

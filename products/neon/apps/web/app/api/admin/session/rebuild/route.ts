@@ -128,7 +128,9 @@ export async function POST() {
       email: (userinfo.email as string) ?? oldSession.email,
       principalId: oldSession.principalId,
       realmKey: oldSession.realmKey ?? realm,
-      workbench: oldSession.workbench ?? "user",
+      // Preserve null for pending sessions; never silently resolve to "user"
+      workbench: oldSession.workbench ?? null,
+      workspaceResolutionState: oldSession.workspaceResolutionState ?? "resolved",
       roles,
       clientRoles,
       groups,

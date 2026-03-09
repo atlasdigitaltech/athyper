@@ -123,7 +123,8 @@ export function NavUser() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  const wb = bootstrap?.workbench ?? "user";
+                  const wb = bootstrap?.workbench;
+                  if (!wb) return; // workspace not yet resolved
                   router.push(`/wb/${wb}/settings/debug`);
                 }}
               >

@@ -15,13 +15,7 @@ import {
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * POST /api/auth/logout (CSRF-protected via middleware)
@@ -82,9 +76,8 @@ export async function POST() {
   let userId: string | undefined;
 
   if (sid) {
-    const redis = await getRedisClient();
-    try {
-      const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
+    const redis = await getSessionRedis();
+    const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
       if (raw) {
         const session = JSON.parse(raw);
         idToken = session.idToken;
@@ -119,9 +112,6 @@ export async function POST() {
         realm,
         meta: { source: "explicit" },
       });
-    } finally {
-      await redis.quit();
-    }
   }
 
   // Layer 3: Clear browser cookies

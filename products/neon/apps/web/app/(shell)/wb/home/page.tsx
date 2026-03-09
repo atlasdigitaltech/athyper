@@ -62,8 +62,8 @@ export default function WorkbenchHomePage() {
       return;
     }
 
-    // Ambiguous — show selection page
-    router.replace("/wb/select");
+    // Ambiguous — show workspace chooser
+    router.replace("/workspace");
   }, [router]);
 
   return (

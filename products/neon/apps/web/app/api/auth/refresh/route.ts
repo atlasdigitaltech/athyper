@@ -14,13 +14,7 @@ import {
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * POST /api/auth/refresh (CSRF-protected via middleware)
@@ -75,7 +69,7 @@ export async function POST() {
       ? "platform"
       : (process.env.DEFAULT_TENANT_ID ?? "default");
 
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
   try {
     const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
@@ -255,7 +249,5 @@ export async function POST() {
       { redirect: "/api/auth/login", reason },
       { status: 401 },
     );
-  } finally {
-    await redis.quit();
   }
 }

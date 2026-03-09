@@ -5,14 +5,7 @@ import {
 } from "@neon/auth/keycloak";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  client.on("error", () => {});
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * GET /api/auth/platform-login
@@ -51,7 +44,7 @@ export async function GET(req: Request) {
 
   let redis;
   try {
-    redis = await getRedisClient();
+    redis = await getSessionRedis();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
@@ -60,8 +53,7 @@ export async function GET(req: Request) {
     );
   }
 
-  try {
-    await redis.set(
+  await redis.set(
       `pkce_state:${state}`,
       JSON.stringify({
         codeVerifier,
@@ -81,9 +73,6 @@ export async function GET(req: Request) {
       workbench,
       meta: { returnUrl },
     });
-  } finally {
-    await redis.quit();
-  }
 
   const authUrl = buildAuthorizationUrl({
     baseUrl,

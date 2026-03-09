@@ -76,6 +76,18 @@ export interface EntityTableMeta {
   capabilities: EntityFeatureCapabilities;
 }
 
+/** Row shape returned by meta.entity queries; identity_config is optional for pre-migration DBs. */
+type EntityRow = {
+  name: string;
+  table_schema: string;
+  table_name: string;
+  kind: string;
+  governance_level: string;
+  entity_short: string | null;
+  feature_flags: Record<string, unknown> | null;
+  identity_config?: Record<string, unknown> | null;
+};
+
 // ============================================================================
 // Resolution Cache (TTL-based to pick up DB changes without restart)
 // ============================================================================

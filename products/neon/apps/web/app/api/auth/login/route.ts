@@ -5,15 +5,7 @@ import {
 } from "@neon/auth/keycloak";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  // Suppress unhandled error events — errors are caught by callers via the connect() rejection
-  client.on("error", () => {});
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 /**
  * GET /api/auth/login?workbench=admin&returnUrl=/dashboard
@@ -51,7 +43,7 @@ async function getRedisClient() {
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const workbench = url.searchParams.get("workbench") ?? "user";
+  const workbench = url.searchParams.get("workbench") ?? null;
   const returnUrl = url.searchParams.get("returnUrl") ?? "/";
   const realmParam = url.searchParams.get("realm"); // "platform" for platform-control login
 
@@ -78,7 +70,7 @@ export async function GET(req: Request) {
   // Store PKCE state in Redis (short TTL — 5 min to complete login)
   let redis;
   try {
-    redis = await getRedisClient();
+    redis = await getSessionRedis();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[auth/login] Redis connection failed:", msg);
@@ -92,11 +84,11 @@ export async function GET(req: Request) {
     );
   }
 
-  try {
-    await redis.set(
+  await redis.set(
       `pkce_state:${state}`,
       JSON.stringify({
         codeVerifier,
+        // workbench is null for tenant-flow logins; resolution happens post-callback
         workbench,
         returnUrl,
         isPlatformLogin,
@@ -111,12 +103,9 @@ export async function GET(req: Request) {
       ip: req.headers.get("x-forwarded-for") ?? "unknown",
       userAgent: req.headers.get("user-agent") ?? "unknown",
       realm,
-      workbench,
+      workbench: workbench ?? "none",
       meta: { returnUrl },
     });
-  } finally {
-    await redis.quit();
-  }
 
   const authUrl = buildAuthorizationUrl({
     baseUrl,

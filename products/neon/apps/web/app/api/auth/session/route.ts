@@ -13,13 +13,7 @@ import {
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-async function getRedisClient() {
-  const { createClient } = await import("redis");
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
-  const client = createClient({ url });
-  if (!client.isOpen) await client.connect();
-  return client;
-}
+import { getSessionRedis } from "@/lib/auth/session-redis";
 
 function hashValue(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -57,10 +51,9 @@ export async function GET(req: Request) {
     realmCookie === "platform"
       ? "platform"
       : (process.env.DEFAULT_TENANT_ID ?? "default");
-  const redis = await getRedisClient();
+  const redis = await getSessionRedis();
 
-  try {
-    const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
+  const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
     if (!raw) {
       // Session cookie exists but session is gone from Redis.
       // Clear the stale cookies to avoid repeated lookups.
@@ -127,9 +120,6 @@ export async function GET(req: Request) {
         selectedTenantId: session.selectedTenantId ?? null,
       }),
     });
-  } finally {
-    await redis.quit();
-  }
 }
 
 /**
@@ -150,29 +140,25 @@ export async function DELETE() {
       realmCookie === "platform"
         ? "platform"
         : (process.env.DEFAULT_TENANT_ID ?? "default");
-    const redis = await getRedisClient();
-    try {
-      // Audit — session destroyed (before deleting, so we can read userId)
-      const raw = await redis.get(`sess:${ns}:${sid}`);
-      if (raw) {
-        const session = JSON.parse(raw);
-        await emitBffAudit(redis, AuthAuditEvent.SESSION_DESTROYED, {
-          tenantId: ns,
-          userId: session.userId,
-          sidHash: hashSidForAudit(sid),
-          meta: { source: "delete_endpoint" },
-        });
+    const redis = await getSessionRedis();
+    // Audit — session destroyed (before deleting, so we can read userId)
+    const raw = await redis.get(`sess:${ns}:${sid}`);
+    if (raw) {
+      const session = JSON.parse(raw);
+      await emitBffAudit(redis, AuthAuditEvent.SESSION_DESTROYED, {
+        tenantId: ns,
+        userId: session.userId,
+        sidHash: hashSidForAudit(sid),
+        meta: { source: "delete_endpoint" },
+      });
 
-        // Clean up user session index
-        if (session.userId) {
-          await redis.sRem(`user_sessions:${ns}:${session.userId}`, sid);
-        }
+      // Clean up user session index
+      if (session.userId) {
+        await redis.sRem(`user_sessions:${ns}:${session.userId}`, sid);
       }
-
-      await redis.del(`sess:${ns}:${sid}`);
-    } finally {
-      await redis.quit();
     }
+
+    await redis.del(`sess:${ns}:${sid}`);
   }
 
   await clearSessionCookie();
