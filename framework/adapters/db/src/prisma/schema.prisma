@@ -9726,6 +9726,7 @@ model entity {
   @@unique([tenant_id, table_schema, table_name], map: "idx_entity_table_mapping_uniq", where: raw("((is_active = true) AND (mapping_mode = 'exclusive'::text))"))
   @@unique([tenant_id, id], map: "idx_entity_tenant_id_uniq")
   @@index([tenant_id, name], map: "idx_entity_active", where: raw("(status = ANY (ARRAY['active'::text, 'deprecated'::text, 'suspended'::text]))"))
+  @@index([tenant_id, name], map: "idx_entity_active_name", where: raw("(is_active = true)"))
   @@index([tenant_id, entity_class], map: "idx_entity_class")
   @@index([table_schema, table_name, discriminator_column, discriminator_value], map: "idx_entity_discriminator", where: raw("(mapping_mode = 'shared'::text)"))
   @@index([tenant_id, engine_tag], map: "idx_entity_engine_tag", where: raw("(engine_tag IS NOT NULL)"))
@@ -9735,7 +9736,6 @@ model entity {
   @@index([tenant_id, ownership_model], map: "idx_entity_ownership")
   @@index([published_version_id], map: "idx_entity_published_version", where: raw("(published_version_id IS NOT NULL)"))
   @@index([tenant_id, status], map: "idx_entity_status")
-  @@index([tenant_id, name], map: "idx_entity_active_name", where: raw("(is_active = true)"))
   @@index([tenant_id, table_schema, table_name], map: "idx_entity_table_lookup", where: raw("(is_active = true)"))
   @@schema("meta")
 }
@@ -10128,6 +10128,28 @@ model field_security_policy {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model hook_action_registry {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id             String?  @db.Uuid
+  action_key            String   @unique(map: "uq_registry_system_action")
+  origin                String   @default("system")
+  label                 String
+  description           String?
+  handler_type          String   @default("built_in")
+  handler_config        Json?
+  default_contract_role String   @default("extension")
+  default_safety_level  String   @default("replaceable")
+  is_active             Boolean  @default(true)
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+  created_by            String
+  tenant                tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, action_key], map: "uq_registry_tenant_action", where: raw("(origin = 'tenant'::text)"))
+  @@schema("meta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model index_def {
   id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id         String         @db.Uuid
@@ -10170,6 +10192,29 @@ model meta_lifecycle {
 
   @@unique([tenant_id, code, version_no], map: "lifecycle_code_uniq")
   @@map("lifecycle")
+  @@schema("meta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model lifecycle_hook_override {
+  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id                 String                    @db.Uuid
+  target_hook_id            String                    @db.Uuid
+  override_kind             String
+  replacement_action        String?
+  replacement_config        Json?
+  sort_order                Int                       @default(0)
+  reason                    String?
+  is_active                 Boolean                   @default(true)
+  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                String
+  lifecycle_transition_hook lifecycle_transition_hook @relation(fields: [target_hook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenant                    tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, target_hook_id], map: "uq_override_active_target")
+  @@index([target_hook_id], map: "idx_override_target", where: raw("(is_active = true)"))
+  @@index([tenant_id, target_hook_id], map: "idx_override_tenant", where: raw("(is_active = true)"))
   @@schema("meta")
 }
 
@@ -10278,53 +10323,8 @@ model lifecycle_transition_hook {
   tenant                  tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lifecycle_transition    lifecycle_transition      @relation(fields: [transition_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([transition_id, layer_rank, sort_order, created_at, id], map: "idx_hook_transition_layered", where: raw("(is_active = true)"))
   @@index([action], map: "idx_hook_action")
-  @@schema("meta")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model hook_action_registry {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id             String?  @db.Uuid
-  action_key            String   @unique(map: "uq_registry_system_action")
-  origin                String   @default("system")
-  label                 String
-  description           String?
-  handler_type          String   @default("built_in")
-  handler_config        Json?
-  default_contract_role String   @default("extension")
-  default_safety_level  String   @default("replaceable")
-  is_active             Boolean  @default(true)
-  created_at            DateTime @default(now()) @db.Timestamptz(6)
-  created_by            String
-  tenant                tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([tenant_id, action_key], map: "uq_registry_tenant_action", where: raw("(origin = 'tenant'::text)"))
-  @@schema("meta")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model lifecycle_hook_override {
-  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id                 String                    @db.Uuid
-  target_hook_id            String                    @db.Uuid
-  override_kind             String
-  replacement_action        String?
-  replacement_config        Json?
-  sort_order                Int                       @default(0)
-  reason                    String?
-  is_active                 Boolean                   @default(true)
-  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                String
-  lifecycle_transition_hook lifecycle_transition_hook @relation(fields: [target_hook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tenant                    tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([tenant_id, target_hook_id], map: "uq_override_active_target")
-  @@index([target_hook_id], map: "idx_override_target", where: raw("(is_active = true)"))
-  @@index([tenant_id, target_hook_id], map: "idx_override_tenant", where: raw("(is_active = true)"))
+  @@index([transition_id, layer_rank, sort_order, created_at, id], map: "idx_hook_transition_layered", where: raw("(is_active = true)"))
   @@schema("meta")
 }
 

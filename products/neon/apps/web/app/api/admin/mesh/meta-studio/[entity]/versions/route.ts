@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await listVersionsDirect(entity);
+      const result = await listVersionsDirect(entity, auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB list versions failed:", err);

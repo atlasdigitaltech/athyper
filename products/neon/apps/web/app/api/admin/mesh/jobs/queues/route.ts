@@ -12,6 +12,14 @@ export async function GET() {
   const auth = await requireAdminSession();
   if (!auth.ok) return auth.response;
 
+  // If no runtime API is configured, return empty queues gracefully
+  if (!auth.runtimeApiUrl) {
+    return NextResponse.json(
+      { success: true, data: [] },
+      { headers: { "X-Correlation-Id": auth.correlationId } },
+    );
+  }
+
   try {
     const res = await fetch(`${auth.runtimeApiUrl}/api/admin/jobs/queues`, {
       headers: {
@@ -22,6 +30,14 @@ export async function GET() {
     });
 
     if (!res.ok) {
+      // If the upstream doesn't support the jobs endpoint, return empty data
+      if (res.status === 404) {
+        return NextResponse.json(
+          { success: true, data: [] },
+          { headers: { "X-Correlation-Id": auth.correlationId } },
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,

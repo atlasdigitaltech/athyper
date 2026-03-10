@@ -50,6 +50,7 @@ export function createSchemaListConfig(
           { value: "ref", label: "Reference" },
           { value: "ent", label: "Enterprise" },
           { value: "doc", label: "Document" },
+          { value: "int", label: "Integration" },
         ],
       },
       {

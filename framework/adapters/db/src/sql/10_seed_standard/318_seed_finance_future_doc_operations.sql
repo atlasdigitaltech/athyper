@@ -35,7 +35,7 @@ BEGIN
             governance_level, engine_tag, entity_short,
             identity_config, feature_flags, created_by
         ) VALUES (
-            v_tenant, 'ACC', 'CreditNote', 'fin', 'fin', 'credit_note',
+            v_tenant, 'ACC', 'CreditNote', 'doc', 'fin', 'credit_note',
             'full', 'posting-engine', 'CN',
             '{"primaryLabelField": "doc_number", "primaryCodeField": "doc_number", "displayTemplate": "{doc_number} – {supplier_name}"}'::jsonb,
             '{"hasApproval": true, "hasPosting": true, "hasSettlement": true}'::jsonb,
@@ -48,7 +48,7 @@ BEGIN
             governance_level, engine_tag, entity_short,
             identity_config, feature_flags, created_by
         ) VALUES (
-            v_tenant, 'ACC', 'DebitNote', 'fin', 'fin', 'debit_note',
+            v_tenant, 'ACC', 'DebitNote', 'doc', 'fin', 'debit_note',
             'full', 'posting-engine', 'DN',
             '{"primaryLabelField": "doc_number", "primaryCodeField": "doc_number", "displayTemplate": "{doc_number} – {counterparty_name}"}'::jsonb,
             '{"hasApproval": true, "hasPosting": true}'::jsonb,
@@ -61,7 +61,7 @@ BEGIN
             governance_level, engine_tag, entity_short,
             identity_config, feature_flags, created_by
         ) VALUES (
-            v_tenant, 'ACC', 'AccrualDocument', 'fin', 'fin', 'accrual_document',
+            v_tenant, 'ACC', 'AccrualDocument', 'doc', 'fin', 'accrual_document',
             'full', 'posting-engine', 'ACR',
             '{"primaryLabelField": "doc_number", "primaryCodeField": "doc_number", "displayTemplate": "{doc_number} – {description}"}'::jsonb,
             '{"hasApproval": false, "hasPosting": true, "hasReversal": true}'::jsonb,
@@ -74,7 +74,7 @@ BEGIN
             governance_level, engine_tag, entity_short,
             identity_config, feature_flags, created_by
         ) VALUES (
-            v_tenant, 'ACC', 'ReclassDocument', 'fin', 'fin', 'reclass_document',
+            v_tenant, 'ACC', 'ReclassDocument', 'doc', 'fin', 'reclass_document',
             'full', 'posting-engine', 'RCL',
             '{"primaryLabelField": "doc_number", "primaryCodeField": "doc_number", "displayTemplate": "{doc_number} – {description}"}'::jsonb,
             '{"hasApproval": true, "hasPosting": true, "hasReversal": true}'::jsonb,

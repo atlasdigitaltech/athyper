@@ -59,5 +59,7 @@ export async function GET() {
         sessionMfaVerifiedAt: session.mfaVerifiedAt,
       },
     });
+  } catch {
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

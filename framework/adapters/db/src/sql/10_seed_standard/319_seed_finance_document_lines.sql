@@ -44,20 +44,20 @@ BEGIN
     -- ========================================================================
     -- §1  Register missing finance document entities
     -- ========================================================================
-    -- CreditNote and DebitNote as full-governance document entities
+    -- CreditNote and DebitNote as full-governance document entities (kind='doc')
     INSERT INTO meta.entity (tenant_id, module_id, name, kind, table_schema, table_name,
                             governance_level, engine_tag, created_by)
     VALUES
-        (v_tenant, 'ACC', 'CreditNote',  'fin', 'fin', 'credit_note',  'full',       'posting-engine', 'system'),
-        (v_tenant, 'ACC', 'DebitNote',   'fin', 'fin', 'debit_note',   'full',       'posting-engine', 'system')
+        (v_tenant, 'ACC', 'CreditNote',  'doc', 'fin', 'credit_note',  'full',       'posting-engine', 'system'),
+        (v_tenant, 'ACC', 'DebitNote',   'doc', 'fin', 'debit_note',   'full',       'posting-engine', 'system')
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
-    -- CreditNoteLine and DebitNoteLine as light-governance child entities
+    -- CreditNoteLine and DebitNoteLine as light-governance child entities (kind='doc')
     INSERT INTO meta.entity (tenant_id, module_id, name, kind, table_schema, table_name,
                             governance_level, engine_tag, created_by)
     VALUES
-        (v_tenant, 'ACC', 'CreditNoteLine', 'fin', 'fin', 'credit_note_line', 'light', 'posting-engine', 'system'),
-        (v_tenant, 'ACC', 'DebitNoteLine',  'fin', 'fin', 'debit_note_line',  'light', 'posting-engine', 'system')
+        (v_tenant, 'ACC', 'CreditNoteLine', 'doc', 'fin', 'credit_note_line', 'light', 'posting-engine', 'system'),
+        (v_tenant, 'ACC', 'DebitNoteLine',  'doc', 'fin', 'debit_note_line',  'light', 'posting-engine', 'system')
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
     -- Display config for CreditNote and DebitNote
@@ -68,6 +68,20 @@ BEGIN
     UPDATE meta.entity
     SET display_config = '{"displayFields":["debit_note_number","supplier_id","total_amount","status"]}'::jsonb
     WHERE tenant_id = v_tenant AND name = 'DebitNote';
+
+    -- Create entity_version v1 for newly registered entities (safety net —
+    -- if 300 already created them, the NOT EXISTS guard prevents duplicates)
+    INSERT INTO meta.entity_version (tenant_id, entity_id, version_no, status, label,
+                                     published_at, published_by, created_by)
+    SELECT e.tenant_id, e.id, 1, 'effective', 'Initial DDL registration',
+           now(), 'system', 'system'
+    FROM meta.entity e
+    WHERE e.tenant_id = v_tenant
+      AND e.name IN ('CreditNote', 'DebitNote', 'CreditNoteLine', 'DebitNoteLine')
+      AND NOT EXISTS (
+          SELECT 1 FROM meta.entity_version ev
+          WHERE ev.entity_id = e.id AND ev.tenant_id = v_tenant
+      );
 
     -- ========================================================================
     -- §2  Seed field dictionary — PurchaseInvoiceLine
@@ -208,3 +222,70 @@ BEGIN
     RAISE NOTICE 'Finance document line meta seeding complete';
 END;
 $$;
+
+-- ============================================================================
+-- Replicate finance document line fields to all other demo tenants
+-- ============================================================================
+DO $$
+DECLARE
+    v_source_tenant uuid;
+    v_target_tenant uuid;
+    v_source_vid    uuid;
+    v_target_vid    uuid;
+    v_entity_name   text;
+BEGIN
+    SELECT id INTO v_source_tenant FROM core.tenant ORDER BY created_at LIMIT 1;
+    IF v_source_tenant IS NULL THEN RETURN; END IF;
+
+    FOR v_target_tenant IN
+        SELECT id FROM core.tenant WHERE id != v_source_tenant
+    LOOP
+        FOREACH v_entity_name IN ARRAY ARRAY[
+            'PurchaseInvoiceLine', 'CreditNoteLine', 'DebitNoteLine'
+        ]
+        LOOP
+            v_source_vid := pg_temp.ev_id(v_source_tenant, v_entity_name);
+            v_target_vid := pg_temp.ev_id(v_target_tenant, v_entity_name);
+
+            IF v_source_vid IS NOT NULL AND v_target_vid IS NOT NULL THEN
+                INSERT INTO meta.field (tenant_id, entity_version_id, name, column_name, data_type, ui_type,
+                                        is_required, sort_order, origin, is_read_only, is_computed, write_once,
+                                        cardinality, child_entity_name, child_fk_field, collection_behavior,
+                                        is_unique, is_searchable, is_filterable,
+                                        default_value, validation, lookup_config, is_active, created_by)
+                SELECT v_target_tenant, v_target_vid, f.name, f.column_name, f.data_type, f.ui_type,
+                       f.is_required, f.sort_order, f.origin, f.is_read_only, f.is_computed, f.write_once,
+                       f.cardinality, f.child_entity_name, f.child_fk_field, f.collection_behavior,
+                       f.is_unique, f.is_searchable, f.is_filterable,
+                       f.default_value, f.validation, f.lookup_config, f.is_active, 'system'
+                FROM meta.field f
+                WHERE f.tenant_id = v_source_tenant AND f.entity_version_id = v_source_vid
+                ON CONFLICT (tenant_id, entity_version_id, name) DO NOTHING;
+            END IF;
+        END LOOP;
+
+        -- Also replicate collection fields wired on parent entities
+        FOREACH v_entity_name IN ARRAY ARRAY[
+            'PurchaseInvoice', 'CreditNote', 'DebitNote'
+        ]
+        LOOP
+            v_source_vid := pg_temp.ev_id(v_source_tenant, v_entity_name);
+            v_target_vid := pg_temp.ev_id(v_target_tenant, v_entity_name);
+
+            IF v_source_vid IS NOT NULL AND v_target_vid IS NOT NULL THEN
+                INSERT INTO meta.field (tenant_id, entity_version_id, name, column_name, data_type, ui_type,
+                                        cardinality, child_entity_name, child_fk_field, collection_behavior,
+                                        is_required, sort_order, origin, is_active, created_by)
+                SELECT v_target_tenant, v_target_vid, f.name, f.column_name, f.data_type, f.ui_type,
+                       f.cardinality, f.child_entity_name, f.child_fk_field, f.collection_behavior,
+                       f.is_required, f.sort_order, f.origin, f.is_active, 'system'
+                FROM meta.field f
+                WHERE f.tenant_id = v_source_tenant AND f.entity_version_id = v_source_vid
+                  AND f.data_type = 'collection'
+                ON CONFLICT (tenant_id, entity_version_id, name) DO NOTHING;
+            END IF;
+        END LOOP;
+    END LOOP;
+
+    RAISE NOTICE 'Finance document line fields replicated to all tenants';
+END $$;

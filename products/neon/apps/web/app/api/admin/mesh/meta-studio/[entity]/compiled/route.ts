@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await getCompiledDirect(entity);
+      const result = await getCompiledDirect(entity, auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB get compiled failed:", err);

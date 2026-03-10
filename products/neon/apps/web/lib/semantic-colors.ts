@@ -14,12 +14,14 @@ export const KIND_BORDER: Record<string, string> = {
   ref: "border-l-categorical-1",
   ent: "border-l-categorical-2",
   doc: "border-l-categorical-3",
+  int: "border-l-categorical-4",
 };
 
 export const KIND_BADGE: Record<string, string> = {
   ref: "border-categorical-1 text-categorical-1",
   ent: "border-categorical-2 text-categorical-2",
   doc: "border-categorical-3 text-categorical-3",
+  int: "border-categorical-4 text-categorical-4",
 };
 
 // ─── Policy Scope ────────────────────────────────────────────

@@ -11,16 +11,55 @@
 //   GlobalDrawer          — The Sheet-based overlay drawer
 
 import {
+  ArrowLeftRight,
+  ArrowRightLeft,
+  Banknote,
+  BarChart3,
+  BookOpen,
+  Box,
+  Building,
+  Building2,
+  Calculator,
+  Calendar,
+  CalendarCheck,
+  CalendarOff,
+  ChevronRight,
+  CircleDot,
+  ClipboardList,
+  Combine,
   Command,
+  CreditCard,
+  FileDiff,
+  FileMinus,
+  FilePlus,
+  FileStack,
+  FileText,
   GitBranch,
+  Handshake,
+  HardDrive,
+  Landmark,
+  Layers,
   LayoutDashboard,
   Menu,
   Package,
+  PenLine,
   Plug,
+  Receipt,
+  Scale,
   ScrollText,
+  Send,
   Settings,
   Shapes,
   Shield,
+  ShoppingCart,
+  Target,
+  UserCircle,
+  Users,
+  Wallet,
+  Warehouse,
+  Brain,
+  Globe,
+  Rocket,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,6 +80,9 @@ import {
   UserMenuHeader,
 } from "./user-menu";
 
+import type { LucideIcon } from "lucide-react";
+
+import type { NavModule, NavWorkspace } from "@/lib/nav/nav-types";
 import type { Workbench } from "@/lib/auth/types";
 import type { SessionBootstrap } from "@/lib/session-bootstrap";
 
@@ -53,7 +95,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -158,7 +199,12 @@ export function GlobalDrawer({ workbench }: GlobalDrawerProps) {
             {workbench === "admin" && (
               <MeshAdminSection workbench={workbench} />
             )}
-            <EntitySection workbench={workbench} />
+            {workbench !== "admin" && (
+              <WorkspaceNavSection workbench={workbench} />
+            )}
+            {(workbench === "user" || workbench === "ops") && (
+              <FinanceConsoleSection workbench={workbench} />
+            )}
             <SystemSection workbench={workbench} />
           </div>
         </ScrollArea>
@@ -246,11 +292,67 @@ function MeshAdminSection({ workbench }: { workbench: Workbench }) {
   );
 }
 
-// ─── Entity Quick Access Section ──────────────────────────────────────────────
+// ─── Icon map ────────────────────────────────────────────────────────────────
 
-function EntitySection({ workbench }: { workbench: Workbench }) {
-  const [search, setSearch] = useState("");
+const ICON_MAP: Record<string, LucideIcon> = {
+  ArrowLeftRight,
+  ArrowRightLeft,
+  Banknote,
+  BarChart3,
+  BookOpen,
+  Box,
+  Building,
+  Building2,
+  Calculator,
+  Calendar,
+  CalendarCheck,
+  CalendarOff,
+  ClipboardList,
+  Combine,
+  CreditCard,
+  FileDiff,
+  FileMinus,
+  FilePlus,
+  FileStack,
+  FileText,
+  Handshake,
+  HardDrive,
+  Landmark,
+  Layers,
+  Package,
+  PenLine,
+  Receipt,
+  Scale,
+  ScrollText,
+  Send,
+  ShoppingCart,
+  Target,
+  UserCircle,
+  Users,
+  Wallet,
+  Warehouse,
+};
+
+function resolveIcon(name: string): LucideIcon {
+  return ICON_MAP[name] ?? CircleDot;
+}
+
+// ─── Workspace-to-content mapping ────────────────────────────────────────────
+// Defines which workspace codes are visible in each workbench.
+// undefined = show all workspaces.
+
+const WORKBENCH_WORKSPACE_MAP: Record<Workbench, string[] | undefined> = {
+  user: undefined, // all workspaces
+  ops: undefined, // all workspaces
+  partner: ["operations", "supply-chain"], // limited scope
+  admin: undefined, // admin workbench never renders this section (guarded above)
+};
+
+// ─── Workspace Navigation Section ────────────────────────────────────────────
+
+function WorkspaceNavSection({ workbench }: { workbench: Workbench }) {
   const auth = useAuthOptional();
+  const pathname = usePathname();
   const csrfToken =
     typeof window !== "undefined"
       ? (
@@ -259,61 +361,167 @@ function EntitySection({ workbench }: { workbench: Workbench }) {
         )?.csrfToken
       : undefined;
 
-  const { tree } = useNavTree(workbench, csrfToken);
+  const { tree, isFallback } = useNavTree(workbench, csrfToken);
 
-  const entities = useMemo(() => {
-    if (!tree) return [];
-    const filtered = filterNavTree(tree, auth);
-    const all = filtered.workspaces.flatMap((ws) =>
-      ws.modules.flatMap((mod) => mod.entities),
-    );
-    // Deduplicate by slug and sort alphabetically
-    return [...new Map(all.map((e) => [e.slug, e])).values()].sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
-  }, [tree, auth]);
+  const filteredTree = useMemo(() => {
+    if (!tree) return null;
+    // In fallback/dev mode, show all modules without role filtering
+    const roleFiltered = isFallback ? tree : filterNavTree(tree, auth);
+    if (!roleFiltered) return null;
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return entities;
-    return entities.filter(
-      (e) =>
-        e.label.toLowerCase().includes(q) || e.slug.toLowerCase().includes(q),
-    );
-  }, [entities, search]);
+    // Scope workspaces to what this workbench should show
+    const allowedCodes = WORKBENCH_WORKSPACE_MAP[workbench];
+    if (!allowedCodes) return roleFiltered;
 
-  if (entities.length === 0) return null;
+    return {
+      ...roleFiltered,
+      workspaces: roleFiltered.workspaces.filter((ws) =>
+        allowedCodes.includes(ws.code),
+      ),
+    };
+  }, [tree, auth, isFallback, workbench]);
+
+  if (!filteredTree || filteredTree.workspaces.length === 0) return null;
+
+  return (
+    <>
+      {filteredTree.workspaces.map((ws) => (
+        <WorkspaceGroup
+          key={ws.code}
+          workspace={ws}
+          pathname={pathname}
+        />
+      ))}
+    </>
+  );
+}
+
+function WorkspaceGroup({
+  workspace,
+  pathname,
+}: {
+  workspace: NavWorkspace;
+  pathname: string;
+}) {
+  return (
+    <div>
+      <Separator />
+      <SectionLabel>{workspace.label}</SectionLabel>
+      <ul className="space-y-0.5">
+        {workspace.modules.map((mod) => (
+          <ModuleItem key={mod.code} module={mod} pathname={pathname} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ModuleItem({
+  module: mod,
+  pathname,
+}: {
+  module: NavModule;
+  pathname: string;
+}) {
+  const Icon = resolveIcon(mod.icon);
+  const isAnyEntityActive = mod.entities.some((e) =>
+    pathname.startsWith(`/app/${e.slug}`),
+  );
+  const [open, setOpen] = useState(isAnyEntityActive);
+
+  return (
+    <li>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+          isAnyEntityActive
+            ? "bg-accent text-accent-foreground font-medium"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        )}
+      >
+        <Icon className="size-4 shrink-0" />
+        <span className="flex-1 text-left">{mod.label}</span>
+        <ChevronRight
+          className={cn(
+            "size-3.5 shrink-0 transition-transform duration-200",
+            open && "rotate-90",
+          )}
+        />
+      </button>
+      {open && mod.entities.length > 0 && (
+        <ul className="ml-4 mt-0.5 space-y-0.5 border-l pl-2">
+          {mod.entities.map((entity) => {
+            const href = `/app/${entity.slug}`;
+            const isActive = pathname.startsWith(href);
+            return (
+              <li key={entity.slug}>
+                <Link
+                  href={href}
+                  className={cn(
+                    "flex items-center rounded-md px-2 py-1 text-sm transition-colors",
+                    isActive
+                      ? "bg-accent text-accent-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  {entity.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+// ─── Finance Console Section ─────────────────────────────────────────────────
+
+const FINANCE_CONSOLE_NAV = [
+  { label: "Atlas AI Console", href: "/finance/atlas-console", icon: Brain },
+  {
+    label: "Global Close Monitor",
+    href: "/finance/global-close-monitor",
+    icon: Globe,
+  },
+  {
+    label: "Release Control Tower",
+    href: "/finance/release-control-tower",
+    icon: Rocket,
+  },
+] as const;
+
+function FinanceConsoleSection({ workbench }: { workbench: Workbench }) {
+  const pathname = usePathname();
+  const basePath = `/wb/${workbench}`;
 
   return (
     <div>
       <Separator />
-      <SectionLabel>Quick Access</SectionLabel>
-      <Input
-        placeholder="Search entities..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-1.5 h-7 text-xs"
-      />
-      {filtered.length > 0 ? (
-        <ul className="max-h-48 space-y-0.5 overflow-y-auto">
-          {filtered.map((entity) => (
-            <li key={entity.slug}>
+      <SectionLabel>Finance Console</SectionLabel>
+      <ul className="space-y-0.5">
+        {FINANCE_CONSOLE_NAV.map((item) => {
+          const href = `${basePath}${item.href}`;
+          const isActive = pathname.startsWith(href);
+          return (
+            <li key={item.href}>
               <Link
-                href={`/app/${entity.slug}`}
-                className="flex items-center rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                href={href}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
               >
-                {entity.label}
+                <item.icon className="size-4 shrink-0" />
+                <span>{item.label}</span>
               </Link>
             </li>
-          ))}
-        </ul>
-      ) : (
-        search.trim() && (
-          <p className="px-2 text-xs text-muted-foreground">
-            No entities found.
-          </p>
-        )
-      )}
+          );
+        })}
+      </ul>
     </div>
   );
 }

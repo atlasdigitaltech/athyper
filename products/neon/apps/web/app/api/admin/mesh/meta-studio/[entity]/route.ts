@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await getEntityDirect(entity);
+      const result = await getEntityDirect(entity, auth.tenantId);
       if (!result.success) {
         return NextResponse.json(
           {
@@ -87,6 +87,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       const result = await updateEntityDirect(
         entity,
         validated.data as Record<string, unknown>,
+        auth.tenantId,
       );
       if (!result.success) {
         return NextResponse.json(
@@ -147,7 +148,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await deleteEntityDirect(entity);
+      const result = await deleteEntityDirect(entity, auth.tenantId);
       await emitMeshAudit(MeshAuditEvent.ENTITY_DELETED, {
         tenantId: auth.tenantId,
         sidHash: hashSidForAudit(auth.sid),

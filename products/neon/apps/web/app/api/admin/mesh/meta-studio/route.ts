@@ -26,7 +26,7 @@ export async function GET() {
   // Direct DB access — bypasses runtime API proxy
   if (hasDirectDb()) {
     try {
-      const result = await listEntitiesDirect();
+      const result = await listEntitiesDirect(auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB list failed:", err);
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   // Direct DB access — bypasses runtime API proxy
   if (hasDirectDb()) {
     try {
-      const result = await createEntityDirect(validated.data as any);
+      const result = await createEntityDirect(validated.data as any, auth.tenantId);
       await emitMeshAudit(MeshAuditEvent.ENTITY_CREATED, {
         tenantId: auth.tenantId,
         sidHash: hashSidForAudit(auth.sid),

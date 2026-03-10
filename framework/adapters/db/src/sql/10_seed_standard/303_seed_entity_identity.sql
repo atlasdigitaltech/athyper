@@ -9,8 +9,9 @@
 
 BEGIN;
 
--- Disable evolution guard during identity backfill (initial population of new columns)
+-- Disable guards during identity backfill (initial population of new columns)
 ALTER TABLE meta.entity DISABLE TRIGGER entity_evolution_guard;
+ALTER TABLE meta.entity DISABLE TRIGGER trg_class_governance_guard;
 
 -- ============================================================================
 -- §1  Backfill entity_code from table_name (already snake_case)
@@ -136,7 +137,8 @@ UPDATE meta.entity SET entity_class = 'LOG' WHERE name IN (
     'WebhookEvent', 'OutboxItem', 'DeliveryLog', 'JobLog'
 );
 
--- Re-enable evolution guard
+-- Re-enable guards
 ALTER TABLE meta.entity ENABLE TRIGGER entity_evolution_guard;
+ALTER TABLE meta.entity ENABLE TRIGGER trg_class_governance_guard;
 
 COMMIT;

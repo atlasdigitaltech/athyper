@@ -7,7 +7,7 @@
 // descriptor output. "React is a renderer."
 
 import { Button, Card } from "@neon/ui";
-import { AlertCircle, Pencil, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { EntityActionBar } from "./EntityActionBar";
@@ -104,6 +104,11 @@ export function EntityPageShell({
 
   const handleAction = useCallback(
     (actionCode: string) => {
+      // Client-side actions handled locally
+      if (actionCode === "edit") {
+        setEditing(true);
+        return;
+      }
       executeAction(actionCode);
     },
     [executeAction],
@@ -182,19 +187,6 @@ export function EntityPageShell({
         summary={<EntityBadgeStrip badges={dynamicDescriptor.badges} />}
         actions={
           <>
-            {canEdit && fieldMeta && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={() => setEditing(true)}>
-                    <Pencil className="size-4 mr-1" />
-                    Edit
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  Edit Record
-                </TooltipContent>
-              </Tooltip>
-            )}
             <EntityActionBar
               actions={dynamicDescriptor.actions}
               onAction={handleAction}

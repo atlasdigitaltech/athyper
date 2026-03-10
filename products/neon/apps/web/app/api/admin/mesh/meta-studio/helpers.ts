@@ -3,9 +3,10 @@ import "server-only";
 import { getSessionId } from "@neon/auth/session";
 import { NextResponse } from "next/server";
 
-import { hasDirectDb, getEntityDirect } from "./db";
+import { hasDirectDb, getDb, getEntityDirect } from "./db";
 import { checkRateLimit } from "./rate-limit";
 import { isStubEnabled, resolveStub } from "./stubs";
+import { resolveTenantUuid } from "@/lib/api-context";
 
 import type { NextRequest } from "next/server";
 import type { ZodSchema, ZodError } from "zod";
@@ -74,8 +75,19 @@ export async function requireAdminSession(): Promise<
     };
   }
 
-  const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
+  const tenantCode = process.env.DEFAULT_TENANT_ID ?? "default";
   const correlationId = crypto.randomUUID();
+
+  // Resolve tenant code/slug to UUID when direct DB is available
+  let tenantId = tenantCode;
+  if (hasDirectDb()) {
+    try {
+      const db = await getDb();
+      tenantId = await resolveTenantUuid(db, tenantCode);
+    } catch {
+      // Fall through with code — will fail at query time if not a UUID
+    }
+  }
 
   return { ok: true, sid, tenantId, runtimeApiUrl, correlationId };
 }
@@ -221,7 +233,7 @@ export async function assertDraftVersion(
   try {
     // Try direct DB first
     if (hasDirectDb()) {
-      const result = await getEntityDirect(entityName);
+      const result = await getEntityDirect(entityName, auth.tenantId);
       const status = (result.data as any)?.currentVersion?.status;
       if (status && status !== "draft") {
         return NextResponse.json(

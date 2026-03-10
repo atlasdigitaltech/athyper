@@ -130,7 +130,7 @@ export function useTenantProfile(): TenantProfileData {
       tenantDisplayName: bootstrap.tenantDisplayName,
       environment: bootstrap.environment,
       subscriptionTier: bootstrap.subscriptionTier,
-      workbench: bootstrap.workbench,
+      workbench: bootstrap.workbench ?? "",
       modules: bootstrap.modules,
       personas: bootstrap.personas,
       roles: bootstrap.roles,

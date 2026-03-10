@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await listIndexesDirect(entity);
+      const result = await listIndexesDirect(entity, auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB list indexes failed:", err);

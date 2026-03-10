@@ -64,7 +64,7 @@ create table if not exists fin.bank_statement_line (
     transaction_date    date not null,
     value_date          date,
     amount              decimal(18,4) not null,
-    direction           varchar(5) not null check (direction in ('DEBIT','CREDIT')),
+    direction           varchar(6) not null check (direction in ('DEBIT','CREDIT')),
     reference           varchar(200),
     description         text,
     counterparty        varchar(200),

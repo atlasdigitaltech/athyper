@@ -160,10 +160,10 @@ DO $$ BEGIN
         FROM meta.entity e WHERE ele.entity_name = e.name AND ele.tenant_id = e.tenant_id AND ele.meta_entity_id IS NULL;
     END IF;
 
-    -- wf.approval_instance
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='wf' AND table_name='approval_instance' AND column_name='entity_name') THEN
+    -- wf.approval_instance (uses entity_type column with entity_code values)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='wf' AND table_name='approval_instance' AND column_name='entity_type') THEN
         UPDATE wf.approval_instance ai SET meta_entity_id = e.id
-        FROM meta.entity e WHERE ai.entity_name = e.name AND ai.tenant_id = e.tenant_id AND ai.meta_entity_id IS NULL;
+        FROM meta.entity e WHERE ai.entity_type = e.entity_code AND ai.tenant_id = e.tenant_id AND ai.meta_entity_id IS NULL;
     END IF;
 
     -- wf.lifecycle_timer_schedule

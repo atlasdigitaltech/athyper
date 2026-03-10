@@ -1,6 +1,7 @@
 // WRONG LOCATION — this file is at /resolving (route group strips "(auth)").
 // The actual page is at app/auth/resolving/page.tsx → /auth/resolving.
 // This file just redirects to the correct URL.
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 async function getSession() {

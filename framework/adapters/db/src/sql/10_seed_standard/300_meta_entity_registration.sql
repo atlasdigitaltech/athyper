@@ -1,10 +1,15 @@
 /* ============================================================================
    Athyper v2.1 — Meta Entity Registration
-   Registers ALL business entities from ref, ent, doc, fin, wf(int) schemas
+   Registers ALL business entities from ref, ent, doc, fin(→ent/doc/ref), wf(int) schemas
    into meta.entity + meta.entity_version (v1, published).
 
    Dependencies: meta.entity, meta.entity_version, all base schemas
    ============================================================================ */
+
+-- Temporarily disable CLASS_GOVERNANCE_GUARD during registration.
+-- entity_class is not yet populated at this stage — it defaults to 'MASTER'.
+-- File 303_seed_entity_identity.sql backfills the correct entity_class afterwards.
+ALTER TABLE meta.entity DISABLE TRIGGER trg_class_governance_guard;
 
 DO $$
 DECLARE
@@ -80,44 +85,46 @@ BEGIN
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
     -- ========================================================================
-    -- §4  FIN SCHEMA — Finance Master Entities (kind='fin', governance_level='full')
-    -- Core finance master data with full meta governance.
+    -- §4  FIN SCHEMA — Finance Master & Document Entities
+    -- Master data → kind='ent', Documents → kind='doc', all governance_level='full'.
     -- ========================================================================
     INSERT INTO meta.entity (tenant_id, module_id, name, kind, table_schema, table_name,
                             governance_level, engine_tag, created_by)
     VALUES
-        -- Posting Engine
-        (v_tenant, 'ACC', 'ChartOfAccounts',   'fin', 'fin', 'chart_of_accounts',  'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'CostCenter',        'fin', 'fin', 'cost_center',        'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'ProfitCenter',      'fin', 'fin', 'profit_center',      'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'FiscalPeriod',      'fin', 'fin', 'fiscal_period',      'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'AccountingProfile', 'fin', 'fin', 'accounting_profile', 'full', 'posting-engine',    'system'),
-        -- Decision Grid / OU
-        (v_tenant, 'ACC', 'OperatingUnit',     'fin', 'fin', 'operating_unit',     'full', 'decision-grid',     'system'),
-        (v_tenant, 'ACC', 'BusinessIntent',    'fin', 'fin', 'business_intent',    'full', 'decision-grid',     'system'),
-        -- Budget Engine
-        (v_tenant, 'BUDGET', 'FundingProfile', 'fin', 'fin', 'funding_profile',    'full', 'budget-engine',     'system'),
-        -- Inventory Engine
-        (v_tenant, 'INVENTORY', 'Warehouse',   'fin', 'fin', 'warehouse',          'full', 'inventory-engine',  'system'),
-        (v_tenant, 'INVENTORY', 'ItemMaster',  'fin', 'fin', 'item_master',        'full', 'inventory-engine',  'system'),
-        -- Asset Engine
-        (v_tenant, 'ASSET', 'Asset',           'fin', 'fin', 'asset',              'full', 'asset-engine',      'system'),
-        -- Commission Engine
-        (v_tenant, 'ACC', 'CommissionPlan',    'fin', 'fin', 'commission_plan',    'full', 'commission-engine', 'system'),
-        -- Federation Engine
-        (v_tenant, 'ACC', 'LegalEntity',       'fin', 'fin', 'legal_entity',       'full', 'federation-engine', 'system'),
-        -- Tax Engine
-        (v_tenant, 'ACC', 'TaxJurisdiction',   'fin', 'fin', 'tax_jurisdiction',   'full', 'tax-engine',        'system'),
-        -- Atlas AI
-        (v_tenant, 'ACC', 'AIModelRegistry',   'fin', 'fin', 'ai_model_registry',  'full', 'atlas-ai',          'system'),
-        -- Finance Documents (full governance — lifecycle-managed transactional documents)
-        (v_tenant, 'ACC', 'PurchaseInvoice', 'fin', 'fin', 'purchase_invoice',   'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'ManualJournalEntry',   'fin', 'fin', 'journal_entry',      'full', 'posting-engine',    'system'),
-        (v_tenant, 'ACC', 'PaymentEntry',          'fin', 'fin', 'payment_entry',      'full', 'posting-engine',    'system'),
-        -- Spend Categories
-        (v_tenant, 'ACC', 'SpendCategory',         'fin', 'fin', 'spend_category',     'full', 'decision-grid',     'system'),
-        -- Banking / Reconciliation
-        (v_tenant, 'TREASURY', 'BankStatement',    'fin', 'fin', 'bank_statement',     'full', 'bank-reconciliation', 'system')
+        -- Posting Engine (master data → ent)
+        (v_tenant, 'ACC', 'ChartOfAccounts',   'ent', 'fin', 'chart_of_accounts',  'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'CostCenter',        'ent', 'fin', 'cost_center',        'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'ProfitCenter',      'ent', 'fin', 'profit_center',      'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'FiscalPeriod',      'ent', 'fin', 'fiscal_period',      'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'AccountingProfile', 'ent', 'fin', 'accounting_profile', 'full', 'posting-engine',    'system'),
+        -- Decision Grid / OU (master data → ent)
+        (v_tenant, 'ACC', 'OperatingUnit',     'ent', 'fin', 'operating_unit',     'full', 'decision-grid',     'system'),
+        (v_tenant, 'ACC', 'BusinessIntent',    'ent', 'fin', 'business_intent',    'full', 'decision-grid',     'system'),
+        -- Budget Engine (master data → ent)
+        (v_tenant, 'BUDGET', 'FundingProfile', 'ent', 'fin', 'funding_profile',    'full', 'budget-engine',     'system'),
+        -- Inventory Engine (master data → ent)
+        (v_tenant, 'INVENTORY', 'Warehouse',   'ent', 'fin', 'warehouse',          'full', 'inventory-engine',  'system'),
+        (v_tenant, 'INVENTORY', 'ItemMaster',  'ent', 'fin', 'item_master',        'full', 'inventory-engine',  'system'),
+        -- Asset Engine (master data → ent)
+        (v_tenant, 'ASSET', 'Asset',           'ent', 'fin', 'asset',              'full', 'asset-engine',      'system'),
+        -- Commission Engine (master data → ent)
+        (v_tenant, 'ACC', 'CommissionPlan',    'ent', 'fin', 'commission_plan',    'full', 'commission-engine', 'system'),
+        -- Federation Engine (master data → ent)
+        (v_tenant, 'ACC', 'LegalEntity',       'ent', 'fin', 'legal_entity',       'full', 'federation-engine', 'system'),
+        -- Tax Engine (master data → ent)
+        (v_tenant, 'ACC', 'TaxJurisdiction',   'ent', 'fin', 'tax_jurisdiction',   'full', 'tax-engine',        'system'),
+        -- Atlas AI (master data → ent)
+        (v_tenant, 'ACC', 'AIModelRegistry',   'ent', 'fin', 'ai_model_registry',  'full', 'atlas-ai',          'system'),
+        -- Finance Documents (lifecycle-managed transactional documents → doc)
+        (v_tenant, 'ACC', 'PurchaseInvoice',       'doc', 'fin', 'purchase_invoice',   'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'CreditNote',            'doc', 'fin', 'credit_note',        'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'DebitNote',             'doc', 'fin', 'debit_note',         'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'ManualJournalEntry',    'doc', 'fin', 'journal_entry',      'full', 'posting-engine',    'system'),
+        (v_tenant, 'ACC', 'PaymentEntry',          'doc', 'fin', 'payment_entry',      'full', 'posting-engine',    'system'),
+        -- Spend Categories (master data → ent)
+        (v_tenant, 'ACC', 'SpendCategory',         'ent', 'fin', 'spend_category',     'full', 'decision-grid',     'system'),
+        -- Banking / Reconciliation (document → doc)
+        (v_tenant, 'TREASURY', 'BankStatement',    'doc', 'fin', 'bank_statement',     'full', 'bank-reconciliation', 'system')
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
     -- ── Set display_config for hierarchical entities ──
@@ -143,6 +150,14 @@ BEGIN
     WHERE tenant_id = v_tenant AND name = 'PurchaseInvoice';
 
     UPDATE meta.entity
+    SET display_config = '{"displayFields":["credit_note_number","supplier_id","total_amount","status"]}'::jsonb
+    WHERE tenant_id = v_tenant AND name = 'CreditNote';
+
+    UPDATE meta.entity
+    SET display_config = '{"displayFields":["debit_note_number","supplier_id","total_amount","status"]}'::jsonb
+    WHERE tenant_id = v_tenant AND name = 'DebitNote';
+
+    UPDATE meta.entity
     SET display_config = '{"displayFields":["payment_number","supplier_id","total_amount","status","payment_method"]}'::jsonb
     WHERE tenant_id = v_tenant AND name = 'PaymentEntry';
 
@@ -159,87 +174,90 @@ BEGIN
     WHERE tenant_id = v_tenant AND name = 'BankStatement';
 
     -- ========================================================================
-    -- §5  FIN SCHEMA — Finance Config/Rule Entities (kind='fin', governance_level='light')
+    -- §5  FIN SCHEMA — Finance Config/Rule Entities (kind='ref', governance_level='light')
     -- Setup and rule tables: field dict + permissions, no lifecycle/overlays.
     -- ========================================================================
     INSERT INTO meta.entity (tenant_id, module_id, name, kind, table_schema, table_name,
                             governance_level, engine_tag, created_by)
     VALUES
-        (v_tenant, 'ACC',        'PolicyModule',           'fin', 'fin', 'policy_module',           'light', 'decision-grid',     'system'),
-        (v_tenant, 'ACC',        'SmartDefaultRule',       'fin', 'fin', 'smart_default_rule',      'light', 'decision-grid',     'system'),
-        (v_tenant, 'ACC',        'IntercompanyAgreement',  'fin', 'fin', 'intercompany_agreement',  'light', 'federation-engine', 'system'),
-        (v_tenant, 'TREASURY',   'FxRate',                 'fin', 'fin', 'fx_rate',                 'light', 'federation-engine', 'system'),
-        (v_tenant, 'ACC',        'TaxRate',                'fin', 'fin', 'tax_rate',                'light', 'tax-engine',        'system'),
-        (v_tenant, 'MFG',        'BillOfMaterials',        'fin', 'fin', 'bill_of_materials',       'light', 'production-engine', 'system'),
-        (v_tenant, 'MFG',        'Routing',                'fin', 'fin', 'routing',                 'light', 'production-engine', 'system'),
-        (v_tenant, 'ACC',        'CommissionAssignment',   'fin', 'fin', 'commission_assignment',   'light', 'commission-engine', 'system'),
+        (v_tenant, 'ACC',        'PolicyModule',           'ref', 'fin', 'policy_module',           'light', 'decision-grid',     'system'),
+        (v_tenant, 'ACC',        'SmartDefaultRule',       'ref', 'fin', 'smart_default_rule',      'light', 'decision-grid',     'system'),
+        (v_tenant, 'ACC',        'IntercompanyAgreement',  'ref', 'fin', 'intercompany_agreement',  'light', 'federation-engine', 'system'),
+        (v_tenant, 'TREASURY',   'FxRate',                 'ref', 'fin', 'fx_rate',                 'light', 'federation-engine', 'system'),
+        (v_tenant, 'ACC',        'TaxRate',                'ref', 'fin', 'tax_rate',                'light', 'tax-engine',        'system'),
+        (v_tenant, 'MFG',        'BillOfMaterials',        'ref', 'fin', 'bill_of_materials',       'light', 'production-engine', 'system'),
+        (v_tenant, 'MFG',        'Routing',                'ref', 'fin', 'routing',                 'light', 'production-engine', 'system'),
+        (v_tenant, 'ACC',        'CommissionAssignment',   'ref', 'fin', 'commission_assignment',   'light', 'commission-engine', 'system'),
         -- Spend Category config/mapping
-        (v_tenant, 'ACC',        'SpendCategoryCommodityMap', 'fin', 'fin', 'spend_category_commodity_map', 'light', 'decision-grid', 'system'),
-        (v_tenant, 'ACC',        'CategoryIntentRule',        'fin', 'fin', 'category_intent_rule',         'light', 'decision-grid', 'system'),
+        (v_tenant, 'ACC',        'SpendCategoryCommodityMap', 'ref', 'fin', 'spend_category_commodity_map', 'light', 'decision-grid', 'system'),
+        (v_tenant, 'ACC',        'CategoryIntentRule',        'ref', 'fin', 'category_intent_rule',         'light', 'decision-grid', 'system'),
         -- Document infrastructure
-        (v_tenant, 'ACC',        'DocumentSequence',          'fin', 'fin', 'document_sequence',            'light', 'posting-engine', 'system')
+        (v_tenant, 'ACC',        'DocumentSequence',          'ref', 'fin', 'document_sequence',            'light', 'posting-engine', 'system')
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
     -- ========================================================================
-    -- §6  FIN SCHEMA — Finance Transaction/Ledger Entities (kind='fin', governance_level='audit_only')
-    -- Immutable/append-only transaction records. Audit policy only.
+    -- §6  FIN SCHEMA — Finance Transaction/Ledger Entities (governance_level='audit_only')
+    -- Immutable/append-only transaction records. Document child lines → kind='doc',
+    -- all other ledger/transaction entities → kind='ent'.
     -- ========================================================================
     INSERT INTO meta.entity (tenant_id, module_id, name, kind, table_schema, table_name,
                             governance_level, engine_tag, created_by)
     VALUES
-        -- GL / Posting
-        (v_tenant, 'ACC',       'JournalEntry',             'fin', 'fin', 'journal_entry',             'audit_only', 'posting-engine',    'system'),
-        (v_tenant, 'ACC',       'JournalLine',              'fin', 'fin', 'journal_line',              'audit_only', 'posting-engine',    'system'),
-        (v_tenant, 'ACC',       'GLBalance',                'fin', 'fin', 'gl_balance',                'audit_only', 'posting-engine',    'system'),
-        -- Finance Document Lines (audit_only — child rows of lifecycle-managed documents)
-        (v_tenant, 'ACC',       'PurchaseInvoiceLine',      'fin', 'fin', 'purchase_invoice_line',     'audit_only', 'posting-engine',    'system'),
-        (v_tenant, 'ACC',       'PaymentAllocation',        'fin', 'fin', 'payment_allocation',        'audit_only', 'posting-engine',    'system'),
-        -- Pipeline / Decision Grid
-        (v_tenant, 'ACC',       'TransactionPipeline',      'fin', 'fin', 'transaction_pipeline',      'audit_only', 'decision-grid',     'system'),
-        (v_tenant, 'ACC',       'PolicyEvaluationLog',      'fin', 'fin', 'policy_evaluation_log',     'audit_only', 'decision-grid',     'system'),
-        (v_tenant, 'ACC',       'Exception',                'fin', 'fin', 'exception',                 'audit_only', 'decision-grid',     'system'),
-        (v_tenant, 'ACC',       'OuIntentMapping',          'fin', 'fin', 'ou_intent_mapping',         'audit_only', 'decision-grid',     'system'),
-        -- Budget
-        (v_tenant, 'BUDGET',    'FundingTransaction',       'fin', 'fin', 'funding_transaction',       'audit_only', 'budget-engine',     'system'),
-        (v_tenant, 'BUDGET',    'FundingTransfer',          'fin', 'fin', 'funding_transfer',          'audit_only', 'budget-engine',     'system'),
-        -- Commitment
-        (v_tenant, 'BUY',       'Commitment',               'fin', 'fin', 'commitment',                'audit_only', 'commitment-engine', 'system'),
-        (v_tenant, 'BUY',       'CommitmentSchedule',       'fin', 'fin', 'commitment_schedule',       'audit_only', 'commitment-engine', 'system'),
-        (v_tenant, 'BUY',       'CommitmentFulfillment',    'fin', 'fin', 'commitment_fulfillment',    'audit_only', 'commitment-engine', 'system'),
-        -- Inventory
-        (v_tenant, 'INVENTORY', 'InventoryBalance',         'fin', 'fin', 'inventory_balance',         'audit_only', 'inventory-engine',  'system'),
-        (v_tenant, 'INVENTORY', 'InventoryMovement',        'fin', 'fin', 'inventory_movement',        'audit_only', 'inventory-engine',  'system'),
-        (v_tenant, 'INVENTORY', 'InventoryValuationLayer',  'fin', 'fin', 'inventory_valuation_layer', 'audit_only', 'inventory-engine',  'system'),
-        (v_tenant, 'INVENTORY', 'Stocktake',                'fin', 'fin', 'stocktake',                 'audit_only', 'inventory-engine',  'system'),
-        (v_tenant, 'INVENTORY', 'StocktakeLine',            'fin', 'fin', 'stocktake_line',            'audit_only', 'inventory-engine',  'system'),
-        -- Production
-        (v_tenant, 'MFG',       'BomLine',                  'fin', 'fin', 'bom_line',                  'audit_only', 'production-engine', 'system'),
-        (v_tenant, 'MFG',       'WorkOrder',                'fin', 'fin', 'work_order',                'audit_only', 'production-engine', 'system'),
-        (v_tenant, 'MFG',       'WorkOrderCost',            'fin', 'fin', 'work_order_cost',           'audit_only', 'production-engine', 'system'),
-        (v_tenant, 'MFG',       'WorkOrderMaterialIssue',   'fin', 'fin', 'work_order_material_issue', 'audit_only', 'production-engine', 'system'),
-        (v_tenant, 'MFG',       'ProductionVariance',       'fin', 'fin', 'production_variance',       'audit_only', 'production-engine', 'system'),
-        -- Federation
-        (v_tenant, 'ACC',       'IntercompanyTransaction',  'fin', 'fin', 'intercompany_transaction',  'audit_only', 'federation-engine', 'system'),
-        (v_tenant, 'ACC',       'ConsolidationElimination', 'fin', 'fin', 'consolidation_elimination', 'audit_only', 'federation-engine', 'system'),
-        (v_tenant, 'ACC',       'NettingBatch',             'fin', 'fin', 'netting_batch',             'audit_only', 'federation-engine', 'system'),
-        (v_tenant, 'ACC',       'FxRevaluation',            'fin', 'fin', 'fx_revaluation',            'audit_only', 'federation-engine', 'system'),
-        -- Commission
-        (v_tenant, 'ACC',       'CommissionCalculation',    'fin', 'fin', 'commission_calculation',    'audit_only', 'commission-engine', 'system'),
-        (v_tenant, 'ACC',       'CommissionStatement',      'fin', 'fin', 'commission_statement',      'audit_only', 'commission-engine', 'system'),
-        -- Tax
-        (v_tenant, 'ACC',       'TaxCalculation',           'fin', 'fin', 'tax_calculation',           'audit_only', 'tax-engine',        'system'),
-        (v_tenant, 'ACC',       'TaxCreditLedger',          'fin', 'fin', 'tax_credit_ledger',         'audit_only', 'tax-engine',        'system'),
-        -- Asset
-        (v_tenant, 'ASSET',     'AssetBook',                'fin', 'fin', 'asset_book',                'audit_only', 'asset-engine',      'system'),
-        (v_tenant, 'ASSET',     'AssetTransaction',         'fin', 'fin', 'asset_transaction',         'audit_only', 'asset-engine',      'system'),
-        (v_tenant, 'ASSET',     'DepreciationRun',          'fin', 'fin', 'depreciation_run',          'audit_only', 'asset-engine',      'system'),
-        -- Atlas AI
-        (v_tenant, 'ACC',       'AIPrediction',             'fin', 'fin', 'ai_prediction',             'audit_only', 'atlas-ai',          'system'),
-        (v_tenant, 'ACC',       'AIAction',                 'fin', 'fin', 'ai_action',                 'audit_only', 'atlas-ai',          'system'),
-        (v_tenant, 'ACC',       'AIDriftMonitor',           'fin', 'fin', 'ai_drift_monitor',          'audit_only', 'atlas-ai',          'system'),
-        -- Banking / Reconciliation
-        (v_tenant, 'TREASURY', 'BankStatementLine',         'fin', 'fin', 'bank_statement_line',          'audit_only', 'bank-reconciliation', 'system'),
-        (v_tenant, 'TREASURY', 'ReconciliationSession',     'fin', 'fin', 'reconciliation_session',       'audit_only', 'bank-reconciliation', 'system')
+        -- GL / Posting (ledger → ent)
+        (v_tenant, 'ACC',       'JournalEntry',             'ent', 'fin', 'journal_entry',             'audit_only', 'posting-engine',    'system'),
+        (v_tenant, 'ACC',       'JournalLine',              'ent', 'fin', 'journal_line',              'audit_only', 'posting-engine',    'system'),
+        (v_tenant, 'ACC',       'GLBalance',                'ent', 'fin', 'gl_balance',                'audit_only', 'posting-engine',    'system'),
+        -- Finance Document Lines (child rows of lifecycle-managed documents → doc)
+        (v_tenant, 'ACC',       'PurchaseInvoiceLine',      'doc', 'fin', 'purchase_invoice_line',     'audit_only', 'posting-engine',    'system'),
+        (v_tenant, 'ACC',       'CreditNoteLine',           'doc', 'fin', 'credit_note_line',          'light',      'posting-engine',    'system'),
+        (v_tenant, 'ACC',       'DebitNoteLine',            'doc', 'fin', 'debit_note_line',           'light',      'posting-engine',    'system'),
+        (v_tenant, 'ACC',       'PaymentAllocation',        'doc', 'fin', 'payment_allocation',        'audit_only', 'posting-engine',    'system'),
+        -- Pipeline / Decision Grid (ledger → ent)
+        (v_tenant, 'ACC',       'TransactionPipeline',      'ent', 'fin', 'transaction_pipeline',      'audit_only', 'decision-grid',     'system'),
+        (v_tenant, 'ACC',       'PolicyEvaluationLog',      'ent', 'fin', 'policy_evaluation_log',     'audit_only', 'decision-grid',     'system'),
+        (v_tenant, 'ACC',       'Exception',                'ent', 'fin', 'exception',                 'audit_only', 'decision-grid',     'system'),
+        (v_tenant, 'ACC',       'OuIntentMapping',          'ent', 'fin', 'ou_intent_mapping',         'audit_only', 'decision-grid',     'system'),
+        -- Budget (ledger → ent)
+        (v_tenant, 'BUDGET',    'FundingTransaction',       'ent', 'fin', 'funding_transaction',       'audit_only', 'budget-engine',     'system'),
+        (v_tenant, 'BUDGET',    'FundingTransfer',          'ent', 'fin', 'funding_transfer',          'audit_only', 'budget-engine',     'system'),
+        -- Commitment (ledger → ent)
+        (v_tenant, 'BUY',       'Commitment',               'ent', 'fin', 'commitment',                'audit_only', 'commitment-engine', 'system'),
+        (v_tenant, 'BUY',       'CommitmentSchedule',       'ent', 'fin', 'commitment_schedule',       'audit_only', 'commitment-engine', 'system'),
+        (v_tenant, 'BUY',       'CommitmentFulfillment',    'ent', 'fin', 'commitment_fulfillment',    'audit_only', 'commitment-engine', 'system'),
+        -- Inventory (ledger → ent)
+        (v_tenant, 'INVENTORY', 'InventoryBalance',         'ent', 'fin', 'inventory_balance',         'audit_only', 'inventory-engine',  'system'),
+        (v_tenant, 'INVENTORY', 'InventoryMovement',        'ent', 'fin', 'inventory_movement',        'audit_only', 'inventory-engine',  'system'),
+        (v_tenant, 'INVENTORY', 'InventoryValuationLayer',  'ent', 'fin', 'inventory_valuation_layer', 'audit_only', 'inventory-engine',  'system'),
+        (v_tenant, 'INVENTORY', 'Stocktake',                'ent', 'fin', 'stocktake',                 'audit_only', 'inventory-engine',  'system'),
+        (v_tenant, 'INVENTORY', 'StocktakeLine',            'ent', 'fin', 'stocktake_line',            'audit_only', 'inventory-engine',  'system'),
+        -- Production (ledger → ent)
+        (v_tenant, 'MFG',       'BomLine',                  'ent', 'fin', 'bom_line',                  'audit_only', 'production-engine', 'system'),
+        (v_tenant, 'MFG',       'WorkOrder',                'ent', 'fin', 'work_order',                'audit_only', 'production-engine', 'system'),
+        (v_tenant, 'MFG',       'WorkOrderCost',            'ent', 'fin', 'work_order_cost',           'audit_only', 'production-engine', 'system'),
+        (v_tenant, 'MFG',       'WorkOrderMaterialIssue',   'ent', 'fin', 'work_order_material_issue', 'audit_only', 'production-engine', 'system'),
+        (v_tenant, 'MFG',       'ProductionVariance',       'ent', 'fin', 'production_variance',       'audit_only', 'production-engine', 'system'),
+        -- Federation (ledger → ent)
+        (v_tenant, 'ACC',       'IntercompanyTransaction',  'ent', 'fin', 'intercompany_transaction',  'audit_only', 'federation-engine', 'system'),
+        (v_tenant, 'ACC',       'ConsolidationElimination', 'ent', 'fin', 'consolidation_elimination', 'audit_only', 'federation-engine', 'system'),
+        (v_tenant, 'ACC',       'NettingBatch',             'ent', 'fin', 'netting_batch',             'audit_only', 'federation-engine', 'system'),
+        (v_tenant, 'ACC',       'FxRevaluation',            'ent', 'fin', 'fx_revaluation',            'audit_only', 'federation-engine', 'system'),
+        -- Commission (ledger → ent)
+        (v_tenant, 'ACC',       'CommissionCalculation',    'ent', 'fin', 'commission_calculation',    'audit_only', 'commission-engine', 'system'),
+        (v_tenant, 'ACC',       'CommissionStatement',      'ent', 'fin', 'commission_statement',      'audit_only', 'commission-engine', 'system'),
+        -- Tax (ledger → ent)
+        (v_tenant, 'ACC',       'TaxCalculation',           'ent', 'fin', 'tax_calculation',           'audit_only', 'tax-engine',        'system'),
+        (v_tenant, 'ACC',       'TaxCreditLedger',          'ent', 'fin', 'tax_credit_ledger',         'audit_only', 'tax-engine',        'system'),
+        -- Asset (ledger → ent)
+        (v_tenant, 'ASSET',     'AssetBook',                'ent', 'fin', 'asset_book',                'audit_only', 'asset-engine',      'system'),
+        (v_tenant, 'ASSET',     'AssetTransaction',         'ent', 'fin', 'asset_transaction',         'audit_only', 'asset-engine',      'system'),
+        (v_tenant, 'ASSET',     'DepreciationRun',          'ent', 'fin', 'depreciation_run',          'audit_only', 'asset-engine',      'system'),
+        -- Atlas AI (ledger → ent)
+        (v_tenant, 'ACC',       'AIPrediction',             'ent', 'fin', 'ai_prediction',             'audit_only', 'atlas-ai',          'system'),
+        (v_tenant, 'ACC',       'AIAction',                 'ent', 'fin', 'ai_action',                 'audit_only', 'atlas-ai',          'system'),
+        (v_tenant, 'ACC',       'AIDriftMonitor',           'ent', 'fin', 'ai_drift_monitor',          'audit_only', 'atlas-ai',          'system'),
+        -- Banking / Reconciliation (document lines → doc)
+        (v_tenant, 'TREASURY', 'BankStatementLine',         'doc', 'fin', 'bank_statement_line',          'audit_only', 'bank-reconciliation', 'system'),
+        (v_tenant, 'TREASURY', 'ReconciliationSession',     'ent', 'fin', 'reconciliation_session',       'audit_only', 'bank-reconciliation', 'system')
     ON CONFLICT (tenant_id, name) DO NOTHING;
 
     -- ========================================================================
@@ -265,7 +283,7 @@ BEGIN
     -- ========================================================================
     INSERT INTO meta.entity_version (tenant_id, entity_id, version_no, status, label,
                                      published_at, published_by, created_by)
-    SELECT e.tenant_id, e.id, 1, 'published', 'Initial DDL registration',
+    SELECT e.tenant_id, e.id, 1, 'effective', 'Initial DDL registration',
            now(), 'system', 'system'
     FROM meta.entity e
     WHERE e.tenant_id = v_tenant
@@ -273,6 +291,16 @@ BEGIN
           SELECT 1 FROM meta.entity_version ev
           WHERE ev.entity_id = e.id AND ev.tenant_id = v_tenant
       );
+
+    -- ========================================================================
+    -- §9  Activate all draft entities (seed entities are production-ready)
+    -- ========================================================================
+    UPDATE meta.entity
+    SET    status = 'active',
+           status_changed_at = now(),
+           status_changed_by = 'system'
+    WHERE  tenant_id = v_tenant
+      AND  status = 'draft';
 
     RAISE NOTICE 'Meta entity registration complete: % entities, % versions',
         (SELECT count(*) FROM meta.entity WHERE tenant_id = v_tenant),
@@ -316,7 +344,7 @@ BEGIN
         -- Create versions for new entities
         INSERT INTO meta.entity_version (tenant_id, entity_id, version_no, status, label,
                                          published_at, published_by, created_by)
-        SELECT e.tenant_id, e.id, 1, 'published', 'Initial DDL registration',
+        SELECT e.tenant_id, e.id, 1, 'effective', 'Initial DDL registration',
                now(), 'system', 'system'
         FROM meta.entity e
         WHERE e.tenant_id = v_target_tenant
@@ -329,3 +357,6 @@ BEGIN
     RAISE NOTICE 'Replicated meta entities to all tenants. Total: %',
         (SELECT count(*) FROM meta.entity);
 END $$;
+
+-- Re-enable CLASS_GOVERNANCE_GUARD after registration.
+ALTER TABLE meta.entity ENABLE TRIGGER trg_class_governance_guard;

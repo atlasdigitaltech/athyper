@@ -40,7 +40,7 @@ export async function getDb(): Promise<Kysely<DB>> {
  * List all entities from meta.entity with version/field/relation enrichment.
  * Replicates MetaRegistryService.listEntities() + enrichEntities().
  */
-export async function listEntitiesDirect(): Promise<{
+export async function listEntitiesDirect(tenantId: string): Promise<{
   success: boolean;
   data: unknown[];
   meta: {
@@ -59,10 +59,12 @@ export async function listEntitiesDirect(): Promise<{
     db
       .selectFrom("meta.entity")
       .select((eb) => eb.fn.countAll().as("count"))
+      .where("tenant_id", "=", tenantId)
       .executeTakeFirstOrThrow(),
     db
       .selectFrom("meta.entity")
       .selectAll()
+      .where("tenant_id", "=", tenantId)
       .orderBy("created_at", "desc")
       .execute(),
     db
@@ -243,16 +245,18 @@ export async function listEntitiesDirect(): Promise<{
 /**
  * Get a single entity by name with version/field/relation enrichment.
  */
-export async function getEntityDirect(entityName: string): Promise<{
+export async function getEntityDirect(entityName: string, tenantId?: string): Promise<{
   success: boolean;
   data: unknown | null;
 }> {
   const db = await getDb();
+  const tid = tenantId ?? process.env.DEFAULT_TENANT_ID ?? "default";
 
   const entity = await db
     .selectFrom("meta.entity")
     .selectAll()
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tid)
     .executeTakeFirst();
 
   if (!entity) return { success: false, data: null };
@@ -381,10 +385,8 @@ export async function createEntityDirect(data: {
   governanceLevel?: string;
   engineTag?: string;
   identityConfig?: Record<string, unknown> | null;
-}): Promise<{ success: boolean; data: unknown }> {
+}, tenantId: string): Promise<{ success: boolean; data: unknown }> {
   const db = await getDb();
-
-  const tenantId = process.env.DEFAULT_TENANT_ID ?? "default";
 
   const entity = await db
     .insertInto("meta.entity")
@@ -436,6 +438,7 @@ export async function createEntityDirect(data: {
 export async function updateEntityDirect(
   entityName: string,
   updates: Record<string, unknown>,
+  tenantId: string,
 ): Promise<{
   success: boolean;
   data: unknown | null;
@@ -501,6 +504,7 @@ export async function updateEntityDirect(
       .selectFrom("meta.entity")
       .select(["id"])
       .where("name", "=", entityName)
+      .where("tenant_id", "=", tenantId)
       .executeTakeFirst();
 
     if (entity) {
@@ -523,6 +527,7 @@ export async function updateEntityDirect(
     .updateTable("meta.entity")
     .set(dbUpdates as any)
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
     .returningAll()
     .executeTakeFirst();
 
@@ -575,7 +580,7 @@ export async function updateEntityDirect(
     await Promise.all(satelliteWrites);
   }
 
-  return getEntityDirect(entity.name);
+  return getEntityDirect(entity.name, tenantId);
 }
 
 /**
@@ -583,9 +588,10 @@ export async function updateEntityDirect(
  */
 export async function deleteEntityDirect(
   entityName: string,
+  tenantId: string,
 ): Promise<{ success: boolean }> {
   const db = await getDb();
-  await db.deleteFrom("meta.entity").where("name", "=", entityName).execute();
+  await db.deleteFrom("meta.entity").where("name", "=", entityName).where("tenant_id", "=", tenantId).execute();
   return { success: true };
 }
 
@@ -593,12 +599,14 @@ export async function deleteEntityDirect(
 
 async function resolveLatestVersionId(
   entityName: string,
+  tenantId: string,
 ): Promise<{ entityId: string; versionId: string } | null> {
   const db = await getDb();
   const entity = await db
     .selectFrom("meta.entity")
     .select(["id"])
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!entity) return null;
   const version = await db
@@ -681,9 +689,9 @@ function mapRelation(row: any): Record<string, unknown> {
   };
 }
 
-export async function listFieldsDirect(entityName: string) {
+export async function listFieldsDirect(entityName: string, tenantId: string) {
   const db = await getDb();
-  const resolved = await resolveLatestVersionId(entityName);
+  const resolved = await resolveLatestVersionId(entityName, tenantId);
   if (!resolved) return { success: false, data: [] };
   const rows = await db
     .selectFrom("meta.field")
@@ -694,9 +702,9 @@ export async function listFieldsDirect(entityName: string) {
   return { success: true, data: rows.map(mapField) };
 }
 
-export async function listRelationsDirect(entityName: string) {
+export async function listRelationsDirect(entityName: string, tenantId: string) {
   const db = await getDb();
-  const resolved = await resolveLatestVersionId(entityName);
+  const resolved = await resolveLatestVersionId(entityName, tenantId);
   if (!resolved) return { success: false, data: [] };
   const rows = await db
     .selectFrom("meta.relation")
@@ -706,9 +714,9 @@ export async function listRelationsDirect(entityName: string) {
   return { success: true, data: rows.map(mapRelation) };
 }
 
-export async function listIndexesDirect(entityName: string) {
+export async function listIndexesDirect(entityName: string, tenantId: string) {
   const db = await getDb();
-  const resolved = await resolveLatestVersionId(entityName);
+  const resolved = await resolveLatestVersionId(entityName, tenantId);
   if (!resolved) return { success: false, data: [] };
   const rows = await db
     .selectFrom("meta.index_def")
@@ -729,12 +737,13 @@ export async function listIndexesDirect(entityName: string) {
   };
 }
 
-export async function listVersionsDirect(entityName: string) {
+export async function listVersionsDirect(entityName: string, tenantId: string) {
   const db = await getDb();
   const entity = await db
     .selectFrom("meta.entity")
     .select(["id"])
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!entity) return { success: false, data: [] };
   const rows = await db
@@ -757,12 +766,13 @@ export async function listVersionsDirect(entityName: string) {
   };
 }
 
-export async function getPoliciesDirect(entityName: string) {
+export async function getPoliciesDirect(entityName: string, tenantId: string) {
   const db = await getDb();
   const entity = await db
     .selectFrom("meta.entity")
     .select(["id"])
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (!entity)
     return {
@@ -812,9 +822,9 @@ export async function getPoliciesDirect(entityName: string) {
   };
 }
 
-export async function getCompiledDirect(entityName: string) {
+export async function getCompiledDirect(entityName: string, tenantId: string) {
   const db = await getDb();
-  const resolved = await resolveLatestVersionId(entityName);
+  const resolved = await resolveLatestVersionId(entityName, tenantId);
   if (!resolved) return { success: true, data: null };
   const compiled = await db
     .selectFrom("meta.entity_compiled")
@@ -843,6 +853,7 @@ export async function getCompiledDirect(entityName: string) {
 export async function fetchPublishValidationData(
   entityName: string,
   versionId: string,
+  tenantId: string,
 ): Promise<{
   entityName: string;
   entityClass: string;
@@ -867,6 +878,7 @@ export async function fetchPublishValidationData(
     .selectFrom("meta.entity")
     .selectAll()
     .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
     .executeTakeFirst();
 
   if (!entity) return null;
@@ -941,9 +953,9 @@ export async function fetchPublishValidationData(
   };
 }
 
-export async function getValidationDirect(entityName: string) {
+export async function getValidationDirect(entityName: string, tenantId: string) {
   const db = await getDb();
-  const resolved = await resolveLatestVersionId(entityName);
+  const resolved = await resolveLatestVersionId(entityName, tenantId);
   if (!resolved) return { success: true, data: { version: 1, rules: [] } };
   const fieldsWithValidation = await db
     .selectFrom("meta.field")

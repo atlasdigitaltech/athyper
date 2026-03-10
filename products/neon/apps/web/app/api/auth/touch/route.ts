@@ -92,5 +92,7 @@ export async function POST() {
     await redis.set(key, JSON.stringify(session), { EX: 28800 });
 
     return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

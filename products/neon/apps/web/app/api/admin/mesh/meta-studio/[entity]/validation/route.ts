@@ -30,7 +30,7 @@ export async function GET(
 
   if (hasDirectDb()) {
     try {
-      const result = await getValidationDirect(entity);
+      const result = await getValidationDirect(entity, auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB get validation failed:", err);

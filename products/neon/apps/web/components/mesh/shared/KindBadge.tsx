@@ -8,6 +8,7 @@ const KIND_LABELS: Record<string, string> = {
   ref: "Reference",
   ent: "Enterprise",
   doc: "Document",
+  int: "Integration",
 };
 
 interface KindBadgeProps {

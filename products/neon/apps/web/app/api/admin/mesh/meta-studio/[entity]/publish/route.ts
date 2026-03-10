@@ -68,6 +68,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     const validationData = await fetchPublishValidationData(
       entity,
       metaBody.data.currentVersion.id,
+      auth.tenantId,
     );
 
     if (validationData) {

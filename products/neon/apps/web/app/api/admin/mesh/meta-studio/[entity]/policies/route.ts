@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (hasDirectDb()) {
     try {
-      const result = await getPoliciesDirect(entity);
+      const result = await getPoliciesDirect(entity, auth.tenantId);
       return NextResponse.json(result);
     } catch (err) {
       console.error("[meta-studio] Direct DB get policies failed:", err);
