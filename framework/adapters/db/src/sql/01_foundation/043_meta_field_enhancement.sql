@@ -74,7 +74,7 @@ ALTER TABLE meta.field ADD CONSTRAINT chk_field_cardinality
 
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_origin;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_origin
-    CHECK (origin IN ('system', 'business'));
+    CHECK (origin IN ('system', 'standard', 'business'));
 
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_compute_mode;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_compute_mode

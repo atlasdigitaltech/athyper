@@ -1,7 +1,9 @@
 // lib/schema-manager/capability-flags.ts
 //
-// Rule-driven guardrails per entity kind.
+// Rule-driven guardrails per entity class.
 // Determines which tabs and features are available for each entity type.
+
+import type { EntityClass } from "./types";
 
 export interface CapabilityFlags {
   supportsLifecycle: boolean;
@@ -14,19 +16,22 @@ export interface CapabilityFlags {
   supportsViews: boolean;
   supportsIntegrations: boolean;
   supportsValidation: boolean;
+  supportsControls: boolean;
+  supportsOperations: boolean;
 }
 
-export type EntityKind = "ref" | "ent" | "doc";
-
 /**
- * Capability matrix per entity kind.
+ * Capability matrix per entity class.
  *
- * - ref (Reference Data): Lightweight lookup tables. No lifecycle, workflows, or overlays.
- * - ent (Entity): Full-featured business entities. All capabilities enabled.
- * - doc (Document): Document-oriented entities. Most features except temporal.
+ * - REFERENCE: Lightweight lookup tables. No lifecycle, workflows, or overlays.
+ * - MASTER: Full-featured business entities. All capabilities enabled.
+ * - DOCUMENT: Document-oriented entities. Most features except temporal.
+ * - CONTROL: Configuration/rules entities. Basic capabilities.
+ * - LEDGER: Immutable append-only records. Limited capabilities.
+ * - LOG: Operational event streams. Minimal capabilities.
  */
-export const ENTITY_CAPABILITIES: Record<EntityKind, CapabilityFlags> = {
-  ref: {
+export const ENTITY_CAPABILITIES: Record<EntityClass, CapabilityFlags> = {
+  REFERENCE: {
     supportsLifecycle: false,
     supportsApprovals: false,
     supportsNumbering: false,
@@ -37,8 +42,10 @@ export const ENTITY_CAPABILITIES: Record<EntityKind, CapabilityFlags> = {
     supportsViews: true,
     supportsIntegrations: false,
     supportsValidation: true,
+    supportsControls: true,
+    supportsOperations: true,
   },
-  ent: {
+  MASTER: {
     supportsLifecycle: true,
     supportsApprovals: true,
     supportsNumbering: true,
@@ -49,8 +56,10 @@ export const ENTITY_CAPABILITIES: Record<EntityKind, CapabilityFlags> = {
     supportsViews: true,
     supportsIntegrations: true,
     supportsValidation: true,
+    supportsControls: true,
+    supportsOperations: true,
   },
-  doc: {
+  DOCUMENT: {
     supportsLifecycle: true,
     supportsApprovals: true,
     supportsNumbering: true,
@@ -61,6 +70,50 @@ export const ENTITY_CAPABILITIES: Record<EntityKind, CapabilityFlags> = {
     supportsViews: true,
     supportsIntegrations: true,
     supportsValidation: true,
+    supportsControls: true,
+    supportsOperations: true,
+  },
+  CONTROL: {
+    supportsLifecycle: false,
+    supportsApprovals: false,
+    supportsNumbering: false,
+    supportsTemporal: false,
+    supportsOverlays: true,
+    supportsWorkflows: false,
+    supportsForms: true,
+    supportsViews: true,
+    supportsIntegrations: false,
+    supportsValidation: true,
+    supportsControls: true,
+    supportsOperations: true,
+  },
+  LEDGER: {
+    supportsLifecycle: false,
+    supportsApprovals: false,
+    supportsNumbering: true,
+    supportsTemporal: false,
+    supportsOverlays: false,
+    supportsWorkflows: false,
+    supportsForms: false,
+    supportsViews: true,
+    supportsIntegrations: false,
+    supportsValidation: true,
+    supportsControls: true,
+    supportsOperations: true,
+  },
+  LOG: {
+    supportsLifecycle: false,
+    supportsApprovals: false,
+    supportsNumbering: false,
+    supportsTemporal: false,
+    supportsOverlays: false,
+    supportsWorkflows: false,
+    supportsForms: false,
+    supportsViews: true,
+    supportsIntegrations: false,
+    supportsValidation: false,
+    supportsControls: false,
+    supportsOperations: true,
   },
 };
 
@@ -75,14 +128,16 @@ export const TAB_CAPABILITY_MAP: Record<string, keyof CapabilityFlags> = {
   views: "supportsViews",
   integrations: "supportsIntegrations",
   validation: "supportsValidation",
+  controls: "supportsControls",
+  operations: "supportsOperations",
 };
 
 /**
- * Check whether a tab should be visible for a given entity kind.
+ * Check whether a tab should be visible for a given entity class.
  * Tabs not in the capability map are always visible (e.g., fields, relations, indexes).
  */
-export function isTabEnabled(segment: string, kind: EntityKind): boolean {
+export function isTabEnabled(segment: string, entityClass: EntityClass): boolean {
   const capKey = TAB_CAPABILITY_MAP[segment];
   if (!capKey) return true; // Structural tabs are always visible
-  return ENTITY_CAPABILITIES[kind][capKey];
+  return ENTITY_CAPABILITIES[entityClass][capKey];
 }

@@ -15,8 +15,10 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Eye, EyeOff, Layers, Plus, RefreshCw, Save } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Archive, Filter, Layers, Lock, Plus, RefreshCw, Save, Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 import { FieldFormDialog } from "./FieldFormDialog";
 import { FieldRow } from "./FieldRow";
@@ -32,9 +34,19 @@ import { ConfirmDeleteDialog } from "@/components/mesh/shared/ConfirmDeleteDialo
 import { EmptyState } from "@/components/mesh/shared/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEntityFields } from "@/lib/schema-manager/use-entity-fields";
+import { useEntityMeta } from "@/lib/schema-manager/use-entity-meta";
 import { useMutation } from "@/lib/schema-manager/use-mutation";
+import { useEntityValidation } from "@/lib/schema-manager/use-entity-validation";
 
 const SYSTEM_FIELDS = new Set([
   "id",
@@ -80,10 +92,17 @@ function rebaseReorder(
 
 export function FieldEditor({
   entityName,
-  readonly = false,
+  readonly: readonlyProp = false,
 }: FieldEditorProps) {
-  const { fields, loading, error, etag, refresh } = useEntityFields(entityName);
-  const [showSystem, setShowSystem] = useState(false);
+  const { entity: entityMeta } = useEntityMeta(entityName);
+  const versionStatus = entityMeta?.currentVersion?.status;
+  const isVersionLocked = versionStatus === "published" || versionStatus === "archived";
+  const readonly = readonlyProp || isVersionLocked;
+
+  const { fields, loading, error, etag, hasPublishedVersion, refresh } = useEntityFields(entityName);
+  const { rules: entityValidationRules } = useEntityValidation(entityName);
+  const [originFilter, setOriginFilter] = useState<"all" | "system" | "standard" | "business">("all");
+  const [showDeprecated, setShowDeprecated] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<FieldDefinition | null>(
     null,
@@ -97,21 +116,58 @@ export function FieldEditor({
     null,
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Deep-link: auto-open field dialog when ?edit=fieldId is in URL
+  const searchParams = useSearchParams();
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandled.current || loading || fields.length === 0) return;
+    const editFieldId = searchParams.get("edit");
+    if (!editFieldId) return;
+    const field = fields.find((f) => f.id === editFieldId);
+    if (field) {
+      deepLinkHandled.current = true;
+      setEditingField(field);
+      setDialogOpen(true);
+    }
+  }, [searchParams, fields, loading]);
 
   // Use local state for reordering, fallback to fetched fields
   const displayFields = localFields ?? fields;
 
-  const { userFields, systemFields } = useMemo(() => {
-    const user: FieldDefinition[] = [];
-    const system: FieldDefinition[] = [];
+  const { deprecatedCount, originCounts } = useMemo(() => {
+    let deprecated = 0;
+    const counts = { system: 0, standard: 0, business: 0 };
     for (const f of displayFields) {
-      if (SYSTEM_FIELDS.has(f.name)) system.push(f);
-      else user.push(f);
+      if (f.isDeprecated) deprecated++;
+      const o = (f.origin ?? (SYSTEM_FIELDS.has(f.name) ? "system" : "business")) as keyof typeof counts;
+      if (o in counts) counts[o]++;
     }
-    return { userFields: user, systemFields: system };
+    return { deprecatedCount: deprecated, originCounts: counts };
   }, [displayFields]);
 
-  const visibleFields = showSystem ? displayFields : userFields;
+  const visibleFields = useMemo(() => {
+    let list = displayFields;
+    if (originFilter !== "all") {
+      list = list.filter((f) => {
+        const o = f.origin ?? (SYSTEM_FIELDS.has(f.name) ? "system" : "business");
+        return o === originFilter;
+      });
+    }
+    if (!showDeprecated) list = list.filter((f) => !f.isDeprecated);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          (f.label && f.label.toLowerCase().includes(q)) ||
+          f.dataType.toLowerCase().includes(q) ||
+          (f.columnName && f.columnName.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [originFilter, showDeprecated, displayFields, searchQuery]);
   const hasUnsavedOrder = localFields !== null;
 
   const sensors = useSensors(
@@ -136,6 +192,9 @@ export function FieldEditor({
       setConflictData(conflict);
       setConflictOpen(true);
     },
+    onError: (err) => {
+      toast.error(err.message || "Failed to save field order");
+    },
   });
 
   // Mutation hook for creating/updating a field
@@ -153,7 +212,38 @@ export function FieldEditor({
         setConflictData(conflict);
         setConflictOpen(true);
       },
+      onError: (err) => {
+        const details = (err as any)?.fieldErrors as Array<{ path: string; message: string }> | undefined;
+        if (details?.length) {
+          toast.error(details.map((e) => `${e.path}: ${e.message}`).join("\n"));
+        } else {
+          toast.error(err.message || "Failed to save field");
+        }
+      },
     });
+
+  // Mutation hook for deprecating/restoring a field
+  const { mutate: deprecateField } = useMutation<FieldDefinition>({
+    url: `/api/admin/mesh/meta-studio/${encodeURIComponent(entityName)}/fields`,
+    method: "POST",
+    etag,
+    onSuccess: (data) => {
+      const field = data as any;
+      toast.success(
+        field?.isDeprecated
+          ? `Field "${field.name}" deprecated`
+          : `Field "${field.name}" restored`,
+      );
+      refresh();
+    },
+    onConflict: (conflict) => {
+      setConflictData(conflict);
+      setConflictOpen(true);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update field status");
+    },
+  });
 
   // Mutation hook for deleting a field
   const { mutate: deleteField, loading: deletingField } = useMutation<void>({
@@ -168,6 +258,9 @@ export function FieldEditor({
     onConflict: (conflict) => {
       setConflictData(conflict);
       setConflictOpen(true);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete field");
     },
   });
 
@@ -228,6 +321,16 @@ export function FieldEditor({
       setDialogOpen(true);
     },
     [readonly],
+  );
+
+  const handleDeprecate = useCallback(
+    (field: FieldDefinition) => {
+      deprecateField({
+        fieldId: field.id,
+        isDeprecated: !field.isDeprecated,
+      });
+    },
+    [deprecateField],
   );
 
   const handleDelete = useCallback((field: FieldDefinition) => {
@@ -313,31 +416,58 @@ export function FieldEditor({
 
   if (fields.length === 0) {
     return (
-      <EmptyState
-        icon={Layers}
-        title="No fields defined"
-        description="Add fields to define the structure of this entity."
-        actionLabel={readonly ? undefined : "Add First Field"}
-        onAction={readonly ? undefined : handleAddNew}
-      />
+      <>
+        <EmptyState
+          icon={Layers}
+          title="No fields defined"
+          description="Add fields to define the structure of this entity."
+          actionLabel={readonly ? undefined : "Add First Field"}
+          onAction={readonly ? undefined : handleAddNew}
+        />
+        {!readonly && (
+          <FieldFormDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            field={editingField}
+            existingFields={fields}
+            entityValidationRules={entityValidationRules}
+            entityName={entityName}
+            onSubmit={handleFormSubmit}
+          />
+        )}
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium">Fields</h3>
-          <Badge variant="secondary" className="text-xs">
-            {fields.length}
+      {isVersionLocked && (
+        <div className="flex items-center justify-between rounded-md border border-muted bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Lock className="size-3.5" />
+            <span>
+              {versionStatus === "published"
+                ? "This version is published. Fields are read-only."
+                : "This version is archived. Fields are read-only."}
+            </span>
+          </div>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+            <Plus className="size-3" />
+            Create New Version
+          </Button>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-lg font-semibold shrink-0">Fields</h2>
+          <Badge variant="secondary" className="text-xs shrink-0">
+            {fields.length} fields
           </Badge>
-          {readonly && (
-            <Badge variant="outline" className="text-xs text-warning">
+          {readonly && !isVersionLocked && (
+            <Badge variant="outline" className="text-xs text-warning shrink-0">
               Read-only
             </Badge>
           )}
-        </div>
-        <div className="flex items-center gap-2">
           {hasUnsavedOrder && !readonly && (
             <>
               <Button
@@ -359,21 +489,56 @@ export function FieldEditor({
               </Button>
             </>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSystem(!showSystem)}
-            className="gap-1.5"
-          >
-            {showSystem ? (
-              <EyeOff className="size-3.5" />
-            ) : (
-              <Eye className="size-3.5" />
+          <span className="text-sm text-meta-text-soft truncate">
+            Define and organize the data structure for this entity.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Search */}
+          <div className="relative w-[180px]">
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-meta-text-soft pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search fields..."
+              className="h-8 pl-8 pr-8 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
             )}
-            {showSystem
-              ? "Hide system"
-              : `Show system (${systemFields.length})`}
-          </Button>
+          </div>
+          {/* Origin filter */}
+          <Select value={originFilter} onValueChange={(v) => setOriginFilter(v as typeof originFilter)}>
+            <SelectTrigger size="sm" className="w-[150px] gap-1.5 !text-xs">
+              <Filter className="size-3.5 text-meta-text-soft" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem className="text-xs" value="all">All fields</SelectItem>
+              <SelectItem className="text-xs" value="standard">Standard ({originCounts.standard})</SelectItem>
+              <SelectItem className="text-xs" value="business">Custom ({originCounts.business})</SelectItem>
+              <SelectItem className="text-xs" value="system">System ({originCounts.system})</SelectItem>
+            </SelectContent>
+          </Select>
+          {deprecatedCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeprecated(!showDeprecated)}
+              className="gap-1.5"
+            >
+              <Archive className="size-3.5" />
+              {showDeprecated
+                ? "Hide deprecated"
+                : `Show deprecated (${deprecatedCount})`}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={refresh}>
             <RefreshCw className="size-3.5" />
           </Button>
@@ -396,7 +561,7 @@ export function FieldEditor({
           items={visibleFields.map((f) => f.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-1.5" role="list" aria-label="Entity fields">
+          <div className="rounded-lg border" role="list" aria-label="Entity fields">
             {visibleFields.map((field) => (
               <div
                 key={field.id}
@@ -409,8 +574,9 @@ export function FieldEditor({
               >
                 <FieldRow
                   field={field}
-                  onEdit={readonly ? undefined : handleEdit}
-                  onDelete={readonly ? undefined : handleDelete}
+                  onEdit={handleEdit}
+                  onDelete={readonly || hasPublishedVersion ? undefined : handleDelete}
+                  onDeprecate={readonly ? undefined : handleDeprecate}
                 />
               </div>
             ))}
@@ -418,15 +584,14 @@ export function FieldEditor({
         </SortableContext>
       </DndContext>
 
-      {!readonly && (
-        <FieldFormDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          field={editingField}
-          existingFields={fields}
-          onSubmit={handleFormSubmit}
-        />
-      )}
+      <FieldFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        field={editingField}
+        existingFields={fields}
+        readonly={readonly}
+        onSubmit={handleFormSubmit}
+      />
 
       <ConfirmDeleteDialog
         open={deleteOpen}

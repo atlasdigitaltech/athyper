@@ -3839,7 +3839,7 @@ model bank_statement_line {
   transaction_date   DateTime       @db.Date
   value_date         DateTime?      @db.Date
   amount             Decimal        @db.Decimal(18, 4)
-  direction          String         @db.VarChar(5)
+  direction          String         @db.VarChar(6)
   reference          String?        @db.VarChar(200)
   description        String?
   counterparty       String?        @db.VarChar(200)
@@ -10131,7 +10131,7 @@ model field_security_policy {
 model hook_action_registry {
   id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id             String?  @db.Uuid
-  action_key            String   @unique(map: "uq_registry_system_action")
+  action_key            String
   origin                String   @default("system")
   label                 String
   description           String?
@@ -10144,7 +10144,7 @@ model hook_action_registry {
   created_by            String
   tenant                tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([tenant_id, action_key], map: "uq_registry_tenant_action", where: raw("(origin = 'tenant'::text)"))
+  @@unique([tenant_id, action_key], map: "uq_registry_tenant_action")
   @@schema("meta")
 }
 

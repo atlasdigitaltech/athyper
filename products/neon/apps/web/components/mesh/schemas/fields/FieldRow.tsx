@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Archive, GripVertical, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
 import { FieldTypeIcon } from "./FieldTypeIcon";
 
@@ -10,27 +10,18 @@ import type { FieldDefinition } from "@/lib/schema-manager/types";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FIELD_ATTR_BADGE } from "@/lib/semantic-colors";
+import { FIELD_ATTR_BADGE, FIELD_ORIGIN_BADGE } from "@/lib/semantic-colors";
 import { cn } from "@/lib/utils";
-
-const SYSTEM_FIELDS = new Set([
-  "id",
-  "tenant_id",
-  "realm_id",
-  "created_at",
-  "created_by",
-  "updated_at",
-  "updated_by",
-]);
 
 interface FieldRowProps {
   field: FieldDefinition;
   onEdit?: (field: FieldDefinition) => void;
   onDelete?: (field: FieldDefinition) => void;
+  onDeprecate?: (field: FieldDefinition) => void;
 }
 
-export function FieldRow({ field, onEdit, onDelete }: FieldRowProps) {
-  const isSystem = SYSTEM_FIELDS.has(field.name);
+export function FieldRow({ field, onEdit, onDelete, onDeprecate }: FieldRowProps) {
+  const isSystem = field.origin === "system";
 
   const {
     attributes,
@@ -51,10 +42,11 @@ export function FieldRow({ field, onEdit, onDelete }: FieldRowProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-center gap-3 rounded-md border px-3 py-2 transition-colors",
-        isDragging && "z-10 shadow-lg bg-card",
+        "group flex items-center gap-3 border-b last:border-b-0 px-3 py-2.5 transition-colors",
+        isDragging && "z-10 shadow-lg bg-card rounded-md border",
         isSystem && "bg-muted/30",
-        !isDragging && "hover:bg-muted/50",
+        field.isDeprecated && "opacity-60",
+        !isDragging && "hover:bg-muted/20",
       )}
     >
       <button
@@ -70,12 +62,12 @@ export function FieldRow({ field, onEdit, onDelete }: FieldRowProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-medium truncate">
-            {field.name}
+          <span className="text-sm font-medium truncate">
+            {field.label ?? field.name}
           </span>
-          {field.columnName !== field.name && (
-            <span className="text-xs text-muted-foreground font-mono truncate">
-              ({field.columnName})
+          {field.label && (
+            <span className="text-xs text-muted-foreground truncate">
+              {field.name}
             </span>
           )}
         </div>
@@ -117,15 +109,31 @@ export function FieldRow({ field, onEdit, onDelete }: FieldRowProps) {
             filterable
           </Badge>
         )}
-        {isSystem && (
-          <Badge variant="secondary" className="text-xs">
-            system
+        {field.isDeprecated && (
+          <Badge
+            variant="outline"
+            className={cn("text-xs", FIELD_ATTR_BADGE.deprecated)}
+          >
+            deprecated
           </Badge>
         )}
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-xs",
+            FIELD_ORIGIN_BADGE[field.origin] ?? FIELD_ORIGIN_BADGE.business,
+          )}
+        >
+          {field.origin === "system"
+            ? "system"
+            : field.origin === "standard"
+              ? "standard"
+              : "custom"}
+        </Badge>
       </div>
 
       {(onEdit || onDelete) && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div className="flex items-center justify-end gap-1 w-[5.5rem] opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           {onEdit && (
             <Button
               variant="ghost"
@@ -134,6 +142,21 @@ export function FieldRow({ field, onEdit, onDelete }: FieldRowProps) {
               onClick={() => onEdit(field)}
             >
               <Pencil className="size-3.5" />
+            </Button>
+          )}
+          {!isSystem && onDeprecate && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => onDeprecate(field)}
+              title={field.isDeprecated ? "Restore field" : "Deprecate field"}
+            >
+              {field.isDeprecated ? (
+                <RotateCcw className="size-3.5" />
+              ) : (
+                <Archive className="size-3.5" />
+              )}
             </Button>
           )}
           {!isSystem && onDelete && (

@@ -70,7 +70,7 @@ export async function GET(
 
     return successResponse({
       entityName: meta.entityName,
-      kind: meta.kind,
+      entityClass: meta.entityClass,
       governanceLevel: meta.governanceLevel,
       entityShort: meta.entityShort,
       featureFlags: meta.featureFlags,

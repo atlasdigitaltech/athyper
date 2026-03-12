@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import type { EntitySummary } from "@/lib/schema-manager/types";
 
-import { KindBadge } from "@/components/mesh/shared/KindBadge";
+import { ClassBadge } from "@/components/mesh/shared/ClassBadge";
 import { StatusDot } from "@/components/mesh/shared/StatusDot";
 import {
   Table,
@@ -28,7 +28,7 @@ export function SchemaTable({ entities, basePath }: SchemaTableProps) {
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Kind</TableHead>
+          <TableHead>Class</TableHead>
           <TableHead>Table</TableHead>
           <TableHead className="text-center">Version</TableHead>
           <TableHead className="text-center">Fields</TableHead>
@@ -48,7 +48,7 @@ export function SchemaTable({ entities, basePath }: SchemaTableProps) {
             >
               <TableCell className="font-medium">{entity.name}</TableCell>
               <TableCell>
-                <KindBadge kind={entity.kind} />
+                <ClassBadge entityClass={entity.entityClass} />
               </TableCell>
               <TableCell className="text-muted-foreground font-mono text-xs">
                 {entity.tableSchema}.{entity.tableName}

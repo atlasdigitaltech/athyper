@@ -20,5 +20,8 @@ create schema if not exists notify;
 create schema if not exists evt;    -- Event Store backbone
 create schema if not exists fin;    -- Financial domain (all engines share)
 
+-- User-defined entities
+create schema if not exists custom;
+
 -- Extensions
 create extension if not exists pgcrypto;

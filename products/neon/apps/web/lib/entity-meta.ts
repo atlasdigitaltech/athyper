@@ -57,7 +57,6 @@ export interface EntityTableMeta {
   slug: string | null;
   tableSchema: string;
   tableName: string;
-  kind: string;
   entityClass: string;
   governanceLevel: string;
   mappingMode: string;
@@ -81,7 +80,6 @@ type EntityRow = {
   name: string;
   table_schema: string;
   table_name: string;
-  kind: string;
   governance_level: string;
   entity_short: string | null;
   feature_flags: Record<string, unknown> | null;
@@ -123,7 +121,6 @@ export async function resolveEntityMeta(
       slug: string | null;
       table_schema: string;
       table_name: string;
-      kind: string;
       entity_class: string;
       governance_level: string;
       mapping_mode: string;
@@ -135,7 +132,7 @@ export async function resolveEntityMeta(
       feature_flags: Record<string, unknown> | null;
       identity_config: Record<string, unknown> | null;
     }>`
-            SELECT name, entity_code, slug, table_schema, table_name, kind, entity_class, governance_level, mapping_mode, backing_type, ownership_model, mutability, entity_short, status, feature_flags, identity_config
+            SELECT name, entity_code, slug, table_schema, table_name, entity_class, governance_level, mapping_mode, backing_type, ownership_model, mutability, entity_short, status, feature_flags, identity_config
             FROM meta.entity
             WHERE name = ${name}
               AND tenant_id = ${tenantId}
@@ -152,7 +149,6 @@ export async function resolveEntityMeta(
         slug: r.slug ?? null,
         tableSchema: r.table_schema,
         tableName: r.table_name,
-        kind: r.kind,
         entityClass: r.entity_class,
         governanceLevel: r.governance_level,
         mappingMode: r.mapping_mode,
@@ -202,7 +198,6 @@ export async function resolveEntityMetaByTable(
     slug: string | null;
     table_schema: string;
     table_name: string;
-    kind: string;
     entity_class: string;
     governance_level: string;
     mapping_mode: string;
@@ -214,7 +209,7 @@ export async function resolveEntityMetaByTable(
     feature_flags: Record<string, unknown> | null;
     identity_config: Record<string, unknown> | null;
   }>`
-        SELECT name, entity_code, slug, table_schema, table_name, kind, entity_class, governance_level, mapping_mode, backing_type, ownership_model, mutability, entity_short, status, feature_flags, identity_config
+        SELECT name, entity_code, slug, table_schema, table_name, entity_class, governance_level, mapping_mode, backing_type, ownership_model, mutability, entity_short, status, feature_flags, identity_config
         FROM meta.entity
         WHERE table_schema = ${tableSchema}
           AND table_name = ${tableName}
@@ -233,7 +228,6 @@ export async function resolveEntityMetaByTable(
     slug: r.slug ?? null,
     tableSchema: r.table_schema,
     tableName: r.table_name,
-    kind: r.kind,
     entityClass: r.entity_class,
     governanceLevel: r.governance_level,
     mappingMode: r.mapping_mode,

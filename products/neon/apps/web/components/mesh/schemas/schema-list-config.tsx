@@ -19,11 +19,12 @@ import { SchemaCard } from "./SchemaCard";
 import type { ListPageConfig } from "@/components/mesh/list";
 import type { EntitySummary } from "@/lib/schema-manager/types";
 
-import { KindBadge } from "@/components/mesh/shared/KindBadge";
+import { ClassBadge } from "@/components/mesh/shared/ClassBadge";
 import { StatusDot } from "@/components/mesh/shared/StatusDot";
 
 export function createSchemaListConfig(
   basePath: string,
+  onNewEntity?: () => void,
 ): ListPageConfig<EntitySummary> {
   return {
     // Identity
@@ -42,15 +43,17 @@ export function createSchemaListConfig(
       item.tableName.toLowerCase().includes(query),
     quickFilters: [
       {
-        id: "kind",
-        label: "Kind",
+        id: "entityClass",
+        label: "Class",
         defaultValue: "all",
         options: [
-          { value: "all", label: "All Kinds" },
-          { value: "ref", label: "Reference" },
-          { value: "ent", label: "Enterprise" },
-          { value: "doc", label: "Document" },
-          { value: "int", label: "Integration" },
+          { value: "all", label: "All Classes" },
+          { value: "REFERENCE", label: "Reference" },
+          { value: "MASTER", label: "Master" },
+          { value: "DOCUMENT", label: "Document" },
+          { value: "CONTROL", label: "Control" },
+          { value: "LEDGER", label: "Ledger" },
+          { value: "LOG", label: "Log" },
         ],
       },
       {
@@ -66,7 +69,7 @@ export function createSchemaListConfig(
       },
     ],
     filterFn: (item, filters) => {
-      if (filters.kind && item.kind !== filters.kind) return false;
+      if (filters.entityClass && item.entityClass !== filters.entityClass) return false;
       if (filters.status) {
         const status = item.currentVersion?.status ?? "draft";
         if (status !== filters.status) return false;
@@ -83,10 +86,10 @@ export function createSchemaListConfig(
         accessor: (item) => <span className="font-medium">{item.name}</span>,
       },
       {
-        id: "kind",
-        header: "Kind",
-        sortKey: "kind",
-        accessor: (item) => <KindBadge kind={item.kind} />,
+        id: "class",
+        header: "Class",
+        sortKey: "entityClass",
+        accessor: (item) => <ClassBadge entityClass={item.entityClass} />,
       },
       {
         id: "table",
@@ -213,7 +216,7 @@ export function createSchemaListConfig(
         viewMode: "table-columns",
         columnVisibility: {
           name: true,
-          kind: true,
+          class: true,
           status: true,
           table: false,
           version: false,
@@ -228,7 +231,7 @@ export function createSchemaListConfig(
       label: "New Entity",
       icon: Plus,
       onClick: () => {
-        // TODO: open create entity dialog
+        onNewEntity?.();
       },
     },
   };

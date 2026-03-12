@@ -50,8 +50,8 @@ const identityConfigSchema = z
 
 export const createEntitySchema = z.object({
   name: snakeCaseName,
-  kind: z.enum(["ref", "ent", "doc", "fin", "cfg", "int"]),
-  tableSchema: z.string().min(1).max(63).default("public"),
+  entityClass: z.enum(["REFERENCE", "MASTER", "DOCUMENT", "CONTROL", "LEDGER", "LOG"]),
+  tableSchema: z.string().min(1).max(63).default("custom"),
   tableName: snakeCaseName,
   moduleId: z.string().nullish(),
   governanceLevel: z.enum(["full", "light", "audit_only"]).default("full"),
@@ -60,15 +60,37 @@ export const createEntitySchema = z.object({
 });
 
 export const updateEntitySchema = z.object({
+  // Identity & codes (entity table)
   name: snakeCaseName.optional(),
-  kind: z.enum(["ref", "ent", "doc", "fin", "cfg", "int"]).optional(),
+  entityShort: z.string().max(32).nullish(),
+  slug: z
+    .string()
+    .max(128)
+    .regex(/^[a-z][a-z0-9-]*$/, "Must be lowercase kebab-case starting with a letter")
+    .nullish(),
+  moduleId: z.string().nullish(),
   tableSchema: z.string().min(1).max(63).optional(),
   tableName: snakeCaseName.optional(),
-  moduleId: z.string().nullish(),
+  identityConfig: identityConfigSchema,
+
+  // Classification & behavior (entity table + runtime profile satellite)
+  entityClass: z.enum(["REFERENCE", "MASTER", "DOCUMENT", "CONTROL", "LEDGER", "LOG"]).nullish(),
+  status: z.enum(["draft", "active", "deprecated", "suspended"]).optional(),
   isActive: z.boolean().optional(),
   governanceLevel: z.enum(["full", "light", "audit_only"]).optional(),
+  mappingMode: z.enum(["exclusive", "shared"]).optional(),
+  ownershipModel: z.string().max(64).nullish(),
+  mutability: z.string().max(64).nullish(),
+  backingType: z.enum(["table", "view", "virtual"]).nullish(),
   engineTag: z.string().max(128).nullish(),
-  identityConfig: identityConfigSchema,
+
+  // Display & UX (entity_ui_profile satellite)
+  labelSingular: z.string().max(256).nullish(),
+  labelPlural: z.string().max(256).nullish(),
+  description: z.string().max(2048).nullish(),
+  iconKey: z.string().max(64).nullish(),
+  colorToken: z.string().max(64).nullish(),
+  displayConfig: z.record(z.unknown()).nullish(),
 });
 
 // ─── Field Schemas ────────────────────────────────────────────
@@ -111,20 +133,64 @@ const editabilityValueSchema = z.enum([
   "computed",
 ]);
 
-const visibilityRulesSchema = z.object({
+const visibilityDefaultsSchema = z.object({
   create: visibilityValueSchema.optional(),
   view: visibilityValueSchema.optional(),
   edit: visibilityValueSchema.optional(),
 });
 
-const visibilitySchema = visibilityRulesSchema.nullish();
+const behaviorConditionLeafSchema = z.object({
+  field: z.string(),
+  operator: z.string(),
+  value: z.unknown().optional(),
+});
 
-const editabilityRulesSchema = z.object({
+const behaviorConditionGroupSchema: z.ZodType<{
+  operator?: "and" | "or";
+  conditions: Array<unknown>;
+}> = z.lazy(() =>
+  z.object({
+    operator: z.enum(["and", "or"]).optional(),
+    conditions: z.array(z.union([behaviorConditionLeafSchema, behaviorConditionGroupSchema])),
+  }),
+);
+
+const visibilityRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  when: behaviorConditionGroupSchema,
+  then: visibilityValueSchema,
+  contexts: z.array(z.enum(["create", "view", "edit"])),
+  priority: z.number(),
+});
+
+const editabilityRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  when: behaviorConditionGroupSchema,
+  then: editabilityValueSchema,
+  contexts: z.array(z.enum(["create", "edit"])),
+  priority: z.number(),
+});
+
+const visibilitySchema = z.object({
+  defaults: visibilityDefaultsSchema.optional(),
+  rules: z.array(visibilityRuleSchema).optional(),
+}).nullish();
+
+const editabilityDefaultsSchema = z.object({
   create: editabilityValueSchema.optional(),
   edit: editabilityValueSchema.optional(),
 });
 
-const editabilitySchema = editabilityRulesSchema.nullish();
+const editabilitySchema = z.object({
+  defaults: editabilityDefaultsSchema.optional(),
+  rules: z.array(editabilityRuleSchema).optional(),
+}).nullish();
+
+/** Legacy flat format aliases for overlay schemas */
+const visibilityRulesSchema = visibilityDefaultsSchema;
+const editabilityRulesSchema = editabilityDefaultsSchema;
 
 const overlayModeSchema = z.enum(["replace", "extend"]);
 
@@ -331,45 +397,45 @@ function validateMutabilityFlags(
     isComputed?: boolean;
     isReadOnly?: boolean;
     writeOnce?: boolean;
-    editability?: { create?: string; edit?: string } | null;
+    editability?: { defaults?: { create?: string; edit?: string } } | null;
     computeMode?: string | null;
     computeExpr?: { type?: string; recomputeTrigger?: string; stalePolicy?: string } | null;
   },
   ctx: z.RefinementCtx,
 ) {
-  const editability = data.editability;
+  const defaults = data.editability?.defaults;
 
-  // is_computed + editability.{ctx}="editable" → contradiction
+  // is_computed + editability.defaults.{ctx}="editable" → contradiction
   if (data.isComputed) {
-    if (editability?.create === "editable") {
+    if (defaults?.create === "editable") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["editability", "create"],
+        path: ["editability", "defaults", "create"],
         message: "Cannot set editability to 'editable' when is_computed=true (computed fields are always read-only)",
       });
     }
-    if (editability?.edit === "editable") {
+    if (defaults?.edit === "editable") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["editability", "edit"],
+        path: ["editability", "defaults", "edit"],
         message: "Cannot set editability to 'editable' when is_computed=true (computed fields are always read-only)",
       });
     }
   }
 
-  // is_read_only + editability.{ctx}="editable" → contradiction
+  // is_read_only + editability.defaults.{ctx}="editable" → contradiction
   if (data.isReadOnly) {
-    if (editability?.create === "editable") {
+    if (defaults?.create === "editable") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["editability", "create"],
+        path: ["editability", "defaults", "create"],
         message: "Cannot set editability to 'editable' when is_read_only=true",
       });
     }
-    if (editability?.edit === "editable") {
+    if (defaults?.edit === "editable") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["editability", "edit"],
+        path: ["editability", "defaults", "edit"],
         message: "Cannot set editability to 'editable' when is_read_only=true",
       });
     }
@@ -497,7 +563,7 @@ const computeExprSchema = z
   .nullish();
 
 export const createFieldSchema = z.object({
-  name: nonReservedName,
+  name: z.string().min(1, "Display name is required").max(256),
   columnName: nonReservedName,
   dataType: z.enum(DATA_TYPES),
   uiType: z.enum(UI_TYPES).nullish(),
@@ -513,7 +579,7 @@ export const createFieldSchema = z.object({
   format: z.string().max(64).nullish(),
   unit: z.string().max(64).nullish(),
   cardinality: z.enum(["one", "many"]).default("one"),
-  origin: z.enum(["system", "business"]).default("business"),
+  origin: z.enum(["system", "standard", "business"]).default("business"),
   label: z.string().max(256).nullish(),
   description: z.string().max(2048).nullish(),
   constraints: z.record(z.unknown()).nullish(),
@@ -546,7 +612,7 @@ export const createFieldSchema = z.object({
 
 export const updateFieldSchema = z.object({
   fieldId: z.string().uuid(),
-  name: nonReservedName.optional(),
+  name: z.string().min(1).max(256).optional(),
   columnName: nonReservedName.optional(),
   dataType: z.enum(DATA_TYPES).optional(),
   uiType: z.enum(UI_TYPES).nullish(),
@@ -562,7 +628,7 @@ export const updateFieldSchema = z.object({
   format: z.string().max(64).nullish(),
   unit: z.string().max(64).nullish(),
   cardinality: z.enum(["one", "many"]).optional(),
-  origin: z.enum(["system", "business"]).optional(),
+  origin: z.enum(["system", "standard", "business"]).optional(),
   label: z.string().max(256).nullish(),
   description: z.string().max(2048).nullish(),
   constraints: z.record(z.unknown()).nullish(),
@@ -595,6 +661,11 @@ export const updateFieldSchema = z.object({
 
 export const deleteFieldSchema = z.object({
   fieldId: z.string().uuid(),
+});
+
+export const deprecateFieldSchema = z.object({
+  fieldId: z.string().uuid(),
+  isDeprecated: z.boolean(),
 });
 
 export const reorderFieldsSchema = z.object({
@@ -725,28 +796,9 @@ const CONDITION_OPERATORS = [
   "date_after",
 ] as const;
 
-const conditionLeafSchema: z.ZodType<{
-  field: string;
-  operator: string;
-  value?: unknown;
-}> = z.object({
-  field: z.string().min(1),
-  operator: z.enum(CONDITION_OPERATORS),
-  value: z.unknown(),
-});
-
-// Recursive condition group schema
-const conditionGroupSchema: z.ZodType<{
-  operator?: "and" | "or";
-  conditions: unknown[];
-}> = z.lazy(() =>
-  z.object({
-    operator: z.enum(["and", "or"]).optional(),
-    conditions: z
-      .array(z.union([conditionLeafSchema, conditionGroupSchema]))
-      .min(1),
-  }),
-);
+// Reuse the condition schemas defined earlier (behaviorCondition*Schema)
+const conditionLeafSchema = behaviorConditionLeafSchema;
+const conditionGroupSchema = behaviorConditionGroupSchema;
 
 const baseRuleSchema = z.object({
   id: z.string().min(1),

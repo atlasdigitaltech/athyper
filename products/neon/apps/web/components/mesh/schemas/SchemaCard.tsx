@@ -5,10 +5,10 @@ import Link from "next/link";
 
 import type { EntitySummary } from "@/lib/schema-manager/types";
 
-import { KindBadge } from "@/components/mesh/shared/KindBadge";
+import { ClassBadge } from "@/components/mesh/shared/ClassBadge";
 import { StatusDot } from "@/components/mesh/shared/StatusDot";
 import { Card, CardContent } from "@/components/ui/card";
-import { KIND_BORDER } from "@/lib/semantic-colors";
+import { CLASS_BORDER } from "@/lib/semantic-colors";
 import { cn } from "@/lib/utils";
 
 interface SchemaCardProps {
@@ -19,7 +19,7 @@ interface SchemaCardProps {
 export function SchemaCard({ entity, basePath }: SchemaCardProps) {
   const version = entity.currentVersion;
   const status = version?.status ?? "draft";
-  const borderColor = KIND_BORDER[entity.kind] ?? "";
+  const borderColor = CLASS_BORDER[entity.entityClass] ?? "";
 
   return (
     <Link href={`${basePath}/${entity.name}`}>
@@ -36,7 +36,7 @@ export function SchemaCard({ entity, basePath }: SchemaCardProps) {
                 {entity.name}
               </h3>
               <div className="mt-1 flex items-center gap-2">
-                <KindBadge kind={entity.kind} />
+                <ClassBadge entityClass={entity.entityClass} />
                 {version && (
                   <span className="text-xs text-muted-foreground">
                     v{version.versionNo}

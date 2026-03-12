@@ -19,10 +19,13 @@ import type { Edge, Node } from "@xyflow/react";
 
 // ─── Constants ──────────────────────────────────────────────────
 
-const KIND_COLORS: Record<string, string> = {
-  ref: "#6366f1", // indigo
-  ent: "#1d4ed8", // blue
-  doc: "#0d9488", // teal
+const CLASS_COLORS: Record<string, string> = {
+  REFERENCE: "#6366f1", // indigo
+  MASTER: "#1d4ed8", // blue
+  DOCUMENT: "#0d9488", // teal
+  CONTROL: "#f59e0b", // amber
+  LEDGER: "#8b5cf6", // violet
+  LOG: "#64748b", // slate
 };
 
 const EDGE_COLORS: Record<string, string> = {
@@ -41,7 +44,7 @@ const CARDINALITY_LABELS: Record<string, string> = {
 
 interface ERDEntity {
   name: string;
-  kind?: "ref" | "ent" | "doc";
+  entityClass?: string;
   fieldCount: number;
   fields: FieldDefinition[];
 }
@@ -56,15 +59,15 @@ interface SchemaERDViewerProps {
 
 function buildERDGraph(entity: ERDEntity, relations: RelationDefinition[]) {
   // Collect all unique entity names
-  const entityMap = new Map<string, { kind?: string; fieldCount: number }>();
+  const entityMap = new Map<string, { entityClass?: string; fieldCount: number }>();
   entityMap.set(entity.name, {
-    kind: entity.kind,
+    entityClass: entity.entityClass,
     fieldCount: entity.fieldCount,
   });
 
   for (const rel of relations) {
     if (!entityMap.has(rel.targetEntity)) {
-      entityMap.set(rel.targetEntity, { kind: undefined, fieldCount: 0 });
+      entityMap.set(rel.targetEntity, { entityClass: undefined, fieldCount: 0 });
     }
   }
 
@@ -77,7 +80,7 @@ function buildERDGraph(entity: ERDEntity, relations: RelationDefinition[]) {
   const nodes: Node[] = entities.map(([name, info], i) => {
     const isCurrent = name === entity.name;
     const bg = isCurrent
-      ? (KIND_COLORS[info.kind ?? "ent"] ?? "#1d4ed8")
+      ? (CLASS_COLORS[info.entityClass ?? "MASTER"] ?? "#1d4ed8")
       : "#1e293b";
     const borderColor = isCurrent ? "#60a5fa" : "#334155";
 
@@ -92,8 +95,8 @@ function buildERDGraph(entity: ERDEntity, relations: RelationDefinition[]) {
           : "")
       : "";
 
-    const kindBadge = info.kind ? ` [${info.kind.toUpperCase()}]` : "";
-    const label = `${name}${kindBadge}\n${isCurrent ? `${entity.fieldCount} fields` : ""}`;
+    const classBadge = info.entityClass ? ` [${info.entityClass}]` : "";
+    const label = `${name}${classBadge}\n${isCurrent ? `${entity.fieldCount} fields` : ""}`;
 
     return {
       id: name,
@@ -102,7 +105,7 @@ function buildERDGraph(entity: ERDEntity, relations: RelationDefinition[]) {
         y: Math.floor(i / COLS) * ROW_HEIGHT,
       },
       data: { label },
-      ariaLabel: `Entity: ${name}${isCurrent ? " (current)" : ""}${kindBadge}`,
+      ariaLabel: `Entity: ${name}${isCurrent ? " (current)" : ""}${classBadge}`,
       style: {
         background: bg,
         color: "#fff",

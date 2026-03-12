@@ -5,23 +5,27 @@
 // automatically adapt to the active theme preset and mode.
 //
 // Usage: import the relevant record and use the value as Tailwind classes.
-//   import { KIND_BADGE } from "@/lib/semantic-colors";
-//   <Badge className={KIND_BADGE[kind]} />
+//   import { CLASS_BADGE } from "@/lib/semantic-colors";
+//   <Badge className={CLASS_BADGE[entityClass]} />
 
-// ─── Entity Kind ─────────────────────────────────────────────
+// ─── Entity Class ────────────────────────────────────────────
 
-export const KIND_BORDER: Record<string, string> = {
-  ref: "border-l-categorical-1",
-  ent: "border-l-categorical-2",
-  doc: "border-l-categorical-3",
-  int: "border-l-categorical-4",
+export const CLASS_BORDER: Record<string, string> = {
+  REFERENCE: "border-l-categorical-1",
+  MASTER: "border-l-categorical-2",
+  DOCUMENT: "border-l-categorical-3",
+  CONTROL: "border-l-categorical-4",
+  LEDGER: "border-l-categorical-5",
+  LOG: "border-l-categorical-1",
 };
 
-export const KIND_BADGE: Record<string, string> = {
-  ref: "border-categorical-1 text-categorical-1",
-  ent: "border-categorical-2 text-categorical-2",
-  doc: "border-categorical-3 text-categorical-3",
-  int: "border-categorical-4 text-categorical-4",
+export const CLASS_BADGE: Record<string, string> = {
+  REFERENCE: "border-categorical-1 text-categorical-1",
+  MASTER: "border-categorical-2 text-categorical-2",
+  DOCUMENT: "border-categorical-3 text-categorical-3",
+  CONTROL: "border-categorical-4 text-categorical-4",
+  LEDGER: "border-categorical-5 text-categorical-5",
+  LOG: "border-categorical-1 text-categorical-1",
 };
 
 // ─── Policy Scope ────────────────────────────────────────────
@@ -64,6 +68,9 @@ export const STATUS_DOT: Record<string, string> = {
   draft: "bg-warning",
   published: "bg-success",
   archived: "bg-muted-foreground/40",
+  active: "bg-success",
+  deprecated: "bg-destructive",
+  suspended: "bg-muted-foreground/40",
 };
 
 // ─── Severity ────────────────────────────────────────────────
@@ -182,6 +189,15 @@ export const FIELD_ATTR_BADGE: Record<string, string> = {
   searchable: "text-categorical-1 border-categorical-1/40",
   filterable: "text-categorical-2 border-categorical-2/40",
   immutable: "text-muted-foreground border-muted-foreground/40",
+  deprecated: "text-warning border-warning/40",
+};
+
+// ─── Field Origin Badge ────────────────────────────────────
+
+export const FIELD_ORIGIN_BADGE: Record<string, string> = {
+  system: "text-muted-foreground border-muted-foreground/40 bg-muted/50",
+  standard: "text-categorical-1 border-categorical-1/40",
+  business: "text-categorical-3 border-categorical-3/40",
 };
 
 // ─── Version Status Banner ──────────────────────────────────
@@ -225,3 +241,25 @@ export const EFFECT_BADGE: Record<string, string> = {
   allow: "border-success text-success",
   deny: "border-destructive text-destructive",
 };
+
+// ─── Visibility State Badge (Controls page) ────────────────
+
+export const VISIBILITY_STATE_BADGE: Record<string, string> = {
+  visible: "bg-success/10 text-success border-success/20",
+  hidden: "bg-destructive/10 text-destructive border-destructive/20",
+  internal: "bg-warning/10 text-warning border-warning/20",
+};
+
+// ─── Editability State Badge (Controls page) ───────────────
+
+export const EDITABILITY_STATE_BADGE: Record<string, string> = {
+  editable: "bg-success/10 text-success border-success/20",
+  read_only: "bg-warning/10 text-warning border-warning/20",
+  system_managed: "bg-info/10 text-info border-info/20",
+  computed: "bg-categorical-4/10 text-categorical-4 border-categorical-4/20",
+};
+
+// ─── Field Constraint / Validation Badge ────────────────────
+
+export const CONSTRAINT_BADGE = "bg-info/5 text-info border-info/20";
+export const VALIDATION_BADGE = "bg-categorical-4/5 text-categorical-4 border-categorical-4/20";

@@ -118,15 +118,15 @@ function SortableColumnRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm"
+      className="group flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
     >
       <button
         type="button"
-        className="cursor-grab text-muted-foreground hover:text-foreground"
+        className="cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="size-3.5" />
+        <GripVertical className="size-4" />
       </button>
       <Checkbox
         checked={column.visible}
@@ -134,12 +134,12 @@ function SortableColumnRow({
         className="size-3.5"
       />
       {fieldDef && <FieldTypeIcon dataType={fieldDef.dataType} />}
-      <span className="flex-1 truncate">{column.fieldName}</span>
+      <span className="flex-1 truncate text-sm font-medium">{column.fieldName}</span>
       <Select
         value={column.width}
         onValueChange={(v) => onWidthChange(v as ColumnWidth)}
       >
-        <SelectTrigger className="h-6 w-20 text-[10px]">
+        <SelectTrigger className="h-6 w-24 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -560,7 +560,7 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
 
   if (loading) {
     return (
-      <div className="space-y-4 p-4">
+      <div className="space-y-3 p-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -600,11 +600,11 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
   // ─── Render ──────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-3 p-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">View Configuration</h2>
+          <h2 className="text-sm font-semibold">View Configuration</h2>
           <Badge variant="outline" className="text-xs">
             {activeViews.length} preset{activeViews.length !== 1 ? "s" : ""}
           </Badge>
@@ -630,7 +630,7 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
         </div>
       </div>
 
-      <Separator />
+      <Separator className="my-2" />
 
       {/* Preset Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -662,15 +662,15 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
           {/* Sort Configuration */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <ArrowUpDown className="size-3.5" />
                 Default Sort
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
                     Sort By
                   </Label>
                   <Select
@@ -679,7 +679,7 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
                       setSortField(v === "__none__" ? "" : v)
                     }
                   >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
+                    <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="None" />
                     </SelectTrigger>
                     <SelectContent>
@@ -692,15 +692,15 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-32">
-                  <Label className="text-xs text-muted-foreground">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
                     Direction
                   </Label>
                   <Select
                     value={activePreset.defaultSortDirection ?? "asc"}
                     onValueChange={setSortDirection}
                   >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
+                    <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -717,11 +717,11 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Columns3 className="size-3.5" />
                   Columns
                 </CardTitle>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-xs">
                   {resolvedColumns.length} total, {visibleColumns.length}{" "}
                   visible
                 </Badge>
@@ -737,7 +737,7 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
                   items={resolvedColumns.map((c) => c.fieldName)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {resolvedColumns.map((col) => (
                       <SortableColumnRow
                         key={col.fieldName}
@@ -767,22 +767,22 @@ export function ViewConfigurator({ entityName }: ViewConfiguratorProps) {
           {availableFields.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Available Fields</CardTitle>
+                <CardTitle className="text-sm font-medium">Available Fields</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {availableFields.map((f) => (
                     <button
                       key={f}
                       type="button"
                       onClick={() => addColumn(f)}
-                      className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs transition-colors hover:border-primary hover:text-primary"
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary hover:text-primary"
                     >
                       <FieldTypeIcon
                         dataType={fieldMap.get(f)?.dataType ?? "string"}
                       />
-                      <span className="truncate max-w-[140px]">{f}</span>
-                      <Plus className="size-3" />
+                      <span className="truncate max-w-[160px]">{f}</span>
+                      <Plus className="size-3.5" />
                     </button>
                   ))}
                 </div>

@@ -114,7 +114,7 @@ BEGIN
                     v_origin := 'system';
                     v_read_only := true;
                 ELSE
-                    v_origin := 'business';
+                    v_origin := 'standard';
                     v_read_only := false;
                 END IF;
 

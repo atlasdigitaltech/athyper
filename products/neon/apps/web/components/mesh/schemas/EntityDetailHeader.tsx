@@ -16,7 +16,7 @@ import { ActivityDrawer } from "./ActivityDrawer";
 import type { EntitySummary } from "@/lib/schema-manager/types";
 
 import { BackLink } from "@/components/mesh/shared/BackLink";
-import { KindBadge } from "@/components/mesh/shared/KindBadge";
+import { ClassBadge } from "@/components/mesh/shared/ClassBadge";
 import { VersionBadge } from "@/components/mesh/shared/VersionBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,17 +38,6 @@ const BANNER_MESSAGES: Record<string, string> = {
     "Published — this version is read-only. Create a new version to make changes.",
   archived: "Archived — this version is deprecated and read-only",
 };
-
-function VersionStatusBanner({ status }: { status: string }) {
-  const style = STATUS_BANNER[status];
-  const message = BANNER_MESSAGES[status];
-  if (!style || !message) return null;
-  return (
-    <div className={cn("rounded-md border px-3 py-1.5 text-xs", style)}>
-      {message}
-    </div>
-  );
-}
 
 // ─── Header ───────────────────────────────────────────────────
 
@@ -85,9 +74,16 @@ export function EntityDetailHeader({
           <h2 className="text-xl font-semibold tracking-tight truncate">
             {entity.name}
           </h2>
-          <KindBadge kind={entity.kind} />
+          <ClassBadge entityClass={entity.entityClass} />
           {version && (
-            <VersionBadge version={version.versionNo} status={version.status} />
+            <>
+              <VersionBadge version={version.versionNo} status={version.status} />
+              {BANNER_MESSAGES[version.status] && (
+                <span className={cn("text-xs rounded-md border px-2 py-0.5 shrink-0", STATUS_BANNER[version.status])}>
+                  {BANNER_MESSAGES[version.status]}
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -137,8 +133,6 @@ export function EntityDetailHeader({
           </DropdownMenu>
         </div>
       </div>
-
-      {version && <VersionStatusBanner status={version.status} />}
 
       <ActivityDrawer
         open={activityOpen}

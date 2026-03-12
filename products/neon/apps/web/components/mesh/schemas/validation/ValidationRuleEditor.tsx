@@ -30,6 +30,8 @@ import { Separator } from "@/components/ui/separator";
 
 interface ValidationRuleEditorProps {
   rules: ValidationRule[];
+  /** Auto-compiled rules from field-level constraints (read-only, provenance="field") */
+  fieldDerivedRules?: ValidationRule[];
   fields?: string[];
   loading?: boolean;
   onSave: (rules: ValidationRule[]) => Promise<unknown>;
@@ -72,12 +74,14 @@ const SEVERITY_CONFIG = {
 
 export function ValidationRuleEditor({
   rules,
+  fieldDerivedRules = [],
   fields,
   loading,
   onSave,
   onTest,
 }: ValidationRuleEditorProps) {
   const [localRules, setLocalRules] = useState<ValidationRule[]>(rules);
+  const [showFieldRules, setShowFieldRules] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<ValidationRule | null>(null);
   const [saving, setSaving] = useState(false);
@@ -144,7 +148,7 @@ export function ValidationRuleEditor({
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold">Validation Rules</h2>
           <Badge variant="secondary" className="text-xs">
-            {localRules.length}
+            {localRules.length + fieldDerivedRules.length}
           </Badge>
           {isDirty && (
             <Badge
@@ -187,8 +191,66 @@ export function ValidationRuleEditor({
         </>
       )}
 
-      {/* Rules list */}
-      {localRules.length === 0 ? (
+      {/* Field-derived rules (auto-compiled from field constraints) */}
+      {fieldDerivedRules.length > 0 && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setShowFieldRules(!showFieldRules)}
+          >
+            <span>{showFieldRules ? "▾" : "▸"}</span>
+            Field Constraints
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {fieldDerivedRules.length}
+            </Badge>
+            <span className="font-normal text-muted-foreground">
+              — auto-derived from field definitions
+            </span>
+          </button>
+
+          {showFieldRules && (
+            <div className="space-y-1.5 pl-1">
+              {fieldDerivedRules.map((rule) => {
+                const severityConfig =
+                  SEVERITY_CONFIG[rule.severity] ?? SEVERITY_CONFIG.error;
+                const SeverityIcon = severityConfig.icon;
+
+                return (
+                  <div
+                    key={rule.id}
+                    className="flex items-center gap-3 rounded-lg border border-dashed p-2.5 bg-muted/20"
+                  >
+                    <SeverityIcon
+                      className={`h-3.5 w-3.5 shrink-0 ${severityConfig.className}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium truncate">
+                          {rule.name}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {KIND_LABELS[rule.kind] ?? rule.kind}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400 border-0">
+                          Field
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-mono">
+                        {rule.fieldPath}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <Separator />
+        </div>
+      )}
+
+      {/* Custom rules list */}
+      {localRules.length === 0 && fieldDerivedRules.length === 0 ? (
         <EmptyState
           icon={ShieldCheck}
           title="No Validation Rules"
@@ -200,6 +262,16 @@ export function ValidationRuleEditor({
             </Button>
           }
         />
+      ) : localRules.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">
+            No custom rules. Add rules for cross-field validation, conditional logic, and more.
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={handleAdd}>
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add Rule
+          </Button>
+        </div>
       ) : (
         <div className="space-y-2">
           {localRules.map((rule) => {
@@ -223,6 +295,9 @@ export function ValidationRuleEditor({
                     </span>
                     <Badge variant="outline" className="text-[10px] px-1.5">
                       {KIND_LABELS[rule.kind] ?? rule.kind}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-400 border-0">
+                      Custom
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">

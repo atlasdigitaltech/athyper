@@ -9,7 +9,7 @@ export default function EntityOverviewPage() {
 
   // Redirect to the Fields tab as the default view
   useEffect(() => {
-    router.replace(`/wb/${wb}/mesh/meta-studio/${entity}/fields`);
+    router.replace(`/wb/${wb}/mesh/meta-studio/${entity}/overview`);
   }, [wb, entity, router]);
 
   return null;

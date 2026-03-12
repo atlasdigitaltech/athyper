@@ -17,47 +17,80 @@
 -- 1. Visibility JSONB structural validation
 -- ============================================================================
 
--- Visibility context keys must be known values when present
+-- Visibility structural validation
+-- Accepts two formats:
+--   Flat (legacy):    { create?: "visible"|"hidden"|"internal", view?: ..., edit?: ... }
+--   Structured (v2):  { defaults?: { create?, view?, edit? }, rules?: [...] }
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_visibility_values;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_visibility_values
     CHECK (
         visibility IS NULL
         OR (
-            (NOT visibility ? 'create' OR (visibility ->> 'create') IN ('visible', 'hidden', 'internal'))
+            -- Structured format: validate defaults sub-object if present
+            visibility ? 'defaults'
+            AND (
+                visibility -> 'defaults' IS NULL
+                OR (
+                    (NOT (visibility -> 'defaults') ? 'create' OR (visibility -> 'defaults' ->> 'create') IN ('visible', 'hidden', 'internal'))
+                    AND (NOT (visibility -> 'defaults') ? 'view' OR (visibility -> 'defaults' ->> 'view') IN ('visible', 'hidden', 'internal'))
+                    AND (NOT (visibility -> 'defaults') ? 'edit' OR (visibility -> 'defaults' ->> 'edit') IN ('visible', 'hidden', 'internal'))
+                )
+            )
+        )
+        OR (
+            -- Flat format (legacy): validate top-level keys
+            NOT visibility ? 'defaults'
+            AND (NOT visibility ? 'create' OR (visibility ->> 'create') IN ('visible', 'hidden', 'internal'))
             AND (NOT visibility ? 'view' OR (visibility ->> 'view') IN ('visible', 'hidden', 'internal'))
             AND (NOT visibility ? 'edit' OR (visibility ->> 'edit') IN ('visible', 'hidden', 'internal'))
         )
     );
 
--- Visibility must only contain known context keys
+-- Visibility must only contain known top-level keys
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_visibility_keys;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_visibility_keys
     CHECK (
         visibility IS NULL
-        OR NOT (visibility ?| array['mode', 'rules'])  -- prevent overlay shape in base column
+        OR NOT (visibility ?| array['mode'])  -- prevent overlay shape in base column (rules now allowed)
     );
 
 -- ============================================================================
 -- 2. Editability JSONB structural validation
 -- ============================================================================
 
--- Editability context keys must be known values when present
+-- Editability structural validation
+-- Accepts two formats:
+--   Flat (legacy):    { create?: "editable"|"read_only"|"system_managed"|"computed", edit?: ... }
+--   Structured (v2):  { defaults?: { create?, edit? }, rules?: [...] }
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_editability_values;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_editability_values
     CHECK (
         editability IS NULL
         OR (
-            (NOT editability ? 'create' OR (editability ->> 'create') IN ('editable', 'read_only', 'system_managed', 'computed'))
+            -- Structured format: validate defaults sub-object if present
+            editability ? 'defaults'
+            AND (
+                editability -> 'defaults' IS NULL
+                OR (
+                    (NOT (editability -> 'defaults') ? 'create' OR (editability -> 'defaults' ->> 'create') IN ('editable', 'read_only', 'system_managed', 'computed'))
+                    AND (NOT (editability -> 'defaults') ? 'edit' OR (editability -> 'defaults' ->> 'edit') IN ('editable', 'read_only', 'system_managed', 'computed'))
+                )
+            )
+        )
+        OR (
+            -- Flat format (legacy): validate top-level keys
+            NOT editability ? 'defaults'
+            AND (NOT editability ? 'create' OR (editability ->> 'create') IN ('editable', 'read_only', 'system_managed', 'computed'))
             AND (NOT editability ? 'edit' OR (editability ->> 'edit') IN ('editable', 'read_only', 'system_managed', 'computed'))
         )
     );
 
--- Editability must only contain known context keys
+-- Editability must only contain known top-level keys
 ALTER TABLE meta.field DROP CONSTRAINT IF EXISTS chk_field_editability_keys;
 ALTER TABLE meta.field ADD CONSTRAINT chk_field_editability_keys
     CHECK (
         editability IS NULL
-        OR NOT (editability ?| array['mode', 'rules'])  -- prevent overlay shape in base column
+        OR NOT (editability ?| array['mode'])  -- prevent overlay shape in base column (rules now allowed)
     );
 
 -- ============================================================================

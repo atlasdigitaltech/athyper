@@ -15,6 +15,7 @@ export interface UseEntityFieldsResult {
   loading: boolean;
   error: string | null;
   etag: string | null;
+  hasPublishedVersion: boolean;
   refresh: () => void;
 }
 
@@ -23,6 +24,7 @@ export function useEntityFields(entityName: string): UseEntityFieldsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [etag, setEtag] = useState<string | null>(null);
+  const [hasPublishedVersion, setHasPublishedVersion] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchFields = useCallback(async () => {
@@ -53,8 +55,9 @@ export function useEntityFields(entityName: string): UseEntityFieldsResult {
       const serverEtag = res.headers.get("ETag");
       if (serverEtag) setEtag(serverEtag);
 
-      const body = (await res.json()) as { data: FieldDefinition[] };
+      const body = (await res.json()) as { data: FieldDefinition[]; hasPublishedVersion?: boolean };
       setFields(body.data);
+      setHasPublishedVersion(body.hasPublishedVersion ?? false);
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Failed to load fields");
@@ -70,5 +73,5 @@ export function useEntityFields(entityName: string): UseEntityFieldsResult {
     return () => abortRef.current?.abort();
   }, [fetchFields]);
 
-  return { fields, loading, error, etag, refresh: fetchFields };
+  return { fields, loading, error, etag, hasPublishedVersion, refresh: fetchFields };
 }

@@ -385,7 +385,7 @@ export async function GET(
                 entityName: entity,
                 entityClass:
                   descriptorOverride.entityClass ??
-                  deriveEntityClass(meta.kind),
+                  meta.entityClass,
                 featureFlags:
                   descriptorOverride.featureFlags ?? buildFeatureFlags(meta),
                 compiledModelHash: `override-${entity}-v1`,
@@ -419,7 +419,7 @@ export async function GET(
 
               const descriptor: EntityPageStaticDescriptor = {
                 entityName: entity,
-                entityClass: deriveEntityClass(meta.kind),
+                entityClass: meta.entityClass,
                 featureFlags: buildFeatureFlags(meta),
                 compiledModelHash: `auto-${entity}-v1`,
                 tabs: buildTabs(meta),
@@ -467,22 +467,11 @@ export async function GET(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function deriveEntityClass(kind: string): string {
-  switch (kind) {
-    case "doc":
-      return "document";
-    case "ref":
-      return "reference";
-    default:
-      return "master";
-  }
-}
-
 function buildFeatureFlags(meta: {
-  kind: string;
+  entityClass: string;
   featureFlags: Record<string, unknown> | null;
 }): Record<string, boolean> {
-  const isDocument = meta.kind === "doc";
+  const isDocument = meta.entityClass === "DOCUMENT";
   return {
     lifecycle: isDocument,
     approvals: isDocument,
@@ -491,11 +480,11 @@ function buildFeatureFlags(meta: {
 }
 
 function buildTabs(meta: {
-  kind: string;
+  entityClass: string;
   tableSchema: string;
   featureFlags: Record<string, unknown> | null;
 }): TabDescriptor[] {
-  const isDocument = meta.kind === "doc";
+  const isDocument = meta.entityClass === "DOCUMENT";
   const isFinance = meta.tableSchema === "fin";
   const tabs: TabDescriptor[] = [
     { code: "details", label: "Details", enabled: true },

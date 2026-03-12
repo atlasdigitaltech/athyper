@@ -34,6 +34,29 @@ export async function getDb(): Promise<Kysely<DB>> {
   return _db;
 }
 
+// ─── Module Queries ──────────────────────────────────────────
+
+/**
+ * List all modules from core.module.
+ * Returns code + name, sorted by code.
+ */
+export async function listModulesDirect(): Promise<{
+  success: boolean;
+  data: { code: string; name: string }[];
+}> {
+  const db = await getDb();
+  const rows = await db
+    .selectFrom("core.module" as any)
+    .select(["code", "name"])
+    .orderBy("code", "asc")
+    .execute();
+
+  return {
+    success: true,
+    data: rows.map((r: any) => ({ code: r.code as string, name: r.name as string })),
+  };
+}
+
 // ─── Entity Queries ──────────────────────────────────────────
 
 /**
@@ -180,15 +203,25 @@ export async function listEntitiesDirect(tenantId: string): Promise<{
     return {
       id: e.id,
       name: e.name,
-      kind: e.kind ?? "ent",
+      entityClass: ea.entity_class ?? "MASTER",
       moduleId: e.module_id ?? null,
       tableSchema: e.table_schema ?? "ent",
       tableName: e.table_name ?? e.name,
       isActive: e.is_active ?? true,
+      // Identity & codes
+      entityShort: ea.entity_short ?? null,
+      entityCode: ea.entity_code ?? null,
+      slug: ea.slug ?? null,
+      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
+      // Classification
+      status: ea.status ?? "active",
+      mappingMode: ea.mapping_mode ?? "exclusive",
+      backingType: ea.backing_type ?? "table",
       // Runtime profile (from entity_runtime_profile satellite)
       governanceLevel: rp?.governance_level ?? ea.governance_level ?? "full",
       engineTag: rp?.engine_tag ?? ea.engine_tag ?? null,
-      entityClass: ea.entity_class ?? "MASTER",
+      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "tenant",
+      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
       currentVersion: latestVersion
         ? {
             id: latestVersion.id,
@@ -212,14 +245,22 @@ export async function listEntitiesDirect(tenantId: string): Promise<{
       iconKey: up?.icon_key ?? null,
       colorToken: up?.color_token ?? null,
       displayConfig: up?.display_config ?? null,
-      // Runtime profile (from entity_runtime_profile satellite)
+      // Configuration
       featureFlags: rp?.feature_flags ?? ea.feature_flags ?? null,
-      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
       dataPolicy: rp?.data_policy ?? ea.data_policy ?? null,
-      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "system",
-      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
-      // Numbering (from entity_numbering_policy satellite)
       namingPolicy: np?.naming_policy ?? null,
+      provenance: ps?.provenance ?? null,
+      // Polymorphism
+      discriminatorColumn: ea.discriminator_column ?? null,
+      discriminatorValue: ea.discriminator_value ?? null,
+      // Status tracking
+      statusChangedAt: ea.status_changed_at ?? null,
+      statusChangedBy: ea.status_changed_by ?? null,
+      statusReason: ea.status_reason ?? null,
+      // Audit timestamps
+      createdAt: e.created_at,
+      createdBy: ea.created_by ?? null,
+      updatedBy: ea.updated_by ?? null,
       // Operational (from entity_publish_state satellite)
       publishedVersionId: ps?.published_version_id ?? null,
       lastCompiledAt: ps?.last_compiled_at ?? null,
@@ -326,15 +367,25 @@ export async function getEntityDirect(entityName: string, tenantId?: string): Pr
     data: {
       id: entity.id,
       name: entity.name,
-      kind: entity.kind ?? "ent",
+      entityClass: ea.entity_class ?? "MASTER",
       moduleId: entity.module_id ?? null,
       tableSchema: entity.table_schema ?? "ent",
       tableName: entity.table_name ?? entity.name,
       isActive: entity.is_active ?? true,
+      // Identity & codes
+      entityShort: ea.entity_short ?? null,
+      entityCode: ea.entity_code ?? null,
+      slug: ea.slug ?? null,
+      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
+      // Classification
+      status: ea.status ?? "active",
+      mappingMode: ea.mapping_mode ?? "exclusive",
+      backingType: ea.backing_type ?? "table",
       // Runtime profile (from entity_runtime_profile satellite)
       governanceLevel: rp?.governance_level ?? ea.governance_level ?? "full",
       engineTag: rp?.engine_tag ?? ea.engine_tag ?? null,
-      entityClass: ea.entity_class ?? "MASTER",
+      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "tenant",
+      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
       currentVersion: latestVersion
         ? {
             id: latestVersion.id,
@@ -356,14 +407,22 @@ export async function getEntityDirect(entityName: string, tenantId?: string): Pr
       iconKey: up?.icon_key ?? null,
       colorToken: up?.color_token ?? null,
       displayConfig: up?.display_config ?? null,
-      // Runtime profile (from entity_runtime_profile satellite)
+      // Configuration
       featureFlags: rp?.feature_flags ?? ea.feature_flags ?? null,
-      identityConfig: rp?.identity_config ?? ea.identity_config ?? null,
       dataPolicy: rp?.data_policy ?? ea.data_policy ?? null,
-      ownershipModel: rp?.ownership_model ?? ea.ownership_model ?? "system",
-      mutability: rp?.mutability ?? ea.mutability ?? "controlled",
-      // Numbering (from entity_numbering_policy satellite)
       namingPolicy: np?.naming_policy ?? null,
+      provenance: ps?.provenance ?? null,
+      // Polymorphism
+      discriminatorColumn: ea.discriminator_column ?? null,
+      discriminatorValue: ea.discriminator_value ?? null,
+      // Status tracking
+      statusChangedAt: ea.status_changed_at ?? null,
+      statusChangedBy: ea.status_changed_by ?? null,
+      statusReason: ea.status_reason ?? null,
+      // Audit timestamps
+      createdAt: entity.created_at,
+      createdBy: ea.created_by ?? null,
+      updatedBy: ea.updated_by ?? null,
       // Operational (from entity_publish_state satellite)
       publishedVersionId: ps?.published_version_id ?? null,
       lastCompiledAt: ps?.last_compiled_at ?? null,
@@ -378,7 +437,7 @@ export async function getEntityDirect(entityName: string, tenantId?: string): Pr
  */
 export async function createEntityDirect(data: {
   name: string;
-  kind?: string;
+  entityClass?: string;
   moduleId?: string;
   tableSchema?: string;
   tableName?: string;
@@ -388,41 +447,58 @@ export async function createEntityDirect(data: {
 }, tenantId: string): Promise<{ success: boolean; data: unknown }> {
   const db = await getDb();
 
+  const entityName = data.name;
+  const entityCode = entityName; // snake_case code derived from name
+  const slug = entityName.replace(/_/g, "-"); // kebab-case slug
+
   const entity = await db
     .insertInto("meta.entity")
     .values({
       id: crypto.randomUUID(),
       tenant_id: tenantId,
       module_id: data.moduleId ?? "default",
-      name: data.name,
-      kind: data.kind ?? "ent",
+      name: entityName,
+      entity_class: data.entityClass ?? "MASTER",
       table_schema: data.tableSchema ?? "ent",
-      table_name: data.tableName ?? data.name,
+      table_name: data.tableName ?? entityName,
       governance_level: data.governanceLevel ?? "full",
       engine_tag: data.engineTag ?? null,
       identity_config: data.identityConfig ? JSON.stringify(data.identityConfig) : null,
-      is_active: true,
+      entity_code: entityCode,
+      slug,
+      status: "active",
       created_by: "admin",
     } as any)
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  const ea = entity as any;
   return {
     success: true,
     data: {
       id: entity.id,
       name: entity.name,
-      kind: entity.kind ?? "ent",
+      entityClass: ea.entity_class ?? "MASTER",
       moduleId: entity.module_id ?? null,
       tableSchema: entity.table_schema ?? "ent",
       tableName: entity.table_name ?? entity.name,
-      isActive: entity.is_active ?? true,
-      governanceLevel: (entity as any).governance_level ?? "full",
-      engineTag: (entity as any).engine_tag ?? null,
+      isActive: ea.is_active ?? true,
+      entityShort: ea.entity_short ?? null,
+      entityCode: ea.entity_code ?? null,
+      slug: ea.slug ?? null,
+      status: ea.status ?? "active",
+      mappingMode: ea.mapping_mode ?? "exclusive",
+      governanceLevel: ea.governance_level ?? "full",
+      engineTag: ea.engine_tag ?? null,
+      ownershipModel: ea.ownership_model ?? "tenant",
+      mutability: ea.mutability ?? "controlled",
+      backingType: ea.backing_type ?? "table",
       currentVersion: null,
       fieldCount: 0,
       relationCount: 0,
       updatedAt: entity.updated_at ?? entity.created_at,
+      createdAt: entity.created_at,
+      createdBy: ea.created_by ?? null,
     },
   };
 }
@@ -432,7 +508,7 @@ export async function createEntityDirect(data: {
  *
  * Enforces the schema evolution guard: columns that form the entity's
  * stable identity and physical binding (entity_code, table_schema,
- * table_name, kind, entity_class, mapping_mode, backing_type) are
+ * table_name, entity_class, mapping_mode, backing_type) are
  * immutable once any version has been published.
  */
 export async function updateEntityDirect(
@@ -448,12 +524,18 @@ export async function updateEntityDirect(
 
   const dbUpdates: Record<string, unknown> = { updated_at: new Date() };
   if (updates.name !== undefined) dbUpdates.name = updates.name;
-  if (updates.kind !== undefined) dbUpdates.kind = updates.kind;
   if (updates.tableSchema !== undefined)
     dbUpdates.table_schema = updates.tableSchema;
   if (updates.tableName !== undefined) dbUpdates.table_name = updates.tableName;
   if (updates.moduleId !== undefined) dbUpdates.module_id = updates.moduleId;
   if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+  if (updates.entityShort !== undefined) dbUpdates.entity_short = updates.entityShort;
+  if (updates.entityCode !== undefined) dbUpdates.entity_code = updates.entityCode;
+  if (updates.slug !== undefined) dbUpdates.slug = updates.slug;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.entityClass !== undefined) dbUpdates.entity_class = updates.entityClass;
+  if (updates.mappingMode !== undefined) dbUpdates.mapping_mode = updates.mappingMode;
+  if (updates.backingType !== undefined) dbUpdates.backing_type = updates.backingType;
 
   // ── Satellite updates ──
   // Runtime profile → entity_runtime_profile
@@ -692,14 +774,262 @@ function mapRelation(row: any): Record<string, unknown> {
 export async function listFieldsDirect(entityName: string, tenantId: string) {
   const db = await getDb();
   const resolved = await resolveLatestVersionId(entityName, tenantId);
-  if (!resolved) return { success: false, data: [] };
-  const rows = await db
+  if (!resolved) return { success: false, data: [], hasPublishedVersion: false };
+
+  const [rows, publishedVersion] = await Promise.all([
+    db
+      .selectFrom("meta.field")
+      .selectAll()
+      .where("entity_version_id", "=", resolved.versionId)
+      .orderBy("sort_order", "asc")
+      .execute(),
+    db
+      .selectFrom("meta.entity_version")
+      .select(["id"])
+      .where("entity_id", "=", resolved.entityId)
+      .where("status", "=", "published")
+      .limit(1)
+      .executeTakeFirst(),
+  ]);
+
+  return {
+    success: true,
+    data: rows.map(mapField),
+    hasPublishedVersion: !!publishedVersion,
+  };
+}
+
+/**
+ * Ensures a draft version exists for the entity. Creates one if missing.
+ * Returns the resolved { entityId, versionId }.
+ */
+async function ensureDraftVersion(
+  entityName: string,
+  tenantId: string,
+): Promise<{ entityId: string; versionId: string }> {
+  const db = await getDb();
+  const entity = await db
+    .selectFrom("meta.entity")
+    .select(["id"])
+    .where("name", "=", entityName)
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!entity) throw new Error(`Entity '${entityName}' not found`);
+
+  const existing = await db
+    .selectFrom("meta.entity_version")
+    .select(["id"])
+    .where("entity_id", "=", entity.id as string)
+    .orderBy("version_no", "desc")
+    .limit(1)
+    .executeTakeFirst();
+  if (existing) return { entityId: entity.id as string, versionId: existing.id as string };
+
+  // Auto-create first draft version
+  const version = await db
+    .insertInto("meta.entity_version")
+    .values({
+      id: crypto.randomUUID(),
+      tenant_id: tenantId,
+      entity_id: entity.id as string,
+      version_no: 1,
+      status: "draft",
+      created_by: "admin",
+    } as any)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return { entityId: entity.id as string, versionId: version.id as string };
+}
+
+/**
+ * Create a new field in meta.field for the entity's draft version.
+ */
+export async function createFieldDirect(
+  entityName: string,
+  data: Record<string, unknown>,
+  tenantId: string,
+): Promise<{ success: boolean; data: unknown }> {
+  const db = await getDb();
+  const { versionId } = await ensureDraftVersion(entityName, tenantId);
+
+  // Determine next sort order
+  const lastField = await db
     .selectFrom("meta.field")
-    .selectAll()
-    .where("entity_version_id", "=", resolved.versionId)
-    .orderBy("sort_order", "asc")
-    .execute();
-  return { success: true, data: rows.map(mapField) };
+    .select(["sort_order"])
+    .where("entity_version_id", "=", versionId)
+    .orderBy("sort_order", "desc")
+    .limit(1)
+    .executeTakeFirst();
+  const nextOrder = ((lastField as any)?.sort_order ?? -1) + 1;
+
+  const row = await db
+    .insertInto("meta.field")
+    .values({
+      id: crypto.randomUUID(),
+      tenant_id: tenantId,
+      entity_version_id: versionId,
+      name: data.name as string,
+      column_name: (data.columnName as string) || (data.name as string),
+      data_type: data.dataType as string,
+      ui_type: (data.uiType as string) ?? null,
+      is_required: (data.isRequired as boolean) ?? false,
+      is_unique: (data.isUnique as boolean) ?? false,
+      is_searchable: (data.isSearchable as boolean) ?? false,
+      is_filterable: (data.isFilterable as boolean) ?? false,
+      default_value: data.defaultValue ? JSON.stringify(data.defaultValue) : null,
+      validation: data.validationJson ? JSON.stringify(
+        typeof data.validationJson === "string" ? JSON.parse(data.validationJson as string) : data.validationJson,
+      ) : null,
+      format: (data.format as string) ?? null,
+      unit: (data.unit as string) || null,
+      cardinality: (data.cardinality as string) ?? "one",
+      ui_hint: data.uiHint ? JSON.stringify(data.uiHint) : null,
+      is_read_only: (data.isReadOnly as boolean) ?? false,
+      visibility: data.visibility ? JSON.stringify(data.visibility) : null,
+      editability: data.editability ? JSON.stringify(data.editability) : null,
+      sort_order: nextOrder,
+      created_by: "admin",
+    } as any)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return { success: true, data: mapField(row) };
+}
+
+/**
+ * Update an existing field in meta.field by field ID.
+ */
+export async function updateFieldDirect(
+  entityName: string,
+  fieldId: string,
+  data: Record<string, unknown>,
+  tenantId: string,
+): Promise<{ success: boolean; data: unknown }> {
+  const db = await getDb();
+
+  const updates: Record<string, unknown> = { updated_at: new Date(), updated_by: "admin" };
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.columnName !== undefined) updates.column_name = data.columnName;
+  if (data.dataType !== undefined) updates.data_type = data.dataType;
+  if (data.uiType !== undefined) updates.ui_type = data.uiType;
+  if (data.isRequired !== undefined) updates.is_required = data.isRequired;
+  if (data.isUnique !== undefined) updates.is_unique = data.isUnique;
+  if (data.isSearchable !== undefined) updates.is_searchable = data.isSearchable;
+  if (data.isFilterable !== undefined) updates.is_filterable = data.isFilterable;
+  if (data.format !== undefined) updates.format = data.format;
+  if (data.unit !== undefined) updates.unit = data.unit || null;
+  if (data.cardinality !== undefined) updates.cardinality = data.cardinality;
+  if (data.isReadOnly !== undefined) updates.is_read_only = data.isReadOnly;
+  if (data.uiHint !== undefined) updates.ui_hint = data.uiHint ? JSON.stringify(data.uiHint) : null;
+  if (data.visibility !== undefined) updates.visibility = data.visibility ? JSON.stringify(data.visibility) : null;
+  if (data.editability !== undefined) updates.editability = data.editability ? JSON.stringify(data.editability) : null;
+  if (data.defaultValue !== undefined) updates.default_value = data.defaultValue ? JSON.stringify(data.defaultValue) : null;
+  if (data.validationJson !== undefined) {
+    const val = data.validationJson;
+    updates.validation = val ? JSON.stringify(typeof val === "string" ? JSON.parse(val as string) : val) : null;
+  }
+
+  const row = await db
+    .updateTable("meta.field")
+    .set(updates as any)
+    .where("id", "=", fieldId)
+    .where("tenant_id", "=", tenantId)
+    .returningAll()
+    .executeTakeFirst();
+
+  if (!row) return { success: false, data: null };
+  return { success: true, data: mapField(row) };
+}
+
+/**
+ * Toggle the is_deprecated flag on a field.
+ */
+export async function deprecateFieldDirect(
+  fieldId: string,
+  isDeprecated: boolean,
+  tenantId: string,
+): Promise<{ success: boolean; data: unknown }> {
+  const db = await getDb();
+  const row = await db
+    .updateTable("meta.field")
+    .set({ is_deprecated: isDeprecated, updated_at: new Date(), updated_by: "admin" } as any)
+    .where("id", "=", fieldId)
+    .where("tenant_id", "=", tenantId)
+    .returningAll()
+    .executeTakeFirst();
+  if (!row) return { success: false, data: null };
+  return { success: true, data: mapField(row) };
+}
+
+/**
+ * Delete a field from meta.field by field ID.
+ * Blocks deletion if the entity has any published version (use deprecate instead).
+ */
+export async function deleteFieldDirect(
+  fieldId: string,
+  tenantId: string,
+): Promise<{ success: boolean; error?: { code: string; message: string } }> {
+  const db = await getDb();
+
+  // Look up the field's entity to check for published versions
+  const field = await db
+    .selectFrom("meta.field")
+    .select(["entity_version_id"])
+    .where("id", "=", fieldId)
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!field) return { success: false, error: { code: "NOT_FOUND", message: "Field not found" } };
+
+  const version = await db
+    .selectFrom("meta.entity_version")
+    .select(["entity_id"])
+    .where("id", "=", (field as any).entity_version_id)
+    .executeTakeFirst();
+  if (version) {
+    const published = await db
+      .selectFrom("meta.entity_version")
+      .select(["id"])
+      .where("entity_id", "=", (version as any).entity_id)
+      .where("status", "=", "published")
+      .limit(1)
+      .executeTakeFirst();
+    if (published) {
+      return {
+        success: false,
+        error: {
+          code: "PUBLISHED_GUARD",
+          message: "Cannot delete a field from an entity with published versions. Use deprecate instead.",
+        },
+      };
+    }
+  }
+
+  const result = await db
+    .deleteFrom("meta.field")
+    .where("id", "=", fieldId)
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  return { success: (result.numDeletedRows ?? 0n) > 0n };
+}
+
+/**
+ * Reorder fields by updating sort_order for the given field IDs.
+ */
+export async function reorderFieldsDirect(
+  entityName: string,
+  fieldIds: string[],
+  tenantId: string,
+): Promise<{ success: boolean }> {
+  const db = await getDb();
+  for (let i = 0; i < fieldIds.length; i++) {
+    await db
+      .updateTable("meta.field")
+      .set({ sort_order: i, updated_at: new Date(), updated_by: "admin" } as any)
+      .where("id", "=", fieldIds[i])
+      .where("tenant_id", "=", tenantId)
+      .execute();
+  }
+  return { success: true };
 }
 
 export async function listRelationsDirect(entityName: string, tenantId: string) {

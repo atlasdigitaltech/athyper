@@ -53,7 +53,7 @@ export function CommandPalette({ entities, basePath }: CommandPaletteProps) {
       cmds.push({
         id: `go:${entity.name}`,
         label: entity.name,
-        description: `${entity.kind} entity`,
+        description: `${entity.entityClass} entity`,
         category: "Entities",
         action: () => router.push(`${basePath}/${entity.name}/fields`),
       });

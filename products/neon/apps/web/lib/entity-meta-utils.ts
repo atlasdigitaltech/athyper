@@ -375,7 +375,6 @@ export const IMMUTABLE_AFTER_PUBLISH_COLUMNS = new Set([
   "entity_code",
   "table_schema",
   "table_name",
-  "kind",
   "entity_class",
   "mapping_mode",
   "backing_type",
@@ -454,7 +453,6 @@ export function checkEvolutionGuard(
  */
 export const ENTITY_UPDATE_KEY_TO_COLUMN: Record<string, string> = {
   name: "name",
-  kind: "kind",
   tableSchema: "table_schema",
   tableName: "table_name",
   moduleId: "module_id",

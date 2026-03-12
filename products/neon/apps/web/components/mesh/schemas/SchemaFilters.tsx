@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 export interface SchemaFilterValues {
   search: string;
-  kind: string;
+  entityClass: string;
   status: string;
 }
 
@@ -66,17 +66,20 @@ export function SchemaFilters({
       </div>
 
       <Select
-        value={filters.kind}
-        onValueChange={(v) => onFiltersChange({ ...filters, kind: v })}
+        value={filters.entityClass}
+        onValueChange={(v) => onFiltersChange({ ...filters, entityClass: v })}
       >
         <SelectTrigger className="w-[140px] h-9">
-          <SelectValue placeholder="Kind" />
+          <SelectValue placeholder="Class" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Kinds</SelectItem>
-          <SelectItem value="ref">Reference</SelectItem>
-          <SelectItem value="ent">Enterprise</SelectItem>
-          <SelectItem value="doc">Document</SelectItem>
+          <SelectItem value="all">All Classes</SelectItem>
+          <SelectItem value="REFERENCE">Reference</SelectItem>
+          <SelectItem value="MASTER">Master</SelectItem>
+          <SelectItem value="DOCUMENT">Document</SelectItem>
+          <SelectItem value="CONTROL">Control</SelectItem>
+          <SelectItem value="LEDGER">Ledger</SelectItem>
+          <SelectItem value="LOG">Log</SelectItem>
         </SelectContent>
       </Select>
 

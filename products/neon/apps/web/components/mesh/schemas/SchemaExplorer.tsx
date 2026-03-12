@@ -5,8 +5,9 @@
 // Meta-Studio schema explorer — enhanced version using the generic list page system.
 
 import { RefreshCw } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
+import { EntityFormDialog } from "./EntityFormDialog";
 import { createSchemaListConfig } from "./schema-list-config";
 
 import type { EntitySummary } from "@/lib/schema-manager/types";
@@ -82,7 +83,13 @@ interface SchemaExplorerProps {
 
 export function SchemaExplorer({ basePath }: SchemaExplorerProps) {
   const { entities, loading, error, refresh } = useSchemaList();
-  const config = useMemo(() => createSchemaListConfig(basePath), [basePath]);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openCreateDialog = useCallback(() => setCreateOpen(true), []);
+  const config = useMemo(
+    () => createSchemaListConfig(basePath, openCreateDialog),
+    [basePath, openCreateDialog],
+  );
 
   return (
     <ListPageProvider<EntitySummary>
@@ -93,6 +100,11 @@ export function SchemaExplorer({ basePath }: SchemaExplorerProps) {
       refresh={refresh}
     >
       <SchemaExplorerContent />
+      <EntityFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={refresh}
+      />
     </ListPageProvider>
   );
 }

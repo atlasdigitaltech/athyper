@@ -22,6 +22,8 @@ export interface ValidationRule {
   phase: "beforePersist" | "beforeTransition";
   fieldPath: string;
   message?: string;
+  /** Rule provenance: "field" = auto-derived from field constraints, "custom" = manually added */
+  provenance?: "field" | "custom";
   // Rule-specific fields
   min?: number;
   max?: number;

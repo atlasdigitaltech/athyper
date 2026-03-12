@@ -3,29 +3,66 @@
 // Shared types for the Schema Manager UI.
 // These mirror the meta schema DB layer (050_meta_tables.sql).
 
+export type EntityClass = "REFERENCE" | "MASTER" | "CONTROL" | "DOCUMENT" | "LEDGER" | "LOG";
+
 export interface EntitySummary {
     id: string;
     name: string;
-    kind: "ref" | "ent" | "doc" | "fin" | "cfg" | "int";
+    entityClass: EntityClass;
     moduleId: string | null;
     tableSchema: string;
     tableName: string;
     isActive: boolean;
     governanceLevel?: string;
     engineTag?: string | null;
-    entityClass?: string;
     currentVersion: VersionSummary | null;
     fieldCount: number;
     relationCount: number;
     updatedAt: string | null;
+
+    // Identity & codes
+    entityShort?: string | null;
+    entityCode?: string | null;
+    slug?: string | null;
+    identityConfig?: Record<string, unknown> | null;
+
+    // Classification
+    status?: "draft" | "active" | "deprecated" | "suspended";
+    mappingMode?: "exclusive" | "shared";
+    ownershipModel?: string | null;
+    mutability?: string | null;
+    backingType?: string | null;
+
+    // Configuration
+    namingPolicy?: Record<string, unknown> | null;
+    featureFlags?: Record<string, unknown> | null;
+    displayConfig?: Record<string, unknown> | null;
+    provenance?: string | null;
+
+    // Polymorphism
+    discriminatorColumn?: string | null;
+    discriminatorValue?: string | null;
+
     // Display metadata
     labelSingular?: string | null;
     labelPlural?: string | null;
     description?: string | null;
     iconKey?: string | null;
     colorToken?: string | null;
+
     // Data policy
     dataPolicy?: Record<string, unknown> | null;
+
+    // Status tracking
+    statusChangedAt?: string | null;
+    statusChangedBy?: string | null;
+    statusReason?: string | null;
+
+    // Audit timestamps
+    createdAt?: string;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+
     // Operational
     publishedVersionId?: string | null;
     lastCompiledAt?: string | null;
@@ -69,7 +106,7 @@ export interface FieldDefinition {
     unit: string | null;
     /** Field multiplicity: "one" (scalar) or "many" (array) */
     cardinality: string;
-    /** Field origin: "system" or "business" */
+    /** Field origin: "system", "standard", or "business" */
     origin: string;
     /** First-class display label */
     label: string | null;
@@ -97,6 +134,62 @@ export interface FieldDefinition {
     isComputed: boolean;
     /** Write-once flag (locked after creation) */
     writeOnce: boolean;
+    /** Context-aware visibility rules with optional conditional overrides */
+    visibility: VisibilityConfig | null;
+    /** Context-aware editability rules with optional conditional overrides */
+    editability: EditabilityConfig | null;
+}
+
+// ─── Condition Tree (shared with validation/policy) ─────────
+
+export interface ConditionLeaf {
+    field: string;
+    operator: string;
+    value: unknown;
+}
+
+export interface ConditionGroup {
+    operator?: "and" | "or";
+    conditions: Array<ConditionLeaf | ConditionGroup>;
+}
+
+// ─── Visibility & Editability Conditional Rules ─────────────
+
+export type VisibilityState = "visible" | "hidden" | "internal";
+export type EditabilityState = "editable" | "read_only" | "system_managed" | "computed";
+export type VisibilityContext = "create" | "view" | "edit";
+export type EditabilityContext = "create" | "edit";
+
+export interface VisibilityRule {
+    id: string;
+    name: string;
+    when: ConditionGroup;
+    then: VisibilityState;
+    contexts: VisibilityContext[];
+    priority: number;
+}
+
+export interface EditabilityRule {
+    id: string;
+    name: string;
+    when: ConditionGroup;
+    then: EditabilityState;
+    contexts: EditabilityContext[];
+    priority: number;
+}
+
+export interface VisibilityConfig {
+    /** Static per-context defaults */
+    defaults: Partial<Record<VisibilityContext, VisibilityState>>;
+    /** Conditional override rules evaluated at runtime */
+    rules?: VisibilityRule[];
+}
+
+export interface EditabilityConfig {
+    /** Static per-context defaults */
+    defaults: Partial<Record<EditabilityContext, EditabilityState>>;
+    /** Conditional override rules evaluated at runtime */
+    rules?: EditabilityRule[];
 }
 
 export interface RelationDefinition {

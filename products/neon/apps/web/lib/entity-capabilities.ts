@@ -34,7 +34,7 @@ export interface EntityCapabilities {
   entityKey: string;
   entityName: string;
   entityShort: string | null;
-  entityKind: string;
+  entityClass: string;
   governanceLevel: string;
   operations: EntityOperationDescriptor[];
   routes: EntityRoutes;

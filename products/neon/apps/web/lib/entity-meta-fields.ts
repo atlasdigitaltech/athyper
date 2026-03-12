@@ -49,7 +49,7 @@ export interface ServerFieldMeta {
     unit: string | null;
     /** Field multiplicity: "one" or "many" */
     cardinality: string;
-    /** Field origin: "system" or "business" */
+    /** Field origin: "system", "standard", or "business" */
     origin: string;
     /** First-class display label */
     label: string | null;
@@ -476,7 +476,7 @@ export async function getColumnsFromSchema(
             format: null,
             unit: null,
             cardinality: "one" as const,
-            origin: "business" as const,
+            origin: "standard" as const,
             label: null,
             description: null,
             constraints: null,

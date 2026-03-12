@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 
 import type { ReactNode } from "react";
 
+import type { EntityClass } from "@/lib/schema-manager/types";
+
 import { EntityDetailHeader } from "@/components/mesh/schemas/EntityDetailHeader";
 import { EntityTabNav } from "@/components/mesh/schemas/EntityTabNav";
 import { useEntityMeta } from "@/lib/schema-manager/use-entity-meta";
@@ -27,8 +29,8 @@ export default function EntityDetailLayout({
         loading={loading}
         backHref={backHref}
       />
-      <EntityTabNav basePath={basePath} />
-      <div className="pt-2">{children}</div>
+      <EntityTabNav basePath={basePath} entityClass={entityData?.entityClass as EntityClass | undefined} />
+      <div className="pt-1">{children}</div>
     </div>
   );
 }
