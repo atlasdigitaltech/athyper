@@ -84,5 +84,11 @@ export async function GET(req: Request) {
     prompt: "login",
   });
 
-  return NextResponse.redirect(authUrl);
+  const cookieStr = req.headers.get("cookie") ?? "";
+  const rawTheme = cookieStr.split("; ").find((c) => c.startsWith("theme_preset="))?.split("=")[1];
+  const themePreset = rawTheme ? decodeURIComponent(rawTheme) : undefined;
+  const finalUrl = new URL(authUrl);
+  if (themePreset) finalUrl.searchParams.set("kc_locale", themePreset);
+
+  return NextResponse.redirect(finalUrl.toString());
 }

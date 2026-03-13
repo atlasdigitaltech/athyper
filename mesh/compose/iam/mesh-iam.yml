@@ -14,7 +14,7 @@ services:
     image: quay.io/keycloak/keycloak:26.5.1
     profiles: ["mesh", "iam"]
     mem_limit: "${IAM_MEMORY_LIMIT}"
-    command: ["start-dev"]
+    command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${IAM_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${IAM_ADMIN_PASSWORD}
@@ -28,6 +28,10 @@ services:
       KC_DB_POOL_INITIAL_SIZE: 1
       KC_DB_POOL_MIN_SIZE: 5
       KC_DB_POOL_MAX_SIZE: 20
+    volumes:
+      - ../../config/iam/themes/neon:/opt/keycloak/themes/neon:ro
+      - ../../config/iam/realm-demosetup.json:/opt/keycloak/data/import/realm-demosetup.json:ro
+      - ../../config/iam/realm-platform-control.json:/opt/keycloak/data/import/realm-platform-control.json:ro
     networks: [edge, internal]
     depends_on:
       gateway:

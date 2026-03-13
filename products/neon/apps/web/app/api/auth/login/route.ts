@@ -117,5 +117,13 @@ export async function GET(req: Request) {
     prompt: "login", // Force Keycloak to show login form (prevents SSO session reuse after logout)
   });
 
-  return NextResponse.redirect(authUrl);
+  // Pass theme_preset to KC via kc_locale so FTL templates can apply the user's palette.
+  // KC stores kc_locale in the auth session and exposes it as `locale` across all flow steps.
+  const cookieStr = req.headers.get("cookie") ?? "";
+  const rawTheme = cookieStr.split("; ").find((c) => c.startsWith("theme_preset="))?.split("=")[1];
+  const themePreset = rawTheme ? decodeURIComponent(rawTheme) : undefined;
+  const finalUrl = new URL(authUrl);
+  if (themePreset) finalUrl.searchParams.set("kc_locale", themePreset);
+
+  return NextResponse.redirect(finalUrl.toString());
 }

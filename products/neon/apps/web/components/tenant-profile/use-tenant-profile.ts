@@ -28,7 +28,7 @@ export interface TenantProfileData {
   tenantDisplayName: string;
   environment: string;
   subscriptionTier: string;
-  workbench: string;
+  workbench: string | null;
   modules: string[];
   personas: string[];
   roles: string[];

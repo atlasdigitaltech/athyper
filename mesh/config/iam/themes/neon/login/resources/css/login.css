@@ -1,0 +1,506 @@
+/* =======================================================================
+ * Neon Keycloak Login Theme — login.css
+ * Mirrors Neon app split-panel layout with mono color palette
+ * ======================================================================= */
+
+/* ── Geist font ── */
+@import url('https://fonts.bunny.net/css?family=geist:300,400,500,600&display=swap');
+
+/* ── Color tokens (mono preset, light mode) ── */
+:root {
+  --bg:           oklch(0.985 0 0);   /* near-white background */
+  --fg:           oklch(0.14 0 0);    /* near-black foreground */
+  --primary:      oklch(0.22 0 0);    /* dark panel background */
+  --primary-fg:   oklch(0.98 0 0);    /* text on dark panel */
+  --muted-fg:     oklch(0.46 0 0);    /* secondary text */
+  --border:       oklch(0.88 0 0);    /* input / divider border */
+  --input-bg:     oklch(1 0 0);       /* input field background */
+  --destructive:  oklch(0.577 0.245 27.325);
+  --radius:       0.5rem;
+  --shadow-sm:    0px 1px 3px 0px hsl(0 0% 0% / 0.06),
+                  0px 1px 2px -1px hsl(0 0% 0% / 0.06);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ── */
+.kc-page {
+  display: flex;
+  height: 100dvh;
+}
+
+/* Left branding panel — hidden on mobile */
+.kc-panel-left {
+  display: none;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .kc-panel-left {
+    display: flex;
+    width: 33.333%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+  }
+}
+
+.kc-panel-left .brand-inner { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+.kc-panel-left .brand-logo {
+  width: 3rem;
+  height: 3rem;
+  color: var(--primary-fg);
+}
+
+.kc-panel-left h1 {
+  font-size: 3rem;
+  font-weight: 300;
+  color: var(--primary-fg);
+  line-height: 1.1;
+}
+
+.kc-panel-left p {
+  font-size: 1.25rem;
+  color: oklch(0.98 0 0 / 80%);
+}
+
+/* Right form panel */
+.kc-panel-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.kc-form-card {
+  width: 100%;
+  max-width: 28rem;
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+@media (min-width: 1024px) {
+  .kc-form-card { padding-top: 8rem; padding-bottom: 8rem; }
+}
+
+/* Mobile-only logo */
+.kc-mobile-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.kc-mobile-logo svg { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.kc-mobile-logo span { font-size: 1.125rem; font-weight: 600; }
+
+@media (min-width: 1024px) {
+  .kc-mobile-logo { display: none; }
+}
+
+/* ── Header ── */
+.kc-header { display: flex; flex-direction: column; gap: 0.5rem; text-align: center; }
+
+.kc-header h2 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.kc-header p {
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+  line-height: 1.5;
+}
+
+/* ── Alerts ── */
+.kc-alert {
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.kc-alert-error {
+  background: oklch(0.577 0.245 27.325 / 0.1);
+  color: var(--destructive);
+}
+
+.kc-alert-warning {
+  background: oklch(0.54 0 0 / 0.1);
+  color: oklch(0.32 0 0);
+}
+
+.kc-alert-success {
+  background: oklch(0.42 0 0 / 0.1);
+  color: oklch(0.24 0 0);
+}
+
+.kc-alert-info {
+  background: oklch(0.36 0 0 / 0.08);
+  color: oklch(0.28 0 0);
+}
+
+/* ── Form fields ── */
+.kc-form { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.kc-field { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.kc-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.kc-field input {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.kc-field input:focus {
+  border-color: oklch(0.46 0 0);
+  box-shadow: 0 0 0 3px oklch(0.46 0 0 / 0.12);
+}
+
+.kc-field input[disabled] {
+  background: oklch(0.955 0 0);
+  color: var(--muted-fg);
+  cursor: not-allowed;
+}
+
+/* ── Password visibility toggle ── */
+.kc-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.kc-input-wrap input {
+  flex: 1;
+  padding-right: 2.75rem;
+}
+
+.kc-password-toggle {
+  position: absolute;
+  right: 0.625rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: var(--muted-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: color 0.15s;
+}
+
+.kc-password-toggle:hover { color: var(--fg); }
+
+.kc-password-toggle svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  pointer-events: none;
+}
+
+/* ── Remember me + forgot password row ── */
+.kc-form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kc-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--fg);
+  user-select: none;
+}
+
+.kc-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.kc-link {
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  transition: color 0.15s;
+}
+
+.kc-link:hover { color: var(--fg); }
+
+/* ── Buttons ── */
+.kc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 1.5rem;
+  border: none;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+}
+
+.kc-btn-primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.kc-btn-primary:hover { opacity: 0.88; }
+
+.kc-btn-ghost {
+  background: transparent;
+  color: var(--muted-fg);
+  border: 1px solid var(--border);
+  height: 2.25rem;
+  font-size: 0.8125rem;
+}
+
+.kc-btn-ghost:hover {
+  background: oklch(0.955 0 0);
+  color: var(--fg);
+}
+
+/* ── Social divider ── */
+.kc-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-fg);
+}
+
+.kc-divider::before,
+.kc-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Social buttons ── */
+.kc-social-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.kc-social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.kc-social-btn:hover { background: oklch(0.955 0 0); }
+
+/* ── Footer ── */
+.kc-footer { text-align: center; display: flex; flex-direction: column; gap: 0.25rem; }
+
+.kc-footer p {
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+}
+
+.kc-footer a {
+  color: oklch(0.46 0 0 / 60%);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.kc-footer a:hover { color: var(--muted-fg); }
+
+/* ── OAuth grant scope list ── */
+.kc-scope-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+}
+
+.kc-scope-list ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  background: oklch(0.975 0 0);
+}
+
+.kc-scope-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.kc-scope-list li:last-child { border-bottom: none; }
+
+.kc-scope-name { font-weight: 500; color: var(--fg); }
+.kc-scope-desc { font-size: 0.8125rem; color: var(--muted-fg); }
+
+/* ── Grant action buttons ── */
+.kc-grant-form { gap: 1rem; }
+
+.kc-grant-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Register link ── */
+.kc-register {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+}
+
+.kc-register a {
+  color: var(--fg);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* =======================================================================
+ * Palette overrides — mirrors Neon app preset CSS variables.
+ * Applied when JS reads theme_preset cookie and sets data-theme-preset.
+ * ======================================================================= */
+
+:root[data-theme-preset="mono"] {
+  --bg: oklch(0.985 0 0); --fg: oklch(0.14 0 0);
+  --primary: oklch(0.22 0 0); --primary-fg: oklch(0.98 0 0);
+  --muted-fg: oklch(0.46 0 0); --border: oklch(0.88 0 0);
+  --input-bg: oklch(1 0 0); --radius: 0.5rem;
+}
+
+:root[data-theme-preset="default"] {
+  --bg: oklch(0.985 0 0); --fg: oklch(0.14 0 0);
+  --primary: oklch(0.22 0 0); --primary-fg: oklch(0.98 0 0);
+  --muted-fg: oklch(0.46 0 0); --border: oklch(0.88 0 0);
+  --input-bg: oklch(1 0 0); --radius: 0.5rem;
+}
+
+:root[data-theme-preset="vintage-paper"] {
+  --bg: oklch(0.96 0.015 90); --fg: oklch(0.34 0.03 55);
+  --primary: oklch(0.59 0.09 63); --primary-fg: oklch(1 0 0);
+  --muted-fg: oklch(0.51 0.05 60); --border: oklch(0.85 0.03 82);
+  --input-bg: oklch(0.99 0.008 85); --radius: 0.375rem;
+  --destructive: oklch(0.5 0.16 28);
+}
+
+:root[data-theme-preset="cosmic-night"] {
+  --bg: oklch(0.96 0.012 280); --fg: oklch(0.18 0.04 280);
+  --primary: oklch(0.45 0.2 275); --primary-fg: oklch(0.98 0 0);
+  --muted-fg: oklch(0.45 0.03 275); --border: oklch(0.88 0.02 280);
+  --input-bg: oklch(1 0.005 280); --radius: 0.75rem;
+}
+
+:root[data-theme-preset="soft-pop"] {
+  --bg: oklch(1 0 0); --fg: oklch(0 0 0);
+  --primary: oklch(0.5106 0.2301 276.9656); --primary-fg: oklch(1 0 0);
+  --muted-fg: oklch(0.3211 0 0); --border: oklch(0 0 0);
+  --input-bg: oklch(1 0 0); --radius: 1rem;
+}
+
+:root[data-theme-preset="brutalist"] {
+  --bg: oklch(1 0 0); --fg: oklch(0 0 0);
+  --primary: oklch(0.6489 0.237 26.9728); --primary-fg: oklch(1 0 0);
+  --muted-fg: oklch(0.3211 0 0); --border: oklch(0 0 0);
+  --input-bg: oklch(1 0 0); --radius: 0px;
+}
+
+:root[data-theme-preset="tangerine"] {
+  --bg: oklch(1 0 0); --fg: oklch(0.32 0 0);
+  --primary: oklch(0.64 0.17 36.44); --primary-fg: oklch(1 0 0);
+  --muted-fg: oklch(0.55 0.02 264.36); --border: oklch(0.9 0.01 247.88);
+  --input-bg: oklch(1 0 0); --radius: 0.625rem;
+}
+
+:root[data-theme-preset="modern-minimal"] {
+  --bg: oklch(0.995 0 0); --fg: oklch(0.15 0 0);
+  --primary: oklch(0.45 0.18 250); --primary-fg: oklch(0.99 0 0);
+  --muted-fg: oklch(0.52 0 0); --border: oklch(0.93 0 0);
+  --input-bg: oklch(1 0 0); --radius: 0.5rem;
+}
+
+:root[data-theme-preset="bubblegum"] {
+  --bg: oklch(0.97 0.015 340); --fg: oklch(0.2 0.04 340);
+  --primary: oklch(0.6 0.22 340); --primary-fg: oklch(0.99 0 0);
+  --muted-fg: oklch(0.45 0.04 340); --border: oklch(0.88 0.03 340);
+  --input-bg: oklch(0.99 0.008 340); --radius: 1.25rem;
+}
+
+:root[data-theme-preset="violet-bloom"] {
+  --bg: oklch(0.965 0.015 305); --fg: oklch(0.2 0.05 300);
+  --primary: oklch(0.5 0.22 300); --primary-fg: oklch(0.98 0 0);
+  --muted-fg: oklch(0.48 0.04 300); --border: oklch(0.88 0.025 305);
+  --input-bg: oklch(0.99 0.008 305); --radius: 0.75rem;
+}
+
+:root[data-theme-preset="doom-64"] {
+  --bg: oklch(0.92 0.01 100); --fg: oklch(0.15 0.02 120);
+  --primary: oklch(0.55 0.2 145); --primary-fg: oklch(0.98 0 0);
+  --muted-fg: oklch(0.45 0.02 120); --border: oklch(0.82 0.02 100);
+  --input-bg: oklch(0.95 0.008 100); --radius: 0.25rem;
+}

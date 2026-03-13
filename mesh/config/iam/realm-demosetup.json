@@ -3,6 +3,7 @@
   "realm": "athyper",
   "displayName": "athyper",
   "displayNameHtml": "athyper Business Operating Platform",
+  "loginTheme": "neon",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": true,
@@ -6073,7 +6074,9 @@
       }
     ]
   },
-  "internationalizationEnabled": false,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "default", "mono", "vintage-paper", "cosmic-night", "soft-pop", "brutalist", "tangerine", "modern-minimal", "bubblegum", "violet-bloom", "doom-64"],
+  "defaultLocale": "en",
   "authenticationFlows": [
     {
       "id": "1031db13-0f6c-42a9-b8ce-981978326c86",
