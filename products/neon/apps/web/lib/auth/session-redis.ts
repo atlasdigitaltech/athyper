@@ -27,7 +27,10 @@ function createConnection(): Promise<AnyRedisClient> {
       url,
       socket: {
         connectTimeout: 3000,
-        reconnectStrategy: (retries: number) => Math.min(retries * 100, 3000),
+        reconnectStrategy: (retries: number) => {
+          if (retries >= 3) return false; // fail fast — don't hang indefinitely
+          return Math.min(retries * 200, 1000);
+        },
       },
     });
     client.on("error", () => {});

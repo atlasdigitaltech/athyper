@@ -46,6 +46,7 @@ export async function GET(req: Request) {
   const workbench = url.searchParams.get("workbench") ?? null;
   const returnUrl = url.searchParams.get("returnUrl") ?? "/";
   const realmParam = url.searchParams.get("realm"); // "platform" for platform-control login
+  const provider = url.searchParams.get("provider") ?? null; // e.g. "github" — maps to kc_idp_hint
 
   const baseUrl =
     process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
         returnUrl,
         isPlatformLogin,
         realm,
+        provider,
       }),
       { EX: 300 },
     );
@@ -115,6 +117,7 @@ export async function GET(req: Request) {
     codeChallenge,
     state,
     prompt: "login", // Force Keycloak to show login form (prevents SSO session reuse after logout)
+    idpHint: provider ?? undefined, // Skip Keycloak login page and go directly to social IdP
   });
 
   // Pass theme_preset to KC via kc_locale so FTL templates can apply the user's palette.

@@ -126,23 +126,6 @@
       </form>
       </#if>
 
-      <!-- Social / Identity providers -->
-      <#if social?? && social.providers?has_content>
-        <#if realm.password>
-          <div class="kc-divider">${msg("identity-provider-login-label")}</div>
-        </#if>
-        <div class="kc-social-list">
-          <#list social.providers as p>
-            <a class="kc-social-btn" href="${p.loginUrl}">
-              <#if p.iconClasses?has_content>
-                <i class="${p.iconClasses}"></i>
-              </#if>
-              ${p.displayName}
-            </a>
-          </#list>
-        </div>
-      </#if>
-
       <!-- Register link -->
       <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         <p class="kc-register">

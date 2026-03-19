@@ -3,6 +3,8 @@
 import { Command, User } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+
 const BRAND = { bg: "#2563eb", bgHover: "#1d4ed8", light: "#dbeafe" };
 
 export default function UserLoginPage() {
@@ -65,6 +67,7 @@ export default function UserLoginPage() {
             >
               Sign in with Keycloak
             </button>
+            <SocialLoginButtons workbench="user" returnUrl={returnUrl} />
             <a
               href="/"
               className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"

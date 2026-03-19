@@ -65,6 +65,8 @@ export interface BuildAuthUrlParams {
   scope?: string;
   /** OIDC prompt parameter: "login" forces re-authentication even if SSO session exists */
   prompt?: "none" | "login" | "consent" | "select_account";
+  /** Keycloak IdP hint — skips the Keycloak login page and redirects directly to the named IdP (e.g. "github") */
+  idpHint?: string;
 }
 
 /**
@@ -80,6 +82,7 @@ export function buildAuthorizationUrl(params: BuildAuthUrlParams): string {
     state,
     scope,
     prompt,
+    idpHint,
   } = params;
   const authUrl = new URL(
     `${baseUrl}/realms/${realm}/protocol/openid-connect/auth`,
@@ -92,6 +95,7 @@ export function buildAuthorizationUrl(params: BuildAuthUrlParams): string {
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("scope", scope ?? "openid profile email");
   if (prompt) authUrl.searchParams.set("prompt", prompt);
+  if (idpHint) authUrl.searchParams.set("kc_idp_hint", idpHint);
   return authUrl.toString();
 }
 

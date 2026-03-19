@@ -96,6 +96,8 @@ export async function GET(req: Request) {
     const pkceState = JSON.parse(stateRaw);
     const { codeVerifier, returnUrl } = pkceState;
     const isPlatformLogin: boolean = pkceState.isPlatformLogin === true;
+    // Provider used for social login (e.g. "github", "microsoft") — stored during login initiation
+    const pkceProvider = typeof pkceState.provider === "string" ? pkceState.provider : null;
     await redis.del(stateKey); // One-time use: delete immediately to prevent replay
 
     // ─── Step 2: Exchange code for tokens ───────────────────────
@@ -182,12 +184,42 @@ export async function GET(req: Request) {
       ? groupsClaim.filter((g): g is string => typeof g === "string")
       : [];
 
-    // Extract tenant_id: token claim → groups → env var fallback
+    // Extract tenant_id: provider override → token claim → Keycloak Organizations → groups → env var fallback
     // Groups follow the pattern /org/{tenantCode}/persona/{persona}
-    let tokenTenantId =
-      typeof claims.tenant_id === "string" ? claims.tenant_id : "";
-    let tenantSource = tokenTenantId ? "jwt_claim" : "";
-    if (!tokenTenantId) {
+    //
+    // Provider-specific override: set GITHUB_TENANT_ID / MICROSOFT_TENANT_ID (etc.) in env to hard-map
+    // a social login provider to a specific tenant regardless of what the JWT claims contain.
+    // e.g. GITHUB_TENANT_ID=demo_in ensures all GitHub logins land in demo_in even if Keycloak
+    // returns the wrong organization claim.
+    const providerEnvKey = pkceProvider
+      ? `${pkceProvider.toUpperCase()}_TENANT_ID`
+      : null;
+    const providerTenantOverride =
+      providerEnvKey ? (process.env[providerEnvKey] ?? null) : null;
+
+    let tokenTenantId = providerTenantOverride
+      ? providerTenantOverride
+      : (typeof claims.tenant_id === "string" ? claims.tenant_id : "");
+    let tenantSource = providerTenantOverride
+      ? "provider_override"
+      : (tokenTenantId ? "jwt_claim" : "");
+    if (!tokenTenantId && !providerTenantOverride) {
+      // Keycloak 26.x Organizations claim — two possible formats:
+      //   Array:  ["demo_in"]            (oidc-organization-membership-mapper default)
+      //   Object: { "demo_in": {} }      (some mapper configurations)
+      const orgClaim = claims.organization;
+      if (Array.isArray(orgClaim) && orgClaim.length > 0 && typeof orgClaim[0] === "string") {
+        tokenTenantId = orgClaim[0];
+        tenantSource = "keycloak_org";
+      } else if (orgClaim && typeof orgClaim === "object" && !Array.isArray(orgClaim)) {
+        const orgAliases = Object.keys(orgClaim as Record<string, unknown>);
+        if (orgAliases.length > 0 && orgAliases[0]) {
+          tokenTenantId = orgAliases[0];
+          tenantSource = "keycloak_org";
+        }
+      }
+    }
+    if (!tokenTenantId && !providerTenantOverride) {
       const orgGroup = groups.find((g) => g.startsWith("/org/"));
       if (orgGroup) {
         const parts = orgGroup.split("/");
@@ -209,6 +241,7 @@ export async function GET(req: Request) {
       username: preferredUsername,
       tokenTenantId,
       tenantSource,
+      provider: pkceProvider,
       persona: resolvedPersona ?? `fallback(realm:${roles.includes("admin")})`,
       clientRoles,
       groups,

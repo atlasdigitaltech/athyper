@@ -18,7 +18,7 @@ interface ResolvingClientProps {
  *   3. Follows the server decision:
  *      - { redirect }               → hard navigate (session state changed)
  *      - { decision: "chooser_required" | "switch_required" } → /workspace
- *      - { decision: "denied" }     → show error, link to logout
+ *      - { decision: "denied" }     → auto-logout (clears KC SSO session) → /login?error=...
  *
  * C.6: writes localStorage.neon_last_workbench only after server confirms
  * the final workbench (i.e. when it returns { redirect }). Never optimistic.
@@ -68,11 +68,22 @@ export default function ResolvingClient({ returnUrl }: ResolvingClientProps) {
       }
 
       if (data.decision === "denied") {
-        // Replace spinner with inline error — handled by state below
-        const el = document.getElementById("resolving-denied");
-        if (el) el.style.display = "block";
-        const spinner = document.getElementById("resolving-spinner");
-        if (spinner) spinner.style.display = "none";
+        // Auto-logout: clear Next.js session + Keycloak SSO session,
+        // then redirect to /login with an error message so the user
+        // sees feedback instead of a blank page.
+        try {
+          const logoutRes = await fetch("/api/auth/logout", { method: "POST" });
+          const logoutData = (await logoutRes.json()) as { logoutUrl?: string };
+          const base = logoutData.logoutUrl ?? "/login";
+          const url = new URL(base, window.location.origin);
+          // Append error only when redirecting to our own /login page
+          if (url.origin === window.location.origin) {
+            url.searchParams.set("error", "Your account does not have access to any workspace.");
+          }
+          window.location.href = url.toString();
+        } catch {
+          window.location.href = "/login?error=Your+account+does+not+have+access+to+any+workspace.";
+        }
         return;
       }
 
@@ -99,18 +110,6 @@ export default function ResolvingClient({ returnUrl }: ResolvingClientProps) {
           </p>
         </div>
 
-        {/* Denied state — hidden until resolver returns denied */}
-        <div id="resolving-denied" className="hidden space-y-4">
-          <p className="text-sm text-destructive">
-            Your account does not have access to any workspace.
-          </p>
-          <a
-            href="/api/auth/logout"
-            className="text-sm underline text-muted-foreground hover:text-foreground"
-          >
-            Sign out
-          </a>
-        </div>
       </div>
     </div>
   );

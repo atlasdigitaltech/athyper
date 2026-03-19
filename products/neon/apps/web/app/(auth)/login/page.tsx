@@ -4,6 +4,7 @@ import { Command } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -63,6 +64,7 @@ export default function LoginPage() {
               <Button className="w-full" size="lg" onClick={handleLogin}>
                 Sign in with Keycloak
               </Button>
+              <SocialLoginButtons returnUrl={returnUrl} />
               <Button
                 className="w-full"
                 variant="ghost"
