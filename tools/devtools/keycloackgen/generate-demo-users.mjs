@@ -191,16 +191,7 @@ function buildUser(tenant, persona, nameEntry, now) {
     enabled: true,
     createdTimestamp: now,
     totp: false,
-    credentials: [
-      {
-        id: randomUUID(),
-        type: SHARED_CREDENTIAL_DATA.type,
-        userLabel: SHARED_CREDENTIAL_DATA.userLabel,
-        createdDate: now,
-        secretData: SHARED_CREDENTIAL_DATA.secretData,
-        credentialData: SHARED_CREDENTIAL_DATA.credentialData,
-      },
-    ],
+    credentials: [],
     disableableCredentialTypes: [],
     requiredActions: [],
     clientRoles: {

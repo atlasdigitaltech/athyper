@@ -126,6 +126,7 @@
       </form>
       </#if>
 
+
       <!-- Register link -->
       <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
         <p class="kc-register">

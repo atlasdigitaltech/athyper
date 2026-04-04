@@ -83,14 +83,20 @@ export async function GET(req: Request) {
   try {
     // ─── Step 1: Validate PKCE state ────────────────────────────
     // The state parameter ties the callback to the login request.
-    // It's stored in Redis with a 300s TTL during GET /api/auth/login.
+    // It's stored in Redis with a 1800s TTL during GET /api/auth/login.
     const stateKey = `pkce_state:${state}`;
     const stateRaw = await redis.get(stateKey);
 
     if (!stateRaw) {
-      return new NextResponse("Invalid or expired state parameter", {
-        status: 400,
-      });
+      // State expired (email-based flows can exceed TTL) or was already consumed.
+      // Redirect to login so the user can start a fresh auth flow instead of
+      // landing on a blank error page.
+      return NextResponse.redirect(
+        new URL(
+          `/login?error=${encodeURIComponent("Your login session expired. Please sign in again.")}`,
+          url.origin,
+        ),
+      );
     }
 
     const pkceState = JSON.parse(stateRaw);

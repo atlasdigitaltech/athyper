@@ -23,6 +23,7 @@ include:
   - db/mesh-dbpool-auth.yml
   - gateway/mesh-gateway.yml
   - iam/mesh-iam.yml
+  - iam/mesh-mailhog.yml
   - memorycache/mesh-memorycache.yml
   - memorycache/mesh-memorycache-exporter.yml
   - objectstorage/mesh-objectstorage.yml

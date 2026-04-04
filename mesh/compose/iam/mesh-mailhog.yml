@@ -1,0 +1,26 @@
+# =======================================================================
+# Stack       : athyper Mesh – IAM
+# Service     : Mailhog — local SMTP capture for development
+#
+# Description :
+#   Catches all outbound email from Keycloak during local development.
+#   SMTP listens on port 1025 (reachable from Keycloak as "mailhog:1025").
+#   Web UI is port-forwarded to localhost:8025 for easy inbox inspection.
+#
+#   NOT for staging or production — dev only.
+# =======================================================================
+
+services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    profiles: ["mesh", "iam"]
+    networks: [edge, internal]
+    ports:
+      - "8025:8025"   # Web UI  → http://localhost:8025
+    environment:
+      MH_HOSTNAME: mailhog.athyper.local
+      MH_STORAGE: memory
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+    restart: unless-stopped

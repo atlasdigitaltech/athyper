@@ -36,8 +36,8 @@ import { getSessionRedis } from "@/lib/auth/session-redis";
  *   - prompt=login ensures Keycloak shows the login form even if the user
  *     has an active SSO session. This prevents confusion after logout
  *     (without it, clicking "Login" would silently re-authenticate).
- *   - PKCE state TTL is 300s — if the user takes longer than 5 minutes
- *     at the Keycloak login form, the callback will fail with "expired state".
+ *   - PKCE state TTL is 1800s — accommodates email-based flows (password reset,
+ *     magic link) where the user may take up to 30 minutes to complete the flow.
  *   - The codeVerifier is stored in Redis, never sent to the browser.
  *     Only the codeChallenge (SHA-256 hash) goes to Keycloak.
  */
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
         realm,
         provider,
       }),
-      { EX: 300 },
+      { EX: 1800 }, // 30 min — accommodates email-based flows (password reset, magic link)
     );
 
     // Audit — login flow initiated

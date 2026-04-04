@@ -38,6 +38,8 @@ services:
         condition: service_healthy
       dbpool-auth:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     healthcheck:
       test: [
           "CMD-SHELL",

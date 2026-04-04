@@ -145,12 +145,42 @@ echo [5/5] Restarting Keycloak container...
 docker ps --format "{{.Names}}" | findstr /C:"athyper-mesh-iam" >nul 2>&1
 if not errorlevel 1 (
     docker restart athyper-mesh-iam-1
-    echo Waiting for Keycloak to be ready...
-    timeout /t 10 >nul
-    echo Keycloak restarted
+    echo Waiting for Keycloak to be ready ^(health check^)...
+    set "KC_READY=0"
+    for /L %%i in (1,1,60) do (
+        if "!KC_READY!"=="0" (
+            for /f "tokens=*" %%s in ('docker inspect --format "{{.State.Health.Status}}" athyper-mesh-iam-1 2^>nul') do set "KC_STATUS=%%s"
+            if "!KC_STATUS!"=="healthy" (
+                set "KC_READY=1"
+                echo Keycloak is ready.
+            ) else (
+                timeout /t 3 >nul
+            )
+        )
+    )
+    if "!KC_READY!"=="0" (
+        echo Warning: Keycloak health check timed out. Waiting an extra 15 seconds...
+        timeout /t 15 >nul
+    )
 ) else (
     echo Keycloak container not running, start it to apply changes:
     echo   cd mesh ^&^& up.bat --profile mesh
+)
+
+echo [6/6] Provisioning users (passwords + MFA)...
+set "PROVISION_SCRIPT=%MESH_DIR%\..\tools\devtools\keycloackgen\provision-keycloak-users.mjs"
+if exist "!PROVISION_SCRIPT!" (
+    where node >nul 2>&1
+    if not errorlevel 1 (
+        node "!PROVISION_SCRIPT!"
+        echo Users provisioned successfully
+    ) else (
+        echo Warning: node not found - run manually:
+        echo   node tools\devtools\keycloackgen\provision-keycloak-users.mjs
+    )
+) else (
+    echo Warning: provision script not found at: !PROVISION_SCRIPT!
+    echo   Run manually: node tools\devtools\keycloackgen\provision-keycloak-users.mjs
 )
 
 echo.
@@ -160,6 +190,7 @@ echo Next steps:
 echo   1. Access Keycloak Admin Console
 echo   2. Verify realms: athyper, platform-control
 echo   3. Check clients, users, roles
+echo   4. Users can log in with password: Demo123! (MFA setup required on first login)
 echo.
 echo Keycloak Admin URL: http://localhost/auth
 echo.

@@ -422,6 +422,68 @@ html, body {
   text-underline-offset: 0.2em;
 }
 
+/* ── Password-reset page specific ── */
+.kc-reset-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.kc-back-link {
+  font-size: 0.8125rem;
+}
+
+.kc-info-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted-fg);
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+  background: oklch(0.975 0 0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.kc-info-note svg { flex-shrink: 0; margin-top: 0.1rem; }
+
+/* ── Magic-link page specific ── */
+.kc-magic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-fg);
+  background: oklch(0.975 0 0);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  margin: 0 auto;
+}
+
+.kc-magic-badge svg { width: 0.875rem; height: 0.875rem; }
+
+.kc-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kc-or-divider::before,
+.kc-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* =======================================================================
  * Palette overrides — mirrors Neon app preset CSS variables.
  * Applied when JS reads theme_preset cookie and sets data-theme-preset.
