@@ -469,10 +469,10 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await db
+      const rows = await (db as any)
         .selectFrom("shared.plan_module_access as pma")
-        .innerJoin("shared.module as m"            as never, "m.id"  as never, "pma.module_id" as never)
-        .innerJoin("shared.subscription_plan as sp" as never, "sp.id" as never, "pma.plan_id"  as never)
+        .innerJoin("shared.module as m", "m.id", "pma.module_id")
+        .innerJoin("shared.subscription_plan as sp", "sp.id", "pma.plan_id")
         .select([
           "pma.id"                as never,
           "m.code"                as never,
@@ -589,10 +589,10 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await db
+      const rows = await (db as any)
         .selectFrom("shared.plan_permission_access as ppa")
-        .innerJoin("shared.permission as p"        as never, "p.id"  as never, "ppa.permission_id" as never)
-        .innerJoin("shared.subscription_plan as sp" as never, "sp.id" as never, "ppa.plan_id"       as never)
+        .innerJoin("shared.permission as p", "p.id", "ppa.permission_id")
+        .innerJoin("shared.subscription_plan as sp", "sp.id", "ppa.plan_id")
         .select([
           "ppa.id"                as never,
           "p.code"                as never,
@@ -710,10 +710,10 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await db
+      const rows = await (db as any)
         .selectFrom("shared.plan_feature_access as pfa")
-        .innerJoin("shared.enterprise_feature as ef" as never, "ef.id" as never, "pfa.feature_id" as never)
-        .innerJoin("shared.subscription_plan as sp"  as never, "sp.id" as never, "pfa.plan_id"    as never)
+        .innerJoin("shared.enterprise_feature as ef", "ef.id", "pfa.feature_id")
+        .innerJoin("shared.subscription_plan as sp", "sp.id", "pfa.plan_id")
         .select([
           "pfa.id"                as never,
           "ef.code"               as never,
@@ -833,9 +833,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const { tenantId } = req.params as Record<string, string>;
       if (!isUuid(tenantId!)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
 
-      const row = await db
+      const row = await (db as any)
         .selectFrom("master.tenant as t")
-        .leftJoin("shared.subscription_plan as sp" as never, "sp.code" as never, "t.subscription" as never)
+        .leftJoin("shared.subscription_plan as sp", "sp.code", "t.subscription")
         .select([
           "t.id"           as never,
           "t.code"         as never,
@@ -1183,15 +1183,15 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
     const [modules, features, permissions] = await Promise.all([
       // Modules: all modules with LEFT JOIN to plan access and tenant subscription
-      db
+      (db as any)
         .selectFrom("shared.module as m")
-        .leftJoin("shared.plan_module_access as pma" as never, (join: never) =>
-          (join as any)
+        .leftJoin("shared.plan_module_access as pma" as any, (join: any) =>
+          join
             .onRef("pma.module_id", "=", "m.id")
             .on("pma.plan_id" as never, "=", planId as never),
         )
-        .leftJoin("master.tenant_module_subscription as tms" as never, (join: never) =>
-          (join as any)
+        .leftJoin("master.tenant_module_subscription as tms" as any, (join: any) =>
+          join
             .onRef("tms.module_id", "=", "m.id")
             .on("tms.tenant_id" as never, "=", tenantId as never),
         )
@@ -1215,15 +1215,15 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         .execute(),
 
       // Features: active features with plan access and tenant entitlement
-      db
+      (db as any)
         .selectFrom("shared.enterprise_feature as ef")
-        .leftJoin("shared.plan_feature_access as pfa" as never, (join: never) =>
-          (join as any)
+        .leftJoin("shared.plan_feature_access as pfa" as any, (join: any) =>
+          join
             .onRef("pfa.feature_id", "=", "ef.id")
             .on("pfa.plan_id" as never, "=", planId as never),
         )
-        .leftJoin("master.tenant_feature_entitlement as tfe" as never, (join: never) =>
-          (join as any)
+        .leftJoin("master.tenant_feature_entitlement as tfe" as any, (join: any) =>
+          join
             .onRef("tfe.feature_id", "=", "ef.id")
             .on("tfe.tenant_id" as never, "=", tenantId as never),
         )
@@ -1251,15 +1251,15 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         .execute(),
 
       // Plan-restricted permissions only
-      db
+      (db as any)
         .selectFrom("shared.permission as p")
-        .leftJoin("shared.plan_permission_access as ppa" as never, (join: never) =>
-          (join as any)
+        .leftJoin("shared.plan_permission_access as ppa" as any, (join: any) =>
+          join
             .onRef("ppa.permission_id", "=", "p.id")
             .on("ppa.plan_id" as never, "=", planId as never),
         )
-        .leftJoin("master.tenant_permission_override as tpo" as never, (join: never) =>
-          (join as any)
+        .leftJoin("master.tenant_permission_override as tpo" as any, (join: any) =>
+          join
             .onRef("tpo.permission_id", "=", "p.id")
             .on("tpo.tenant_id" as never, "=", tenantId as never),
         )
@@ -1307,7 +1307,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       if (!tenant) { res.status(404).json({ error: "NOT_FOUND", message: "Tenant not found" }); return; }
 
-      const result = await resolveEntitlements(tenantId, tenant["subscription"] as string);
+      const result = await resolveEntitlements(tenantId!, tenant["subscription"] as string);
 
       res.setHeader("Cache-Control", "no-store");
       res.json({
@@ -1349,7 +1349,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       if (!tenant) { res.status(404).json({ error: "NOT_FOUND", message: "Tenant not found" }); return; }
 
-      const result = await resolveEntitlements(tenantId, planCode);
+      const result = await resolveEntitlements(tenantId!, planCode);
       if (!result.plan) {
         res.status(404).json({ error: "PLAN_NOT_FOUND", message: `Plan '${planCode}' not found` });
         return;

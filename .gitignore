@@ -65,6 +65,7 @@ pids/
 
 # Next.js
 next-env.d.ts
+.next-env.d.ts
 
 # =========================
 # Archives

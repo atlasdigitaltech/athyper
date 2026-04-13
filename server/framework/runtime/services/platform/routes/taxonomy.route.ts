@@ -92,7 +92,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const tbl = codeTable(family);
@@ -146,20 +146,20 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q = req.query as Record<string, unknown>;
       const { page, limit, offset } = parsePagination(q);
-      const domain = (req.params["domain"] ?? "").toLowerCase();
+      const domain = String(req.params["domain"]).toLowerCase();
       const tbl = codeTable(family);
       const alias = "n";
 
       let base = db
         .selectFrom(`${tbl} as ${alias}`)
-        .where(`${alias}.domain_code` as never, "=", domain)
-        .where(`${alias}.parent_code` as never, "is", null)
-        .where(`${alias}.status` as never, "=", "active");
+        .where(`${alias}.domain_code` as any, "=", domain)
+        .where(`${alias}.parent_code` as any, "is", null)
+        .where(`${alias}.status` as any, "=", "active");
 
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("cnt")).executeTakeFirst(),
@@ -169,7 +169,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
             `${alias}.description`, `${alias}.level_no`, `${alias}.is_leaf`,
             `${alias}.keywords`, `${alias}.status`,
           ] as never[])
-          .orderBy(`${alias}.code` as never, "asc")
+          .orderBy(`${alias}.code` as any, "asc")
           .limit(limit)
           .offset(offset)
           .execute(),
@@ -194,11 +194,11 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
-      const domain   = (req.params["domain"] ?? "").toLowerCase();
-      const nodeCode = req.params["code"] ?? "";
+      const domain   = String(req.params["domain"]).toLowerCase();
+      const nodeCode = String(req.params["code"]);
       const tbl      = codeTable(family);
       const alias    = "n";
 
@@ -209,8 +209,8 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
           `${alias}.description`, `${alias}.parent_code`, `${alias}.level_no`,
           `${alias}.is_leaf`, `${alias}.keywords`, `${alias}.status`,
         ] as never[])
-        .where(`${alias}.domain_code` as never, "=", domain)
-        .where(`${alias}.code` as never, "=", nodeCode)
+        .where(`${alias}.domain_code` as any, "=", domain)
+        .where(`${alias}.code` as any, "=", nodeCode)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -231,21 +231,21 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q = req.query as Record<string, unknown>;
       const { page, limit, offset } = parsePagination(q);
-      const domain   = (req.params["domain"] ?? "").toLowerCase();
-      const nodeCode = req.params["code"] ?? "";
+      const domain   = String(req.params["domain"]).toLowerCase();
+      const nodeCode = String(req.params["code"]);
       const tbl      = codeTable(family);
       const alias    = "n";
 
       let base = db
         .selectFrom(`${tbl} as ${alias}`)
-        .where(`${alias}.domain_code`  as never, "=", domain)
-        .where(`${alias}.parent_code`  as never, "=", nodeCode)
-        .where(`${alias}.status`       as never, "=", "active");
+        .where(`${alias}.domain_code`  as any, "=", domain)
+        .where(`${alias}.parent_code`  as any, "=", nodeCode)
+        .where(`${alias}.status`       as any, "=", "active");
 
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("cnt")).executeTakeFirst(),
@@ -255,7 +255,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
             `${alias}.description`, `${alias}.parent_code`, `${alias}.level_no`,
             `${alias}.is_leaf`, `${alias}.status`,
           ] as never[])
-          .orderBy(`${alias}.code` as never, "asc")
+          .orderBy(`${alias}.code` as any, "asc")
           .limit(limit)
           .offset(offset)
           .execute(),
@@ -281,11 +281,11 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
-      const domain   = (req.params["domain"] ?? "").toLowerCase();
-      const nodeCode = req.params["code"] ?? "";
+      const domain   = String(req.params["domain"]).toLowerCase();
+      const nodeCode = String(req.params["code"]);
       const tbl      = codeTable(family);
 
       const pathRows = await sql<{
@@ -333,12 +333,12 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q          = req.query as Record<string, unknown>;
       const term       = parseSearch({ search: q["q"] });   // reuse parseSearch via alias
-      const domain     = (req.params["domain"] ?? "").toLowerCase();
+      const domain     = String(req.params["domain"]).toLowerCase();
       const includePath = q["include_path"] === "true";
       const leafOnly   = q["leaf_only"]    === "true";
       const levelNo    = typeof q["level"] === "string" ? parseInt(q["level"], 10) : null;
@@ -359,23 +359,23 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
 
       let base = db
         .selectFrom(`${tbl} as ${alias}`)
-        .where(`${alias}.domain_code` as never, "=", domain)
-        .where(`${alias}.status` as never, "=", "active")
+        .where(`${alias}.domain_code` as any, "=", domain)
+        .where(`${alias}.status` as any, "=", "active")
         .where((eb) => eb.or([
-          eb(`${alias}.name` as never, "ilike", ilike),
-          eb(`${alias}.code` as never, "ilike", ilike),
+          eb(`${alias}.name` as any, "ilike", ilike),
+          eb(`${alias}.code` as any, "ilike", ilike),
           // keywords GIN: term = ANY(keywords) — exact element match on the array
           sql<boolean>`${sql.raw(String(term).replace(/'/g, "''"))
             .toString()
             ? `'${String(term).replace(/'/g, "''")}'`
-            : "''"} = ANY(${sql.raw(`${alias}.keywords`)})` as never,
+            : "''"} = ANY(${sql.raw(`${alias}.keywords`)})` as any,
         ]));
 
-      if (leafOnly)            { base = base.where(`${alias}.is_leaf`     as never, "=", true)     as typeof base; }
+      if (leafOnly)            { base = base.where(`${alias}.is_leaf`     as any, "=", true)     as typeof base; }
       if (!Number.isNaN(levelNo) && levelNo !== null) {
-        base = base.where(`${alias}.level_no`  as never, "=", levelNo)    as typeof base;
+        base = base.where(`${alias}.level_no`  as any, "=", levelNo)    as typeof base;
       }
-      if (parentCode)          { base = base.where(`${alias}.parent_code` as never, "=", parentCode) as typeof base; }
+      if (parentCode)          { base = base.where(`${alias}.parent_code` as any, "=", parentCode) as typeof base; }
 
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("cnt")).executeTakeFirst(),
@@ -385,8 +385,8 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
             `${alias}.description`, `${alias}.parent_code`, `${alias}.level_no`,
             `${alias}.is_leaf`, `${alias}.keywords`, `${alias}.status`,
           ] as never[])
-          .orderBy(`${alias}.level_no` as never, "asc")
-          .orderBy(`${alias}.code`     as never, "asc")
+          .orderBy(`${alias}.level_no` as any, "asc")
+          .orderBy(`${alias}.code`     as any, "asc")
           .limit(limit)
           .execute(),
       ]);
@@ -442,7 +442,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q = req.query as Record<string, unknown>;
@@ -517,7 +517,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q = req.query as Record<string, unknown>;
@@ -593,7 +593,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const family = resolveFamily(req.params["family"] ?? "", res);
+      const family = resolveFamily(String(req.params["family"]), res);
       if (!family) return;
 
       const q = req.query as Record<string, unknown>;
@@ -607,13 +607,13 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
       const statusFilter  = typeof q["status"] === "string" ? q["status"] : "active";
 
       let base = db.selectFrom(`${crosswalkTable(family)} as cw`);
-      if (sourceDomain) { base = base.where("cw.source_domain_code" as never, "=", sourceDomain) as typeof base; }
-      if (targetDomain) { base = base.where("cw.target_domain_code" as never, "=", targetDomain) as typeof base; }
-      if (sourceCode)   { base = base.where("cw.source_code"        as never, "=", sourceCode)   as typeof base; }
-      if (targetCode)   { base = base.where("cw.target_code"        as never, "=", targetCode)   as typeof base; }
-      if (mappingType)  { base = base.where("cw.mapping_type"       as never, "=", mappingType)  as typeof base; }
-      if (verifiedOnly) { base = base.where("cw.is_verified"        as never, "=", true)          as typeof base; }
-      base = base.where("cw.status" as never, "=", statusFilter) as typeof base;
+      if (sourceDomain) { base = base.where("cw.source_domain_code" as any, "=", sourceDomain) as typeof base; }
+      if (targetDomain) { base = base.where("cw.target_domain_code" as any, "=", targetDomain) as typeof base; }
+      if (sourceCode)   { base = base.where("cw.source_code"        as any, "=", sourceCode)   as typeof base; }
+      if (targetCode)   { base = base.where("cw.target_code"        as any, "=", targetCode)   as typeof base; }
+      if (mappingType)  { base = base.where("cw.mapping_type"       as any, "=", mappingType)  as typeof base; }
+      if (verifiedOnly) { base = base.where("cw.is_verified"        as any, "=", true)          as typeof base; }
+      base = base.where("cw.status" as any, "=", statusFilter) as typeof base;
 
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("cnt")).executeTakeFirst(),
@@ -625,9 +625,9 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
             "cw.mapping_type", "cw.confidence", "cw.provenance",
             "cw.is_verified", "cw.verified_at", "cw.notes", "cw.status",
           ] as never[])
-          .orderBy("cw.source_domain_code" as never, "asc")
-          .orderBy("cw.source_code"        as never, "asc")
-          .orderBy("cw.confidence"         as never, "desc")
+          .orderBy("cw.source_domain_code" as any, "asc")
+          .orderBy("cw.source_code"        as any, "asc")
+          .orderBy("cw.confidence"         as any, "desc")
           .limit(limit)
           .offset(offset)
           .execute(),
