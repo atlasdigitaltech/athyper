@@ -1,0 +1,16 @@
+{
+  "productCode": "neon",
+  "productName": "neon",
+  "descriptor": "Business Operating Platform",
+  "logoFiles": {
+    "primary": "logo-primary.svg",
+    "compact": "logo-compact.svg",
+    "icon": "icon.svg"
+  },
+  "rules": {
+    "officialAppLockup": "logo-primary.svg",
+    "officialKeycloakLockup": "logo-primary.svg",
+    "minWidthPx": 120,
+    "clearSpaceRatio": 0.5
+  }
+}

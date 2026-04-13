@@ -7,7 +7,6 @@
  *
  * Flows:
  *   - User login        → /api/auth/login?returnUrl=...
- *   - Partner login     → /api/auth/login?returnUrl=...
  *   - GitHub OAuth      → /api/auth/login?provider=github&returnUrl=...
  *   - Platform Admin    → /api/auth/login?realm=platform (feature-flagged)
  *   - Clear Session     → /logout (clears stale session cookies)
@@ -16,31 +15,83 @@
  * (set by direct deep-links or bookmarks) for backwards compatibility.
  */
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { NeonLogo } from "@athyper/icons/custom/NeonLogo";
 import { Button } from "@athyper/ui/primitives";
+import { NeonLogoPrimary } from "@athyper/brand";
+
+// ─── Workspace marketing slides ───────────────────────────────────────────────
+
+const SLIDES = [
+  {
+    workspace: "Finance",
+    headline: "Master Every Dollar.\nCommand Every Decision.",
+    description:
+      "Unify accounting, payments, cash flow, budgets, and digital transactions into a single financial command center.",
+  },
+  {
+    workspace: "Supply Chain",
+    headline: "Orchestrate\nComplexity.",
+    description:
+      "Command sourcing, procurement, inventory, warehousing, logistics, and supplier performance through one intelligent backbone.",
+  },
+  {
+    workspace: "Commercial",
+    headline: "Turn Every Conversation\ninto Revenue.",
+    description:
+      "Capture, nurture, and convert demand with a seamlessly connected engine across customer engagement, sales, and order execution.",
+  },
+  {
+    workspace: "People",
+    headline: "Empower Every Person.\nElevate the Organization.",
+    description:
+      "Fuel the full workforce lifecycle with intelligent HR and payroll capabilities that keep talent engaged, aligned, and compliant.",
+  },
+  {
+    workspace: "Projects & Services",
+    headline: "Deliver Brilliance.\nControl Every Cost.",
+    description:
+      "Manage projects, service workflows, budgets, and revenue-linked execution — all in one command center.",
+  },
+  {
+    workspace: "Operations",
+    headline: "Run Without\nInterruption.",
+    description:
+      "Power production and maintenance with intelligent tools that maximize uptime, sharpen planning, and drive operational excellence.",
+  },
+  {
+    workspace: "Assets & Facilities",
+    headline: "Maximize What\nYou Own.",
+    description:
+      "Command fixed assets, property portfolios, leases, facilities, and spaces with lifecycle visibility and bulletproof accountability.",
+  },
+];
 
 // ─── Inner page (needs useSearchParams inside Suspense) ───────────────────────
 
 function LoginPageInner() {
   const params = useSearchParams();
 
-  // Read from both param names: `redirect` (set by middleware) and
-  // `returnUrl` (set by direct deep-links / bookmarks)
   const returnUrl =
     params.get("redirect") ?? params.get("returnUrl") ?? "/";
 
   const errorParam = params.get("error");
   const [loading, setLoading] = useState<string | null>(null);
+  const [slide, setSlide] = useState(0);
+
+  // Auto-advance slides every 5 s
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlide((s) => (s + 1) % SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   function buildLoginUrl(workbench: "user" | "partner" | "platform"): string {
     const url = new URL("/api/auth/login", window.location.origin);
     if (workbench === "platform") {
       url.searchParams.set("realm", "platform");
     } else {
-      // Encode a workbench filter so /auth/select only shows relevant workbench
-      // options after KC auth (e.g. clicking "Partner Login" hides User tiles).
       const selectTarget = new URL("/auth/select", window.location.origin);
       if (returnUrl && returnUrl !== "/") {
         selectTarget.searchParams.set("returnUrl", returnUrl);
@@ -70,53 +121,70 @@ function LoginPageInner() {
   const githubEnabled =
     process.env.NEXT_PUBLIC_GITHUB_LOGIN_ENABLED === "true";
 
+  const current = SLIDES[slide] ?? SLIDES[0]!;
+
   return (
     <div className="flex h-dvh">
-      {/* ── Left panel — branding (lg+) ───────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-1/3 lg:h-dvh bg-white items-center justify-center border-r border-border">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 900 600"
-          role="img"
-          aria-label="neon Business Operating Platform"
-          className="w-full px-8"
-        >
-          <g transform="translate(40,35) scale(1.02)">
-            <polygon points="125,17 14,244 75,244 155,82" fill="#000000" />
-            <polygon points="223,120 169,120 109,244 163,243" fill="#000000" />
-            <polygon points="225,164 199,220 212,244 263,244" fill="#000000" />
-          </g>
-          <text x="315" y="245" fill="#000000" fontFamily="Arial, Helvetica, sans-serif" fontSize="126" fontWeight="700" letterSpacing="-4">neon</text>
-          <line x1="38" y1="337" x2="862" y2="337" stroke="#000000" strokeWidth="5" />
-          <text x="450" y="455" fill="#000000" fontFamily="Arial, Helvetica, sans-serif" fontSize="59" fontWeight="400" textAnchor="middle" letterSpacing="-1">Business Operating Platform</text>
-        </svg>
-      </div>
 
-      {/* ── Right panel — form ────────────────────────────────────────── */}
-      <div className="flex w-full items-center justify-center bg-background p-8 lg:w-2/3">
-        <div className="w-full max-w-sm space-y-8 py-16 lg:py-24">
+      {/* ── Left panel ───────────────────────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-3/5 lg:h-dvh flex-col bg-primary border-r border-border text-primary-foreground">
 
-          {/* Header — logo visible on mobile only */}
-          <div className="space-y-2 text-center">
-            <div className="flex flex-col items-center justify-center gap-2 lg:hidden">
-              <NeonLogo className="text-primary" width={36} height={36} />
-              <span className="text-lg font-light tracking-widest text-foreground">neon</span>
-            </div>
-            <h2 className="text-2xl font-medium tracking-tight">Sign in</h2>
-            <p className="text-sm text-muted-foreground">
-              Sign in with your identity provider.
+        {/* Logo — top center */}
+        <div className="flex justify-center pt-10 pb-2">
+          <NeonLogoPrimary className="w-[480px]" />
+        </div>
+
+        {/* Marketing slider — fills remaining height */}
+        <div className="flex flex-1 flex-col justify-center px-16 pb-10">
+          <div key={slide} className="space-y-4 animate-in fade-in duration-500">
+            <p className="text-xs font-semibold tracking-widest uppercase opacity-50">
+              {current.workspace}
+            </p>
+            <h3 className="text-[2.75rem] font-bold leading-[1.15] whitespace-pre-line">
+              {current.headline}
+            </h3>
+            <p className="text-base leading-relaxed opacity-60">
+              {current.description}
             </p>
           </div>
 
-          {/* Error banner */}
-          {errorParam && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {decodeURIComponent(errorParam)}
-            </div>
-          )}
+          {/* Dot indicators */}
+          <div className="flex items-center gap-2 mt-10">
+            {SLIDES.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setSlide(i)}
+                aria-label={`Slide ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-300 bg-primary-foreground ${
+                  i === slide ? "w-6 opacity-100" : "w-1.5 opacity-30"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
 
-          {/* Primary login options */}
-          <div className="space-y-3">
+      {/* ── Right panel — form ────────────────────────────────────────────── */}
+      <div className="flex w-full flex-col bg-background lg:w-2/5">
+
+        {/* Centered form area */}
+        <div className="flex flex-1 items-center justify-center p-8">
+          <div className="w-full max-w-sm space-y-8">
+
+            {/* Header */}
+            <div className="space-y-1 text-center">
+              <h2 className="text-2xl font-medium tracking-tight">Welcome back</h2>
+              <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            </div>
+
+            {/* Error banner */}
+            {errorParam && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {decodeURIComponent(errorParam)}
+              </div>
+            )}
+
+            {/* Sign in */}
             <Button
               className="w-full"
               size="lg"
@@ -126,66 +194,66 @@ function LoginPageInner() {
             >
               Sign in
             </Button>
-          </div>
 
-          {/* Divider + Social login (feature-flagged) */}
-          {githubEnabled && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+            {/* GitHub (feature-flagged) */}
+            {githubEnabled && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">or</span>
-                </div>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleGitHub}
+                  loading={loading === "github"}
+                  disabled={loading !== null}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
+                  </svg>
+                  Continue with GitHub
+                </Button>
+              </>
+            )}
+
+            {/* Platform admin */}
+            {platformEnabled && (
+              <div className="text-center">
+                <button
+                  className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                  onClick={() => handleLogin("platform")}
+                  disabled={loading !== null}
+                >
+                  Platform Admin
+                </button>
               </div>
+            )}
 
-              <Button
-                className="w-full"
-                variant="outline"
-                size="lg"
-                onClick={handleGitHub}
-                loading={loading === "github"}
-                disabled={loading !== null}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                Continue with GitHub
-              </Button>
-            </>
-          )}
-
-          {/* Platform admin */}
-          {platformEnabled && (
-            <div className="text-center">
-              <button
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
-                onClick={() => handleLogin("platform")}
-                disabled={loading !== null}
-              >
-                Platform Admin
-              </button>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="space-y-1 pt-2 text-center">
-            <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} athyper. All rights reserved.
-            </p>
-            <div>
-              <button
-                className="text-xs text-muted-foreground/60 underline-offset-4 hover:underline disabled:opacity-50"
-                onClick={() => { window.location.href = "/logout"; }}
-                disabled={loading !== null}
-              >
-                Clear Session
-              </button>
-            </div>
           </div>
-
         </div>
+
+        {/* Footer — pinned to bottom */}
+        <div className="space-y-1 pb-8 text-center">
+          <p className="text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} athyper. All rights reserved.
+          </p>
+          <div>
+            <button
+              className="text-xs text-muted-foreground opacity-60 underline-offset-4 hover:underline disabled:opacity-50"
+              onClick={() => { window.location.href = "/logout"; }}
+              disabled={loading !== null}
+            >
+              Clear Session
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

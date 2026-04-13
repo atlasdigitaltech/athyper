@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/brand": "workspace:*",
     "@athyper/api-client": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
     "@athyper/auth": "workspace:*",

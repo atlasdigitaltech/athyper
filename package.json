@@ -13,9 +13,15 @@
     "test": "turbo test",
     "storybook": "turbo dev --filter=@athyper/storybook",
     "contracts:check": "turbo contracts:check",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "brand:build": "tsx scripts/brand/build-brand.ts",
+    "brand:sync:keycloak": "tsx scripts/brand/sync-keycloak.ts",
+    "brand:verify": "tsx scripts/brand/verify-brand-sync.ts",
+    "brand:refresh": "pnpm brand:build && pnpm brand:sync:keycloak",
+    "brand:check": "pnpm brand:build && pnpm brand:verify"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "turbo": "^2.9.5",
     "typescript": "^6.0.2"
   }

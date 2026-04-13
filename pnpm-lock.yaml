@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
       turbo:
         specifier: ^2.9.5
         version: 2.9.5
@@ -26,6 +29,9 @@ importers:
       '@athyper/auth':
         specifier: workspace:*
         version: link:../../packages/shared/data/auth
+      '@athyper/brand':
+        specifier: workspace:*
+        version: link:../../packages/shared/foundation/brand
       '@athyper/collaboration-ui':
         specifier: workspace:*
         version: link:../../packages/shared/runtime/collaboration-ui
@@ -248,6 +254,22 @@ importers:
       react:
         specifier: ^19.2.5
         version: 19.2.5
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+
+  packages/shared/foundation/brand:
+    dependencies:
+      react:
+        specifier: '>=19.0.0'
+        version: 19.2.5
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
       typescript:
         specifier: ^6.0.2
         version: 6.0.2

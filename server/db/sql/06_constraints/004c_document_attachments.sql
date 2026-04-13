@@ -15,8 +15,9 @@ ALTER TABLE document.doc_attachment
     ALTER COLUMN created_by SET NOT NULL;
 
 -- Add UNIQUE (tenant_id, id) if not already present
--- duplicate_table (42P07) raised when constraint was already created inline in CREATE TABLE
--- duplicate_object (42710) raised when already added via ALTER TABLE previously
+-- duplicate_table (42P07) is raised on fresh DBs where the constraint is already
+-- defined inline in the CREATE TABLE; duplicate_object (42710) is raised on old
+-- DBs that had the constraint added via ALTER TABLE previously.
 DO $$ BEGIN
     ALTER TABLE document.doc_attachment
         ADD CONSTRAINT doc_attachment_tenant_id_uq UNIQUE (tenant_id, id);

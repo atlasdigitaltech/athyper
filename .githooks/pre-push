@@ -4,6 +4,10 @@
 # Blocks direct pushes to protected branches: main, develop.
 # All changes must go through a Pull Request.
 #
+# Also: verifies that KC theme brand assets are in sync with the
+# canonical source before any push. Prevents stale assets from
+# reaching the remote.
+#
 # Flow:  feature/* → PR → develop → PR → main
 #
 # To bypass in a genuine emergency:
@@ -37,5 +41,19 @@ while read local_ref local_sha remote_ref remote_sha; do
     exit 1
   fi
 done
+
+# ── Brand sync verification ───────────────────────────────────
+# Verify KC brand assets match the canonical source before push.
+# Catches cases where brand source changed but sync was not run.
+
+if command -v pnpm &>/dev/null; then
+  pnpm brand:verify
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "  Fix: run  pnpm brand:refresh  then commit the updated files."
+    echo ""
+    exit 1
+  fi
+fi
 
 exit 0

@@ -2056,13 +2056,11 @@
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
         "http://localhost:3000/*",
-        "https://neon.athyper.local/*",
-        "http://localhost:3001/*"
+        "https://neon.athyper.local/*"
       ],
       "webOrigins": [
-        "https://neon.athyper.local",
-        "http://localhost:3001",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://neon.athyper.local"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -2080,7 +2078,7 @@
         "client.introspection.response.allow.jwt.claim.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "frontchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3001/*",
+        "post.logout.redirect.uris": "http://localhost:3000/*##https://neon.athyper.local/*",
         "oauth2.device.authorization.grant.enabled": "false",
         "backchannel.logout.revoke.offline.tokens": "false",
         "use.refresh.tokens": "true",

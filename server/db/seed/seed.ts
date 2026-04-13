@@ -270,21 +270,19 @@ async function runReset(connectionString: string): Promise<void> {
 
     log({ msg: "reset_start" });
 
-    // Drop schemas in reverse dependency order
+    // Drop schemas in reverse dependency order.
+    // List must match the schemas created by 01_schemas/001_schemas.sql.
     const schemas = [
-      "fin",
-      "evt",
-      "notify",
-      "ui",
-      "collab",
-      "doc",
-      "ent",
-      "wf",
-      "sec",
-      "audit",
-      "meta",
-      "ref",
-      "core",
+      "aggregate",
+      "snapshot",
+      "governance",
+      "event",
+      "log",
+      "ledger",
+      "document",
+      "master",
+      "control",
+      "shared",
     ];
     for (const schema of schemas) {
       await client.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
