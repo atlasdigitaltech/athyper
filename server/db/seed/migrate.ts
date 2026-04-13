@@ -220,6 +220,8 @@ function checksum(sql: string): string {
 // ---------------------------------------------------------------------------
 
 async function ensureTrackingTable(client: pg.Client): Promise<void> {
+  // public schema may not exist on fresh databases or after a DROP SCHEMA public
+  await client.query(`CREATE SCHEMA IF NOT EXISTS public`);
   await client.query(`
     CREATE TABLE IF NOT EXISTS public.schema_provisions (
       id          serial primary key,
@@ -482,8 +484,7 @@ async function main(): Promise<void> {
 
     if (reset) {
       await runReset(connectionString);
-      // After reset, fall through to run all phases unless only --reset was given
-      if (!runAll && !phaseArg) return;
+      // After reset, always fall through to re-run all phases from scratch
     }
 
     let phases: Phase[];

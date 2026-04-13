@@ -431,6 +431,14 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- group_role: patch scope check to include 'ou_l1' (CC-scoped assignments)
+DO $$ BEGIN
+    ALTER TABLE master.group_role DROP CONSTRAINT IF EXISTS gr_scope_chk;
+    ALTER TABLE master.group_role ADD CONSTRAINT gr_scope_chk
+        CHECK (scope IN ('all','own','team','ou_l1'));
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 -- group_role → tenant, principal_group, role, company_code
 DO $$ BEGIN
     ALTER TABLE master.group_role

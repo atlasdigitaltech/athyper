@@ -15,10 +15,12 @@ ALTER TABLE document.doc_attachment
     ALTER COLUMN created_by SET NOT NULL;
 
 -- Add UNIQUE (tenant_id, id) if not already present
+-- duplicate_table (42P07) raised when constraint was already created inline in CREATE TABLE
+-- duplicate_object (42710) raised when already added via ALTER TABLE previously
 DO $$ BEGIN
     ALTER TABLE document.doc_attachment
         ADD CONSTRAINT doc_attachment_tenant_id_uq UNIQUE (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 -- ── FK constraints ────────────────────────────────────────────────────────────
 

@@ -185,7 +185,6 @@ CREATE TABLE IF NOT EXISTS master.asset (
     useful_life_months       integer      NOT NULL,
 
     -- Table-specific (assignment)
-    company_code_id          uuid,
     cost_center_id           uuid,
     profit_center_id         uuid,
     project_id               uuid,

@@ -19,7 +19,7 @@
 --
 -- Idempotent: TRUNCATE group_member then ON CONFLICT DO NOTHING.
 -- ============================================================================
-
+ 
 DO $members$
 DECLARE
     v_su        uuid := '00000000-0000-0000-0000-000000000000';
@@ -27,11 +27,11 @@ DECLARE
 BEGIN
     SELECT id INTO v_athyper
     FROM master.tenant WHERE code = 'athyper' AND realm_key = 'athyper';
-
+ 
     -- ── Step 0: Clear existing group_member rows ─────────────────────────────
     TRUNCATE master.group_member CASCADE;
     RAISE NOTICE '[002_demo_group_members] Cleared group_member';
-
+ 
     -- ── Step 1: Assign principal system users (tenant-level, 28 users) ───────
     --
     -- *.OWNER  → <TENANT_CODE_UPPER>-OWNER group in their tenant
@@ -82,9 +82,9 @@ BEGIN
         'bb001000-0000-0000-0000-00000000001c'::uuid
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
-
+ 
     RAISE NOTICE '[002_demo_group_members] Step 1 complete — 28 tenant-level principal users assigned';
-
+ 
     -- ── Step 2: Assign CC-level principals (athyper, 34 users) ───────────────
     --
     -- <CC>.OWNER → <CC>-OWNER group
@@ -140,9 +140,9 @@ BEGIN
         'bb002000-0000-0000-0000-000000000022'::uuid
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
-
+ 
     RAISE NOTICE '[002_demo_group_members] Step 2 complete — 34 CC-level principals assigned';
-
+ 
     -- ── Step 3: Assign demo users to correct scope groups ────────────────────
     --
     -- Scope rules derived from KC org memberships:
@@ -195,9 +195,9 @@ BEGIN
     JOIN master.principal_group pg
         ON pg.tenant_id = v_athyper AND pg.code = v.group_code
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
-
+ 
     RAISE NOTICE '[002_demo_group_members] Step 3 complete — demo users assigned to correct scope groups';
-
+ 
     -- ── Step 4: Assign named/demo tenant persona users to their ADMIN groups ────
     --
     -- One persona user per tenant (from 005_named_tenant_principals.sql).
@@ -235,12 +235,12 @@ BEGIN
     JOIN master.principal_group pg
         ON pg.tenant_id = t.id AND pg.code = v.group_code
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
-
+ 
     RAISE NOTICE '[002_demo_group_members] Step 4 complete — 13 named/demo tenant persona users assigned';
     RAISE NOTICE '[002_demo_group_members] Complete';
-
+ 
 END $members$;
-
+ 
 -- ── Verification ──────────────────────────────────────────────────────────────
 SELECT
     t.code                   AS tenant,

@@ -58,18 +58,22 @@ BEGIN
     --               keycloak_sync_status, created_by
     -- ══════════════════════════════════════════════════════════════════════════
 
+    -- Use a SELECT-based insert to resolve the actual principal UUID at runtime.
+    -- The principal may already exist (from 001_demo_principals.sql) with a
+    -- different UUID, so hardcoding the UUID here would cause an FK violation.
     INSERT INTO master.principal_profile (
         tenant_id, principal_id,
         given_name, family_name, display_name,
         keycloak_id, keycloak_username, keycloak_sync_status,
         created_by
-    ) VALUES
-
-    ((SELECT id FROM master.tenant WHERE realm_key = 'athyper' AND code = 'athyper'),
-     'aa000015-0000-0000-0000-000000000001',
-     'ATHQ', 'Agent', 'ATHQ Agent',
-     'aa000015-0000-0000-0000-000000000001', 'athq.agent', 'pending', v_su)
-
+    )
+    SELECT
+        p.tenant_id, p.id,
+        'ATHQ', 'Agent', 'ATHQ Agent',
+        p.id, 'athq.agent', 'pending', v_su
+    FROM master.principal p
+    JOIN master.tenant t ON t.id = p.tenant_id
+    WHERE t.realm_key = 'athyper' AND t.code = 'athyper' AND p.code = 'athq.agent'
     ON CONFLICT (tenant_id, principal_id) DO NOTHING;
 
     RAISE NOTICE '[004_athq_principals] ATHQ Agent principal + profile seeded (auth binding created by JIT on first login)';

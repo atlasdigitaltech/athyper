@@ -1017,7 +1017,7 @@ CREATE TABLE IF NOT EXISTS master.group_role (
 
     CONSTRAINT group_role_pkey     PRIMARY KEY (id),
     CONSTRAINT group_role_uq       UNIQUE (tenant_id, group_id, role_id),
-    CONSTRAINT gr_scope_chk        CHECK (scope IN ('all','own','team')),
+    CONSTRAINT gr_scope_chk        CHECK (scope IN ('all','own','team','ou_l1')),
     CONSTRAINT gr_status_chk       CHECK (status IN ('active','suspended'))
 );
 

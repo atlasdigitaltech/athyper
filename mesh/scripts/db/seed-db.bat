@@ -24,7 +24,7 @@ pushd "%SCRIPT_DIR%\..\.." >nul
 set "MESH_DIR=%CD%"
 popd >nul
 
-pushd "%MESH_DIR%\..\framework\adapters\db" >nul
+pushd "%MESH_DIR%\..\server\db" >nul
 set "SEED_DIR=%CD%"
 popd >nul
 
@@ -96,7 +96,7 @@ REM ---------------------------------------------------------------------------
 REM Run the provisioner
 REM ---------------------------------------------------------------------------
 cd /d "%SEED_DIR%"
-npx tsx src/seed/seed.ts %*
+npx tsx seed/migrate.ts %*
 
 if errorlevel 1 (
     echo.
