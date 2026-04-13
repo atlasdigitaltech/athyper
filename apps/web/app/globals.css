@@ -1,0 +1,21 @@
+/* Tell Tailwind CSS 4 to load the v3-format JavaScript config.
+   Without this directive @tailwindcss/postcss ignores tailwind.config.ts
+   and neither the content paths (source scanning) nor the preset theme
+   (sidebar colors, w-sidebar, etc.) are applied. */
+@config "../tailwind.config.ts";
+
+/* Load all theme presets */
+@import "@athyper/theme/presets/base.css";
+@import "@athyper/theme/presets/neon-modern.css";
+@import "@athyper/theme/presets/neon-mono.css";
+@import "@athyper/theme/presets/neon-tangerine.css";
+@import "@athyper/theme/presets/mesh-night.css";
+@import "@athyper/theme/presets/mesh-bloom.css";
+@import "@athyper/theme/presets/atlas-vintage.css";
+@import "@athyper/theme/presets/athyper-pop.css";
+@import "@athyper/theme/presets/athyper-bubble.css";
+@import "@athyper/theme/presets/atlas-neo.css";
+@import "@athyper/theme/presets/atlas-doom.css";
+
+/* Load Tailwind + base resets */
+@import "@athyper/theme/base.css";

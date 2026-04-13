@@ -1,0 +1,4 @@
+
+> @athyper/adapter-objectstorage@0.1.0 typecheck D:\Products\athyper\framework\adapters\objectstorage
+> tsc -p tsconfig.json --noEmit
+

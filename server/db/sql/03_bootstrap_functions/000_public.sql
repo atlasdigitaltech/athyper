@@ -1,0 +1,2 @@
+-- 03_bootstrap_functions/000_public.sql
+-- No bootstrap functions required for this schema.

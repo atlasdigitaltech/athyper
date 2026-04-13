@@ -2,17 +2,5 @@
   "name": "@athyper/tsconfig",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "echo noop"
-  },
-  "exports": {
-    "./base": "./base.json",
-    "./next": "./next.json",
-    "./package.json": "./package.json"
-  },
-  "files": [
-    "base.json",
-    "next.json"
-  ]
+  "files": ["base.json"]
 }

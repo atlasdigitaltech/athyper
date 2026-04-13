@@ -1,169 +1,30 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "ui": "tui",
+  "globalDependencies": ["**/.env.*local"],
   "tasks": {
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-
     "build": {
       "dependsOn": ["^build"],
-      "env": [
-        "NODE_ENV",
-        "NEXT_PUBLIC_*",
-
-        "DATABASE_URL",
-        "DATABASE_ADMIN_URL",
-
-        "AUTH_SECRET",
-        "AUTH_DEBUG_EXPOSE_TOKENS",
-        "KEYCLOAK_URL",
-        "KEYCLOAK_BASE_URL",
-        "KEYCLOAK_REALM",
-        "KEYCLOAK_CLIENT_ID",
-
-        "REDIS_URL",
-        "RUNTIME_API_URL",
-        "PUBLIC_BASE_URL",
-        "DEFAULT_TENANT_ID",
-        "ENVIRONMENT",
-        "TENANT_ID"
-      ],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*",
-
-        "tooling/tsconfig/**",
-        "tooling/eslint-config/**",
-
-        "src/**",
-        "assets/**",
-        "generated/**",
-
-        "prisma/**",
-        "kysely/**",
-        "sql/**",
-        "seed/**",
-        "types/**",
-
-        "*.ts",
-        "*.tsx",
-        "*.js",
-        "*.jsx",
-        "*.json",
-
-        "package.json",
-        "tsconfig*.json",
-        "next.config.*",
-        "tailwind.config.*",
-        "postcss.config.*"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "!.next/cache/**",
-        "build/**",
-        "out/**",
-        "*.tsbuildinfo"
-      ]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "inputs": ["src/**", "tsconfig.json", "package.json"]
     },
-
+    "dev": { "cache": false, "persistent": true },
     "lint": {
-      "inputs": [
-        "$TURBO_DEFAULT$",
-
-        "tooling/tsconfig/**",
-        "tooling/eslint-config/**",
-
-        "src/**",
-        "assets/**",
-        "generated/**",
-
-        "*.ts",
-        "*.tsx",
-        "*.js",
-        "*.jsx",
-        "*.json",
-
-        "package.json",
-        "eslint.config.*",
-        ".eslintrc*",
-        "tsconfig*.json"
-      ],
-      "outputs": []
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "eslint.config.*"]
     },
-
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-
-        "tooling/tsconfig/**",
-        "tooling/eslint-config/**",
-
-        "src/**",
-        "assets/**",
-        "generated/**",
-
-        "*.ts",
-        "*.tsx",
-        "*.json",
-
-        "package.json",
-        "tsconfig*.json"
-      ],
-      "outputs": ["*.tsbuildinfo"]
+      "inputs": ["src/**", "tsconfig.json"]
     },
-
     "test": {
-      "dependsOn": ["^test"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-
-        "tooling/tsconfig/**",
-        "tooling/eslint-config/**",
-
-        "src/**",
-        "assets/**",
-        "generated/**",
-
-        "*.ts",
-        "*.tsx",
-        "*.js",
-        "*.jsx",
-        "*.json",
-
-        "package.json"
-      ],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tests/**", "vitest.config.*"]
     },
-
-    "clean": {
-      "cache": false
+    "contracts:check": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**"],
+      "outputs": []
     },
-
-    "depcheck": {
-      "cache": false
-    },
-
-    "db:generate": { "cache": false },
-    "db:migrate": { "cache": false },
-    "db:deploy": { "cache": false },
-    "db:reset": { "cache": false },
-    "db:studio": { "cache": false },
-    "kysely:codegen": { "cache": false }
-  },
-  "globalEnv": [
-    "AUDIT_ENCRYPTION_MASTER_KEY",
-    "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
-    "NODE_TLS_REJECT_UNAUTHORIZED",
-    "API_MESH_URL",
-    "ENABLE_DEV_STUBS",
-    "ENTITY_DATA_PARAMS",
-    "PLATFORM_CONTROL_ENABLED",
-    "PLATFORM_KEYCLOAK_CLIENT_ID",
-    "PLATFORM_KEYCLOAK_REALM"
-  ],
-  "globalPassThroughEnv": ["CI", "FORCE_COLOR", "NODE_OPTIONS"]
+    "clean": { "cache": false }
+  }
 }

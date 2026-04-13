@@ -1,0 +1,1336 @@
+/**
+ * Platform Routes — saved views, module tree, entity catalog, notifications,
+ *                   user preferences, entity field browser
+ *
+ * GET    /api/platform/saved-views/:entity              — user + shared saved filter views
+ * POST   /api/platform/saved-views/:entity              — create a saved view
+ * DELETE /api/platform/saved-views/:entity/:id          — delete a saved view
+ * PATCH  /api/platform/saved-views/:entity/:id/default  — set as default
+ * GET    /api/platform/modules                          — tenant module subscriptions
+ * GET    /api/platform/entities                         — entity catalog (admin)
+ * GET    /api/platform/entities/:name/fields            — fields for a specific entity
+ * GET    /api/platform/preferences                      — current user's UI preferences
+ * PATCH  /api/platform/preferences                      — update UI preferences
+ * GET    /api/platform/notifications/unread-count       — unread notification count
+ * GET    /api/platform/blueprints                      — blueprint catalog with applied status per tenant
+ */
+
+import type { RequestHandler, Router } from "express";
+import type { Kysely } from "kysely";
+import { sql } from "kysely";
+import {
+  verifyBearer,
+  resolveTenantId,
+  isUuid,
+  resolvePrincipalIdOrNull,
+} from "@athyper/svc-shared";
+
+// ─── Deps ─────────────────────────────────────────────────────────────────────
+
+export interface PlatformRoutesDeps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>;
+  auth: {
+    verifyToken(token: string): Promise<Record<string, unknown>>;
+  };
+  logger?: {
+    error(event: string, fields?: Record<string, unknown>): void;
+  };
+}
+
+// ─── Row mappers ──────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toSavedView(row: Record<string, any>) {
+  const state = (row.state_json ?? {}) as Record<string, unknown>;
+  return {
+    id:         row.id as string,
+    entity_code: (row.entity_key ?? "") as string,
+    name:       row.name as string,
+    is_default: (row.is_default ?? false) as boolean,
+    is_shared:  (row.scope === "shared" || row.scope === "system") as boolean,
+    config: {
+      columns:    (state["columns"]    ?? undefined) as string[] | undefined,
+      sort_by:    (state["sort_by"]    ?? undefined) as string   | undefined,
+      sort_order: (state["sort_order"] ?? undefined) as "asc" | "desc" | undefined,
+      filters:    (state["filters"]    ?? undefined) as unknown[] | undefined,
+      page_size:  (state["page_size"]  ?? undefined) as number   | undefined,
+    },
+    created_by:  row.created_by as string,
+    created_at:  (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toModule(row: Record<string, any>) {
+  return {
+    id:            row.id as string,
+    module_id:     row.module_id as string,
+    status:        row.status as string,
+    subscribed_at: (row.subscribed_at instanceof Date ? row.subscribed_at.toISOString() : String(row.subscribed_at)),
+    expires_at:    row.expires_at ? (row.expires_at instanceof Date ? row.expires_at.toISOString() : String(row.expires_at)) : null,
+    metadata:      (row.metadata ?? {}) as Record<string, unknown>,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toEntity(row: Record<string, any>) {
+  return {
+    id:              row.id as string,
+    name:            row.name as string,
+    entity_class:    row.entity_class as string,
+    ownership_model: row.ownership_model as string,
+    module_id:       row.module_id as string,
+    table_schema:    row.table_schema as string,
+    table_name:      row.table_name as string,
+    label_singular:  (row.label_singular ?? null) as string | null,
+    label_plural:    (row.label_plural   ?? null) as string | null,
+    description:     (row.description    ?? null) as string | null,
+    icon_key:        (row.icon_key       ?? null) as string | null,
+  };
+}
+
+// ─── Route factory ────────────────────────────────────────────────────────────
+
+export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps): Router {
+  const { db, auth, logger } = deps;
+
+  // ── GET /platform/saved-views/:entity ──────────────────────────────────────
+
+  const listSavedViewsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityKey = req.params["entity"] as string;
+      const xOrg      = (req.headers["x-org"]   as string) ?? "";
+      const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      let query = db
+        .selectFrom("master.saved_view as sv")
+        .select([
+          "sv.id", "sv.entity_key", "sv.name", "sv.scope",
+          "sv.is_default", "sv.state_json",
+          "sv.created_by", "sv.created_at",
+        ])
+        .where("sv.tenant_id", "=", tenantId)
+        .where("sv.entity_key", "=", entityKey)
+        .where("sv.status", "=", "active")
+        .where("sv.deleted_at" as never, "is", null);
+
+      if (principalId) {
+        // personal views for this principal OR shared/system views
+        query = query.where((eb) =>
+          eb.or([
+            eb.and([
+              eb("sv.scope", "=", "personal"),
+              eb("sv.owner_principal_id", "=", principalId),
+            ]),
+            eb("sv.scope", "in", ["shared", "system"]),
+          ]),
+        ) as typeof query;
+      } else {
+        query = query.where("sv.scope", "in", ["shared", "system"]) as typeof query;
+      }
+
+      const rows = await query
+        .orderBy("sv.is_default", "desc")
+        .orderBy("sv.name", "asc")
+        .execute() as Record<string, unknown>[];
+
+      res.json(rows.map(toSavedView));
+    } catch (err) {
+      logger?.error("platform_saved_views_list_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /platform/saved-views/:entity ─────────────────────────────────────
+
+  const createSavedViewHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityKey = req.params["entity"] as string;
+      const xOrg      = (req.headers["x-org"]   as string) ?? "";
+      const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "TENANT_REQUIRED" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      const body = req.body as Record<string, unknown>;
+      const name  = typeof body["name"] === "string" ? body["name"].trim() : "";
+      const scope = typeof body["is_shared"] === "boolean" && body["is_shared"] ? "shared" : "personal";
+      const config = (body["config"] ?? {}) as Record<string, unknown>;
+
+      if (!name) { res.status(400).json({ error: "NAME_REQUIRED" }); return; }
+
+      // Machine-stable code derived from name
+      const code = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 60) + "_" + Date.now().toString(36);
+
+      const row = await db
+        .insertInto("master.saved_view" as never)
+        .values({
+          tenant_id:          tenantId,
+          owner_principal_id: scope === "personal" ? principalId : null,
+          scope,
+          surface_code:       "entity-list",
+          entity_key:         entityKey,
+          code,
+          name,
+          is_default:         false,
+          is_pinned:          false,
+          state_json:         JSON.stringify(config),
+          status:             "active",
+          created_by:         principalId,
+        } as never)
+        .returning(["id", "entity_key", "name", "scope", "is_default", "state_json", "created_by", "created_at"] as never[])
+        .executeTakeFirstOrThrow();
+
+      res.status(201).json(toSavedView(row as Record<string, unknown>));
+    } catch (err) {
+      logger?.error("platform_saved_views_create_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /platform/saved-views/:entity/:viewId ───────────────────────────
+
+  const deleteSavedViewHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const viewId  = req.params["viewId"] as string;
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (!isUuid(viewId)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      // Soft-delete: only owner can delete personal views; shared views require shared scope
+      const existing = await db
+        .selectFrom("master.saved_view as sv")
+        .select(["sv.id", "sv.scope", "sv.owner_principal_id"])
+        .where("sv.id", "=", viewId)
+        .where("sv.tenant_id", "=", tenantId)
+        .where("sv.deleted_at" as never, "is", null)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!existing) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (existing["scope"] === "personal" && existing["owner_principal_id"] !== principalId) {
+        res.status(403).json({ error: "FORBIDDEN" }); return;
+      }
+
+      await db
+        .updateTable("master.saved_view" as never)
+        .set({ deleted_at: new Date(), status: "archived", updated_at: new Date(), updated_by: principalId ?? undefined } as never)
+        .where("id" as never, "=", viewId as never)
+        .execute();
+
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("platform_saved_views_delete_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /platform/saved-views/:entity/:viewId/default ───────────────────
+
+  const setDefaultViewHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityKey = req.params["entity"] as string;
+      const viewId    = req.params["viewId"] as string;
+      const xOrg      = (req.headers["x-org"]   as string) ?? "";
+      const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      if (!isUuid(viewId)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      // Atomically clear old default and set new one to prevent a window with no default
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .updateTable("master.saved_view" as never)
+          .set({ is_default: false, updated_at: new Date() } as never)
+          .where("tenant_id" as never, "=", tenantId as never)
+          .where("entity_key" as never, "=", entityKey as never)
+          .where("is_default" as never, "=", true as never)
+          .execute();
+
+        await trx
+          .updateTable("master.saved_view" as never)
+          .set({ is_default: true, updated_at: new Date(), updated_by: principalId ?? undefined } as never)
+          .where("id" as never, "=", viewId as never)
+          .where("tenant_id" as never, "=", tenantId as never)
+          .execute();
+      });
+
+      res.json({ ok: true });
+    } catch (err) {
+      logger?.error("platform_saved_views_default_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/modules ──────────────────────────────────────────────────
+
+  const modulesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const rows = await db
+        .selectFrom("master.tenant_module_subscription as tms")
+        .select(["tms.id", "tms.module_id", "tms.status", "tms.subscribed_at", "tms.expires_at", "tms.metadata"])
+        .where("tms.tenant_id", "=", tenantId)
+        .orderBy("tms.subscribed_at", "asc")
+        .execute() as Record<string, unknown>[];
+
+      res.json(rows.map(toModule));
+    } catch (err) {
+      logger?.error("platform_modules_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/entities ────────────────────────────────────────────────
+
+  const entitiesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const search = typeof req.query["q"] === "string" ? req.query["q"] : undefined;
+      const entityClass = typeof req.query["class"] === "string" ? req.query["class"] : undefined;
+      const limit = Math.min(200, Math.max(1, parseInt(String(req.query["limit"] ?? "100"), 10)));
+
+      let query = db
+        .selectFrom("control.entity as e")
+        .select([
+          "e.id", "e.name", "e.entity_class", "e.ownership_model", "e.module_id",
+          "e.table_schema", "e.table_name",
+          "e.label_singular", "e.label_plural", "e.description", "e.icon_key",
+        ])
+        .where("e.is_active" as never, "=", true as never);
+
+      if (search) {
+        const term = `%${search.toLowerCase()}%`;
+        query = query.where((eb) =>
+          eb.or([
+            eb("e.name" as never, "like", term as never),
+            eb("e.table_name" as never, "like", term as never),
+          ]),
+        ) as typeof query;
+      }
+      if (entityClass) {
+        query = query.where("e.entity_class" as never, "=", entityClass as never) as typeof query;
+      }
+
+      const rows = await query
+        .orderBy("e.entity_class", "asc")
+        .orderBy("e.name", "asc")
+        .limit(limit)
+        .execute() as Record<string, unknown>[];
+
+      res.json({ data: rows.map(toEntity), count: rows.length });
+    } catch (err) {
+      logger?.error("platform_entities_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/notifications ───────────────────────────────────────────
+
+  const listNotificationsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ data: [] }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.json({ data: [] }); return; }
+
+      const limit  = Math.min(100, Math.max(1, parseInt(String(req.query["limit"]  ?? "50"), 10)));
+      const offset = Math.max(0,               parseInt(String(req.query["offset"] ?? "0"),  10));
+      const unreadOnly = req.query["unread"] === "true";
+
+      let query = db
+        .selectFrom("event.notification_delivery as nd")
+        .innerJoin("event.notification_message as nm", "nm.id", "nd.message_id")
+        .select([
+          "nd.id", "nd.read_at",
+          "nm.id as message_id", "nm.subject", "nm.event_code", "nm.entity_type",
+          "nm.entity_id", "nm.payload", "nm.priority", "nm.created_at",
+        ])
+        .where("nd.tenant_id", "=", tenantId)
+        .where("nd.recipient_id", "=", principalId)
+        .where("nd.channel", "=", "in_app");
+
+      if (unreadOnly) {
+        query = query.where("nd.read_at" as never, "is", null) as typeof query;
+      }
+
+      const rows = await query
+        .orderBy("nm.created_at", "desc")
+        .limit(limit + 1)
+        .offset(offset)
+        .execute() as Record<string, unknown>[];
+
+      const hasMore = rows.length > limit;
+      const data = rows.slice(0, limit).map((r) => ({
+        id:          r["id"],
+        message_id:  r["message_id"],
+        subject:     r["subject"] ?? null,
+        event_code:  r["event_code"],
+        entity_type: r["entity_type"] ?? null,
+        entity_id:   r["entity_id"] ?? null,
+        payload:     r["payload"] ?? {},
+        priority:    r["priority"] ?? "normal",
+        is_read:     r["read_at"] != null,
+        read_at:     r["read_at"] ? (r["read_at"] instanceof Date ? (r["read_at"] as Date).toISOString() : String(r["read_at"])) : null,
+        created_at:  r["created_at"] instanceof Date ? (r["created_at"] as Date).toISOString() : String(r["created_at"]),
+      }));
+
+      res.json({ data, hasMore });
+    } catch (err) {
+      logger?.error("platform_notifications_list_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /platform/notifications/:id/read ─────────────────────────────────
+
+  const markReadHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const deliveryId = req.params["id"] as string;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      await db
+        .updateTable("event.notification_delivery" as never)
+        .set({ read_at: new Date(), updated_at: new Date() } as never)
+        .where("id" as never, "=", deliveryId as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("recipient_id" as never, "=", (principalId ?? "") as never)
+        .where("read_at" as never, "is", null)
+        .execute();
+
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("platform_notifications_mark_read_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /platform/notifications/read-all ─────────────────────────────────
+
+  const markAllReadHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(204).end(); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(204).end(); return; }
+
+      await db
+        .updateTable("event.notification_delivery" as never)
+        .set({ read_at: new Date(), updated_at: new Date() } as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("recipient_id" as never, "=", principalId as never)
+        .where("channel" as never, "=", "in_app" as never)
+        .where("read_at" as never, "is", null)
+        .execute();
+
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("platform_notifications_mark_all_read_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/notifications/unread-count ──────────────────────────────
+
+  const unreadCountHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ count: 0 }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.json({ count: 0 }); return; }
+
+      const result = await db
+        .selectFrom("event.notification_delivery as nd")
+        .select(db.fn.countAll<number>().as("count"))
+        .where("nd.tenant_id", "=", tenantId)
+        .where("nd.recipient_id", "=", principalId)
+        .where("nd.channel", "=", "in_app")
+        .where("nd.read_at" as never, "is", null)
+        .executeTakeFirst() as { count: number | string } | undefined;
+
+      const count = result ? Number(result.count) : 0;
+      res.json({ count });
+    } catch (err) {
+      logger?.error("platform_unread_count_error", { err: String(err) });
+      // Return 0 rather than 500 — this is a non-critical badge count
+      res.json({ count: 0 });
+    }
+  };
+
+  // ── GET /platform/stats ───────────────────────────────────────────────────
+
+  const statsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const [tenants, modules, principals] = await Promise.all([
+        db.selectFrom("master.tenant as t")
+          .select(db.fn.countAll<number>().as("count"))
+          .where("t.status" as never, "=", "active" as never)
+          .executeTakeFirst() as Promise<{ count: number | string } | undefined>,
+        db.selectFrom("master.tenant_module_subscription as tms")
+          .select(db.fn.countAll<number>().as("count"))
+          .where("tms.status", "=", "active")
+          .executeTakeFirst() as Promise<{ count: number | string } | undefined>,
+        db.selectFrom("master.principal as p")
+          .select(db.fn.countAll<number>().as("count"))
+          .where("p.is_active" as never, "=", true as never)
+          .where("p.is_locked", "=", false)
+          .executeTakeFirst() as Promise<{ count: number | string } | undefined>,
+      ]);
+
+      res.json({
+        active_tenants:  Number(tenants?.count  ?? 0),
+        active_modules:  Number(modules?.count  ?? 0),
+        active_principals: Number(principals?.count ?? 0),
+        system_health:   "ok",
+      });
+    } catch (err) {
+      logger?.error("platform_stats_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/blueprints ──────────────────────────────────────────────
+
+  const blueprintsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const { rows } = await sql<{
+        id:                string;
+        code:              string;
+        name:              string;
+        category:          string;
+        industry_vertical: string[];
+        framework:         string | null;
+        base_version:      string;
+        description:       string | null;
+        dependencies:      string[];
+        status:            "active" | "applied";
+      }>`
+        SELECT
+          br.id,
+          br.code,
+          br.name,
+          br.category,
+          br.industry_vertical,
+          br.framework,
+          br.base_version,
+          br.description,
+          br.dependencies,
+          CASE
+            WHEN tba.blueprint_code IS NOT NULL THEN 'applied'
+            ELSE 'active'
+          END AS status
+        FROM   control.blueprint_registry br
+        LEFT   JOIN control.tenant_blueprint_application tba
+               ON  tba.blueprint_code = br.code
+               AND tba.tenant_id      = ${tenantId}::uuid
+               AND tba.status         = 'applied'
+        WHERE  br.status = 'active'
+        ORDER  BY br.category, br.name
+      `.execute(db);
+
+      res.json(rows);
+    } catch (err) {
+      logger?.error("platform_blueprints_error", { err: String(err) });
+      // Fall back to empty array so the page uses its static catalog
+      res.json([]);
+    }
+  };
+
+  // ── GET /platform/entities/:name/fields ───────────────────────────────────
+
+  const entityFieldsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityName = (req.params["name"] as string | undefined)?.trim();
+      if (!entityName) {
+        res.status(400).json({ error: "MISSING_ENTITY", message: "entity name is required" });
+        return;
+      }
+
+      const fields = await db
+        .selectFrom("control.entity_field as ef")
+        .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+        .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+        .select([
+          "ef.id",
+          "ef.name",
+          "ef.label",
+          "ef.column_name",
+          "ef.data_type",
+          "ef.ui_type",
+          "ef.is_required",
+          "ef.is_unique",
+          "ef.is_searchable",
+          "ef.is_filterable",
+          "ef.is_sortable",
+          "ef.is_read_only",
+          "ef.is_computed",
+          "ef.is_active",
+          "ef.sort_order",
+          "ef.origin",
+          "ef.cardinality",
+        ])
+        .where("e.name", "=", entityName)
+        .where("e.tenant_id", "is", null)
+        .where("ev.status", "=", "EFFECTIVE")
+        .where("ef.is_active", "=", true)
+        .orderBy("ef.sort_order", "asc")
+        .orderBy("ef.name", "asc")
+        .execute();
+
+      res.json(fields);
+    } catch (err) {
+      logger?.error("platform_entity_fields_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/preferences ─────────────────────────────────────────────
+
+  const PREFS_EMPTY = {
+    appearance_mode: null, density_code: null, metadata: {},
+    locale_code: null, language_code: null, timezone_code: null,
+    date_format: null, number_format: null, week_start: null,
+    home_workspace_code: null, home_module_code: null, default_company_code_id: null,
+  };
+
+  const getPreferencesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json(PREFS_EMPTY); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.json(PREFS_EMPTY); return; }
+
+      const row = await db
+        .selectFrom("master.principal_ui_profile as p")
+        .select([
+          "p.appearance_mode", "p.density_code", "p.metadata",
+          "p.locale_code", "p.language_code", "p.timezone_code",
+          "p.date_format", "p.number_format", "p.week_start",
+          "p.home_workspace_code", "p.home_module_code", "p.default_company_code_id",
+        ])
+        .where("p.tenant_id", "=", tenantId)
+        .where("p.principal_id", "=", principalId)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      res.json({
+        appearance_mode:         row?.["appearance_mode"]         ?? null,
+        density_code:            row?.["density_code"]            ?? null,
+        metadata:                row?.["metadata"]                ?? {},
+        locale_code:             row?.["locale_code"]             ?? null,
+        language_code:           row?.["language_code"]           ?? null,
+        timezone_code:           row?.["timezone_code"]           ?? null,
+        date_format:             row?.["date_format"]             ?? null,
+        number_format:           row?.["number_format"]           ?? null,
+        week_start:              row?.["week_start"]              ?? null,
+        home_workspace_code:     row?.["home_workspace_code"]     ?? null,
+        home_module_code:        row?.["home_module_code"]        ?? null,
+        default_company_code_id: row?.["default_company_code_id"] ?? null,
+      });
+    } catch (err) {
+      logger?.error("platform_preferences_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /platform/preferences ───────────────────────────────────────────
+
+  const patchPreferencesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      const body = req.body as {
+        appearance_mode?: string;
+        density_code?: string;
+        metadata?: Record<string, unknown>;
+        locale_code?: string;
+        language_code?: string;
+        timezone_code?: string;
+        date_format?: string;
+        number_format?: string;
+        week_start?: number | null;
+        home_workspace_code?: string;
+        home_module_code?: string;
+      };
+
+      const now = new Date().toISOString();
+      const vals = {
+        tenant_id:           tenantId,
+        principal_id:        principalId,
+        appearance_mode:     body.appearance_mode     ?? null,
+        density_code:        body.density_code        ?? null,
+        metadata:            JSON.stringify(body.metadata ?? {}),
+        locale_code:         body.locale_code         ?? null,
+        language_code:       body.language_code       ?? null,
+        timezone_code:       body.timezone_code       ?? null,
+        date_format:         body.date_format         ?? null,
+        number_format:       body.number_format       ?? null,
+        week_start:          body.week_start          ?? null,
+        home_workspace_code: body.home_workspace_code ?? null,
+        home_module_code:    body.home_module_code    ?? null,
+        created_by:          principalId,
+        updated_at:          now,
+        updated_by:          principalId,
+      };
+
+      await db
+        .insertInto("master.principal_ui_profile" as never)
+        .values(vals as never)
+        .onConflict((oc) =>
+          oc.columns(["tenant_id", "principal_id"] as never[]).doUpdateSet({
+            appearance_mode:     vals.appearance_mode,
+            density_code:        vals.density_code,
+            metadata:            vals.metadata,
+            locale_code:         vals.locale_code,
+            language_code:       vals.language_code,
+            timezone_code:       vals.timezone_code,
+            date_format:         vals.date_format,
+            number_format:       vals.number_format,
+            week_start:          vals.week_start,
+            home_workspace_code: vals.home_workspace_code,
+            home_module_code:    vals.home_module_code,
+            updated_at:          now,
+            updated_by:          principalId,
+          } as never),
+        )
+        .execute();
+
+      res.json({ ok: true });
+    } catch (err) {
+      logger?.error("platform_preferences_patch_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/profile ─────────────────────────────────────────────────
+
+  const getProfileHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      const [principal, profile, authBindings] = await Promise.all([
+        db.selectFrom("master.principal as p")
+          .select(["p.id", "p.code", "p.name", "p.login_email", "p.principal_type", "p.principal_source", "p.created_at"])
+          .where("p.tenant_id", "=", tenantId)
+          .where("p.id", "=", principalId)
+          .executeTakeFirst(),
+        db.selectFrom("master.principal_profile as pp")
+          .select([
+            "pp.given_name", "pp.family_name", "pp.preferred_name", "pp.display_name",
+            "pp.avatar_url", "pp.locale", "pp.timezone",
+            "pp.default_company_code_id", "pp.default_cost_center_id",
+            "pp.employee_id", "pp.enabled_date", "pp.disabled_date", "pp.updated_at",
+          ])
+          .where("pp.tenant_id", "=", tenantId)
+          .where("pp.principal_id", "=", principalId)
+          .executeTakeFirst(),
+        db.selectFrom("master.principal_auth_binding as ab")
+          .select([
+            "ab.provider_code", "ab.subject_id", "ab.username",
+            "ab.sync_status", "ab.synced_at", "ab.idp_enabled",
+            "ab.idp_email_verified", "ab.required_actions",
+          ])
+          .where("ab.tenant_id", "=", tenantId)
+          .where("ab.principal_id", "=", principalId)
+          .execute(),
+      ]);
+
+      res.json({
+        principal:    principal    ?? null,
+        profile:      profile      ?? null,
+        auth_bindings: authBindings ?? [],
+      });
+    } catch (err) {
+      logger?.error("platform_profile_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/identity ────────────────────────────────────────────────
+
+  const getIdentityHandler: RequestHandler = async (req, res, next) => {
+    const EMPTY = { persona: null, groups: [], teams: [], delegations_received: [], delegations_given: [] };
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json(EMPTY); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.json(EMPTY); return; }
+
+      // Persona + shared.persona join
+      const personaRow = await db
+        .selectFrom("master.principal_persona as pp")
+        .innerJoin("shared.persona as p", "p.id", "pp.persona_id")
+        .select([
+          "pp.persona_id", "p.code as persona_code", "p.name as persona_name",
+          "pp.expires_at", "pp.assigned_by", "pp.created_at",
+        ])
+        .where("pp.tenant_id", "=", tenantId)
+        .where("pp.principal_id", "=", principalId)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      // Groups
+      const groupRows = await db
+        .selectFrom("master.group_member as gm")
+        .innerJoin("master.principal_group as g", "g.id", "gm.group_id")
+        .select(["g.id", "g.code", "g.name", "g.is_system", "g.status"])
+        .where("gm.tenant_id", "=", tenantId)
+        .where("gm.principal_id", "=", principalId)
+        .execute() as Record<string, unknown>[];
+
+      const groupIds = groupRows.map((g) => g["id"] as string).filter(Boolean);
+
+      const roleRows = groupIds.length > 0
+        ? await db
+            .selectFrom("master.group_role as gr")
+            .innerJoin("shared.role as r", "r.id", "gr.role_id")
+            .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "gr.scope"])
+            .where("gr.tenant_id", "=", tenantId)
+            .where("gr.group_id", "in", groupIds)
+            .where("gr.status", "=", "active")
+            .execute() as Record<string, unknown>[]
+        : [];
+
+      const groups = groupRows.map((g) => ({
+        ...g,
+        roles: roleRows
+          .filter((r) => r["group_id"] === g["id"])
+          .map((r) => ({ role_code: r["role_code"], role_name: r["role_name"], scope: r["scope"] })),
+      }));
+
+      // Teams
+      const teams = await db
+        .selectFrom("master.team_principal as tp")
+        .innerJoin("master.team as t", "t.id", "tp.team_id")
+        .select([
+          "t.id", "t.code", "t.name", "t.team_type",
+          "tp.role_in_team", "t.effective_from",
+        ])
+        .where("tp.tenant_id", "=", tenantId)
+        .where("tp.principal_id", "=", principalId)
+        .where("tp.left_at" as never, "is", null)
+        .execute() as Record<string, unknown>[];
+
+      // Delegations
+      const now = new Date();
+      const [delegationsReceived, delegationsGiven] = await Promise.all([
+        db.selectFrom("master.delegation_grant as d")
+          .select(["d.id", "d.delegator_id", "d.scope_type", "d.scope_ref", "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at"])
+          .where("d.tenant_id", "=", tenantId)
+          .where("d.delegate_id", "=", principalId)
+          .where("d.is_revoked", "=", false)
+          .where("d.expires_at", ">", now as never)
+          .execute(),
+        db.selectFrom("master.delegation_grant as d")
+          .select(["d.id", "d.delegate_id", "d.scope_type", "d.scope_ref", "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at"])
+          .where("d.tenant_id", "=", tenantId)
+          .where("d.delegator_id", "=", principalId)
+          .where("d.is_revoked", "=", false)
+          .execute(),
+      ]);
+
+      res.json({
+        persona:               personaRow          ?? null,
+        groups,
+        teams:                 teams               as Record<string, unknown>[],
+        delegations_received:  delegationsReceived as Record<string, unknown>[],
+        delegations_given:     delegationsGiven    as Record<string, unknown>[],
+      });
+    } catch (err) {
+      logger?.error("platform_identity_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/tenant-admin ────────────────────────────────────────────
+
+  const getTenantAdminHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      // Gate: require membership in either the canonical 'tenant_admin' group
+      // or the seeded '{UPPER_TENANT_CODE}-ADMIN' group (e.g. 'ATHYPER-ADMIN').
+      // Resolve tenant code first, then check membership.
+      const tenantCodeRow = await db
+        .selectFrom("master.tenant as t")
+        .select("t.code")
+        .where("t.id", "=", tenantId)
+        .executeTakeFirst();
+      const tenantAdminCode = tenantCodeRow ? `${tenantCodeRow.code.toUpperCase()}-ADMIN` : "";
+
+      const adminCheck = await db
+        .selectFrom("master.group_member as gm")
+        .innerJoin("master.principal_group as g", "g.id", "gm.group_id")
+        .select("gm.id")
+        .where("gm.tenant_id", "=", tenantId)
+        .where("gm.principal_id", "=", principalId)
+        .where("g.code", "in", ["tenant_admin", tenantAdminCode].filter(Boolean))
+        .executeTakeFirst();
+
+      if (!adminCheck) {
+        res.status(403).json({ error: "TENANT_ADMIN_REQUIRED" });
+        return;
+      }
+
+      const [tenantRow, tenantProfile, modules, features, permissionOverrides] = await Promise.all([
+        db.selectFrom("master.tenant as t")
+          .select(["t.id", "t.code", "t.name", "t.display_name", "t.realm_key", "t.region", "t.subscription", "t.status"])
+          .where("t.id", "=", tenantId)
+          .executeTakeFirst(),
+        db.selectFrom("master.tenant_profile as tp")
+          .select([
+            "tp.country_code", "tp.currency_code", "tp.locale_code",
+            "tp.timezone_code", "tp.fiscal_year_start_month", "tp.date_format",
+            "tp.number_format", "tp.week_start", "tp.language_code",
+            "tp.reporting_currency_code",
+          ])
+          .where("tp.tenant_id", "=", tenantId)
+          .executeTakeFirst(),
+        db.selectFrom("master.tenant_module_subscription as ms")
+          .innerJoin("shared.module as m", "m.id", "ms.module_id")
+          .select(["m.code as module_code", "m.name as module_name", "ms.status", "ms.subscribed_at"])
+          .where("ms.tenant_id", "=", tenantId)
+          .execute(),
+        db.selectFrom("master.tenant_feature_entitlement as fe")
+          .select(["fe.feature_id", "fe.status", "fe.expires_at", "fe.activated_at"])
+          .where("fe.tenant_id", "=", tenantId)
+          .execute(),
+        db.selectFrom("master.tenant_permission_override as po")
+          .select(["po.permission_id", "po.is_granted", "po.reason", "po.expires_at", "po.granted_by"])
+          .where("po.tenant_id", "=", tenantId)
+          .execute(),
+      ]);
+
+      res.json({
+        tenant:               tenantRow          ?? null,
+        tenant_profile:       tenantProfile      ?? null,
+        modules:              modules            as Record<string, unknown>[],
+        features:             features           as Record<string, unknown>[],
+        permission_overrides: permissionOverrides as Record<string, unknown>[],
+      });
+    } catch (err) {
+      logger?.error("platform_tenant_admin_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── Register routes ───────────────────────────────────────────────────────
+
+  router.get("/platform/saved-views/:entity", listSavedViewsHandler);
+  router.post("/platform/saved-views/:entity", createSavedViewHandler);
+  router.delete("/platform/saved-views/:entity/:viewId", deleteSavedViewHandler);
+  router.patch("/platform/saved-views/:entity/:viewId/default", setDefaultViewHandler);
+  router.get("/platform/modules", modulesHandler);
+  // entity fields before entity catalog to avoid :name capture on /entities
+  router.get("/platform/entities/:name/fields", entityFieldsHandler);
+  router.get("/platform/entities", entitiesHandler);
+  router.get("/platform/preferences", getPreferencesHandler);
+  router.patch("/platform/preferences", patchPreferencesHandler);
+  router.get("/platform/profile", getProfileHandler);
+  router.get("/platform/identity", getIdentityHandler);
+  router.get("/platform/tenant-admin", getTenantAdminHandler);
+  router.get("/platform/blueprints", blueprintsHandler);
+  router.get("/platform/stats", statsHandler);
+  router.get("/platform/notifications", listNotificationsHandler);
+  router.post("/platform/notifications/read-all", markAllReadHandler);
+  router.post("/platform/notifications/:id/read", markReadHandler);
+  router.get("/platform/notifications/unread-count", unreadCountHandler);
+
+  // Paths without /platform/ prefix — BFF proxies to these directly
+  router.get("/notifications/unread-count", unreadCountHandler);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN — platform-admin only
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function isPlatformAdmin(claims: Record<string, unknown>): boolean {
+    const ra = claims["realm_access"] as Record<string, unknown> | undefined;
+    const roles = ra?.["roles"];
+    return Array.isArray(roles) && (roles as string[]).includes("platform-admin");
+  }
+
+  const SYSTEM_ACTOR = "00000000-0000-7000-a000-000000000001";
+
+  // ── FX Rate write endpoints ──────────────────────────────────────────────────
+
+  const createFxRateHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const xOrg        = (req.headers["x-org"]   as string) ?? "";
+      const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId    = await resolveTenantId(db, xOrg, xRealm);
+      const sub         = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const body = req.body as Record<string, unknown>;
+      const { from_currency, to_currency, rate, rate_type, effective_date, effective_time, source, source_reference } = body;
+
+      if (!from_currency || !to_currency || !rate || !rate_type || !effective_date) {
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "from_currency, to_currency, rate, rate_type, effective_date are required" });
+        return;
+      }
+
+      const row = await db
+        .insertInto("master.fx_rate" as never)
+        .values({
+          tenant_id:        tenantId,
+          from_currency:    String(from_currency).toUpperCase(),
+          to_currency:      String(to_currency).toUpperCase(),
+          rate:             Number(rate),
+          rate_type:        String(rate_type).toUpperCase(),
+          effective_date:   String(effective_date),
+          effective_time:   effective_time ? String(effective_time) : null,
+          source:           source ? String(source).toUpperCase() : "MANUAL",
+          source_reference: source_reference ? String(source_reference) : null,
+          created_by:       principalId,
+          metadata:         "{}",
+        } as never)
+        .returning(["id", "from_currency", "to_currency", "rate", "rate_type", "effective_date", "status"] as never[])
+        .executeTakeFirstOrThrow();
+
+      res.status(201).json({ data: row });
+    } catch (err) {
+      logger?.error("admin_fx_rate_create_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  const updateFxRateHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const xOrg        = (req.headers["x-org"]   as string) ?? "";
+      const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId    = await resolveTenantId(db, xOrg, xRealm);
+      const sub         = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const rateId      = req.params["id"] as string ?? "";
+      const body       = req.body as Record<string, unknown>;
+
+      if (!isUuid(rateId)) {
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "Invalid id" });
+        return;
+      }
+
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: principalId };
+      if (body["rate"]             !== undefined) updates["rate"]             = Number(body["rate"]);
+      if (body["source_reference"] !== undefined) updates["source_reference"] = String(body["source_reference"]);
+      if (body["metadata"]         !== undefined) updates["metadata"]         = JSON.stringify(body["metadata"]);
+
+      const row = await db
+        .updateTable("master.fx_rate" as never)
+        .set(updates as never)
+        .where("id"        as never, "=", rateId as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("is_active" as never, "=", true as never)
+        .returning(["id", "from_currency", "to_currency", "rate", "rate_type", "effective_date", "status"] as never[])
+        .executeTakeFirst();
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.json({ data: row });
+    } catch (err) {
+      logger?.error("admin_fx_rate_update_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  const supersedeFxRateHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const xOrg        = (req.headers["x-org"]   as string) ?? "";
+      const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId    = await resolveTenantId(db, xOrg, xRealm);
+      const sub         = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const rateId      = req.params["id"] as string ?? "";
+
+      if (!isUuid(rateId)) {
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "Invalid id" });
+        return;
+      }
+
+      const row = await db
+        .updateTable("master.fx_rate" as never)
+        .set({
+          status:            "superseded",
+          status_changed_at: new Date().toISOString(),
+          status_changed_by: principalId,
+          updated_at:        new Date().toISOString(),
+          updated_by:        principalId,
+        } as never)
+        .where("id"        as never, "=", rateId as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("is_active" as never, "=", true as never)
+        .returning(["id", "status"] as never[])
+        .executeTakeFirst();
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.json({ data: row });
+    } catch (err) {
+      logger?.error("admin_fx_rate_supersede_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── Enterprise feature admin endpoints ───────────────────────────────────────
+
+  const listEnterpriseFeaturesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const q = req.query as Record<string, unknown>;
+      const search = typeof q["search"] === "string" ? q["search"].trim() : "";
+
+      let base = db.selectFrom("shared.enterprise_feature as ef");
+      if (search) {
+        base = base.where((eb) => eb.or([
+          eb("ef.code" as never, "ilike", `%${search}%` as never),
+          eb("ef.name" as never, "ilike", `%${search}%` as never),
+        ])) as typeof base;
+      }
+
+      const rows = await base
+        .select(["ef.id", "ef.code", "ef.name", "ef.description", "ef.view_key", "ef.edit_key", "ef.sort_order", "ef.status"] as never[])
+        .orderBy("ef.sort_order" as never, "asc")
+        .orderBy("ef.code"       as never, "asc")
+        .execute();
+
+      res.json({ data: rows });
+    } catch (err) {
+      logger?.error("admin_enterprise_features_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── Subscription plan admin endpoints ────────────────────────────────────────
+
+  const listSubscriptionPlansHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const rows = await db
+        .selectFrom("shared.subscription_plan as p")
+        .select(["p.id", "p.code", "p.name", "p.max_users", "p.sort_order", "p.status"] as never[])
+        .orderBy("p.sort_order" as never, "asc")
+        .execute();
+
+      res.json({ data: rows });
+    } catch (err) {
+      logger?.error("admin_subscription_plans_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  const getPlanAccessHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      if (!isPlatformAdmin(claims)) {
+        res.status(403).json({ error: "FORBIDDEN", message: "platform-admin role required" });
+        return;
+      }
+
+      const planId = req.params["id"] as string ?? "";
+      if (!isUuid(planId)) {
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "Invalid plan id" });
+        return;
+      }
+
+      const [modules, permissions, features] = await Promise.all([
+        db.selectFrom("shared.plan_module_access as pma")
+          .innerJoin("shared.module as m", "m.id" as never, "pma.module_id" as never)
+          .where("pma.plan_id" as never, "=", planId as never)
+          .select(["m.id", "m.code", "m.name", "pma.access_level"] as never[])
+          .orderBy("m.code" as never, "asc")
+          .execute(),
+        db.selectFrom("shared.plan_permission_access as ppa")
+          .innerJoin("shared.permission as p", "p.id" as never, "ppa.permission_id" as never)
+          .where("ppa.plan_id" as never, "=", planId as never)
+          .select(["p.id", "p.code", "p.name"] as never[])
+          .orderBy("p.code" as never, "asc")
+          .execute(),
+        db.selectFrom("shared.plan_feature_access as pfa")
+          .innerJoin("shared.enterprise_feature as ef", "ef.id" as never, "pfa.feature_id" as never)
+          .where("pfa.plan_id" as never, "=", planId as never)
+          .select(["ef.id", "ef.code", "ef.name", "pfa.access_level"] as never[])
+          .orderBy("ef.code" as never, "asc")
+          .execute(),
+      ]);
+
+      res.json({ data: { modules, permissions, features } });
+    } catch (err) {
+      logger?.error("admin_plan_access_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // Admin route registration
+  router.post("/platform/admin/fx-rates",            createFxRateHandler);
+  router.patch("/platform/admin/fx-rates/:id",       updateFxRateHandler);
+  router.delete("/platform/admin/fx-rates/:id",      supersedeFxRateHandler);
+  router.get("/platform/admin/enterprise-features",  listEnterpriseFeaturesHandler);
+  router.get("/platform/admin/subscription-plans",   listSubscriptionPlansHandler);
+  router.get("/platform/admin/subscription-plans/:id/access", getPlanAccessHandler);
+
+  return router;
+}

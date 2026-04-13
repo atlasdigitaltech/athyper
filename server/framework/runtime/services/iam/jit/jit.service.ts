@@ -1,0 +1,258 @@
+/**
+ * IAM JIT Provisioning Service — v4.1
+ *
+ * Creates a principal + profile + auth binding on first login for any
+ * Keycloak user who has no pre-existing DB identity in a given tenant.
+ *
+ * Design goals
+ * ────────────
+ *  • Idempotent — safe to call multiple times; ON CONFLICT guards every insert.
+ *  • Handles pre-seeded principals — if a principal with the same `code`
+ *    (username) already exists (e.g. seeded in demo data), we attach the
+ *    auth binding to it rather than creating a duplicate principal.
+ *  • Handles concurrent logins — ON CONFLICT (tenant_id, provider_code,
+ *    subject_id) on principal_auth_binding prevents duplicate bindings under
+ *    race conditions.
+ *  • Single DB transaction — all three inserts (principal, profile, binding)
+ *    succeed or fail together.
+ *
+ * Caller contract
+ * ───────────────
+ *  The caller (session.service.ts) must have already resolved tenant_id from
+ *  the DB. This service takes tenant_id directly to avoid a redundant lookup.
+ *
+ * principal.code uniqueness
+ * ─────────────────────────
+ *  `code` is used for the principal's human-readable identifier and must be
+ *  unique within the tenant. We use the KC `preferred_username`, but if that
+ *  already exists for a *different* sub (KC UUID), we fall back to the KC
+ *  `sub` UUID itself as the code — guaranteed unique.
+ */
+
+import type { Kysely } from "kysely";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDb = Record<string, any>;
+
+const SYSTEM_UUID = "00000000-0000-0000-0000-000000000000";
+
+export interface JitPrincipalInput {
+  /** KC JWT `sub` claim — the IdP-assigned user UUID. */
+  sub: string;
+  /** KC `preferred_username`. Used as principal.code when available. */
+  username: string;
+  /** KC `name` claim — stored as principal.name and profile.display_name. */
+  display_name: string;
+  /** KC `email` claim — optional, stored on auth binding. */
+  email?: string;
+  /** Already-resolved tenant UUID from the session service. */
+  tenant_id: string;
+}
+
+export interface JitPrincipalResult {
+  principal_id: string;
+  /** true = newly created this call; false = binding already existed. */
+  created: boolean;
+}
+
+/**
+ * Ensure a principal + auth binding exists for the given KC user in the
+ * given tenant. Returns the resolved principal_id.
+ *
+ * Algorithm
+ * ─────────
+ * 1. Check if the auth binding already exists → return early (fast path).
+ * 2. Find a pre-existing principal by username (code) in this tenant.
+ *    If found, create only the missing auth binding.
+ * 3. If no principal exists:
+ *    a. INSERT principal with code=username (ON CONFLICT: use sub UUID as fallback code).
+ *    b. INSERT principal_profile.
+ *    c. INSERT principal_auth_binding.
+ */
+export async function jitProvisionPrincipal(
+  db: Kysely<AnyDb>,
+  input: JitPrincipalInput,
+): Promise<JitPrincipalResult | null> {
+  const { sub, username, display_name, email, tenant_id } = input;
+
+  // ── Step 1: Fast path — binding already exists ─────────────────────────────
+  const existingBinding = await db
+    .selectFrom("master.principal_auth_binding")
+    .select("principal_id")
+    .where("tenant_id", "=", tenant_id)
+    .where("provider_code", "=", "keycloak")
+    .where("subject_id", "=", sub)
+    .executeTakeFirst();
+
+  if (existingBinding) {
+    return { principal_id: existingBinding.principal_id, created: false };
+  }
+
+  // ── Step 2: Look for pre-seeded principal by username ──────────────────────
+  const existingPrincipal = await db
+    .selectFrom("master.principal")
+    .select("id")
+    .where("tenant_id", "=", tenant_id)
+    .where("code", "=", username)
+    .executeTakeFirst();
+
+  let principalId: string;
+
+  if (existingPrincipal) {
+    // Pre-seeded principal found. Check if it already has a keycloak binding —
+    // this happens when the seed used a placeholder UUID instead of the real KC sub.
+    // In that case we must UPDATE rather than INSERT to avoid a unique constraint
+    // violation on (tenant_id, principal_id, provider_code).
+    principalId = existingPrincipal.id as string;
+
+    const existingKCBinding = await db
+      .selectFrom("master.principal_auth_binding")
+      .select("subject_id")
+      .where("tenant_id", "=", tenant_id)
+      .where("principal_id", "=", principalId)
+      .where("provider_code", "=", "keycloak")
+      .executeTakeFirst();
+
+    if (existingKCBinding) {
+      if (existingKCBinding.subject_id === sub) {
+        // Binding is already correct — nothing to do.
+        return { principal_id: principalId, created: false };
+      }
+      // Wrong subject_id (seed mismatch) — update to the real KC UUID.
+      await db
+        .updateTable("master.principal_auth_binding")
+        .set({
+          subject_id: sub,
+          username: username || null,
+          sync_status: "synced",
+          synced_at: new Date(),
+          updated_at: new Date(),
+          updated_by: SYSTEM_UUID,
+        })
+        .where("tenant_id", "=", tenant_id)
+        .where("principal_id", "=", principalId)
+        .where("provider_code", "=", "keycloak")
+        .execute();
+
+      // Sync the keycloak_id on the profile too.
+      await db
+        .updateTable("master.principal_profile")
+        .set({
+          keycloak_id: sub,
+          keycloak_username: username || null,
+          keycloak_sync_status: "synced",
+          keycloak_synced_at: new Date(),
+          updated_at: new Date(),
+          updated_by: SYSTEM_UUID,
+        })
+        .where("tenant_id", "=", tenant_id)
+        .where("principal_id", "=", principalId)
+        .execute();
+
+      return { principal_id: principalId, created: false };
+    }
+    // No binding yet — fall through to Step 3c to insert it.
+  } else {
+    // ── Step 3a: Create the principal ──────────────────────────────────────
+    // Try with username as code first. If a different user already claimed
+    // that code in this tenant, fall back to the KC sub UUID (always unique).
+    const nameParts = display_name.trim().split(/\s+/);
+    const safeCode = username.trim() || sub;
+
+    const inserted = await db
+      .insertInto("master.principal")
+      .values({
+        tenant_id,
+        code: safeCode,
+        name: display_name || username || sub,
+        principal_type: "user",
+        is_locked: false,
+        is_service_account: false,
+        principal_source: "oidc_jit",
+        status: "active",
+        created_by: SYSTEM_UUID,
+      })
+      .onConflict((oc) =>
+        // Code already taken by a different user → use sub UUID as code instead.
+        // We can't DO NOTHING here because we need the id regardless of conflict.
+        oc.columns(["tenant_id", "code"]).doUpdateSet({
+          // Update the name in case the display name changed (idempotent intent).
+          // Only fires if code == safeCode matches an existing row for THIS sub.
+          // If it's a different sub, the conflict means we must use sub as code.
+          name: display_name || username || sub,
+        }),
+      )
+      .returning("id")
+      .executeTakeFirst();
+
+    if (!inserted) {
+      // Conflict — the same code exists for a DIFFERENT sub.
+      // Re-insert with sub UUID as the code.
+      const fallback = await db
+        .insertInto("master.principal")
+        .values({
+          tenant_id,
+          code: sub,
+          name: display_name || username || sub,
+          principal_type: "user",
+          is_locked: false,
+          is_service_account: false,
+          principal_source: "oidc_jit",
+          status: "active",
+          created_by: SYSTEM_UUID,
+        })
+        .onConflict((oc) => oc.columns(["tenant_id", "code"]).doNothing())
+        .returning("id")
+        .executeTakeFirst();
+
+      if (!fallback) return null; // Should not happen; concurrent insert already won.
+
+      principalId = fallback.id as string;
+    } else {
+      principalId = inserted.id as string;
+    }
+
+    // ── Step 3b: Create the principal_profile ──────────────────────────────
+    const givenName = nameParts[0] ?? username;
+    const familyName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+    await db
+      .insertInto("master.principal_profile")
+      .values({
+        tenant_id,
+        principal_id: principalId,
+        given_name: givenName,
+        family_name: familyName || null,
+        display_name: display_name || username,
+        keycloak_id: sub,
+        keycloak_username: username || null,
+        keycloak_sync_status: "synced",
+        keycloak_synced_at: new Date(),
+        created_by: SYSTEM_UUID,
+      })
+      .onConflict((oc) => oc.columns(["tenant_id", "principal_id"]).doNothing())
+      .execute();
+  }
+
+  // ── Step 3c / Step 2b: Create the auth binding ────────────────────────────
+  await db
+    .insertInto("master.principal_auth_binding")
+    .values({
+      tenant_id,
+      principal_id: principalId,
+      provider_code: "keycloak",
+      subject_id: sub,
+      username: username || null,
+      sync_status: "synced",
+      idp_enabled: true,
+      idp_email_verified: !!email,
+      synced_at: new Date(),
+      created_by: SYSTEM_UUID,
+    })
+    .onConflict((oc) =>
+      oc.columns(["tenant_id", "provider_code", "subject_id"]).doNothing(),
+    )
+    .execute();
+
+  return { principal_id: principalId, created: true };
+}

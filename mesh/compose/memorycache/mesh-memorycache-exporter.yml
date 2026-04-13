@@ -15,7 +15,7 @@ services:
     profiles: ["mesh", "memorycache"]
     mem_limit: "${MEMORYCACHE_EXPORTER_MEMORY_LIMIT}"
     environment:
-      REDIS_ADDR: redis://:${MEMORYCACHE_PASSWORD}@memorycache:6379
+      REDIS_ADDR: redis://exporter:${MEMORYCACHE_PASSWORD}@memorycache:6379
     networks: [internal]
     depends_on:
       memorycache:

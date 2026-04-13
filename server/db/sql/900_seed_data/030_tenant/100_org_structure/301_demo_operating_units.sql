@@ -1,0 +1,8 @@
+-- ============================================================================
+-- 301_demo_operating_units.sql — REMOVED (company_code migration)
+-- ============================================================================
+-- master.operating_unit table has been dropped. Demo tenant org structure is
+-- represented solely through master.company_code rows. This file is retained
+-- as a no-op placeholder to preserve seed execution-order numbering.
+-- See 13_patches/002_drop_operating_unit.sql for the authoritative DROP.
+-- ============================================================================

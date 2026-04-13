@@ -1,0 +1,735 @@
+-- 04_tables/008_governance.sql
+-- Depends on: 01_schemas, 04_tables/003_master.sql
+-- Governance schema tables.
+
+-- ============================================================================
+-- §11  governance.comment_moderation — aggregated moderation state
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.comment_moderation (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+
+    -- Subject (one row per comment)
+    context_type    text        NOT NULL,
+    comment_id      uuid        NOT NULL,
+
+    -- Moderation state (mutable — UPSERT on flag events)
+    is_hidden       boolean     NOT NULL DEFAULT false,
+    hidden_reason   text,
+    hidden_at       timestamptz,
+    hidden_by       uuid,
+
+    -- Counters (maintained by trigger)
+    flag_count      integer     NOT NULL DEFAULT 0,
+    last_flagged_at timestamptz,
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT gmod_pkey        PRIMARY KEY (id),
+    CONSTRAINT gmod_unique      UNIQUE (tenant_id, context_type, comment_id),
+    CONSTRAINT gmod_count_chk   CHECK (flag_count >= 0),
+    CONSTRAINT gmod_hidden_chk  CHECK (
+        (is_hidden = false AND hidden_at IS NULL AND hidden_by IS NULL)
+        OR (is_hidden = true AND hidden_at IS NOT NULL AND hidden_by IS NOT NULL)
+    )
+    -- context_type: 09_triggers — control.trg_validate_lookup_columns('master.comment_type')
+);
+
+COMMENT ON TABLE  governance.comment_moderation IS
+    'Aggregated moderation state per comment. One row per (tenant, context_type, comment_id). '
+    'UPSERT pattern — updated by trigger on event.comment_flag changes. '
+    'Kept separate from event.comment_flag for O(1) render-time moderation checks. '
+    'context_type in master.comment_type lookup.';
+COMMENT ON COLUMN governance.comment_moderation.flag_count IS
+    'Total accumulated flags for this comment across all reporters. '
+    'Maintained by trg_sync_comment_moderation trigger on event.comment_flag.';
+
+
+-- ============================================================================
+-- §BPS  governance.book_period_status — per-book period gate
+-- ============================================================================
+-- Same period can be open in STAT but closed in TAX.
+-- Posting checks BOTH fiscal_period.status AND book_period_status.status.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS governance.book_period_status (
+    -- Identity
+    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id        uuid         NOT NULL,
+
+    -- Company scope (Tier 1 UUID)
+    company_code_id  uuid         NOT NULL,
+
+    -- Book + Period
+    book_id          uuid         NOT NULL,
+    fiscal_year      smallint     NOT NULL,
+    period_number    smallint     NOT NULL,
+
+    -- Close timestamps
+    opened_at        timestamptz,
+    opened_by        uuid,
+    soft_closed_at   timestamptz,
+    soft_closed_by   uuid,
+    hard_closed_at   timestamptz,
+    hard_closed_by   uuid,
+
+    -- Reopen tracking
+    reopen_count     smallint     NOT NULL DEFAULT 0,
+    last_reopen_reason text,
+
+    -- Metadata
+    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Lifecycle
+    status           text         NOT NULL DEFAULT 'future',
+    is_active        boolean      GENERATED ALWAYS AS (status IN ('open', 'soft_close')) STORED,
+    status_changed_at timestamptz,
+    status_changed_by uuid,
+
+    -- Audit
+    created_at       timestamptz  NOT NULL DEFAULT now(),
+    created_by       uuid         NOT NULL,
+    updated_at       timestamptz,
+    updated_by       uuid,
+
+    CONSTRAINT book_period_status_pkey PRIMARY KEY (id),
+    CONSTRAINT book_period_status_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT book_period_status_composite_uq
+        UNIQUE (tenant_id, company_code_id, book_id, fiscal_year, period_number),
+    CONSTRAINT bps_period_range_chk CHECK (period_number BETWEEN 0 AND 16),
+    CONSTRAINT bps_reopen_count_chk CHECK (reopen_count >= 0)
+);
+
+COMMENT ON TABLE governance.book_period_status IS
+    'Per-book period gate. Same period can be open in STAT but closed in TAX. '
+    'Posting requires BOTH fiscal_period.status AND book_period_status.status '
+    'to allow posting.';
+
+
+-- ============================================================================
+-- GENERIC GOVERNANCE CYCLE MODEL
+-- ============================================================================
+-- 11 tables implementing a reusable cycle-based governance framework.
+-- Supports ordered phases, parallel tasks via intra-cycle DAG, hybrid JSONB
+-- domain_data, cross-cycle dependencies, deviation carryforward, and
+-- external approval integration via document.workflow_request.
+--
+-- Lifecycle state machines:
+--   cycle_run:    PLANNED → OPEN → IN_PROGRESS → PHASE_GATE → COMPLETED → CERTIFIED → CLOSED
+--   cycle_task:   PENDING → IN_PROGRESS → COMPLETED | FAILED | DEVIATED | BLOCKED
+--   cycle_deviation: OPEN → PENDING_APPROVAL → APPROVED → APPLIED → RESOLVED | ACCEPTED
+--   cycle_certification: DRAFT → PENDING_REVIEW → CERTIFIED → ATTESTED → SUPERSEDED | REVOKED
+
+
+-- ============================================================================
+-- §CT  governance.cycle_type — cycle type definitions (root entity)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_type (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Definition
+    type_code               varchar(30) NOT NULL,
+    type_name               varchar(150) NOT NULL,
+    description             text,
+    frequency               varchar(20) NOT NULL DEFAULT 'MONTHLY',
+    domain                  varchar(30) NOT NULL,
+    clean_cycle_policy      jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    approval_policies       jsonb                DEFAULT '{}'::jsonb,
+    run_data_schema         jsonb,
+    task_data_schema        jsonb,
+
+    -- Lifecycle
+    is_active               boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ctyp_pkey           PRIMARY KEY (id),
+    CONSTRAINT ctyp_code_uq        UNIQUE (tenant_id, type_code),
+    CONSTRAINT ctyp_tenant_id_uq   UNIQUE (tenant_id, id),
+    CONSTRAINT ctyp_frequency_chk  CHECK (
+        frequency IN ('DAILY','WEEKLY','BIWEEKLY','SEMI_MONTHLY',
+                      'MONTHLY','QUARTERLY','SEMI_ANNUAL','ANNUAL','AD_HOC')),
+    CONSTRAINT ctyp_domain_chk     CHECK (
+        domain IN ('FINANCE','HR','INVENTORY','WAREHOUSE','PROCUREMENT',
+                   'PROJECT','SUPPLIER','SAFETY','COMPLIANCE','CUSTOM'))
+);
+
+COMMENT ON TABLE governance.cycle_type IS
+    'Governance cycle type definitions. Root entity for the cycle model. '
+    'Each type defines phases, task categories, templates, and policies.';
+
+
+-- ============================================================================
+-- §CP  governance.cycle_phase — ordered phases per cycle type
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_phase (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Parent
+    cycle_type_id           uuid        NOT NULL,
+
+    -- Definition
+    phase_code              varchar(30) NOT NULL,
+    phase_name              varchar(100) NOT NULL,
+    sort_order              smallint    NOT NULL,
+    description             text,
+    is_gate_enforced        boolean     NOT NULL DEFAULT true,
+    min_readiness_pct       numeric(5,2),
+    target_hours_from_start integer,
+
+    -- Lifecycle
+    is_active               boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT cph_pkey              PRIMARY KEY (id),
+    CONSTRAINT cph_code_uq           UNIQUE (tenant_id, cycle_type_id, phase_code),
+    CONSTRAINT cph_order_uq          UNIQUE (tenant_id, cycle_type_id, sort_order),
+    CONSTRAINT cph_tenant_type_id_uq UNIQUE (tenant_id, cycle_type_id, id),
+    CONSTRAINT cph_type_fk           FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id)
+);
+
+COMMENT ON TABLE governance.cycle_phase IS
+    'Ordered phases within a cycle type. sort_order determines sequence. '
+    'Gates can be enforced per phase with min_readiness_pct thresholds.';
+
+
+-- ============================================================================
+-- §TCAT  governance.cycle_task_category — task categories per cycle type
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_task_category (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Parent
+    cycle_type_id           uuid        NOT NULL,
+
+    -- Definition
+    category_code           varchar(30) NOT NULL,
+    category_name           varchar(100) NOT NULL,
+    sort_order              smallint    NOT NULL DEFAULT 0,
+    color_code              varchar(7),
+
+    -- Lifecycle
+    is_active               boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ctcat_pkey              PRIMARY KEY (id),
+    CONSTRAINT ctcat_code_uq           UNIQUE (tenant_id, cycle_type_id, category_code),
+    CONSTRAINT ctcat_tenant_type_id_uq UNIQUE (tenant_id, cycle_type_id, id),
+    CONSTRAINT ctcat_type_fk           FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id)
+);
+
+COMMENT ON TABLE governance.cycle_task_category IS
+    'Registered task categories per cycle type (e.g. SUBLEDGER, TAX, CASH). '
+    'FK-enforced on cycle_task_template.category_id. '
+    'P2-FIX: updated_at/updated_by added — category metadata (name, sort, color) is mutable.';
+
+
+-- ============================================================================
+-- §TPL  governance.cycle_task_template — reusable task definitions
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_task_template (
+    -- Identity
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                uuid        NOT NULL,
+    entity_code              varchar(20) NOT NULL,
+
+    -- Parents
+    cycle_type_id            uuid        NOT NULL,
+    phase_id                 uuid        NOT NULL,
+    category_id              uuid        NOT NULL,
+
+    -- Definition
+    task_code                varchar(50) NOT NULL,
+    task_name                varchar(150) NOT NULL,
+    description              text,
+    completion_mode          varchar(10) NOT NULL DEFAULT 'MANUAL',
+    system_check_handler     varchar(100),
+    is_mandatory             boolean     NOT NULL DEFAULT true,
+    is_waivable              boolean     NOT NULL DEFAULT false,
+    severity                 varchar(10),
+    sort_order               smallint    NOT NULL DEFAULT 0,
+    sla_hours                integer,
+    estimated_duration_min   integer,
+    reminder_lead_hours      integer,
+    default_owner_role       text,
+    default_owner_user_id    uuid,
+    is_auto_start_when_ready boolean     NOT NULL DEFAULT false,
+    orchestration_group      text,
+    blueprint_filter         varchar(5)[],
+
+    -- Lifecycle
+    is_active                boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at               timestamptz NOT NULL DEFAULT now(),
+    created_by               uuid        NOT NULL,
+    updated_at               timestamptz,
+    updated_by               uuid,
+
+    CONSTRAINT ctpl_pkey               PRIMARY KEY (id),
+    CONSTRAINT ctpl_code_uq            UNIQUE (tenant_id, entity_code, cycle_type_id, task_code),
+    CONSTRAINT ctpl_type_fk            FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id),
+    CONSTRAINT ctpl_phase_fk           FOREIGN KEY (tenant_id, cycle_type_id, phase_id)
+        REFERENCES governance.cycle_phase (tenant_id, cycle_type_id, id),
+    CONSTRAINT ctpl_category_fk        FOREIGN KEY (tenant_id, cycle_type_id, category_id)
+        REFERENCES governance.cycle_task_category (tenant_id, cycle_type_id, id),
+    CONSTRAINT ctpl_completion_mode_chk CHECK (completion_mode IN ('MANUAL','SYSTEM','HYBRID')),
+    CONSTRAINT ctpl_system_handler_chk  CHECK (completion_mode = 'MANUAL' OR system_check_handler IS NOT NULL),
+    CONSTRAINT ctpl_severity_chk        CHECK (severity IS NULL OR severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+    CONSTRAINT ctpl_sla_positive_chk    CHECK (sla_hours IS NULL OR sla_hours > 0),
+    CONSTRAINT ctpl_dur_positive_chk    CHECK (estimated_duration_min IS NULL OR estimated_duration_min > 0)
+);
+
+COMMENT ON TABLE governance.cycle_task_template IS
+    'Reusable task definitions within a cycle type. Templates are materialized '
+    'into cycle_task instances when a cycle_run is opened.';
+
+
+-- ============================================================================
+-- §TDEP  governance.cycle_task_dependency — intra-cycle DAG between templates
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_task_dependency (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Scope
+    cycle_type_id           uuid        NOT NULL,
+    entity_code             varchar(20) NOT NULL,
+
+    -- Edge
+    predecessor_template_id uuid        NOT NULL REFERENCES governance.cycle_task_template(id),
+    successor_template_id   uuid        NOT NULL REFERENCES governance.cycle_task_template(id),
+    dependency_type         varchar(20) NOT NULL DEFAULT 'FINISH_TO_START',
+    is_hard                 boolean     NOT NULL DEFAULT true,
+
+    -- Lifecycle
+    is_active               boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ctdep_pkey          PRIMARY KEY (id),
+    CONSTRAINT ctdep_no_self_chk   CHECK (predecessor_template_id <> successor_template_id),
+    CONSTRAINT ctdep_dep_type_chk  CHECK (dependency_type IN ('FINISH_TO_START','FINISH_TO_FINISH')),
+    CONSTRAINT ctdep_edge_uq       UNIQUE (tenant_id, cycle_type_id, entity_code, predecessor_template_id, successor_template_id),
+    CONSTRAINT ctdep_type_fk       FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id)
+);
+
+COMMENT ON TABLE governance.cycle_task_dependency IS
+    'Intra-cycle directed acyclic graph (DAG) between task templates. '
+    'Cycle detection enforced by trg_check_dep_cycle trigger.';
+
+
+-- ============================================================================
+-- §CRUN  governance.cycle_run — runtime cycle instance
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_run (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    entity_code             varchar(20) NOT NULL,
+
+    -- Type + Period
+    cycle_type_id           uuid        NOT NULL,
+    fiscal_year             smallint    NOT NULL,
+    period_number           smallint    NOT NULL,
+    run_number              smallint    NOT NULL DEFAULT 1,
+
+    -- Lifecycle
+    status                  varchar(30) NOT NULL DEFAULT 'PLANNED',
+    current_phase_id        uuid,
+
+    -- Dates
+    period_end_date         date        NOT NULL,
+    cycle_start_date        date        NOT NULL,
+    cycle_target_date       date        NOT NULL,
+    phase_targets           jsonb       NOT NULL DEFAULT '[]'::jsonb,
+
+    -- Execution timestamps
+    started_at              timestamptz,
+    started_by              uuid,
+    completed_at            timestamptz,
+    completed_by            uuid,
+    certified_at            timestamptz,
+    certified_by            uuid,
+    cancelled_at            timestamptz,
+    cancelled_by            uuid,
+
+    -- Domain
+    notes                   text,
+    domain_data             jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT crun_pkey           PRIMARY KEY (id),
+    CONSTRAINT crun_natural_uq     UNIQUE (tenant_id, entity_code, cycle_type_id, fiscal_year, period_number, run_number),
+    CONSTRAINT crun_tenant_id_uq   UNIQUE (tenant_id, id),
+    CONSTRAINT crun_type_fk        FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id),
+    CONSTRAINT crun_phase_fk       FOREIGN KEY (tenant_id, cycle_type_id, current_phase_id)
+        REFERENCES governance.cycle_phase (tenant_id, cycle_type_id, id),
+    CONSTRAINT crun_status_chk     CHECK (
+        status IN ('PLANNED','OPEN','IN_PROGRESS','PHASE_GATE','COMPLETED',
+                   'CERTIFIED','CLOSED','REOPENED','CANCELLED')),
+    CONSTRAINT crun_dates_chk      CHECK (cycle_start_date <= cycle_target_date)
+);
+
+COMMENT ON TABLE governance.cycle_run IS
+    'Runtime cycle instance. One run per (entity, type, fiscal_year, period, run_number). '
+    'domain_data validated against cycle_type.run_data_schema by trigger.';
+COMMENT ON COLUMN governance.cycle_run.domain_data IS
+    'Extensible JSONB payload validated against cycle_type.run_data_schema by '
+    'governance.trg_validate_domain_data(). Holds cycle-specific context such as '
+    'reporting_currency, consolidation_scope, and special instructions.';
+
+
+-- ============================================================================
+-- §CTSK  governance.cycle_task — materialized task instance
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_task (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    entity_code             varchar(20) NOT NULL,
+
+    -- Parents
+    cycle_run_id            uuid        NOT NULL,
+    template_id             uuid        NOT NULL REFERENCES governance.cycle_task_template(id),
+    phase_id                uuid        NOT NULL,
+    category_id             uuid        NOT NULL,
+
+    -- Definition (copied from template)
+    task_code               varchar(50) NOT NULL,
+    is_mandatory            boolean     NOT NULL DEFAULT true,
+
+    -- Assignment
+    assigned_to             uuid,
+    assigned_role           text,
+
+    -- Lifecycle
+    status                  varchar(20) NOT NULL DEFAULT 'PENDING',
+    due_at                  timestamptz,
+
+    -- Completion
+    completed_by            uuid,
+    completed_at            timestamptz,
+    completion_notes        text,
+    evidence_payload        jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Failure
+    failure_reason          text,
+    failed_at               timestamptz,
+
+    -- Runtime
+    execution_meta          jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    domain_data             jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ctsk_pkey              PRIMARY KEY (id),
+    CONSTRAINT ctsk_natural_uq        UNIQUE (tenant_id, cycle_run_id, task_code),
+    CONSTRAINT ctsk_run_fk            FOREIGN KEY (tenant_id, cycle_run_id)
+        REFERENCES governance.cycle_run (tenant_id, id),
+    CONSTRAINT ctsk_status_chk        CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','BLOCKED','FAILED','DEVIATED')),
+    CONSTRAINT ctsk_completion_chk    CHECK (status <> 'COMPLETED' OR (completed_by IS NOT NULL AND completed_at IS NOT NULL)),
+    CONSTRAINT ctsk_completion_cln_chk CHECK (status = 'COMPLETED' OR completed_by IS NULL),
+    CONSTRAINT ctsk_failure_chk       CHECK (status <> 'FAILED' OR (failure_reason IS NOT NULL AND failed_at IS NOT NULL)),
+    CONSTRAINT ctsk_failure_cln_chk   CHECK (status = 'FAILED' OR failure_reason IS NULL)
+);
+
+COMMENT ON TABLE governance.cycle_task IS
+    'Materialized task instance within a cycle run. Created from templates by '
+    'governance.materialize_cycle_tasks(). domain_data validated by trigger.';
+COMMENT ON COLUMN governance.cycle_task.domain_data IS
+    'Extensible JSONB payload validated against cycle_task_template.task_data_schema. '
+    'Holds task-specific context: checklist items, calculation parameters, scope filters.';
+COMMENT ON COLUMN governance.cycle_task.evidence_payload IS
+    'Structured proof of task completion. Contents vary by task_code: '
+    'e.g. reconciliation_report, sign-off screenshots, balance confirmations. '
+    'Validated by governance.trg_validate_domain_data() if evidence_schema is set on template.';
+COMMENT ON COLUMN governance.cycle_task.execution_meta IS
+    'Runtime execution metadata: retry counts, worker_id, timing metrics, error traces. '
+    'Written by the task execution engine, not by users.';
+
+
+-- ============================================================================
+-- §CDEV  governance.cycle_deviation — unified exception/override/waiver
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_deviation (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    entity_code             varchar(20) NOT NULL,
+
+    -- Parent
+    cycle_run_id            uuid        NOT NULL,
+
+    -- Classification
+    deviation_type          varchar(20) NOT NULL,
+    scope                   varchar(20) NOT NULL DEFAULT 'TASK',
+
+    -- Scope references
+    task_id                 uuid        REFERENCES governance.cycle_task(id),
+    task_template_id        uuid        REFERENCES governance.cycle_task_template(id),
+    task_code               varchar(50),
+    task_category           varchar(30),
+    deviation_code          varchar(50),
+
+    -- Description
+    title                   varchar(200) NOT NULL,
+    description             text,
+
+    -- Reason
+    reason_code             varchar(30) NOT NULL,
+    reason_subcode          varchar(30),
+    reason_detail           text,
+
+    -- Impact
+    severity                varchar(20) NOT NULL DEFAULT 'MEDIUM',
+    impact_type             varchar(30) NOT NULL DEFAULT 'PROCESS',
+    impact_amount           numeric(18,4),
+    impact_currency         varchar(3),
+
+    -- Lifecycle
+    status                  varchar(20) NOT NULL DEFAULT 'OPEN',
+    applies_to_phase_id     uuid        REFERENCES governance.cycle_phase(id),
+
+    -- Workflow approval
+    workflow_request_id     uuid,
+
+    -- Actors
+    requested_by            uuid        NOT NULL,
+    requested_at            timestamptz NOT NULL DEFAULT now(),
+    decision_notes          text,
+    assigned_to             uuid,
+    assigned_at             timestamptz,
+    resolved_by             uuid,
+    resolved_at             timestamptz,
+    resolution_notes        text,
+    revocation_reason       text,
+
+    -- Evidence
+    evidence_payload        jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Effectivity
+    effective_from          date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to            date,
+
+    -- Carryforward lineage
+    carried_from_id         uuid        REFERENCES governance.cycle_deviation(id),
+    carry_count             smallint    NOT NULL DEFAULT 0,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT cdev_pkey              PRIMARY KEY (id),
+    CONSTRAINT cdev_run_fk            FOREIGN KEY (tenant_id, cycle_run_id)
+        REFERENCES governance.cycle_run (tenant_id, id),
+    CONSTRAINT cdev_type_chk          CHECK (deviation_type IN ('EXCEPTION','OVERRIDE','WAIVER')),
+    CONSTRAINT cdev_scope_chk         CHECK (scope IN ('TASK','CATEGORY','GATE','PERIOD')),
+    CONSTRAINT cdev_severity_chk      CHECK (severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+    CONSTRAINT cdev_impact_type_chk   CHECK (impact_type IN ('TASK_BLOCKER','GATE_BLOCKER','DATA_QUALITY','PROCESS','EXTERNAL','IMMATERIAL')),
+    CONSTRAINT cdev_status_chk        CHECK (
+        status IN ('OPEN','PENDING_APPROVAL','APPROVED','REJECTED','APPLIED',
+                   'RESOLVED','ACCEPTED','DEFERRED','EXPIRED','REVOKED','CARRIED_FORWARD')),
+    CONSTRAINT cdev_cat_ref_chk       CHECK (scope <> 'CATEGORY' OR task_category IS NOT NULL),
+    CONSTRAINT cdev_decision_chk      CHECK (status NOT IN ('APPROVED','REJECTED') OR decision_notes IS NOT NULL),
+    CONSTRAINT cdev_resolution_chk    CHECK (status NOT IN ('RESOLVED','ACCEPTED') OR resolution_notes IS NOT NULL),
+    CONSTRAINT cdev_task_scope_chk    CHECK (scope <> 'TASK' OR task_id IS NOT NULL OR task_template_id IS NOT NULL),
+    CONSTRAINT cdev_gate_scope_chk    CHECK (scope <> 'GATE' OR applies_to_phase_id IS NOT NULL)
+);
+
+COMMENT ON TABLE governance.cycle_deviation IS
+    'Unified exception/override/waiver within a cycle run. Supports approval '
+    'workflow via document.workflow_request, carryforward lineage, and '
+    'scope-specific integrity constraints.';
+COMMENT ON COLUMN governance.cycle_deviation.evidence_payload IS
+    'Structured proof supporting the deviation: exception reports, override justifications, '
+    'waiver approvals. Validated by governance.trg_validate_domain_data() if schema defined.';
+
+
+-- ============================================================================
+-- §CCERT  governance.cycle_certification — formal sign-off / attestation
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_certification (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    entity_code             varchar(20) NOT NULL,
+
+    -- Parent
+    cycle_run_id            uuid        NOT NULL,
+
+    -- Definition
+    cert_code               varchar(40) NOT NULL,
+    cert_version            smallint    NOT NULL DEFAULT 1,
+    cert_type               varchar(20) NOT NULL DEFAULT 'STANDARD',
+
+    -- Lifecycle
+    status                  varchar(20) NOT NULL DEFAULT 'DRAFT',
+    content_hash            varchar(64),
+    snapshot_payload        jsonb,
+
+    -- Workflow approval
+    workflow_request_id     uuid,
+
+    -- Review
+    controller_notes        text,
+    attestation_notes       text,
+
+    -- Actors
+    certified_by            uuid,
+    certified_at            timestamptz,
+    attested_by             uuid,
+    attested_at             timestamptz,
+
+    -- Supersession
+    superseded_by_id        uuid        REFERENCES governance.cycle_certification(id),
+    supersession_reason     text,
+    revocation_reason       text,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ccert_pkey          PRIMARY KEY (id),
+    CONSTRAINT ccert_natural_uq    UNIQUE (tenant_id, cycle_run_id, cert_code, cert_version),
+    CONSTRAINT ccert_run_fk        FOREIGN KEY (tenant_id, cycle_run_id)
+        REFERENCES governance.cycle_run (tenant_id, id),
+    CONSTRAINT ccert_type_chk      CHECK (cert_type IN ('STANDARD','WITH_EXCEPTIONS','QUALIFIED','INTERIM')),
+    CONSTRAINT ccert_status_chk    CHECK (status IN ('DRAFT','PENDING_REVIEW','CERTIFIED','ATTESTED','SUPERSEDED','REVOKED'))
+);
+
+COMMENT ON TABLE governance.cycle_certification IS
+    'Formal sign-off and attestation within a cycle run. Supports versioning, '
+    'supersession, content hashing, and external approval workflow.';
+
+
+-- ============================================================================
+-- §CXDEP  governance.cycle_cross_dependency — phase-to-phase across types
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_cross_dependency (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Predecessor
+    predecessor_type_id     uuid        NOT NULL,
+    predecessor_phase_id    uuid        NOT NULL,
+
+    -- Successor
+    successor_type_id       uuid        NOT NULL,
+    successor_phase_id      uuid        NOT NULL,
+
+    -- Config
+    is_hard                 boolean     NOT NULL DEFAULT true,
+    is_active               boolean     NOT NULL DEFAULT true,
+    description             text,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT cxdep_pkey          PRIMARY KEY (id),
+    CONSTRAINT cxdep_edge_uq       UNIQUE (tenant_id, predecessor_type_id, predecessor_phase_id, successor_type_id, successor_phase_id),
+    CONSTRAINT cxdep_no_self_chk   CHECK (predecessor_type_id <> successor_type_id OR predecessor_phase_id <> successor_phase_id),
+    CONSTRAINT cxdep_pred_phase_fk FOREIGN KEY (tenant_id, predecessor_type_id, predecessor_phase_id)
+        REFERENCES governance.cycle_phase (tenant_id, cycle_type_id, id),
+    CONSTRAINT cxdep_succ_phase_fk FOREIGN KEY (tenant_id, successor_type_id, successor_phase_id)
+        REFERENCES governance.cycle_phase (tenant_id, cycle_type_id, id)
+);
+
+COMMENT ON TABLE governance.cycle_cross_dependency IS
+    'Phase-to-phase dependencies across different cycle types. Used by '
+    'governance.check_cross_cycle_gate() to block successor phase entry. '
+    'P2-FIX: updated_at/updated_by added — is_active and description are mutable.';
+
+
+-- ============================================================================
+-- §CCFR  governance.cycle_carryforward_rule — carryforward config per type
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS governance.cycle_carryforward_rule (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Parent
+    cycle_type_id           uuid        NOT NULL,
+
+    -- Rule
+    deviation_type          varchar(20) NOT NULL,
+    action                  varchar(20) NOT NULL,
+    max_carry_count         smallint,
+    escalate_after_carries  smallint,
+    description             text,
+
+    -- Lifecycle
+    is_active               boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT ccfr_pkey           PRIMARY KEY (id),
+    CONSTRAINT ccfr_rule_uq        UNIQUE (tenant_id, cycle_type_id, deviation_type),
+    CONSTRAINT ccfr_type_fk        FOREIGN KEY (tenant_id, cycle_type_id)
+        REFERENCES governance.cycle_type (tenant_id, id),
+    CONSTRAINT ccfr_dev_type_chk   CHECK (deviation_type IN ('EXCEPTION','OVERRIDE','WAIVER')),
+    CONSTRAINT ccfr_action_chk     CHECK (action IN ('FORCE_CLOSE','AUTO_CARRY','EXPIRE')),
+    CONSTRAINT ccfr_max_count_chk  CHECK (max_carry_count IS NULL OR max_carry_count > 0)
+);
+
+COMMENT ON TABLE governance.cycle_carryforward_rule IS
+    'Carryforward policy per cycle type and deviation type. Controls whether '
+    'open deviations are force-closed, auto-carried, or expired at cycle boundary. '
+    'P2-FIX: updated_at/updated_by added — rule config (action, thresholds) is mutable.';

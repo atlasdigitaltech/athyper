@@ -1,0 +1,61 @@
+# =============================================================================
+# athyper Runtime API Server — Development Image
+# Build context: repo root (d:/Products/athyper)
+# Usage:
+#   docker compose --project-directory mesh/compose build athyper-api
+# =============================================================================
+
+FROM node:22-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# ─── Dependency install ───────────────────────────────────────────────────────
+# Copy workspace manifests first for layer caching
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY tooling/tsconfig/ ./tooling/tsconfig/
+COPY server/package.json ./server/
+
+# Copy all server workspace package.json files (adapters + services)
+COPY server/framework/adapters/auth/package.json ./server/framework/adapters/auth/
+COPY server/framework/adapters/db/package.json ./server/framework/adapters/db/
+COPY server/framework/adapters/memorycache/package.json ./server/framework/adapters/memorycache/
+COPY server/framework/adapters/objectstorage/package.json ./server/framework/adapters/objectstorage/
+COPY server/framework/adapters/telemetry/package.json ./server/framework/adapters/telemetry/
+COPY server/framework/runtime/services/collab/package.json ./server/framework/runtime/services/collab/
+COPY server/framework/runtime/services/documents/package.json ./server/framework/runtime/services/documents/
+COPY server/framework/runtime/services/finance/package.json ./server/framework/runtime/services/finance/
+COPY server/framework/runtime/services/iam/package.json ./server/framework/runtime/services/iam/
+COPY server/framework/runtime/services/jobs/package.json ./server/framework/runtime/services/jobs/
+COPY server/framework/runtime/services/metadata/package.json ./server/framework/runtime/services/metadata/
+COPY server/framework/runtime/services/platform/package.json ./server/framework/runtime/services/platform/
+COPY server/framework/runtime/services/records/package.json ./server/framework/runtime/services/records/
+COPY server/framework/runtime/services/shared/package.json ./server/framework/runtime/services/shared/
+
+# Copy @athyper/core and @athyper/config package manifests (used by adapter-telemetry)
+COPY packages/shared/foundation/core/package.json ./packages/shared/foundation/core/
+COPY packages/shared/foundation/config/package.json ./packages/shared/foundation/config/
+
+RUN pnpm install --frozen-lockfile \
+      --filter "@athyper/runtime-server..." \
+      --filter "@athyper/adapter-*"
+
+# ─── Source ───────────────────────────────────────────────────────────────────
+COPY server/ ./server/
+COPY packages/shared/foundation/core/ ./packages/shared/foundation/core/
+COPY packages/shared/foundation/config/ ./packages/shared/foundation/config/
+
+# ─── Build workspace library packages ────────────────────────────────────────
+# Adapters and services export from dist/index.js — must be compiled before the
+# server starts. Builds in dependency order (pnpm respects workspace graph).
+RUN pnpm --filter "@athyper/adapter-*" --filter "@athyper/svc-shared" --filter "@athyper/svc-jobs" run build
+
+# ─── Runtime ──────────────────────────────────────────────────────────────────
+WORKDIR /app/server
+
+EXPOSE 3000
+
+# Dev: tsx watch for hot-reload (PORT is injected by Docker compose via env)
+CMD ["pnpm", "run", "dev"]

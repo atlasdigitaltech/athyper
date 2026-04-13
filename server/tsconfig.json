@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@athyper/svc-shared":    ["./framework/runtime/services/shared/index.ts"],
+      "@athyper/svc-iam":       ["./framework/runtime/services/iam/index.ts"],
+      "@athyper/svc-metadata":  ["./framework/runtime/services/metadata/index.ts"],
+      "@athyper/svc-records":   ["./framework/runtime/services/records/index.ts"],
+      "@athyper/svc-documents": ["./framework/runtime/services/documents/index.ts"],
+      "@athyper/svc-collab":    ["./framework/runtime/services/collab/index.ts"],
+      "@athyper/svc-finance":   ["./framework/runtime/services/finance/index.ts"],
+      "@athyper/svc-platform":  ["./framework/runtime/services/platform/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "framework/runtime/services/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "framework/adapters",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

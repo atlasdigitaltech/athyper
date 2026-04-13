@@ -1,0 +1,2 @@
+-- 10_views/001_shared.sql
+-- No views required. All shared tables accessed directly as shared.*.

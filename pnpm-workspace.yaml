@@ -1,31 +1,8 @@
 packages:
-  # ─────────────────────────────────────────────
-  # Framework (engine)
-  # ─────────────────────────────────────────────
-  - "framework/core"
-  - "framework/runtime"
-  - "framework/adapters/*" # db, auth, memorycache, telemetry, objectstorage
-
-  # NOTE: clear
-  # Do NOT include framework/*
-  # Services are part of runtime package, not separate pnpm packages
-
-  # ─────────────────────────────────────────────
-  # Shared libraries & tooling
-  # ─────────────────────────────────────────────
-  - "packages/*" # ui, auth, api-client, workbenches
-  - "tooling/*" # eslint-config, tsconfig
-  - "tools/*" # codegen, etc.
-
-  # ─────────────────────────────────────────────
-  # Products (deployables)
-  # ─────────────────────────────────────────────
-  - "products/*/apps/*" # Next.js apps (neon/apps/web)
-  - "products/*/auth" # Product-specific auth packages
-  - "products/*/content" # Product-specific content packages
-  - "products/*/shared/*" # Product-specific shared packages
-  - "products/*/themes" # Product-specific theme packages
-
-
-  # OPTIONAL (enable only if product root has package.json)
-  # - "products/*"
+  - "apps/*"
+  - "packages/shared/*/*"
+  - "packages/domain/*/*"
+  - "tooling/*"
+  - "server"
+  - "server/framework/adapters/*"
+  - "server/framework/runtime/services/*"

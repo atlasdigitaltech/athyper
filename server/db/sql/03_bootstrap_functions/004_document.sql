@@ -1,0 +1,2 @@
+-- 03_bootstrap_functions/004_document.sql
+-- No bootstrap functions required for this schema.

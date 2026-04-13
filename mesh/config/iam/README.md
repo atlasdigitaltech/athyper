@@ -209,7 +209,7 @@ jq '.' mesh/config/iam/realm-demosetup.json > realm-formatted.json
 
 - [Keycloak Export/Import Docs](https://www.keycloak.org/docs/latest/server_admin/#_export_import)
 - Project Auth Architecture: `../../docs/security/AUTH_ARCHITECTURE.md`
-- Mesh Scripts: `../scripts/README.md`
+- Mesh Scripts: `../../../tools/scripts/`
 - Database Scripts: `../../framework/adapters/db/scripts/README-KEYCLOAK-EXPORT.md`
 
 ---

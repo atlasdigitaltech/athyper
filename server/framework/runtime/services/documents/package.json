@@ -1,0 +1,43 @@
+{
+  "name": "@athyper/svc-documents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely",
+    "dev": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@athyper/adapter-objectstorage": "workspace:*",
+    "@athyper/svc-shared": "workspace:*",
+    "busboy": "^1.6.0"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "@types/busboy": "^1.5.4",
+    "@types/express": "^5.0.1",
+    "express": "^5.0.0",
+    "kysely": "^0.28.15",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}

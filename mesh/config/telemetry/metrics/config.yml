@@ -4,6 +4,7 @@ global:
 
 rule_files:
   - governance-alerts.yml
+  - redis-alerts.yml
 
 scrape_configs:
   - job_name: prometheus
@@ -20,6 +21,19 @@ scrape_configs:
           service: memorycache
           role: primary
           component: redis_exporter
+          env: dev
+
+  # Application-level cache metrics (tenant-scoped hit/miss/write/invalidated).
+  # Complements redis_exporter which only provides Redis-server-wide stats.
+  # Endpoint: GET athyper-api:3000/metrics  (internal network only — not via Traefik edge)
+  # Metrics: athyper_cache_operations_total, athyper_cache_invalidated_keys_total
+  - job_name: athyper_api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["athyper-api:3000"]
+        labels:
+          service: athyper-api
+          component: cache_metrics
           env: dev
   - job_name: loki
     static_configs:

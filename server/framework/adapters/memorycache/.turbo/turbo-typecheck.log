@@ -1,0 +1,4 @@
+
+> @athyper/adapter-memorycache@0.1.0 typecheck D:\Products\athyper\framework\adapters\memorycache
+> tsc -p tsconfig.json --noEmit
+

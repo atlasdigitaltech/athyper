@@ -1,0 +1,4 @@
+
+> @athyper/adapter-auth@0.1.0 typecheck D:\Products\athyper\framework\adapters\auth
+> tsc -p tsconfig.json --noEmit
+

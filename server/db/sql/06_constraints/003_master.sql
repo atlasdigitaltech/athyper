@@ -1,0 +1,8 @@
+-- 06_constraints/003_master.sql
+-- THIS FILE HAS BEEN SPLIT for maintainability:
+--
+--   003a_master_identity.sql — Identity, RBAC, collaboration, document/branding constraints
+--   003b_master_finance.sql  — Legal entities, company codes, GL, parties, products constraints
+--   003c_master_extended.sql — Asset management, dimensions, intent, tax, FX, budgets, banking constraints
+--
+-- Run the above files in alphabetical order (a → b → c).

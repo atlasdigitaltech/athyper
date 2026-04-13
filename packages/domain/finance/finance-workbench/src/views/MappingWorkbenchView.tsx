@@ -1,0 +1,186 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { AlertTriangle, ArrowRight, Plus } from "lucide-react";
+import {
+  Badge, Button,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@athyper/ui/primitives";
+import { cn } from "@athyper/theme/utils";
+import { CHARTS, MAPPINGS } from "../data/demo-data";
+
+const TYPE_STYLE = {
+  direct: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  merge:  "bg-blue-50 text-blue-700 border-blue-200",
+  split:  "bg-amber-50 text-amber-700 border-amber-200",
+} as const;
+
+const STATUS_STYLE = {
+  active:  "bg-emerald-50 text-emerald-700 border-emerald-200",
+  expired: "bg-muted text-muted-foreground",
+  draft:   "bg-amber-50 text-amber-700 border-amber-200",
+} as const;
+
+export function MappingWorkbenchView() {
+  const [source, setSource] = useState("COA-SOCPA");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [showExpired, setShowExpired] = useState(false);
+
+  const filtered = useMemo(() => {
+    return MAPPINGS.filter((m) =>
+      m.sourceChart === source &&
+      (typeFilter === "all" || m.mappingType === typeFilter) &&
+      (showExpired || m.status === "active"),
+    );
+  }, [source, typeFilter, showExpired]);
+
+  // Validate split groups sum to 100%
+  const splitGroups: Record<string, number> = {};
+  filtered
+    .filter((m) => m.mappingType === "split")
+    .forEach((m) => {
+      splitGroups[m.sourceAccount] = (splitGroups[m.sourceAccount] ?? 0) + (m.allocationPct ?? 0);
+    });
+
+  const sourceCharts = CHARTS.filter((c) => c.tier !== "group");
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground">Source: master.coa_account_mapping · Effective-dated, versioned</span>
+        <Button size="sm" className="h-7 gap-1 text-xs">
+          <Plus size={12} />
+          New mapping
+        </Button>
+      </div>
+
+      {/* Source → Target selector */}
+      <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border">
+        <div className="flex-1">
+          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Source chart</div>
+          <Select value={source} onValueChange={setSource}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceCharts.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.code} — {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <ArrowRight size={18} className="text-muted-foreground mt-3 shrink-0" />
+        <div className="flex-1">
+          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Target (group)</div>
+          <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-xs font-mono">
+            COA-IFRS-GROUP
+          </div>
+        </div>
+      </div>
+
+      {/* Type filter pills */}
+      <div className="flex items-center gap-2">
+        {["all", "direct", "merge", "split"].map((t) => (
+          <Button
+            key={t}
+            variant={typeFilter === t ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-[10px] px-2.5"
+            onClick={() => setTypeFilter(t)}
+          >
+            {t === "all" ? "All" : t}
+          </Button>
+        ))}
+        <Button
+          variant={showExpired ? "default" : "outline"}
+          size="sm"
+          className="h-7 text-[10px] px-2.5"
+          onClick={() => setShowExpired(!showExpired)}
+        >
+          Show expired
+        </Button>
+        <span className="flex-1" />
+        <span className="text-[10px] text-muted-foreground">{filtered.length} mappings</span>
+      </div>
+
+      {/* Split validation warnings */}
+      {Object.entries(splitGroups)
+        .filter(([, total]) => total !== 100)
+        .map(([account, total]) => (
+          <div
+            key={account}
+            className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100 text-xs text-amber-700"
+          >
+            <AlertTriangle size={13} />
+            <span className="font-mono font-medium">{account}</span>: split allocations total{" "}
+            {total}% — must be 100%
+          </div>
+        ))}
+
+      {/* Mapping table */}
+      <div className="rounded-xl border overflow-hidden">
+        <table className="w-full text-[10px]">
+          <thead>
+            <tr className="bg-muted/50 border-b">
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Source account</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Source name</th>
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground">Type</th>
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground">%</th>
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground">→</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Group account</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Group name</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Effective</th>
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground">Ver</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Status</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((m) => (
+              <tr
+                key={m.id}
+                className={cn(
+                  "border-b last:border-0 hover:bg-muted/30 transition-colors",
+                  m.status === "expired" && "opacity-50",
+                )}
+              >
+                <td className="py-1.5 px-2 font-mono">{m.sourceAccount}</td>
+                <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[140px]">{m.sourceName}</td>
+                <td className="py-1.5 px-2 text-center">
+                  <Badge variant="outline" className={cn("text-[10px] py-0", TYPE_STYLE[m.mappingType])}>
+                    {m.mappingType}
+                  </Badge>
+                </td>
+                <td className="py-1.5 px-2 text-center font-mono">{m.allocationPct ? `${m.allocationPct}%` : "—"}</td>
+                <td className="py-1.5 px-2 text-center">
+                  <ArrowRight size={11} className="text-muted-foreground mx-auto" />
+                </td>
+                <td className="py-1.5 px-2 font-mono">{m.targetAccount}</td>
+                <td className="py-1.5 px-2 text-muted-foreground">{m.targetName}</td>
+                <td className="py-1.5 px-2 text-muted-foreground font-mono text-[9px]">
+                  {m.effectiveFrom}{m.effectiveTo ? ` → ${m.effectiveTo}` : ""}
+                </td>
+                <td className="py-1.5 px-2 text-center text-muted-foreground">v{m.version}</td>
+                <td className="py-1.5 px-2">
+                  <Badge variant="outline" className={cn("text-[10px] py-0", STATUS_STYLE[m.status])}>
+                    {m.status}
+                  </Badge>
+                </td>
+                <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[120px]">{m.reason}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />direct: 1:1</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-500" />merge: N:1 rollup</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" />split: 1:N with % (must sum to 100%)</span>
+      </div>
+    </div>
+  );
+}

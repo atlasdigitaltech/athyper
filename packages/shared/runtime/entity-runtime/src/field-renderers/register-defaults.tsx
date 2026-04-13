@@ -1,0 +1,305 @@
+/**
+ * @athyper/entity-runtime — Default Field Renderers
+ *
+ * Built-in renderers for all standard data types.
+ * Call registerDefaults() at app startup to populate the registry.
+ */
+import { useCallback } from "react";
+import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
+// Select primitives kept for EnumRenderer (LookupSelect).
+import { EntityRefPicker, type EntityRefOption } from "@athyper/ui/composites";
+import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
+import { useLookupDomain } from "@athyper/query";
+import { registerFieldRenderer, type FieldRendererProps } from "./registry";
+
+// ── Text / String ───────────────────────────────────────────────
+
+function TextRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  if (mode === "view") {
+    return <span className="text-sm">{String(value ?? "—")}</span>;
+  }
+  return (
+    <Input
+      value={String(value ?? "")}
+      onChange={(e) => onChange?.(e.target.value)}
+      placeholder={field.label ?? field.name}
+      error={error}
+    />
+  );
+}
+
+// ── Number / Integer / Decimal ──────────────────────────────────
+
+function NumberRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  if (mode === "view") {
+    if (field.unit) {
+      return <QuantityUnit quantity={Number(value ?? 0)} unit={field.unit} />;
+    }
+    return <span className="text-sm tabular-nums">{value != null ? String(value) : "—"}</span>;
+  }
+  return (
+    <Input
+      type="number"
+      value={String(value ?? "")}
+      onChange={(e) => onChange?.(e.target.valueAsNumber)}
+      placeholder={field.label ?? field.name}
+      error={error}
+    />
+  );
+}
+
+// ── Boolean ─────────────────────────────────────────────────────
+
+function BooleanRenderer({ value, mode, onChange }: FieldRendererProps) {
+  if (mode === "view") {
+    return <Badge variant={value ? "success" : "muted"}>{value ? "Yes" : "No"}</Badge>;
+  }
+  return (
+    <Checkbox
+      checked={Boolean(value)}
+      onCheckedChange={(checked) => onChange?.(checked)}
+    />
+  );
+}
+
+// ── Date / DateTime ─────────────────────────────────────────────
+
+function DateRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  if (mode === "view") {
+    if (!value) return <span className="text-sm text-muted-foreground">—</span>;
+    const date = new Date(String(value));
+    const formatted = field.data_type === "date"
+      ? date.toLocaleDateString()
+      : date.toLocaleString();
+    return <span className="text-sm">{formatted}</span>;
+  }
+  return (
+    <Input
+      type={field.data_type === "date" ? "date" : "datetime-local"}
+      value={String(value ?? "")}
+      onChange={(e) => onChange?.(e.target.value)}
+      error={error}
+    />
+  );
+}
+
+// ── Money ───────────────────────────────────────────────────────
+
+function MoneyRenderer({ value, mode, onChange, error }: FieldRendererProps) {
+  if (mode === "view") {
+    const data = value as { amount?: number; currency_code?: string } | null;
+    if (!data?.amount) return <span className="text-sm text-muted-foreground">—</span>;
+    return <MoneySummary amount={data.amount} currencyCode={data.currency_code ?? "USD"} />;
+  }
+  return (
+    <Input
+      type="number"
+      step="0.01"
+      value={String((value as { amount?: number })?.amount ?? "")}
+      onChange={(e) => onChange?.({ amount: e.target.valueAsNumber })}
+      error={error}
+    />
+  );
+}
+
+// ── Enum / Lookup ───────────────────────────────────────────────
+
+function EnumRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  if (mode === "view") {
+    return <Badge variant="outline">{String(value ?? "—")}</Badge>;
+  }
+  return (
+    <LookupSelect
+      domainCode={field.enum_domain_code ?? ""}
+      value={String(value ?? "")}
+      onChange={(v) => onChange?.(v)}
+      error={error}
+    />
+  );
+}
+
+interface LookupSelectProps {
+  domainCode: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}
+
+function LookupSelect({ domainCode, value, onChange, error }: LookupSelectProps) {
+  const { data, isLoading } = useLookupDomain(domainCode);
+  const activeValues = (data?.values ?? [])
+    .filter((v) => v.status === "active")
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  return (
+    <div className="space-y-1">
+      <Select value={value} onValueChange={onChange} disabled={isLoading || !domainCode}>
+        <SelectTrigger className={error ? "border-destructive" : undefined}>
+          <SelectValue placeholder={isLoading ? "Loading…" : "Select…"} />
+        </SelectTrigger>
+        <SelectContent>
+          {activeValues.map((v) => (
+            <SelectItem key={v.code} value={v.code}>
+              {v.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+// ── UUID ─────────────────────────────────────────────────────────
+
+function UuidRenderer({ value, mode }: FieldRendererProps) {
+  if (mode === "view") {
+    const str = String(value ?? "");
+    return <span className="font-mono text-xs text-muted-foreground">{str.slice(0, 8)}…</span>;
+  }
+  return <span className="text-sm">{String(value ?? "")}</span>;
+}
+
+// ── Reference (entity chooser) ───────────────────────────────────
+
+/** Returns a human-readable label from a raw/remapped entity row. */
+function getEntityRowLabel(row: Record<string, unknown>): string {
+  const keys = Object.keys(row);
+  const nameKey = keys.find((k) => k !== "id" && k.endsWith("_name"));
+  if (nameKey && row[nameKey]) return String(row[nameKey]);
+  if (row.name) return String(row.name);
+  const codeKey = keys.find((k) => k !== "id" && k.endsWith("_code") && k !== "currency_code");
+  if (codeKey && row[codeKey]) return String(row[codeKey]);
+  if (row.code) return String(row.code);
+  return String(row.id ?? "").slice(0, 8);
+}
+
+function getReferenceEntityCode(field: FieldRendererProps["field"]): string | null {
+  if (field.reference_config?.target_entity) return field.reference_config.target_entity;
+  const v = field.validation_rules as Record<string, unknown> | null;
+  if (v?.ref_entity) return String(v.ref_entity);
+  return null;
+}
+
+/**
+ * Wrapper that wires EntityRefPicker to the relay-backed record search.
+ * Calls GET /api/relay/records/{entityCode}?q={query}&limit=20
+ * so the BFF injects auth and tenant headers transparently.
+ */
+function ReferencePickerField({
+  entityCode,
+  value,
+  onChange,
+  error,
+}: {
+  entityCode: string | null;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+}) {
+  const searchFn = useCallback(
+    async (query: string): Promise<EntityRefOption[]> => {
+      if (!entityCode) return [];
+      const params = new URLSearchParams({ q: query, limit: "20" });
+      const res = await fetch(`/api/relay/records/${encodeURIComponent(entityCode)}?${params}`);
+      if (!res.ok) return [];
+      const body = await res.json() as { data?: Record<string, unknown>[] };
+      return (body.data ?? []).map((row) => ({
+        value: String(row["id"] ?? ""),
+        label: getEntityRowLabel(row),
+        description: row["code"] ? String(row["code"]) : undefined,
+      }));
+    },
+    [entityCode],
+  );
+
+  return (
+    <div className="space-y-1">
+      <EntityRefPicker
+        value={value || null}
+        onChange={(v) => onChange(v ?? "")}
+        search={searchFn}
+        disabled={!entityCode}
+        error={error}
+        placeholder="Search records…"
+      />
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  const entityCode = getReferenceEntityCode(field);
+
+  if (mode === "view") {
+    if (!value) return <span className="text-sm text-muted-foreground">—</span>;
+    return (
+      <span className="font-mono text-xs text-muted-foreground">
+        {String(value).slice(0, 8)}…
+      </span>
+    );
+  }
+
+  return (
+    <ReferencePickerField
+      entityCode={entityCode}
+      value={String(value ?? "")}
+      onChange={(v) => onChange?.(v)}
+      error={error}
+    />
+  );
+}
+
+// ── JSON ────────────────────────────────────────────────────────
+
+function JsonRenderer({ value, mode }: FieldRendererProps) {
+  if (mode === "view") {
+    return (
+      <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs font-mono">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    );
+  }
+  return <pre className="text-xs">{JSON.stringify(value, null, 2)}</pre>;
+}
+
+// ── Registration ────────────────────────────────────────────────
+
+/**
+ * Register all default field renderers.
+ * Call once at app startup (e.g. in apps/web providers).
+ */
+export function registerDefaults(): void {
+  // Text family
+  registerFieldRenderer("string", TextRenderer);
+  registerFieldRenderer("text", TextRenderer);
+
+  // Number family
+  registerFieldRenderer("integer", NumberRenderer);
+  registerFieldRenderer("bigint", NumberRenderer);
+  registerFieldRenderer("decimal", NumberRenderer);
+  registerFieldRenderer("numeric", NumberRenderer);
+
+  // Boolean
+  registerFieldRenderer("boolean", BooleanRenderer);
+
+  // Date family
+  registerFieldRenderer("date", DateRenderer);
+  registerFieldRenderer("datetime", DateRenderer);
+  registerFieldRenderer("timestamptz", DateRenderer);
+
+  // Money
+  registerFieldRenderer("money", MoneyRenderer);
+
+  // Enum / Lookup
+  registerFieldRenderer("enum", EnumRenderer);
+
+  // UUID
+  registerFieldRenderer("uuid", UuidRenderer);
+  // Reference — entity chooser dropdown in edit mode
+  registerFieldRenderer("reference", ReferenceRenderer);
+
+  // JSON
+  registerFieldRenderer("json", JsonRenderer);
+  registerFieldRenderer("jsonb", JsonRenderer);
+}

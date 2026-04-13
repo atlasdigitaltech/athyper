@@ -1,0 +1,2 @@
+-- 03_bootstrap_functions/005_ledger.sql
+-- No bootstrap functions required for this schema.

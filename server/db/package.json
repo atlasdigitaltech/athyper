@@ -1,0 +1,31 @@
+{
+  "name": "@athyper/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "db:provision": "tsx seed/seed.ts",
+    "db:provision:ddl": "tsx seed/seed.ts --ddl-only",
+    "db:provision:seed": "tsx seed/seed.ts --seed-only",
+    "db:provision:reset": "tsx seed/seed.ts --reset",
+    "db:provision:status": "tsx seed/seed.ts --status",
+    "db:provision:force": "tsx seed/seed.ts --force",
+    "db:setup": "tsx seed/migrate.ts --all",
+    "db:setup:ddl": "tsx seed/migrate.ts --phase=1",
+    "db:setup:system": "tsx seed/migrate.ts --phase=2",
+    "db:setup:tenant": "tsx seed/migrate.ts --phase=3",
+    "db:setup:status": "tsx seed/migrate.ts --status",
+    "db:setup:reset": "tsx seed/migrate.ts --reset",
+    "db:setup:force": "tsx seed/migrate.ts --all --force",
+    "lint:sql": "bash ../framework/adapters/db/ci/lint_sql_hardcoded.sh"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.2"
+  }
+}

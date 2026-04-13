@@ -24,13 +24,14 @@ services:
       REDIS_PASSWORD: ${MEMORYCACHE_PASSWORD}
     volumes:
       - ${MESH_CONFIG}/memorycache/cache.conf:/usr/local/etc/redis/redis.conf:ro
+      - ${MESH_CONFIG}/memorycache/redis-acl.conf:/usr/local/etc/redis/redis-acl.conf:ro
       - ${MESH_DATA}/memorycache:/data
     networks: [internal]
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          'redis-cli -a "$MEMORYCACHE_PASSWORD" ping >/dev/null 2>&1',
+          'redis-cli --user app -a "$MEMORYCACHE_PASSWORD" ping >/dev/null 2>&1',
         ]
       interval: 10s
       timeout: 3s

@@ -14,7 +14,7 @@ services:
     image: quay.io/keycloak/keycloak:26.5.1
     profiles: ["mesh", "iam"]
     mem_limit: "${IAM_MEMORY_LIMIT}"
-    command: ["start-dev"]
+    command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${IAM_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${IAM_ADMIN_PASSWORD}
@@ -28,12 +28,25 @@ services:
       KC_DB_POOL_INITIAL_SIZE: 1
       KC_DB_POOL_MIN_SIZE: 5
       KC_DB_POOL_MAX_SIZE: 20
+      KC_SMTP_HOST: ${KC_SMTP_HOST:-mailhog}
+      KC_SMTP_PORT: ${KC_SMTP_PORT:-1025}
+      KC_SMTP_FROM: ${KC_SMTP_FROM:-noreply@athyper.local}
+      KC_SMTP_FROM_DISPLAY_NAME: ${KC_SMTP_FROM_DISPLAY_NAME:-Athyper}
+      KC_SMTP_AUTH: ${KC_SMTP_AUTH:-false}
+      KC_SMTP_SSL: ${KC_SMTP_SSL:-false}
+      KC_SMTP_STARTTLS: ${KC_SMTP_STARTTLS:-false}
+    volumes:
+      - ${MESH_CONFIG}/iam/themes/neon:/opt/keycloak/themes/neon:ro
+      - ${MESH_CONFIG}/iam/realm-demosetup.json:/opt/keycloak/data/import/realm-demosetup.json:ro
+      - ${MESH_CONFIG}/iam/realm-platform-control.json:/opt/keycloak/data/import/realm-platform-control.json:ro
     networks: [edge, internal]
     depends_on:
       gateway:
         condition: service_healthy
       dbpool-auth:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     healthcheck:
       test: [
           "CMD-SHELL",

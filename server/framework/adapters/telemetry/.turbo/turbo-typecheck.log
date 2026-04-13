@@ -1,0 +1,4 @@
+
+> @athyper/adapter-telemetry@0.1.0 typecheck D:\Products\athyper\framework\adapters\telemetry
+> tsc -p tsconfig.json --noEmit
+

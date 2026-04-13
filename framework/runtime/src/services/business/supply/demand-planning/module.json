@@ -1,7 +1,0 @@
-﻿{
-  "code": "DEMAND",
-  "name": "Demand Forecast \u0026 Planning",
-  "dependsOn": ["INVENTORY", "SALE", "AI"],
-  "tenantScoped": true,
-  "subscription": "Enterprise"
-}

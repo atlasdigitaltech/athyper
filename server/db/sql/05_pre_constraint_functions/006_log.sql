@@ -1,0 +1,2 @@
+-- 05_pre_constraint_functions/006_log.sql
+-- No pre-constraint functions required for this schema.

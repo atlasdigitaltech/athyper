@@ -1,0 +1,38 @@
+import { EntityListPage } from "@athyper/entity-runtime/list";
+
+/**
+ * Runtime entity list — /app/[entity]
+ *
+ * Unified list page for ALL entity types: master records and document records.
+ * The entity code drives all rendering, columns, filters, and actions via metadata.
+ *
+ * Record family is determined by entity metadata:
+ *   family: "master"   → vendor, customer, account, cost-center, employee, item, warehouse…
+ *   family: "document" → purchase-invoice, purchase-order, journal-entry, payment-entry…
+ *
+ * The [entity] segment is the canonical entity code — the business key
+ * (e.g. "vendor", "purchase-invoice") not a UUID.
+ *
+ * Examples:
+ *   /app/vendor           → Vendor list
+ *   /app/customer         → Customer list
+ *   /app/purchase-invoice → Purchase Invoice list
+ *   /app/journal-entry    → Journal Entry list
+ *
+ * Row click navigates to /app/[entity]/[id] using the record's business key.
+ *
+ * Decision rule:
+ *   This page IS the record list → belongs in (runtime), not (workbench).
+ *   /finance/coa is the COA workbench — account hierarchy explorer.
+ *   /app/account is the account master record — create, edit, attach.
+ *   A workbench may open a runtime record via drawer or deep link but
+ *   never duplicates its form.
+ */
+export default async function AppEntityListRoute({
+  params,
+}: {
+  params: Promise<{ entity: string }>;
+}) {
+  const { entity } = await params;
+  return <EntityListPage entityCode={entity} />;
+}

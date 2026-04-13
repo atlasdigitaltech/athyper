@@ -436,7 +436,7 @@ docker compose --project-directory mesh/compose --env-file mesh/env/.env logs db
 # Reset database (delete data and reinitialize)
 # WARNING: This deletes all database data
 ./down.sh
-rm -rf ../data/db
+rm -rf data/db
 ./up.sh
 ```
 

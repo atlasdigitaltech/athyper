@@ -1,0 +1,2 @@
+-- 03_bootstrap_functions/003_master.sql
+-- No bootstrap functions required for this schema.

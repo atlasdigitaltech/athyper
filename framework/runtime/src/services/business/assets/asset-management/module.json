@@ -1,7 +1,0 @@
-﻿{
-  "code": "ASSET",
-  "name": "Asset Management",
-  "dependsOn": ["CORE", "ACC", "MDG", "AUDIT"],
-  "tenantScoped": true,
-  "subscription": "Enterprise"
-}

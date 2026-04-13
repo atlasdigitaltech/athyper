@@ -1,0 +1,18 @@
+import type { Router } from "express";
+import { createFinanceRoutes, type FinanceRouteDeps } from "./finance.route.js";
+import { createApRoutes } from "./ap.route.js";
+import { createBankRoutes } from "./bank.route.js";
+import { createPeriodCloseRoutes } from "./period-close.route.js";
+import { createJournalRoutes } from "./journal.route.js";
+import { createAnalyticsRoutes } from "./analytics.route.js";
+import { createReportsRoutes } from "./reports.route.js";
+
+export function registerFinanceRoutes(router: Router, deps: FinanceRouteDeps): void {
+  createFinanceRoutes(router, deps);
+  createApRoutes(router, deps);
+  createBankRoutes(router, deps);
+  createPeriodCloseRoutes(router, deps);
+  createJournalRoutes(router, deps);
+  createAnalyticsRoutes(router, deps);
+  createReportsRoutes(router, deps);
+}
