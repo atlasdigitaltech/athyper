@@ -159,9 +159,25 @@ else
   echo -e "  cd mesh/scripts/stack && ./up.sh"
 fi
 
+echo -e "\n${GREEN}[5/5] Provisioning users (passwords + MFA)...${NC}"
+PROVISION_SCRIPT="${MESH_DIR}/../tools/devtools/keycloackgen/provision-keycloak-users.mjs"
+if [ -f "${PROVISION_SCRIPT}" ]; then
+  if command -v node &> /dev/null; then
+    node "${PROVISION_SCRIPT}"
+    echo -e "${GREEN}✓ Users provisioned${NC}"
+  else
+    echo -e "${YELLOW}Warning: node not found — run manually:${NC}"
+    echo -e "  node tools/devtools/keycloackgen/provision-keycloak-users.mjs"
+  fi
+else
+  echo -e "${YELLOW}Warning: provision script not found at: ${PROVISION_SCRIPT}${NC}"
+  echo -e "  Run manually: node tools/devtools/keycloackgen/provision-keycloak-users.mjs"
+fi
+
 echo -e "\n${GREEN}✓ Import completed successfully!${NC}"
 echo -e "\n${YELLOW}Next steps:${NC}"
 echo -e "  1. Access Keycloak Admin Console"
 echo -e "  2. Verify realms: athyper, platform-control"
 echo -e "  3. Check clients, users, roles"
+echo -e "  4. Users can log in with password: Demo123! (MFA setup required on first login)"
 echo -e "\n${GREEN}Keycloak Admin URL: http://localhost/auth${NC}"
