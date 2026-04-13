@@ -45,6 +45,7 @@ export { getStatusIcon } from "./status-icons";
 
 // Custom SVGs
 export { AthyperLogo } from "./custom/AthyperLogo";
+export { NeonLogo } from "./custom/NeonLogo";
 
 // Types
 export type { IconComponent, IconProps } from "./types";

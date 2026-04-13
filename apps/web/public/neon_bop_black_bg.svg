@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="neon Business Operating Platform logo on black background">
+  <rect width="900" height="600" fill="#000000"/>
+
+  <!-- Icon -->
+  <g transform="translate(40,35) scale(1.02)">
+    <polygon points="125,17 14,244 75,244 155,82" fill="#FFFFFF"/>
+    <polygon points="223,120 169,120 109,244 163,243" fill="#FFFFFF"/>
+    <polygon points="225,164 199,220 212,244 263,244" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Product name -->
+  <text x="315" y="245"
+        fill="#FFFFFF"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="126"
+        font-weight="700"
+        letter-spacing="-4">neon</text>
+
+  <!-- Divider -->
+  <line x1="38" y1="337" x2="862" y2="337" stroke="#FFFFFF" stroke-width="5"/>
+
+  <!-- Descriptor -->
+  <text x="450" y="455"
+        fill="#FFFFFF"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="59"
+        font-weight="400"
+        text-anchor="middle"
+        letter-spacing="-1">Business Operating Platform</text>
+</svg>

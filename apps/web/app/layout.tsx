@@ -14,8 +14,8 @@ const sourceSerif4 = Source_Serif_4({
 });
 
 export const metadata = {
-  title: "Athyper",
-  description: "Enterprise Platform",
+  title: "Neon",
+  description: "Business Operating Platform",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

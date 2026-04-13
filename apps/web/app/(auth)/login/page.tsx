@@ -18,7 +18,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AthyperLogo } from "@athyper/icons/custom/AthyperLogo";
+import { NeonLogo } from "@athyper/icons/custom/NeonLogo";
 import { Button } from "@athyper/ui/primitives";
 
 // ─── Inner page (needs useSearchParams inside Suspense) ───────────────────────
@@ -73,22 +73,23 @@ function LoginPageInner() {
   return (
     <div className="flex h-dvh">
       {/* ── Left panel — branding (lg+) ───────────────────────────────── */}
-      <div className="hidden bg-primary lg:flex lg:w-1/3 lg:flex-col lg:items-center lg:justify-center lg:p-12">
-        <div className="space-y-6 text-center">
-          <AthyperLogo
-            className="mx-auto text-primary-foreground"
-            width={56}
-            height={56}
-          />
-          <div className="space-y-2">
-            <h1 className="text-5xl font-light text-primary-foreground">
-              Welcome
-            </h1>
-            <p className="text-xl text-primary-foreground/80">
-              Sign in to continue to Neon
-            </p>
-          </div>
-        </div>
+      <div className="hidden lg:flex lg:w-1/3 lg:h-dvh bg-white items-center justify-center border-r border-border">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 900 600"
+          role="img"
+          aria-label="neon Business Operating Platform"
+          className="w-full px-8"
+        >
+          <g transform="translate(40,35) scale(1.02)">
+            <polygon points="125,17 14,244 75,244 155,82" fill="#000000" />
+            <polygon points="223,120 169,120 109,244 163,243" fill="#000000" />
+            <polygon points="225,164 199,220 212,244 263,244" fill="#000000" />
+          </g>
+          <text x="315" y="245" fill="#000000" fontFamily="Arial, Helvetica, sans-serif" fontSize="126" fontWeight="700" letterSpacing="-4">neon</text>
+          <line x1="38" y1="337" x2="862" y2="337" stroke="#000000" strokeWidth="5" />
+          <text x="450" y="455" fill="#000000" fontFamily="Arial, Helvetica, sans-serif" fontSize="59" fontWeight="400" textAnchor="middle" letterSpacing="-1">Business Operating Platform</text>
+        </svg>
       </div>
 
       {/* ── Right panel — form ────────────────────────────────────────── */}
@@ -97,13 +98,13 @@ function LoginPageInner() {
 
           {/* Header — logo visible on mobile only */}
           <div className="space-y-2 text-center">
-            <div className="flex items-center justify-center gap-2 lg:hidden">
-              <AthyperLogo className="text-primary" width={32} height={32} />
+            <div className="flex flex-col items-center justify-center gap-2 lg:hidden">
+              <NeonLogo className="text-primary" width={36} height={36} />
+              <span className="text-lg font-light tracking-widest text-foreground">neon</span>
             </div>
             <h2 className="text-2xl font-medium tracking-tight">Sign in</h2>
             <p className="text-sm text-muted-foreground">
-              Sign in with your identity provider. Your workspace will be
-              determined after sign-in.
+              Sign in with your identity provider.
             </p>
           </div>
 
@@ -124,17 +125,6 @@ function LoginPageInner() {
               disabled={loading !== null}
             >
               Sign in
-            </Button>
-
-            <Button
-              className="w-full"
-              variant="outline"
-              size="lg"
-              onClick={() => handleLogin("partner")}
-              loading={loading === "partner"}
-              disabled={loading !== null}
-            >
-              Partner / Supplier Login
             </Button>
           </div>
 
