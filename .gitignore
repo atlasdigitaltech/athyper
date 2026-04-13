@@ -63,7 +63,7 @@ pids/
 **/.vite/
 
 # Next.js
-.next-env.d.ts
+next-env.d.ts
 
 # =========================
 # Archives
@@ -131,7 +131,6 @@ mesh/config/apps/kernel.config.parameter.json
 # Tool outputs
 tools/**/tmp/
 tools/**/output/
-tools/SAMPLE TEMPLATES
 
 # =========================
 # Prisma / DB artifacts
@@ -159,9 +158,8 @@ __pycache__/
 
 # Generated (output dirs only — do NOT ignore source packages)
 **/generated/
-!framework/adapters/db/src/generated/
+!server/framework/adapters/db/src/generated/
 **/codegen/
-!tools/codegen/
 **/.prisma/
 
 # =========================
