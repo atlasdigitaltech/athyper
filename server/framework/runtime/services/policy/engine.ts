@@ -219,21 +219,21 @@ export class PolicyEngine {
     };
 
     // Load active policy definitions (tenant-specific + platform-global)
-    const definitions = await this.db
-      .selectFrom("control.policy_definition as pd" as never)
-      .selectAll("pd" as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const definitions = await (this.db.selectFrom("control.policy_definition as pd") as any)
+      .selectAll("pd")
       .where((eb: any) => eb.or([
-        eb("pd.tenant_id" as never, "=", tenantId),
-        eb("pd.tenant_id" as never, "is", null),
+        eb("pd.tenant_id", "=", tenantId),
+        eb("pd.tenant_id", "is", null),
       ]))
-      .where("pd.entity_type" as never, "=", entityType)
-      .where("pd.is_active" as never, "=", true)
-      .where("pd.effective_from" as never, "<=", today)
+      .where("pd.entity_type", "=", entityType)
+      .where("pd.is_active", "=", true)
+      .where("pd.effective_from", "<=", today)
       .where((eb: any) => eb.or([
-        eb("pd.effective_until" as never, "is", null),
-        eb("pd.effective_until" as never, ">=", today),
+        eb("pd.effective_until", "is", null),
+        eb("pd.effective_until", ">=", today),
       ]))
-      .orderBy(["pd.tenant_id" as never, "pd.priority" as never])
+      .orderBy(["pd.tenant_id", "pd.priority"])
       .execute();
 
     const allOutcomes: RuleOutcome[] = [];
@@ -242,11 +242,11 @@ export class PolicyEngine {
       const mode = (defRow.evaluation_mode ?? "first_match") as EvaluationMode;
 
       // Load rules for this policy ordered by priority ASC
-      const rules = await this.db
-        .selectFrom("control.policy_rule as pr" as never)
-        .selectAll("pr" as never)
-        .where("pr.policy_id" as never, "=", defRow.id)
-        .orderBy("pr.priority" as never, "asc")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rules = await (this.db.selectFrom("control.policy_rule as pr") as any)
+        .selectAll("pr")
+        .where("pr.policy_id", "=", defRow.id)
+        .orderBy("pr.priority", "asc")
         .execute();
 
       const policyOutcomes: RuleOutcome[] = [];
@@ -332,39 +332,39 @@ export class PolicyEngine {
     limit?: number;
     offset?: number;
   }): Promise<PolicyDefinition[]> {
-    let q = this.db
-      .selectFrom("control.policy_definition as pd" as never)
-      .selectAll("pd" as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = (this.db.selectFrom("control.policy_definition as pd") as any)
+      .selectAll("pd")
       .where((eb: any) => eb.or([
-        eb("pd.tenant_id" as never, "=", opts.tenantId),
-        eb("pd.tenant_id" as never, "is", null),
+        eb("pd.tenant_id", "=", opts.tenantId),
+        eb("pd.tenant_id", "is", null),
       ]))
-      .orderBy(["pd.priority" as never, "pd.created_at" as never]);
+      .orderBy(["pd.priority", "pd.created_at"]);
 
     if (opts.entityType) {
-      q = q.where("pd.entity_type" as never, "=", opts.entityType) as typeof q;
+      q = q.where("pd.entity_type", "=", opts.entityType);
     }
     if (opts.moduleId) {
-      q = q.where("pd.module_id" as never, "=", opts.moduleId) as typeof q;
+      q = q.where("pd.module_id", "=", opts.moduleId);
     }
     if (opts.isActive !== undefined) {
-      q = q.where("pd.is_active" as never, "=", opts.isActive) as typeof q;
+      q = q.where("pd.is_active", "=", opts.isActive);
     }
 
-    q = q.limit(opts.limit ?? 50).offset(opts.offset ?? 0) as typeof q;
+    q = q.limit(opts.limit ?? 50).offset(opts.offset ?? 0);
 
     const rows = await q.execute();
     return rows.map(this.mapDefinition);
   }
 
   async getDefinition(id: string, tenantId: string): Promise<PolicyDefinition | null> {
-    const row = await this.db
-      .selectFrom("control.policy_definition as pd" as never)
-      .selectAll("pd" as never)
-      .where("pd.id" as never, "=", id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = await (this.db.selectFrom("control.policy_definition as pd") as any)
+      .selectAll("pd")
+      .where("pd.id", "=", id)
       .where((eb: any) => eb.or([
-        eb("pd.tenant_id" as never, "=", tenantId),
-        eb("pd.tenant_id" as never, "is", null),
+        eb("pd.tenant_id", "=", tenantId),
+        eb("pd.tenant_id", "is", null),
       ]))
       .executeTakeFirst();
 
@@ -412,11 +412,11 @@ export class PolicyEngine {
     // Bump version_no on every write
     updates.version_no = sql`version_no + 1` as never;
 
-    const row = await this.db
-      .updateTable("control.policy_definition" as never)
-      .set(updates as never)
-      .where("id" as never, "=", id)
-      .where("tenant_id" as never, "=", tenantId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = await (this.db.updateTable("control.policy_definition") as any)
+      .set(updates)
+      .where("id", "=", id)
+      .where("tenant_id", "=", tenantId)
       .returningAll()
       .executeTakeFirst();
 
@@ -430,11 +430,11 @@ export class PolicyEngine {
     const def = await this.getDefinition(policyId, tenantId);
     if (!def) return [];
 
-    const rows = await this.db
-      .selectFrom("control.policy_rule as pr" as never)
-      .selectAll("pr" as never)
-      .where("pr.policy_id" as never, "=", policyId)
-      .orderBy("pr.priority" as never, "asc")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = await (this.db.selectFrom("control.policy_rule as pr") as any)
+      .selectAll("pr")
+      .where("pr.policy_id", "=", policyId)
+      .orderBy("pr.priority", "asc")
       .execute();
 
     return rows.map(this.mapRule);
@@ -474,14 +474,14 @@ export class PolicyEngine {
     params: UpdateRuleParams,
   ): Promise<PolicyRule | null> {
     // Verify tenant owns the parent policy
-    const ruleRow = await this.db
-      .selectFrom("control.policy_rule as pr" as never)
-      .innerJoin("control.policy_definition as pd" as never, "pd.id" as never, "pr.policy_id" as never)
-      .select(["pr.id" as never, "pd.tenant_id" as never])
-      .where("pr.id" as never, "=", ruleId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ruleRow = await (this.db.selectFrom("control.policy_rule as pr") as any)
+      .innerJoin("control.policy_definition as pd", "pd.id", "pr.policy_id")
+      .select(["pr.id", "pd.tenant_id"])
+      .where("pr.id", "=", ruleId)
       .where((eb: any) => eb.or([
-        eb("pd.tenant_id" as never, "=", tenantId),
-        eb("pd.tenant_id" as never, "is", null),
+        eb("pd.tenant_id", "=", tenantId),
+        eb("pd.tenant_id", "is", null),
       ]))
       .executeTakeFirst();
 
@@ -500,10 +500,10 @@ export class PolicyEngine {
     if (params.approvers   !== undefined) updates.approvers   = params.approvers != null ? JSON.stringify(params.approvers) : null;
     if (params.slaHours    !== undefined) updates.sla_hours   = params.slaHours;
 
-    const row = await this.db
-      .updateTable("control.policy_rule" as never)
-      .set(updates as never)
-      .where("id" as never, "=", ruleId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = await (this.db.updateTable("control.policy_rule") as any)
+      .set(updates)
+      .where("id", "=", ruleId)
       .returningAll()
       .executeTakeFirst();
 
@@ -512,22 +512,22 @@ export class PolicyEngine {
 
   async deleteRule(ruleId: string, tenantId: string): Promise<boolean> {
     // Verify tenant owns the parent policy
-    const ruleRow = await this.db
-      .selectFrom("control.policy_rule as pr" as never)
-      .innerJoin("control.policy_definition as pd" as never, "pd.id" as never, "pr.policy_id" as never)
-      .select(["pr.id" as never])
-      .where("pr.id" as never, "=", ruleId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ruleRow = await (this.db.selectFrom("control.policy_rule as pr") as any)
+      .innerJoin("control.policy_definition as pd", "pd.id", "pr.policy_id")
+      .select(["pr.id"])
+      .where("pr.id", "=", ruleId)
       .where((eb: any) => eb.or([
-        eb("pd.tenant_id" as never, "=", tenantId),
-        eb("pd.tenant_id" as never, "is", null),
+        eb("pd.tenant_id", "=", tenantId),
+        eb("pd.tenant_id", "is", null),
       ]))
       .executeTakeFirst();
 
     if (!ruleRow) return false;
 
-    await this.db
-      .deleteFrom("control.policy_rule" as never)
-      .where("id" as never, "=", ruleId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (this.db.deleteFrom("control.policy_rule") as any)
+      .where("id", "=", ruleId)
       .execute();
 
     return true;
@@ -543,17 +543,18 @@ export class PolicyEngine {
     limit?: number;
     offset?: number;
   }): Promise<unknown[]> {
-    let q = this.db
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = this.db
       .selectFrom("log.policy_evaluation_log as pel" as never)
       .selectAll("pel" as never)
-      .where("pel.tenant_id" as never, "=", opts.tenantId)
+      .where("pel.tenant_id" as never, "=", opts.tenantId as never)
       .orderBy("pel.evaluated_at" as never, "desc");
 
-    if (opts.txnId)     q = q.where("pel.txn_id" as never,     "=", opts.txnId)     as typeof q;
-    if (opts.pipelineId) q = q.where("pel.pipeline_id" as never, "=", opts.pipelineId) as typeof q;
-    if (opts.action)    q = q.where("pel.action" as never,     "=", opts.action)    as typeof q;
+    if (opts.txnId)      q = q.where("pel.txn_id",     "=", opts.txnId);
+    if (opts.pipelineId) q = q.where("pel.pipeline_id", "=", opts.pipelineId);
+    if (opts.action)     q = q.where("pel.action",     "=", opts.action);
 
-    q = q.limit(opts.limit ?? 50).offset(opts.offset ?? 0) as typeof q;
+    q = q.limit(opts.limit ?? 50).offset(opts.offset ?? 0);
 
     return q.execute();
   }

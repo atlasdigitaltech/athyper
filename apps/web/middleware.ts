@@ -126,7 +126,7 @@ export function middleware(request: NextRequest) {
     const acceptLang = request.headers.get("accept-language") ?? "";
     const preferred = acceptLang
       .split(",")
-      .map((part) => part.split(";")[0].trim().split("-")[0].toLowerCase())
+      .map((part) => (part.split(";")[0] ?? part).trim().split("-")[0]?.toLowerCase() ?? "")
       .find((lang) => SUPPORTED_LOCALES.has(lang));
 
     const response = NextResponse.next({ request: { headers: requestHeaders } });

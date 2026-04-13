@@ -311,12 +311,12 @@ export function createWorkflowAdminRoutes(
         patch["effective_to"] = body["effective_to"] ? new Date(body["effective_to"] as string) : null;
       }
 
-      const row = await db
-        .updateTable("control.workflow_definition" as never)
-        .set(patch as never)
-        .where("id" as never, "=", id)
-        .where("tenant_id" as never, "=", tenantId)
-        .returning(["id", "code", "name", "entity_type", "is_active", "effective_from", "effective_to", "updated_at"] as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable("control.workflow_definition") as any)
+        .set(patch)
+        .where("id", "=", id)
+        .where("tenant_id", "=", tenantId)
+        .returning(["id", "code", "name", "entity_type", "is_active", "effective_from", "effective_to", "updated_at"])
         .executeTakeFirst();
 
       if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -352,7 +352,7 @@ export function createWorkflowAdminRoutes(
           "wt.version_no as versionNo",
           "wt.is_active as isActive",
           // compiled_hash NULL means template needs recompile
-          db.fn.coalesce("wt.compiled_hash" as never, db.val(null) as never).as("compiledHash"),
+          db.fn.coalesce("wt.compiled_hash" as never, sql<null>`null`).as("compiledHash"),
           "wt.created_at as createdAt",
           "wt.updated_at as updatedAt",
         ])
@@ -462,10 +462,10 @@ export function createWorkflowAdminRoutes(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { compiled_json, compiled_hash } = await compileTemplate(trx as unknown as Kysely<any>, templateId);
 
-        await trx
-          .updateTable("control.workflow_template" as never)
-          .set({ compiled_json: JSON.stringify(compiled_json), compiled_hash, updated_at: new Date(), updated_by: principalId } as never)
-          .where("id" as never, "=", templateId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (trx.updateTable("control.workflow_template") as any)
+          .set({ compiled_json: JSON.stringify(compiled_json), compiled_hash, updated_at: new Date(), updated_by: principalId })
+          .where("id", "=", templateId)
           .execute();
 
         return { templateId, compiled_hash };
@@ -510,17 +510,17 @@ export function createWorkflowAdminRoutes(
       if (body["behaviors"] !== undefined)     patch["compiled_hash"] = null;
 
       // Allow update if the template belongs to this tenant OR is platform-global
-      const finalRow = await db
-        .updateTable("control.workflow_template" as never)
-        .set(patch as never)
-        .where("id" as never, "=", id)
-        .where((eb) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalRow = await (db.updateTable("control.workflow_template") as any)
+        .set(patch)
+        .where("id", "=", id)
+        .where((eb: any) =>
           eb.or([
-            eb("wt.tenant_id" as never, "=", tenantId),
-            eb("wt.tenant_id" as never, "is", null),
+            eb("wt.tenant_id", "=", tenantId),
+            eb("wt.tenant_id", "is", null),
           ]),
         )
-        .returning(["id", "code", "name", "is_active", "version_no", "compiled_hash", "updated_at"] as never)
+        .returning(["id", "code", "name", "is_active", "version_no", "compiled_hash", "updated_at"])
         .executeTakeFirst();
 
       if (!finalRow) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -684,10 +684,10 @@ export function createWorkflowAdminRoutes(
       if (body["quorum"]        !== undefined) patch["quorum"]        = body["quorum"] ? JSON.stringify(body["quorum"]) : null;
       if (body["sla_policy_id"] !== undefined) patch["sla_policy_id"] = body["sla_policy_id"] ?? null;
 
-      const row = await db
-        .updateTable("control.workflow_template_stage" as never)
-        .set(patch as never)
-        .where("id" as never, "=", stageId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable("control.workflow_template_stage") as any)
+        .set(patch)
+        .where("id", "=", stageId)
         .returningAll()
         .executeTakeFirst();
 
@@ -709,9 +709,9 @@ export function createWorkflowAdminRoutes(
       const stageId = (req.params["stageId"] as string).trim();
       if (!isUuid(stageId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
-      const row = await db
-        .deleteFrom("control.workflow_template_stage" as never)
-        .where("id" as never, "=", stageId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.deleteFrom("control.workflow_template_stage") as any)
+        .where("id", "=", stageId)
         .returningAll()
         .executeTakeFirst();
 
@@ -797,10 +797,10 @@ export function createWorkflowAdminRoutes(
       if (body["conditions"] !== undefined) patch["conditions"] = body["conditions"] ? JSON.stringify(body["conditions"]) : null;
       if (body["assign_to"]  !== undefined) patch["assign_to"]  = JSON.stringify(body["assign_to"]);
 
-      const row = await db
-        .updateTable("control.workflow_template_rule" as never)
-        .set(patch as never)
-        .where("id" as never, "=", ruleId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable("control.workflow_template_rule") as any)
+        .set(patch)
+        .where("id", "=", ruleId)
         .returningAll()
         .executeTakeFirst();
 
@@ -821,9 +821,9 @@ export function createWorkflowAdminRoutes(
       const ruleId = (req.params["ruleId"] as string).trim();
       if (!isUuid(ruleId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
-      const row = await db
-        .deleteFrom("control.workflow_template_rule" as never)
-        .where("id" as never, "=", ruleId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.deleteFrom("control.workflow_template_rule") as any)
+        .where("id", "=", ruleId)
         .returningAll()
         .executeTakeFirst();
 
@@ -854,17 +854,16 @@ export function createWorkflowAdminRoutes(
 
       const { compiled_json, compiled_hash } = await compileTemplate(db, id);
 
-      await db
-        .updateTable("control.workflow_template" as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db.updateTable("control.workflow_template") as any)
         .set({
           compiled_json: JSON.stringify(compiled_json),
           compiled_hash,
-          // Bump version_no on every compile so workflow_requests can trace the snapshot version
-          version_no:    sql`version_no + 1` as never,
+          version_no:    sql`version_no + 1`,
           updated_at:    new Date(),
           updated_by:    principalId,
-        } as never)
-        .where("id" as never, "=", id)
+        })
+        .where("id", "=", id)
         .execute();
 
       res.json({
@@ -993,14 +992,14 @@ export function createWorkflowAdminRoutes(
       }
       if (body["escalation_chain"] !== undefined) patch["escalation_chain"] = JSON.stringify(body["escalation_chain"]);
 
-      const row = await db
-        .updateTable("control.workflow_sla_policy" as never)
-        .set(patch as never)
-        .where("id" as never, "=", id)
-        .where((eb) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable("control.workflow_sla_policy") as any)
+        .set(patch)
+        .where("id", "=", id)
+        .where((eb: any) =>
           eb.or([
-            eb("sp.tenant_id" as never, "=", tenantId),
-            eb("sp.tenant_id" as never, "is", null),
+            eb("sp.tenant_id", "=", tenantId),
+            eb("sp.tenant_id", "is", null),
           ]),
         )
         .returningAll()

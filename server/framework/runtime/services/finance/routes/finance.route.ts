@@ -223,12 +223,63 @@ function sumSectionsPrior(sections: StatementSectionShape[]): number | undefined
   return sections.reduce((s, sec) => s + (sec.priorTotal ?? 0), 0);
 }
 
+// ── User company-access resolver ──────────────────────────────────────────────
+// Returns the set of company_code UUIDs the caller may see.
+// • allCompanies=true  → no restriction (user has at least one tenant-wide role)
+// • allCompanies=false → restrict to allowedIds (may be empty → show all as fallback)
+//
+// Resolution path: JWT sub → principal_profile.keycloak_id → principal →
+//   group_member → group_role.company_code_id
+
+async function resolveUserCompanyAccess(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  keycloakSub: string | null,
+): Promise<{ allCompanies: boolean; allowedIds: string[] }> {
+  if (!keycloakSub) return { allCompanies: true, allowedIds: [] };
+
+  // Check if the user has any tenant-wide role (company_code_id IS NULL)
+  const wideRow = await sql<{ has_wide: boolean }>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM   master.principal_profile pp
+      JOIN   master.principal          p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
+      JOIN   master.group_member       gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
+      JOIN   master.group_role         gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
+      WHERE  pp.keycloak_id        = ${keycloakSub}
+        AND  pp.tenant_id          = ${tenantId}::uuid
+        AND  gr.company_code_id   IS NULL
+        AND  gr.status             = 'active'
+    ) AS has_wide
+  `.execute(db);
+
+  if (wideRow.rows[0]?.has_wide) return { allCompanies: true, allowedIds: [] };
+
+  // Collect company-specific grants
+  const ccRows = await sql<{ company_code_id: string }>`
+    SELECT DISTINCT gr.company_code_id
+    FROM   master.principal_profile pp
+    JOIN   master.principal          p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
+    JOIN   master.group_member       gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
+    JOIN   master.group_role         gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
+    WHERE  pp.keycloak_id        = ${keycloakSub}
+      AND  pp.tenant_id          = ${tenantId}::uuid
+      AND  gr.company_code_id   IS NOT NULL
+      AND  gr.status             = 'active'
+  `.execute(db);
+
+  return { allCompanies: false, allowedIds: ccRows.rows.map((r) => r.company_code_id) };
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
 
   // ── GET /api/finance/master/companies ─────────────────────────────────────
+  // Returns companies the calling user is allowed to see.
+  // Includes fiscal_year_start_month so the UI can render correct period labels.
   router.get("/finance/master/companies", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -237,17 +288,78 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.json([]); return; }
-      const rows = await db
+
+      const userSub = (claims["sub"] as string | undefined) ?? null;
+      const access = await resolveUserCompanyAccess(db, tenantId, userSub);
+
+      let query = db
         .selectFrom("master.company_code as cc")
-        .select(["cc.id", "cc.code", "cc.name",
+        .select([
+          "cc.id", "cc.code", "cc.name",
           "cc.functional_currency as functionalCurrency",
-          "cc.legal_entity_id as legalEntityId"])
+          "cc.legal_entity_id as legalEntityId",
+          "cc.fiscal_year_start_month as fiscalYearStartMonth",
+        ])
         .where("cc.tenant_id", "=", tenantId)
-        .where("cc.status", "=", "active")
-        .orderBy("cc.code", "asc")
-        .execute();
+        .where("cc.status", "=", "active");
+
+      // Apply company-code restriction when user has specific grants (non-empty)
+      if (!access.allCompanies && access.allowedIds.length > 0) {
+        query = query.where("cc.id", "in", access.allowedIds) as typeof query;
+      }
+      // If allowedIds is empty and allCompanies=false → no roles resolved yet;
+      // fall through and return all companies (non-breaking for new/unassigned users).
+
+      const rows = await query.orderBy("cc.code", "asc").execute();
       res.json(rows);
     } catch (err) { logger?.error("finance_companies_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── GET /api/finance/master/periods ───────────────────────────────────────
+  // Returns fiscal periods for a given company code + fiscal year, including
+  // lifecycle status (future | open | soft_close | hard_close).
+  // Used by the FinanceContextBar to show which periods are available/open.
+  router.get("/finance/master/periods", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const companyCode = ((req.query["companyCode"] as string) ?? "").trim();
+      const fyRaw = req.query["fiscalYear"] as string | undefined;
+      const fiscalYear = parseInt(fyRaw ?? "", 10);
+      if (!companyCode) { res.status(400).json({ error: "companyCode is required" }); return; }
+      if (isNaN(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2100) {
+        res.status(400).json({ error: "fiscalYear must be a valid year" }); return;
+      }
+
+      const company = await db
+        .selectFrom("master.company_code as cc")
+        .select(["cc.id"])
+        .where("cc.tenant_id", "=", tenantId)
+        .where("cc.code", "=", companyCode)
+        .executeTakeFirst() as { id: string } | undefined;
+      if (!company) { res.json([]); return; }
+
+      const rows = await db
+        .selectFrom("master.fiscal_period as fp")
+        .select([
+          "fp.period_number as periodNumber",
+          "fp.period_type as periodType",
+          "fp.start_date as startDate",
+          "fp.end_date as endDate",
+          "fp.status",
+        ])
+        .where("fp.tenant_id", "=", tenantId)
+        .where("fp.company_code_id", "=", company.id)
+        .where("fp.fiscal_year", "=", fiscalYear)
+        .orderBy("fp.period_number", "asc")
+        .execute();
+      res.json(rows);
+    } catch (err) { logger?.error("finance_periods_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   // ── GET /api/finance/master/entities ──────────────────────────────────────

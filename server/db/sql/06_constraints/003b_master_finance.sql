@@ -602,24 +602,24 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- invoice_hold_policy_id: FUTURE ANCHOR — no FK target yet.
 
 
--- ── master.principal_auth_binding ──────────────────────────────────────────
--- pab_tenant_id_uq UNIQUE (tenant_id, id) was redundant — id is already a global PK
+-- ── master.principal_identity_binding ──────────────────────────────────────────
+-- pib_tenant_id_uq UNIQUE (tenant_id, id) was redundant — id is already a global PK
 -- and no FK targets (tenant_id, id) on this table. Dropped here for existing DBs.
-ALTER TABLE master.principal_auth_binding DROP CONSTRAINT IF EXISTS pab_tenant_id_uq;
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_tenant_id_uq;
 
-DO $$ BEGIN ALTER TABLE master.principal_auth_binding ADD CONSTRAINT pab_tenant_fk
+DO $$ BEGIN ALTER TABLE master.principal_identity_binding ADD CONSTRAINT pib_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE master.principal_auth_binding ADD CONSTRAINT pab_principal_fk
+DO $$ BEGIN ALTER TABLE master.principal_identity_binding ADD CONSTRAINT pib_principal_fk
     FOREIGN KEY (tenant_id, principal_id)
     REFERENCES master.principal (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Migrate sync_status to shared.keycloak_sync_status_d domain.
 -- Drops the inline CHECK and re-types the column; all existing values are valid.
-ALTER TABLE master.principal_auth_binding DROP CONSTRAINT IF EXISTS pab_sync_status_chk;
-ALTER TABLE master.principal_auth_binding
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_sync_status_chk;
+ALTER TABLE master.principal_identity_binding
     ALTER COLUMN sync_status TYPE shared.keycloak_sync_status_d
     USING sync_status::text;
 

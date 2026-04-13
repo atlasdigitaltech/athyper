@@ -73,25 +73,25 @@ DO $$ BEGIN
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── principal_auth_binding foreign keys ──────────────────────────────────────
+-- ── principal_identity_binding foreign keys ──────────────────────────────────────
 -- These were absent from the table DDL (04_tables) and are added here to keep
 -- FK declarations co-located with the rest of the identity layer constraints.
 
 -- pab.tenant_id → master.tenant
-ALTER TABLE master.principal_auth_binding DROP CONSTRAINT IF EXISTS pab_tenant_fk;
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_tenant_fk;
 DO $$ BEGIN
-    ALTER TABLE master.principal_auth_binding
-        ADD CONSTRAINT pab_tenant_fk
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- pab.(tenant_id, principal_id) → master.principal (composite FK, cascade delete)
 -- Ensures orphaned bindings cannot exist after a principal is deleted.
-ALTER TABLE master.principal_auth_binding DROP CONSTRAINT IF EXISTS pab_principal_fk;
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_principal_fk;
 DO $$ BEGIN
-    ALTER TABLE master.principal_auth_binding
-        ADD CONSTRAINT pab_principal_fk
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_principal_fk
         FOREIGN KEY (tenant_id, principal_id)
         REFERENCES master.principal (tenant_id, id)
         ON DELETE CASCADE;
@@ -100,8 +100,8 @@ END $$;
 
 -- pab audit pair: updated_at and updated_by must both be set or both be NULL.
 DO $$ BEGIN
-    ALTER TABLE master.principal_auth_binding
-        ADD CONSTRAINT pab_audit_pair_chk
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
@@ -423,73 +423,66 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- principal_group → tenant
+-- auth_group → tenant
 DO $$ BEGIN
-    ALTER TABLE master.principal_group
-        ADD CONSTRAINT principal_group_tenant_fk
+    ALTER TABLE master.auth_group
+        ADD CONSTRAINT auth_group_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- group_role: patch scope check to include 'ou_l1' (CC-scoped assignments)
+-- auth_group_role: drop legacy scope/company_code_id constraints that no longer exist
 DO $$ BEGIN
-    ALTER TABLE master.group_role DROP CONSTRAINT IF EXISTS gr_scope_chk;
-    ALTER TABLE master.group_role ADD CONSTRAINT gr_scope_chk
-        CHECK (scope IN ('all','own','team','ou_l1'));
+    ALTER TABLE master.auth_group_role DROP CONSTRAINT IF EXISTS agr_scope_chk;
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
+ALTER TABLE master.auth_group_role DROP CONSTRAINT IF EXISTS auth_group_role_cc_fk;
 
--- group_role → tenant, principal_group, role, company_code
+-- auth_group_role → tenant, auth_group, role
+-- NOTE: assignment_scope_ref_id is polymorphic (CC or LE); validated by trigger, not FK.
 DO $$ BEGIN
-    ALTER TABLE master.group_role
-        ADD CONSTRAINT group_role_tenant_fk
+    ALTER TABLE master.auth_group_role
+        ADD CONSTRAINT auth_group_role_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.group_role
-        ADD CONSTRAINT group_role_group_fk
+    ALTER TABLE master.auth_group_role
+        ADD CONSTRAINT auth_group_role_group_fk
         FOREIGN KEY (tenant_id, group_id)
-        REFERENCES master.principal_group (tenant_id, id) ON DELETE CASCADE;
+        REFERENCES master.auth_group (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.group_role
-        ADD CONSTRAINT group_role_role_fk
+    ALTER TABLE master.auth_group_role
+        ADD CONSTRAINT auth_group_role_role_fk
         FOREIGN KEY (role_id)
         REFERENCES shared.role (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- auth_group_member → tenant, principal, auth_group
 DO $$ BEGIN
-    ALTER TABLE master.group_role
-        ADD CONSTRAINT group_role_cc_fk
-        FOREIGN KEY (company_code_id) REFERENCES master.company_code (id) ON DELETE SET NULL;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
--- group_member → tenant, principal, principal_group
-DO $$ BEGIN
-    ALTER TABLE master.group_member
-        ADD CONSTRAINT pgm_tenant_fk
+    ALTER TABLE master.auth_group_member
+        ADD CONSTRAINT agm_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.group_member
-        ADD CONSTRAINT pgm_principal_fk
+    ALTER TABLE master.auth_group_member
+        ADD CONSTRAINT agm_principal_fk
         FOREIGN KEY (principal_id) REFERENCES master.principal (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.group_member
-        ADD CONSTRAINT pgm_group_fk
+    ALTER TABLE master.auth_group_member
+        ADD CONSTRAINT agm_group_fk
         FOREIGN KEY (tenant_id, group_id)
-        REFERENCES master.principal_group (tenant_id, id) ON DELETE CASCADE;
+        REFERENCES master.auth_group (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -530,33 +523,42 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- team_principal → tenant, team, principal
+-- team_member → tenant, team, principal
 -- Patch 001 Fix 2: drop over-restrictive table constraint; replaced by partial unique index.
-ALTER TABLE master.team_principal DROP CONSTRAINT IF EXISTS team_principal_active_uq;
+ALTER TABLE master.team_member DROP CONSTRAINT IF EXISTS team_member_active_uq;
 
 DO $$ BEGIN
-    ALTER TABLE master.team_principal
-        ADD CONSTRAINT tp_tenant_fk
+    ALTER TABLE master.team_member
+        ADD CONSTRAINT tm_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.team_principal
-        ADD CONSTRAINT tp_team_fk
+    ALTER TABLE master.team_member
+        ADD CONSTRAINT tm_team_fk
         FOREIGN KEY (tenant_id, team_id)
         REFERENCES master.team (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE master.team_principal
-        ADD CONSTRAINT tp_principal_fk
+    ALTER TABLE master.team_member
+        ADD CONSTRAINT tm_principal_fk
         FOREIGN KEY (principal_id) REFERENCES master.principal (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- access_grant → tenant, role, group, principal, permission, ou
+-- access_grant: drop legacy company_code_id FK (column removed)
+ALTER TABLE master.access_grant DROP CONSTRAINT IF EXISTS ag_cc_fk;
+-- Drop legacy scope check (replaced by ag_visibility_scope_chk in table DDL)
+DO $$ BEGIN
+    ALTER TABLE master.access_grant DROP CONSTRAINT IF EXISTS ag_scope_chk;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- access_grant → tenant, role, group, principal, permission
+-- NOTE: assignment_scope_ref_id is polymorphic (CC or LE); validated by trigger, not FK.
 DO $$ BEGIN
     ALTER TABLE master.access_grant
         ADD CONSTRAINT ag_tenant_fk
@@ -574,7 +576,7 @@ END $$;
 DO $$ BEGIN
     ALTER TABLE master.access_grant
         ADD CONSTRAINT ag_group_fk
-        FOREIGN KEY (group_id) REFERENCES master.principal_group (id) ON DELETE CASCADE;
+        FOREIGN KEY (group_id) REFERENCES master.auth_group (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -589,13 +591,6 @@ DO $$ BEGIN
     ALTER TABLE master.access_grant
         ADD CONSTRAINT ag_permission_fk
         FOREIGN KEY (permission_id) REFERENCES shared.permission (id) ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-    ALTER TABLE master.access_grant
-        ADD CONSTRAINT ag_cc_fk
-        FOREIGN KEY (company_code_id) REFERENCES master.company_code (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -624,7 +619,7 @@ END $$;
 DO $$ BEGIN
     ALTER TABLE master.group_feature_grant
         ADD CONSTRAINT gfg_group_fk
-        FOREIGN KEY (group_id) REFERENCES master.principal_group (id) ON DELETE CASCADE;
+        FOREIGN KEY (group_id) REFERENCES master.auth_group (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 

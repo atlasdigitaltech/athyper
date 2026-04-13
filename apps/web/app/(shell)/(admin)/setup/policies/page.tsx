@@ -473,7 +473,7 @@ function PolicyGrid() {
             <Button
               key={s}
               size="sm"
-              variant={statusFilter === s ? "default" : "ghost"}
+              variant={statusFilter === s ? "primary" : "ghost"}
               className="h-8 text-xs"
               onClick={() => setStatusFilter(s)}
             >

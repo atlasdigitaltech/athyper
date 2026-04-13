@@ -29,4 +29,5 @@ export {
   type CommandPaletteBaseProps,
   type CommandGroupProps,
   type CommandItemProps,
+  type PaletteTab,
 } from "./CommandPaletteBase";

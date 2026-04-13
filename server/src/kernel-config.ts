@@ -58,12 +58,12 @@ const RealmDefaultsSchema = z.object({
       metaStudio: z.boolean().default(false),
       debugMode: z.boolean().default(false),
     })
-    .default({}),
+    .default({ metaStudio: false, debugMode: false }),
   policies: z
     .object({
       strictTenantIsolation: z.boolean().default(true),
     })
-    .default({}),
+    .default({ strictTenantIsolation: true }),
 });
 
 const TenantSchema = z.object({
@@ -73,13 +73,16 @@ const TenantSchema = z.object({
       currency: z.string().default("USD"),
       timezone: z.string().default("UTC"),
     })
-    .default({}),
+    .default({ country: "US", currency: "USD", timezone: "UTC" }),
   orgs: z.record(z.string(), z.unknown()).default({}),
 });
 
 const RealmSchema = z.object({
   iam: RealmIamSchema,
-  defaults: RealmDefaultsSchema.default({}),
+  defaults: RealmDefaultsSchema.default({
+    features: { metaStudio: false, debugMode: false },
+    policies: { strictTenantIsolation: true },
+  }),
   tenants: z.record(z.string(), TenantSchema).default({}),
 });
 
@@ -109,7 +112,7 @@ const KernelConfigSchema = z.object({
       serviceName: z.string().default("athyper-runtime"),
       serviceVersion: z.string().default("1.0.0"),
     })
-    .default({}),
+    .default({ serviceName: "athyper-runtime", serviceVersion: "1.0.0" }),
 });
 
 // ─── Public types ─────────────────────────────────────────────────────────────

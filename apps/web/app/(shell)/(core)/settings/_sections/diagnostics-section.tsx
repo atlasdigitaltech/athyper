@@ -504,12 +504,12 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     {
       id: "resync_identity",
       label: "Re-sync Identity Binding",
-      desc: "Forces re-synchronisation of the principal_auth_binding record from Athyper IAM. Use when your IdP profile has changed but the platform hasn't updated.",
+      desc: "Forces re-synchronisation of the principal_identity_binding record from Athyper IAM. Use when your IdP profile has changed but the platform hasn't updated.",
       buttonLabel: "Re-sync",
       confirm: {
         endpoint: "POST /api/admin/user/sync-profile",
         impact: "Re-reads your identity from Keycloak and overwrites the local auth binding record. Your session is not interrupted.",
-        scopeLabel: "Current user · principal_auth_binding",
+        scopeLabel: "Current user · principal_identity_binding",
       },
       onExecute: async () => {
         await execute("resync_identity", {

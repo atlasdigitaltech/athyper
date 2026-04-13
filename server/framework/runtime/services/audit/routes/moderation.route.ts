@@ -232,8 +232,9 @@ export function createModerationRoutes(router: Router, deps: ModerationRouteDeps
             hidden_at: new Date(), hidden_by: c.principalId,
             created_by: c.principalId,
           } as never)
-          .onConflict((oc: never) =>
-            (oc as { columns: Function }).columns(["tenant_id", "context_type", "comment_id"]).doUpdateSet({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .onConflict((oc: any) =>
+            oc.columns(["tenant_id", "context_type", "comment_id"]).doUpdateSet({
               is_hidden: true, hidden_reason: reviewNote,
               hidden_at: new Date(), hidden_by: c.principalId,
               updated_at: new Date(), updated_by: c.principalId,

@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
@@ -162,6 +168,9 @@ importers:
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
+      next:
+        specifier: ^16.2.3
+        version: 16.2.3(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -420,6 +429,9 @@ importers:
       '@athyper/collaboration-ui':
         specifier: workspace:*
         version: link:../collaboration-ui
+      '@athyper/content-ui':
+        specifier: workspace:*
+        version: link:../../ui/content-ui
       '@athyper/domain-widgets':
         specifier: workspace:*
         version: link:../../ui/domain-widgets
@@ -448,6 +460,9 @@ importers:
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
+      next:
+        specifier: ^16.2.3
+        version: 16.2.3(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -488,6 +503,9 @@ importers:
       '@athyper/api-contracts':
         specifier: workspace:*
         version: link:../../data/api-contracts
+      '@athyper/auth':
+        specifier: workspace:*
+        version: link:../../data/auth
       '@athyper/icons':
         specifier: workspace:*
         version: link:../../foundation/icons

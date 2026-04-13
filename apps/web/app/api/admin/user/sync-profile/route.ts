@@ -6,7 +6,7 @@ import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-heade
  * POST /api/admin/user/sync-profile
  *
  * Forces re-synchronisation of the current principal's identity binding
- * from Athyper IAM → master.principal_auth_binding.
+ * from Athyper IAM → master.principal_identity_binding.
  * The active session is not interrupted.
  */
 export async function POST() {
@@ -34,7 +34,7 @@ export async function POST() {
 
     return NextResponse.json({
       message: "Identity sync completed",
-      detail: "principal_auth_binding updated from Athyper IAM.",
+      detail: "principal_identity_binding updated from Athyper IAM.",
     });
   } catch {
     return NextResponse.json(

@@ -447,14 +447,14 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
       if (!ctx) return;
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
-      const rows = await db
-        .selectFrom("governance.cycle_cross_dependency as cxd" as never)
-        .selectAll("cxd" as never)
-        .where("cxd.tenant_id" as never, "=", ctx.tenantId as never)
-        .where("cxd.is_active" as never, "=", true as never)
-        .where((eb: never) => (eb as { or: Function }).or([
-          (eb as { cmpr: Function }).cmpr("cxd.predecessor_type_id" as never, "=", id as never),
-          (eb as { cmpr: Function }).cmpr("cxd.successor_type_id" as never, "=", id as never),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = await (db.selectFrom("governance.cycle_cross_dependency as cxd") as any)
+        .selectAll("cxd")
+        .where("cxd.tenant_id", "=", ctx.tenantId)
+        .where("cxd.is_active", "=", true)
+        .where((eb: any) => eb.or([
+          eb("cxd.predecessor_type_id", "=", id),
+          eb("cxd.successor_type_id", "=", id),
         ]))
         .execute() as Record<string, unknown>[];
       res.json({ ok: true, data: rows });
@@ -603,7 +603,8 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
           .where("cr.id" as never, "=", id as never)
           .where("cr.tenant_id" as never, "=", ctx.tenantId as never)
           .executeTakeFirst() as Promise<Record<string, unknown> | undefined>,
-        db.executeQuery({ sql: "SELECT * FROM governance.get_cycle_progress($1)", parameters: [id] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        db.executeQuery({ sql: "SELECT * FROM governance.get_cycle_progress($1)", parameters: [id] } as any)
           .then((r) => (r.rows as unknown[])[0] ?? null)
           .catch(() => null),
       ]);
@@ -649,9 +650,11 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
 
       // Check intra-cycle + cross-cycle gates via DB functions
       const [phaseGate, crossGate] = await Promise.all([
-        db.executeQuery({ sql: "SELECT * FROM governance.check_phase_gate($1, $2)", parameters: [id, targetPhaseId] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        db.executeQuery({ sql: "SELECT * FROM governance.check_phase_gate($1, $2)", parameters: [id, targetPhaseId] } as any)
           .then((r) => (r.rows as unknown[])[0] as Record<string, unknown> | undefined),
-        db.executeQuery({ sql: "SELECT * FROM governance.check_cross_cycle_gate($1, $2)", parameters: [id, targetPhaseId] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        db.executeQuery({ sql: "SELECT * FROM governance.check_cross_cycle_gate($1, $2)", parameters: [id, targetPhaseId] } as any)
           .then((r) => (r.rows as unknown[])[0] as Record<string, unknown> | undefined),
       ]);
 
@@ -684,7 +687,8 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const cleanResult = await db
-        .executeQuery({ sql: "SELECT * FROM governance.evaluate_clean_cycle($1)", parameters: [id] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .executeQuery({ sql: "SELECT * FROM governance.evaluate_clean_cycle($1)", parameters: [id] } as any)
         .then((r) => (r.rows as unknown[])[0] as Record<string, unknown> | undefined)
         .catch(() => null);
 
@@ -739,7 +743,8 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
       await db.transaction().execute(async (trx) => {
         // Execute carryforward if next run is provided
         if (nextRunId && isUuid(String(nextRunId))) {
-          await trx.executeQuery({ sql: "SELECT governance.execute_carryforward($1, $2)", parameters: [id, nextRunId] });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await trx.executeQuery({ sql: "SELECT governance.execute_carryforward($1, $2)", parameters: [id, nextRunId] } as any);
         }
         await trx
           .updateTable("governance.cycle_run" as never)
@@ -807,7 +812,8 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
 
       // Check task dependencies before completing
       const depCheck = await db
-        .executeQuery({ sql: "SELECT * FROM governance.check_task_dependencies($1, $2)", parameters: [null, id] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .executeQuery({ sql: "SELECT * FROM governance.check_task_dependencies($1, $2)", parameters: [null, id] } as any)
         .then((r) => (r.rows as unknown[])[0] as Record<string, unknown> | undefined)
         .catch(() => null);
 
@@ -955,7 +961,7 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
       try {
         const ctx = await resolveTenantAndPrincipal(req, res);
         if (!ctx) return;
-        const { id } = req.params;
+        const id = req.params["id"] as string;
         if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
         const row = await db
           .updateTable("governance.cycle_deviation" as never)
@@ -991,7 +997,8 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
           .where("cc.cycle_run_id" as never, "=", id as never)
           .orderBy("cc.created_at" as never, "desc")
           .execute() as Promise<Record<string, unknown>[]>,
-        db.executeQuery({ sql: "SELECT * FROM governance.get_certification_metrics($1)", parameters: [id] })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        db.executeQuery({ sql: "SELECT * FROM governance.get_certification_metrics($1)", parameters: [id] } as any)
           .then((r) => (r.rows as unknown[])[0] ?? null)
           .catch(() => null),
       ]);
@@ -1035,7 +1042,7 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
       try {
         const ctx = await resolveTenantAndPrincipal(req, res);
         if (!ctx) return;
-        const { id } = req.params;
+        const id = req.params["id"] as string;
         if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
         const row = await db
           .updateTable("governance.cycle_certification" as never)

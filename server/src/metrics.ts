@@ -15,7 +15,7 @@
  * Prometheus scrape: job_name=athyper_api, target=athyper-api:3000
  */
 
-import type { CacheMetrics } from "./framework/runtime/services/iam/session/session.service.js";
+import type { CacheMetrics } from "../framework/runtime/services/iam/session/session.service.js";
 import type { Request, Response } from "express";
 
 // ─── Internal counter store ───────────────────────────────────────────────────
@@ -79,7 +79,8 @@ export function metricsHandler(_req: Request, res: Response): void {
   const lines: string[] = [HELP, ""];
 
   for (const [k, count] of counters) {
-    const [tenant, operation, service] = k.split("\0");
+    const parts = k.split("\0");
+    const tenant = parts[0] ?? ""; const operation = parts[1] ?? ""; const service = parts[2] ?? "";
     lines.push(
       `athyper_cache_operations_total{tenant="${escape(tenant)}",operation="${escape(operation)}",service="${escape(service)}"} ${count}`,
     );
@@ -88,7 +89,8 @@ export function metricsHandler(_req: Request, res: Response): void {
   lines.push("");
 
   for (const [k, count] of invalidatedKeys) {
-    const [tenant, service] = k.split("\0");
+    const parts = k.split("\0");
+    const tenant = parts[0] ?? ""; const service = parts[1] ?? "";
     lines.push(
       `athyper_cache_invalidated_keys_total{tenant="${escape(tenant)}",service="${escape(service)}"} ${count}`,
     );

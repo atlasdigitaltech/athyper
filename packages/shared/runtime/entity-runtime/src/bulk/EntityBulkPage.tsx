@@ -441,7 +441,7 @@ export function EntityBulkPage({ entityCode }: EntityBulkPageProps) {
 
   // Updatable fields: not computed, not read-only
   const updatableFields = listConfig.columns
-    .filter((f) => !f.is_computed && !f.is_read_only)
+    .filter((f) => !f.is_readonly)
     .map((f) => ({ name: f.name, label: f.label ?? f.name }));
 
   const columns: ColumnDef<Record<string, unknown>>[] = listConfig.columns.map((field) => ({

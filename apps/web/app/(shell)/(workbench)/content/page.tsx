@@ -177,7 +177,7 @@ export default function ContentBrowserPage() {
       <div className="mb-4 space-y-2">
         <div className="flex flex-wrap gap-1">
           {(["", ...STATUSES] as const).map((s) => (
-            <Button key={s} size="sm" variant={statusFilter === s ? "default" : "ghost"} className="h-7 text-xs"
+            <Button key={s} size="sm" variant={statusFilter === s ? "primary" : "ghost"} className="h-7 text-xs"
               onClick={() => setStatusFilter(s as ContentStatus | "")}>
               {s === "" ? "All" : s}
             </Button>

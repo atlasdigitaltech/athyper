@@ -254,7 +254,7 @@ export default function GovernanceCycleTypeDetailPage() {
   const params = useParams<{ id: string }>();
   const typeId = params.id;
 
-  const { data } = useQuery<{ data: { id: string; typeName: string; typeCode: string; domain: string; frequency: string } }>({
+  const { data } = useQuery<{ data: { id: string; typeName: string; typeCode: string; domain: string; frequency: string } | null }>({
     queryKey: ["governance-cycle-type", typeId],
     queryFn: async () => {
       const res = await fetch(`/api/governance/cycle-types?limit=200`);

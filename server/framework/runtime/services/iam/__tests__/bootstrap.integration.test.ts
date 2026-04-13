@@ -161,15 +161,15 @@ describe("BootstrapService.resolve", () => {
 
     // Bootstrap service does 3 types of selectFrom queries per tenant:
     //   1. master.tenant  → tenant id/name/status
-    //   2. master.principal_auth_binding → principal_id
+    //   2. master.principal_identity_binding → principal_id
     //   Then sql CTE
-    //   Then for delegation count: master.tenant again + master.principal_auth_binding + master.delegation_grant
+    //   Then for delegation count: master.tenant again + master.principal_identity_binding + master.delegation_grant
     const db = {
       selectFrom(table: string) {
         const rowsByTable: Record<string, unknown> = {
           "master.tenant": { id: "t-athyper", name: "Athyper", display_name: "Athyper Group", status: "active" },
-          "master.principal_auth_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
-          "master.principal_auth_binding": { principal_id: RAMA_SUB },
+          "master.principal_identity_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding": { principal_id: RAMA_SUB },
           "master.delegation_grant": { cnt: 0 },
         };
 
@@ -300,8 +300,8 @@ describe("BootstrapService.resolve", () => {
       selectFrom(table: string) {
         const rowsByTable: Record<string, unknown> = {
           "master.tenant": { id: "t-id", name: "Athyper", display_name: "Athyper Group", status: "active" },
-          "master.principal_auth_binding as pab": { principal_id: KUMAR_SUB, is_active: true, is_locked: false },
-          "master.principal_auth_binding": { principal_id: KUMAR_SUB },
+          "master.principal_identity_binding as pab": { principal_id: KUMAR_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding": { principal_id: KUMAR_SUB },
           "master.delegation_grant": { cnt: 0 },
         };
         const rowsForTable = rowsByTable[table];
@@ -367,8 +367,8 @@ describe("BootstrapService.resolve", () => {
       selectFrom(table: string) {
         const rowsByTable: Record<string, unknown> = {
           "master.tenant": { id: "t-pepsi", name: "Pepsi", display_name: "Pepsi Corporation", status: "active" },
-          "master.principal_auth_binding as pab": { principal_id: JESUS_SUB, is_active: true, is_locked: false },
-          "master.principal_auth_binding": { principal_id: JESUS_SUB },
+          "master.principal_identity_binding as pab": { principal_id: JESUS_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding": { principal_id: JESUS_SUB },
           "master.delegation_grant": { cnt: 0 },
         };
         const rowsForTable = rowsByTable[table];
@@ -458,8 +458,8 @@ describe("BootstrapService.resolve", () => {
       selectFrom(table: string) {
         const rowsByTable: Record<string, unknown> = {
           "master.tenant": { id: "t-athyper", name: "Athyper", display_name: "Athyper Group", status: "active" },
-          "master.principal_auth_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
-          "master.principal_auth_binding": { principal_id: RAMA_SUB },
+          "master.principal_identity_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding": { principal_id: RAMA_SUB },
           "master.delegation_grant": { cnt: 0 },
         };
         const rowsForTable = rowsByTable[table];

@@ -58,7 +58,22 @@ const ServerConfigSchema = z.object({
     .object({
       pollIntervalMs: z.coerce.number().int().positive().default(10_000),
     })
-    .default({}),
+    .default({ pollIntervalMs: 10_000 }),
+
+  /**
+   * Email (SMTP / nodemailer).
+   * Optional — when absent the email notification channel is not registered.
+   */
+  email: z
+    .object({
+      host:         z.string().min(1),
+      port:         z.coerce.number().int().positive().default(587),
+      secure:       z.boolean().default(false),
+      user:         z.string().default(""),
+      pass:         z.string().default(""),
+      from_address: z.string().default(""),
+    })
+    .optional(),
 
   /**
    * Object storage (S3 / MinIO).
@@ -117,10 +132,10 @@ const ServerConfigSchema = z.object({
           supportAdmin: z.string().default("SUPPORT_ADMIN"),
           readOnlySupport: z.string().default("READ_ONLY_SUPPORT"),
         })
-        .default({}),
+        .default({ productAdmin: "PRODUCT_ADMIN", tenantManager: "TENANT_MANAGER", supportAdmin: "SUPPORT_ADMIN", readOnlySupport: "READ_ONLY_SUPPORT" }),
       /** Allowed operations per platform role. */
       rolePermissions: z
-        .record(z.array(z.string()))
+        .record(z.string(), z.array(z.string()))
         .default({
           PRODUCT_ADMIN: [
             "tenant:list",
@@ -133,7 +148,12 @@ const ServerConfigSchema = z.object({
           READ_ONLY_SUPPORT: ["tenant:list"],
         }),
     })
-    .default({}),
+    .default({
+      enabled: false,
+      realmKey: "platform-control",
+      roles: { productAdmin: "PRODUCT_ADMIN", tenantManager: "TENANT_MANAGER", supportAdmin: "SUPPORT_ADMIN", readOnlySupport: "READ_ONLY_SUPPORT" },
+      rolePermissions: { PRODUCT_ADMIN: ["tenant:list","tenant:switch","tenant:manage","platform:configure"], TENANT_MANAGER: ["tenant:list","tenant:switch","tenant:manage"], SUPPORT_ADMIN: ["tenant:list","tenant:switch"], READ_ONLY_SUPPORT: ["tenant:list"] },
+    }),
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;

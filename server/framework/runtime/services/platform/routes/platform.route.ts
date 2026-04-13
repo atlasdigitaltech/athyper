@@ -842,7 +842,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .where("pp.tenant_id", "=", tenantId)
           .where("pp.principal_id", "=", principalId)
           .executeTakeFirst(),
-        db.selectFrom("master.principal_auth_binding as ab")
+        db.selectFrom("master.principal_identity_binding as ab")
           .select([
             "ab.provider_code", "ab.subject_id", "ab.username",
             "ab.sync_status", "ab.synced_at", "ab.idp_enabled",
@@ -895,8 +895,8 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       // Groups
       const groupRows = await db
-        .selectFrom("master.group_member as gm")
-        .innerJoin("master.principal_group as g", "g.id", "gm.group_id")
+        .selectFrom("master.auth_group_member as gm")
+        .innerJoin("master.auth_group as g", "g.id", "gm.group_id")
         .select(["g.id", "g.code", "g.name", "g.is_system", "g.status"])
         .where("gm.tenant_id", "=", tenantId)
         .where("gm.principal_id", "=", principalId)
@@ -906,7 +906,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const roleRows = groupIds.length > 0
         ? await db
-            .selectFrom("master.group_role as gr")
+            .selectFrom("master.auth_group_role as gr")
             .innerJoin("shared.role as r", "r.id", "gr.role_id")
             .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "gr.scope"])
             .where("gr.tenant_id", "=", tenantId)
@@ -924,7 +924,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       // Teams
       const teams = await db
-        .selectFrom("master.team_principal as tp")
+        .selectFrom("master.team_member as tp")
         .innerJoin("master.team as t", "t.id", "tp.team_id")
         .select([
           "t.id", "t.code", "t.name", "t.team_type",
@@ -993,8 +993,8 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const tenantAdminCode = tenantCodeRow ? `${tenantCodeRow.code.toUpperCase()}-ADMIN` : "";
 
       const adminCheck = await db
-        .selectFrom("master.group_member as gm")
-        .innerJoin("master.principal_group as g", "g.id", "gm.group_id")
+        .selectFrom("master.auth_group_member as gm")
+        .innerJoin("master.auth_group as g", "g.id", "gm.group_id")
         .select("gm.id")
         .where("gm.tenant_id", "=", tenantId)
         .where("gm.principal_id", "=", principalId)

@@ -14,3 +14,4 @@ export { usePostingTrace } from "./usePostingTrace";
 export { useCompleteTask, useSignOffPhase, useStartCloseRun } from "./usePeriodCloseMutations";
 export { useAccountAnalysis, type AccountAnalysisData, type AccountAnalysisPeriod } from "./useAccountAnalysis";
 export { useFinanceDashboardKpis, type FinanceDashboardKpis } from "./useFinanceDashboardKpis";
+export { useFiscalPeriods, type FiscalPeriodRow } from "./useFiscalPeriods";

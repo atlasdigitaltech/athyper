@@ -237,16 +237,16 @@ CREATE TRIGGER trg_role_updated_at BEFORE UPDATE ON shared.role FOR EACH ROW EXE
 DROP TRIGGER IF EXISTS trg_role_status_changed ON shared.role;
 CREATE TRIGGER trg_role_status_changed BEFORE UPDATE ON shared.role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
--- principal_group
-DROP TRIGGER IF EXISTS trg_principal_group_updated_at ON master.principal_group;
-CREATE TRIGGER trg_principal_group_updated_at BEFORE UPDATE ON master.principal_group FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+-- auth_group
+DROP TRIGGER IF EXISTS trg_auth_group_updated_at ON master.auth_group;
+CREATE TRIGGER trg_auth_group_updated_at BEFORE UPDATE ON master.auth_group FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_principal_group_status_changed ON master.principal_group;
-CREATE TRIGGER trg_principal_group_status_changed BEFORE UPDATE ON master.principal_group FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+DROP TRIGGER IF EXISTS trg_auth_group_status_changed ON master.auth_group;
+CREATE TRIGGER trg_auth_group_status_changed BEFORE UPDATE ON master.auth_group FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
--- group_role
-DROP TRIGGER IF EXISTS trg_group_role_updated_at ON master.group_role;
-CREATE TRIGGER trg_group_role_updated_at BEFORE UPDATE ON master.group_role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+-- auth_group_role
+DROP TRIGGER IF EXISTS trg_auth_group_role_updated_at ON master.auth_group_role;
+CREATE TRIGGER trg_auth_group_role_updated_at BEFORE UPDATE ON master.auth_group_role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 -- team
 DROP TRIGGER IF EXISTS trg_team_updated_at ON master.team;
@@ -261,16 +261,16 @@ CREATE TRIGGER trg_team_status_changed BEFORE UPDATE ON master.team FOR EACH ROW
 -- All use topic='iam'. Worker filters: WHERE topic = 'iam'.
 -- ============================================================================
 
--- group_member → iam / group_membership
-DROP TRIGGER IF EXISTS trg_pgm_iam_outbox ON master.group_member;
-CREATE TRIGGER trg_pgm_iam_outbox
-    AFTER INSERT OR DELETE ON master.group_member
-    FOR EACH ROW EXECUTE FUNCTION master.trg_emit_outbox_event('iam', 'group_membership');
+-- auth_group_member → iam / auth_group_membership
+DROP TRIGGER IF EXISTS trg_agm_iam_outbox ON master.auth_group_member;
+CREATE TRIGGER trg_agm_iam_outbox
+    AFTER INSERT OR DELETE ON master.auth_group_member
+    FOR EACH ROW EXECUTE FUNCTION master.trg_emit_outbox_event('iam', 'auth_group_membership');
 
--- group_role → iam / role_assignment
-DROP TRIGGER IF EXISTS trg_group_role_iam_outbox ON master.group_role;
-CREATE TRIGGER trg_group_role_iam_outbox
-    AFTER INSERT OR UPDATE OR DELETE ON master.group_role
+-- auth_group_role → iam / role_assignment
+DROP TRIGGER IF EXISTS trg_auth_group_role_iam_outbox ON master.auth_group_role;
+CREATE TRIGGER trg_auth_group_role_iam_outbox
+    AFTER INSERT OR UPDATE OR DELETE ON master.auth_group_role
     FOR EACH ROW EXECUTE FUNCTION master.trg_emit_outbox_event('iam', 'role_assignment');
 
 -- principal_persona → iam / persona_assignment
@@ -290,15 +290,15 @@ CREATE TRIGGER trg_principal_profile_ou_iam_outbox
 DROP TRIGGER IF EXISTS trg_role_iam_outbox_insert ON shared.role;
 DROP TRIGGER IF EXISTS trg_role_iam_outbox_update ON shared.role;
 
--- principal_group → iam / group_created | group_updated
-DROP TRIGGER IF EXISTS trg_principal_group_iam_outbox_insert ON master.principal_group;
-CREATE TRIGGER trg_principal_group_iam_outbox_insert
-    AFTER INSERT ON master.principal_group
+-- auth_group → iam / group_created | group_updated
+DROP TRIGGER IF EXISTS trg_auth_group_iam_outbox_insert ON master.auth_group;
+CREATE TRIGGER trg_auth_group_iam_outbox_insert
+    AFTER INSERT ON master.auth_group
     FOR EACH ROW EXECUTE FUNCTION master.trg_emit_outbox_event('iam', 'group_created');
 
-DROP TRIGGER IF EXISTS trg_principal_group_iam_outbox_update ON master.principal_group;
-CREATE TRIGGER trg_principal_group_iam_outbox_update
-    AFTER UPDATE ON master.principal_group
+DROP TRIGGER IF EXISTS trg_auth_group_iam_outbox_update ON master.auth_group;
+CREATE TRIGGER trg_auth_group_iam_outbox_update
+    AFTER UPDATE ON master.auth_group
     FOR EACH ROW EXECUTE FUNCTION master.trg_emit_outbox_event('iam', 'group_updated');
 
 -- access_grant — updated_at / status_changed_at lifecycle
@@ -2116,14 +2116,44 @@ CREATE TRIGGER trg_scp_remittance_bank_link
     BEFORE INSERT OR UPDATE OF preferred_remittance_bank_link_id ON master.company_code_supplier_profile
     FOR EACH ROW EXECUTE FUNCTION master.trg_scp_validate_remittance_bank_link();
 
--- ── principal_auth_binding: updated_at ─────────────────────────────────────
-DROP TRIGGER IF EXISTS trg_pab_updated_at ON master.principal_auth_binding;
-CREATE TRIGGER trg_pab_updated_at
-    BEFORE UPDATE ON master.principal_auth_binding
+-- ── principal_identity_binding: updated_at ─────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_pib_updated_at ON master.principal_identity_binding;
+CREATE TRIGGER trg_pib_updated_at
+    BEFORE UPDATE ON master.principal_identity_binding
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
--- ── principal_auth_binding: service_client_id guard ────────────────────────
-DROP TRIGGER IF EXISTS trg_pab_service_client ON master.principal_auth_binding;
-CREATE TRIGGER trg_pab_service_client
-    BEFORE INSERT OR UPDATE OF service_client_id ON master.principal_auth_binding
+-- ── principal_identity_binding: service_client_id guard ────────────────────────
+DROP TRIGGER IF EXISTS trg_pib_service_client ON master.principal_identity_binding;
+CREATE TRIGGER trg_pib_service_client
+    BEFORE INSERT OR UPDATE OF service_client_id ON master.principal_identity_binding
     FOR EACH ROW EXECUTE FUNCTION master.trg_guard_auth_binding_service_client();
+
+
+-- ============================================================================
+-- RBAC Phase 6: Assignment scope validation triggers
+-- ============================================================================
+
+-- auth_group_role: validate assignment_scope_ref_id points to the correct table/tenant
+DROP TRIGGER IF EXISTS trg_bi_bu_validate_assignment_scope ON master.auth_group_role;
+CREATE TRIGGER trg_bi_bu_validate_assignment_scope
+    BEFORE INSERT OR UPDATE OF assignment_scope_type, assignment_scope_ref_id
+    ON master.auth_group_role
+    FOR EACH ROW
+    EXECUTE FUNCTION master.trg_validate_assignment_scope('auth_group_role');
+
+-- access_grant: validate assignment_scope_ref_id points to the correct table/tenant
+DROP TRIGGER IF EXISTS trg_bi_bu_validate_assignment_scope ON master.access_grant;
+CREATE TRIGGER trg_bi_bu_validate_assignment_scope
+    BEFORE INSERT OR UPDATE OF assignment_scope_type, assignment_scope_ref_id
+    ON master.access_grant
+    FOR EACH ROW
+    EXECUTE FUNCTION master.trg_validate_assignment_scope('access_grant');
+
+-- company_code_access: entity_type lookup validation (replaces inline CHECK constraint)
+DROP TRIGGER IF EXISTS trg_cca_entity_type_lookup ON master.company_code_access;
+CREATE TRIGGER trg_cca_entity_type_lookup
+    BEFORE INSERT OR UPDATE OF entity_type ON master.company_code_access
+    FOR EACH ROW
+    EXECUTE FUNCTION control.trg_validate_lookup_columns(
+        'master.company_code_access_entity_type', 'entity_type'
+    );

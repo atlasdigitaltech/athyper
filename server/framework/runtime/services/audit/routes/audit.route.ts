@@ -175,7 +175,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const row = await db
@@ -253,7 +253,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const row = await db

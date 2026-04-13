@@ -329,15 +329,15 @@ export class WorkflowEngine {
 
       const stage1 = stage1Row as Record<string, unknown>;
 
-      await trx
-        .updateTable("document.workflow_stage" as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (trx.updateTable("document.workflow_stage") as any)
         .set({
           status: "active",
           started_at: new Date(),
           updated_at: new Date(),
           updated_by: requestedBy,
-        } as never)
-        .where("id" as never, "=", stage1.id)
+        })
+        .where("id", "=", stage1.id)
         .execute();
 
       // Create work_items for stage 1
@@ -448,16 +448,16 @@ export class WorkflowEngine {
         if (!delegateTo) {
           throw Object.assign(new Error("DELEGATE_TARGET_REQUIRED"), { code: 400 });
         }
-        await trx
-          .updateTable("event.work_item" as never)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (trx.updateTable("event.work_item") as any)
           .set({
             assignee_id: delegateTo,
             status: "assigned",
             assigned_at: new Date(),
             updated_at: new Date(),
             updated_by: actorId,
-          } as never)
-          .where("id" as never, "=", workItemId)
+          })
+          .where("id", "=", workItemId)
           .execute();
 
         await this.logEvent(trx, {
@@ -477,8 +477,8 @@ export class WorkflowEngine {
 
       // Terminal action
       const newStatus = action === "escalate" ? "escalated" : "completed";
-      await trx
-        .updateTable("event.work_item" as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (trx.updateTable("event.work_item") as any)
         .set({
           status: newStatus,
           decision: action,
@@ -490,8 +490,8 @@ export class WorkflowEngine {
             : {}),
           updated_at: new Date(),
           updated_by: actorId,
-        } as never)
-        .where("id" as never, "=", workItemId)
+        })
+        .where("id", "=", workItemId)
         .execute();
 
       await this.logEvent(trx, {
@@ -614,16 +614,16 @@ export class WorkflowEngine {
     if (!stageComplete) return;
 
     // Close this stage
-    await trx
-      .updateTable("document.workflow_stage" as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (trx.updateTable("document.workflow_stage") as any)
       .set({
         status: "completed",
         outcome,
         completed_at: new Date(),
         updated_at: new Date(),
         updated_by: actorId,
-      } as never)
-      .where("id" as never, "=", stageId)
+      })
+      .where("id", "=", stageId)
       .execute();
 
     await this.logEvent(trx, {
@@ -651,15 +651,15 @@ export class WorkflowEngine {
 
       if (nextStageRow) {
         const ns = nextStageRow as Record<string, unknown>;
-        await trx
-          .updateTable("document.workflow_stage" as never)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (trx.updateTable("document.workflow_stage") as any)
           .set({
             status: "active",
             started_at: new Date(),
             updated_at: new Date(),
             updated_by: actorId,
-          } as never)
-          .where("id" as never, "=", ns.id)
+          })
+          .where("id", "=", ns.id)
           .execute();
 
         const nextCompiledStage = templateSnapshot.stages?.find(
@@ -694,8 +694,8 @@ export class WorkflowEngine {
     const requestStatus = outcome === "approved" ? "approved" : "rejected";
     const requestDecision = outcome === "approved" ? "approve" : "reject";
 
-    await trx
-      .updateTable("document.workflow_request" as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (trx.updateTable("document.workflow_request") as any)
       .set({
         status: requestStatus,
         decision: requestDecision,
@@ -703,8 +703,8 @@ export class WorkflowEngine {
         decided_at: new Date(),
         updated_at: new Date(),
         updated_by: actorId,
-      } as never)
-      .where("id" as never, "=", requestId)
+      })
+      .where("id", "=", requestId)
       .execute();
 
     await this.logEvent(trx, {

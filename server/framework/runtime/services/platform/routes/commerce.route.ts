@@ -469,10 +469,10 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await (db as any)
-        .selectFrom("shared.plan_module_access as pma")
-        .innerJoin("shared.module as m", "m.id", "pma.module_id")
-        .innerJoin("shared.subscription_plan as sp", "sp.id", "pma.plan_id")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = await (db.selectFrom("shared.plan_module_access as pma") as any)
+        .innerJoin("shared.module as m",             "m.id",   "pma.module_id")
+        .innerJoin("shared.subscription_plan as sp", "sp.id",  "pma.plan_id")
         .select([
           "pma.id"                as never,
           "m.code"                as never,
@@ -589,9 +589,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await (db as any)
-        .selectFrom("shared.plan_permission_access as ppa")
-        .innerJoin("shared.permission as p", "p.id", "ppa.permission_id")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = await (db.selectFrom("shared.plan_permission_access as ppa") as any)
+        .innerJoin("shared.permission as p",         "p.id",  "ppa.permission_id")
         .innerJoin("shared.subscription_plan as sp", "sp.id", "ppa.plan_id")
         .select([
           "ppa.id"                as never,
@@ -710,10 +710,10 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode } = req.params as Record<string, string>;
 
-      const rows = await (db as any)
-        .selectFrom("shared.plan_feature_access as pfa")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = await (db.selectFrom("shared.plan_feature_access as pfa") as any)
         .innerJoin("shared.enterprise_feature as ef", "ef.id", "pfa.feature_id")
-        .innerJoin("shared.subscription_plan as sp", "sp.id", "pfa.plan_id")
+        .innerJoin("shared.subscription_plan as sp",  "sp.id", "pfa.plan_id")
         .select([
           "pfa.id"                as never,
           "ef.code"               as never,
@@ -830,11 +830,11 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   const getTenantPlanHandler: RequestHandler = async (req, res, next) => {
     try {
       if (!await adminGuard(req, res, auth)) return;
-      const { tenantId } = req.params as Record<string, string>;
-      if (!isUuid(tenantId!)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
+      const tenantId = (req.params as Record<string, string>)["tenantId"]!;
+      if (!isUuid(tenantId)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
 
-      const row = await (db as any)
-        .selectFrom("master.tenant as t")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.selectFrom("master.tenant as t") as any)
         .leftJoin("shared.subscription_plan as sp", "sp.code", "t.subscription")
         .select([
           "t.id"           as never,
@@ -866,8 +866,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   const assignTenantPlanHandler: RequestHandler = async (req, res, next) => {
     try {
       if (!await adminGuard(req, res, auth)) return;
-      const { tenantId } = req.params as Record<string, string>;
-      if (!isUuid(tenantId!)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
+      const tenantId = (req.params as Record<string, string>)["tenantId"]!;
+      if (!isUuid(tenantId)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
 
       const body     = req.body as Record<string, unknown>;
       const planCode = typeof body["plan_code"] === "string" ? body["plan_code"].trim() : "";
@@ -1183,17 +1183,17 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
     const [modules, features, permissions] = await Promise.all([
       // Modules: all modules with LEFT JOIN to plan access and tenant subscription
-      (db as any)
-        .selectFrom("shared.module as m")
-        .leftJoin("shared.plan_module_access as pma" as any, (join: any) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (db.selectFrom("shared.module as m") as any)
+        .leftJoin("shared.plan_module_access as pma", (join: any) =>
           join
             .onRef("pma.module_id", "=", "m.id")
-            .on("pma.plan_id" as never, "=", planId as never),
+            .on("pma.plan_id", "=", planId),
         )
-        .leftJoin("master.tenant_module_subscription as tms" as any, (join: any) =>
+        .leftJoin("master.tenant_module_subscription as tms", (join: any) =>
           join
             .onRef("tms.module_id", "=", "m.id")
-            .on("tms.tenant_id" as never, "=", tenantId as never),
+            .on("tms.tenant_id", "=", tenantId),
         )
         .select([
           "m.id"                    as never,
@@ -1215,17 +1215,17 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         .execute(),
 
       // Features: active features with plan access and tenant entitlement
-      (db as any)
-        .selectFrom("shared.enterprise_feature as ef")
-        .leftJoin("shared.plan_feature_access as pfa" as any, (join: any) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (db.selectFrom("shared.enterprise_feature as ef") as any)
+        .leftJoin("shared.plan_feature_access as pfa", (join: any) =>
           join
             .onRef("pfa.feature_id", "=", "ef.id")
-            .on("pfa.plan_id" as never, "=", planId as never),
+            .on("pfa.plan_id", "=", planId),
         )
-        .leftJoin("master.tenant_feature_entitlement as tfe" as any, (join: any) =>
+        .leftJoin("master.tenant_feature_entitlement as tfe", (join: any) =>
           join
             .onRef("tfe.feature_id", "=", "ef.id")
-            .on("tfe.tenant_id" as never, "=", tenantId as never),
+            .on("tfe.tenant_id", "=", tenantId),
         )
         .select([
           "ef.id"                   as never,
@@ -1251,17 +1251,17 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         .execute(),
 
       // Plan-restricted permissions only
-      (db as any)
-        .selectFrom("shared.permission as p")
-        .leftJoin("shared.plan_permission_access as ppa" as any, (join: any) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (db.selectFrom("shared.permission as p") as any)
+        .leftJoin("shared.plan_permission_access as ppa", (join: any) =>
           join
             .onRef("ppa.permission_id", "=", "p.id")
-            .on("ppa.plan_id" as never, "=", planId as never),
+            .on("ppa.plan_id", "=", planId),
         )
-        .leftJoin("master.tenant_permission_override as tpo" as any, (join: any) =>
+        .leftJoin("master.tenant_permission_override as tpo", (join: any) =>
           join
             .onRef("tpo.permission_id", "=", "p.id")
-            .on("tpo.tenant_id" as never, "=", tenantId as never),
+            .on("tpo.tenant_id", "=", tenantId),
         )
         .select([
           "p.id"                    as never,
@@ -1295,8 +1295,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   const effectiveEntitlementsHandler: RequestHandler = async (req, res, next) => {
     try {
       if (!await adminGuard(req, res, auth)) return;
-      const { tenantId } = req.params as Record<string, string>;
-      if (!isUuid(tenantId!)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
+      const tenantId = (req.params as Record<string, string>)["tenantId"]!;
+      if (!isUuid(tenantId)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
 
       // Read tenant's current plan code
       const tenant = await db
@@ -1307,7 +1307,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       if (!tenant) { res.status(404).json({ error: "NOT_FOUND", message: "Tenant not found" }); return; }
 
-      const result = await resolveEntitlements(tenantId!, tenant["subscription"] as string);
+      const result = await resolveEntitlements(tenantId, tenant["subscription"] as string);
 
       res.setHeader("Cache-Control", "no-store");
       res.json({
@@ -1333,8 +1333,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   const previewEntitlementsHandler: RequestHandler = async (req, res, next) => {
     try {
       if (!await adminGuard(req, res, auth)) return;
-      const { tenantId } = req.params as Record<string, string>;
-      if (!isUuid(tenantId!)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
+      const tenantId = (req.params as Record<string, string>)["tenantId"]!;
+      if (!isUuid(tenantId)) { res.status(400).json({ error: "INVALID_TENANT_ID", message: "tenantId must be a UUID" }); return; }
 
       const body     = req.body as Record<string, unknown>;
       const planCode = typeof body["plan_code"] === "string" ? body["plan_code"].trim() : "";
@@ -1349,7 +1349,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       if (!tenant) { res.status(404).json({ error: "NOT_FOUND", message: "Tenant not found" }); return; }
 
-      const result = await resolveEntitlements(tenantId!, planCode);
+      const result = await resolveEntitlements(tenantId, planCode);
       if (!result.plan) {
         res.status(404).json({ error: "PLAN_NOT_FOUND", message: `Plan '${planCode}' not found` });
         return;

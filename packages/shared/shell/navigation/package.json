@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/auth": "workspace:*",
     "@athyper/icons": "workspace:*"
   },
   "peerDependencies": {

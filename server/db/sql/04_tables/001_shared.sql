@@ -706,7 +706,7 @@ COMMENT ON TABLE shared.permission IS
 -- ============================================================================
 -- §17  persona_permission — binary grant matrix (persona × permission)
 -- ============================================================================
--- No scope_constraint column. Scope lives exclusively on master.group_role.
+-- No scope_constraint column. Scope lives exclusively on master.auth_group_role.
 
 CREATE TABLE IF NOT EXISTS shared.persona_permission (
     -- Identity
@@ -727,7 +727,7 @@ CREATE TABLE IF NOT EXISTS shared.persona_permission (
 
 COMMENT ON TABLE shared.persona_permission IS
   'Binary grant matrix: persona × permission. is_granted = true means the persona '
-  'has the permission by default. No scope column — scope lives on master.group_role.';
+  'has the permission by default. No scope column — scope lives on master.auth_group_role.';
 
 
 -- §18  ou_type — REMOVED: migrated to control.lookup_domain / control.lookup_value
@@ -959,7 +959,7 @@ COMMENT ON TABLE shared.industry_crosswalk IS
 -- shared.role — Platform RBAC role = Persona × Module (shared, not per-tenant)
 -- ============================================================================
 -- Moved from master.role. Removed: tenant_id, is_system.
--- One row per (persona × module). Scope lives on master.group_role exclusively.
+-- One row per (persona × module). Scope lives on master.auth_group_role exclusively.
 
 CREATE TABLE IF NOT EXISTS shared.role (
     -- Identity
@@ -1002,4 +1002,4 @@ CREATE TABLE IF NOT EXISTS shared.role (
 COMMENT ON TABLE shared.role IS
   'Platform RBAC role = Persona × Module or Persona × Workspace. '
   'Shared across all tenants — no tenant_id. '
-  'Scope lives on master.group_role exclusively.';
+  'Scope lives on master.auth_group_role exclusively.';

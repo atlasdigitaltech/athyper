@@ -177,7 +177,7 @@ export function FinancialReportsWorkbench({ scope, report }: FinancialReportsWor
         <div className="flex items-center gap-2">
           {isLive && meta.supportsCompare && (
             <Button
-              variant={scope.comparative ? "default" : "outline"}
+              variant={scope.comparative ? "primary" : "outline"}
               size="sm"
               className="h-8 text-xs"
               onClick={toggleCompare}

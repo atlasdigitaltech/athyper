@@ -202,7 +202,7 @@ export default function CycleRunsPage() {
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="flex flex-wrap gap-1">
           {(["", ...RUN_STATUSES] as const).map((s) => (
-            <Button key={s} size="sm" variant={statusFilter === s ? "default" : "ghost"} className="h-7 text-xs"
+            <Button key={s} size="sm" variant={statusFilter === s ? "primary" : "ghost"} className="h-7 text-xs"
               onClick={() => setStatusFilter(s as RunStatus | "")}>
               {s === "" ? "All" : s}
             </Button>

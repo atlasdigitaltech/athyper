@@ -11,7 +11,7 @@
  *    (username) already exists (e.g. seeded in demo data), we attach the
  *    auth binding to it rather than creating a duplicate principal.
  *  • Handles concurrent logins — ON CONFLICT (tenant_id, provider_code,
- *    subject_id) on principal_auth_binding prevents duplicate bindings under
+ *    subject_id) on principal_identity_binding prevents duplicate bindings under
  *    race conditions.
  *  • Single DB transaction — all three inserts (principal, profile, binding)
  *    succeed or fail together.
@@ -67,7 +67,7 @@ export interface JitPrincipalResult {
  * 3. If no principal exists:
  *    a. INSERT principal with code=username (ON CONFLICT: use sub UUID as fallback code).
  *    b. INSERT principal_profile.
- *    c. INSERT principal_auth_binding.
+ *    c. INSERT principal_identity_binding.
  */
 export async function jitProvisionPrincipal(
   db: Kysely<AnyDb>,
@@ -77,7 +77,7 @@ export async function jitProvisionPrincipal(
 
   // ── Step 1: Fast path — binding already exists ─────────────────────────────
   const existingBinding = await db
-    .selectFrom("master.principal_auth_binding")
+    .selectFrom("master.principal_identity_binding")
     .select("principal_id")
     .where("tenant_id", "=", tenant_id)
     .where("provider_code", "=", "keycloak")
@@ -106,7 +106,7 @@ export async function jitProvisionPrincipal(
     principalId = existingPrincipal.id as string;
 
     const existingKCBinding = await db
-      .selectFrom("master.principal_auth_binding")
+      .selectFrom("master.principal_identity_binding")
       .select("subject_id")
       .where("tenant_id", "=", tenant_id)
       .where("principal_id", "=", principalId)
@@ -120,7 +120,7 @@ export async function jitProvisionPrincipal(
       }
       // Wrong subject_id (seed mismatch) — update to the real KC UUID.
       await db
-        .updateTable("master.principal_auth_binding")
+        .updateTable("master.principal_identity_binding")
         .set({
           subject_id: sub,
           username: username || null,
@@ -236,7 +236,7 @@ export async function jitProvisionPrincipal(
 
   // ── Step 3c / Step 2b: Create the auth binding ────────────────────────────
   await db
-    .insertInto("master.principal_auth_binding")
+    .insertInto("master.principal_identity_binding")
     .values({
       tenant_id,
       principal_id: principalId,

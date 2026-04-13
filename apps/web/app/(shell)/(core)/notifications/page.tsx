@@ -181,7 +181,7 @@ export default function NotificationsPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button
-            variant={unreadOnly ? "default" : "outline"}
+            variant={unreadOnly ? "primary" : "outline"}
             size="sm"
             onClick={() => setUnreadOnly((v) => !v)}
           >

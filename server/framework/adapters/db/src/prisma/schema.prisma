@@ -5229,11 +5229,11 @@ model work_item {
   updated_at                                                     DateTime?         @db.Timestamptz(6)
   updated_by                                                     String?           @db.Uuid
   principal_work_item_assignee_idToprincipal                     principal?        @relation("work_item_assignee_idToprincipal", fields: [assignee_id], references: [id], onUpdate: NoAction, map: "wi_assignee_fk")
-  principal_group_work_item_assignee_group_idToprincipal_group   principal_group?  @relation("work_item_assignee_group_idToprincipal_group", fields: [assignee_group_id], references: [id], onUpdate: NoAction, map: "wi_assignee_group_fk")
+  auth_group_work_item_assignee_group_idToauth_group   auth_group?  @relation("work_item_assignee_group_idToauth_group", fields: [assignee_group_id], references: [id], onUpdate: NoAction, map: "wi_assignee_group_fk")
   team                                                           team?             @relation(fields: [assignee_team_id], references: [id], onUpdate: NoAction, map: "wi_assignee_team_fk")
   principal_work_item_created_byToprincipal                      principal         @relation("work_item_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "wi_created_by_fk")
   principal_work_item_designated_idToprincipal                   principal?        @relation("work_item_designated_idToprincipal", fields: [designated_id], references: [id], onUpdate: NoAction, map: "wi_designated_fk")
-  principal_group_work_item_designated_group_idToprincipal_group principal_group?  @relation("work_item_designated_group_idToprincipal_group", fields: [designated_group_id], references: [id], onUpdate: NoAction, map: "wi_designated_group_fk")
+  auth_group_work_item_designated_group_idToauth_group auth_group?  @relation("work_item_designated_group_idToauth_group", fields: [designated_group_id], references: [id], onUpdate: NoAction, map: "wi_designated_group_fk")
   workflow_request                                               workflow_request? @relation(fields: [tenant_id, workflow_request_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "wi_request_fk")
   workflow_stage                                                 workflow_stage?   @relation(fields: [tenant_id, workflow_stage_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "wi_stage_fk")
   tenant                                                         tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wi_tenant_fk")
@@ -7123,7 +7123,7 @@ model permission_decision_log {
   created_by         String              @db.Uuid
   enterprise_feature enterprise_feature? @relation(fields: [feature_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "pdl_feature_fk")
   access_grant       access_grant?       @relation(fields: [matched_grant_id], references: [id], onUpdate: NoAction, map: "pdl_grant_fk")
-  principal_group    principal_group?    @relation(fields: [matched_group_id], references: [id], onUpdate: NoAction, map: "pdl_group_fk")
+  auth_group    auth_group?    @relation(fields: [matched_group_id], references: [id], onUpdate: NoAction, map: "pdl_group_fk")
   permission         permission?         @relation(fields: [permission_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "pdl_permission_fk")
   principal          principal           @relation(fields: [principal_id], references: [id], onUpdate: NoAction, map: "pdl_principal_fk")
   role               role?               @relation(fields: [matched_role_id], references: [id], onUpdate: NoAction, map: "pdl_role_fk")
@@ -7344,7 +7344,7 @@ model share_audit_log {
   created_by                                               String           @db.Uuid
   principal_share_audit_log_actor_idToprincipal            principal        @relation("share_audit_log_actor_idToprincipal", fields: [actor_id], references: [id], onUpdate: NoAction, map: "sal_actor_fk")
   access_grant                                             access_grant?    @relation(fields: [access_grant_id], references: [id], onUpdate: NoAction, map: "sal_grant_fk")
-  principal_group                                          principal_group? @relation(fields: [target_group_id], references: [id], onUpdate: NoAction, map: "sal_target_group_fk")
+  auth_group                                          auth_group? @relation(fields: [target_group_id], references: [id], onUpdate: NoAction, map: "sal_target_group_fk")
   principal_share_audit_log_target_principal_idToprincipal principal?       @relation("share_audit_log_target_principal_idToprincipal", fields: [target_principal_id], references: [id], onUpdate: NoAction, map: "sal_target_principal_fk")
   tenant                                                   tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sal_tenant_fk")
 
@@ -7443,8 +7443,6 @@ model access_grant {
   principal_id                                   String?                   @db.Uuid
   permission_id                                  String                    @db.Uuid
   effect                                         String
-  scope                                          String?
-  ou_scope_id                                    String?                   @db.Uuid
   resource_type                                  String?
   resource_id                                    String?                   @db.Uuid
   expires_at                                     DateTime?                 @db.Timestamptz(6)
@@ -7462,10 +7460,13 @@ model access_grant {
   updated_by                                     String?                   @db.Uuid
   status_changed_at                              DateTime?                 @db.Timestamptz(6)
   status_changed_by                              String?                   @db.Uuid
+  visibility_scope                               String?
+  assignment_scope_type                          String?
+  assignment_scope_ref_id                        String?                   @db.Uuid
   permission_decision_log                        permission_decision_log[]
   share_audit_log                                share_audit_log[]
   principal_access_grant_granted_byToprincipal   principal?                @relation("access_grant_granted_byToprincipal", fields: [granted_by], references: [id], onUpdate: NoAction, map: "ag_granted_by_fk")
-  principal_group                                principal_group?          @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ag_group_fk")
+  auth_group                                auth_group?          @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ag_group_fk")
   permission                                     permission                @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "ag_permission_fk")
   principal_access_grant_principal_idToprincipal principal?                @relation("access_grant_principal_idToprincipal", fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ag_principal_fk")
   principal_access_grant_revoked_byToprincipal   principal?                @relation("access_grant_revoked_byToprincipal", fields: [revoked_by], references: [id], onUpdate: NoAction, map: "ag_revoked_by_fk")
@@ -7475,6 +7476,9 @@ model access_grant {
   @@index([tenant_id, group_id, permission_id], map: "ag_group_perm_pidx", where: raw("((status = 'active'::text) AND (group_id IS NOT NULL))"))
   @@index([tenant_id, principal_id, permission_id], map: "ag_principal_perm_pidx", where: raw("((status = 'active'::text) AND (principal_id IS NOT NULL))"))
   @@index([tenant_id, role_id, permission_id], map: "ag_role_perm_pidx", where: raw("((status = 'active'::text) AND (role_id IS NOT NULL))"))
+  @@index([tenant_id, permission_id, assignment_scope_ref_id], map: "ag_assignment_cc_idx", where: raw("((assignment_scope_type = 'company_code'::text) AND (status = 'active'::text) AND (effect = 'allow'::text))"))
+  @@index([tenant_id, permission_id, assignment_scope_ref_id], map: "ag_assignment_le_idx", where: raw("((assignment_scope_type = 'legal_entity'::text) AND (status = 'active'::text) AND (effect = 'allow'::text))"))
+  @@index([tenant_id, permission_id, assignment_scope_type], map: "ag_assignment_scope_idx", where: raw("((status = 'active'::text) AND (effect = 'allow'::text))"))
   @@schema("master")
 }
 
@@ -9563,7 +9567,7 @@ model group_feature_grant {
   created_at         DateTime           @default(now()) @db.Timestamptz(6)
   created_by         String             @db.Uuid
   enterprise_feature enterprise_feature @relation(fields: [feature_id], references: [id], onUpdate: NoAction, map: "gfg_feature_fk")
-  principal_group    principal_group    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gfg_group_fk")
+  auth_group    auth_group    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gfg_group_fk")
   tenant             tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gfg_tenant_fk")
 
   @@unique([tenant_id, group_id, feature_id, access_type], map: "group_feature_grant_uq")
@@ -9573,7 +9577,7 @@ model group_feature_grant {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model group_member {
+model auth_group_member {
   id              String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id       String          @db.Uuid
   principal_id    String          @db.Uuid
@@ -9582,42 +9586,47 @@ model group_member {
   added_by        String?         @db.Uuid
   created_at      DateTime        @default(now()) @db.Timestamptz(6)
   created_by      String          @db.Uuid
-  principal_group principal_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pgm_group_fk")
-  principal       principal       @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pgm_principal_fk")
-  tenant          tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pgm_tenant_fk")
+  auth_group auth_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "agm_group_fk")
+  principal       principal       @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agm_principal_fk")
+  tenant          tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agm_tenant_fk")
 
-  @@unique([tenant_id, principal_id, group_id], map: "group_member_uq")
-  @@index([tenant_id, group_id], map: "pgm_group_idx")
-  @@index([tenant_id, principal_id], map: "pgm_principal_idx")
+  @@unique([tenant_id, principal_id, group_id], map: "auth_group_member_uq")
+  @@index([tenant_id, group_id], map: "agm_group_idx")
+  @@index([tenant_id, principal_id], map: "agm_principal_idx")
   @@schema("master")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model group_role {
-  id              String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String          @db.Uuid
-  group_id        String          @db.Uuid
-  role_id         String          @db.Uuid
-  scope           String
-  ou_scope_id     String?         @db.Uuid
-  expires_at      DateTime?       @db.Timestamptz(6)
-  assigned_by     String?         @db.Uuid
-  metadata        Json            @default("{}")
-  status          String          @default("active")
-  is_active       Boolean?        @default(dbgenerated("(status = 'active'::text)"))
-  created_at      DateTime        @default(now()) @db.Timestamptz(6)
-  created_by      String          @db.Uuid
-  updated_at      DateTime?       @db.Timestamptz(6)
-  updated_by      String?         @db.Uuid
-  principal_group principal_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "group_role_group_fk")
-  role            role            @relation(fields: [role_id], references: [id], onUpdate: NoAction, map: "group_role_role_fk")
-  tenant          tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_role_tenant_fk")
+model auth_group_role {
+  id                      String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id               String          @db.Uuid
+  group_id                String          @db.Uuid
+  role_id                 String          @db.Uuid
+  expires_at              DateTime?       @db.Timestamptz(6)
+  assigned_by             String?         @db.Uuid
+  metadata                Json            @default("{}")
+  status                  String          @default("active")
+  is_active               Boolean?        @default(dbgenerated("(status = 'active'::text)"))
+  created_at              DateTime        @default(now()) @db.Timestamptz(6)
+  created_by              String          @db.Uuid
+  updated_at              DateTime?       @db.Timestamptz(6)
+  updated_by              String?         @db.Uuid
+  visibility_scope        String
+  assignment_scope_type   String
+  assignment_scope_ref_id String?         @db.Uuid
+  include_descendants     Boolean         @default(true)
+  auth_group         auth_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "auth_group_role_group_fk")
+  role                    role            @relation(fields: [role_id], references: [id], onUpdate: NoAction, map: "auth_group_role_role_fk")
+  tenant                  tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "auth_group_role_tenant_fk")
 
-  @@unique([tenant_id, group_id, role_id], map: "group_role_uq")
+  @@unique([tenant_id, group_id, role_id, assignment_scope_type, assignment_scope_ref_id, include_descendants], map: "auth_group_role_uq")
   @@index([tenant_id, group_id], map: "gr_group_active_pidx", where: raw("(status = 'active'::text)"))
   @@index([tenant_id, role_id], map: "gr_role_idx")
+  @@index([tenant_id, assignment_scope_ref_id], map: "gr_assignment_cc_idx", where: raw("((assignment_scope_type = 'company_code'::text) AND (status = 'active'::text))"))
+  @@index([tenant_id, assignment_scope_ref_id], map: "gr_assignment_le_idx", where: raw("((assignment_scope_type = 'legal_entity'::text) AND (status = 'active'::text))"))
+  @@index([tenant_id, assignment_scope_type, assignment_scope_ref_id], map: "gr_assignment_scope_idx", where: raw("(status = 'active'::text)"))
   @@schema("master")
 }
 
@@ -9958,7 +9967,7 @@ model letterhead {
   company_code_id   String?         @db.Uuid
   render_output     render_output[]
   principal         principal       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "letterhead_created_by_fk")
-  tenant            tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")
+  tenant            tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")
   tenant_profile    tenant_profile[]
 
   @@unique([tenant_id, code], map: "letterhead_tenant_code_uq")
@@ -10701,7 +10710,7 @@ model principal {
   fiscal_period                                                                        fiscal_period[]
   fx_rate                                                                              fx_rate[]
   gl_account                                                                           gl_account[]
-  group_member                                                                         group_member[]
+  auth_group_member                                                                         auth_group_member[]
   holiday_calendar                                                                     holiday_calendar[]
   holiday_calendar_day                                                                 holiday_calendar_day[]
   item                                                                                 item[]
@@ -10719,7 +10728,7 @@ model principal {
   payment_term_clause                                                                  payment_term_clause[]
   payment_term_discount_tier                                                           payment_term_discount_tier[]
   tenant                                                                               tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_tenant_fk")
-  principal_auth_binding                                                               principal_auth_binding[]
+  principal_identity_binding                                                               principal_identity_binding[]
   principal_feature_grant                                                              principal_feature_grant[]
   principal_persona                                                                    principal_persona[]
   principal_profile_principal_profile_tenant_id_principal_idToprincipal                principal_profile?              @relation("principal_profile_tenant_id_principal_idToprincipal")
@@ -10747,7 +10756,7 @@ model principal {
   tax_jurisdiction                                                                     tax_jurisdiction[]
   tax_type                                                                             tax_type[]
   team                                                                                 team[]
-  team_principal                                                                       team_principal[]
+  team_member                                                                       team_member[]
   template                                                                             template[]
   template_binding                                                                     template_binding[]
   tenant_profile_tenant_profile_created_byToprincipal                                  tenant_profile[]                @relation("tenant_profile_created_byToprincipal")
@@ -10769,8 +10778,8 @@ model principal {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model principal_auth_binding {
-  id                  String    @id(map: "pab_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+model principal_identity_binding {
+  id                  String    @id(map: "pib_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String    @db.Uuid
   principal_id        String    @db.Uuid
   provider_code       String
@@ -10794,13 +10803,13 @@ model principal_auth_binding {
   created_by          String    @db.Uuid
   updated_at          DateTime? @db.Timestamptz(6)
   updated_by          String?   @db.Uuid
-  principal           principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pab_principal_fk")
-  tenant              tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pab_tenant_fk")
+  principal           principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pib_principal_fk")
+  tenant              tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pib_tenant_fk")
 
-  @@unique([tenant_id, principal_id, provider_code], map: "pab_principal_provider_uq")
-  @@unique([tenant_id, provider_code, subject_id], map: "pab_subject_provider_uq")
-  @@index([tenant_id, principal_id], map: "pab_principal_idx")
-  @@index([tenant_id, sync_status], map: "pab_sync_status_pidx", where: raw("((sync_status)::text = ANY (ARRAY['pending'::text, 'drift'::text, 'error'::text]))"))
+  @@unique([tenant_id, principal_id, provider_code], map: "pib_principal_provider_uq")
+  @@unique([tenant_id, provider_code, subject_id], map: "pib_subject_provider_uq")
+  @@index([tenant_id, principal_id], map: "pib_principal_idx")
+  @@index([tenant_id, sync_status], map: "pib_sync_status_pidx", where: raw("((sync_status)::text = ANY (ARRAY['pending'::text, 'drift'::text, 'error'::text]))"))
   @@schema("master")
 }
 
@@ -10829,7 +10838,7 @@ model principal_feature_grant {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model principal_group {
+model auth_group {
   id                                                       String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                String                    @db.Uuid
   code                                                     String
@@ -10846,20 +10855,20 @@ model principal_group {
   created_by                                               String                    @db.Uuid
   updated_at                                               DateTime?                 @db.Timestamptz(6)
   updated_by                                               String?                   @db.Uuid
-  work_item_work_item_assignee_group_idToprincipal_group   work_item[]               @relation("work_item_assignee_group_idToprincipal_group")
-  work_item_work_item_designated_group_idToprincipal_group work_item[]               @relation("work_item_designated_group_idToprincipal_group")
+  work_item_work_item_assignee_group_idToauth_group   work_item[]               @relation("work_item_assignee_group_idToauth_group")
+  work_item_work_item_designated_group_idToauth_group work_item[]               @relation("work_item_designated_group_idToauth_group")
   permission_decision_log                                  permission_decision_log[]
   share_audit_log                                          share_audit_log[]
   access_grant                                             access_grant[]
   group_feature_grant                                      group_feature_grant[]
-  group_member                                             group_member[]
-  group_role                                               group_role[]
-  tenant                                                   tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_group_tenant_fk")
+  auth_group_member                                             auth_group_member[]
+  auth_group_role                                               auth_group_role[]
+  tenant                                                   tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "auth_group_tenant_fk")
 
-  @@unique([tenant_id, code], map: "principal_group_tenant_code_uq")
-  @@unique([tenant_id, id], map: "principal_group_tenant_id_uq")
-  @@index([tenant_id], map: "ix_pg_self_service_eligible", where: raw("((is_self_service_eligible = true) AND (status = 'active'::text))"))
-  @@index([tenant_id], map: "pg_tenant_active_pidx", where: raw("(status = 'active'::text)"))
+  @@unique([tenant_id, code], map: "auth_group_tenant_code_uq")
+  @@unique([tenant_id, id], map: "auth_group_tenant_id_uq")
+  @@index([tenant_id], map: "ix_aug_self_service_eligible", where: raw("((is_self_service_eligible = true) AND (status = 'active'::text))"))
+  @@index([tenant_id], map: "aug_tenant_active_pidx", where: raw("(status = 'active'::text)"))
   @@schema("master")
 }
 
@@ -11561,7 +11570,7 @@ model team {
   work_item         work_item[]
   principal         principal        @relation(fields: [leader_id], references: [id], onUpdate: NoAction, map: "team_leader_fk")
   tenant            tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "team_tenant_fk")
-  team_principal    team_principal[]
+  team_member    team_member[]
 
   @@unique([tenant_id, code], map: "team_tenant_code_uq")
   @@unique([tenant_id, id], map: "team_tenant_id_uq")
@@ -11572,7 +11581,7 @@ model team {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model team_principal {
+model team_member {
   id           String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id    String    @db.Uuid
   team_id      String    @db.Uuid
@@ -11582,12 +11591,12 @@ model team_principal {
   left_at      DateTime? @db.Timestamptz(6)
   created_at   DateTime  @default(now()) @db.Timestamptz(6)
   created_by   String    @db.Uuid
-  principal    principal @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tp_principal_fk")
-  team         team      @relation(fields: [tenant_id, team_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "tp_team_fk")
-  tenant       tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tp_tenant_fk")
+  principal    principal @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tm_principal_fk")
+  team         team      @relation(fields: [tenant_id, team_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "tm_team_fk")
+  tenant       tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tm_tenant_fk")
 
-  @@unique([tenant_id, team_id, principal_id], map: "team_principal_active_uidx", where: raw("(left_at IS NULL)"))
-  @@index([tenant_id, team_id], map: "tp_team_idx")
+  @@unique([tenant_id, team_id, principal_id], map: "team_member_active_uidx", where: raw("(left_at IS NULL)"))
+  @@index([tenant_id, team_id], map: "tm_team_idx")
   @@schema("master")
 }
 
@@ -11878,8 +11887,8 @@ model tenant {
   fx_rate                           fx_rate[]
   gl_account                        gl_account[]
   group_feature_grant               group_feature_grant[]
-  group_member                      group_member[]
-  group_role                        group_role[]
+  auth_group_member                      auth_group_member[]
+  auth_group_role                        auth_group_role[]
   holiday_calendar                  holiday_calendar[]
   holiday_calendar_day              holiday_calendar_day[]
   item                              item[]
@@ -11902,9 +11911,9 @@ model tenant {
   payment_term_discount_tier        payment_term_discount_tier[]
   planning_model                    planning_model[]
   principal                         principal[]
-  principal_auth_binding            principal_auth_binding[]
+  principal_identity_binding            principal_identity_binding[]
   principal_feature_grant           principal_feature_grant[]
-  principal_group                   principal_group[]
+  auth_group                   auth_group[]
   principal_persona                 principal_persona[]
   principal_profile                 principal_profile[]
   principal_ui_preference           principal_ui_preference[]
@@ -11920,7 +11929,7 @@ model tenant {
   tax_jurisdiction                  tax_jurisdiction[]
   tax_type                          tax_type[]
   team                              team[]
-  team_principal                    team_principal[]
+  team_member                    team_member[]
   template                          template[]
   template_binding                  template_binding[]
   tenant_feature_entitlement        tenant_feature_entitlement[]
@@ -12676,7 +12685,7 @@ model role {
   permission_decision_log permission_decision_log[]
   access_grant            access_grant[]
   attachment_acl          attachment_acl[]
-  group_role              group_role[]
+  auth_group_role              auth_group_role[]
   module                  module?                   @relation(fields: [module_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_module_fk")
   persona                 persona                   @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "shared_role_persona_fk")
   workspace               workspace?                @relation(fields: [workspace_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_workspace_fk")

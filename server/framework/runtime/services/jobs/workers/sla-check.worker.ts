@@ -216,6 +216,7 @@ async function executeSlaAction(
       ? metaObj["sla_escalation_level"]
       : 0;
     const nextTarget = escalationChain[currentLevel] ?? escalationChain[escalationChain.length - 1];
+    if (!nextTarget) return;
 
     // Reassign if the target is a direct principal
     if (nextTarget.type === "principal") {

@@ -57,7 +57,7 @@ DO $$ BEGIN ALTER TABLE log.permission_decision_log ADD CONSTRAINT pdl_role_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE log.permission_decision_log ADD CONSTRAINT pdl_group_fk
-    FOREIGN KEY (matched_group_id) REFERENCES master.principal_group (id) ON DELETE SET NULL;
+    FOREIGN KEY (matched_group_id) REFERENCES master.auth_group (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE log.permission_decision_log ADD CONSTRAINT pdl_cc_fk
@@ -121,7 +121,7 @@ DO $$ BEGIN ALTER TABLE log.share_audit_log ADD CONSTRAINT sal_target_principal_
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE log.share_audit_log ADD CONSTRAINT sal_target_group_fk
-    FOREIGN KEY (target_group_id) REFERENCES master.principal_group (id) ON DELETE SET NULL;
+    FOREIGN KEY (target_group_id) REFERENCES master.auth_group (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE log.share_audit_log ADD CONSTRAINT sal_cc_fk

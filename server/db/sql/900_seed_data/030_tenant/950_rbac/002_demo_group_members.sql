@@ -1,9 +1,9 @@
 -- ============================================================================
 -- PRINCIPAL GROUP MEMBERS — OWNER & ADMIN ASSIGNMENTS
 -- ============================================================================
--- File:    002_demo_group_members.sql
+-- File:    002_demo_auth_group_members.sql
 -- Schema:  master
--- Tables:  group_member
+-- Tables:  auth_group_member
 --
 -- ── Design ──────────────────────────────────────────────────────────────────
 --
@@ -17,7 +17,7 @@
 --   persona=owner/manager → athyper ATHYPER-OWNER group (tenant-level)
 --   persona=admin/agent/etc → athyper ATHYPER-ADMIN group (tenant-level)
 --
--- Idempotent: TRUNCATE group_member then ON CONFLICT DO NOTHING.
+-- Idempotent: TRUNCATE auth_group_member then ON CONFLICT DO NOTHING.
 -- ============================================================================
  
 DO $members$
@@ -28,16 +28,16 @@ BEGIN
     SELECT id INTO v_athyper
     FROM master.tenant WHERE code = 'athyper' AND realm_key = 'athyper';
  
-    -- ── Step 0: Clear existing group_member rows ─────────────────────────────
-    TRUNCATE master.group_member CASCADE;
-    RAISE NOTICE '[002_demo_group_members] Cleared group_member';
+    -- ── Step 0: Clear existing auth_group_member rows ─────────────────────────────
+    TRUNCATE master.auth_group_member CASCADE;
+    RAISE NOTICE '[002_demo_auth_group_members] Cleared auth_group_member';
  
     -- ── Step 1: Assign principal system users (tenant-level, 28 users) ───────
     --
     -- *.OWNER  → <TENANT_CODE_UPPER>-OWNER group in their tenant
     -- *.ADMIN  → <TENANT_CODE_UPPER>-ADMIN group in their tenant
     --
-    INSERT INTO master.group_member (
+    INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
         joined_at, added_by, created_by
     )
@@ -48,7 +48,7 @@ BEGIN
         now(), v_su, v_su
     FROM master.principal p
     JOIN master.tenant t ON t.id = p.tenant_id
-    JOIN master.principal_group pg ON pg.tenant_id = p.tenant_id
+    JOIN master.auth_group pg ON pg.tenant_id = p.tenant_id
         AND pg.code = upper(replace(t.code, '-', '_'))
                       || CASE WHEN p.code LIKE '%.OWNER' THEN '-OWNER' ELSE '-ADMIN' END
     WHERE p.id IN (
@@ -83,14 +83,14 @@ BEGIN
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
  
-    RAISE NOTICE '[002_demo_group_members] Step 1 complete — 28 tenant-level principal users assigned';
+    RAISE NOTICE '[002_demo_auth_group_members] Step 1 complete — 28 tenant-level principal users assigned';
  
     -- ── Step 2: Assign CC-level principals (athyper, 34 users) ───────────────
     --
     -- <CC>.OWNER → <CC>-OWNER group
     -- <CC>.ADMIN → <CC>-ADMIN group
     --
-    INSERT INTO master.group_member (
+    INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
         joined_at, added_by, created_by
     )
@@ -100,7 +100,7 @@ BEGIN
         pg.id,
         now(), v_su, v_su
     FROM master.principal p
-    JOIN master.principal_group pg ON pg.tenant_id = p.tenant_id
+    JOIN master.auth_group pg ON pg.tenant_id = p.tenant_id
         AND pg.code = split_part(p.code, '.', 1)
                       || CASE WHEN p.code LIKE '%.OWNER' THEN '-OWNER' ELSE '-ADMIN' END
     WHERE p.id IN (
@@ -141,7 +141,7 @@ BEGIN
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
  
-    RAISE NOTICE '[002_demo_group_members] Step 2 complete — 34 CC-level principals assigned';
+    RAISE NOTICE '[002_demo_auth_group_members] Step 2 complete — 34 CC-level principals assigned';
  
     -- ── Step 3: Assign demo users to correct scope groups ────────────────────
     --
@@ -156,7 +156,7 @@ BEGIN
     --     auic.manager                → AUIC-ADMIN
     --     asgf.manager                → ASGF-ADMIN
     --
-    INSERT INTO master.group_member (
+    INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
         joined_at, added_by, created_by
     )
@@ -192,18 +192,18 @@ BEGIN
     ) AS v(principal_code, group_code)
     JOIN master.principal p
         ON p.tenant_id = v_athyper AND p.code = v.principal_code
-    JOIN master.principal_group pg
+    JOIN master.auth_group pg
         ON pg.tenant_id = v_athyper AND pg.code = v.group_code
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
  
-    RAISE NOTICE '[002_demo_group_members] Step 3 complete — demo users assigned to correct scope groups';
+    RAISE NOTICE '[002_demo_auth_group_members] Step 3 complete — demo users assigned to correct scope groups';
  
     -- ── Step 4: Assign named/demo tenant persona users to their ADMIN groups ────
     --
     -- One persona user per tenant (from 005_named_tenant_principals.sql).
     -- Each is assigned to the ADMIN group of their own tenant.
     --
-    INSERT INTO master.group_member (
+    INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
         joined_at, added_by, created_by
     )
@@ -232,12 +232,12 @@ BEGIN
         ON t.code = v.tenant_code AND t.realm_key = 'athyper'
     JOIN master.principal p
         ON p.tenant_id = t.id AND p.code = v.principal_code
-    JOIN master.principal_group pg
+    JOIN master.auth_group pg
         ON pg.tenant_id = t.id AND pg.code = v.group_code
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
  
-    RAISE NOTICE '[002_demo_group_members] Step 4 complete — 13 named/demo tenant persona users assigned';
-    RAISE NOTICE '[002_demo_group_members] Complete';
+    RAISE NOTICE '[002_demo_auth_group_members] Step 4 complete — 13 named/demo tenant persona users assigned';
+    RAISE NOTICE '[002_demo_auth_group_members] Complete';
  
 END $members$;
  
@@ -246,8 +246,8 @@ SELECT
     t.code                   AS tenant,
     pg.code                  AS "group",
     count(gm.principal_id)   AS member_count
-FROM master.group_member gm
-JOIN master.principal_group pg ON pg.id = gm.group_id
+FROM master.auth_group_member gm
+JOIN master.auth_group pg ON pg.id = gm.group_id
 JOIN master.tenant t           ON t.id  = gm.tenant_id
 WHERE t.code <> 'system'
 GROUP BY t.code, pg.code

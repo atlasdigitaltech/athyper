@@ -161,7 +161,7 @@ export default function GovernanceSetupPage() {
       {/* Domain filter */}
       <div className="mb-4 flex flex-wrap gap-1">
         {["", ...DOMAINS].map((d) => (
-          <Button key={d} size="sm" variant={domainFilter === d ? "default" : "ghost"} className="h-7 text-xs"
+          <Button key={d} size="sm" variant={domainFilter === d ? "primary" : "ghost"} className="h-7 text-xs"
             onClick={() => setDomainFilter(d)}>
             {d === "" ? "All" : d}
           </Button>

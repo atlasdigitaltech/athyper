@@ -1,5 +1,5 @@
-import { type HTMLAttributes } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { cva } from "class-variance-authority";
 import { cn } from "@athyper/theme/utils";
 
 const badgeVariants = cva(
@@ -23,9 +23,20 @@ const badgeVariants = cva(
   },
 );
 
-export interface BadgeProps
-  extends HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "outline"
+  | "success"
+  | "warning"
+  | "destructive"
+  | "info"
+  | "muted";
+
+export interface BadgeProps extends ComponentPropsWithoutRef<"div"> {
+  variant?: BadgeVariant | null;
+  children?: ReactNode;
+}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;

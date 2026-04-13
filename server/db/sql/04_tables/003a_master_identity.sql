@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS master.principal_profile (
     disabled_date   timestamptz,
 
     -- Table-specific (IdP snapshot — audit only, non-canonical)
-    -- DEPRECATED (Phase 4): keycloak_* and idp_snapshot migrated to principal_auth_binding
+    -- DEPRECATED (Phase 4): keycloak_* and idp_snapshot migrated to principal_identity_binding
     idp_snapshot    jsonb,
     attributes      jsonb,
 
@@ -194,11 +194,11 @@ COMMENT ON COLUMN master.principal_profile.employee_id IS
     'Optional FK bridge to master.employee. Allows principal -> employee '
     'navigation without joining through principal_id. NULL for non-employees.';
 
--- §3b principal_auth_binding — dedicated IdP/Keycloak shadow (Phase 4)
+-- §3b principal_identity_binding — dedicated IdP/Keycloak shadow (Phase 4)
 -- One row per (principal, provider). Multi-IdP ready.
 -- Separated from principal_profile: "who is this person in the product"
 -- vs "how is this actor represented in IAM".
-CREATE TABLE IF NOT EXISTS master.principal_auth_binding (
+CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
@@ -247,32 +247,32 @@ CREATE TABLE IF NOT EXISTS master.principal_auth_binding (
     updated_at              timestamptz,
     updated_by              uuid,
 
-    CONSTRAINT pab_pkey                 PRIMARY KEY (id),
-    CONSTRAINT pab_principal_provider_uq UNIQUE (tenant_id, principal_id, provider_code),
-    CONSTRAINT pab_subject_provider_uq  UNIQUE (tenant_id, provider_code, subject_id),
-    CONSTRAINT pab_provider_code_chk    CHECK (provider_code IN (
+    CONSTRAINT pib_pkey                 PRIMARY KEY (id),
+    CONSTRAINT pib_principal_provider_uq UNIQUE (tenant_id, principal_id, provider_code),
+    CONSTRAINT pib_subject_provider_uq  UNIQUE (tenant_id, provider_code, subject_id),
+    CONSTRAINT pib_provider_code_chk    CHECK (provider_code IN (
         'keycloak', 'azure_ad', 'okta', 'google',
         'saml_generic', 'oidc_generic'
     )),
-    CONSTRAINT pab_sync_status_chk      CHECK (sync_status IN (
+    CONSTRAINT pib_sync_status_chk      CHECK (sync_status IN (
         'pending', 'synced', 'drift', 'error', 'disabled'
     )),
-    CONSTRAINT pab_subject_nonempty     CHECK (btrim(subject_id) <> ''),
-    CONSTRAINT pab_sync_retry_chk       CHECK (sync_retry_count >= 0)
+    CONSTRAINT pib_subject_nonempty     CHECK (btrim(subject_id) <> ''),
+    CONSTRAINT pib_sync_retry_chk       CHECK (sync_retry_count >= 0)
 );
 
-COMMENT ON TABLE master.principal_auth_binding IS
+COMMENT ON TABLE master.principal_identity_binding IS
     'IdP/Keycloak shadow table. One row per (principal, provider). '
     'Separated from principal_profile: "who is this person in the product" '
     'vs "how is this actor represented in IAM". Multi-IdP ready.';
-COMMENT ON COLUMN master.principal_auth_binding.provider_code IS
+COMMENT ON COLUMN master.principal_identity_binding.provider_code IS
     'Identity provider code. Sealed enum (inline CHECK). Adding a new IdP '
     'requires code changes in the sync adapter — not business-extensible.';
-COMMENT ON COLUMN master.principal_auth_binding.subject_id IS
+COMMENT ON COLUMN master.principal_identity_binding.subject_id IS
     'IdP-specific principal identifier (Keycloak UUID, Azure OID, etc.).';
-COMMENT ON COLUMN master.principal_auth_binding.idp_snapshot IS
+COMMENT ON COLUMN master.principal_identity_binding.idp_snapshot IS
     'Full user representation JSON from provider API. Non-canonical — audit only.';
-COMMENT ON COLUMN master.principal_auth_binding.sync_status IS
+COMMENT ON COLUMN master.principal_identity_binding.sync_status IS
     'Sync health. Sealed protocol enum (inline CHECK): '
     'pending, synced, drift, error, disabled.';
 
@@ -912,11 +912,9 @@ CREATE TABLE IF NOT EXISTS master.company_code_access (
     created_by      uuid              NOT NULL,
 
     CONSTRAINT company_code_access_pkey PRIMARY KEY (id),
-    CONSTRAINT company_code_access_uq   UNIQUE (tenant_id, entity_type, entity_id, company_code_id),
-    CONSTRAINT cca_entity_type_chk   CHECK (entity_type IN (
-        'supplier','customer','item','chart_of_accounts',
-        'cost_centre','project','bank_account'
-    ))
+    CONSTRAINT company_code_access_uq   UNIQUE (tenant_id, entity_type, entity_id, company_code_id)
+    -- entity_type validated by trg_cca_entity_type_lookup trigger (§9 in 09_triggers/)
+    -- using lookup domain master.company_code_access_entity_type (extensible)
 );
 
 COMMENT ON TABLE master.company_code_access IS
@@ -930,12 +928,12 @@ COMMENT ON TABLE master.company_code_access IS
 
 
 -- ============================================================================
--- §18  principal_group — RBAC groups (replaces association schema groups)
+-- §18  auth_group — RBAC groups (replaces association schema groups)
 -- ============================================================================
--- Reuses the existing principal_group table name from the codebase.
+-- Reuses the existing auth_group table name from the codebase.
 -- This is the GROUP entity itself (not membership).
 
-CREATE TABLE IF NOT EXISTS master.principal_group (
+CREATE TABLE IF NOT EXISTS master.auth_group (
     -- Identity
     id              uuid              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid              NOT NULL,
@@ -962,30 +960,30 @@ CREATE TABLE IF NOT EXISTS master.principal_group (
     updated_at      timestamptz,
     updated_by      uuid,
 
-    CONSTRAINT principal_group_pkey           PRIMARY KEY (id),
-    CONSTRAINT principal_group_tenant_id_uq   UNIQUE (tenant_id, id),
-    CONSTRAINT principal_group_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT principal_group_code_nonempty  CHECK (btrim(code) <> ''),
-    CONSTRAINT principal_group_name_nonempty  CHECK (btrim(name) <> ''),
-    CONSTRAINT principal_group_status_chk     CHECK (status IN ('active','suspended','deprecated'))
+    CONSTRAINT auth_group_pkey           PRIMARY KEY (id),
+    CONSTRAINT auth_group_tenant_id_uq   UNIQUE (tenant_id, id),
+    CONSTRAINT auth_group_tenant_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT auth_group_code_nonempty  CHECK (btrim(code) <> ''),
+    CONSTRAINT auth_group_name_nonempty  CHECK (btrim(name) <> ''),
+    CONSTRAINT auth_group_status_chk     CHECK (status IN ('active','suspended','deprecated'))
 );
 
-COMMENT ON TABLE master.principal_group IS
-  'RBAC group entity. Groups aggregate roles via group_role. '
-  'Principals are members via group_member. '
+COMMENT ON TABLE master.auth_group IS
+  'RBAC group entity. Groups aggregate roles via auth_group_role. '
+  'Principals are members via auth_group_member. '
   'is_system = true means standard group, immutable by tenant.';
 
-COMMENT ON COLUMN master.principal_group.is_self_service_eligible IS
+COMMENT ON COLUMN master.auth_group.is_self_service_eligible IS
   'When true, principals may request membership in this group via a self-service '
   'profile update request (UPUPR). False by default — tenant admins explicitly '
   'flag groups as self-service eligible. Checked by UPUPR iam_group scope validation.';
 
 
 -- ============================================================================
--- §19  group_role — role assignments to groups (scope lives here)
+-- §19  auth_group_role — role assignments to groups (two-dimension scope lives here)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS master.group_role (
+CREATE TABLE IF NOT EXISTS master.auth_group_role (
     -- Identity
     id              uuid              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid              NOT NULL,
@@ -994,9 +992,13 @@ CREATE TABLE IF NOT EXISTS master.group_role (
     group_id        uuid              NOT NULL,
     role_id         uuid              NOT NULL,
 
-    -- Table-specific (scope — MANDATORY, this is where all scope config lives)
-    scope           text              NOT NULL,
-    company_code_id uuid,
+    -- Table-specific (visibility scope — row-level data filtering)
+    visibility_scope text             NOT NULL,
+
+    -- Table-specific (assignment scope — organizational boundary)
+    assignment_scope_type    text     NOT NULL DEFAULT 'tenant',
+    assignment_scope_ref_id  uuid,
+    include_descendants      boolean  NOT NULL DEFAULT true,
 
     -- Table-specific (lifecycle)
     expires_at      timestamptz,
@@ -1015,23 +1017,65 @@ CREATE TABLE IF NOT EXISTS master.group_role (
     updated_at      timestamptz,
     updated_by      uuid,
 
-    CONSTRAINT group_role_pkey     PRIMARY KEY (id),
-    CONSTRAINT group_role_uq       UNIQUE (tenant_id, group_id, role_id),
-    CONSTRAINT gr_scope_chk        CHECK (scope IN ('all','own','team','ou_l1')),
-    CONSTRAINT gr_status_chk       CHECK (status IN ('active','suspended'))
+    CONSTRAINT auth_group_role_pkey     PRIMARY KEY (id),
+
+    -- Uniqueness: same role can appear at different assignment scopes on one group
+    CONSTRAINT auth_group_role_uq       UNIQUE NULLS NOT DISTINCT (
+        tenant_id, group_id, role_id,
+        assignment_scope_type, assignment_scope_ref_id, include_descendants
+    ),
+
+    -- Visibility scope: row-level filtering
+    CONSTRAINT agr_visibility_scope_chk CHECK (visibility_scope IN ('all', 'own', 'team')),
+
+    -- Assignment scope: organizational boundary
+    CONSTRAINT agr_assignment_scope_chk CHECK (
+        assignment_scope_type IN ('tenant', 'company_code', 'legal_entity')
+    ),
+
+    -- Ref consistency: tenant → NULL, company_code/legal_entity → NOT NULL
+    CONSTRAINT agr_assignment_ref_chk CHECK (
+        (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
+     OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+    ),
+
+    -- include_descendants only meaningful for legal_entity;
+    -- must be true for tenant and company_code (irrelevant but enforced)
+    CONSTRAINT agr_descendants_chk CHECK (
+        assignment_scope_type = 'legal_entity'
+        OR include_descendants = true
+    ),
+
+    CONSTRAINT agr_status_chk       CHECK (status IN ('active', 'suspended'))
 );
 
-COMMENT ON TABLE master.group_role IS
-  'Links roles to groups with MANDATORY scope. This is the single location where '
-  'scope (all/own/team) is configured. '
-  'company_code_id optionally restricts scope to a specific company code.';
+COMMENT ON TABLE master.auth_group_role IS
+    'Links roles to groups with two orthogonal scope dimensions: '
+    'visibility_scope (all/own/team) controls row-level data filtering. '
+    'assignment_scope_type + assignment_scope_ref_id controls the organizational '
+    'boundary (tenant/company_code/legal_entity) in which the role applies. '
+    'include_descendants controls legal_entity subtree traversal.';
+COMMENT ON COLUMN master.auth_group_role.visibility_scope IS
+    'Row-level data visibility: all (every record), own (created_by = principal), '
+    'team (created_by in principal''s team).';
+COMMENT ON COLUMN master.auth_group_role.assignment_scope_type IS
+    'Organizational boundary: tenant (all CCs), company_code (single CC), '
+    'legal_entity (CCs under an LE, subtree per include_descendants).';
+COMMENT ON COLUMN master.auth_group_role.assignment_scope_ref_id IS
+    'FK to master.company_code.id or master.legal_entity.id depending on '
+    'assignment_scope_type. NULL when assignment_scope_type = tenant. '
+    'Validated by trg_validate_assignment_scope trigger (tenant-safe).';
+COMMENT ON COLUMN master.auth_group_role.include_descendants IS
+    'Only meaningful for legal_entity scope. true = full descendant subtree, '
+    'false = direct LE companies only. Must be true for tenant and company_code.';
 
 
 -- ============================================================================
--- §20  group_member — principal membership in groups
+-- §20  auth_group_member — principal membership in groups
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS master.group_member (
+CREATE TABLE IF NOT EXISTS master.auth_group_member (
     -- Identity
     id              uuid              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid              NOT NULL,
@@ -1048,11 +1092,11 @@ CREATE TABLE IF NOT EXISTS master.group_member (
     created_at      timestamptz       NOT NULL DEFAULT now(),
     created_by      uuid              NOT NULL,
 
-    CONSTRAINT group_member_pkey PRIMARY KEY (id),
-    CONSTRAINT group_member_uq   UNIQUE (tenant_id, principal_id, group_id)
+    CONSTRAINT auth_group_member_pkey PRIMARY KEY (id),
+    CONSTRAINT auth_group_member_uq   UNIQUE (tenant_id, principal_id, group_id)
 );
 
-COMMENT ON TABLE master.group_member IS
+COMMENT ON TABLE master.auth_group_member IS
   'Links principals to groups. A principal inherits all roles (and their scopes) '
   'from every group they belong to.';
 
@@ -1136,10 +1180,10 @@ COMMENT ON TABLE master.team IS
 
 
 -- ============================================================================
--- §23  team_principal — team membership
+-- §23  team_member — team membership
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS master.team_principal (
+CREATE TABLE IF NOT EXISTS master.team_member (
     -- Identity
     id              uuid              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid              NOT NULL,
@@ -1157,18 +1201,18 @@ CREATE TABLE IF NOT EXISTS master.team_principal (
     created_at      timestamptz       NOT NULL DEFAULT now(),
     created_by      uuid              NOT NULL,
 
-    CONSTRAINT team_principal_pkey       PRIMARY KEY (id)
+    CONSTRAINT team_member_pkey       PRIMARY KEY (id)
     -- Patch 001 Fix 2: UNIQUE (tenant_id, team_id, principal_id) DEFERRABLE removed.
-    -- Replaced by team_principal_active_uidx partial unique index (left_at IS NULL only)
+    -- Replaced by team_member_active_uidx partial unique index (left_at IS NULL only)
     -- so members who leave and re-join are not blocked by historical rows.
 );
 
 -- Patch 002 Fix 2: updated to reflect patch 001 change — DEFERRABLE UNIQUE removed,
--- replaced by partial index team_principal_active_uidx (WHERE left_at IS NULL).
-COMMENT ON TABLE master.team_principal IS
+-- replaced by partial index team_member_active_uidx (WHERE left_at IS NULL).
+COMMENT ON TABLE master.team_member IS
     'Team membership. left_at preserved for history. '
     'Active members: left_at IS NULL. '
-    'Uniqueness enforced by partial index team_principal_active_uidx '
+    'Uniqueness enforced by partial index team_member_active_uidx '
     '(WHERE left_at IS NULL) — allows re-joining after leaving.';
 
 
@@ -1192,9 +1236,14 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
     permission_id   uuid              NOT NULL,
     effect          text              NOT NULL,
 
-    -- Table-specific (optional scope — allow grants only)
-    scope           text,
-    company_code_id uuid,
+    -- Table-specific (optional visibility scope — allow grants only)
+    visibility_scope text,
+
+    -- Table-specific (optional assignment scope)
+    assignment_scope_type    text,
+    assignment_scope_ref_id  uuid,
+
+    -- Table-specific (resource-level grant — optional)
     resource_type   text,
     resource_id     uuid,
 
@@ -1222,9 +1271,21 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
     status_changed_by   uuid,
 
     CONSTRAINT access_grant_pkey PRIMARY KEY (id),
-    CONSTRAINT ag_effect_chk     CHECK (effect IN ('allow','deny')),
-    CONSTRAINT ag_scope_chk      CHECK (scope IS NULL OR scope IN ('all','own','team')),
-    CONSTRAINT ag_status_chk     CHECK (status IN ('active','revoked','expired')),
+    CONSTRAINT ag_effect_chk     CHECK (effect IN ('allow', 'deny')),
+    CONSTRAINT ag_visibility_scope_chk CHECK (
+        visibility_scope IS NULL OR visibility_scope IN ('all', 'own', 'team')
+    ),
+    CONSTRAINT ag_assignment_scope_chk CHECK (
+        assignment_scope_type IS NULL
+     OR assignment_scope_type IN ('tenant', 'company_code', 'legal_entity')
+    ),
+    CONSTRAINT ag_assignment_ref_chk CHECK (
+        assignment_scope_type IS NULL
+     OR (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
+     OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+    ),
+    CONSTRAINT ag_status_chk     CHECK (status IN ('active', 'revoked', 'expired')),
     -- Exactly one subject
     CONSTRAINT ag_one_subject_chk
         CHECK (num_nonnulls(role_id, group_id, principal_id) = 1),
@@ -1234,10 +1295,13 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
 );
 
 COMMENT ON TABLE master.access_grant IS
-  'Runtime allow/deny overrides. Deny always beats allow (SoD enforcement). '
-  'Exactly one subject per row. Deny restricted to principal-level only. '
-  'updated_at/by stamped by trg_access_grant_updated_at; '
-  'status_changed_at/by stamped by trg_access_grant_status_changed.';
+    'Runtime allow/deny overrides. Deny always beats allow (SoD enforcement). '
+    'visibility_scope: optional row-level filter for allow grants. '
+    'assignment_scope_type: optional org boundary. NULL = unscoped (applies regardless of CC). '
+    'legal_entity scope on access_grant always means full descendant subtree '
+    '(no include_descendants column — keeps override table simpler). '
+    'updated_at/by stamped by trg_access_grant_updated_at; '
+    'status_changed_at/by stamped by trg_access_grant_status_changed.';
 
 
 -- ============================================================================

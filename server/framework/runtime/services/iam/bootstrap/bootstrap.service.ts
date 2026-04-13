@@ -3,20 +3,20 @@
  *
  * Resolves the complete set of tenants and entities (company codes) accessible
  * to a principal, using the KC JWT org aliases as the tenant list and the DB
- * group_role model to resolve company_code access within each tenant.
+ * auth_group_role model to resolve company_code access within each tenant.
  *
  * Cache key: `bootstrap:{sub}:{tenant_hash}` — TTL 300 s
  * tenant_hash = short hash of sorted orgAliases (cache busts when org set changes)
  *
  * DB resolution per tenant:
- *   principal_auth_binding → principal
- *   group_member → group_role → shared.role (persona_id, module_id)
+ *   principal_identity_binding → principal
+ *   auth_group_member → auth_group_role → shared.role (persona_id, module_id)
  *   CTE: scope_all=true → all active company_codes; else explicit company_code_id bindings
  *   delegation_grant → delegation_count (non-revoked, non-expired, across all tenants)
  *
  * Schema note:
- *   - `group_role.scope = 'all'` maps to spec's `scope_all = true`
- *   - `group_role.company_code_id` (nullable FK) maps to spec's `group_role_company_code` junction
+ *   - `auth_group_role.scope = 'all'` maps to spec's `scope_all = true`
+ *   - `auth_group_role.company_code_id` (nullable FK) maps to spec's `auth_group_role_company_code` junction
  *   - `shared.role` is the canonical role table (not `master.role`, which was dropped)
  */
 
@@ -137,7 +137,7 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
       if (!tenantRow) continue;
 
       const principalRow = await db
-        .selectFrom("master.principal_auth_binding as pab")
+        .selectFrom("master.principal_identity_binding as pab")
         .select("pab.principal_id")
         .where("pab.subject_id", "=", sub)
         .where("pab.provider_code", "=", "keycloak")
@@ -231,7 +231,7 @@ async function resolveTenant(
 
   // Resolve the principal in this tenant
   const principalRow = await db
-    .selectFrom("master.principal_auth_binding as pab")
+    .selectFrom("master.principal_identity_binding as pab")
     .innerJoin("master.principal as p", (join) =>
       join.onRef("p.id", "=", "pab.principal_id").on("p.tenant_id", "=", tenantId),
     )
@@ -247,7 +247,7 @@ async function resolveTenant(
   // ── Entity CTE via raw SQL ─────────────────────────────────────────────────
   // Adapted from spec query:
   //   - scope_all = (scope = 'all')
-  //   - group_role_company_code → group_role.company_code_id directly
+  //   - auth_group_role_company_code → auth_group_role.company_code_id directly
   //   - master.role → shared.role
   //
   // Returns one row per {company_code, persona} for this principal in this tenant.
@@ -262,13 +262,13 @@ async function resolveTenant(
   }>`
     WITH principal_roles AS (
       SELECT
-        gr.id            AS group_role_id,
+        gr.id            AS auth_group_role_id,
         (gr.scope = 'all') AS scope_all,
         r.persona_id,
         r.module_id,
         gr.company_code_id
-      FROM master.group_member  gm
-      JOIN master.group_role    gr
+      FROM master.auth_group_member  gm
+      JOIN master.auth_group_role    gr
         ON  gr.group_id   = gm.group_id
         AND gr.tenant_id  = gm.tenant_id
         AND gr.is_active  = true

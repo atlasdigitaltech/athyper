@@ -85,7 +85,7 @@ export function MappingWorkbenchView() {
         {["all", "direct", "merge", "split"].map((t) => (
           <Button
             key={t}
-            variant={typeFilter === t ? "default" : "outline"}
+            variant={typeFilter === t ? "primary" : "outline"}
             size="sm"
             className="h-7 text-[10px] px-2.5"
             onClick={() => setTypeFilter(t)}
@@ -94,7 +94,7 @@ export function MappingWorkbenchView() {
           </Button>
         ))}
         <Button
-          variant={showExpired ? "default" : "outline"}
+          variant={showExpired ? "primary" : "outline"}
           size="sm"
           className="h-7 text-[10px] px-2.5"
           onClick={() => setShowExpired(!showExpired)}

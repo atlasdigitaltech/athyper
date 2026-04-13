@@ -70,7 +70,7 @@ async function resolveCompanyCodeId(db: Kysely<any>, xOrg: string, tenantId: str
     .selectFrom("master.company_code as cc")
     .select("cc.id")
     .where("cc.tenant_id", "=", tenantId)
-    .where("cc.status" as never, "=", "active")
+    .where("cc.status" as never, "=", "active" as never)
     .orderBy("cc.code" as never, "asc")
     .executeTakeFirst();
 
@@ -247,8 +247,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       let countQuery = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
 
       if (tenantId) {
-        listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId);
-        countQuery = countQuery.where("tenant_id" as never, "=", tenantId);
+        listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId as never);
+        countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
       }
 
       const [rows, countResult, fieldMap] = await Promise.all([
@@ -315,8 +315,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
 
       const [row, fieldMap] = await Promise.all([
         db.selectFrom(fullTable).selectAll()
-          .where("id" as never, "=", id)
-          .where("tenant_id" as never, "=", tenantId)
+          .where("id" as never, "=", id as never)
+          .where("tenant_id" as never, "=", tenantId as never)
           .executeTakeFirst(),
         resolveFieldMap(db, entity.name as string),
       ]);
@@ -341,8 +341,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         lineRows = await db
           .selectFrom(linesTable)
           .selectAll()
-          .where(linesFkCol as never, "=", id)
-          .where("tenant_id" as never, "=", tenantId)
+          .where(linesFkCol as never, "=", id as never)
+          .where("tenant_id" as never, "=", tenantId as never)
           .orderBy("line_no" as never, "asc")
           .execute() as Record<string, unknown>[];
       } catch (e) {
@@ -502,8 +502,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const row = await db
         .updateTable(fullTable)
         .set({ status: body.to_status, updated_at: new Date().toISOString() } as never)
-        .where("id" as never, "=", id)
-        .where("tenant_id" as never, "=", tenantId)
+        .where("id" as never, "=", id as never)
+        .where("tenant_id" as never, "=", tenantId as never)
         .returningAll()
         .executeTakeFirst();
 

@@ -311,55 +311,55 @@ CREATE POLICY admin_write   ON master.company_code_access FOR ALL TO athyperadmi
 -- shared.role has no RLS — it is a platform-level read-only reference table.
 -- All authenticated roles can read; writes are admin-only via schema grants.
 
--- ── principal_group ──
-ALTER TABLE master.principal_group ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.principal_group FORCE ROW LEVEL SECURITY;
+-- ── auth_group ──
+ALTER TABLE master.auth_group ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.auth_group FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_read   ON master.principal_group;
-DROP POLICY IF EXISTS tenant_insert ON master.principal_group;
-DROP POLICY IF EXISTS tenant_update ON master.principal_group;
-DROP POLICY IF EXISTS admin_read    ON master.principal_group;
-DROP POLICY IF EXISTS admin_write   ON master.principal_group;
+DROP POLICY IF EXISTS tenant_read   ON master.auth_group;
+DROP POLICY IF EXISTS tenant_insert ON master.auth_group;
+DROP POLICY IF EXISTS tenant_update ON master.auth_group;
+DROP POLICY IF EXISTS admin_read    ON master.auth_group;
+DROP POLICY IF EXISTS admin_write   ON master.auth_group;
 
-CREATE POLICY tenant_read   ON master.principal_group FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.principal_group FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.principal_group FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.principal_group FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.principal_group FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY tenant_read   ON master.auth_group FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.auth_group FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.auth_group FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.auth_group FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.auth_group FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
--- ── group_role ──
-ALTER TABLE master.group_role ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.group_role FORCE ROW LEVEL SECURITY;
+-- ── auth_group_role ──
+ALTER TABLE master.auth_group_role ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.auth_group_role FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_read   ON master.group_role;
-DROP POLICY IF EXISTS tenant_insert ON master.group_role;
-DROP POLICY IF EXISTS tenant_update ON master.group_role;
-DROP POLICY IF EXISTS tenant_delete ON master.group_role;
-DROP POLICY IF EXISTS admin_read    ON master.group_role;
-DROP POLICY IF EXISTS admin_write   ON master.group_role;
+DROP POLICY IF EXISTS tenant_read   ON master.auth_group_role;
+DROP POLICY IF EXISTS tenant_insert ON master.auth_group_role;
+DROP POLICY IF EXISTS tenant_update ON master.auth_group_role;
+DROP POLICY IF EXISTS tenant_delete ON master.auth_group_role;
+DROP POLICY IF EXISTS admin_read    ON master.auth_group_role;
+DROP POLICY IF EXISTS admin_write   ON master.auth_group_role;
 
-CREATE POLICY tenant_read   ON master.group_role FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.group_role FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.group_role FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.group_role FOR DELETE USING (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.group_role FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.group_role FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY tenant_read   ON master.auth_group_role FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.auth_group_role FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.auth_group_role FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.auth_group_role FOR DELETE USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.auth_group_role FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.auth_group_role FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
--- ── group_member ──
-ALTER TABLE master.group_member ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.group_member FORCE ROW LEVEL SECURITY;
+-- ── auth_group_member ──
+ALTER TABLE master.auth_group_member ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.auth_group_member FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_read   ON master.group_member;
-DROP POLICY IF EXISTS tenant_insert ON master.group_member;
-DROP POLICY IF EXISTS tenant_delete ON master.group_member;
-DROP POLICY IF EXISTS admin_read    ON master.group_member;
-DROP POLICY IF EXISTS admin_write   ON master.group_member;
+DROP POLICY IF EXISTS tenant_read   ON master.auth_group_member;
+DROP POLICY IF EXISTS tenant_insert ON master.auth_group_member;
+DROP POLICY IF EXISTS tenant_delete ON master.auth_group_member;
+DROP POLICY IF EXISTS admin_read    ON master.auth_group_member;
+DROP POLICY IF EXISTS admin_write   ON master.auth_group_member;
 
-CREATE POLICY tenant_read   ON master.group_member FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.group_member FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.group_member FOR DELETE USING (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.group_member FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.group_member FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY tenant_read   ON master.auth_group_member FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.auth_group_member FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.auth_group_member FOR DELETE USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.auth_group_member FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.auth_group_member FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 -- ── principal_persona ──
 ALTER TABLE master.principal_persona ENABLE ROW LEVEL SECURITY;
@@ -393,21 +393,21 @@ CREATE POLICY tenant_update ON master.team FOR UPDATE USING (tenant_id = shared.
 CREATE POLICY admin_read    ON master.team FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.team FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
--- ── team_principal ──
-ALTER TABLE master.team_principal ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.team_principal FORCE ROW LEVEL SECURITY;
+-- ── team_member ──
+ALTER TABLE master.team_member ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.team_member FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_read   ON master.team_principal;
-DROP POLICY IF EXISTS tenant_insert ON master.team_principal;
-DROP POLICY IF EXISTS tenant_delete ON master.team_principal;
-DROP POLICY IF EXISTS admin_read    ON master.team_principal;
-DROP POLICY IF EXISTS admin_write   ON master.team_principal;
+DROP POLICY IF EXISTS tenant_read   ON master.team_member;
+DROP POLICY IF EXISTS tenant_insert ON master.team_member;
+DROP POLICY IF EXISTS tenant_delete ON master.team_member;
+DROP POLICY IF EXISTS admin_read    ON master.team_member;
+DROP POLICY IF EXISTS admin_write   ON master.team_member;
 
-CREATE POLICY tenant_read   ON master.team_principal FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.team_principal FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.team_principal FOR DELETE USING (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.team_principal FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.team_principal FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY tenant_read   ON master.team_member FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.team_member FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.team_member FOR DELETE USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.team_member FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.team_member FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 -- ── access_grant ──
 ALTER TABLE master.access_grant ENABLE ROW LEVEL SECURITY;
@@ -1516,15 +1516,15 @@ CREATE POLICY admin_read    ON master.payment_method FOR SELECT TO athyperadmin 
 CREATE POLICY admin_write   ON master.payment_method FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 
--- ── principal_auth_binding ──────────────────────────────────────────────────
-ALTER TABLE master.principal_auth_binding ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.principal_auth_binding FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON master.principal_auth_binding;
-DROP POLICY IF EXISTS admin_read   ON master.principal_auth_binding;
-DROP POLICY IF EXISTS admin_write  ON master.principal_auth_binding;
-CREATE POLICY tenant_read ON master.principal_auth_binding
+-- ── principal_identity_binding ──────────────────────────────────────────────────
+ALTER TABLE master.principal_identity_binding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.principal_identity_binding FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON master.principal_identity_binding;
+DROP POLICY IF EXISTS admin_read   ON master.principal_identity_binding;
+DROP POLICY IF EXISTS admin_write  ON master.principal_identity_binding;
+CREATE POLICY tenant_read ON master.principal_identity_binding
     FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_read ON master.principal_auth_binding
+CREATE POLICY admin_read ON master.principal_identity_binding
     FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write ON master.principal_auth_binding
+CREATE POLICY admin_write ON master.principal_identity_binding
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

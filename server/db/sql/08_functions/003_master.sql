@@ -1575,27 +1575,32 @@ DROP FUNCTION IF EXISTS master.trg_project_ou_lifecycle();
 -- ============================================================================
 
 -- ── derive_effective_roles ──────────────────────────────────
--- Returns all role IDs and their scopes for a principal from group memberships.
+-- Returns all role assignments with two-dimension scope for a principal.
 
--- Drop old version to allow return-type change (ou_scope_id → company_code_id)
+-- Drop old version to allow return-type change (scope/company_code_id → two-dimension model)
 DROP FUNCTION IF EXISTS master.derive_effective_roles(uuid, uuid);
 CREATE OR REPLACE FUNCTION master.derive_effective_roles(
     p_tenant_id    uuid,
     p_principal_id uuid
 ) RETURNS TABLE (
-    role_id          uuid,
-    scope            text,
-    company_code_id  uuid,
-    source_group     uuid
+    role_id                    uuid,
+    visibility_scope           text,
+    assignment_scope_type      text,
+    assignment_scope_ref_id    uuid,
+    include_descendants        boolean,
+    source_group               uuid
 ) LANGUAGE sql STABLE PARALLEL SAFE
-SET search_path = master, pg_catalog AS $$
+SET search_path = master, pg_catalog
+AS $$
     SELECT
         gr.role_id,
-        gr.scope,
-        gr.company_code_id,
+        gr.visibility_scope,
+        gr.assignment_scope_type,
+        gr.assignment_scope_ref_id,
+        gr.include_descendants,
         pgm.group_id AS source_group
-    FROM master.group_member pgm
-    JOIN master.group_role gr
+    FROM master.auth_group_member pgm
+    JOIN master.auth_group_role gr
         ON gr.group_id  = pgm.group_id
        AND gr.tenant_id = pgm.tenant_id
        AND gr.status    = 'active'
@@ -1605,8 +1610,9 @@ SET search_path = master, pg_catalog AS $$
 $$;
 
 COMMENT ON FUNCTION master.derive_effective_roles IS
-    'Returns all role IDs and their scopes for a principal from their group memberships. '
-    'Filters out expired and inactive group_role assignments.';
+    'Returns all role assignments with two-dimension scope for a principal. '
+    'visibility_scope + assignment_scope_type/ref_id/include_descendants. '
+    'Filters out expired and inactive auth_group_role assignments.';
 
 
 -- ── check_permission ────────────────────────────────────────
@@ -1661,14 +1667,14 @@ BEGIN
 
     -- Step 2: Get principal's groups and roles
     SELECT ARRAY_AGG(DISTINCT gr.role_id) INTO v_role_ids
-    FROM master.group_member pgm
-    JOIN master.group_role gr ON gr.group_id = pgm.group_id
+    FROM master.auth_group_member pgm
+    JOIN master.auth_group_role gr ON gr.group_id = pgm.group_id
       AND gr.tenant_id = pgm.tenant_id AND gr.status = 'active'
       AND (gr.expires_at IS NULL OR gr.expires_at > now())
     WHERE pgm.tenant_id = p_tenant_id AND pgm.principal_id = p_principal_id;
 
     SELECT ARRAY_AGG(DISTINCT group_id) INTO v_group_ids
-    FROM master.group_member
+    FROM master.auth_group_member
     WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id;
 
     -- Step 3: Check persona_permission (base RBAC)
@@ -1728,35 +1734,343 @@ COMMENT ON FUNCTION master.check_permission IS
     'Returns: allow | deny | not_found | not_in_plan.';
 
 
--- ── get_effective_scope ─────────────────────────────────────
--- Returns the widest scope from all active group_role assignments for a permission.
+-- ── resolve_allowed_companies ───────────────────────────────
+-- Replaces get_effective_scope (which was lossy LIMIT 1 and conflated both scope dims).
+-- Returns the full set of company_code_ids the principal is allowed for a permission.
+-- Sources: persona (tenant-wide) + auth_group_role (scoped) + access_grant (scoped).
+-- Deny checked first.
 
--- Drop old version to allow return-type change (ou_scope_id → company_code_id)
 DROP FUNCTION IF EXISTS master.get_effective_scope(uuid, uuid, uuid);
-CREATE OR REPLACE FUNCTION master.get_effective_scope(
+
+CREATE OR REPLACE FUNCTION master.resolve_allowed_companies(
     p_tenant_id     uuid,
     p_principal_id  uuid,
     p_permission_id uuid
-) RETURNS TABLE (scope text, company_code_id uuid)
-LANGUAGE sql STABLE PARALLEL SAFE
-SET search_path = master, shared, pg_catalog AS $$
-    SELECT gr.scope, gr.company_code_id
-    FROM master.group_member pgm
-    JOIN master.group_role gr
+) RETURNS TABLE (company_code_id uuid)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = master, shared, pg_catalog
+AS $$
+BEGIN
+    -- Deny check (matches check_permission step 5)
+    IF EXISTS (
+        SELECT 1 FROM master.access_grant ag
+        WHERE ag.tenant_id     = p_tenant_id
+          AND ag.principal_id  = p_principal_id
+          AND ag.permission_id = p_permission_id
+          AND ag.effect        = 'deny'
+          AND ag.status        = 'active'
+          AND (ag.expires_at IS NULL OR ag.expires_at > now())
+    ) THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+
+    -- Source 1: persona_permission → tenant-wide
+    SELECT cc.id
+    FROM master.company_code cc
+    WHERE cc.tenant_id = p_tenant_id
+      AND cc.is_active = true
+      AND EXISTS (
+          SELECT 1
+          FROM master.principal_persona ppa
+          JOIN shared.persona_permission pp
+              ON pp.persona_id    = ppa.persona_id
+             AND pp.permission_id = p_permission_id
+             AND pp.is_granted    = true
+          WHERE ppa.tenant_id    = p_tenant_id
+            AND ppa.principal_id = p_principal_id
+            AND (ppa.expires_at IS NULL OR ppa.expires_at > now())
+      )
+
+    UNION
+
+    -- Source 2a: auth_group_role — tenant scope
+    SELECT cc.id
+    FROM master.company_code cc
+    WHERE cc.tenant_id = p_tenant_id
+      AND cc.is_active = true
+      AND EXISTS (
+          SELECT 1
+          FROM master.auth_group_member pgm
+          JOIN master.auth_group_role gr
+              ON gr.group_id  = pgm.group_id
+             AND gr.tenant_id = pgm.tenant_id
+             AND gr.status    = 'active'
+             AND (gr.expires_at IS NULL OR gr.expires_at > now())
+          JOIN shared.role r ON r.id = gr.role_id AND r.status = 'active'
+          JOIN shared.persona_permission pp
+              ON pp.persona_id    = r.persona_id
+             AND pp.permission_id = p_permission_id
+             AND pp.is_granted    = true
+          WHERE pgm.tenant_id              = p_tenant_id
+            AND pgm.principal_id           = p_principal_id
+            AND gr.assignment_scope_type   = 'tenant'
+      )
+
+    UNION
+
+    -- Source 2b: auth_group_role — company_code scope
+    SELECT gr.assignment_scope_ref_id
+    FROM master.auth_group_member pgm
+    JOIN master.auth_group_role gr
         ON gr.group_id  = pgm.group_id
        AND gr.tenant_id = pgm.tenant_id
        AND gr.status    = 'active'
        AND (gr.expires_at IS NULL OR gr.expires_at > now())
-    JOIN shared.role r ON r.id = gr.role_id
+    JOIN shared.role r ON r.id = gr.role_id AND r.status = 'active'
     JOIN shared.persona_permission pp
-        ON pp.persona_id   = r.persona_id
+        ON pp.persona_id    = r.persona_id
        AND pp.permission_id = p_permission_id
        AND pp.is_granted    = true
-    WHERE pgm.tenant_id    = p_tenant_id
-      AND pgm.principal_id = p_principal_id
+    WHERE pgm.tenant_id            = p_tenant_id
+      AND pgm.principal_id         = p_principal_id
+      AND gr.assignment_scope_type = 'company_code'
+
+    UNION
+
+    -- Source 2c: auth_group_role — legal_entity with full descendant subtree
+    SELECT sub.company_code_id
+    FROM master.auth_group_member pgm
+    JOIN master.auth_group_role gr
+        ON gr.group_id  = pgm.group_id
+       AND gr.tenant_id = pgm.tenant_id
+       AND gr.status    = 'active'
+       AND (gr.expires_at IS NULL OR gr.expires_at > now())
+    JOIN shared.role r ON r.id = gr.role_id AND r.status = 'active'
+    JOIN shared.persona_permission pp
+        ON pp.persona_id    = r.persona_id
+       AND pp.permission_id = p_permission_id
+       AND pp.is_granted    = true
+    CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(
+        p_tenant_id, gr.assignment_scope_ref_id
+    ) sub
+    WHERE pgm.tenant_id              = p_tenant_id
+      AND pgm.principal_id           = p_principal_id
+      AND gr.assignment_scope_type   = 'legal_entity'
+      AND gr.include_descendants     = true
+
+    UNION
+
+    -- Source 2d: auth_group_role — legal_entity direct companies only
+    SELECT cc.id
+    FROM master.auth_group_member pgm
+    JOIN master.auth_group_role gr
+        ON gr.group_id  = pgm.group_id
+       AND gr.tenant_id = pgm.tenant_id
+       AND gr.status    = 'active'
+       AND (gr.expires_at IS NULL OR gr.expires_at > now())
+    JOIN shared.role r ON r.id = gr.role_id AND r.status = 'active'
+    JOIN shared.persona_permission pp
+        ON pp.persona_id    = r.persona_id
+       AND pp.permission_id = p_permission_id
+       AND pp.is_granted    = true
+    JOIN master.company_code cc
+        ON cc.legal_entity_id = gr.assignment_scope_ref_id
+       AND cc.tenant_id       = p_tenant_id
+       AND cc.is_active       = true
+    WHERE pgm.tenant_id              = p_tenant_id
+      AND pgm.principal_id           = p_principal_id
+      AND gr.assignment_scope_type   = 'legal_entity'
+      AND gr.include_descendants     = false
+
+    UNION
+
+    -- Source 3a: access_grant — tenant scope
+    SELECT cc.id
+    FROM master.company_code cc
+    WHERE cc.tenant_id = p_tenant_id
+      AND cc.is_active = true
+      AND EXISTS (
+          SELECT 1 FROM master.access_grant ag
+          WHERE ag.tenant_id              = p_tenant_id
+            AND ag.permission_id          = p_permission_id
+            AND ag.effect                 = 'allow'
+            AND ag.status                 = 'active'
+            AND (ag.expires_at IS NULL OR ag.expires_at > now())
+            AND ag.assignment_scope_type  = 'tenant'
+            AND (
+                ag.principal_id = p_principal_id
+             OR ag.group_id IN (
+                    SELECT group_id FROM master.auth_group_member
+                    WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id)
+             OR ag.role_id IN (
+                    SELECT gr2.role_id FROM master.auth_group_member pgm2
+                    JOIN master.auth_group_role gr2
+                        ON gr2.group_id  = pgm2.group_id
+                       AND gr2.tenant_id = pgm2.tenant_id
+                       AND gr2.status    = 'active'
+                    WHERE pgm2.tenant_id    = p_tenant_id
+                      AND pgm2.principal_id = p_principal_id)
+            )
+      )
+
+    UNION
+
+    -- Source 3b: access_grant — company_code scope
+    SELECT ag.assignment_scope_ref_id
+    FROM master.access_grant ag
+    WHERE ag.tenant_id              = p_tenant_id
+      AND ag.permission_id          = p_permission_id
+      AND ag.effect                 = 'allow'
+      AND ag.status                 = 'active'
+      AND (ag.expires_at IS NULL OR ag.expires_at > now())
+      AND ag.assignment_scope_type  = 'company_code'
+      AND (
+          ag.principal_id = p_principal_id
+       OR ag.group_id IN (
+              SELECT group_id FROM master.auth_group_member
+              WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id)
+       OR ag.role_id IN (
+              SELECT gr2.role_id FROM master.auth_group_member pgm2
+              JOIN master.auth_group_role gr2
+                  ON gr2.group_id  = pgm2.group_id
+                 AND gr2.tenant_id = pgm2.tenant_id
+                 AND gr2.status    = 'active'
+              WHERE pgm2.tenant_id    = p_tenant_id
+                AND pgm2.principal_id = p_principal_id)
+      )
+
+    UNION
+
+    -- Source 3c: access_grant — legal_entity (always full subtree)
+    SELECT sub.company_code_id
+    FROM master.access_grant ag
+    CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(
+        p_tenant_id, ag.assignment_scope_ref_id
+    ) sub
+    WHERE ag.tenant_id              = p_tenant_id
+      AND ag.permission_id          = p_permission_id
+      AND ag.effect                 = 'allow'
+      AND ag.status                 = 'active'
+      AND (ag.expires_at IS NULL OR ag.expires_at > now())
+      AND ag.assignment_scope_type  = 'legal_entity'
+      AND (
+          ag.principal_id = p_principal_id
+       OR ag.group_id IN (
+              SELECT group_id FROM master.auth_group_member
+              WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id)
+       OR ag.role_id IN (
+              SELECT gr2.role_id FROM master.auth_group_member pgm2
+              JOIN master.auth_group_role gr2
+                  ON gr2.group_id  = pgm2.group_id
+                 AND gr2.tenant_id = pgm2.tenant_id
+                 AND gr2.status    = 'active'
+              WHERE pgm2.tenant_id    = p_tenant_id
+                AND pgm2.principal_id = p_principal_id)
+      )
+
+    UNION
+
+    -- Source 3d: access_grant — unscoped (NULL assignment_scope_type) → all CCs
+    SELECT cc.id
+    FROM master.company_code cc
+    WHERE cc.tenant_id = p_tenant_id
+      AND cc.is_active = true
+      AND EXISTS (
+          SELECT 1 FROM master.access_grant ag
+          WHERE ag.tenant_id             = p_tenant_id
+            AND ag.permission_id         = p_permission_id
+            AND ag.effect                = 'allow'
+            AND ag.status                = 'active'
+            AND (ag.expires_at IS NULL OR ag.expires_at > now())
+            AND ag.assignment_scope_type IS NULL
+            AND (
+                ag.principal_id = p_principal_id
+             OR ag.group_id IN (
+                    SELECT group_id FROM master.auth_group_member
+                    WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id)
+             OR ag.role_id IN (
+                    SELECT gr2.role_id FROM master.auth_group_member pgm2
+                    JOIN master.auth_group_role gr2
+                        ON gr2.group_id  = pgm2.group_id
+                       AND gr2.tenant_id = pgm2.tenant_id
+                       AND gr2.status    = 'active'
+                    WHERE pgm2.tenant_id    = p_tenant_id
+                      AND pgm2.principal_id = p_principal_id)
+            )
+      );
+END;
+$$;
+
+COMMENT ON FUNCTION master.resolve_allowed_companies IS
+    'Returns the full set of allowed company_code_ids for a principal + permission. '
+    'Replaces the old get_effective_scope() which was lossy (LIMIT 1) and conflated '
+    'visibility scope with assignment scope. '
+    'Evaluation: persona (tenant-wide) + auth_group_role (scoped) + access_grant (scoped). '
+    'Deny checked first. LE scope on access_grant always means full subtree.';
+
+
+-- ── get_effective_visibility_scope ──────────────────────────
+-- Returns the widest visibility_scope (all > team > own) for a principal + permission.
+-- Row-filtering dimension only. CC boundary: resolve_allowed_companies().
+
+CREATE OR REPLACE FUNCTION master.get_effective_visibility_scope(
+    p_tenant_id     uuid,
+    p_principal_id  uuid,
+    p_permission_id uuid
+) RETURNS text
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master, shared, pg_catalog
+AS $$
+    SELECT vs FROM (
+        -- Persona → always 'all'
+        SELECT 'all'::text AS vs
+        FROM master.principal_persona ppa
+        JOIN shared.persona_permission pp
+            ON pp.persona_id    = ppa.persona_id
+           AND pp.permission_id = p_permission_id
+           AND pp.is_granted    = true
+        WHERE ppa.tenant_id    = p_tenant_id
+          AND ppa.principal_id = p_principal_id
+          AND (ppa.expires_at IS NULL OR ppa.expires_at > now())
+
+        UNION ALL
+
+        -- Group role
+        SELECT gr.visibility_scope AS vs
+        FROM master.auth_group_member pgm
+        JOIN master.auth_group_role gr
+            ON gr.group_id  = pgm.group_id
+           AND gr.tenant_id = pgm.tenant_id
+           AND gr.status    = 'active'
+           AND (gr.expires_at IS NULL OR gr.expires_at > now())
+        JOIN shared.role r ON r.id = gr.role_id AND r.status = 'active'
+        JOIN shared.persona_permission pp
+            ON pp.persona_id    = r.persona_id
+           AND pp.permission_id = p_permission_id
+           AND pp.is_granted    = true
+        WHERE pgm.tenant_id    = p_tenant_id
+          AND pgm.principal_id = p_principal_id
+
+        UNION ALL
+
+        -- Access grant allows
+        SELECT ag.visibility_scope AS vs
+        FROM master.access_grant ag
+        WHERE ag.tenant_id     = p_tenant_id
+          AND ag.permission_id = p_permission_id
+          AND ag.effect        = 'allow'
+          AND ag.status        = 'active'
+          AND (ag.expires_at IS NULL OR ag.expires_at > now())
+          AND ag.visibility_scope IS NOT NULL
+          AND (
+              ag.principal_id = p_principal_id
+           OR ag.group_id IN (
+                  SELECT group_id FROM master.auth_group_member
+                  WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id)
+           OR ag.role_id IN (
+                  SELECT gr2.role_id FROM master.auth_group_member pgm2
+                  JOIN master.auth_group_role gr2
+                      ON gr2.group_id  = pgm2.group_id
+                     AND gr2.tenant_id = pgm2.tenant_id
+                     AND gr2.status    = 'active'
+                  WHERE pgm2.tenant_id    = p_tenant_id
+                    AND pgm2.principal_id = p_principal_id)
+          )
+    ) all_scopes
     ORDER BY
-        -- Widest scope first: all > team > own
-        CASE gr.scope
+        CASE vs
             WHEN 'all'  THEN 1
             WHEN 'team' THEN 2
             WHEN 'own'  THEN 3
@@ -1765,14 +2079,75 @@ SET search_path = master, shared, pg_catalog AS $$
     LIMIT 1;
 $$;
 
-COMMENT ON FUNCTION master.get_effective_scope IS
-    'Returns the widest scope for a principal+permission pair from their group_role assignments. '
-    'Joins through group_role → role → persona → persona_permission to confirm the permission is granted.';
+COMMENT ON FUNCTION master.get_effective_visibility_scope IS
+    'Returns the widest visibility_scope (all > team > own) for a principal + permission. '
+    'Row-filtering dimension only. CC boundary: resolve_allowed_companies(). '
+    'Replaces the old get_effective_scope() which conflated both dimensions.';
 
 
 -- get_ou_subtree removed: OU hierarchy was retired in the company_code migration.
--- Scope is now expressed as: all, own, team (group_role) or company_code.
 DROP FUNCTION IF EXISTS master.get_ou_subtree(uuid, uuid);
+
+
+-- ── trg_validate_assignment_scope ───────────────────────────
+-- Shared trigger function: validates assignment_scope_ref_id exists in the
+-- correct target table (company_code or legal_entity) for the same tenant.
+-- Attached to both auth_group_role and access_grant (TG_ARGV[0] = table name for error msgs).
+
+CREATE OR REPLACE FUNCTION master.trg_validate_assignment_scope()
+RETURNS trigger LANGUAGE plpgsql STABLE
+SET search_path = master, pg_temp
+AS $$
+DECLARE
+    v_source text := coalesce(TG_ARGV[0], TG_TABLE_NAME);
+BEGIN
+    IF NEW.assignment_scope_type IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    CASE NEW.assignment_scope_type
+        WHEN 'tenant' THEN
+            IF NEW.assignment_scope_ref_id IS NOT NULL THEN
+                RAISE EXCEPTION '%: ref_id must be NULL for tenant scope',
+                    v_source USING ERRCODE = 'check_violation';
+            END IF;
+
+        WHEN 'company_code' THEN
+            IF NOT EXISTS (
+                SELECT 1 FROM master.company_code
+                WHERE id        = NEW.assignment_scope_ref_id
+                  AND tenant_id = NEW.tenant_id
+            ) THEN
+                RAISE EXCEPTION '%: ref_id % not found in company_code for tenant %',
+                    v_source, NEW.assignment_scope_ref_id, NEW.tenant_id
+                    USING ERRCODE = 'foreign_key_violation';
+            END IF;
+
+        WHEN 'legal_entity' THEN
+            IF NOT EXISTS (
+                SELECT 1 FROM master.legal_entity
+                WHERE id        = NEW.assignment_scope_ref_id
+                  AND tenant_id = NEW.tenant_id
+            ) THEN
+                RAISE EXCEPTION '%: ref_id % not found in legal_entity for tenant %',
+                    v_source, NEW.assignment_scope_ref_id, NEW.tenant_id
+                    USING ERRCODE = 'foreign_key_violation';
+            END IF;
+
+        ELSE
+            RAISE EXCEPTION '%: unknown assignment_scope_type %',
+                v_source, NEW.assignment_scope_type
+                USING ERRCODE = 'check_violation';
+    END CASE;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_validate_assignment_scope IS
+    'Validates assignment_scope_ref_id exists in the target table (company_code '
+    'or legal_entity) and belongs to the same tenant. Shared by auth_group_role and '
+    'access_grant. TG_ARGV[0] = source table name for error messages.';
 
 
 -- ============================================================================
@@ -3449,7 +3824,7 @@ COMMENT ON FUNCTION master.trg_scp_validate_remittance_bank_link IS
     'the same or tenant-wide company.';
 
 
--- ── principal_auth_binding: service_client_id guard ────────────────────────
+-- ── principal_identity_binding: service_client_id guard ────────────────────────
 CREATE OR REPLACE FUNCTION master.trg_guard_auth_binding_service_client()
 RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
 DECLARE
@@ -3464,13 +3839,13 @@ BEGIN
     WHERE tenant_id = NEW.tenant_id AND id = NEW.principal_id;
 
     IF v_is_service IS NULL THEN
-        RAISE EXCEPTION 'principal_auth_binding: principal_id (%) not found', NEW.principal_id
+        RAISE EXCEPTION 'principal_identity_binding: principal_id (%) not found', NEW.principal_id
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
     IF NOT v_is_service THEN
         RAISE EXCEPTION
-            'principal_auth_binding: service_client_id is set but principal (%) '
+            'principal_identity_binding: service_client_id is set but principal (%) '
             'is not a service account', NEW.principal_id
             USING ERRCODE = 'check_violation';
     END IF;
@@ -3484,8 +3859,8 @@ COMMENT ON FUNCTION master.trg_guard_auth_binding_service_client IS
     'Trigger-only enforcement — no inline CHECK.';
 
 
--- ── Phase 4 migration function: keycloak_* → principal_auth_binding ────────
-CREATE OR REPLACE FUNCTION master.fn_migrate_principal_auth_bindings(
+-- ── Phase 4 migration function: keycloak_* → principal_identity_binding ────────
+CREATE OR REPLACE FUNCTION master.fn_migrate_principal_identity_bindings(
     p_dry_run boolean DEFAULT true
 )
 RETURNS TABLE (
@@ -3505,7 +3880,7 @@ BEGIN
         FROM master.principal_profile pp
         WHERE pp.keycloak_id IS NOT NULL
           AND NOT EXISTS (
-              SELECT 1 FROM master.principal_auth_binding pab
+              SELECT 1 FROM master.principal_identity_binding pab
               WHERE pab.tenant_id = pp.tenant_id
                 AND pab.principal_id = pp.principal_id
                 AND pab.provider_code = 'keycloak'
@@ -3515,7 +3890,7 @@ BEGIN
         FROM master.principal_profile pp
         WHERE pp.keycloak_id IS NOT NULL
           AND EXISTS (
-              SELECT 1 FROM master.principal_auth_binding pab
+              SELECT 1 FROM master.principal_identity_binding pab
               WHERE pab.tenant_id = pp.tenant_id
                 AND pab.principal_id = pp.principal_id
                 AND pab.provider_code = 'keycloak'
@@ -3526,7 +3901,7 @@ BEGIN
     END IF;
 
     WITH inserted AS (
-        INSERT INTO master.principal_auth_binding (
+        INSERT INTO master.principal_identity_binding (
             tenant_id, principal_id, provider_code, subject_id,
             username, federation_link, created_at_millis, not_before,
             service_client_id, required_actions,
@@ -3561,6 +3936,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION master.fn_migrate_principal_auth_bindings IS
+COMMENT ON FUNCTION master.fn_migrate_principal_identity_bindings IS
     'Phase 4 migration: copies keycloak_* and idp_snapshot from principal_profile '
-    'into principal_auth_binding. Pass p_dry_run=true for impact analysis.';
+    'into principal_identity_binding. Pass p_dry_run=true for impact analysis.';

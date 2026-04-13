@@ -70,7 +70,7 @@ export function ProfileSection({ active }: { active: boolean }) {
               <Badge variant="outline" className="text-2xs capitalize">
                 {str(p?.["principal_source"], "internal")}
               </Badge>
-              {pp?.["employee_id"] && (
+              {!!pp?.["employee_id"] && (
                 <Badge variant="success" className="text-2xs">Employee linked</Badge>
               )}
             </div>
@@ -188,7 +188,7 @@ export function ProfileSection({ active }: { active: boolean }) {
               icon={Key}
               managedBy={{
                 manager:  "Identity Provider (Athyper IAM)",
-                source:   "master.principal_auth_binding",
+                source:   "master.principal_identity_binding",
                 editPath: "Managed by your organisation's login provider",
               }}
             >

@@ -563,7 +563,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             size="sm"
-            variant={action.danger ? "destructive" : "default"}
+            variant={action.danger ? "destructive" : "primary"}
             disabled={!canConfirm}
             onClick={onConfirm}
           >

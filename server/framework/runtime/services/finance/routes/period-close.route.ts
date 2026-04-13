@@ -294,7 +294,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       }
 
       // Resolve company_code from scopeId
-      const companies = await resolveCompanyIds(db, tenantId, { scopeType: "company", scopeId, fiscalYear, period: periodNumber });
+      const companies = await resolveCompanyIds(db, tenantId, { scopeType: "company", scopeId });
       if (companies.length === 0) { res.status(404).json({ error: "COMPANY_NOT_FOUND" }); return; }
       const companyCode = companies[0]!.company_code as string;
 
@@ -408,7 +408,6 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .execute();
       }
 
-      logger?.info("period_close_run_started", { runId: newRun.id, companyCode, fiscalYear, periodNumber });
       res.status(201).json({ id: newRun.id, runNumber, taskCount: templates.length });
     } catch (err) { logger?.error("period_close_start_run_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
@@ -500,7 +499,6 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .execute();
       }
 
-      logger?.info("period_close_task_action", { taskId, runId, action, principalId });
       res.json({ taskId, action, status: action === "complete" ? "COMPLETED" : "PENDING" });
     } catch (err) { logger?.error("period_close_task_action_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
@@ -604,7 +602,6 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .where("tenant_id", "=", tenantId)
           .execute();
 
-        logger?.info("period_close_phase_signed_off", { runId, phaseCode, nextPhaseCode: nextPhase.phase_code });
         res.json({
           runId,
           runStatus:     "IN_PROGRESS",
@@ -626,7 +623,6 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .where("tenant_id", "=", tenantId)
           .execute();
 
-        logger?.info("period_close_run_completed", { runId, phaseCode, principalId });
         res.json({
           runId,
           runStatus: "COMPLETED",

@@ -7,6 +7,7 @@ export { Label } from "./Label";
 export { Checkbox } from "./Checkbox";
 export { Separator } from "./Separator";
 export { Skeleton } from "./Skeleton";
+export { Progress } from "./Progress";
 export {
   Select, SelectGroup, SelectValue, SelectTrigger,
   SelectContent, SelectItem, SelectSeparator,

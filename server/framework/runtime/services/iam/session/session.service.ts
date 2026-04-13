@@ -184,7 +184,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
 
     // ── Step 5: Resolve principal via auth binding (with JIT fallback) ───────
     let bindingRow = await db
-      .selectFrom("master.principal_auth_binding as pab")
+      .selectFrom("master.principal_identity_binding as pab")
       .innerJoin("master.principal as p", (join) =>
         join.onRef("p.id", "=", "pab.principal_id").on("p.tenant_id", "=", tenantId),
       )
@@ -212,7 +212,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
           if (jit) {
             // Re-query with the JOIN so is_active / is_locked come from the principal row.
             bindingRow = await db
-              .selectFrom("master.principal_auth_binding as pab")
+              .selectFrom("master.principal_identity_binding as pab")
               .innerJoin("master.principal as p", (join) =>
                 join.onRef("p.id", "=", "pab.principal_id").on("p.tenant_id", "=", tenantId),
               )
@@ -292,12 +292,12 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       }),
     );
 
-    // ── Step 9: Scope from group_role ──────────────────────────────────────────
+    // ── Step 9: Scope from auth_group_role ──────────────────────────────────────────
     // scope='all' → principal covers the entire tenant (no company_code filter)
-    // other scopes → collect the specific company_codes from group_role bindings
+    // other scopes → collect the specific company_codes from auth_group_role bindings
     const groupRoleRows = await db
-      .selectFrom("master.group_member as gm")
-      .innerJoin("master.group_role as gr", (join) =>
+      .selectFrom("master.auth_group_member as gm")
+      .innerJoin("master.auth_group_role as gr", (join) =>
         join
           .onRef("gr.group_id", "=", "gm.group_id")
           .onRef("gr.tenant_id", "=", "gm.tenant_id")

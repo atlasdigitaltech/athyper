@@ -172,17 +172,26 @@ CREATE INDEX IF NOT EXISTS shared_role_persona_idx ON shared.role (persona_id);
 CREATE INDEX IF NOT EXISTS shared_role_module_pidx ON shared.role (module_id) WHERE module_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS shared_role_active_pidx ON shared.role (id) WHERE status = 'active';
 
--- principal_group
-CREATE INDEX IF NOT EXISTS pg_tenant_active_pidx ON master.principal_group (tenant_id) WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS ix_pg_self_service_eligible ON master.principal_group (tenant_id) WHERE is_self_service_eligible = true AND status = 'active';
+-- auth_group
+CREATE INDEX IF NOT EXISTS aug_tenant_active_pidx ON master.auth_group (tenant_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS ix_aug_self_service_eligible ON master.auth_group (tenant_id) WHERE is_self_service_eligible = true AND status = 'active';
 
--- group_role
-CREATE INDEX IF NOT EXISTS gr_group_active_pidx ON master.group_role (tenant_id, group_id) WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS gr_role_idx ON master.group_role (tenant_id, role_id);
+-- auth_group_role
+CREATE INDEX IF NOT EXISTS agr_group_active_pidx ON master.auth_group_role (tenant_id, group_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS agr_role_idx ON master.auth_group_role (tenant_id, role_id);
+CREATE INDEX IF NOT EXISTS agr_assignment_scope_idx
+    ON master.auth_group_role (tenant_id, assignment_scope_type, assignment_scope_ref_id)
+    WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS agr_assignment_le_idx
+    ON master.auth_group_role (tenant_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'legal_entity' AND status = 'active';
+CREATE INDEX IF NOT EXISTS agr_assignment_cc_idx
+    ON master.auth_group_role (tenant_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'company_code' AND status = 'active';
 
--- group_member
-CREATE INDEX IF NOT EXISTS pgm_principal_idx ON master.group_member (tenant_id, principal_id);
-CREATE INDEX IF NOT EXISTS pgm_group_idx ON master.group_member (tenant_id, group_id);
+-- auth_group_member
+CREATE INDEX IF NOT EXISTS agm_principal_idx ON master.auth_group_member (tenant_id, principal_id);
+CREATE INDEX IF NOT EXISTS agm_group_idx ON master.auth_group_member (tenant_id, group_id);
 
 -- principal_persona
 CREATE INDEX IF NOT EXISTS pp_persona_idx ON master.principal_persona (tenant_id, persona_id);
@@ -191,15 +200,15 @@ CREATE INDEX IF NOT EXISTS pp_persona_idx ON master.principal_persona (tenant_id
 CREATE INDEX IF NOT EXISTS team_tenant_active_pidx ON master.team (tenant_id) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS team_leader_idx ON master.team (tenant_id, leader_id);
 
--- team_principal
--- Patch 001 Fix 2: replaces team_principal_active_uq table constraint.
+-- team_member
+-- Patch 001 Fix 2: replaces team_member_active_uq table constraint.
 -- Partial unique: only active memberships (left_at IS NULL) must be unique per team.
 -- Historical rows (left_at IS NOT NULL) are unrestricted — allows re-joining after leaving.
-DROP INDEX IF EXISTS master.tp_principal_active_pidx;
-CREATE UNIQUE INDEX IF NOT EXISTS team_principal_active_uidx
-    ON master.team_principal (tenant_id, team_id, principal_id)
+DROP INDEX IF EXISTS master.tm_principal_active_pidx;
+CREATE UNIQUE INDEX IF NOT EXISTS team_member_active_uidx
+    ON master.team_member (tenant_id, team_id, principal_id)
     WHERE left_at IS NULL;
-CREATE INDEX IF NOT EXISTS tp_team_idx ON master.team_principal (tenant_id, team_id);
+CREATE INDEX IF NOT EXISTS tm_team_idx ON master.team_member (tenant_id, team_id);
 
 -- access_grant
 CREATE INDEX IF NOT EXISTS ag_principal_perm_pidx ON master.access_grant (tenant_id, principal_id, permission_id)
@@ -208,6 +217,15 @@ CREATE INDEX IF NOT EXISTS ag_role_perm_pidx ON master.access_grant (tenant_id, 
     WHERE status = 'active' AND role_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ag_group_perm_pidx ON master.access_grant (tenant_id, group_id, permission_id)
     WHERE status = 'active' AND group_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ag_assignment_scope_idx
+    ON master.access_grant (tenant_id, permission_id, assignment_scope_type)
+    WHERE status = 'active' AND effect = 'allow';
+CREATE INDEX IF NOT EXISTS ag_assignment_cc_idx
+    ON master.access_grant (tenant_id, permission_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'company_code' AND status = 'active' AND effect = 'allow';
+CREATE INDEX IF NOT EXISTS ag_assignment_le_idx
+    ON master.access_grant (tenant_id, permission_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'legal_entity' AND status = 'active' AND effect = 'allow';
 
 -- group_feature_grant
 CREATE INDEX IF NOT EXISTS gfg_group_idx ON master.group_feature_grant (tenant_id, group_id);
@@ -999,13 +1017,13 @@ CREATE INDEX IF NOT EXISTS bahc_gl_account_idx
     ON master.bank_account_house_config (tenant_id, gl_account_id);
 
 
--- ── §PAB principal_auth_binding ─────────────────────────────────────────────
+-- ── §PAB principal_identity_binding ─────────────────────────────────────────────
 
-CREATE INDEX IF NOT EXISTS pab_principal_idx
-    ON master.principal_auth_binding (tenant_id, principal_id);
+CREATE INDEX IF NOT EXISTS pib_principal_idx
+    ON master.principal_identity_binding (tenant_id, principal_id);
 
-CREATE INDEX IF NOT EXISTS pab_sync_status_pidx
-    ON master.principal_auth_binding (tenant_id, sync_status)
+CREATE INDEX IF NOT EXISTS pib_sync_status_pidx
+    ON master.principal_identity_binding (tenant_id, sync_status)
     WHERE sync_status IN ('pending', 'drift', 'error');
 
 -- ── Profile extension indexes ──────────────────────────────────────────────

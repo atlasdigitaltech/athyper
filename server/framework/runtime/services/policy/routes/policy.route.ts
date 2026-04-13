@@ -27,10 +27,18 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
   verifyBearer,
-  resolveTenantId,
-  resolvePrincipalIdOrNull,
   isUuid,
 } from "@athyper/svc-shared";
+
+function resolveTenantId(claims: Record<string, unknown>): string | null {
+  const t = claims["tenant_id"];
+  return typeof t === "string" && t ? t : null;
+}
+
+function resolvePrincipalIdOrNull(claims: Record<string, unknown>): string | null {
+  const s = claims["sub"] ?? claims["principal_id"];
+  return typeof s === "string" && s ? s : null;
+}
 import {
   PolicyEngine,
   type PolicyAction,
@@ -53,7 +61,7 @@ async function resolveActor(
   req: Parameters<RequestHandler>[0],
   res: Parameters<RequestHandler>[1],
 ): Promise<{ tenantId: string; principalId: string } | null> {
-  const claims = await verifyBearer(deps.auth, req, res);
+  const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
   if (!claims) return null;
 
   const tenantId = resolveTenantId(claims);
@@ -79,7 +87,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
   // ── GET /policy/definitions ───────────────────────────────────────────────
 
   router.get("/policy/definitions", (async (req, res) => {
-    const claims = await verifyBearer(deps.auth, req, res);
+    const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
     if (!claims) return;
 
     const tenantId = resolveTenantId(claims);
@@ -141,13 +149,13 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
   // ── GET /policy/definitions/:id ───────────────────────────────────────────
 
   router.get("/policy/definitions/:id", (async (req, res) => {
-    const claims = await verifyBearer(deps.auth, req, res);
+    const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
     if (!claims) return;
 
     const tenantId = resolveTenantId(claims);
     if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
     const definition = await engine.getDefinition(id, tenantId);
@@ -163,7 +171,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
     if (!actor) return;
 
     const { tenantId, principalId } = actor;
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
     const { name, description, priority, evaluation_mode, effective_from, effective_until, status } = req.body as Record<string, unknown>;
@@ -195,13 +203,13 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
   // ── GET /policy/definitions/:id/rules ────────────────────────────────────
 
   router.get("/policy/definitions/:id/rules", (async (req, res) => {
-    const claims = await verifyBearer(deps.auth, req, res);
+    const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
     if (!claims) return;
 
     const tenantId = resolveTenantId(claims);
     if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
     const rules = await engine.listRules(id, tenantId);
@@ -215,7 +223,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
     if (!actor) return;
 
     const { tenantId, principalId } = actor;
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
     const { priority, conditions, action, score, confidence, explanation, approvers, sla_hours } =
@@ -249,7 +257,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
     if (!actor) return;
 
     const { tenantId, principalId } = actor;
-    const { ruleId } = req.params;
+    const ruleId = req.params["ruleId"] as string;
     if (!isUuid(ruleId)) { res.status(400).json({ error: "INVALID_RULE_ID" }); return; }
 
     const { priority, conditions, action, score, confidence, explanation, approvers, sla_hours } =
@@ -283,7 +291,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
     if (!actor) return;
 
     const { tenantId } = actor;
-    const { ruleId } = req.params;
+    const ruleId = req.params["ruleId"] as string;
     if (!isUuid(ruleId)) { res.status(400).json({ error: "INVALID_RULE_ID" }); return; }
 
     const deleted = await engine.deleteRule(ruleId, tenantId);
@@ -333,7 +341,7 @@ export function createPolicyRoutes(router: Router, deps: PolicyRouteDeps): void 
   // ── GET /policy/log ───────────────────────────────────────────────────────
 
   router.get("/policy/log", (async (req, res) => {
-    const claims = await verifyBearer(deps.auth, req, res);
+    const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
     if (!claims) return;
 
     const tenantId = resolveTenantId(claims);

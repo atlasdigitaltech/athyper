@@ -1176,7 +1176,8 @@ VALUES
     ('document.payment_entry_type',          'Payment Entry Type',          'Type of outbound payment (standard, retention_release, advance, final, partial, down_payment, netting, urgent). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.payment_entry_status',        'Payment Entry Status',        'Lifecycle states for document.payment_entry. Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.acct_dist_account_source',    'Accounting Distribution Account Source', 'How the GL account was determined for an accounting distribution row (posting_role, from_intent, fixed, from_category). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
-    ('master.company_code_spend_policy_status', 'Company Code Spend Policy Status', 'Lifecycle status of a company-code / spend-category policy mapping. Platform-governed.', 'master', false, 'active', '00000000-0000-0000-0000-000000000000')
+    ('master.company_code_spend_policy_status', 'Company Code Spend Policy Status', 'Lifecycle status of a company-code / spend-category policy mapping. Platform-governed.', 'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('master.company_code_access_entity_type',  'Company Code Access Entity Type',  'Entity types scoped to company codes via master.company_code_access. is_extensible=true — tenants may add new entity types without DDL.',                  'master', true,  'active', '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (code) DO NOTHING;
 
 

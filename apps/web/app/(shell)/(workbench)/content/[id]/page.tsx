@@ -88,7 +88,7 @@ function StatusActions({ item }: { item: ContentItem }) {
       <div className="flex gap-2">
         {availableActions.map((act) => (
           <Button key={act} size="sm"
-            variant={act === "archive" ? "ghost" : "default"}
+            variant={act === "archive" ? "ghost" : "primary"}
             onClick={() => { setPendingAction(act); setConfirmOpen(true); }}>
             {actionLabel[act]}
           </Button>
@@ -162,7 +162,7 @@ function BodyEditor({ itemId, version }: { itemId: string; version: ContentVersi
             Body (JSON)
             {version && <span className="ml-2 text-muted-foreground font-normal">v{version.versionNumber}</span>}
           </Label>
-          <Button size="sm" variant={dirty ? "default" : "ghost"} className="h-7 text-xs"
+          <Button size="sm" variant={dirty ? "primary" : "ghost"} className="h-7 text-xs"
             onClick={() => save.mutate()} disabled={save.isPending || !dirty}>
             <Save className="mr-1 h-3 w-3" />Save Version
           </Button>

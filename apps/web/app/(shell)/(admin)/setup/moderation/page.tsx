@@ -73,7 +73,7 @@ function ActionDialog({ flag, open, onOpenChange }: { flag: CommentFlag; open: b
           </div>
           <div className="flex gap-2">
             {(["review", "dismiss", "action"] as const).map((a) => (
-              <Button key={a} size="sm" variant={action === a ? "default" : "outline"} className="text-xs"
+              <Button key={a} size="sm" variant={action === a ? "primary" : "outline"} className="text-xs"
                 onClick={() => setAction(a)}>
                 {a}
               </Button>

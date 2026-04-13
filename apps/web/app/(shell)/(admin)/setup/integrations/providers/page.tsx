@@ -53,7 +53,7 @@ function IntegrationSubNav({ active }: { active: string }) {
     <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
       {tabs.map((t) => (
         <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "default" : "ghost"} className="h-7 text-xs">
+          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
             {t.label}
           </Button>
         </Link>
@@ -191,10 +191,10 @@ export default function ProvidersPage() {
 
       {/* Channel filter */}
       <div className="mb-4 flex flex-wrap gap-1">
-        <Button size="sm" variant={channelFilter === "" ? "default" : "ghost"} className="h-7 text-xs"
+        <Button size="sm" variant={channelFilter === "" ? "primary" : "ghost"} className="h-7 text-xs"
           onClick={() => setChannelFilter("")}>All</Button>
         {CHANNELS.map((c) => (
-          <Button key={c} size="sm" variant={channelFilter === c ? "default" : "ghost"} className="h-7 text-xs"
+          <Button key={c} size="sm" variant={channelFilter === c ? "primary" : "ghost"} className="h-7 text-xs"
             onClick={() => setChannelFilter(c)}>{c}</Button>
         ))}
       </div>

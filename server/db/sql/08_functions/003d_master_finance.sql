@@ -81,3 +81,49 @@ COMMENT ON FUNCTION master.fn_resolve_scope_companies IS
   'Resolves a FinanceScope to a set of company_code rows. '
   'scope_type: company | legal_entity | group. '
   'Used by all financial read-model queries as the scope entry point.';
+
+
+-- =============================================================================
+-- master.fn_resolve_le_subtree_companies
+-- =============================================================================
+-- Resolves a legal_entity_id to ALL company_code_ids in its full descendant
+-- subtree. Recursive CTE walks master.legal_entity.parent_entity_id from the
+-- anchor LE downward.
+--
+-- Unlike fn_resolve_scope_companies('legal_entity'), which returns only direct
+-- (non-recursive) CCs under a single LE, this function walks the full tree.
+-- Used by resolve_allowed_companies() for RBAC assignment-scope evaluation.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION master.fn_resolve_le_subtree_companies(
+    p_tenant_id       uuid,
+    p_legal_entity_id uuid
+) RETURNS TABLE (company_code_id uuid)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+    WITH RECURSIVE le_tree AS (
+        SELECT le.id
+        FROM master.legal_entity le
+        WHERE le.id        = p_legal_entity_id
+          AND le.tenant_id = p_tenant_id
+          AND le.is_active = true
+        UNION ALL
+        SELECT child.id
+        FROM master.legal_entity child
+        INNER JOIN le_tree parent ON child.parent_entity_id = parent.id
+        WHERE child.tenant_id = p_tenant_id
+          AND child.is_active = true
+    )
+    SELECT cc.id
+    FROM master.company_code cc
+    INNER JOIN le_tree ON cc.legal_entity_id = le_tree.id
+    WHERE cc.tenant_id = p_tenant_id
+      AND cc.is_active = true;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_le_subtree_companies IS
+    'Resolves a legal_entity_id to all company_code_ids in its full descendant subtree. '
+    'Recursive CTE walks master.legal_entity.parent_entity_id from the anchor LE down. '
+    'Unlike fn_resolve_scope_companies(''legal_entity''), which returns only direct CCs, '
+    'this walks the full tree. Used by resolve_allowed_companies().';

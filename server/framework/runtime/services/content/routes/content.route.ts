@@ -241,9 +241,9 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
-      const row = await db
-        .selectFrom("master.content_item as ci" as never)
-        .leftJoin("snapshot.content_item_version as civ" as never, "civ.id" as never, "ci.current_version_id" as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.selectFrom("master.content_item as ci") as any)
+        .leftJoin("snapshot.content_item_version as civ", "civ.id", "ci.current_version_id")
         .select([
           "ci.id", "ci.tenant_id", "ci.code", "ci.title", "ci.kind",
           "ci.parent_id", "ci.locale_code", "ci.slug", "ci.summary",
@@ -251,9 +251,9 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
           "ci.status_changed_at", "ci.created_at", "ci.updated_at",
           "civ.body_json", "civ.body_format", "civ.version as current_version",
           "civ.checksum as current_checksum",
-        ] as never[])
-        .where("ci.id" as never, "=", id as never)
-        .where("ci.tenant_id" as never, "=", c.tenantId as never)
+        ])
+        .where("ci.id", "=", id)
+        .where("ci.tenant_id", "=", c.tenantId)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -317,7 +317,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       try {
         const c = await resolveCtx(req, res);
         if (!c) return;
-        const { id } = req.params;
+        const id = req.params["id"] as string;
         if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
         const row = await db
           .updateTable("master.content_item" as never)

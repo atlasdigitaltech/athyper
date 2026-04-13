@@ -45,7 +45,7 @@ function createConnection(): Promise<AnyRedisClient> {
         connectTimeout: CONNECT_TIMEOUT_MS,
         socketTimeout: SOCKET_TIMEOUT_MS,
         noDelay: true,
-        keepAlive: 10000, // TCP keepalive every 10s — prevents Docker port-map drops
+        keepAlive: true, // TCP keepalive — prevents Docker port-map drops
         reconnectStrategy,
       },
     });

@@ -147,7 +147,7 @@ describe("SessionService.resolve", () => {
         const rows: Record<string, unknown> = {
           "master.tenant":                   { id: "t-athyper", status: "active" },
           "master.company_code as cc":       { cc_name: "Athyper Group Holdings", country_code: "MY" },
-          "master.principal_auth_binding as pab": { principal_id: KUMAR_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding as pab": { principal_id: KUMAR_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-manager", persona_code: "manager" },
           "shared.permission as p":          [
             { code: "invoice.create", is_granted: true },
@@ -158,7 +158,7 @@ describe("SessionService.resolve", () => {
             { code: "ACC", name: "Accounts" },
             { code: "PAY", name: "Payments" },
           ],
-          "master.group_member as gm":       [
+          "master.auth_group_member as gm":       [
             { scope: "all", cc_code: null },
           ],
           "master.delegation_grant as dg":   [],
@@ -216,7 +216,7 @@ describe("SessionService.resolve", () => {
         const rows: Record<string, unknown> = {
           "master.tenant":                   { id: "t-athyper", status: "active" },
           "master.company_code as cc":       { cc_name: "Athyper Group Holdings", country_code: "MY" },
-          "master.principal_auth_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [
             { code: "report.view", is_granted: true },
@@ -224,7 +224,7 @@ describe("SessionService.resolve", () => {
           "master.tenant_module_subscription as tms": [
             { code: "ACC", name: "Accounts" },
           ],
-          "master.group_member as gm": [
+          "master.auth_group_member as gm": [
             { scope: "own", cc_code: "ATHQ" },
           ],
           "master.delegation_grant as dg": [],
@@ -292,11 +292,11 @@ describe("SessionService.resolve", () => {
         const rows: Record<string, unknown> = {
           "master.tenant":                   { id: "t-demo-in", status: "active" },
           "master.company_code as cc":       { cc_name: "Demo India", country_code: "IN" },
-          "master.principal_auth_binding as pab": { principal_id: PRIYA_SUB, is_active: true, is_locked: false },
+          "master.principal_identity_binding as pab": { principal_id: PRIYA_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [{ code: "invoice.view", is_granted: true }],
           "master.tenant_module_subscription as tms": [{ code: "ACC", name: "Accounts" }],
-          "master.group_member as gm":       [{ scope: "own", cc_code: "DEMOIN" }],
+          "master.auth_group_member as gm":       [{ scope: "own", cc_code: "DEMOIN" }],
           "master.delegation_grant as dg":   [],
         };
 
@@ -344,7 +344,7 @@ describe("SessionService.resolve", () => {
         const rows: Record<string, unknown> = {
           "master.tenant": { id: "t-athyper", status: "active" },
           "master.company_code as cc": { cc_name: "Athyper Group Holdings", country_code: "MY" },
-          "master.principal_auth_binding as pab": {
+          "master.principal_identity_binding as pab": {
             principal_id: KUMAR_SUB,
             is_active: true,
             is_locked: true,  // locked!

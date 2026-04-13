@@ -117,13 +117,13 @@ DO $$ BEGIN ALTER TABLE event.work_item ADD CONSTRAINT wi_designated_fk
     FOREIGN KEY (designated_id) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE event.work_item ADD CONSTRAINT wi_designated_group_fk
-    FOREIGN KEY (designated_group_id) REFERENCES master.principal_group (id) ON DELETE SET NULL;
+    FOREIGN KEY (designated_group_id) REFERENCES master.auth_group (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE event.work_item ADD CONSTRAINT wi_assignee_fk
     FOREIGN KEY (assignee_id) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE event.work_item ADD CONSTRAINT wi_assignee_group_fk
-    FOREIGN KEY (assignee_group_id) REFERENCES master.principal_group (id) ON DELETE SET NULL;
+    FOREIGN KEY (assignee_group_id) REFERENCES master.auth_group (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE event.work_item ADD CONSTRAINT wi_assignee_team_fk
     FOREIGN KEY (assignee_team_id) REFERENCES master.team (id) ON DELETE SET NULL;

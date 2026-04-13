@@ -130,7 +130,7 @@ export default function MetadataSetupPage() {
             {CLASS_OPTIONS.map((cls) => (
               <Button
                 key={cls || "all"}
-                variant={entityClass === cls ? "default" : "ghost"}
+                variant={entityClass === cls ? "primary" : "ghost"}
                 size="sm"
                 className="h-8 text-xs"
                 onClick={() => setEntityClass(cls)}

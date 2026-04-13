@@ -48,7 +48,7 @@ function IntegrationSubNav({ active }: { active: string }) {
     <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
       {tabs.map((t) => (
         <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "default" : "ghost"} className="h-7 text-xs">
+          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
             {t.label}
           </Button>
         </Link>

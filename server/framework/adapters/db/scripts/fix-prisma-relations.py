@@ -60,34 +60,21 @@ def main():
         "commitment.commitment_procurement []",
     )
 
-    # ── Fix 5: invoice_bank_snapshot — add composite unique ───────────────────
-    text = replace_once(
-        text,
-        '  @@unique([tenant_id, id], map: "ibs_tenant_id_uq")\n'
-        '  @@schema("document")\n'
-        '}\n'
-        '\n'
-        '/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.\n'
-        'model invoice_match_case {',
+    # ── Fix 5: invoice_bank_snapshot — deduplicate ibs_tenant_invoice_uq ────────
+    # db pull adds both the introspected unique and the manually-added one → keep one
+    text = text.replace(
         '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n'
-        '  @@unique([tenant_id, id], map: "ibs_tenant_id_uq")\n'
-        '  @@schema("document")\n'
-        '}\n'
-        '\n'
-        '/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.\n'
-        'model invoice_match_case {',
-        "invoice_bank_snapshot @@unique tenant_invoice",
+        '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n',
+        '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n',
+        1,
     )
 
-    # ── Fix 6: invoice_party_snapshot — add composite unique ──────────────────
-    text = replace_once(
-        text,
-        '  @@unique([tenant_id, id], map: "ips_tenant_id_uq")\n'
-        '  @@index([tenant_id, supplier_id], map: "ips_supplier_idx"',
+    # ── Fix 6: invoice_party_snapshot — deduplicate ips_tenant_invoice_uq ────────
+    text = text.replace(
         '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n'
-        '  @@unique([tenant_id, id], map: "ips_tenant_id_uq")\n'
-        '  @@index([tenant_id, supplier_id], map: "ips_supplier_idx"',
-        "invoice_party_snapshot @@unique tenant_invoice",
+        '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n',
+        '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n',
+        1,
     )
 
     # ── Fix 7: payment_term_discount_result self-ref back-ref → [] ───────────
@@ -111,15 +98,13 @@ def main():
     )
 
     # ── Fix 9: letterhead.tenant_profile back-ref → [] ───────────────────────
+    # The "one" side (tenant_profile.letterhead) keeps fields/references.
+    # The "many" side (letterhead.tenant_profile) must be a plain back-reference [].
     text = replace_once(
         text,
-        '  company_code      company_code?   @relation(fields: [company_code_id], references: [id], onUpdate: NoAction, map: "letterhead_cc_fk")\n'
-        '  principal         principal       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "letterhead_created_by_fk")\n'
-        '  tenant            tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")\n'
+        '  tenant            tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")\n'
         '  tenant_profile    tenant_profile?',
-        '  company_code      company_code?   @relation(fields: [company_code_id], references: [id], onUpdate: NoAction, map: "letterhead_cc_fk")\n'
-        '  principal         principal       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "letterhead_created_by_fk")\n'
-        '  tenant            tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")\n'
+        '  tenant            tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "letterhead_tenant_fk")\n'
         '  tenant_profile    tenant_profile[]',
         "letterhead.tenant_profile []",
     )

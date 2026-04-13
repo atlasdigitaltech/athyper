@@ -43,12 +43,14 @@ export interface RecordsRouteDeps {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<{ table_schema: string; table_name: string } | null> {
-  return db
+  const row = await db
     .selectFrom("control.entity as e")
     .select(["e.table_schema", "e.table_name"])
     .where("e.name", "=", entityCode)
     .where("e.tenant_id", "is", null)
-    .executeTakeFirst() ?? null;
+    .executeTakeFirst();
+  if (!row) return null;
+  return { table_schema: String(row.table_schema), table_name: String(row.table_name) };
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────
@@ -84,8 +86,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       let countQuery = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
 
       if (tenantId) {
-        listQuery = listQuery.where("tenant_id" as never, "=", tenantId);
-        countQuery = countQuery.where("tenant_id" as never, "=", tenantId);
+        listQuery = listQuery.where("tenant_id" as never, "=", tenantId as never);
+        countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
       }
 
       const [rows, countResult, fieldMap] = await Promise.all([
@@ -139,7 +141,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-      const row = await db.selectFrom(fullTable).selectAll().where("id" as never, "=", id).executeTakeFirst();
+      const row = await db.selectFrom(fullTable).selectAll().where("id" as never, "=", id as never).executeTakeFirst();
 
       if (!row) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
@@ -275,11 +277,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       mappedData.updated_at = new Date().toISOString();
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-      const row = await db
-        .updateTable(fullTable)
-        .set(mappedData as never)
-        .where("id" as never, "=", id)
-        .where("tenant_id" as never, "=", tenantId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable(fullTable) as any)
+        .set(mappedData)
+        .where("id", "=", id)
+        .where("tenant_id", "=", tenantId)
         .returningAll()
         .executeTakeFirst();
 
@@ -318,9 +320,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-      await db.deleteFrom(fullTable)
-        .where("id" as never, "=", id)
-        .where("tenant_id" as never, "=", tenantId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db.deleteFrom(fullTable) as any)
+        .where("id", "=", id)
+        .where("tenant_id", "=", tenantId)
         .execute();
 
       res.status(204).end();

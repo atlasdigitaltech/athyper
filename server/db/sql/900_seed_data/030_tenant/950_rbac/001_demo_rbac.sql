@@ -3,7 +3,7 @@
 -- ============================================================================
 -- File:    001_demo_rbac.sql
 -- Schema:  master
--- Tables:  principal_group, group_role
+-- Tables:  auth_group, auth_group_role
 --
 -- ── Design ──────────────────────────────────────────────────────────────────
 --
@@ -23,7 +23,7 @@
 -- Total: 62 groups
 --
 -- ── Idempotency ─────────────────────────────────────────────────────────────
--- Step 0 TRUNCATES principal_group (CASCADE → group_role, group_member).
+-- Step 0 TRUNCATES auth_group (CASCADE → auth_group_role, auth_group_member).
 -- Steps 1-4 are INSERT … ON CONFLICT DO NOTHING.
 -- Re-running is safe.
 -- ============================================================================
@@ -33,13 +33,13 @@ DECLARE
     v_su uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
 
-    -- ── Step 0: Clear all existing principal_group data ──────────────────────
-    TRUNCATE master.principal_group CASCADE;
-    RAISE NOTICE '[001_demo_rbac] Cleared principal_group (CASCADE)';
+    -- ── Step 0: Clear all existing auth_group data ──────────────────────
+    TRUNCATE master.auth_group CASCADE;
+    RAISE NOTICE '[001_demo_rbac] Cleared auth_group (CASCADE)';
 
     -- ── Step 1: Create tenant-level OWNER + ADMIN groups (14 tenants × 2) ───
 
-    INSERT INTO master.principal_group (
+    INSERT INTO master.auth_group (
         tenant_id, code, name, description,
         is_system, is_self_service_eligible, created_by
     )
@@ -75,9 +75,9 @@ BEGIN
     -- Simpler, explicit approach that avoids regex complexity:
     -- Each of the 14 tenants gets exactly its own two groups.
 
-    TRUNCATE master.principal_group CASCADE;
+    TRUNCATE master.auth_group CASCADE;
 
-    INSERT INTO master.principal_group (
+    INSERT INTO master.auth_group (
         tenant_id, code, name, description,
         is_system, is_self_service_eligible, created_by
     )
@@ -133,7 +133,7 @@ BEGIN
 
     -- ── Step 2: Create CC-level OWNER + ADMIN groups for athyper (17 × 2) ───
 
-    INSERT INTO master.principal_group (
+    INSERT INTO master.auth_group (
         tenant_id, code, name, description,
         is_system, is_self_service_eligible, created_by
     )
@@ -183,14 +183,14 @@ BEGIN
 
     -- ── Step 3: Assign owner-* roles to all OWNER groups ─────────────────────
     --
-    -- 3a: Tenant-level OWNER groups — scope = 'all'
-    INSERT INTO master.group_role (
-        tenant_id, group_id, role_id, scope, created_by
+    -- 3a: Tenant-level OWNER groups — visibility_scope='all', assignment_scope_type='tenant'
+    INSERT INTO master.auth_group_role (
+        tenant_id, group_id, role_id, visibility_scope, assignment_scope_type, created_by
     )
     SELECT
         pg.tenant_id, pg.id AS group_id, r.id AS role_id,
-        'all' AS scope, v_su
-    FROM master.principal_group pg
+        'all' AS visibility_scope, 'tenant' AS assignment_scope_type, v_su
+    FROM master.auth_group pg
     JOIN master.tenant t ON t.id = pg.tenant_id
     CROSS JOIN shared.role r
     WHERE pg.code LIKE '%-OWNER'
@@ -202,20 +202,23 @@ BEGIN
       )
       AND r.code LIKE 'owner-%'
       AND t.code <> 'system'
-    ON CONFLICT (tenant_id, group_id, role_id) DO NOTHING;
+    ON CONFLICT (tenant_id, group_id, role_id, assignment_scope_type, assignment_scope_ref_id, include_descendants) DO NOTHING;
 
-    RAISE NOTICE '[001_demo_rbac] Step 3a complete — owner-* roles → tenant-level OWNER groups (scope=all)';
+    RAISE NOTICE '[001_demo_rbac] Step 3a complete — owner-* roles → tenant-level OWNER groups (visibility_scope=all, type=tenant)';
 
-    -- 3b: CC-level OWNER groups — scope = 'ou_l1' scoped to their CC
-    INSERT INTO master.group_role (
-        tenant_id, group_id, role_id, scope, company_code_id, created_by
+    -- 3b: CC-level OWNER groups — visibility_scope='all', assignment_scope_type='company_code'
+    INSERT INTO master.auth_group_role (
+        tenant_id, group_id, role_id,
+        visibility_scope, assignment_scope_type, assignment_scope_ref_id,
+        created_by
     )
     SELECT
         pg.tenant_id, pg.id, r.id,
-        'ou_l1',
-        cc.id AS company_code_id,
+        'all' AS visibility_scope,
+        'company_code' AS assignment_scope_type,
+        cc.id AS assignment_scope_ref_id,
         v_su
-    FROM master.principal_group pg
+    FROM master.auth_group pg
     JOIN master.tenant t ON t.id = pg.tenant_id AND t.code = 'athyper'
     -- resolve CC code from group code: 'ATHQ-OWNER' → 'ATHQ'
     JOIN master.company_code cc
@@ -229,19 +232,19 @@ BEGIN
         'AUIC-OWNER','AUKA-OWNER'
     )
       AND r.code LIKE 'owner-%'
-    ON CONFLICT (tenant_id, group_id, role_id) DO NOTHING;
+    ON CONFLICT (tenant_id, group_id, role_id, assignment_scope_type, assignment_scope_ref_id, include_descendants) DO NOTHING;
 
-    RAISE NOTICE '[001_demo_rbac] Step 3b complete — owner-* roles → CC-level OWNER groups (scope=ou_l1)';
+    RAISE NOTICE '[001_demo_rbac] Step 3b complete — owner-* roles → CC-level OWNER groups (visibility_scope=all, type=company_code)';
 
     -- ── Step 4: Assign admin-* roles to all ADMIN groups ─────────────────────
     --
-    -- 4a: Tenant-level ADMIN groups — scope = 'all'
-    INSERT INTO master.group_role (
-        tenant_id, group_id, role_id, scope, created_by
+    -- 4a: Tenant-level ADMIN groups — visibility_scope='all', assignment_scope_type='tenant'
+    INSERT INTO master.auth_group_role (
+        tenant_id, group_id, role_id, visibility_scope, assignment_scope_type, created_by
     )
     SELECT
-        pg.tenant_id, pg.id, r.id, 'all', v_su
-    FROM master.principal_group pg
+        pg.tenant_id, pg.id, r.id, 'all', 'tenant', v_su
+    FROM master.auth_group pg
     JOIN master.tenant t ON t.id = pg.tenant_id
     CROSS JOIN shared.role r
     WHERE pg.code LIKE '%-ADMIN'
@@ -253,20 +256,23 @@ BEGIN
       )
       AND r.code LIKE 'admin-%'
       AND t.code <> 'system'
-    ON CONFLICT (tenant_id, group_id, role_id) DO NOTHING;
+    ON CONFLICT (tenant_id, group_id, role_id, assignment_scope_type, assignment_scope_ref_id, include_descendants) DO NOTHING;
 
-    RAISE NOTICE '[001_demo_rbac] Step 4a complete — admin-* roles → tenant-level ADMIN groups (scope=all)';
+    RAISE NOTICE '[001_demo_rbac] Step 4a complete — admin-* roles → tenant-level ADMIN groups (visibility_scope=all, type=tenant)';
 
-    -- 4b: CC-level ADMIN groups — scope = 'ou_l1' scoped to their CC
-    INSERT INTO master.group_role (
-        tenant_id, group_id, role_id, scope, company_code_id, created_by
+    -- 4b: CC-level ADMIN groups — visibility_scope='all', assignment_scope_type='company_code'
+    INSERT INTO master.auth_group_role (
+        tenant_id, group_id, role_id,
+        visibility_scope, assignment_scope_type, assignment_scope_ref_id,
+        created_by
     )
     SELECT
         pg.tenant_id, pg.id, r.id,
-        'ou_l1',
-        cc.id AS company_code_id,
+        'all' AS visibility_scope,
+        'company_code' AS assignment_scope_type,
+        cc.id AS assignment_scope_ref_id,
         v_su
-    FROM master.principal_group pg
+    FROM master.auth_group pg
     JOIN master.tenant t ON t.id = pg.tenant_id AND t.code = 'athyper'
     JOIN master.company_code cc
         ON cc.tenant_id = t.id
@@ -279,9 +285,9 @@ BEGIN
         'AUIC-ADMIN','AUKA-ADMIN'
     )
       AND r.code LIKE 'admin-%'
-    ON CONFLICT (tenant_id, group_id, role_id) DO NOTHING;
+    ON CONFLICT (tenant_id, group_id, role_id, assignment_scope_type, assignment_scope_ref_id, include_descendants) DO NOTHING;
 
-    RAISE NOTICE '[001_demo_rbac] Step 4b complete — admin-* roles → CC-level ADMIN groups (scope=ou_l1)';
+    RAISE NOTICE '[001_demo_rbac] Step 4b complete — admin-* roles → CC-level ADMIN groups (visibility_scope=all, type=company_code)';
 
 END $rbac$;
 
@@ -289,17 +295,17 @@ END $rbac$;
 DO $verify$
 DECLARE
     v_groups   int;
-    v_gr_owner int;
-    v_gr_admin int;
+    v_agr_owner int;
+    v_agr_admin int;
 BEGIN
-    SELECT count(*) INTO v_groups  FROM master.principal_group;
-    SELECT count(*) INTO v_gr_owner FROM master.group_role gr
-        JOIN master.principal_group pg ON pg.id = gr.group_id WHERE pg.code LIKE '%-OWNER';
-    SELECT count(*) INTO v_gr_admin FROM master.group_role gr
-        JOIN master.principal_group pg ON pg.id = gr.group_id WHERE pg.code LIKE '%-ADMIN';
+    SELECT count(*) INTO v_groups  FROM master.auth_group;
+    SELECT count(*) INTO v_agr_owner FROM master.auth_group_role gr
+        JOIN master.auth_group pg ON pg.id = gr.group_id WHERE pg.code LIKE '%-OWNER';
+    SELECT count(*) INTO v_agr_admin FROM master.auth_group_role gr
+        JOIN master.auth_group pg ON pg.id = gr.group_id WHERE pg.code LIKE '%-ADMIN';
 
     RAISE NOTICE '[001_demo_rbac] Verification:';
     RAISE NOTICE '  Total groups:              %   (expected 62)', v_groups;
-    RAISE NOTICE '  OWNER group role links:    %', v_gr_owner;
-    RAISE NOTICE '  ADMIN group role links:    %', v_gr_admin;
+    RAISE NOTICE '  OWNER group role links:    %', v_agr_owner;
+    RAISE NOTICE '  ADMIN group role links:    %', v_agr_admin;
 END $verify$;

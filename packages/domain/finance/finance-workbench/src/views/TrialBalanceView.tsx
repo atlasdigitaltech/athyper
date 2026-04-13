@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { Button, Skeleton } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
+import type { AccountClass } from "../data/types";
 import { useTrialBalance } from "../hooks/useTrialBalance";
 import { AccountClassBadge, AccountClassDot } from "../components/ChartBadge";
 import { BalanceCard } from "../components/BalanceCard";
@@ -82,7 +83,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
             {(["summary", "detailed"] as const).map((v) => (
               <Button
                 key={v}
-                variant={viewMode === v ? "default" : "outline"}
+                variant={viewMode === v ? "primary" : "outline"}
                 size="sm"
                 className="h-7 text-[10px] px-2.5 capitalize"
                 onClick={() => setViewMode(v)}
@@ -126,12 +127,13 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
             </thead>
             <tbody>
               {[...classMap.entries()].map(([cls, { debit, credit, count }]) => {
+                const accountCls = cls as AccountClass;
                 const net = debit - credit;
                 return (
                   <tr key={cls} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="py-2 px-3">
                       <div className="flex items-center gap-2">
-                        <AccountClassDot cls={cls} />
+                        <AccountClassDot cls={accountCls} />
                         <span className="font-medium capitalize">{cls.replace(/_/g, " ")}</span>
                       </div>
                     </td>
@@ -181,7 +183,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                   <tr key={row.accountCode} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="py-1.5 px-3 font-mono text-muted-foreground">{row.accountCode}</td>
                     <td className="py-1.5 px-3">{row.accountName}</td>
-                    <td className="py-1.5 px-3"><AccountClassBadge cls={row.accountClass} /></td>
+                    <td className="py-1.5 px-3"><AccountClassBadge cls={row.accountClass as AccountClass} /></td>
                     <td className="py-1.5 px-3 text-right font-mono">
                       {row.closingDebit ? fmtFull(row.closingDebit) : "—"}
                     </td>

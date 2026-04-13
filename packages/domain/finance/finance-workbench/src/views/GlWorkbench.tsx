@@ -101,7 +101,7 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance", allowC
           <div>
             <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Compare</div>
             <Button
-              variant={scope.comparative ? "default" : "outline"}
+              variant={scope.comparative ? "primary" : "outline"}
               size="sm"
               className="h-7 text-[10px] px-2.5"
               onClick={() => setScope((prev) => ({ ...prev, comparative: !prev.comparative }))}

@@ -77,7 +77,7 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
 export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string): Promise<string | null> {
   if (!sub) return null;
   const row = await db
-    .selectFrom("master.principal_auth_binding as pab")
+    .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
     .where("pab.tenant_id", "=", tenantId)
@@ -98,7 +98,7 @@ export async function resolvePrincipalIdWithJit(
   claims?: Record<string, unknown>,
 ): Promise<string> {
   const existing = await db
-    .selectFrom("master.principal_auth_binding as pab")
+    .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
     .where("pab.tenant_id", "=", tenantId)
@@ -118,7 +118,7 @@ export async function resolvePrincipalIdWithJit(
         .values({ tenant_id: tenantId, code: username.slice(0, 50), name: displayName, principal_type: "user", is_locked: false, is_service_account: false, principal_source: "oidc_jit", status: "active", created_by: SYSTEM_PRINCIPAL_UUID } as never)
         .returning("id" as never).executeTakeFirstOrThrow();
       const newId = (p as Record<string, unknown>).id as string;
-      await trx.insertInto("master.principal_auth_binding" as never)
+      await trx.insertInto("master.principal_identity_binding" as never)
         .values({ tenant_id: tenantId, principal_id: newId, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
         .execute();
       return newId;

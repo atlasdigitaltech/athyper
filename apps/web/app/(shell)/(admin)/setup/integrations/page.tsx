@@ -57,7 +57,7 @@ function IntegrationSubNav({ active }: { active: string }) {
     <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
       {tabs.map((t) => (
         <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "default" : "ghost"} className="h-7 text-xs">
+          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
             {t.label}
           </Button>
         </Link>
@@ -209,10 +209,10 @@ export default function IntegrationEndpointsPage() {
       {/* Service filter */}
       {services.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1">
-          <Button size="sm" variant={serviceFilter === "" ? "default" : "ghost"} className="h-7 text-xs"
+          <Button size="sm" variant={serviceFilter === "" ? "primary" : "ghost"} className="h-7 text-xs"
             onClick={() => setServiceFilter("")}>All</Button>
           {services.map((s) => (
-            <Button key={s} size="sm" variant={serviceFilter === s ? "default" : "ghost"} className="h-7 text-xs font-mono"
+            <Button key={s} size="sm" variant={serviceFilter === s ? "primary" : "ghost"} className="h-7 text-xs font-mono"
               onClick={() => setServiceFilter(s)}>{s}</Button>
           ))}
         </div>

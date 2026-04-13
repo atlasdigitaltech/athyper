@@ -12,8 +12,6 @@ export type access_grant = {
     principal_id: string | null;
     permission_id: string;
     effect: string;
-    scope: string | null;
-    ou_scope_id: string | null;
     resource_type: string | null;
     resource_id: string | null;
     expires_at: Timestamp | null;
@@ -31,6 +29,9 @@ export type access_grant = {
     updated_by: string | null;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
+    visibility_scope: string | null;
+    assignment_scope_type: string | null;
+    assignment_scope_ref_id: string | null;
 };
 export type accounting_distribution = {
     id: Generated<string>;
@@ -830,6 +831,53 @@ export type audit_log = {
     user_agent: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
+};
+export type auth_group = {
+    id: Generated<string>;
+    tenant_id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    is_system: Generated<boolean>;
+    is_self_service_eligible: Generated<boolean>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type auth_group_member = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    group_id: string;
+    joined_at: Generated<Timestamp>;
+    added_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+};
+export type auth_group_role = {
+    id: Generated<string>;
+    tenant_id: string;
+    group_id: string;
+    role_id: string;
+    expires_at: Timestamp | null;
+    assigned_by: string | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+    visibility_scope: string;
+    assignment_scope_type: string;
+    assignment_scope_ref_id: string | null;
+    include_descendants: Generated<boolean>;
 };
 export type bank_account = {
     id: Generated<string>;
@@ -3795,33 +3843,6 @@ export type group_feature_grant = {
     created_at: Generated<Timestamp>;
     created_by: string;
 };
-export type group_member = {
-    id: Generated<string>;
-    tenant_id: string;
-    principal_id: string;
-    group_id: string;
-    joined_at: Generated<Timestamp>;
-    added_by: string | null;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-};
-export type group_role = {
-    id: Generated<string>;
-    tenant_id: string;
-    group_id: string;
-    role_id: string;
-    scope: string;
-    ou_scope_id: string | null;
-    expires_at: Timestamp | null;
-    assigned_by: string | null;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
 export type hash_anchor = {
     id: Generated<string>;
     tenant_id: string;
@@ -6092,7 +6113,18 @@ export type principal = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
-export type principal_auth_binding = {
+export type principal_feature_grant = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    feature_id: string;
+    access_type: Generated<string>;
+    expires_at: Timestamp | null;
+    granted_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+};
+export type principal_identity_binding = {
     id: Generated<string>;
     tenant_id: string;
     principal_id: string;
@@ -6113,35 +6145,6 @@ export type principal_auth_binding = {
     idp_enabled: Generated<boolean>;
     idp_email_verified: Generated<boolean>;
     metadata: Generated<unknown>;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
-export type principal_feature_grant = {
-    id: Generated<string>;
-    tenant_id: string;
-    principal_id: string;
-    feature_id: string;
-    access_type: Generated<string>;
-    expires_at: Timestamp | null;
-    granted_by: string | null;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-};
-export type principal_group = {
-    id: Generated<string>;
-    tenant_id: string;
-    code: string;
-    name: string;
-    description: string | null;
-    is_system: Generated<boolean>;
-    is_self_service_eligible: Generated<boolean>;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    status_changed_at: Timestamp | null;
-    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -7341,7 +7344,7 @@ export type team = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
-export type team_principal = {
+export type team_member = {
     id: Generated<string>;
     tenant_id: string;
     team_id: string;
@@ -8006,6 +8009,9 @@ export type DB = {
     "master.attachment": attachment;
     "master.attachment_acl": attachment_acl;
     "master.attachment_comment": attachment_comment;
+    "master.auth_group": auth_group;
+    "master.auth_group_member": auth_group_member;
+    "master.auth_group_role": auth_group_role;
     "master.bank_account": bank_account;
     "master.bank_account_house_config": bank_account_house_config;
     "master.bank_account_link": bank_account_link;
@@ -8054,8 +8060,6 @@ export type DB = {
     "master.fx_rate": fx_rate;
     "master.gl_account": gl_account;
     "master.group_feature_grant": group_feature_grant;
-    "master.group_member": group_member;
-    "master.group_role": group_role;
     "master.holiday_calendar": holiday_calendar;
     "master.holiday_calendar_day": holiday_calendar_day;
     "master.item": item;
@@ -8079,9 +8083,8 @@ export type DB = {
     "master.payment_term_discount_tier": payment_term_discount_tier;
     "master.planning_model": planning_model;
     "master.principal": principal;
-    "master.principal_auth_binding": principal_auth_binding;
     "master.principal_feature_grant": principal_feature_grant;
-    "master.principal_group": principal_group;
+    "master.principal_identity_binding": principal_identity_binding;
     "master.principal_persona": principal_persona;
     "master.principal_profile": principal_profile;
     "master.principal_ui_preference": principal_ui_preference;
@@ -8097,7 +8100,7 @@ export type DB = {
     "master.tax_jurisdiction": tax_jurisdiction;
     "master.tax_type": tax_type;
     "master.team": team;
-    "master.team_principal": team_principal;
+    "master.team_member": team_member;
     "master.template": template;
     "master.template_binding": template_binding;
     "master.tenant": tenant;

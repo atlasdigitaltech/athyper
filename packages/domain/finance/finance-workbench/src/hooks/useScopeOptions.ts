@@ -42,6 +42,8 @@ export interface CompanyOption {
   name: string;
   functionalCurrency: string;
   legalEntityId: string;
+  /** 1–12. Defines how period numbers map to calendar months. */
+  fiscalYearStartMonth: number;
 }
 
 export interface EntityOption {

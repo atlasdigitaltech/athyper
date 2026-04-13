@@ -22,6 +22,7 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/collaboration-ui": "workspace:*",
+    "@athyper/content-ui": "workspace:*",
     "@athyper/domain-widgets": "workspace:*",
     "@athyper/metadata-client": "workspace:*",
     "@athyper/query": "workspace:*"
@@ -40,6 +41,7 @@
     "@athyper/ui": "workspace:*",
     "@tanstack/react-query": "^5.97.0",
     "lucide-react": "^1.8.0",
+    "next": "^16.2.3",
     "react": "^19.2.5",
     "typescript": "^6.0.2"
   }

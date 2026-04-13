@@ -175,7 +175,7 @@ export function IdentitySection({ active }: { active: boolean }) {
             icon={Users}
             managedBy={{
               manager:  "Tenant Admin",
-              source:   "master.group_member → principal_group → group_role → shared.role",
+              source:   "master.auth_group_member → auth_group → auth_group_role → shared.role",
               editPath: "Admin or self-service (if group is eligible)",
             }}
           >
@@ -192,7 +192,7 @@ export function IdentitySection({ active }: { active: boolean }) {
                       </span>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      {g["is_system"] && (
+                      {!!g["is_system"] && (
                         <Badge variant="info" className="text-2xs">System</Badge>
                       )}
                       <Badge variant="outline" className="text-2xs capitalize">
@@ -236,7 +236,7 @@ export function IdentitySection({ active }: { active: boolean }) {
             icon={Layers}
             managedBy={{
               manager:  "Team Leader / Tenant Admin",
-              source:   "master.team_principal → master.team",
+              source:   "master.team_member → master.team",
               editPath: "Admin or team leader assignment",
             }}
           >

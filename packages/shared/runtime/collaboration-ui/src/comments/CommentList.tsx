@@ -84,7 +84,7 @@ export function CommentList({ entityType, entityId, className }: CommentListProp
             )}
           </div>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+            <Button variant="ghost" size="sm" onClick={() => markAllAsRead()}>
               <CheckCheck className="mr-1.5 size-4" />
               Mark all read
             </Button>

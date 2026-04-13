@@ -65,7 +65,7 @@ function ActionButtons({ item, onDone }: ActionButtonsProps) {
       <div className="flex gap-2">
         <Button
           size="sm"
-          variant="default"
+          variant="primary"
           onClick={() => act("approve")}
           loading={submit.isPending}
         >

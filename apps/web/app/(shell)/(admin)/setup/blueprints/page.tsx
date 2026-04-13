@@ -144,7 +144,7 @@ const ALL_CATEGORIES: Array<{ key: Blueprint["category"] | "all"; label: string 
 
 function BlueprintCard({ bp }: { bp: Blueprint }) {
   const colorClass = CATEGORY_COLORS[bp.category];
-  const isApplied  = bp.status === "applied";
+  const isApplied  = false; // Blueprint.status is "active"|"deprecated"; applied state not tracked here
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -244,7 +244,7 @@ export default function BlueprintsPage() {
           {ALL_CATEGORIES.map(({ key, label }) => (
             <Button
               key={key}
-              variant={activeCategory === key ? "default" : "ghost"}
+              variant={activeCategory === key ? "primary" : "ghost"}
               size="sm"
               className="h-8 text-xs"
               onClick={() => setActiveCategory(key as Blueprint["category"] | "all")}
