@@ -178,31 +178,19 @@ export interface ManagedByProps {
 }
 
 export function ManagedBy({ manager, source, lastUpdated, editPath }: ManagedByProps) {
+  const parts: string[] = [];
+  if (manager)     parts.push(`Managed by: ${manager}`);
+  if (source)      parts.push(source);
+  if (lastUpdated) {
+    const d = fmtDate(lastUpdated);
+    if (d !== "—") parts.push(`Updated: ${d}`);
+  }
+  if (editPath)    parts.push(editPath);
+
   return (
-    <div className="mb-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-muted px-3 py-2 text-2xs text-muted-foreground">
-      {manager && (
-        <span className="inline-flex items-center gap-1">
-          <Lock className="h-2.5 w-2.5 shrink-0" />
-          Managed by:{" "}
-          <strong className="font-semibold text-foreground/70">{manager}</strong>
-        </span>
-      )}
-      {source && (
-        <span className="inline-flex items-center gap-1 font-mono">
-          <Database className="h-2.5 w-2.5 shrink-0" />
-          {source}
-        </span>
-      )}
-      {lastUpdated && (
-        <span className="inline-flex items-center gap-1">
-          Updated: {fmtDate(lastUpdated)}
-        </span>
-      )}
-      {editPath && (
-        <span className="inline-flex items-center gap-1 italic">
-          Edit via: {editPath}
-        </span>
-      )}
+    <div className="mb-3.5 flex items-center gap-1.5 rounded-md bg-muted px-3 py-2 text-2xs text-muted-foreground">
+      <Lock className="h-2.5 w-2.5 shrink-0" />
+      <span>{parts.join(" · ")}</span>
     </div>
   );
 }
@@ -252,10 +240,8 @@ export function InfoRow({
       {/* Value + copy */}
       <span
         className={cn(
-          "flex items-center gap-1.5 text-right",
-          mono
-            ? "font-mono text-xs text-foreground"
-            : "text-sm text-foreground",
+          "flex items-center gap-1.5 text-right text-xs font-medium text-foreground",
+          mono && "font-mono",
         )}
       >
         {value ?? <span className="text-muted-foreground">—</span>}
@@ -296,14 +282,14 @@ export function SectionCard({
   return (
     <Card className="mb-4 w-full">
       <CardHeader className="pb-0 pt-4">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
           {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
           <span className="flex-1">{title}</span>
           {badge}
         </CardTitle>
         {note && (
-          <p className="mt-1 flex items-center gap-1 text-2xs text-muted-foreground">
-            <Lock className="h-2.5 w-2.5 shrink-0" />
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            <Lock className="h-3 w-3 shrink-0" />
             {note}
           </p>
         )}
@@ -348,7 +334,7 @@ export function Banner({
   const Icon = IconOverride ?? DefaultIcon;
   return (
     <div className={cn(
-      "mb-4 flex items-start gap-2.5 rounded-md border px-3.5 py-3 text-xs leading-relaxed",
+      "mb-4 flex items-start gap-2.5 rounded-md border px-3.5 py-3 text-sm leading-relaxed",
       wrapper,
     )}>
       <Icon className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", iconClass)} />

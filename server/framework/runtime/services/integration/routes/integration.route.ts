@@ -1,7 +1,7 @@
 /**
  * Integration Hub Routes
  *
- * Endpoint registry (int.endpoint):
+ * Endpoint registry (event.endpoint):
  *   GET    /integration/endpoints              — list endpoints
  *   POST   /integration/endpoints              — register endpoint
  *   PATCH  /integration/endpoints/:id          — update config/health
@@ -23,7 +23,7 @@
  *   GET    /integration/deliveries             — list deliveries (always date-bounded)
  *   GET    /integration/deliveries/:id         — full detail + channel_detail
  *
- * Webhook subscriptions (int.webhook_subscription):
+ * Webhook subscriptions (event.webhook_subscription):
  *   GET    /integration/webhooks               — list subscriptions
  *   POST   /integration/webhooks               — register subscription
  *   PATCH  /integration/webhooks/:id           — update topics/config
@@ -162,7 +162,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       const q = req.query as Record<string, unknown>;
 
       let query = db
-        .selectFrom("int.endpoint as e" as never)
+        .selectFrom("event.endpoint as e" as never)
         .selectAll("e" as never)
         .where("e.tenant_id" as never, "=", c.tenantId as never)
         .orderBy("e.service" as never).orderBy("e.name" as never)
@@ -186,7 +186,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
         res.status(400).json({ error: "MISSING_FIELDS", message: "service, code, name, path required" }); return;
       }
       const row = await db
-        .insertInto("int.endpoint" as never)
+        .insertInto("event.endpoint" as never)
         .values({
           tenant_id: c.tenantId, service: body["service"], code: body["code"],
           name: body["name"], description: body["description"] ?? null,
@@ -215,7 +215,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       if (body["health"] !== undefined)      updates["health"] = body["health"];
       if (body["isActive"] !== undefined)    updates["is_active"] = body["isActive"];
       const row = await db
-        .updateTable("int.endpoint" as never)
+        .updateTable("event.endpoint" as never)
         .set(updates as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
@@ -232,7 +232,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const row = await db
-        .updateTable("int.endpoint" as never)
+        .updateTable("event.endpoint" as never)
         .set({ is_active: false, updated_at: new Date(), updated_by: c.principalId } as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
@@ -465,7 +465,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // WEBHOOK SUBSCRIPTIONS (int.webhook_subscription)
+  // WEBHOOK SUBSCRIPTIONS (event.webhook_subscription)
   // ══════════════════════════════════════════════════════════════════════════
 
   router.get("/integration/webhooks", async (req, res, next) => {
@@ -475,7 +475,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
       const isActive = req.query["isActive"] !== "false";
       const rows = await db
-        .selectFrom("int.webhook_subscription as ws" as never)
+        .selectFrom("event.webhook_subscription as ws" as never)
         // signing_secret omitted from list response
         .select(["ws.id", "ws.tenant_id", "ws.target_url", "ws.topics", "ws.description", "ws.max_retries", "ws.timeout_ms", "ws.last_delivery_at", "ws.last_delivery_status", "ws.failure_count", "ws.is_active", "ws.created_at", "ws.updated_at"] as never[])
         .where("ws.tenant_id" as never, "=", c.tenantId as never)
@@ -497,7 +497,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
         res.status(400).json({ error: "MISSING_FIELDS", message: "targetUrl required" }); return;
       }
       const row = await db
-        .insertInto("int.webhook_subscription" as never)
+        .insertInto("event.webhook_subscription" as never)
         .values({
           tenant_id: c.tenantId, target_url: body["targetUrl"],
           signing_secret: body["signingSecret"] ?? null,
@@ -527,7 +527,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       if (body["maxRetries"] !== undefined)   updates["max_retries"] = body["maxRetries"];
       if (body["timeoutMs"] !== undefined)    updates["timeout_ms"] = body["timeoutMs"];
       const row = await db
-        .updateTable("int.webhook_subscription" as never)
+        .updateTable("event.webhook_subscription" as never)
         .set(updates as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
@@ -544,7 +544,7 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const row = await db
-        .updateTable("int.webhook_subscription" as never)
+        .updateTable("event.webhook_subscription" as never)
         .set({ is_active: false, updated_at: new Date(), updated_by: c.principalId } as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)

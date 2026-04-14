@@ -1,4 +1,5 @@
 // server/framework/adapters/db/src/kysely/query-helpers.ts
+import { sql } from "kysely";
 import type { ReferenceExpression, SelectQueryBuilder } from "kysely";
 
 /**
@@ -303,4 +304,58 @@ export function createFieldWhitelistFromMeta(
   mappings: MetaFieldMapping[],
 ): FieldWhitelist {
   return new Set(mappings.map((m) => m.dbColumnName));
+}
+
+// ─── RBAC scope helpers ───────────────────────────────────────────────────────
+
+/**
+ * Restricts a Kysely query to only rows accessible by the session's company scope.
+ *
+ * `ccCodeRef` must point to a `company_code.code` column that the calling query
+ * already exposes (typically via `JOIN master.company_code AS cc`).
+ *
+ * - `scope.all = true`           → no filter (tenant-wide access)
+ * - `scope.company_codes` empty  → `WHERE false` (no accessible entities)
+ * - otherwise                    → `WHERE {ccCodeRef} IN (scope.company_codes)`
+ */
+export function withCompanyScope<DB, TB extends keyof DB & string, O>(
+  query: SelectQueryBuilder<DB, TB, O>,
+  scope: { all: boolean; company_codes: string[] },
+  ccCodeRef: ReferenceExpression<DB, TB>,
+): SelectQueryBuilder<DB, TB, O> {
+  if (scope.all) return query;
+  if (scope.company_codes.length === 0) {
+    // Principal has no accessible company codes — return empty result set.
+    return query.where(sql<boolean>`false`);
+  }
+  return query.where(ccCodeRef, "in", scope.company_codes);
+}
+
+/**
+ * Restricts a Kysely query to only rows visible under the session's row-level scope.
+ *
+ * `createdByRef` must point to the `created_by` UUID column on the primary table.
+ *
+ * - `visibility = 'all'`  → no filter (see all rows regardless of creator)
+ * - `visibility = 'team'` → `WHERE {createdByRef} IN (principalId, ...teamMemberIds)`
+ * - `visibility = 'own'`  → `WHERE {createdByRef} = principalId`
+ *
+ * When `visibility = 'team'`, pass `teamMemberIds` (the resolved list of principal
+ * UUIDs on the same team). Falls back to 'own' behaviour when the list is absent
+ * or empty — conservative by design.
+ */
+export function withVisibilityScope<DB, TB extends keyof DB & string, O>(
+  query: SelectQueryBuilder<DB, TB, O>,
+  scope: { visibility: "all" | "own" | "team" },
+  createdByRef: ReferenceExpression<DB, TB>,
+  principalId: string,
+  teamMemberIds?: string[],
+): SelectQueryBuilder<DB, TB, O> {
+  if (scope.visibility === "all") return query;
+  if (scope.visibility === "team" && teamMemberIds && teamMemberIds.length > 0) {
+    const ids = Array.from(new Set([principalId, ...teamMemberIds]));
+    return query.where(createdByRef, "in", ids);
+  }
+  // 'own' or team fallback when no team members are resolved
+  return query.where(createdByRef, "=", principalId);
 }

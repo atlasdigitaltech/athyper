@@ -23,6 +23,11 @@ CREATE INDEX IF NOT EXISTS ec_version_idx
 -- §6  DOCUMENT · PRINT · BRANDING  —  snapshot indexes
 -- =============================================================================
 
+-- ── snapshot.content_item_version ───────────────────────────────────────────
+-- Latest version per content item (DESC for most-recent-first queries)
+CREATE INDEX IF NOT EXISTS civ_item_version_desc_idx
+    ON snapshot.content_item_version (content_item_id, version DESC);
+
 -- ── snapshot.template_version ──────────────────────────────────────────────
 -- GiST temporal range: answers "which version was effective on date X?"
 -- Requires btree_gist (already loaded in 00_extensions/001_extensions.sql)

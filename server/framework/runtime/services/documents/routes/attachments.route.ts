@@ -72,7 +72,7 @@ export interface AttachmentsRouteDeps {
 async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string): Promise<string> {
   if (!sub) return SYSTEM_PRINCIPAL_UUID;
   const existing = await db
-    .selectFrom("master.principal_auth_binding as pab")
+    .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
     .where("pab.tenant_id", "=", tenantId)

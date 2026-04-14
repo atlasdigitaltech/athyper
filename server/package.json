@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/app.ts",
+    "dev:worker": "MODE=worker tsx watch src/app.ts",
+    "dev:scheduler": "MODE=scheduler tsx watch src/app.ts",
     "start": "node dist/src/app.js",
+    "start:api": "node dist/src/app.js",
+    "start:worker": "MODE=worker node dist/src/app.js",
+    "start:scheduler": "MODE=scheduler node dist/src/app.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",

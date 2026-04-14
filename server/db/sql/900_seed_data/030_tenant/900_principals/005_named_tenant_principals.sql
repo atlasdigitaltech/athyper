@@ -3,7 +3,7 @@
 -- ============================================================================
 -- File:     005_named_tenant_principals.sql
 -- Schemas:  master.principal, master.principal_profile,
---           master.principal_auth_binding
+--           master.principal_identity_binding
 -- Purpose:  Pre-seed persona users so that KC → DB identity resolution works
 --           on first login without JIT.
 --
@@ -128,11 +128,11 @@ BEGIN
     RAISE NOTICE '[005_named_tenant_principals] Stage B: 17 principal profiles seeded';
 
     -- ══════════════════════════════════════════════════════════════════════════
-    -- STAGE C: master.principal_auth_binding
+    -- STAGE C: master.principal_identity_binding
     -- provider_code = 'keycloak', subject_id = KC UUID (= principal.id)
     -- ══════════════════════════════════════════════════════════════════════════
 
-    INSERT INTO master.principal_auth_binding (
+    INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
         provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,

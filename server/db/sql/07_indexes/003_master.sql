@@ -1072,3 +1072,80 @@ CREATE INDEX IF NOT EXISTS scp_remittance_bank_link_idx
 
 -- ── §PM1 payment_method ─────────────────────────────────────────────────────
 -- (indexes are table-level: payment_method_tenant_code_uq via UNIQUE constraint)
+
+
+-- =============================================================================
+-- §CMS  master.content_item / content_item_link / content_item_access_grant
+-- =============================================================================
+
+-- content_item
+CREATE INDEX IF NOT EXISTS content_item_tenant_status_kind_idx
+    ON master.content_item (tenant_id, status, kind);
+
+CREATE INDEX IF NOT EXISTS content_item_tenant_parent_idx
+    ON master.content_item (tenant_id, parent_id);
+
+CREATE INDEX IF NOT EXISTS content_item_tenant_locale_slug_idx
+    ON master.content_item (tenant_id, locale_code, slug);
+
+CREATE INDEX IF NOT EXISTS content_item_published_pidx
+    ON master.content_item (tenant_id, kind, locale_code)
+    WHERE status = 'PUBLISHED';
+
+-- content_item_link
+CREATE INDEX IF NOT EXISTS cil_source_idx
+    ON master.content_item_link (source_content_item_id);
+
+CREATE INDEX IF NOT EXISTS cil_target_idx
+    ON master.content_item_link (target_content_item_id);
+
+-- content_item_access_grant
+CREATE INDEX IF NOT EXISTS ciag_item_subject_idx
+    ON master.content_item_access_grant (content_item_id, subject_type, subject_id);
+
+-- Partial index for non-expiring grants only (volatile now() cannot be used in predicates)
+CREATE INDEX IF NOT EXISTS ciag_item_level_perpetual_pidx
+    ON master.content_item_access_grant (content_item_id, access_level)
+    WHERE expires_at IS NULL;
+
+
+-- ============================================================================
+-- Payment terms tables
+-- ============================================================================
+
+-- ============================================================================
+-- Holiday Calendar indexes
+-- ============================================================================
+
+-- hc: active calendars per tenant (partial)
+CREATE INDEX IF NOT EXISTS hc_tenant_pidx
+    ON master.holiday_calendar (tenant_id)
+    WHERE status = 'active';
+
+-- hcd: calendar + year lookup (covers "all holidays for calendar in year")
+CREATE INDEX IF NOT EXISTS hcd_calendar_year_idx
+    ON master.holiday_calendar_day (holiday_calendar_id, calendar_year);
+
+-- hcd: date lookup (covers "is this date a holiday?")
+CREATE INDEX IF NOT EXISTS hcd_date_idx
+    ON master.holiday_calendar_day (holiday_calendar_id, holiday_date);
+
+
+-- ============================================================================
+-- Payment Term indexes
+-- ============================================================================
+
+-- pt: active terms per tenant (partial)
+CREATE INDEX IF NOT EXISTS pt_tenant_active_pidx
+    ON master.payment_term (tenant_id)
+    WHERE status = 'active';
+
+-- ptc: clauses for a given term
+CREATE INDEX IF NOT EXISTS ptc_term_idx
+    ON master.payment_term_clause (payment_term_id);
+
+-- ptdt: discount tiers for a given term
+CREATE INDEX IF NOT EXISTS ptdt_term_idx
+    ON master.payment_term_discount_tier (payment_term_id);
+
+

@@ -2157,3 +2157,903 @@ CREATE TRIGGER trg_cca_entity_type_lookup
     EXECUTE FUNCTION control.trg_validate_lookup_columns(
         'master.company_code_access_entity_type', 'entity_type'
     );
+
+
+-- ============================================================================
+-- §  auth_epoch increment triggers
+-- ============================================================================
+-- auth_epoch on master.principal is a monotonically increasing security cache
+-- epoch. When it changes the session service detects a cache stale condition
+-- and forces immediate re-resolution, bypassing the 5-minute TTL.
+--
+-- Increment on:
+--   A) master.principal.is_locked changed (any direction)
+--   B) master.access_grant: effect=deny row inserted, revoked, or deleted
+--      (principal-targeted only per schema rule; no risk_level filter here —
+--       any deny change is security-relevant)
+--   C) master.delegation_grant.is_revoked set to true (revocation only)
+--
+-- Each trigger calls the same shared function master.fn_bump_auth_epoch().
+-- ============================================================================
+
+-- ── Trigger function ─────────────────────────────────────────────────────────
+-- Resolves the target principal_id from NEW (or OLD on DELETE) and bumps epoch.
+-- Also emits an IAM outbox event so the outbox worker can bust frontend sessions.
+
+CREATE OR REPLACE FUNCTION master.fn_bump_auth_epoch()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, event, pg_catalog
+AS $$
+DECLARE
+    v_principal_id  uuid;
+    v_tenant_id     uuid;
+BEGIN
+    -- ── Determine the target principal ────────────────────────────────────
+    IF TG_TABLE_NAME = 'principal' THEN
+        v_principal_id := NEW.id;
+        v_tenant_id    := NEW.tenant_id;
+
+    ELSIF TG_TABLE_NAME = 'access_grant' THEN
+        -- access_grant.principal_id may be NULL (role/group grants).
+        -- auth_epoch only applies to direct-principal deny grants.
+        IF TG_OP = 'DELETE' THEN
+            v_principal_id := OLD.principal_id;
+            v_tenant_id    := OLD.tenant_id;
+        ELSE
+            v_principal_id := NEW.principal_id;
+            v_tenant_id    := NEW.tenant_id;
+        END IF;
+        IF v_principal_id IS NULL THEN
+            RETURN COALESCE(NEW, OLD);
+        END IF;
+
+    ELSIF TG_TABLE_NAME = 'delegation_grant' THEN
+        -- Bump delegate's epoch (they lose the delegated permissions on revoke).
+        v_principal_id := NEW.delegate_id;
+        v_tenant_id    := NEW.tenant_id;
+    END IF;
+
+    -- ── Increment auth_epoch ──────────────────────────────────────────────
+    UPDATE master.principal
+    SET    auth_epoch = auth_epoch + 1
+    WHERE  id        = v_principal_id
+      AND  tenant_id = v_tenant_id;
+
+    -- ── Emit IAM outbox event ─────────────────────────────────────────────
+    -- The IAM outbox worker picks this up and invalidates frontend/BFF sessions.
+    -- ON CONFLICT DO NOTHING: if the principal was just deleted, skip gracefully.
+    INSERT INTO event.outbox (
+        tenant_id, topic, event_type, entity_type, entity_id, payload
+    ) VALUES (
+        v_tenant_id,
+        'iam',
+        'auth_epoch_changed',
+        'principal',
+        v_principal_id,
+        jsonb_build_object(
+            'principal_id', v_principal_id,
+            'trigger_table', TG_TABLE_NAME,
+            'trigger_op',    TG_OP
+        )
+    )
+    ON CONFLICT DO NOTHING;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+COMMENT ON FUNCTION master.fn_bump_auth_epoch IS
+    'Increments master.principal.auth_epoch and emits an IAM outbox event. '
+    'Called by auth_epoch triggers on principal (is_locked), '
+    'access_grant (deny, principal-targeted), and delegation_grant (revocation). '
+    'The session service compares the cached epoch with the DB on every cache hit; '
+    'a mismatch forces immediate cache invalidation and session re-resolution.';
+
+-- ── Trigger A: principal.is_locked toggled ────────────────────────────────────
+
+DROP TRIGGER IF EXISTS trg_principal_bump_auth_epoch ON master.principal;
+CREATE TRIGGER trg_principal_bump_auth_epoch
+    AFTER UPDATE OF is_locked
+    ON master.principal
+    FOR EACH ROW
+    WHEN (OLD.is_locked IS DISTINCT FROM NEW.is_locked)
+    EXECUTE FUNCTION master.fn_bump_auth_epoch();
+
+-- ── Trigger B: deny access_grant inserted, revoked (status change), or deleted ──
+
+DROP TRIGGER IF EXISTS trg_access_grant_bump_auth_epoch ON master.access_grant;
+CREATE TRIGGER trg_access_grant_bump_auth_epoch
+    AFTER INSERT OR UPDATE OF status OR DELETE
+    ON master.access_grant
+    FOR EACH ROW
+    WHEN (
+        COALESCE(NEW.effect, OLD.effect) = 'deny'
+        AND COALESCE(NEW.principal_id, OLD.principal_id) IS NOT NULL
+    )
+    EXECUTE FUNCTION master.fn_bump_auth_epoch();
+
+-- ── Trigger C: delegation_grant revoked ──────────────────────────────────────
+
+DROP TRIGGER IF EXISTS trg_delegation_grant_bump_auth_epoch ON master.delegation_grant;
+CREATE TRIGGER trg_delegation_grant_bump_auth_epoch
+    AFTER UPDATE OF is_revoked
+    ON master.delegation_grant
+    FOR EACH ROW
+    WHEN (OLD.is_revoked = false AND NEW.is_revoked = true)
+    EXECUTE FUNCTION master.fn_bump_auth_epoch();
+
+
+-- ============================================================================
+-- master.content_item — auto-maintenance triggers
+-- ============================================================================
+
+DROP TRIGGER IF EXISTS trg_content_item_updated_at ON master.content_item;
+CREATE TRIGGER trg_content_item_updated_at
+    BEFORE UPDATE ON master.content_item
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_content_item_status_changed ON master.content_item;
+CREATE TRIGGER trg_content_item_status_changed
+    BEFORE UPDATE ON master.content_item
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- content_item.kind — extensible, governed by master.content_item_kind lookup
+DROP TRIGGER IF EXISTS trg_content_item_kind_lookup ON master.content_item;
+CREATE TRIGGER trg_content_item_kind_lookup
+    BEFORE INSERT OR UPDATE OF kind ON master.content_item
+    FOR EACH ROW EXECUTE FUNCTION
+    control.trg_validate_lookup_columns('master.content_item_kind', 'kind');
+
+-- content_item_link.relation_type — extensible
+DROP TRIGGER IF EXISTS trg_cil_relation_type_lookup ON master.content_item_link;
+CREATE TRIGGER trg_cil_relation_type_lookup
+    BEFORE INSERT OR UPDATE OF relation_type ON master.content_item_link
+    FOR EACH ROW EXECUTE FUNCTION
+    control.trg_validate_lookup_columns(
+        'master.content_item_link_relation_type', 'relation_type');
+
+
+-- ============================================================================
+-- UI principal tables: saved_view, dashboard, dashboard_widget,
+-- principal_ui_profile, principal_ui_preference
+-- ============================================================================
+--                                             trg_validate_lookup_columns)
+-- Convention: DROP TRIGGER IF EXISTS before CREATE for idempotency.
+--             BEFORE triggers fire in alphabetical name order per PostgreSQL spec.
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.principal_ui_profile
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_puip_enforce_created_by ON master.principal_ui_profile;
+CREATE TRIGGER trg_puip_enforce_created_by
+    BEFORE INSERT OR UPDATE ON master.principal_ui_profile
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_created_by();
+
+-- updated_at / updated_by — shared stamp trigger (defined in supplementary)
+DROP TRIGGER IF EXISTS trg_puip_updated_at ON master.principal_ui_profile;
+CREATE TRIGGER trg_puip_updated_at
+    BEFORE UPDATE ON master.principal_ui_profile
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.principal_ui_preference
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_puipref_enforce_created_by ON master.principal_ui_preference;
+CREATE TRIGGER trg_puipref_enforce_created_by
+    BEFORE INSERT OR UPDATE ON master.principal_ui_preference
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_created_by();
+
+DROP TRIGGER IF EXISTS trg_puipref_updated_at ON master.principal_ui_preference;
+CREATE TRIGGER trg_puipref_updated_at
+    BEFORE UPDATE ON master.principal_ui_preference
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.saved_view
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_sv_enforce_created_by ON master.saved_view;
+CREATE TRIGGER trg_sv_enforce_created_by
+    BEFORE INSERT OR UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_created_by();
+
+DROP TRIGGER IF EXISTS trg_sv_updated_at ON master.saved_view;
+CREATE TRIGGER trg_sv_updated_at
+    BEFORE UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_saved_view_status_changed ON master.saved_view;
+CREATE TRIGGER trg_saved_view_status_changed
+    BEFORE UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.dashboard
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_dash_enforce_created_by ON master.dashboard;
+CREATE TRIGGER trg_dash_enforce_created_by
+    BEFORE INSERT OR UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_created_by();
+
+DROP TRIGGER IF EXISTS trg_dash_updated_at ON master.dashboard;
+CREATE TRIGGER trg_dash_updated_at
+    BEFORE UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_dashboard_status_changed ON master.dashboard;
+CREATE TRIGGER trg_dashboard_status_changed
+    BEFORE UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.dashboard_widget
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_dw_enforce_created_by ON master.dashboard_widget;
+CREATE TRIGGER trg_dw_enforce_created_by
+    BEFORE INSERT OR UPDATE ON master.dashboard_widget
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_created_by();
+
+DROP TRIGGER IF EXISTS trg_dashboard_widget_updated_at ON master.dashboard_widget;
+CREATE TRIGGER trg_dashboard_widget_updated_at
+    BEFORE UPDATE ON master.dashboard_widget
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- §  TRIGGER EXECUTION ORDER (BEFORE triggers, alphabetical per table)
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- master.principal_ui_profile — INSERT:
+--   trg_puip_enforce_created_by     stamps created_by from session
+--   [supplementary lookup triggers] validate locale_code etc.
+--
+-- master.principal_ui_profile — UPDATE:
+--   trg_puip_enforce_created_by     blocks created_by mutation
+--   trg_puip_updated_at             stamps updated_at / updated_by
+--   [supplementary lookup triggers] validate locale_code etc.
+--
+-- master.principal_ui_preference — INSERT:
+--   trg_puipref_enforce_created_by  stamps created_by from session
+--   [supplementary lookup triggers] validate preference_code / surface_code
+--
+-- master.principal_ui_preference — UPDATE:
+--   trg_puipref_enforce_created_by  blocks created_by mutation
+--   trg_puipref_updated_at          stamps updated_at / updated_by
+--   [supplementary lookup triggers] validate preference_code / surface_code
+--
+-- master.saved_view — INSERT:
+--   trg_sv_enforce_created_by       stamps created_by from session
+--   [supplementary: trg_sv_scope, trg_sv_surface_code]
+--
+-- master.saved_view — UPDATE:
+--   trg_saved_view_status_changed   stamps status_changed_at / by
+--   trg_sv_enforce_created_by       blocks created_by mutation
+--   trg_sv_updated_at               stamps updated_at / updated_by
+--   [supplementary: trg_sv_guard_scope_owner, trg_sv_immutable_code,
+--                   trg_sv_scope, trg_sv_surface_code,
+--                   trg_sv_sync_deleted_at]
+--
+-- master.dashboard — INSERT:
+--   trg_dash_enforce_created_by     stamps created_by from session
+--   [supplementary: trg_dash_scope, trg_dash_surface_code]
+--
+-- master.dashboard — UPDATE:
+--   trg_dash_enforce_created_by     blocks created_by mutation
+--   trg_dash_updated_at             stamps updated_at / updated_by
+--   trg_dashboard_status_changed    stamps status_changed_at / by
+--   [supplementary: trg_dash_guard_scope_owner, trg_dash_immutable_code,
+--                   trg_dash_scope, trg_dash_surface_code,
+--                   trg_dash_sync_deleted_at]
+--
+-- master.dashboard_widget — INSERT:
+--   [supplementary: trg_dw_breakpoint]
+--   trg_dw_enforce_created_by       stamps created_by from session
+--   [supplementary: trg_dw_widget_type]
+--
+-- master.dashboard_widget — UPDATE:
+--   trg_dashboard_widget_updated_at stamps updated_at / updated_by
+--   [supplementary: trg_dw_breakpoint]
+--   trg_dw_enforce_created_by       blocks created_by mutation
+--   [supplementary: trg_dw_widget_type]
+--
+-- No ordering conflicts. Guard/enforcement triggers examine independent columns.
+
+
+-- ============================================================================
+-- UI principal supplementary triggers (scope/owner immutability, deleted_at sync)
+-- ============================================================================
+--             BEFORE triggers fire in alphabetical name order per PostgreSQL spec.
+--
+-- Lookup domain prerequisites (must be seeded before these triggers fire at runtime):
+--   ui.view_scope, ui.dashboard_scope, ui.surface_code, ui.preference_code,
+--   ui.breakpoint, ui.widget_type, ui.density, ui.appearance_mode
+-- (Seeded in 900_seed_data/010_system/000_lookups/LookupDomain/master/)
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.principal_ui_profile — supplementary lookup validators
+-- ════════════════════════════════════════════════════════════════════════════
+-- locale_code / language_code / timezone_code validators are deferred —
+-- those reference i18n lookup domains not yet seeded in this release.
+
+DROP TRIGGER IF EXISTS trg_puip_appearance_mode ON master.principal_ui_profile;
+CREATE TRIGGER trg_puip_appearance_mode
+    BEFORE INSERT OR UPDATE ON master.principal_ui_profile
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.appearance_mode', 'appearance_mode');
+
+DROP TRIGGER IF EXISTS trg_puip_density ON master.principal_ui_profile;
+CREATE TRIGGER trg_puip_density
+    BEFORE INSERT OR UPDATE ON master.principal_ui_profile
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.density', 'density_code');
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.principal_ui_preference — supplementary lookup validators
+-- ════════════════════════════════════════════════════════════════════════════
+-- trg_validate_lookup_columns returns NEW when value IS NULL → safe for nullable surface_code.
+
+DROP TRIGGER IF EXISTS trg_puipref_preference_code ON master.principal_ui_preference;
+CREATE TRIGGER trg_puipref_preference_code
+    BEFORE INSERT OR UPDATE ON master.principal_ui_preference
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.preference_code', 'preference_code');
+
+DROP TRIGGER IF EXISTS trg_puipref_surface_code ON master.principal_ui_preference;
+CREATE TRIGGER trg_puipref_surface_code
+    BEFORE INSERT OR UPDATE ON master.principal_ui_preference
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.surface_code', 'surface_code');
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.saved_view — supplementary
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- Immutable code (machine-stable key used by front-end routing / deep links)
+DROP TRIGGER IF EXISTS trg_sv_immutable_code ON master.saved_view;
+CREATE TRIGGER trg_sv_immutable_code
+    BEFORE UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_immutable_code();
+
+-- Scope/owner guard (immutable after INSERT — blocks escalation/transfer)
+DROP TRIGGER IF EXISTS trg_sv_guard_scope_owner ON master.saved_view;
+CREATE TRIGGER trg_sv_guard_scope_owner
+    BEFORE UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION master.trg_guard_scope_owner_immutable();
+
+-- Lookup validators
+-- Column is 'scope', domain is 'ui.view_scope' (separate from dashboard scope)
+DROP TRIGGER IF EXISTS trg_sv_scope ON master.saved_view;
+CREATE TRIGGER trg_sv_scope
+    BEFORE INSERT OR UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.view_scope', 'scope');
+
+DROP TRIGGER IF EXISTS trg_sv_surface_code ON master.saved_view;
+CREATE TRIGGER trg_sv_surface_code
+    BEFORE INSERT OR UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.surface_code', 'surface_code');
+
+-- deleted_at ↔ status sync
+DROP TRIGGER IF EXISTS trg_sv_sync_deleted_at ON master.saved_view;
+CREATE TRIGGER trg_sv_sync_deleted_at
+    BEFORE UPDATE ON master.saved_view
+    FOR EACH ROW EXECUTE FUNCTION master.trg_sync_deleted_at_with_status();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.dashboard — supplementary
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_dash_immutable_code ON master.dashboard;
+CREATE TRIGGER trg_dash_immutable_code
+    BEFORE UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_immutable_code();
+
+DROP TRIGGER IF EXISTS trg_dash_guard_scope_owner ON master.dashboard;
+CREATE TRIGGER trg_dash_guard_scope_owner
+    BEFORE UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION master.trg_guard_scope_owner_immutable();
+
+-- Column is 'scope', domain is 'ui.dashboard_scope' (separate from saved_view scope)
+DROP TRIGGER IF EXISTS trg_dash_scope ON master.dashboard;
+CREATE TRIGGER trg_dash_scope
+    BEFORE INSERT OR UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.dashboard_scope', 'scope');
+
+DROP TRIGGER IF EXISTS trg_dash_surface_code ON master.dashboard;
+CREATE TRIGGER trg_dash_surface_code
+    BEFORE INSERT OR UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.surface_code', 'surface_code');
+
+DROP TRIGGER IF EXISTS trg_dash_sync_deleted_at ON master.dashboard;
+CREATE TRIGGER trg_dash_sync_deleted_at
+    BEFORE UPDATE ON master.dashboard
+    FOR EACH ROW EXECUTE FUNCTION master.trg_sync_deleted_at_with_status();
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.dashboard_widget — supplementary
+-- ════════════════════════════════════════════════════════════════════════════
+
+DROP TRIGGER IF EXISTS trg_dw_breakpoint ON master.dashboard_widget;
+CREATE TRIGGER trg_dw_breakpoint
+    BEFORE INSERT OR UPDATE ON master.dashboard_widget
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.breakpoint', 'breakpoint_code');
+
+DROP TRIGGER IF EXISTS trg_dw_widget_type ON master.dashboard_widget;
+CREATE TRIGGER trg_dw_widget_type
+    BEFORE INSERT OR UPDATE ON master.dashboard_widget
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('ui.widget_type', 'widget_type_code');
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- §  COMPLETE TRIGGER EXECUTION ORDER (BEFORE triggers, alphabetical per table)
+-- ════════════════════════════════════════════════════════════════════════════
+-- Combines 003b (core) and 003c (supplementary) for a full picture.
+--
+-- master.principal_ui_profile — INSERT:
+--   trg_puip_appearance_mode        validates appearance_mode → ui.appearance_mode
+--   trg_puip_density                validates density_code    → ui.density
+--   trg_puip_enforce_created_by     stamps created_by from session
+--
+-- master.principal_ui_profile — UPDATE:
+--   trg_puip_appearance_mode        validates appearance_mode
+--   trg_puip_density                validates density_code
+--   trg_puip_enforce_created_by     blocks created_by mutation
+--   trg_puip_updated_at             stamps updated_at / updated_by
+--
+-- master.principal_ui_preference — INSERT:
+--   trg_puipref_enforce_created_by  stamps created_by from session
+--   trg_puipref_preference_code     validates preference_code → ui.preference_code
+--   trg_puipref_surface_code        validates surface_code    → ui.surface_code (nullable)
+--
+-- master.principal_ui_preference — UPDATE:
+--   trg_puipref_enforce_created_by  blocks created_by mutation
+--   trg_puipref_preference_code     validates preference_code
+--   trg_puipref_surface_code        validates surface_code
+--   trg_puipref_updated_at          stamps updated_at / updated_by
+--
+-- master.saved_view — INSERT:
+--   trg_sv_enforce_created_by       stamps created_by from session
+--   trg_sv_scope                    validates scope → ui.view_scope
+--   trg_sv_surface_code             validates surface_code → ui.surface_code
+--
+-- master.saved_view — UPDATE:
+--   trg_saved_view_status_changed   stamps status_changed_at / by
+--   trg_sv_enforce_created_by       blocks created_by mutation
+--   trg_sv_guard_scope_owner        blocks scope / owner_principal_id mutation
+--   trg_sv_immutable_code           blocks code mutation
+--   trg_sv_scope                    validates scope → ui.view_scope
+--   trg_sv_surface_code             validates surface_code → ui.surface_code
+--   trg_sv_sync_deleted_at          syncs deleted_at with status
+--   trg_sv_updated_at               stamps updated_at / updated_by
+--
+-- master.dashboard — INSERT:
+--   trg_dash_enforce_created_by     stamps created_by from session
+--   trg_dash_scope                  validates scope → ui.dashboard_scope
+--   trg_dash_surface_code           validates surface_code → ui.surface_code (nullable)
+--
+-- master.dashboard — UPDATE:
+--   trg_dash_enforce_created_by     blocks created_by mutation
+--   trg_dash_guard_scope_owner      blocks scope / owner_principal_id mutation
+--   trg_dash_immutable_code         blocks code mutation
+--   trg_dash_scope                  validates scope → ui.dashboard_scope
+--   trg_dash_surface_code           validates surface_code → ui.surface_code
+--   trg_dash_sync_deleted_at        syncs deleted_at with status
+--   trg_dash_updated_at             stamps updated_at / updated_by
+--   trg_dashboard_status_changed    stamps status_changed_at / by
+--
+-- master.dashboard_widget — INSERT:
+--   trg_dw_breakpoint               validates breakpoint_code → ui.breakpoint (nullable)
+--   trg_dw_enforce_created_by       stamps created_by from session
+--   trg_dw_widget_type              validates widget_type_code → ui.widget_type
+--
+-- master.dashboard_widget — UPDATE:
+--   trg_dashboard_widget_updated_at stamps updated_at / updated_by
+--   trg_dw_breakpoint               validates breakpoint_code
+--   trg_dw_enforce_created_by       blocks created_by mutation
+--   trg_dw_widget_type              validates widget_type_code
+--
+-- No ordering conflicts. Guard/enforcement/validation triggers examine
+-- independent columns with no cross-dependencies.
+
+
+-- ============================================================================
+-- Payment terms tables
+-- ============================================================================
+-- Functions: CREATE OR REPLACE for idempotency.
+
+
+-- ============================================================================
+-- PART G — updated_at triggers
+-- ============================================================================
+
+-- holiday_calendar
+DROP TRIGGER IF EXISTS trg_hc_updated_at ON master.holiday_calendar;
+CREATE TRIGGER trg_hc_updated_at BEFORE UPDATE ON master.holiday_calendar
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- holiday_calendar_day
+DROP TRIGGER IF EXISTS trg_hcd_updated_at ON master.holiday_calendar_day;
+CREATE TRIGGER trg_hcd_updated_at BEFORE UPDATE ON master.holiday_calendar_day
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- payment_term
+DROP TRIGGER IF EXISTS trg_pt_updated_at ON master.payment_term;
+CREATE TRIGGER trg_pt_updated_at BEFORE UPDATE ON master.payment_term
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- payment_term_clause
+DROP TRIGGER IF EXISTS trg_ptc_updated_at ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_updated_at BEFORE UPDATE ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- payment_term_discount_tier
+DROP TRIGGER IF EXISTS trg_ptdt_updated_at ON master.payment_term_discount_tier;
+CREATE TRIGGER trg_ptdt_updated_at BEFORE UPDATE ON master.payment_term_discount_tier
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- ============================================================================
+-- PART G — status_changed triggers
+-- ============================================================================
+
+-- holiday_calendar
+DROP TRIGGER IF EXISTS trg_hc_status_changed ON master.holiday_calendar;
+CREATE TRIGGER trg_hc_status_changed BEFORE UPDATE ON master.holiday_calendar
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- payment_term
+DROP TRIGGER IF EXISTS trg_pt_status_changed ON master.payment_term;
+CREATE TRIGGER trg_pt_status_changed BEFORE UPDATE ON master.payment_term
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- ============================================================================
+-- PART G — hc_single_default: enforce at most one is_default per tenant (FIX-8)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_enforce_single_default()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.is_default = true THEN
+        UPDATE master.holiday_calendar
+           SET is_default = false,
+               updated_at = now()
+         WHERE tenant_id = NEW.tenant_id
+           AND id <> NEW.id
+           AND is_default = true;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_hc_single_default ON master.holiday_calendar;
+CREATE TRIGGER trg_hc_single_default
+    BEFORE INSERT OR UPDATE OF is_default ON master.holiday_calendar
+    FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_single_default();
+
+
+-- ============================================================================
+-- PART G — weekend_days validation (FIX-8)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_validate_weekend_days()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    -- CUSTOM requires weekend_days with at least one element
+    IF NEW.weekend_pattern = 'CUSTOM' THEN
+        IF NEW.weekend_days IS NULL OR array_length(NEW.weekend_days, 1) IS NULL THEN
+            RAISE EXCEPTION 'holiday_calendar: weekend_pattern=CUSTOM requires non-empty weekend_days array';
+        END IF;
+    END IF;
+
+    -- Non-CUSTOM must not have weekend_days
+    IF NEW.weekend_pattern <> 'CUSTOM' AND NEW.weekend_days IS NOT NULL THEN
+        RAISE EXCEPTION 'holiday_calendar: weekend_days must be NULL when weekend_pattern is not CUSTOM';
+    END IF;
+
+    -- All elements must be 1..7 (ISO day-of-week)
+    IF NEW.weekend_days IS NOT NULL THEN
+        IF NOT (NEW.weekend_days <@ ARRAY[1,2,3,4,5,6,7]::smallint[]) THEN
+            RAISE EXCEPTION 'holiday_calendar: weekend_days elements must be 1-7 (ISO day-of-week)';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_hc_validate_weekend_days ON master.holiday_calendar;
+CREATE TRIGGER trg_hc_validate_weekend_days
+    BEFORE INSERT OR UPDATE OF weekend_pattern, weekend_days ON master.holiday_calendar
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_weekend_days();
+
+
+-- ============================================================================
+-- PART I — Lookup validation triggers
+-- ============================================================================
+
+-- holiday_calendar.status
+DROP TRIGGER IF EXISTS trg_hc_status_lookup ON master.holiday_calendar;
+CREATE TRIGGER trg_hc_status_lookup
+    BEFORE INSERT OR UPDATE OF status ON master.holiday_calendar
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.holiday_calendar_status', 'status');
+
+-- payment_term.status
+DROP TRIGGER IF EXISTS trg_pt_status_lookup ON master.payment_term;
+CREATE TRIGGER trg_pt_status_lookup
+    BEFORE INSERT OR UPDATE OF status ON master.payment_term
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_status', 'status');
+
+-- payment_term.term_category
+DROP TRIGGER IF EXISTS trg_pt_category_lookup ON master.payment_term;
+CREATE TRIGGER trg_pt_category_lookup
+    BEFORE INSERT OR UPDATE OF term_category ON master.payment_term
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_category', 'term_category');
+
+-- payment_term_clause.trigger_event
+DROP TRIGGER IF EXISTS trg_ptc_trigger_event_lookup ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_trigger_event_lookup
+    BEFORE INSERT OR UPDATE OF trigger_event ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_trigger_event', 'trigger_event');
+
+-- payment_term_clause.release_event
+DROP TRIGGER IF EXISTS trg_ptc_release_event_lookup ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_release_event_lookup
+    BEFORE INSERT OR UPDATE OF release_event ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_release_event', 'release_event');
+
+-- payment_term_clause.recovery_method
+DROP TRIGGER IF EXISTS trg_ptc_recovery_method_lookup ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_recovery_method_lookup
+    BEFORE INSERT OR UPDATE OF recovery_method ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_recovery_method', 'recovery_method');
+
+
+-- ============================================================================
+-- PART G — settles_clause_code pairing validation (FIX-4)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_validate_settles_clause()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_target_type text;
+BEGIN
+    -- Only applies when settles_clause_code is set
+    IF NEW.settles_clause_code IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Resolve the clause_type of the referenced (settled) clause
+    SELECT clause_type INTO v_target_type
+      FROM master.payment_term_clause
+     WHERE payment_term_id = NEW.payment_term_id
+       AND clause_code     = NEW.settles_clause_code;
+
+    IF v_target_type IS NULL THEN
+        RAISE EXCEPTION 'payment_term_clause: settles_clause_code "%" not found within the same payment term',
+            NEW.settles_clause_code;
+    END IF;
+
+    -- ADVANCE_RECOVERY must settle ADVANCE
+    IF NEW.clause_type = 'ADVANCE_RECOVERY' AND v_target_type <> 'ADVANCE' THEN
+        RAISE EXCEPTION 'payment_term_clause: ADVANCE_RECOVERY clause must settle an ADVANCE clause, found %',
+            v_target_type;
+    END IF;
+
+    -- RETENTION_RELEASE must settle RETENTION
+    IF NEW.clause_type = 'RETENTION_RELEASE' AND v_target_type <> 'RETENTION' THEN
+        RAISE EXCEPTION 'payment_term_clause: RETENTION_RELEASE clause must settle a RETENTION clause, found %',
+            v_target_type;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ptc_validate_settles ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_validate_settles
+    BEFORE INSERT OR UPDATE OF settles_clause_code, clause_type ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_settles_clause();
+
+
+-- ============================================================================
+-- PART G — Validate current payment term on supplier/customer profiles
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_validate_current_payment_term()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_is_current boolean;
+    v_status     text;
+BEGIN
+    -- Only validate when payment_term_id is set
+    IF NEW.payment_term_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT is_current_version, status
+      INTO v_is_current, v_status
+      FROM master.payment_term
+     WHERE id = NEW.payment_term_id
+       AND tenant_id = NEW.tenant_id;
+
+    IF v_is_current IS NULL THEN
+        RAISE EXCEPTION '% payment_term_id not found in tenant',
+            TG_TABLE_NAME;
+    END IF;
+
+    IF v_is_current <> true THEN
+        RAISE EXCEPTION '% payment_term_id must reference the current version of a payment term',
+            TG_TABLE_NAME;
+    END IF;
+
+    IF v_status <> 'active' THEN
+        RAISE EXCEPTION '% payment_term_id must reference an active payment term, found status=%',
+            TG_TABLE_NAME, v_status;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_scp_validate_payment_term ON master.company_code_supplier_profile;
+CREATE TRIGGER trg_scp_validate_payment_term
+    BEFORE INSERT OR UPDATE OF payment_term_id ON master.company_code_supplier_profile
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_current_payment_term();
+
+DROP TRIGGER IF EXISTS trg_ccp_validate_payment_term ON master.company_code_customer_profile;
+CREATE TRIGGER trg_ccp_validate_payment_term
+    BEFORE INSERT OR UPDATE OF payment_term_id ON master.company_code_customer_profile
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_current_payment_term();
+
+
+-- ============================================================================
+-- PART G — Payment term immutability (FIX-7)
+-- Prevents mutation of business-critical columns once status leaves 'draft'.
+-- Lifecycle columns (status, is_current_version, updated_at, updated_by,
+-- status_changed_at, status_changed_by) are always allowed.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_payment_term_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    -- Only enforce once term leaves draft
+    IF OLD.status = 'draft' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Allow changes to lifecycle-only columns
+    IF (NEW.code,  NEW.name,  NEW.description,  NEW.applicable_to,
+        NEW.base_event,  NEW.due_rule_type,  NEW.due_days,  NEW.due_day_of_month,
+        NEW.grace_days,  NEW.due_date_flexibility,  NEW.business_day_convention,
+        NEW.holiday_calendar_id,  NEW.month_offset,  NEW.term_category,
+        NEW.installment_count,  NEW.version,  NEW.supersedes_payment_term_id,
+        NEW.effective_from,  NEW.effective_to,  NEW.sort_order,  NEW.metadata)
+       IS DISTINCT FROM
+       (OLD.code,  OLD.name,  OLD.description,  OLD.applicable_to,
+        OLD.base_event,  OLD.due_rule_type,  OLD.due_days,  OLD.due_day_of_month,
+        OLD.grace_days,  OLD.due_date_flexibility,  OLD.business_day_convention,
+        OLD.holiday_calendar_id,  OLD.month_offset,  OLD.term_category,
+        OLD.installment_count,  OLD.version,  OLD.supersedes_payment_term_id,
+        OLD.effective_from,  OLD.effective_to,  OLD.sort_order,  OLD.metadata)
+    THEN
+        RAISE EXCEPTION 'payment_term: business columns are immutable once status is not draft (current status=%)',
+            OLD.status;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_pt_immutable ON master.payment_term;
+CREATE TRIGGER trg_pt_immutable
+    BEFORE UPDATE ON master.payment_term
+    FOR EACH ROW EXECUTE FUNCTION master.trg_payment_term_immutable();
+
+
+-- ============================================================================
+-- PART G — Payment term clause immutability (FIX-7)
+-- Prevents mutation once parent term is not in draft.
+-- Lifecycle columns (is_active, updated_at, updated_by) are allowed.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_payment_term_clause_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_term_status text;
+BEGIN
+    SELECT status INTO v_term_status
+      FROM master.payment_term
+     WHERE id = OLD.payment_term_id
+       AND tenant_id = OLD.tenant_id;
+
+    -- Allow all changes while parent term is draft
+    IF v_term_status = 'draft' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Allow changes to lifecycle-only columns
+    IF (NEW.clause_code,  NEW.clause_type,  NEW.sequence_no,
+        NEW.settles_clause_code,  NEW.application_scope,  NEW.basis_amount_mode,
+        NEW.calc_mode,  NEW.default_pct,  NEW.default_amount,  NEW.currency_code,
+        NEW.flexibility_mode,  NEW.min_pct,  NEW.max_pct,  NEW.min_amount,  NEW.max_amount,
+        NEW.cumulative_cap_pct,  NEW.cumulative_cap_amount,
+        NEW.trigger_event,  NEW.release_event,  NEW.release_delay_days,
+        NEW.recovery_start_after_pct,  NEW.recovery_end_before_pct,
+        NEW.recovery_method,  NEW.partial_release_pct,  NEW.partial_release_event,
+        NEW.rounding_method,  NEW.rounding_scale,  NEW.metadata)
+       IS DISTINCT FROM
+       (OLD.clause_code,  OLD.clause_type,  OLD.sequence_no,
+        OLD.settles_clause_code,  OLD.application_scope,  OLD.basis_amount_mode,
+        OLD.calc_mode,  OLD.default_pct,  OLD.default_amount,  OLD.currency_code,
+        OLD.flexibility_mode,  OLD.min_pct,  OLD.max_pct,  OLD.min_amount,  OLD.max_amount,
+        OLD.cumulative_cap_pct,  OLD.cumulative_cap_amount,
+        OLD.trigger_event,  OLD.release_event,  OLD.release_delay_days,
+        OLD.recovery_start_after_pct,  OLD.recovery_end_before_pct,
+        OLD.recovery_method,  OLD.partial_release_pct,  OLD.partial_release_event,
+        OLD.rounding_method,  OLD.rounding_scale,  OLD.metadata)
+    THEN
+        RAISE EXCEPTION 'payment_term_clause: business columns are immutable once parent term status is not draft (term status=%)',
+            v_term_status;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ptc_immutable ON master.payment_term_clause;
+CREATE TRIGGER trg_ptc_immutable
+    BEFORE UPDATE ON master.payment_term_clause
+    FOR EACH ROW EXECUTE FUNCTION master.trg_payment_term_clause_immutable();
+
+
+-- ============================================================================
+-- PART G — Payment term discount tier immutability (FIX-7)
+-- Prevents mutation once parent term is not in draft.
+-- Lifecycle columns (updated_at, updated_by) are allowed.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.trg_payment_term_discount_tier_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_term_status text;
+BEGIN
+    SELECT status INTO v_term_status
+      FROM master.payment_term
+     WHERE id = OLD.payment_term_id
+       AND tenant_id = OLD.tenant_id;
+
+    -- Allow all changes while parent term is draft
+    IF v_term_status = 'draft' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Allow changes to lifecycle-only columns
+    IF (NEW.tier_no,  NEW.qualify_within_days,  NEW.discount_pct,
+        NEW.discount_fixed,  NEW.currency_code,  NEW.discount_basis_mode,
+        NEW.min_invoice_amount,  NEW.is_best_only,  NEW.metadata)
+       IS DISTINCT FROM
+       (OLD.tier_no,  OLD.qualify_within_days,  OLD.discount_pct,
+        OLD.discount_fixed,  OLD.currency_code,  OLD.discount_basis_mode,
+        OLD.min_invoice_amount,  OLD.is_best_only,  OLD.metadata)
+    THEN
+        RAISE EXCEPTION 'payment_term_discount_tier: business columns are immutable once parent term status is not draft (term status=%)',
+            v_term_status;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ptdt_immutable ON master.payment_term_discount_tier;
+CREATE TRIGGER trg_ptdt_immutable
+    BEFORE UPDATE ON master.payment_term_discount_tier
+    FOR EACH ROW EXECUTE FUNCTION master.trg_payment_term_discount_tier_immutable();

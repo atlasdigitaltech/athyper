@@ -107,7 +107,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       }
 
       // ── Resolve entity + effective version ────────────────────────────────
-      const entityCode = req.params["entity"] as string;
+      // Normalise URL slug → DB name (journal-entry → journal_entry)
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
 
       const entityRow = await db
         .selectFrom("control.entity as e")

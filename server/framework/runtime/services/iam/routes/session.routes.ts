@@ -177,7 +177,7 @@ export function createSessionRoutes(router: Router, deps: SessionRoutesDeps): Ro
         orgAliases,
         workbenches,
         delegationId: typeof delegation === "string" && delegation ? delegation : undefined,
-        // JIT provisioning identity — used only when principal_auth_binding is absent.
+        // JIT provisioning identity — used only when principal_identity_binding is absent.
         username: jwtUsername,
         name: jwtName,
         email: jwtEmail,

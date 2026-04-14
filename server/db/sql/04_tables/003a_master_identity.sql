@@ -60,6 +60,15 @@ CREATE TABLE IF NOT EXISTS master.principal (
     is_locked           boolean       NOT NULL DEFAULT false,
     is_service_account  boolean       NOT NULL DEFAULT false,
 
+    -- Table-specific (security cache epoch — trigger-maintained, never write directly)
+    -- Monotonically increasing integer incremented on any security-critical mutation:
+    --   is_locked toggled, deny access_grant created/revoked (high/critical risk),
+    --   delegation_grant revoked, mfa_config.is_enabled changed.
+    -- Session service compares cached auth_epoch with DB on every cache hit.
+    -- A mismatch forces immediate cache invalidation and re-resolution,
+    -- bypassing the 5-minute TTL for security-critical state changes.
+    auth_epoch          integer       NOT NULL DEFAULT 0,
+
     -- Table-specific (auth cache — trigger-maintained, never write directly)
     login_email         text,
 
@@ -94,6 +103,10 @@ CREATE TABLE IF NOT EXISTS master.principal (
 
 COMMENT ON TABLE  master.principal IS
   'Universal actor: users, service accounts, bots. Core identity only — see principal_profile for display data, contact_link for addresses.';
+COMMENT ON COLUMN master.principal.auth_epoch IS
+  'Trigger-maintained security cache epoch. Incremented by trg_principal_bump_auth_epoch '
+  'and related triggers on security-critical mutations. Session service checks this on '
+  'every cache hit — mismatch forces immediate re-resolution. Never write directly.';
 COMMENT ON COLUMN master.principal.login_email IS
   'Trigger-maintained cache of verified primary login email. Source of truth: contact_link. Never write directly.';
 COMMENT ON COLUMN master.principal.external_ref IS
@@ -2398,9 +2411,6 @@ CREATE TABLE IF NOT EXISTS master.letterhead (
         'active', 'archived'
     ))
 );
-
--- Idempotent backfill: add company_code_id if letterhead already existed without it
-ALTER TABLE master.letterhead ADD COLUMN IF NOT EXISTS company_code_id uuid;
 
 COMMENT ON TABLE  master.letterhead IS
     'Reusable page header/footer/watermark definitions for PDF rendering. '

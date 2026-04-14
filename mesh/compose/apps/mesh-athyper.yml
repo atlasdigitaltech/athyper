@@ -143,3 +143,151 @@ services:
       - traefik.http.routers.athyper-api.tls.options=${GATEWAY_TLS_OPTIONS}
       - traefik.http.routers.athyper-api.tls=true
       - traefik.http.services.athyper-api.loadbalancer.server.port=3000
+
+  # -------------------------------------------------------------------------
+  # BullMQ Worker — IAM outbox + job processors (no HTTP, internal only)
+  # Runs: MODE=worker node dist/src/app.js
+  # -------------------------------------------------------------------------
+  athyper-worker:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile.dev
+    profiles: ["mesh", "apps"]
+    mem_limit: "${APPS_ATHYPER_MEMORY_LIMIT}"
+    networks: [internal]
+    depends_on:
+      dbpool-apps:
+        condition: service_healthy
+      memorycache:
+        condition: service_healthy
+    environment:
+      MODE: worker
+      PORT: "${PORT}"
+      ENVIRONMENT: "${ENVIRONMENT}"
+      SERVICE_NAME: "${SERVICE_NAME}"
+      SERVICE_VERSION: "${SERVICE_VERSION}"
+      LOG_LEVEL: "${LOG_LEVEL}"
+      SHUTDOWN_TIMEOUT_MS: "${SHUTDOWN_TIMEOUT_MS}"
+      MULTITENANT: "${MULTITENANT}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
+      MESH_CONFIG: /config
+      ATHYPER_KERNEL_CONFIG_PATH: "${ATHYPER_KERNEL_CONFIG_PATH}"
+      DATABASE_URL: "${DATABASE_URL}"
+      DATABASE_ADMIN_URL: "${DATABASE_ADMIN_URL}"
+      DB_POOL_MAX: "${DB_POOL_MAX}"
+      REDIS_URL: "${REDIS_URL}"
+      S3_ENDPOINT: "${S3_ENDPOINT}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY}"
+      S3_REGION: "${S3_REGION}"
+      S3_BUCKET: "${S3_BUCKET}"
+      S3_USE_SSL: "${S3_USE_SSL}"
+      IAM_ISSUER_URL: "${IAM_ISSUER_URL}"
+      IAM_CLIENT_ID: "${IAM_CLIENT_ID}"
+      IAM_CLIENT_SECRET: "${IAM_CLIENT_SECRET}"
+      IAM_DEFAULT_REALM: "${IAM_DEFAULT_REALM}"
+      ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET: "${ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET}"
+      OTLP_ENDPOINT: "${OTLP_ENDPOINT}"
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      NODE_ENV: development
+    extra_hosts:
+      - "iam.mesh.athyper.local:host-gateway"
+      - "gateway.mesh.athyper.local:host-gateway"
+      - "neon.athyper.local:host-gateway"
+      - "api.athyper.local:host-gateway"
+      - "objectstorage.mesh.athyper.local:host-gateway"
+      - "objectstorage.console.mesh.athyper.local:host-gateway"
+    volumes:
+      - "${MESH_CONFIG}:/config:ro"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- http://localhost:${PORT}/readyz || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 30s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # -------------------------------------------------------------------------
+  # BullMQ Scheduler — repeatable job registration only (no HTTP, internal only)
+  # Runs: MODE=scheduler node dist/src/app.js
+  # -------------------------------------------------------------------------
+  athyper-scheduler:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile.dev
+    profiles: ["mesh", "apps"]
+    mem_limit: "${APPS_ATHYPER_MEMORY_LIMIT}"
+    networks: [internal]
+    depends_on:
+      dbpool-apps:
+        condition: service_healthy
+      memorycache:
+        condition: service_healthy
+    environment:
+      MODE: scheduler
+      PORT: "${PORT}"
+      ENVIRONMENT: "${ENVIRONMENT}"
+      SERVICE_NAME: "${SERVICE_NAME}"
+      SERVICE_VERSION: "${SERVICE_VERSION}"
+      LOG_LEVEL: "${LOG_LEVEL}"
+      SHUTDOWN_TIMEOUT_MS: "${SHUTDOWN_TIMEOUT_MS}"
+      MULTITENANT: "${MULTITENANT}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL}"
+      MESH_CONFIG: /config
+      ATHYPER_KERNEL_CONFIG_PATH: "${ATHYPER_KERNEL_CONFIG_PATH}"
+      DATABASE_URL: "${DATABASE_URL}"
+      DATABASE_ADMIN_URL: "${DATABASE_ADMIN_URL}"
+      DB_POOL_MAX: "${DB_POOL_MAX}"
+      REDIS_URL: "${REDIS_URL}"
+      S3_ENDPOINT: "${S3_ENDPOINT}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY}"
+      S3_REGION: "${S3_REGION}"
+      S3_BUCKET: "${S3_BUCKET}"
+      S3_USE_SSL: "${S3_USE_SSL}"
+      IAM_ISSUER_URL: "${IAM_ISSUER_URL}"
+      IAM_CLIENT_ID: "${IAM_CLIENT_ID}"
+      IAM_CLIENT_SECRET: "${IAM_CLIENT_SECRET}"
+      IAM_DEFAULT_REALM: "${IAM_DEFAULT_REALM}"
+      ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET: "${ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET}"
+      OTLP_ENDPOINT: "${OTLP_ENDPOINT}"
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      NODE_ENV: development
+    extra_hosts:
+      - "iam.mesh.athyper.local:host-gateway"
+      - "gateway.mesh.athyper.local:host-gateway"
+      - "neon.athyper.local:host-gateway"
+      - "api.athyper.local:host-gateway"
+      - "objectstorage.mesh.athyper.local:host-gateway"
+      - "objectstorage.console.mesh.athyper.local:host-gateway"
+    volumes:
+      - "${MESH_CONFIG}:/config:ro"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- http://localhost:${PORT}/readyz || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

@@ -28,6 +28,23 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- §6  DOCUMENT · PRINT · BRANDING  —  snapshot FK constraints
 -- =============================================================================
 
+-- ── snapshot.content_item_version ───────────────────────────────────────────
+ALTER TABLE snapshot.content_item_version DROP CONSTRAINT IF EXISTS civ_tenant_fk;
+DO $$ BEGIN ALTER TABLE snapshot.content_item_version ADD CONSTRAINT civ_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE snapshot.content_item_version DROP CONSTRAINT IF EXISTS civ_content_item_fk;
+DO $$ BEGIN ALTER TABLE snapshot.content_item_version ADD CONSTRAINT civ_content_item_fk
+    FOREIGN KEY (tenant_id, content_item_id)
+    REFERENCES master.content_item (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE snapshot.content_item_version DROP CONSTRAINT IF EXISTS civ_created_by_fk;
+DO $$ BEGIN ALTER TABLE snapshot.content_item_version ADD CONSTRAINT civ_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ── snapshot.template_version ──────────────────────────────────────────────
 ALTER TABLE snapshot.template_version DROP CONSTRAINT IF EXISTS template_version_tenant_fk;
 DO $$ BEGIN ALTER TABLE snapshot.template_version ADD CONSTRAINT template_version_tenant_fk

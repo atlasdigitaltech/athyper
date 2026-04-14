@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS master.asset_class (
     -- Company scope (Tier 1 UUID)
     company_code_id  uuid         NOT NULL,
 
-
     -- Table-specific (hierarchy)
     description              text,
     parent_id                uuid,
@@ -39,11 +38,28 @@ CREATE TABLE IF NOT EXISTS master.asset_class (
     path                     text,
     is_leaf                  boolean      NOT NULL DEFAULT true,
 
-    -- Table-specific (defaults)
-    capitalization_threshold numeric(18,4) NOT NULL DEFAULT 0,
-    currency_code            character(3) NOT NULL DEFAULT 'USD',
+    -- Table-specific (capitalization)
+    capitalization_threshold  numeric(18,4) NOT NULL DEFAULT 0,
+    capitalization_currency   character(3),
+    currency_code             character(3)  NOT NULL DEFAULT 'USD',
+
+    -- Table-specific (asset engine — GL/depreciation defaults moved to control.asset_class_book_policy)
     gl_account_defaults      jsonb        NOT NULL DEFAULT '{}'::jsonb,
     depreciation_defaults    jsonb        NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Table-specific (asset engine v3 — classification & governance)
+    asset_nature                     text    NOT NULL DEFAULT 'tangible',
+    is_depreciable                   boolean NOT NULL DEFAULT true,
+    is_componentization_required     boolean NOT NULL DEFAULT false,
+    is_asset_tag_required            boolean NOT NULL DEFAULT true,
+    is_serial_tracking_required      boolean NOT NULL DEFAULT false,
+    is_location_tracking_required    boolean NOT NULL DEFAULT true,
+    default_uom_code                 text,
+    useful_life_override_policy      text    NOT NULL DEFAULT 'allow',
+    disposal_requires_approval       boolean NOT NULL DEFAULT true,
+    transfer_requires_approval       boolean NOT NULL DEFAULT false,
+    revaluation_allowed              boolean NOT NULL DEFAULT false,
+    impairment_tracking_required     boolean NOT NULL DEFAULT true,
 
     -- Table-specific (display)
     sort_order               smallint     NOT NULL DEFAULT 0,
@@ -70,83 +86,13 @@ CREATE TABLE IF NOT EXISTS master.asset_class (
     CONSTRAINT asset_class_no_self_ref             CHECK (parent_id IS DISTINCT FROM id),
     CONSTRAINT asset_class_threshold_pos           CHECK (capitalization_threshold >= 0),
     CONSTRAINT asset_class_code_nonempty           CHECK (btrim(code) <> ''),
-    CONSTRAINT asset_class_name_nonempty           CHECK (btrim(name) <> '')
+    CONSTRAINT asset_class_name_nonempty           CHECK (btrim(name) <> ''),
+    CONSTRAINT asset_class_nature_chk              CHECK (asset_nature IN (
+        'tangible','intangible','land','cwip','rou','leasehold_improvement')),
+    CONSTRAINT asset_class_life_policy_chk         CHECK (useful_life_override_policy IN ('allow','require','forbid')),
+    CONSTRAINT asset_class_threshold_currency_chk  CHECK (capitalization_threshold = 0 OR capitalization_currency IS NOT NULL),
+    CONSTRAINT asset_class_depr_nature_chk         CHECK (asset_nature NOT IN ('land','cwip') OR is_depreciable = false)
 );
-
-COMMENT ON TABLE master.asset_class IS
-    'Hierarchical asset classification with per-book-type GL account mapping '
-    'defaults and depreciation parameter defaults. Scoped to company_code.';
-
-
--- ── ALTER master.asset_class — asset engine v3 enrichments ─────────────────
--- Adds: asset_nature, is_depreciable, capitalization_currency (replaces
--- currency_code for clarity), componentization, revaluation, tracking flags,
--- governance columns. GL/depreciation parameters migrate to
--- control.asset_class_book_policy (§ACP1 in 002_control.sql).
--- ────────────────────────────────────────────────────────────────────────────
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS asset_nature text NOT NULL DEFAULT 'tangible';
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS is_depreciable boolean NOT NULL DEFAULT true;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS capitalization_currency character(3);
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS is_componentization_required boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS is_asset_tag_required boolean NOT NULL DEFAULT true;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS is_serial_tracking_required boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS is_location_tracking_required boolean NOT NULL DEFAULT true;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS default_uom_code text;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS useful_life_override_policy text NOT NULL DEFAULT 'allow';
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS disposal_requires_approval boolean NOT NULL DEFAULT true;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS transfer_requires_approval boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS revaluation_allowed boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN
-    ALTER TABLE master.asset_class ADD COLUMN IF NOT EXISTS impairment_tracking_required boolean NOT NULL DEFAULT true;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
--- Backfill capitalization_currency from legacy currency_code
-DO $$
-BEGIN
-    UPDATE master.asset_class
-       SET capitalization_currency = currency_code
-     WHERE capitalization_currency IS NULL
-       AND currency_code IS NOT NULL;
-EXCEPTION WHEN undefined_column THEN NULL; -- currency_code may not exist on fresh installs
-END $$;
-
--- CHECK constraints (idempotent via exception guard)
-DO $$ BEGIN ALTER TABLE master.asset_class ADD CONSTRAINT asset_class_nature_chk CHECK (
-    asset_nature IN ('tangible','intangible','land','cwip','rou','leasehold_improvement'));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.asset_class ADD CONSTRAINT asset_class_life_policy_chk CHECK (
-    useful_life_override_policy IN ('allow','require','forbid'));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.asset_class ADD CONSTRAINT asset_class_threshold_currency_chk CHECK (
-    capitalization_threshold = 0 OR capitalization_currency IS NOT NULL);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.asset_class ADD CONSTRAINT asset_class_depr_nature_chk CHECK (
-    asset_nature NOT IN ('land','cwip') OR is_depreciable = false);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 COMMENT ON TABLE master.asset_class IS
     'Hierarchical asset classification — identity, hierarchy, and governance only. '
@@ -749,6 +695,7 @@ CREATE TABLE IF NOT EXISTS master.business_intent (
     -- Financial defaults (last-resort; Engine 4.13 rules take precedence)
     default_gl_account_id           uuid,
     default_tax_code                text,
+    default_tax_group_id            uuid,       -- FK → control.tax_group (tenant-composite)
     -- default_accounting_profile_id intentionally omitted.
     -- Profile resolution is fully owned by:
     --   control.intent_to_accounting_profile_rule (rule-based)
@@ -1103,40 +1050,6 @@ COMMENT ON TABLE master.fx_rate IS
     'Rate types: SPOT (intraday), PERIOD_AVG/END (closing), BUDGET, CONTRACTED, HISTORICAL.';
 
 
--- ── ALTER EXISTING MASTER TABLES — add default_tax_group_id FK columns ────────
-
-DO $$ BEGIN
-    ALTER TABLE master.product ADD COLUMN IF NOT EXISTS default_tax_group_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL;
-END $$;
-COMMENT ON COLUMN master.product.default_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Replaces free-text tax_code. '
-    'Resolution order: product → item_category → spend_category → scoped tax_rate_schedule.';
-
-DO $$ BEGIN
-    ALTER TABLE master.item_category ADD COLUMN IF NOT EXISTS default_tax_group_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL;
-END $$;
-COMMENT ON COLUMN master.item_category.default_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Category-level fallback tax group.';
-
-
-DO $$ BEGIN
-    ALTER TABLE master.company_code_supplier_profile ADD COLUMN IF NOT EXISTS default_wht_tax_group_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL;
-END $$;
-COMMENT ON COLUMN master.company_code_supplier_profile.default_wht_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Replaces free-text withholding_tax_code. '
-    'Group should contain components where tax_type.category = WITHHOLDING.';
-
-DO $$ BEGIN
-    ALTER TABLE master.business_intent ADD COLUMN IF NOT EXISTS default_tax_group_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL;
-END $$;
-COMMENT ON COLUMN master.business_intent.default_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Replaces free-text default_tax_code. '
-    'Last-resort tax group for transactions under this intent. Engine 4.13 rule-based '
-    'resolution takes precedence; this is the fallback when no rule matches.';
 
 
 -- ══════════════════════════════════════════════════════════════════════════════

@@ -16,7 +16,7 @@
 // ─── Session endpoint types ───────────────────────────────────────────────────
 
 export interface SessionQuery {
-  /** KC JWT subject — matches master.principal_auth_binding.subject_id */
+  /** KC JWT subject — matches master.principal_identity_binding.subject_id */
   sub: string;
   /** Realm key derived from `iss` claim (last path segment). e.g. "athyper" */
   realmKey: string;
@@ -48,7 +48,7 @@ export interface SessionQuery {
 
   // ── JIT provisioning identity fields ──────────────────────────────────────
   // Forwarded from the verified JWT claims so the session service can
-  // auto-provision a principal on first login when no principal_auth_binding
+  // auto-provision a principal on first login when no principal_identity_binding
   // exists. JIT is only attempted when both `username` and `name` are present.
   /** KC `preferred_username` claim. Used as principal.code for JIT. */
   username?: string;
@@ -72,10 +72,12 @@ export interface SessionModule {
 }
 
 export interface SessionScope {
-  /** true when the principal's group has scope='all' for this tenant */
+  /** true when the principal has a tenant-wide role assignment (assignment_scope_type = 'tenant') */
   all: boolean;
   /** Explicit company_code codes when all=false. Empty when all=true. */
   company_codes: string[];
+  /** Widest row-level visibility across all group roles: 'all' > 'team' > 'own' */
+  visibility: "all" | "own" | "team";
 }
 
 export interface SessionPartner {
@@ -124,6 +126,30 @@ export interface SessionRouteQuery {
   workbench?: string;
   /** UUID of a delegation_grant to activate. Merges delegated permissions into session. */
   delegation?: string;
+}
+
+// ─── Internal cache format ────────────────────────────────────────────────────
+// CachedSession is stored in Redis but NEVER returned to clients.
+// auth_epoch and principal_id are internal-only fields used by the session
+// service to detect stale cache entries after security-critical mutations.
+
+/**
+ * Internal Redis cache envelope wrapping SessionResponse.
+ * The session service stores this format; the route handler extracts `.response`.
+ *
+ * auth_epoch: matches master.principal.auth_epoch at write time.
+ *   On every cache hit the service compares this with the current DB value.
+ *   A mismatch forces immediate cache invalidation + re-resolution.
+ *
+ * principal_id: UUID needed for the DB auth_epoch lookup without an extra JOIN.
+ */
+export interface CachedSession {
+  /** master.principal.auth_epoch at the time this session was cached. */
+  auth_epoch: number;
+  /** UUID of the resolved principal (master.principal.id). */
+  principal_id: string;
+  /** The public session response returned to clients. */
+  response: SessionResponse;
 }
 
 // ─── Bootstrap endpoint types ─────────────────────────────────────────────────

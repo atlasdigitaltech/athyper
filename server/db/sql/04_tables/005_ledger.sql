@@ -313,18 +313,42 @@ CREATE TABLE IF NOT EXISTS ledger.consolidation_elimination (
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
 
-    -- Table-specific
+    -- Table-specific (consolidation scope)
     company_code_id         uuid            NOT NULL,
     book_id                 uuid            NOT NULL,
     fiscal_year             smallint        NOT NULL,
     period_number           smallint        NOT NULL,
     elimination_type        text            NOT NULL,
+    consolidation_group     text,
+
+    -- IC engine link (FK → document.ic_elimination)
+    ic_elimination_id       uuid,
+
     -- UUID FK references (authoritative)
     source_company_code_id  uuid            NOT NULL,
     dest_company_code_id    uuid            NOT NULL,
     amount                  numeric(18,4)   NOT NULL,
     currency_code           character(3)    NOT NULL,
+    functional_currency_code character(3),
+    exchange_rate           numeric(18,10),
+    functional_amount       numeric(18,4),
     reference_je_id         uuid,
+    reversal_je_id          uuid,
+
+    -- Approval
+    approval_route          text            NOT NULL DEFAULT 'STANDARD',
+    decision_score          numeric(5,4),
+    approved_at             timestamptz,
+    approved_by             uuid,
+
+    -- Summary counters
+    line_count              smallint        NOT NULL DEFAULT 0,
+
+    -- Tags & Metadata
+    tags                    jsonb           NOT NULL DEFAULT '[]'::jsonb,
+    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Lifecycle
     status                  text            NOT NULL DEFAULT 'calculated',
     posted_at               timestamptz,
     posted_by               uuid,
@@ -342,12 +366,15 @@ CREATE TABLE IF NOT EXISTS ledger.consolidation_elimination (
         'MINORITY_INTEREST','INVESTMENT')),
     CONSTRAINT ce_status_chk        CHECK (status IN ('calculated','posted','reviewed')),
     CONSTRAINT ce_period_chk        CHECK (period_number BETWEEN 1 AND 16),
-    CONSTRAINT ce_entity_chk        CHECK (source_company_code_id IS DISTINCT FROM dest_company_code_id)
+    CONSTRAINT ce_entity_chk        CHECK (source_company_code_id IS DISTINCT FROM dest_company_code_id),
+    CONSTRAINT ce_line_count_chk    CHECK (line_count >= 0),
+    CONSTRAINT ce_decision_chk      CHECK (decision_score IS NULL OR decision_score BETWEEN 0 AND 1)
 );
 COMMENT ON TABLE ledger.consolidation_elimination IS
     'IC elimination entries. source/dest as UUID FKs to company_code (authoritative). '
-    'Text entity codes kept as denormalized display cache. '
-    'ce_entity_chk ensures source != dest via UUID comparison.';
+    'ic_elimination_id links to document.ic_elimination for engine-driven eliminations. '
+    'functional_currency_code/exchange_rate/functional_amount support multi-currency reporting. '
+    'approval_route + decision_score support workflow-gated approvals.';
 
 
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -1059,20 +1086,3 @@ COMMENT ON TABLE ledger.ic_elimination_line IS
     'Append-only: no updated_at/updated_by. Corrections via header reversal.';
 
 
--- ══════════════════════════════════════════════════════════════════════════════
--- IC ENGINE — ENHANCE ledger.consolidation_elimination
--- ══════════════════════════════════════════════════════════════════════════════
-
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS ic_elimination_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS consolidation_group text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS functional_currency_code character(3); EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS exchange_rate numeric(18,10); EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS functional_amount numeric(18,4); EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS line_count smallint NOT NULL DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS decision_score numeric(5,4); EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS approval_route text NOT NULL DEFAULT 'STANDARD'; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS reversal_je_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS approved_at timestamptz; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS approved_by uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS tags jsonb NOT NULL DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE ledger.consolidation_elimination ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END $$;

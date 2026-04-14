@@ -1,7 +1,7 @@
 -- 900_seed_data/010_system/001_shared/018_role.sql
 -- Seed: shared.role — one role per (persona × module)
 -- Schema: shared | Table: role
--- Scope lives on master.group_role; roles are platform-level, not per-tenant.
+-- Scope lives on master.auth_group_role; roles are platform-level, not per-tenant.
 -- code pattern: {PERSONA_CODE}-{MODULE_CODE}  e.g. 'manager-ACC'
 -- Idempotent: ON CONFLICT (code) DO UPDATE
 

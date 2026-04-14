@@ -43,10 +43,12 @@ export interface RecordsRouteDeps {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<{ table_schema: string; table_name: string } | null> {
+  // Normalise URL slug → DB name (journal-entry → journal_entry)
+  const name = entityCode.replace(/-/g, "_");
   const row = await db
     .selectFrom("control.entity as e")
     .select(["e.table_schema", "e.table_name"])
-    .where("e.name", "=", entityCode)
+    .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .executeTakeFirst();
   if (!row) return null;

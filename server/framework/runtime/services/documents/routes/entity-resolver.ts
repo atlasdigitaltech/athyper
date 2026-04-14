@@ -16,7 +16,9 @@ export const DOC_PREFIXES = ["purchase", "sales", "service", "expense", "payment
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function resolveDocumentEntity(db: Kysely<any>, docType: string) {
-  const candidates = [docType, ...DOC_PREFIXES.map((p) => `${p}_${docType}`)];
+  // Normalise URL slug → DB name (journal-entry → journal_entry)
+  const slug = docType.replace(/-/g, "_");
+  const candidates = [slug, ...DOC_PREFIXES.map((p) => `${p}_${slug}`)];
 
   for (const name of candidates) {
     const entity = await db

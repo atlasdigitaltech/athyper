@@ -50,3 +50,27 @@ CREATE TRIGGER trg_template_version_validate_variables
     BEFORE INSERT OR UPDATE OF variables_schema
     ON snapshot.template_version
     FOR EACH ROW EXECUTE FUNCTION document.trg_validate_variables_schema();
+
+
+-- ============================================================================
+-- snapshot.content_item_version — immutability guard
+-- ============================================================================
+-- Mirrors snapshot.trg_template_version_immutable pattern.
+-- All UPDATE and DELETE attempts raise an exception.
+
+CREATE OR REPLACE FUNCTION snapshot.trg_content_item_version_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION
+        'snapshot.content_item_version rows are immutable — UPDATE and DELETE are not allowed';
+END;
+$$;
+
+COMMENT ON FUNCTION snapshot.trg_content_item_version_immutable() IS
+    'Blocks all UPDATE and DELETE on snapshot.content_item_version. '
+    'Pattern mirrors snapshot.trg_template_version_immutable.';
+
+DROP TRIGGER IF EXISTS trg_content_item_version_immutable ON snapshot.content_item_version;
+CREATE TRIGGER trg_content_item_version_immutable
+    BEFORE UPDATE OR DELETE ON snapshot.content_item_version
+    FOR EACH ROW EXECUTE FUNCTION snapshot.trg_content_item_version_immutable();

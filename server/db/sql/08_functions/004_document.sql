@@ -1,4 +1,8 @@
 -- 08_functions/004_document.sql
+-- Document schema functions (workflow, UPUPR, render, finance enforcement, P2P guards).
+-- Merged from: 004_document.sql (base), 004c_document_finance.sql, 004i_document_p2p.sql
+
+-- 08_functions/004_document.sql
 -- Document schema functions.
 -- Depends on: 04_tables/004_document.sql
 
@@ -72,8 +76,8 @@ BEGIN
             'groups',       COALESCE(
                 (SELECT jsonb_agg(jsonb_build_object(
                     'group_id', g.id, 'group_code', g.code, 'group_name', g.name))
-                 FROM master.group_member pgm
-                 JOIN master.principal_group g ON g.id = pgm.group_id
+                 FROM master.auth_group_member pgm
+                 JOIN master.auth_group g ON g.id = pgm.group_id
                  WHERE pgm.principal_id = NEW.principal_id
                    AND pgm.tenant_id = NEW.tenant_id), '[]'::jsonb),
             'default_company_code_id', pp.default_company_code_id
@@ -856,3 +860,768 @@ COMMENT ON FUNCTION document.trg_stocktake_line_denorm_counts() IS
     'AFTER INSERT/UPDATE/DELETE trigger on stocktake_line. '
     'Recomputes total_line_count and variance_line_count on the parent stocktake row. '
     'Uses COALESCE(NEW.stocktake_id, OLD.stocktake_id) to handle DELETE correctly.';
+-- 08_functions/004c_document_finance.sql
+-- Finance enforcement trigger functions.
+-- Depends on: 04_tables/004_document.sql, 04_tables/003b_master_finance.sql,
+--             04_tables/008_governance.sql
+
+-- =============================================================================
+-- document.trg_je_period_gate_fn
+-- =============================================================================
+-- Blocks journal_entry INSERT (and posting_date UPDATE) when the target
+-- book-period is hard_closed at either the book or fiscal-period level.
+--
+-- Checks two independent gates:
+--   1. master.fiscal_period.status      = 'hard_close'
+--   2. governance.book_period_status.status IN ('hard_close','future')
+--
+-- A missing book_period_status row is treated as 'future' (not yet opened).
+-- soft_close periods ALLOW posting (they are still mutable pre-close).
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_je_period_gate_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, governance, pg_catalog
+AS $$
+DECLARE
+  v_fp_status   text;
+  v_bps_status  text;
+BEGIN
+  -- 1. Check master.fiscal_period status
+  SELECT fp.status
+    INTO v_fp_status
+    FROM master.fiscal_period fp
+   WHERE fp.tenant_id       = NEW.tenant_id        -- same tenant
+     AND fp.company_code_id = NEW.company_code_id
+     AND fp.fiscal_year     = NEW.fiscal_year
+     AND fp.period_number   = NEW.period_number
+   LIMIT 1;
+
+  IF v_fp_status = 'hard_close' THEN
+    RAISE EXCEPTION
+      'PERIOD_HARD_CLOSED: Fiscal period %/% for company % is hard-closed. '
+      'Use a prior-period adjustment JE with close_override_id.',
+      NEW.fiscal_year, NEW.period_number, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- 2. Check governance.book_period_status
+  SELECT bps.status
+    INTO v_bps_status
+    FROM governance.book_period_status bps
+   WHERE bps.tenant_id       = NEW.tenant_id
+     AND bps.company_code_id = NEW.company_code_id
+     AND bps.book_id         = NEW.book_id
+     AND bps.fiscal_year     = NEW.fiscal_year
+     AND bps.period_number   = NEW.period_number
+   LIMIT 1;
+
+  -- Missing row = 'future' (period not yet opened)
+  v_bps_status := COALESCE(v_bps_status, 'future');
+
+  IF v_bps_status IN ('hard_close', 'future') THEN
+    RAISE EXCEPTION
+      'BOOK_PERIOD_NOT_OPEN: Book period %/% for company %/book % has status ''%''. '
+      'Period must be in status ''open'' or ''soft_close'' to accept postings.',
+      NEW.fiscal_year, NEW.period_number, NEW.company_code_id, NEW.book_id, v_bps_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_je_period_gate_fn IS
+  'BEFORE INSERT trigger function for document.journal_entry. '
+  'Blocks posting to hard-closed fiscal periods or unopened book-periods. '
+  'Checks master.fiscal_period AND governance.book_period_status.';
+
+
+-- =============================================================================
+-- document.trg_jl_validate_posting_controls_fn
+-- =============================================================================
+-- Validates that the GL account is postable in the given company before
+-- a journal_line can be inserted.
+--
+-- Checks master.company_code_gl_account for:
+--   - posting_allowed = true (account not globally blocked)
+--   - blocked_for_manual = false (unless source_doc_type is auto-posting)
+--
+-- A missing company_code_gl_account row means the account is NOT assigned
+-- to this company — posting is rejected.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_jl_validate_posting_controls_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, pg_catalog
+AS $$
+DECLARE
+  v_ctrl       record;
+  v_je_source  text;
+BEGIN
+  -- Look up posting controls for this company + account
+  SELECT cga.posting_allowed,
+         cga.blocked_for_manual,
+         cga.blocked_for_auto
+    INTO v_ctrl
+    FROM master.company_code_gl_account cga
+   WHERE cga.tenant_id       = NEW.tenant_id
+     AND cga.company_code_id = NEW.company_code_id
+     AND cga.gl_account_id   = NEW.gl_account_id
+   LIMIT 1;
+
+  -- Account not assigned to company at all
+  IF NOT FOUND THEN
+    RAISE EXCEPTION
+      'ACCOUNT_NOT_ASSIGNED: GL account % is not assigned to company % '
+      'in master.company_code_gl_account.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Globally blocked
+  IF NOT v_ctrl.posting_allowed THEN
+    RAISE EXCEPTION
+      'ACCOUNT_POSTING_BLOCKED: GL account % is blocked for posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Get the parent JE source type to distinguish manual vs auto
+  SELECT je.source_doc_type
+    INTO v_je_source
+    FROM document.journal_entry je
+   WHERE je.id        = NEW.journal_entry_id
+     AND je.tenant_id = NEW.tenant_id
+   LIMIT 1;
+
+  -- Manual posting blocked
+  IF v_ctrl.blocked_for_manual AND v_je_source = 'MANUAL' THEN
+    RAISE EXCEPTION
+      'ACCOUNT_BLOCKED_MANUAL: GL account % is blocked for manual posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Auto posting blocked
+  IF v_ctrl.blocked_for_auto AND v_je_source != 'MANUAL' THEN
+    RAISE EXCEPTION
+      'ACCOUNT_BLOCKED_AUTO: GL account % is blocked for automatic posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_jl_validate_posting_controls_fn IS
+  'BEFORE INSERT trigger function for document.journal_line. '
+  'Validates posting_allowed + blocked_for_manual/auto '
+  'against master.company_code_gl_account before accepting a journal line.';
+
+
+-- =============================================================================
+-- document.trg_jl_validate_dimensions_fn                            [GAP-3]
+-- =============================================================================
+-- Validates that cost_center_id, profit_center_id, and project_id on a
+-- journal_line (when set) are:
+--   1. Active  — master record has is_active = true  (status = 'active')
+--   2. In-date — posting_date falls within [valid_from, valid_to] (NULL = open)
+--   3. Tenant-isolated — same tenant_id
+--
+-- Fires BEFORE INSERT, after trg_jl_sync_from_header ('s' < 'v') so
+-- NEW.posting_date is already populated from the parent journal_entry.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_jl_validate_dimensions_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, pg_catalog
+AS $$
+DECLARE
+  v_posting_date  date;
+BEGIN
+  v_posting_date := COALESCE(NEW.posting_date, CURRENT_DATE);
+
+  -- ── cost_center_id ────────────────────────────────────────────────────────
+  IF NEW.cost_center_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM master.cost_center cc
+       WHERE cc.id        = NEW.cost_center_id
+         AND cc.tenant_id = NEW.tenant_id
+         AND cc.is_active = true
+         AND (cc.valid_from IS NULL OR cc.valid_from <= v_posting_date)
+         AND (cc.valid_to   IS NULL OR cc.valid_to   >= v_posting_date)
+    ) THEN
+      RAISE EXCEPTION
+        'DIMENSION_INVALID: cost_center_id % is inactive, date-expired, '
+        'or not found for tenant %.',
+        NEW.cost_center_id, NEW.tenant_id
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  -- ── profit_center_id ──────────────────────────────────────────────────────
+  IF NEW.profit_center_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM master.profit_center pc
+       WHERE pc.id        = NEW.profit_center_id
+         AND pc.tenant_id = NEW.tenant_id
+         AND pc.is_active = true
+         AND (pc.valid_from IS NULL OR pc.valid_from <= v_posting_date)
+         AND (pc.valid_to   IS NULL OR pc.valid_to   >= v_posting_date)
+    ) THEN
+      RAISE EXCEPTION
+        'DIMENSION_INVALID: profit_center_id % is inactive, date-expired, '
+        'or not found for tenant %.',
+        NEW.profit_center_id, NEW.tenant_id
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  -- ── project_id ────────────────────────────────────────────────────────────
+  IF NEW.project_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM master.project p
+       WHERE p.id        = NEW.project_id
+         AND p.tenant_id = NEW.tenant_id
+         AND p.is_active = true
+         AND (p.valid_from IS NULL OR p.valid_from <= v_posting_date)
+         AND (p.valid_to   IS NULL OR p.valid_to   >= v_posting_date)
+    ) THEN
+      RAISE EXCEPTION
+        'DIMENSION_INVALID: project_id % is inactive, date-expired, '
+        'or not found for tenant %.',
+        NEW.project_id, NEW.tenant_id
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_jl_validate_dimensions_fn IS
+  'BEFORE INSERT trigger function for document.journal_line. '
+  'Validates cost_center_id, profit_center_id, and project_id against their '
+  'master tables — must be active (is_active=true) and within valid_from/valid_to '
+  'window relative to the posting_date. Fires after trg_jl_sync_from_header so '
+  'posting_date is already populated.';
+
+
+-- =============================================================================
+-- document.trg_je_workflow_gate_fn                                  [GAP-4]
+-- =============================================================================
+-- Blocks transition created → posted when any workflow_request for the JE
+-- has status 'pending' (awaiting decision) or 'rejected' (decision was no).
+--
+-- Absence of a workflow_request means no approval workflow was configured
+-- for this JE — posting is allowed without one.
+--
+-- Alphabetically fires after trg_je_status_transition_guard ('s' < 'w'),
+-- so state-machine validation + posted_at stamping have already occurred
+-- in the same BEFORE chain before this check runs.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_je_workflow_gate_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, pg_catalog
+AS $$
+DECLARE
+  v_blocking_status  text;
+BEGIN
+  -- Look for any open or rejected workflow request for this JE
+  SELECT wr.status
+    INTO v_blocking_status
+    FROM document.workflow_request wr
+   WHERE wr.tenant_id   = NEW.tenant_id
+     AND wr.entity_type = 'journal_entry'
+     AND wr.entity_id   = NEW.id::text
+     AND wr.status IN ('pending', 'rejected')
+   ORDER BY wr.status = 'rejected' DESC  -- surface rejected over pending
+   LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION
+      'WORKFLOW_GATE: journal_entry % cannot be posted — '
+      'a workflow_request exists with status ''%''. '
+      'All approval workflows must reach status ''approved'' or ''canceled'' '
+      'before posting is allowed.',
+      NEW.je_number, v_blocking_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_je_workflow_gate_fn IS
+  'BEFORE UPDATE trigger function on document.journal_entry. '
+  'Fires on created→posted transition. Blocks posting when any '
+  'document.workflow_request for the JE has status ''pending'' or ''rejected''. '
+  'No workflow_request present = no approval required = posting allowed.';
+
+
+-- =============================================================================
+-- document.trg_jl_check_budget_fn                                   [GAP-5]
+-- =============================================================================
+-- Checks budget availability before a debit journal_line is inserted.
+--
+-- Lookup strategy (most-specific-wins):
+--   1. Find active master.budget_allocation for company + fiscal_year whose
+--      dimension filters (gl_account_id, cost_center_id, profit_center_id,
+--      project_id) are NULL-or-match relative to the JL being posted.
+--   2. Prefer period-level ledger.budget_balance.closing_amount; fall back to
+--      allocation-level available_amount.
+--   3. Apply tolerance_pct, then dispatch on overspend_policy:
+--        BLOCK     → hard exception
+--        ESCALATE  → hard exception (escalation via workflow must be done first)
+--        WARN      → non-blocking RAISE WARNING
+--        ALLOW     → pass through
+--
+-- Credit lines are never checked (they restore budget, not consume it).
+-- Lines with no matching allocation pass through (no control configured).
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_jl_check_budget_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, ledger, pg_catalog
+AS $$
+DECLARE
+  v_alloc          record;
+  v_period_closing numeric(18,4);
+  v_available      numeric(18,4);
+  v_tolerance      numeric(18,4);
+  v_consume_amt    numeric(18,4);
+BEGIN
+  -- Only expense/cost postings (debit side) consume budget
+  IF NEW.base_debit = 0 THEN
+    RETURN NEW;
+  END IF;
+
+  v_consume_amt := NEW.base_debit;
+
+  -- Find the best matching active budget allocation.
+  -- NULL on an allocation dimension = wildcard (matches any JL value).
+  -- Order by specificity: most non-NULL dimension filters wins.
+  SELECT ba.id,
+         ba.overspend_policy,
+         ba.tolerance_pct,
+         ba.available_amount
+    INTO v_alloc
+    FROM master.budget_allocation ba
+   WHERE ba.tenant_id        = NEW.tenant_id
+     AND ba.company_code_id  = NEW.company_code_id
+     AND ba.fiscal_year      = NEW.fiscal_year
+     AND ba.is_active        = true
+     AND (ba.gl_account_id    IS NULL OR ba.gl_account_id    = NEW.gl_account_id)
+     AND (ba.cost_center_id   IS NULL OR ba.cost_center_id   = NEW.cost_center_id)
+     AND (ba.profit_center_id IS NULL OR ba.profit_center_id = NEW.profit_center_id)
+     AND (ba.project_id       IS NULL OR ba.project_id       = NEW.project_id)
+   ORDER BY
+       (ba.gl_account_id    IS NOT NULL)::int
+     + (ba.cost_center_id   IS NOT NULL)::int
+     + (ba.profit_center_id IS NOT NULL)::int
+     + (ba.project_id       IS NOT NULL)::int DESC
+   LIMIT 1;
+
+  -- No budget allocation found → no control for this posting
+  IF NOT FOUND THEN
+    RETURN NEW;
+  END IF;
+
+  -- Prefer period-level closing balance; fall back to allocation-level available
+  SELECT bb.closing_amount
+    INTO v_period_closing
+    FROM ledger.budget_balance bb
+   WHERE bb.budget_allocation_id = v_alloc.id
+     AND bb.fiscal_year          = NEW.fiscal_year
+     AND bb.period_number        = NEW.period_number
+   LIMIT 1;
+
+  v_available := COALESCE(v_period_closing, v_alloc.available_amount);
+  v_tolerance := v_available * (v_alloc.tolerance_pct / 100.0);
+
+  -- Enforce overspend policy only when consumption exceeds budget + tolerance
+  IF v_consume_amt > (v_available + v_tolerance) THEN
+    CASE v_alloc.overspend_policy
+      WHEN 'BLOCK' THEN
+        RAISE EXCEPTION
+          'BUDGET_EXCEEDED: Cannot post % — available budget is % '
+          '(with tolerance %). '
+          'Set overspend_policy=ALLOW on allocation % to permit overruns.',
+          v_consume_amt, v_available, v_tolerance, v_alloc.id
+          USING ERRCODE = 'P0001';
+
+      WHEN 'ESCALATE' THEN
+        RAISE EXCEPTION
+          'BUDGET_ESCALATE: Cannot post % — available budget is %. '
+          'A budget revision or transfer must be approved before posting.',
+          v_consume_amt, v_available
+          USING ERRCODE = 'P0001';
+
+      WHEN 'WARN' THEN
+        RAISE WARNING
+          'BUDGET_WARNING: Posting % exceeds available budget of % '
+          '(tolerance: %). Proceeding — overspend_policy=WARN.',
+          v_consume_amt, v_available, v_tolerance;
+
+      ELSE
+        NULL;  -- ALLOW: no restriction, fall through
+    END CASE;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_jl_check_budget_fn IS
+  'BEFORE INSERT trigger function for document.journal_line. '
+  'Checks debit postings against the best-matching active master.budget_allocation '
+  'and ledger.budget_balance for the period. '
+  'Dispatches on overspend_policy: BLOCK/ESCALATE raise exceptions; '
+  'WARN emits a non-blocking warning; ALLOW/no-match passes through. '
+  'Credit lines are never checked (they restore budget, not consume it).';
+-- =============================================================================
+-- 08_functions/004i_document_p2p.sql  –  Guard functions for P2P tables
+-- =============================================================================
+-- Modelled after ledger.trg_guard_inventory_company_consistency() (line 35787).
+-- Four company-consistency functions (one per distinct column-shape) plus two
+-- business-rule guards for payment allocation semantics.
+--
+-- Why four company-consistency functions not one:
+--   goods_receipt header  – has company_code_id directly; checks warehouse + site
+--   goods_receipt line    – no company_code_id; reads from parent GR header
+--   commitment_line       – no company_code_id; reads from parent commitment
+--   ses_line              – no company_code_id; reads from parent SES; item only
+--
+-- master.warehouse has no company_code_id; resolved via warehouse → site → company.
+--
+-- Payment allocation guards (§16):
+--   trg_guard_payment_allocation()       – BEFORE ROW  – type-specific field rules
+--   trg_guard_netting_allocation_count() – AFTER STMT  – NETTING minimum line count
+-- =============================================================================
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §15.1  GR HEADER: receiving_warehouse_id + receiving_site_id
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_gr_header_company()
+RETURNS trigger LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = document, master, pg_temp AS $$
+DECLARE
+    v_resolved uuid;
+BEGIN
+    -- Skip no-op updates
+    IF TG_OP = 'UPDATE'
+       AND OLD.company_code_id        IS NOT DISTINCT FROM NEW.company_code_id
+       AND OLD.receiving_warehouse_id IS NOT DISTINCT FROM NEW.receiving_warehouse_id
+       AND OLD.receiving_site_id      IS NOT DISTINCT FROM NEW.receiving_site_id
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.receiving_warehouse_id IS NOT NULL THEN
+        SELECT s.company_code_id INTO v_resolved
+        FROM master.warehouse w
+        JOIN master.site s
+             ON s.tenant_id = w.tenant_id AND s.id = w.site_id
+        WHERE w.tenant_id = NEW.tenant_id
+          AND w.id = NEW.receiving_warehouse_id;
+
+        IF v_resolved IS DISTINCT FROM NEW.company_code_id THEN
+            RAISE EXCEPTION
+                'GR header: receiving_warehouse % belongs to company %, but GR company is %',
+                NEW.receiving_warehouse_id, v_resolved, NEW.company_code_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.receiving_site_id IS NOT NULL THEN
+        SELECT company_code_id INTO v_resolved
+        FROM master.site
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.receiving_site_id;
+
+        IF v_resolved IS DISTINCT FROM NEW.company_code_id THEN
+            RAISE EXCEPTION
+                'GR header: receiving_site % belongs to company %, but GR company is %',
+                NEW.receiving_site_id, v_resolved, NEW.company_code_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §15.2  GR LINE: item_id + warehouse_id (company from parent GR header)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_gr_line_company()
+RETURNS trigger LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = document, master, pg_temp AS $$
+DECLARE
+    v_header_co uuid;
+    v_resolved  uuid;
+BEGIN
+    SELECT company_code_id INTO v_header_co
+    FROM document.goods_receipt
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.goods_receipt_id;
+
+    IF v_header_co IS NULL THEN
+        RETURN NEW;  -- parent not found yet (deferred FK); let FK catch it
+    END IF;
+
+    IF NEW.item_id IS NOT NULL THEN
+        SELECT company_code_id INTO v_resolved
+        FROM master.item
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+
+        IF v_resolved IS DISTINCT FROM v_header_co THEN
+            RAISE EXCEPTION
+                'GR line: item % belongs to company %, but GR company is %',
+                NEW.item_id, v_resolved, v_header_co
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.warehouse_id IS NOT NULL THEN
+        SELECT s.company_code_id INTO v_resolved
+        FROM master.warehouse w
+        JOIN master.site s
+             ON s.tenant_id = w.tenant_id AND s.id = w.site_id
+        WHERE w.tenant_id = NEW.tenant_id AND w.id = NEW.warehouse_id;
+
+        IF v_resolved IS DISTINCT FROM v_header_co THEN
+            RAISE EXCEPTION
+                'GR line: warehouse % belongs to company %, but GR company is %',
+                NEW.warehouse_id, v_resolved, v_header_co
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §15.3  COMMITMENT LINE: item_id + delivery_warehouse_id + delivery_site_id
+--        (company from parent document.commitment)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_commitment_line_company()
+RETURNS trigger LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = document, master, pg_temp AS $$
+DECLARE
+    v_header_co uuid;
+    v_resolved  uuid;
+BEGIN
+    SELECT company_code_id INTO v_header_co
+    FROM document.commitment
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.commitment_id;
+
+    IF v_header_co IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.item_id IS NOT NULL THEN
+        SELECT company_code_id INTO v_resolved
+        FROM master.item
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+
+        IF v_resolved IS DISTINCT FROM v_header_co THEN
+            RAISE EXCEPTION
+                'Commitment line: item % belongs to company %, but commitment company is %',
+                NEW.item_id, v_resolved, v_header_co
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.delivery_warehouse_id IS NOT NULL THEN
+        SELECT s.company_code_id INTO v_resolved
+        FROM master.warehouse w
+        JOIN master.site s
+             ON s.tenant_id = w.tenant_id AND s.id = w.site_id
+        WHERE w.tenant_id = NEW.tenant_id AND w.id = NEW.delivery_warehouse_id;
+
+        IF v_resolved IS DISTINCT FROM v_header_co THEN
+            RAISE EXCEPTION
+                'Commitment line: delivery_warehouse % belongs to company %, but commitment company is %',
+                NEW.delivery_warehouse_id, v_resolved, v_header_co
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.delivery_site_id IS NOT NULL THEN
+        SELECT company_code_id INTO v_resolved
+        FROM master.site
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.delivery_site_id;
+
+        IF v_resolved IS DISTINCT FROM v_header_co THEN
+            RAISE EXCEPTION
+                'Commitment line: delivery_site % belongs to company %, but commitment company is %',
+                NEW.delivery_site_id, v_resolved, v_header_co
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §15.4  SES LINE: item_id only (optional catalogued services)
+--        (company from parent document.service_entry_sheet)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_ses_line_company()
+RETURNS trigger LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = document, master, pg_temp AS $$
+DECLARE
+    v_header_co uuid;
+    v_item_co   uuid;
+BEGIN
+    IF NEW.item_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT company_code_id INTO v_header_co
+    FROM document.service_entry_sheet
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.service_entry_sheet_id;
+
+    IF v_header_co IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT company_code_id INTO v_item_co
+    FROM master.item
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+
+    IF v_item_co IS DISTINCT FROM v_header_co THEN
+        RAISE EXCEPTION
+            'SES line: item % belongs to company %, but SES company is %',
+            NEW.item_id, v_item_co, v_header_co
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §16  PAYMENT ALLOCATION BUSINESS RULE GUARD  (BEFORE ROW)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Rules:
+--   ADVANCE          → must have commitment_id; must NOT have purchase_invoice_id
+--   STANDARD / PARTIAL / FINAL / DOWN_PAYMENT → must have purchase_invoice_id
+--   RETENTION_RELEASE → must have invoice OR commitment
+--   NETTING          → must have purchase_invoice_id; no commitment_id;
+--                      no advance_recovery_amount; no retention_amount
+--                      (minimum line-count enforced by the companion AFTER STMT
+--                      trigger trg_guard_netting_allocation_count below)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_payment_allocation()
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = document AS $$
+DECLARE
+    v_payment_type text;
+BEGIN
+    SELECT payment_type INTO v_payment_type
+    FROM document.payment_entry
+    WHERE id = NEW.payment_entry_id;
+
+    IF v_payment_type = 'ADVANCE' THEN
+        IF NEW.commitment_id IS NULL THEN
+            RAISE EXCEPTION
+                'Advance payment allocation requires commitment_id'
+                USING ERRCODE = 'P0002';
+        END IF;
+        IF NEW.purchase_invoice_id IS NOT NULL THEN
+            RAISE EXCEPTION
+                'Advance payment allocation must not reference a purchase_invoice_id'
+                USING ERRCODE = 'P0002';
+        END IF;
+    END IF;
+
+    IF v_payment_type IN ('STANDARD','PARTIAL','FINAL','DOWN_PAYMENT') THEN
+        IF NEW.purchase_invoice_id IS NULL THEN
+            RAISE EXCEPTION
+                'Payment type % allocation requires purchase_invoice_id',
+                v_payment_type
+                USING ERRCODE = 'P0002';
+        END IF;
+    END IF;
+
+    IF v_payment_type = 'RETENTION_RELEASE' THEN
+        IF NEW.purchase_invoice_id IS NULL AND NEW.commitment_id IS NULL THEN
+            RAISE EXCEPTION
+                'Retention release allocation requires purchase_invoice_id or commitment_id'
+                USING ERRCODE = 'P0002';
+        END IF;
+    END IF;
+
+    IF v_payment_type = 'NETTING' THEN
+        -- Netting settles existing AP invoice balances across a run; it does not
+        -- operate against open commitments, recover advances, or release retention.
+        -- Those adjustments must be completed on their respective payment types first.
+        IF NEW.purchase_invoice_id IS NULL THEN
+            RAISE EXCEPTION
+                'NETTING allocation requires purchase_invoice_id'
+                USING ERRCODE = 'P0002';
+        END IF;
+        IF NEW.commitment_id IS NOT NULL THEN
+            RAISE EXCEPTION
+                'NETTING allocation must not reference commitment_id; settle open commitments via ADVANCE or STANDARD payments first'
+                USING ERRCODE = 'P0002';
+        END IF;
+        IF NEW.advance_recovery_amount <> 0 THEN
+            RAISE EXCEPTION
+                'NETTING allocation must not carry advance_recovery_amount; recover advances on standard invoice payments first'
+                USING ERRCODE = 'P0002';
+        END IF;
+        IF NEW.retention_amount <> 0 THEN
+            RAISE EXCEPTION
+                'NETTING allocation must not carry retention_amount; use RETENTION_RELEASE payment type instead'
+                USING ERRCODE = 'P0002';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §16b  NETTING ALLOCATION COUNT GUARD  (AFTER STATEMENT)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- A per-row BEFORE trigger cannot count sibling rows that have not yet been
+-- committed, so the minimum-two-lines rule requires a separate AFTER STATEMENT
+-- trigger.  Uses a transition table (new_rows) so the scan is limited to
+-- payment_entry_ids actually touched by the current statement.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_guard_netting_allocation_count()
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = document AS $$
+BEGIN
+    -- Check only NETTING payments touched by this statement.
+    IF EXISTS (
+        SELECT 1
+        FROM   (SELECT DISTINCT payment_entry_id FROM new_rows) AS changed
+        JOIN   document.payment_entry pe
+          ON   pe.id = changed.payment_entry_id
+         AND   pe.payment_type = 'NETTING'
+        WHERE  (
+                   SELECT COUNT(*)
+                   FROM   document.payment_entry_allocation
+                   WHERE  payment_entry_id = pe.id
+               ) < 2
+    ) THEN
+        RAISE EXCEPTION
+            'NETTING payment must have at least two allocation lines — a single-invoice netting run is meaningless; use a STANDARD payment instead'
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    RETURN NULL;
+END;
+$$;

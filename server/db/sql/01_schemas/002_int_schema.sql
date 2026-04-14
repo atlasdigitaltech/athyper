@@ -1,9 +1,5 @@
 -- 01_schemas/002_int_schema.sql
--- Integration hub schema.
--- Depends on: 01_schemas/001_schemas.sql
-
-CREATE SCHEMA IF NOT EXISTS int;
-
-COMMENT ON SCHEMA int IS
-    'Integration hub: endpoint registry, outbound connection config, and '
-    'webhook subscription management. Event processing uses event.outbox.';
+-- DEPRECATED: int schema removed.
+-- int.endpoint and int.webhook_subscription have been consolidated into
+-- the event schema (see 04_tables/007_event.sql §5 and §6).
+-- This file is retained as a tombstone. Do not recreate the int schema.

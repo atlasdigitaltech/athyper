@@ -24,6 +24,7 @@ import type {
   SessionModule,
   SessionScope,
   DelegationAvailable,
+  CachedSession,
 } from "./session.types.js";
 
 const SESSION_CACHE_TTL_SEC = 300; // 5 min
@@ -124,8 +125,31 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     const key = cacheKey(sub, tenant, entity, workbench, delegationId);
     const cached = await cache.get(key);
     if (cached) {
-      metrics?.hit(tenant);
-      return JSON.parse(cached) as SessionResponse;
+      const envelope = JSON.parse(cached) as CachedSession;
+
+      // auth_epoch guard: compare cached epoch with current DB value.
+      // A mismatch means a security-critical mutation occurred (principal locked,
+      // deny grant created/revoked, delegation revoked) since this session was
+      // cached. Force immediate re-resolution regardless of remaining TTL.
+      const epochRow = await db
+        .selectFrom("master.principal as p")
+        .select("p.auth_epoch")
+        .where("p.id", "=", envelope.principal_id)
+        .executeTakeFirst();
+
+      const dbEpoch = (epochRow?.auth_epoch as number | undefined) ?? 0;
+      if (dbEpoch !== envelope.auth_epoch) {
+        // Stale cache — invalidate this key and fall through to full resolution.
+        await cache.del(key);
+        if (typeof cache.srem === "function") {
+          await cache.srem(`principal_sessions:${sub}`, key);
+        }
+        metrics?.invalidated(tenant, 1);
+        // Fall through to DB resolution below
+      } else {
+        metrics?.hit(tenant);
+        return envelope.response;
+      }
     }
     metrics?.miss(tenant);
 
@@ -246,6 +270,17 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     }
     const principalId: string = bindingRow.principal_id;
 
+    // ── Fetch auth_epoch for cache envelope ───────────────────────────────────
+    // Stored alongside the session response so every subsequent cache hit can
+    // compare it against the DB value to detect security-critical mutations.
+    const epochRow = await db
+      .selectFrom("master.principal as p")
+      .select("p.auth_epoch")
+      .where("p.id", "=", principalId)
+      .where("p.tenant_id", "=", tenantId)
+      .executeTakeFirst();
+    const currentAuthEpoch: number = (epochRow?.auth_epoch as number | undefined) ?? 0;
+
     // ── Step 6: Resolve persona ────────────────────────────────────────────────
     const personaRow = await db
       .selectFrom("master.principal_persona as pp")
@@ -292,35 +327,88 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       }),
     );
 
-    // ── Step 9: Scope from auth_group_role ──────────────────────────────────────────
-    // scope='all' → principal covers the entire tenant (no company_code filter)
-    // other scopes → collect the specific company_codes from auth_group_role bindings
-    const groupRoleRows = await db
-      .selectFrom("master.auth_group_member as gm")
-      .innerJoin("master.auth_group_role as gr", (join) =>
-        join
-          .onRef("gr.group_id", "=", "gm.group_id")
-          .onRef("gr.tenant_id", "=", "gm.tenant_id")
-          .on("gr.is_active", "=", true),
-      )
-      .leftJoin("master.company_code as cc", "cc.id", "gr.company_code_id")
-      .select(["gr.scope", "cc.code as cc_code"])
-      .where("gm.principal_id", "=", principalId)
-      .where("gm.tenant_id", "=", tenantId)
-      .execute();
+    // ── Step 9: Scope from auth_group_role (two-dimension model) ──────────────
+    // assignment_scope_type: 'tenant' (all CCs) | 'company_code' | 'legal_entity'
+    // visibility_scope:      'all' | 'team' | 'own'  — widest row-level filter
+    //
+    // A single raw-SQL CTE resolves all three assignment scope types in one
+    // round-trip, expanding legal_entity scopes via fn_resolve_le_subtree_companies.
+    const scopeResult = await sql<{
+      has_tenant_scope: boolean;
+      widest_visibility: string;
+      cc_codes: string[] | null;
+    }>`
+      WITH effective_roles AS (
+        SELECT
+          gr.visibility_scope,
+          gr.assignment_scope_type,
+          gr.assignment_scope_ref_id,
+          gr.include_descendants
+        FROM master.auth_group_member gm
+        JOIN master.auth_group_role gr
+          ON  gr.group_id  = gm.group_id
+          AND gr.tenant_id = gm.tenant_id
+          AND gr.is_active = true
+        WHERE gm.principal_id = ${principalId}
+          AND gm.tenant_id    = ${tenantId}
+      ),
+      cc_scope AS (
+        -- Direct company_code scope
+        SELECT cc.code AS cc_code
+        FROM effective_roles er
+        JOIN master.company_code cc
+          ON  cc.id        = er.assignment_scope_ref_id
+          AND cc.is_active = true
+        WHERE er.assignment_scope_type = 'company_code'
 
-    const hasAllScope = groupRoleRows.some((r: { scope: string }) => r.scope === "all");
+        UNION
+
+        -- Legal entity — full descendant subtree
+        SELECT cc.code AS cc_code
+        FROM effective_roles er
+        CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(${tenantId}, er.assignment_scope_ref_id) sub
+        JOIN master.company_code cc
+          ON  cc.id        = sub.company_code_id
+          AND cc.is_active = true
+        WHERE er.assignment_scope_type = 'legal_entity'
+          AND er.include_descendants   = true
+
+        UNION
+
+        -- Legal entity — direct CCs only (no subtree)
+        SELECT cc.code AS cc_code
+        FROM effective_roles er
+        JOIN master.company_code cc
+          ON  cc.legal_entity_id = er.assignment_scope_ref_id
+          AND cc.tenant_id       = ${tenantId}
+          AND cc.is_active       = true
+        WHERE er.assignment_scope_type = 'legal_entity'
+          AND er.include_descendants   = false
+      )
+      SELECT
+        coalesce(
+          (SELECT bool_or(assignment_scope_type = 'tenant') FROM effective_roles),
+          false
+        ) AS has_tenant_scope,
+        coalesce(
+          (SELECT
+            CASE
+              WHEN bool_or(visibility_scope = 'all')  THEN 'all'
+              WHEN bool_or(visibility_scope = 'team') THEN 'team'
+              ELSE 'own'
+            END
+           FROM effective_roles),
+          'own'
+        ) AS widest_visibility,
+        (SELECT array_agg(DISTINCT cc_code) FROM cc_scope) AS cc_codes
+    `.execute(db);
+
+    const scopeRow = scopeResult.rows[0];
+    const hasTenantScope = scopeRow?.has_tenant_scope ?? false;
     const scope: SessionScope = {
-      all: hasAllScope,
-      company_codes: hasAllScope
-        ? []
-        : [
-            ...new Set(
-              groupRoleRows
-                .filter((r: { cc_code: string | null }) => r.cc_code != null)
-                .map((r: { cc_code: string }) => r.cc_code),
-            ),
-          ],
+      all: hasTenantScope,
+      company_codes: hasTenantScope ? [] : (scopeRow?.cc_codes ?? []),
+      visibility: ((scopeRow?.widest_visibility ?? "own") as "all" | "own" | "team"),
     };
 
     // ── Step 10: Delegations available ────────────────────────────────────────
@@ -439,7 +527,14 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       active_delegation,
     };
 
-    await cache.set(key, JSON.stringify(response), "EX", SESSION_CACHE_TTL_SEC);
+    // Store the CachedSession envelope — auth_epoch enables stale-detection on
+    // every subsequent cache hit without requiring a full DB re-resolution.
+    const envelope: CachedSession = {
+      auth_epoch: currentAuthEpoch,
+      principal_id: principalId,
+      response,
+    };
+    await cache.set(key, JSON.stringify(envelope), "EX", SESSION_CACHE_TTL_SEC);
     metrics?.write(tenant);
 
     // P2: Track this key in the per-principal set so the outbox worker can use

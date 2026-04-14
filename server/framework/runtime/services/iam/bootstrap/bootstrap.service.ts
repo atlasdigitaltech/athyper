@@ -245,11 +245,12 @@ async function resolveTenant(
   const principalId: string = principalRow.principal_id;
 
   // ── Entity CTE via raw SQL ─────────────────────────────────────────────────
-  // Adapted from spec query:
-  //   - scope_all = (scope = 'all')
-  //   - auth_group_role_company_code → auth_group_role.company_code_id directly
-  //   - master.role → shared.role
+  // Two-dimension scope model:
+  //   assignment_scope_type: 'tenant' (all CCs) | 'company_code' | 'legal_entity'
+  //   include_descendants: controls LE subtree traversal
   //
+  // role_cc_map explicitly maps each auth_group_role to its accessible CCs,
+  // then joins back through principal_roles to get persona + module_id.
   // Returns one row per {company_code, persona} for this principal in this tenant.
   const entityRows = await sql<{
     entity_code: string;
@@ -262,50 +263,71 @@ async function resolveTenant(
   }>`
     WITH principal_roles AS (
       SELECT
-        gr.id            AS auth_group_role_id,
-        (gr.scope = 'all') AS scope_all,
+        gr.id                    AS auth_group_role_id,
+        gr.assignment_scope_type,
+        gr.assignment_scope_ref_id,
+        gr.include_descendants,
         r.persona_id,
-        r.module_id,
-        gr.company_code_id
-      FROM master.auth_group_member  gm
-      JOIN master.auth_group_role    gr
-        ON  gr.group_id   = gm.group_id
-        AND gr.tenant_id  = gm.tenant_id
-        AND gr.is_active  = true
-      JOIN shared.role          r
-        ON  r.id = gr.role_id
+        r.module_id
+      FROM master.auth_group_member gm
+      JOIN master.auth_group_role   gr
+        ON  gr.group_id  = gm.group_id
+        AND gr.tenant_id = gm.tenant_id
+        AND gr.is_active = true
+      JOIN shared.role r ON r.id = gr.role_id
       WHERE gm.principal_id = ${principalId}
         AND gm.tenant_id    = ${tenantId}
     ),
-    accessible_company_codes AS (
-      -- Explicit company_code grants (scope_all = false)
-      SELECT DISTINCT company_code_id AS id
-      FROM principal_roles
-      WHERE scope_all = false
-        AND company_code_id IS NOT NULL
+    role_cc_map AS (
+      -- Tenant-wide: cross-join to all active CCs in this tenant
+      SELECT pr.auth_group_role_id, cc.id AS company_code_id
+      FROM principal_roles pr
+      CROSS JOIN master.company_code cc
+      WHERE pr.assignment_scope_type = 'tenant'
+        AND cc.tenant_id  = ${tenantId}
+        AND cc.is_active  = true
 
       UNION
 
-      -- scope_all = true → every active company_code in this tenant
-      SELECT cc.id
-      FROM master.company_code cc
-      WHERE cc.tenant_id = ${tenantId}
-        AND cc.is_active  = true
-        AND EXISTS (SELECT 1 FROM principal_roles WHERE scope_all = true)
+      -- Direct company_code scope
+      SELECT pr.auth_group_role_id, pr.assignment_scope_ref_id AS company_code_id
+      FROM principal_roles pr
+      WHERE pr.assignment_scope_type = 'company_code'
+
+      UNION
+
+      -- Legal entity — full descendant subtree
+      SELECT pr.auth_group_role_id, sub.company_code_id
+      FROM principal_roles pr
+      CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(${tenantId}, pr.assignment_scope_ref_id) sub
+      WHERE pr.assignment_scope_type = 'legal_entity'
+        AND pr.include_descendants   = true
+
+      UNION
+
+      -- Legal entity — direct CCs only (no subtree)
+      SELECT pr.auth_group_role_id, cc.id AS company_code_id
+      FROM principal_roles pr
+      JOIN master.company_code cc
+        ON  cc.legal_entity_id = pr.assignment_scope_ref_id
+        AND cc.tenant_id       = ${tenantId}
+        AND cc.is_active       = true
+      WHERE pr.assignment_scope_type = 'legal_entity'
+        AND pr.include_descendants   = false
     )
     SELECT
-      cc.code                     AS entity_code,
-      cc.name                     AS entity_name,
+      cc.code                           AS entity_code,
+      cc.name                           AS entity_name,
       le.entity_type,
       le.country_code,
-      le.code                     AS legal_entity_code,
-      p.code                      AS persona_code,
+      le.code                           AS legal_entity_code,
+      p.code                            AS persona_code,
       COUNT(DISTINCT pr.module_id)::int AS module_count
-    FROM accessible_company_codes acc
-    JOIN master.company_code   cc ON cc.id = acc.id
-    JOIN master.legal_entity   le ON le.id = cc.legal_entity_id
-    JOIN principal_roles       pr ON (pr.scope_all = true OR pr.company_code_id = acc.id)
-    JOIN shared.persona         p ON p.id = pr.persona_id
+    FROM role_cc_map rcm
+    JOIN master.company_code cc ON cc.id = rcm.company_code_id AND cc.is_active = true
+    JOIN master.legal_entity  le ON le.id = cc.legal_entity_id
+    JOIN principal_roles      pr ON pr.auth_group_role_id = rcm.auth_group_role_id
+    JOIN shared.persona        p ON p.id = pr.persona_id
     GROUP BY cc.code, cc.name, le.entity_type, le.country_code, le.code, p.code
     ORDER BY cc.code
   `.execute(db);

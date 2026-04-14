@@ -158,9 +158,6 @@ describe("SessionService.resolve", () => {
             { code: "ACC", name: "Accounts" },
             { code: "PAY", name: "Payments" },
           ],
-          "master.auth_group_member as gm":       [
-            { scope: "all", cc_code: null },
-          ],
           "master.delegation_grant as dg":   [],
         };
 
@@ -182,6 +179,10 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
+      // Step 9: raw SQL scope CTE — Kumar has tenant-wide access with 'all' visibility
+      executeQuery: vi.fn().mockResolvedValue({
+        rows: [{ has_tenant_scope: true, widest_visibility: "all", cc_codes: null }],
+      }),
     };
 
     const cache = makeMockCache();
@@ -195,7 +196,7 @@ describe("SessionService.resolve", () => {
     expect(result.permissions["invoice.approve"]).toBe(false);
     expect(result.permissions["report.view"]).toBe(true);
     expect(result.modules).toHaveLength(2);
-    expect(result.scope).toEqual({ all: true, company_codes: [] });
+    expect(result.scope).toEqual({ all: true, company_codes: [], visibility: "all" });
     expect(result.delegations_available).toHaveLength(0);
     // Response must be cached
     expect(cache.set).toHaveBeenCalledWith(
@@ -224,9 +225,6 @@ describe("SessionService.resolve", () => {
           "master.tenant_module_subscription as tms": [
             { code: "ACC", name: "Accounts" },
           ],
-          "master.auth_group_member as gm": [
-            { scope: "own", cc_code: "ATHQ" },
-          ],
           "master.delegation_grant as dg": [],
         };
 
@@ -248,6 +246,10 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
+      // Step 9: raw SQL scope CTE — Rama has company_code scope for ATHQ only
+      executeQuery: vi.fn().mockResolvedValue({
+        rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["ATHQ"] }],
+      }),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });
@@ -262,7 +264,7 @@ describe("SessionService.resolve", () => {
     });
 
     expect(result.persona).toBe("agent");
-    expect(result.scope).toEqual({ all: false, company_codes: ["ATHQ"] });
+    expect(result.scope).toEqual({ all: false, company_codes: ["ATHQ"], visibility: "own" });
   });
 
   // ── Partner-only user ───────────────────────────────────────────────────────
@@ -296,7 +298,6 @@ describe("SessionService.resolve", () => {
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [{ code: "invoice.view", is_granted: true }],
           "master.tenant_module_subscription as tms": [{ code: "ACC", name: "Accounts" }],
-          "master.auth_group_member as gm":       [{ scope: "own", cc_code: "DEMOIN" }],
           "master.delegation_grant as dg":   [],
         };
 
@@ -318,6 +319,10 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
+      // Step 9: raw SQL scope CTE — Priya has company_code scope for DEMOIN
+      executeQuery: vi.fn().mockResolvedValue({
+        rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["DEMOIN"] }],
+      }),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });

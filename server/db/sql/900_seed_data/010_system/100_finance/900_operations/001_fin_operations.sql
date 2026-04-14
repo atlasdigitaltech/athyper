@@ -1,8 +1,9 @@
 -- 100_finance/900_operations/001_fin_operations.sql
--- Purpose: control.entity_operation registrations for all 5 finance entities
---          Vendor, Customer, Invoice, Purchase Order, Journal Entry
+-- Purpose: control.entity_operation registrations for all 6 finance entities
+--          Vendor, Customer, Invoice, Purchase Order, Journal Entry, Payment Entry
 -- Depends on: 100_master/001_vendor.sql, 003_customer.sql
---             200_document/001_invoice.sql, 004_purchase_order.sql, 007_journal_entry.sql
+--             200_document/001_invoice.sql, 004_purchase_order.sql, 007_journal_entry.sql,
+--             200_document/010_payment_entry.sql
 -- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
 
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -93,4 +94,24 @@ VALUES
     (NULL, 'journal_entry', 'reverse',  'DETAIL', 'OVERFLOW', 'MODAL',    'reverse',                           true,  70, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                              true,  80, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                            false, 90, '00000000-0000-0000-0000-000000000000')
+ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Payment Entry operations
+-- ══════════════════════════════════════════════════════════════════════════════
+INSERT INTO control.entity_operation
+    (tenant_id, entity_name, permission_code, surface, placement,
+     handler_type, handler_target, is_record_required, sort_order, created_by)
+VALUES
+    (NULL, 'payment_entry', 'create',    'LIST',   'PRIMARY',  'NAVIGATE', '/document/payment_entry/new',        false, 10,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'update',    'DETAIL', 'PRIMARY',  'NAVIGATE', '/document/payment_entry/{id}/edit',  true,  20,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'submit',    'DETAIL', 'PRIMARY',  'MODAL',    'submit',                             true,  30,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'approve',   'DETAIL', 'PRIMARY',  'MODAL',    'approve',                            true,  40,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'deny',      'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                               true,  50,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'post',      'DETAIL', 'TOOLBAR',  'MODAL',    'post',                               true,  60,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'void',      'DETAIL', 'OVERFLOW', 'MODAL',    'void',                               true,  70,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'reverse',   'DETAIL', 'OVERFLOW', 'MODAL',    'reverse',                            true,  80,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'cancel',    'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                             true,  90,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'copy',      'DETAIL', 'OVERFLOW', 'API',      'copy',                               true,  100, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'export',    'LIST',   'TOOLBAR',  'API',      'export',                             false, 110, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;

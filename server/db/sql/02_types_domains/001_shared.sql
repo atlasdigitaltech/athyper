@@ -81,7 +81,7 @@ COMMENT ON DOMAIN shared.provenance_d IS
 
 -- shared.keycloak_sync_status_d — IdP/Keycloak synchronisation health
 -- Superset of all valid sync states across mfa_config, principal_profile (deprecated),
--- and principal_auth_binding. Values are protocol-defined — not business-extensible.
+-- and principal_identity_binding. Values are protocol-defined — not business-extensible.
 -- mfa_config restricts to the 4-value base set via an additional column CHECK.
 DO $$ BEGIN
     CREATE DOMAIN shared.keycloak_sync_status_d AS TEXT
@@ -93,5 +93,5 @@ END $$;
 COMMENT ON DOMAIN shared.keycloak_sync_status_d IS
   'Keycloak/IdP sync health: pending | synced | drift | error | disabled. '
   'Protocol-defined enum — not extensible by tenants. '
-  'Used by master.principal_auth_binding (all 5 values) and '
+  'Used by master.principal_identity_binding (all 5 values) and '
   'control.mfa_config (base 4 values; disabled not applicable to MFA credentials).';

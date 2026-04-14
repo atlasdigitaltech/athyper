@@ -1,0 +1,69 @@
+# =======================================================================
+# Service     : athyper-renderer
+# Phase       : 5.1 — PDF/HTML Rendering Pipeline
+# Base image  : node:20-slim + puppeteer-core + Chromium
+# =======================================================================
+#
+# The renderer is a standalone HTTP service that accepts HTML payloads
+# and returns PDF binaries via Puppeteer/Chromium.
+#
+# Two rendering modes:
+#   POST /render        — synchronous, returns application/pdf binary
+#   POST /render-jobs   — async job, 202 response with jobId
+#   GET  /render-jobs/:jobId — poll status + downloadUrl
+#   GET  /health        — liveness + browser pool status
+#
+# Internal authentication: X-Renderer-Token header (shared secret).
+# The renderer does NOT connect to the database or Redis.
+#
+# CPU/memory limits: start conservative — adjust from load test results.
+# Chromium requires --no-sandbox inside Docker.
+#
+# Build: apps/renderer/ (Dockerfile at apps/renderer/Dockerfile)
+# =======================================================================
+
+services:
+  athyper-renderer:
+    build:
+      context: ../../apps/renderer
+      dockerfile: Dockerfile
+    container_name: athyper-renderer
+    restart: unless-stopped
+    environment:
+      NODE_ENV:               ${NODE_ENV:-production}
+      PORT:                   3100
+      RENDERER_INTERNAL_TOKEN: ${RENDERER_INTERNAL_TOKEN}
+      # Browser pool settings
+      BROWSER_POOL_MIN:       ${BROWSER_POOL_MIN:-1}
+      BROWSER_POOL_MAX:       ${BROWSER_POOL_MAX:-4}
+      BROWSER_TIMEOUT_MS:     ${BROWSER_TIMEOUT_MS:-30000}
+      # Log level
+      LOG_LEVEL:              ${LOG_LEVEL:-info}
+    healthcheck:
+      test:     ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 30s
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus:   "1.0"
+          memory: 512M
+        reservations:
+          cpus:   "0.25"
+          memory: 256M
+    security_opt:
+      # Required for Chromium inside Docker
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN     # Required for Chromium sandbox (only if --no-sandbox not set)
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    labels:
+      athyper.service: "renderer"
+      athyper.phase:   "5.1"

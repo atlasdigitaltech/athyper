@@ -3,7 +3,7 @@
  *
  * Delivers notification events via HTTP POST to a tenant-registered webhook
  * endpoint. Payload is signed with HMAC-SHA256 using the subscription's
- * signing_secret (stored in int.webhook_subscription).
+ * signing_secret (stored in event.webhook_subscription).
  *
  * The recipient_addr for webhook deliveries is the target URL.
  * The signing_secret must be embedded in the payload by the wf-outbox

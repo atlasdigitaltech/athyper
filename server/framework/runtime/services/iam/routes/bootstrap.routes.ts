@@ -6,7 +6,7 @@
  * Auth: valid JWT (Bearer token) required.
  *
  * Reads the JWT `organization` claim for the tenant list and resolves all
- * accessible company codes per tenant via the group_role DB model.
+ * accessible company codes per tenant via the auth_group_role DB model.
  *
  * Response: BootstrapResponse — principal info, full tenant/entity tree,
  *           delegation count. Used by the frontend entity selector on login.

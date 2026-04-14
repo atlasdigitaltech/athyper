@@ -3,11 +3,11 @@
 -- ============================================================================
 -- File:     001_demo_principals.sql
 -- Schemas:  master.principal, master.principal_profile,
---           master.principal_auth_binding
+--           master.principal_identity_binding
 -- Purpose:  Pre-seed all 17 human demo users so the KC → DB identity
 --           resolution works on first login without a JIT create.
 --
--- KEY DESIGN: KC user UUID == DB principal UUID == principal_auth_binding.subject_id
+-- KEY DESIGN: KC user UUID == DB principal UUID == principal_identity_binding.subject_id
 --   The auth adapter looks up (tenant_id, provider_code, subject_id) on every
 --   authenticated request. With this seed, that binding exists before first login.
 --
@@ -68,7 +68,7 @@ BEGIN
     -- STAGE 0: Remove JIT-created demo principals that conflict with stable UUIDs
     -- Targets only principals created by oidc_jit whose keycloak_id matches one
     -- of our stable UUIDs but whose principal.id is different (JIT random UUID).
-    -- CASCADE removes profile + auth_binding + persona + group_member.
+    -- CASCADE removes profile + auth_binding + persona + auth_group_member.
     -- Skips principals that already use the stable UUID (re-run safe).
     -- ══════════════════════════════════════════════════════════════════════════
     DELETE FROM master.principal p
@@ -143,11 +143,11 @@ BEGIN
             keycloak_sync_status = EXCLUDED.keycloak_sync_status;
 
     -- ══════════════════════════════════════════════════════════════════════════
-    -- STAGE C: master.principal_auth_binding
+    -- STAGE C: master.principal_identity_binding
     -- provider_code = 'keycloak', subject_id = KC UUID (= principal.id)
     -- ══════════════════════════════════════════════════════════════════════════
 
-    INSERT INTO master.principal_auth_binding (
+    INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
         provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,

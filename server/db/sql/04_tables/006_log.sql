@@ -1201,3 +1201,80 @@ COMMENT ON TABLE log.resolution_log IS
     '3 rows per transaction: CONTEXT (input snapshot), INTENT (Step 4), PROFILE (Step 4.5). '
     'Append-only: immutability trigger prevents UPDATE and DELETE. '
     'Partial indexes in 07_indexes for step-specific queries.';
+
+
+-- =============================================================================
+-- §DLQ  Dead-letter queues — Phase 3.3 WorkerFramework
+-- =============================================================================
+-- One DLQ table per subsystem. All three share the same column set so the
+-- common insertDlq() helper can target any of them.
+-- Rows are inserted on job failure (after all BullMQ retries exhausted).
+-- retried_at + retried_job_id populated by retryFromDlq().
+
+-- §DLQ-1  log.audit_dlq
+CREATE TABLE IF NOT EXISTS log.audit_dlq (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    queue_name          text        NOT NULL,
+    job_name            text        NOT NULL,
+    payload             jsonb       NOT NULL,
+    error_message       text        NOT NULL,
+    retry_count         smallint    NOT NULL DEFAULT 0,
+    last_attempted_at   timestamptz NOT NULL,
+    retried_at          timestamptz,
+    retried_job_id      text,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT audit_dlq_pkey       PRIMARY KEY (id),
+    CONSTRAINT audit_dlq_payload_chk CHECK (jsonb_typeof(payload) = 'object')
+);
+
+COMMENT ON TABLE log.audit_dlq IS
+    'Dead-letter queue for failed audit-domain background jobs. '
+    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.audit_dlq''. '
+    'retried_at/retried_job_id set by retryFromDlq().';
+
+-- §DLQ-2  log.notification_dlq
+CREATE TABLE IF NOT EXISTS log.notification_dlq (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    queue_name          text        NOT NULL,
+    job_name            text        NOT NULL,
+    payload             jsonb       NOT NULL,
+    error_message       text        NOT NULL,
+    retry_count         smallint    NOT NULL DEFAULT 0,
+    last_attempted_at   timestamptz NOT NULL,
+    retried_at          timestamptz,
+    retried_job_id      text,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT notification_dlq_pkey       PRIMARY KEY (id),
+    CONSTRAINT notification_dlq_payload_chk CHECK (jsonb_typeof(payload) = 'object')
+);
+
+COMMENT ON TABLE log.notification_dlq IS
+    'Dead-letter queue for failed notification-domain background jobs. '
+    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.notification_dlq''.';
+
+-- §DLQ-3  log.render_dlq
+CREATE TABLE IF NOT EXISTS log.render_dlq (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    queue_name          text        NOT NULL,
+    job_name            text        NOT NULL,
+    payload             jsonb       NOT NULL,
+    error_message       text        NOT NULL,
+    retry_count         smallint    NOT NULL DEFAULT 0,
+    last_attempted_at   timestamptz NOT NULL,
+    retried_at          timestamptz,
+    retried_job_id      text,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT render_dlq_pkey       PRIMARY KEY (id),
+    CONSTRAINT render_dlq_payload_chk CHECK (jsonb_typeof(payload) = 'object')
+);
+
+COMMENT ON TABLE log.render_dlq IS
+    'Dead-letter queue for failed render/PDF-domain background jobs. '
+    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.render_dlq''. '
+    'PDF generation failures logged here after all BullMQ retries exhausted.';

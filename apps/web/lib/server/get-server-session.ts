@@ -37,6 +37,12 @@ export interface ShellSessionProps {
   organizations: Record<string, OrgMembership>;
   activeOrg: string | null;
   activeWorkbench: string | null;
+  /**
+   * Unix timestamp (seconds) when the KC access token expires.
+   * Forwarded to SessionProvider so it can schedule a proactive
+   * POST /api/auth/refresh before the token expires.
+   */
+  accessExpiresAt: number;
 }
 
 /** Extract the shell-safe props from a full V4Session. */
@@ -48,5 +54,6 @@ export function toShellSessionProps(session: V4Session): ShellSessionProps {
     organizations: session.organizations,
     activeOrg: session.activeOrg,
     activeWorkbench: session.activeWorkbench,
+    accessExpiresAt: session.accessExpiresAt,
   };
 }

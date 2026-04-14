@@ -1,6 +1,27 @@
 -- 09_triggers/004_document.sql
--- Document schema triggers.
--- Depends on: 08_functions/004_document.sql
+-- Scope: All document-schema triggers
+-- Tables: document.user_profile_update_request, document.render_output,
+--         document.render_job,
+--         document.journal_entry, document.journal_line,
+--         document.journal_line_reference,
+--         document.commitment, document.commitment_line,
+--         document.obligation_horizon,
+--         document.purchase_invoice, document.purchase_invoice_line,
+--         document.payment_entry, document.payment_entry_allocation,
+--         document.payment_term_application,
+--         document.asset_transaction, document.depreciation_run,
+--         document.depreciation_run_line, document.depreciation_schedule,
+--         document.intercompany_agreement, document.intercompany_transaction,
+--         document.netting_batch, document.ic_elimination,
+--         document.stocktake, document.stocktake_line,
+--         document.goods_receipt, document.goods_receipt_line,
+--         document.service_entry_sheet_line
+-- Depends on: 08_functions/004_document.sql,
+--             08_functions/004a_document_journal.sql,
+--             08_functions/004b_document_commitment.sql,
+--             08_functions/004c_document_finance.sql,
+--             08_functions/004i_document_p2p.sql
+
 
 -- =============================================================================
 -- §8  document.user_profile_update_request
@@ -55,10 +76,11 @@ CREATE TRIGGER trg_render_job_updated_at
 
 
 -- =============================================================================
--- §  document.journal_entry
+-- §JE  document.journal_entry
 -- =============================================================================
 -- Trigger ordering (PostgreSQL fires BEFORE triggers alphabetically):
 --   trg_je_immutability_guard      ← fires first (guards posted JEs)
+--   trg_je_p*                      ← period gate (before status triggers)
 --   trg_je_source_doc_type_lookup  ← lookup validation
 --   trg_je_status_changed          ← sets status_changed_at/by
 --   trg_je_status_lookup           ← lookup validation
@@ -66,6 +88,7 @@ CREATE TRIGGER trg_render_job_updated_at
 --   trg_je_sync_base_currency      ← denormalize
 --   trg_je_sync_fiscal_period      ← denormalize
 --   trg_je_updated_at              ← audit timestamp
+--   trg_je_workflow_gate           ← workflow approval gate (after status transition)
 -- =============================================================================
 
 -- G1: Immutability guard — blocks mutations on posted/reversed JEs
@@ -112,19 +135,49 @@ CREATE TRIGGER trg_je_sync_base_currency
     BEFORE INSERT OR UPDATE OF company_code_id ON document.journal_entry
     FOR EACH ROW EXECUTE FUNCTION document.trg_je_sync_base_currency();
 
+-- Period gate — blocks INSERT into hard-closed or unopened periods.
+-- Alphabetically 'trg_je_p...' fires before 'trg_je_s...' (status triggers):
+-- gate first, then validate state machine.
+DROP TRIGGER IF EXISTS trg_je_period_gate ON document.journal_entry;
+CREATE TRIGGER trg_je_period_gate
+    BEFORE INSERT ON document.journal_entry
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_je_period_gate_fn();
+
+COMMENT ON TRIGGER trg_je_period_gate ON document.journal_entry IS
+    'Blocks INSERT into hard-closed or future (not yet opened) book-periods. '
+    'Checks master.fiscal_period AND governance.book_period_status.';
+
+-- Workflow approval gate — blocks created→posted when a pending/rejected request exists.
+-- Alphabetically fires after trg_je_status_transition_guard ('s' < 'w').
+DROP TRIGGER IF EXISTS trg_je_workflow_gate ON document.journal_entry;
+CREATE TRIGGER trg_je_workflow_gate
+    BEFORE UPDATE OF status ON document.journal_entry
+    FOR EACH ROW
+    WHEN (NEW.status = 'posted' AND OLD.status = 'created')
+    EXECUTE FUNCTION document.trg_je_workflow_gate_fn();
+
+COMMENT ON TRIGGER trg_je_workflow_gate ON document.journal_entry IS
+    'Blocks transition created→posted when a document.workflow_request for the JE '
+    'has status ''pending'' or ''rejected''. Absence of a request = no workflow '
+    'required = posting allowed. Depends on: 08_functions/004c_document_finance.sql.';
+
 
 -- =============================================================================
--- §  document.journal_line
+-- §JL  document.journal_line
 -- =============================================================================
 -- Trigger ordering:
---   trg_jl_immutability_guard  ← fires first (blocks changes to posted JE lines)
---   trg_jl_party_type_lookup   ← lookup validation
---   trg_jl_subledger_type_lookup ← lookup validation
---   trg_jl_sync_from_header    ← denormalize header fields
---   trg_jl_updated_at          ← audit timestamp
---   trg_jl_validate_party      ← polymorphic FK validation
+--   trg_jl_immutability_guard       ← fires first (blocks changes to posted JE lines)
+--   trg_jl_party_type_lookup        ← lookup validation
+--   trg_jl_subledger_type_lookup    ← lookup validation
+--   trg_jl_sync_from_header         ← denormalize header fields
+--   trg_jl_updated_at               ← audit timestamp
+--   trg_jl_validate_d*              ← dimension validation (before posting controls)
+--   trg_jl_validate_party           ← polymorphic FK validation
+--   trg_jl_validate_posting_controls ← posting controls enforcement
 -- + AFTER trigger:
---   trg_jl_sync_cached_totals  ← recomputes header totals
+--   trg_jl_check_budget             ← budget availability check
+--   trg_jl_sync_cached_totals       ← recomputes header totals
 -- =============================================================================
 
 -- G1: JL immutability — block all changes to lines of posted/reversed JEs
@@ -161,6 +214,46 @@ CREATE TRIGGER trg_jl_validate_party
     WHEN (NEW.party_type IS NOT NULL)
     EXECUTE FUNCTION document.trg_jl_validate_party();
 
+-- Dimension validation — cost_center_id, profit_center_id, project_id must be
+-- active and date-valid. Fires after trg_jl_sync_from_header (populates posting_date)
+-- and before trg_jl_validate_p* (posting controls).
+DROP TRIGGER IF EXISTS trg_jl_validate_dimensions ON document.journal_line;
+CREATE TRIGGER trg_jl_validate_dimensions
+    BEFORE INSERT ON document.journal_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_jl_validate_dimensions_fn();
+
+COMMENT ON TRIGGER trg_jl_validate_dimensions ON document.journal_line IS
+    'Validates cost_center_id, profit_center_id, and project_id against their '
+    'master tables: must be active (is_active=true) and within valid_from/valid_to '
+    'window relative to the JL posting_date. Depends on: 08_functions/004c_document_finance.sql.';
+
+-- Posting controls validation — enforces master.company_code_gl_account controls.
+-- Alphabetically fires after denorm trigger (trg_jl_sync_*).
+DROP TRIGGER IF EXISTS trg_jl_validate_posting_controls ON document.journal_line;
+CREATE TRIGGER trg_jl_validate_posting_controls
+    BEFORE INSERT ON document.journal_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_jl_validate_posting_controls_fn();
+
+COMMENT ON TRIGGER trg_jl_validate_posting_controls ON document.journal_line IS
+    'Validates posting_allowed, blocked_for_manual, blocked_for_auto '
+    'against master.company_code_gl_account before accepting a journal line.';
+
+-- Budget availability check — skips credit lines (base_debit=0); enforces
+-- overspend_policy BLOCK/ESCALATE/WARN/ALLOW.
+DROP TRIGGER IF EXISTS trg_jl_check_budget ON document.journal_line;
+CREATE TRIGGER trg_jl_check_budget
+    BEFORE INSERT ON document.journal_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_jl_check_budget_fn();
+
+COMMENT ON TRIGGER trg_jl_check_budget ON document.journal_line IS
+    'Checks budget availability for debit journal_lines against the best-matching '
+    'master.budget_allocation and ledger.budget_balance. Enforces overspend_policy: '
+    'BLOCK/ESCALATE → hard exception; WARN → non-blocking warning; ALLOW → pass-through. '
+    'Depends on: 08_functions/004c_document_finance.sql.';
+
 -- G2a: Cached totals sync — AFTER trigger recomputes header totals from lines
 DROP TRIGGER IF EXISTS trg_jl_sync_cached_totals ON document.journal_line;
 CREATE TRIGGER trg_jl_sync_cached_totals
@@ -170,7 +263,7 @@ CREATE TRIGGER trg_jl_sync_cached_totals
 
 
 -- =============================================================================
--- §  document.journal_line_reference
+-- §JLR  document.journal_line_reference
 -- =============================================================================
 
 DROP TRIGGER IF EXISTS trg_jlr_ref_type_lookup ON document.journal_line_reference;
@@ -185,10 +278,124 @@ CREATE TRIGGER trg_jlr_doc_type_lookup
 
 
 -- =============================================================================
+-- §CMT  document.commitment
 -- =============================================================================
--- ASSET MANAGEMENT MODULE — Triggers
+
+DROP TRIGGER IF EXISTS trg_cmt_updated_at ON document.commitment;
+CREATE TRIGGER trg_cmt_updated_at BEFORE UPDATE ON document.commitment
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_cmt_status_changed ON document.commitment;
+CREATE TRIGGER trg_cmt_status_changed BEFORE UPDATE ON document.commitment
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
 -- =============================================================================
+-- §CL  document.commitment_line
 -- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_cl_updated_at ON document.commitment_line;
+CREATE TRIGGER trg_cl_updated_at BEFORE UPDATE ON document.commitment_line
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- §15.3  Commitment line company consistency (item + delivery warehouse/site)
+DROP TRIGGER IF EXISTS trg_cl_company_guard ON document.commitment_line;
+CREATE TRIGGER trg_cl_company_guard
+    BEFORE INSERT OR UPDATE OF item_id, delivery_warehouse_id, delivery_site_id
+    ON document.commitment_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_guard_commitment_line_company();
+
+
+-- =============================================================================
+-- §OH  document.obligation_horizon
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_oh_updated_at ON document.obligation_horizon;
+CREATE TRIGGER trg_oh_updated_at
+    BEFORE UPDATE ON document.obligation_horizon
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_oh_status_changed ON document.obligation_horizon;
+CREATE TRIGGER trg_oh_status_changed
+    BEFORE UPDATE ON document.obligation_horizon
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §PI  document.purchase_invoice
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_pi_updated_at ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_updated_at BEFORE UPDATE ON document.purchase_invoice
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_pi_status_changed ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_status_changed BEFORE UPDATE ON document.purchase_invoice
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §PIL  document.purchase_invoice_line
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_pil_updated_at ON document.purchase_invoice_line;
+CREATE TRIGGER trg_pil_updated_at BEFORE UPDATE ON document.purchase_invoice_line
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §PE  document.payment_entry
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_pe_updated_at ON document.payment_entry;
+CREATE TRIGGER trg_pe_updated_at BEFORE UPDATE ON document.payment_entry
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_pe_status_changed ON document.payment_entry;
+CREATE TRIGGER trg_pe_status_changed BEFORE UPDATE ON document.payment_entry
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §PEA  document.payment_entry_allocation
+-- =============================================================================
+
+-- §16  Payment allocation business-rule guard (per-row)
+DROP TRIGGER IF EXISTS trg_pea_allocation_guard ON document.payment_entry_allocation;
+CREATE TRIGGER trg_pea_allocation_guard
+    BEFORE INSERT OR UPDATE OF payment_entry_id, purchase_invoice_id, commitment_id,
+                               advance_recovery_amount, retention_amount
+    ON document.payment_entry_allocation
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_guard_payment_allocation();
+
+-- §16b  NETTING minimum allocation count guard (after statement)
+-- Runs after the full INSERT/UPDATE so it sees the complete sibling set.
+DROP TRIGGER IF EXISTS trg_pea_netting_count_guard_ins ON document.payment_entry_allocation;
+CREATE TRIGGER trg_pea_netting_count_guard_ins
+    AFTER INSERT
+    ON document.payment_entry_allocation
+    REFERENCING NEW TABLE AS new_rows
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION document.trg_guard_netting_allocation_count();
+
+DROP TRIGGER IF EXISTS trg_pea_netting_count_guard_upd ON document.payment_entry_allocation;
+CREATE TRIGGER trg_pea_netting_count_guard_upd
+    AFTER UPDATE
+    ON document.payment_entry_allocation
+    REFERENCING NEW TABLE AS new_rows
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION document.trg_guard_netting_allocation_count();
+
+
+-- =============================================================================
+-- §PTA  document.payment_term_application
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_pta_updated_at ON document.payment_term_application;
+CREATE TRIGGER trg_pta_updated_at BEFORE UPDATE ON document.payment_term_application
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 
 -- =============================================================================
@@ -270,30 +477,63 @@ DROP TRIGGER IF EXISTS trg_ds_updated_at ON document.depreciation_schedule;
 CREATE TRIGGER trg_ds_updated_at BEFORE UPDATE ON document.depreciation_schedule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
--- ============================================================================
--- Engine 4.13: Unified Transaction Resolution Engine additions
--- ============================================================================
 
--- ============================================================================
--- document.obligation_horizon
--- ============================================================================
+-- =============================================================================
+-- §IC1  document.intercompany_agreement
+-- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_oh_updated_at ON document.obligation_horizon;
-CREATE TRIGGER trg_oh_updated_at
-    BEFORE UPDATE ON document.obligation_horizon
+DROP TRIGGER IF EXISTS trg_ica_updated_at ON document.intercompany_agreement;
+CREATE TRIGGER trg_ica_updated_at BEFORE UPDATE ON document.intercompany_agreement
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_oh_status_changed ON document.obligation_horizon;
-CREATE TRIGGER trg_oh_status_changed
-    BEFORE UPDATE ON document.obligation_horizon
+DROP TRIGGER IF EXISTS trg_ica_status_changed ON document.intercompany_agreement;
+CREATE TRIGGER trg_ica_status_changed BEFORE UPDATE ON document.intercompany_agreement
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 
--- ══════════════════════════════════════════════════════════════════════════════
--- INVENTORY MANAGEMENT ENGINE — Document triggers
--- ══════════════════════════════════════════════════════════════════════════════
+-- =============================================================================
+-- §IC2  document.intercompany_transaction
+-- =============================================================================
 
--- ── document.stocktake ───────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_ict_updated_at ON document.intercompany_transaction;
+CREATE TRIGGER trg_ict_updated_at BEFORE UPDATE ON document.intercompany_transaction
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ict_status_changed ON document.intercompany_transaction;
+CREATE TRIGGER trg_ict_status_changed BEFORE UPDATE ON document.intercompany_transaction
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §IC3  document.netting_batch
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_nb_updated_at ON document.netting_batch;
+CREATE TRIGGER trg_nb_updated_at BEFORE UPDATE ON document.netting_batch
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_nb_status_changed ON document.netting_batch;
+CREATE TRIGGER trg_nb_status_changed BEFORE UPDATE ON document.netting_batch
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §IC4  document.ic_elimination
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_ice_updated_at ON document.ic_elimination;
+CREATE TRIGGER trg_ice_updated_at BEFORE UPDATE ON document.ic_elimination
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ice_status_changed ON document.ic_elimination;
+CREATE TRIGGER trg_ice_status_changed BEFORE UPDATE ON document.ic_elimination
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §INV1  document.stocktake
+-- =============================================================================
+
 DROP TRIGGER IF EXISTS trg_st_updated_at ON document.stocktake;
 CREATE TRIGGER trg_st_updated_at
     BEFORE UPDATE ON document.stocktake
@@ -304,7 +544,11 @@ CREATE TRIGGER trg_st_status_changed
     BEFORE UPDATE OF status ON document.stocktake
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
--- ── document.stocktake_line ──────────────────────────────────────────────────
+
+-- =============================================================================
+-- §INV2  document.stocktake_line
+-- =============================================================================
+
 DROP TRIGGER IF EXISTS trg_stl_updated_at ON document.stocktake_line;
 CREATE TRIGGER trg_stl_updated_at
     BEFORE UPDATE ON document.stocktake_line
@@ -314,3 +558,39 @@ DROP TRIGGER IF EXISTS trg_stl_denorm_counts ON document.stocktake_line;
 CREATE TRIGGER trg_stl_denorm_counts
     AFTER INSERT OR UPDATE OR DELETE ON document.stocktake_line
     FOR EACH ROW EXECUTE FUNCTION document.trg_stocktake_line_denorm_counts();
+
+
+-- =============================================================================
+-- §P2P1  document.goods_receipt  — §15.1 GR header company consistency
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_gr_company_guard ON document.goods_receipt;
+CREATE TRIGGER trg_gr_company_guard
+    BEFORE INSERT OR UPDATE OF company_code_id, receiving_warehouse_id, receiving_site_id
+    ON document.goods_receipt
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_guard_gr_header_company();
+
+
+-- =============================================================================
+-- §P2P2  document.goods_receipt_line  — §15.2 GR line company consistency
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_grl_company_guard ON document.goods_receipt_line;
+CREATE TRIGGER trg_grl_company_guard
+    BEFORE INSERT OR UPDATE OF item_id, warehouse_id
+    ON document.goods_receipt_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_guard_gr_line_company();
+
+
+-- =============================================================================
+-- §P2P3  document.service_entry_sheet_line  — §15.4 SES line company consistency
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_sesl_company_guard ON document.service_entry_sheet_line;
+CREATE TRIGGER trg_sesl_company_guard
+    BEFORE INSERT OR UPDATE OF item_id
+    ON document.service_entry_sheet_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_guard_ses_line_company();

@@ -109,6 +109,11 @@ export function SessionProvider({
     `${initialSession.activeOrg ?? ""}:${initialSession.activeWorkbench ?? ""}`,
   );
 
+  // Track the scheduled refresh timer so we can cancel on unmount
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track the latest known accessExpiresAt so the timer can chain
+  const accessExpiresAtRef = useRef<number>(initialSession.accessExpiresAt ?? 0);
+
   // ── Last-used context restore ─────────────────────────────────────────────
   // On mount: if the BFF session has no active context (e.g. first login or
   // session cleared), try to restore from localStorage and re-select.
@@ -127,6 +132,61 @@ export function SessionProvider({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Proactive token refresh timer ────────────────────────────────────────
+  // Schedules POST /api/auth/refresh to fire REFRESH_BEFORE_EXPIRY_SEC before
+  // the access token expires. On success, reschedules for the new expiry.
+  // On failure (redirect), surfaces INVALID_TOKEN so the expired dialog shows.
+  //
+  // Design notes:
+  //   - 90s before expiry = well inside the server's 120s "skip if still valid" guard
+  //   - Timer is reset on each successful refresh (chained, not interval-based)
+  //   - Unmount + context-switch both cancel the pending timer
+  const REFRESH_BEFORE_EXPIRY_SEC = 90;
+
+  const scheduleTokenRefresh = useCallback((expiresAt: number) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fireInMs = Math.max((expiresAt - REFRESH_BEFORE_EXPIRY_SEC - nowSec) * 1000, 0);
+
+    refreshTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", { method: "POST" });
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          redirect?: string;
+          accessExpiresAt?: number;
+          reason?: string;
+        };
+
+        if (body.ok && body.accessExpiresAt) {
+          // Refresh succeeded — schedule next refresh for the new expiry
+          accessExpiresAtRef.current = body.accessExpiresAt;
+          scheduleTokenRefresh(body.accessExpiresAt);
+        } else if (body.redirect) {
+          // Refresh token expired or session destroyed — surface as auth error
+          setRuntimeError({
+            code: "INVALID_TOKEN",
+            message: body.reason ?? "Your session has expired. Please sign in again.",
+            status: 401,
+          });
+        }
+      } catch {
+        // Network error — will surface naturally on the next runtime fetch
+      }
+    }, fireInMs);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Start the refresh timer on mount; cancel on unmount
+  useEffect(() => {
+    if (accessExpiresAtRef.current > 0) {
+      scheduleTokenRefresh(accessExpiresAtRef.current);
+    }
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [scheduleTokenRefresh]);
 
   // ── Runtime session fetch ─────────────────────────────────────────────────
 

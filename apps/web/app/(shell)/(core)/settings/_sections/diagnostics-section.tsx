@@ -120,20 +120,19 @@ function ActionRow({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-0">
+      <div className="flex items-center justify-between gap-6 border-b border-border py-4 last:border-0">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-foreground">{action.label}</p>
-          <p className="mt-0.5 text-2xs text-muted-foreground leading-relaxed">{action.desc}</p>
+          <p className="text-sm font-semibold text-foreground">{action.label}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{action.desc}</p>
           {result && <ResultCard result={result} />}
         </div>
         <Button
-          size="sm"
-          variant={action.danger ? "destructive" : "outline"}
-          className="h-7 shrink-0 gap-1 px-3 text-xs"
+          variant="outline"
+          className="h-8 shrink-0 gap-1.5 px-4 text-sm font-medium"
           onClick={handleClick}
           disabled={loading}
         >
-          {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+          {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           {action.buttonLabel}
         </Button>
       </div>
@@ -290,28 +289,27 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
                 Session
               </summary>
-              <div className="border-t border-border px-3 py-2 space-y-1.5">
-                <DebugRow label="Principal" value={data.session.principal_id} mono />
+              <div className="border-t border-border px-3 py-1">
+                <DebugRow label="Principal" value={data.session.principal_id} />
                 <DebugRow label="Org"       value={data.session.active_org} />
                 <DebugRow label="Workbench" value={data.session.active_workbench} />
                 <DebugRow
                   label="Token"
                   value={
-                    <span className={cn(
-                      "font-mono text-2xs",
-                      data.session.token_status === "valid" ? "text-success" : "text-destructive",
-                    )}>
-                      {data.session.token_status} · {ttlLabel}
+                    <span className="flex items-center gap-1.5">
+                      <Badge variant={data.session.token_status === "valid" ? "success" : "destructive"}>
+                        {data.session.token_status}
+                      </Badge>
+                      {ttl > 0 && (
+                        <span className="text-xs text-muted-foreground">{ttlLabel}</span>
+                      )}
                     </span>
                   }
                 />
                 <DebugRow
                   label="CSRF"
                   value={
-                    <Badge
-                      variant={data.session.csrf_status === "present" ? "success" : "destructive"}
-                      className="text-2xs"
-                    >
+                    <Badge variant={data.session.csrf_status === "present" ? "success" : "destructive"}>
                       {data.session.csrf_status}
                     </Badge>
                   }
@@ -319,14 +317,11 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                 <DebugRow
                   label="MFA"
                   value={
-                    <span className={cn(
-                      "text-2xs font-mono",
-                      data.session.mfa_verified ? "text-success" : "text-muted-foreground",
-                    )}>
-                      {data.session.mfa_required
-                        ? (data.session.mfa_verified ? "required + verified" : "required + pending")
-                        : "not required"}
-                    </span>
+                    data.session.mfa_required
+                      ? <Badge variant={data.session.mfa_verified ? "success" : "warning"}>
+                          {data.session.mfa_verified ? "verified" : "pending"}
+                        </Badge>
+                      : <span className="text-xs text-muted-foreground">not required</span>
                   }
                 />
               </div>
@@ -338,14 +333,11 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />
                 BFF / Runtime
               </summary>
-              <div className="border-t border-border px-3 py-2 space-y-1.5">
+              <div className="border-t border-border px-3 py-1">
                 <DebugRow
                   label="Runtime"
                   value={
-                    <Badge
-                      variant={data.bff.connected ? "success" : "destructive"}
-                      className="text-2xs"
-                    >
+                    <Badge variant={data.bff.connected ? "success" : "destructive"}>
                       {data.bff.connected ? "connected" : "unreachable"}
                     </Badge>
                   }
@@ -365,11 +357,11 @@ function SessionDebugConsole({ active }: { active: boolean }) {
   );
 }
 
-function DebugRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function DebugRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 text-2xs">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className={cn("text-right text-foreground", mono && "font-mono")}>{value}</span>
+    <div className="flex items-center justify-between gap-4 border-b border-border/40 py-2 last:border-0">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="text-right text-xs text-foreground">{value}</span>
     </div>
   );
 }

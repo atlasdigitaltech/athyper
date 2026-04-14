@@ -3,7 +3,7 @@
 -- ============================================================================
 -- File:     003_principal_users.sql
 -- Schemas:  master.principal, master.principal_profile,
---           master.principal_auth_binding
+--           master.principal_identity_binding
 -- Purpose:  Pre-seed two system principal accounts per organisational unit:
 --             • <TenantCode>.OWNER — full operational control
 --             • <TenantCode>.ADMIN — administrative access
@@ -302,10 +302,10 @@ BEGIN
             updated_at = now();
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE D: master.principal_auth_binding — all 62 principal users
+    -- STAGE D: master.principal_identity_binding — all 62 principal users
     -- ══════════════════════════════════════════════════════════════════════
 
-    INSERT INTO master.principal_auth_binding (
+    INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
         provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,

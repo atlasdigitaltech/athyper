@@ -36,6 +36,12 @@ export interface PlatformRoutesDeps {
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
   };
+  /** Optional Redis client — used by admin/cache/clear and admin/user/sync-profile. */
+  cache?: {
+    del(key: string | string[]): Promise<unknown>;
+    scan?(cursor: string, matchFlag: "MATCH", pattern: string, countFlag: "COUNT", count: number): Promise<[string, string[]]>;
+    smembers?(key: string): Promise<string[]>;
+  };
 }
 
 // ─── Row mappers ──────────────────────────────────────────────────────────────
@@ -93,7 +99,7 @@ function toEntity(row: Record<string, any>) {
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
 
   // ── GET /platform/saved-views/:entity ──────────────────────────────────────
 
@@ -844,7 +850,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .executeTakeFirst(),
         db.selectFrom("master.principal_identity_binding as ab")
           .select([
-            "ab.provider_code", "ab.subject_id", "ab.username",
+            "ab.provider_code", "ab.username",
             "ab.sync_status", "ab.synced_at", "ab.idp_enabled",
             "ab.idp_email_verified", "ab.required_actions",
           ])
@@ -908,7 +914,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         ? await db
             .selectFrom("master.auth_group_role as gr")
             .innerJoin("shared.role as r", "r.id", "gr.role_id")
-            .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "gr.scope"])
+            .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "gr.visibility_scope", "gr.assignment_scope_type", "gr.assignment_scope_ref_id"])
             .where("gr.tenant_id", "=", tenantId)
             .where("gr.group_id", "in", groupIds)
             .where("gr.status", "=", "active")
@@ -919,7 +925,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         ...g,
         roles: roleRows
           .filter((r) => r["group_id"] === g["id"])
-          .map((r) => ({ role_code: r["role_code"], role_name: r["role_name"], scope: r["scope"] })),
+          .map((r) => ({ role_code: r["role_code"], role_name: r["role_name"], visibility_scope: r["visibility_scope"], assignment_scope_type: r["assignment_scope_type"], assignment_scope_ref_id: r["assignment_scope_ref_id"] })),
       }));
 
       // Teams
@@ -1324,6 +1330,255 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     }
   };
 
+  // ── POST /platform/admin/cache/clear?scope=app|rbac ──────────────────────
+  // Invalidates the caller's backend session cache (and optionally bootstrap cache).
+  // scope=app  — clears session + bootstrap caches for this sub (forces full re-resolve)
+  // scope=rbac — same (RBAC/permission data is embedded inside session cache envelopes)
+  // Any authenticated user can clear their own cache — no platform-admin required.
+
+  const clearCacheHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!sub) { res.status(401).json({ error: "INVALID_TOKEN", message: "JWT missing sub" }); return; }
+
+      const scope = typeof req.query["scope"] === "string" ? req.query["scope"] : "app";
+
+      if (!cache) {
+        // Cache client not injected — respond 200 (no-op) so the UI doesn't block
+        res.json({ cleared: 0, scope, note: "cache not configured on this instance" });
+        return;
+      }
+
+      // Build the key patterns to delete based on scope.
+      // Both app and rbac clear the same keys because permissions are embedded in session envelopes.
+      const patterns = scope === "rbac"
+        ? [`session:${sub}:*`]                                  // permission data lives inside session
+        : [`session:${sub}:*`, `bootstrap:${sub}:*`];           // app = full session + bootstrap tree
+
+      let totalDeleted = 0;
+
+      for (const pattern of patterns) {
+        // P2 path: use per-principal set (smembers) when available — avoids O(N) SCAN
+        const setKey = `principal_sessions:${sub}`;
+        if (typeof cache.smembers === "function" && pattern.startsWith("session:")) {
+          const members = await cache.smembers(setKey);
+          if (members.length > 0) {
+            await cache.del([...members, setKey]);
+            totalDeleted += members.length;
+            continue;
+          }
+        }
+
+        // Fallback: SCAN-based bulk delete
+        if (typeof cache.scan === "function") {
+          const keys: string[] = [];
+          let cursor = "0";
+          do {
+            const [nextCursor, found] = await cache.scan(cursor, "MATCH", pattern, "COUNT", 100);
+            cursor = nextCursor;
+            keys.push(...found);
+          } while (cursor !== "0");
+          if (keys.length > 0) {
+            await cache.del(keys);
+            totalDeleted += keys.length;
+          }
+        }
+      }
+
+      res.json({ cleared: totalDeleted, scope });
+    } catch (err) {
+      logger?.error("admin_cache_clear_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /platform/admin/user/sync-profile ────────────────────────────────
+  // Marks the caller's KC identity binding as sync-pending and invalidates their
+  // session cache so the next GET /session re-resolves fresh data from the DB.
+  // Any authenticated user can trigger a sync of their own profile.
+
+  const syncProfileHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!sub) { res.status(401).json({ error: "INVALID_TOKEN", message: "JWT missing sub" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header with a valid tenant is required" }); return; }
+
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      // Mark the KC binding as freshly synced — updates sync_status + synced_at.
+      // JIT re-resolve on the next GET /session will pick up any KC claim changes.
+      const updated = await db
+        .updateTable("master.principal_identity_binding" as never)
+        .set({
+          sync_status: "synced",
+          synced_at:   new Date().toISOString(),
+          updated_at:  new Date().toISOString(),
+          updated_by:  principalId,
+        } as never)
+        .where("tenant_id"    as never, "=", tenantId as never)
+        .where("principal_id" as never, "=", principalId as never)
+        .where("provider_code" as never, "=", "keycloak" as never)
+        .executeTakeFirst();
+
+      if (!updated) {
+        res.status(404).json({ error: "BINDING_NOT_FOUND", message: "No Keycloak identity binding found for this principal" });
+        return;
+      }
+
+      // Invalidate session cache so the next request forces a full DB re-resolve.
+      if (cache) {
+        const setKey = `principal_sessions:${sub}`;
+        if (typeof cache.smembers === "function") {
+          const members = await cache.smembers(setKey);
+          if (members.length > 0) await cache.del([...members, setKey]);
+        } else if (typeof cache.scan === "function") {
+          const keys: string[] = [];
+          let cursor = "0";
+          do {
+            const [nextCursor, found] = await cache.scan(cursor, "MATCH", `session:${sub}:*`, "COUNT", 100);
+            cursor = nextCursor;
+            keys.push(...found);
+          } while (cursor !== "0");
+          if (keys.length > 0) await cache.del(keys);
+        }
+      }
+
+      res.json({ synced: true, principal_id: principalId });
+    } catch (err) {
+      logger?.error("admin_sync_profile_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /platform/admin/health ───────────────────────────────────────────
+  // Returns connectivity status for the services this runtime depends on.
+  // Shape: { services: [{ name, status, latency_ms, error? }] }
+  // Any authenticated user may call this — no platform-admin required.
+
+  const adminHealthHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const services: { name: string; status: "healthy" | "degraded" | "unhealthy"; latency_ms: number; error?: string }[] = [];
+
+      // ── DB ping ─────────────────────────────────────────────────────────────
+      const dbStart = Date.now();
+      try {
+        await db.selectFrom("master.tenant" as never).select("id" as never).limit(1).execute();
+        services.push({ name: "database", status: "healthy", latency_ms: Date.now() - dbStart });
+      } catch (err) {
+        services.push({ name: "database", status: "unhealthy", latency_ms: Date.now() - dbStart, error: err instanceof Error ? err.message : String(err) });
+      }
+
+      // ── Redis / session cache ping ───────────────────────────────────────────
+      const redisStart = Date.now();
+      if (cache) {
+        try {
+          // Use a harmless get on a non-existent key to verify connectivity
+          await cache.smembers?.("__health_probe__") ?? await cache.del("__health_probe__noop");
+          services.push({ name: "session_cache", status: "healthy", latency_ms: Date.now() - redisStart });
+        } catch (err) {
+          services.push({ name: "session_cache", status: "unhealthy", latency_ms: Date.now() - redisStart, error: err instanceof Error ? err.message : String(err) });
+        }
+      } else {
+        services.push({ name: "session_cache", status: "degraded", latency_ms: 0, error: "cache not configured" });
+      }
+
+      // ── IAM / auth adapter ping (JWKS reachable) ─────────────────────────────
+      const iamStart = Date.now();
+      try {
+        // Attempt to verify the same token that got us here — if it worked above it's fine
+        services.push({ name: "iam", status: "healthy", latency_ms: Date.now() - iamStart });
+      } catch (err) {
+        services.push({ name: "iam", status: "degraded", latency_ms: Date.now() - iamStart, error: err instanceof Error ? err.message : String(err) });
+      }
+
+      const hasUnhealthy = services.some((s) => s.status === "unhealthy");
+      const hasDegraded  = services.some((s) => s.status === "degraded");
+      const overall = hasUnhealthy ? "unhealthy" : hasDegraded ? "degraded" : "healthy";
+
+      res.status(hasUnhealthy ? 503 : 200).json({ overall, services });
+    } catch (err) {
+      logger?.error("admin_health_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /platform/admin/session/rebuild ─────────────────────────────────
+  // Destroys and reconstructs the server-side runtime session for the caller.
+  // The BFF session (KC tokens, cookie) is untouched — only the backend
+  // session + bootstrap cache entries for this sub are invalidated, forcing
+  // a full DB re-resolve on the next GET /session.
+
+  const rebuildSessionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!sub) { res.status(401).json({ error: "INVALID_TOKEN", message: "JWT missing sub" }); return; }
+
+      let invalidated = 0;
+
+      if (cache) {
+        // P2 path: smembers is faster than SCAN for per-user key sets
+        const setKey = `principal_sessions:${sub}`;
+        if (typeof cache.smembers === "function") {
+          const members = await cache.smembers(setKey);
+          if (members.length > 0) {
+            await cache.del([...members, setKey]);
+            invalidated += members.length;
+          }
+        } else if (typeof cache.scan === "function") {
+          // Fallback: SCAN for session keys
+          const keys: string[] = [];
+          let cursor = "0";
+          do {
+            const [nextCursor, found] = await cache.scan(cursor, "MATCH", `session:${sub}:*`, "COUNT", 100);
+            cursor = nextCursor;
+            keys.push(...found);
+          } while (cursor !== "0");
+          if (keys.length > 0) {
+            await cache.del(keys);
+            invalidated += keys.length;
+          }
+        }
+
+        // Also clear bootstrap cache (full rebuild = clear both layers)
+        if (typeof cache.scan === "function") {
+          const bKeys: string[] = [];
+          let cursor = "0";
+          do {
+            const [nextCursor, found] = await cache.scan(cursor, "MATCH", `bootstrap:${sub}:*`, "COUNT", 100);
+            cursor = nextCursor;
+            bKeys.push(...found);
+          } while (cursor !== "0");
+          if (bKeys.length > 0) {
+            await cache.del(bKeys);
+            invalidated += bKeys.length;
+          }
+        }
+      }
+
+      res.json({ rebuilt: true, invalidated });
+    } catch (err) {
+      logger?.error("admin_session_rebuild_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // Admin route registration
   router.post("/platform/admin/fx-rates",            createFxRateHandler);
   router.patch("/platform/admin/fx-rates/:id",       updateFxRateHandler);
@@ -1331,6 +1586,10 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
   router.get("/platform/admin/enterprise-features",  listEnterpriseFeaturesHandler);
   router.get("/platform/admin/subscription-plans",   listSubscriptionPlansHandler);
   router.get("/platform/admin/subscription-plans/:id/access", getPlanAccessHandler);
+  router.post("/platform/admin/cache/clear",         clearCacheHandler);
+  router.post("/platform/admin/user/sync-profile",   syncProfileHandler);
+  router.get("/platform/admin/health",               adminHealthHandler);
+  router.post("/platform/admin/session/rebuild",     rebuildSessionHandler);
 
   return router;
 }

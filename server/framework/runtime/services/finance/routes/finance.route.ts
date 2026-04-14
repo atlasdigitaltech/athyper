@@ -225,11 +225,16 @@ function sumSectionsPrior(sections: StatementSectionShape[]): number | undefined
 
 // ── User company-access resolver ──────────────────────────────────────────────
 // Returns the set of company_code UUIDs the caller may see.
-// • allCompanies=true  → no restriction (user has at least one tenant-wide role)
+// • allCompanies=true  → no restriction (user has a tenant-wide role)
 // • allCompanies=false → restrict to allowedIds (may be empty → show all as fallback)
 //
 // Resolution path: JWT sub → principal_profile.keycloak_id → principal →
-//   group_member → group_role.company_code_id
+//   auth_group_member → auth_group_role (assignment_scope_type / assignment_scope_ref_id)
+//
+// Two-dimension scope model:
+//   assignment_scope_type = 'tenant'       → allCompanies = true
+//   assignment_scope_type = 'company_code' → allowedIds += assignment_scope_ref_id
+//   assignment_scope_type = 'legal_entity' → allowedIds += CCs under that LE subtree
 
 async function resolveUserCompanyAccess(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,37 +244,61 @@ async function resolveUserCompanyAccess(
 ): Promise<{ allCompanies: boolean; allowedIds: string[] }> {
   if (!keycloakSub) return { allCompanies: true, allowedIds: [] };
 
-  // Check if the user has any tenant-wide role (company_code_id IS NULL)
-  const wideRow = await sql<{ has_wide: boolean }>`
-    SELECT EXISTS (
-      SELECT 1
-      FROM   master.principal_profile pp
-      JOIN   master.principal          p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
-      JOIN   master.group_member       gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
-      JOIN   master.group_role         gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
-      WHERE  pp.keycloak_id        = ${keycloakSub}
-        AND  pp.tenant_id          = ${tenantId}::uuid
-        AND  gr.company_code_id   IS NULL
-        AND  gr.status             = 'active'
-    ) AS has_wide
+  // Single CTE resolves both dimensions in one round-trip:
+  //   has_wide  → any 'tenant'-scoped active role
+  //   cc_ids    → all CC UUIDs from CC-scope + LE-scope roles
+  const scopeResult = await sql<{ has_wide: boolean; cc_ids: string[] | null }>`
+    WITH principal_roles AS (
+      SELECT
+        gr.assignment_scope_type,
+        gr.assignment_scope_ref_id,
+        gr.include_descendants
+      FROM   master.principal_profile  pp
+      JOIN   master.principal           p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
+      JOIN   master.auth_group_member   gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
+      JOIN   master.auth_group_role     gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
+      WHERE  pp.keycloak_id = ${keycloakSub}
+        AND  pp.tenant_id   = ${tenantId}::uuid
+        AND  gr.status      = 'active'
+    ),
+    scoped_ccs AS (
+      -- Direct company_code scope
+      SELECT assignment_scope_ref_id AS cc_id
+      FROM   principal_roles
+      WHERE  assignment_scope_type = 'company_code'
+
+      UNION
+
+      -- Legal entity — full descendant subtree
+      SELECT sub.company_code_id AS cc_id
+      FROM   principal_roles pr
+      CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(${tenantId}::uuid, pr.assignment_scope_ref_id) sub
+      WHERE  pr.assignment_scope_type = 'legal_entity'
+        AND  pr.include_descendants   = true
+
+      UNION
+
+      -- Legal entity — direct CCs only
+      SELECT cc.id AS cc_id
+      FROM   principal_roles pr
+      JOIN   master.company_code cc
+        ON   cc.legal_entity_id = pr.assignment_scope_ref_id
+        AND  cc.tenant_id       = ${tenantId}::uuid
+        AND  cc.is_active       = true
+      WHERE  pr.assignment_scope_type = 'legal_entity'
+        AND  pr.include_descendants   = false
+    )
+    SELECT
+      coalesce(
+        (SELECT bool_or(assignment_scope_type = 'tenant') FROM principal_roles),
+        false
+      ) AS has_wide,
+      (SELECT array_agg(DISTINCT cc_id) FROM scoped_ccs) AS cc_ids
   `.execute(db);
 
-  if (wideRow.rows[0]?.has_wide) return { allCompanies: true, allowedIds: [] };
-
-  // Collect company-specific grants
-  const ccRows = await sql<{ company_code_id: string }>`
-    SELECT DISTINCT gr.company_code_id
-    FROM   master.principal_profile pp
-    JOIN   master.principal          p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
-    JOIN   master.group_member       gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
-    JOIN   master.group_role         gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
-    WHERE  pp.keycloak_id        = ${keycloakSub}
-      AND  pp.tenant_id          = ${tenantId}::uuid
-      AND  gr.company_code_id   IS NOT NULL
-      AND  gr.status             = 'active'
-  `.execute(db);
-
-  return { allCompanies: false, allowedIds: ccRows.rows.map((r) => r.company_code_id) };
+  const row = scopeResult.rows[0];
+  if (row?.has_wide) return { allCompanies: true, allowedIds: [] };
+  return { allCompanies: false, allowedIds: row?.cc_ids ?? [] };
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────

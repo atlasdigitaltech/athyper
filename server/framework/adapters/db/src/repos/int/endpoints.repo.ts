@@ -14,7 +14,7 @@ export async function findActiveEndpoints(
   service?: string,
 ): Promise<EndpointRow[]> {
   let q = db
-    .selectFrom("int.endpoint as e" as never)
+    .selectFrom("event.endpoint as e" as never)
     .select(["e.id", "e.service", "e.path", "e.method", "e.is_active"] as never[])
     .where("e.is_active" as never, "=", true as never);
 

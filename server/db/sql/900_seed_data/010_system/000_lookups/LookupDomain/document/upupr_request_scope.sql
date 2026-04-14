@@ -15,7 +15,7 @@ FROM (VALUES
      '{"changes_key":"locale_contact","affected_tables":["master.principal_profile","master.contact_link"]}'),
     ('iam_group',     'IAM Group',        'document.upupr_request_scope',
      'Add or remove self-service-eligible IAM group memberships.',               30,
-     '{"changes_key":"iam_group","affected_tables":["master.group_member"]}'),
+     '{"changes_key":"iam_group","affected_tables":["master.auth_group_member"]}'),
     ('ou_assignment', 'Company Code Assignment', 'document.upupr_request_scope',
      'Change primary company code and company-code-scoped ACL entries.',         40,
      '{"changes_key":"ou_assignment","affected_tables":["master.principal_profile","master.company_code_access"]}'),

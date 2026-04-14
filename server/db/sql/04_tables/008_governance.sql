@@ -733,3 +733,71 @@ COMMENT ON TABLE governance.cycle_carryforward_rule IS
     'Carryforward policy per cycle type and deviation type. Controls whether '
     'open deviations are force-closed, auto-carried, or expired at cycle boundary. '
     'P2-FIX: updated_at/updated_by added — rule config (action, thresholds) is mutable.';
+
+
+-- =============================================================================
+-- §RP  governance.report_pack — Phase 4.4 report delivery
+-- =============================================================================
+-- Tracks generated report packs for governance cycles.
+-- Each row represents a requested report bundle for a cycle run.
+-- Files are stored in object storage (S3/MinIO).
+-- The download endpoint generates a time-limited presigned URL from storage_key.
+--
+-- Phase 4.4 delivery contract (A12):
+--   GET /api/governance/report-packs/:id/download → 302 redirect to presigned URL
+--   Initial implementation uses HTML stub (format='html').
+--   Upgrades to PDF format after Phase 5.1 rendering pipeline ships.
+
+CREATE TABLE IF NOT EXISTS governance.report_pack (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Subject
+    cycle_run_id        uuid        NOT NULL,
+
+    -- Report spec
+    report_type         text        NOT NULL DEFAULT 'cycle_summary',
+    format              text        NOT NULL DEFAULT 'html',
+
+    -- Generation status
+    status              text        NOT NULL DEFAULT 'pending',
+
+    -- Storage
+    storage_key         text,               -- S3/MinIO object key; NULL until generated
+    file_size_bytes     bigint,
+    content_type        text        NOT NULL DEFAULT 'text/html',
+
+    -- Generation metadata
+    generated_at        timestamptz,
+    error_message       text,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT rp_pkey          PRIMARY KEY (id),
+    CONSTRAINT rp_tenant_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT rp_status_chk    CHECK (status IN ('pending', 'generating', 'ready', 'failed')),
+    CONSTRAINT rp_format_chk    CHECK (format IN ('html', 'pdf', 'xlsx')),
+    CONSTRAINT rp_type_chk      CHECK (report_type IN (
+        'cycle_summary', 'deviation_summary', 'certification_summary',
+        'task_status', 'compliance_dashboard'
+    )),
+    CONSTRAINT rp_storage_chk   CHECK (
+        (status IN ('pending', 'generating', 'failed')) OR storage_key IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE governance.report_pack IS
+    'Generated report bundle for a governance cycle run. '
+    'storage_key = S3/MinIO object key populated after generation. '
+    'Download via GET /governance/report-packs/:id/download → presigned URL. '
+    'Phase 4.4: HTML stub. Upgrades to PDF after Phase 5.1 renderer ships.';
+COMMENT ON COLUMN governance.report_pack.storage_key IS
+    'S3/MinIO object key. Format: reports/{tenantId}/{cycleRunId}/{id}.{format}. '
+    'NULL while status is pending/generating/failed.';
+COMMENT ON COLUMN governance.report_pack.format IS
+    'Output format. html (Phase 4.4 stub), pdf (Phase 5.1+), xlsx (optional).';

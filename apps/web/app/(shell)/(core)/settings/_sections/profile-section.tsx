@@ -114,9 +114,8 @@ export function ProfileSection({ active }: { active: boolean }) {
           >
             <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
               <div>
-                <InfoRow label="Principal ID"  value={str(p?.["id"])}           mono copyable hint="Unique UUID. Used for all system references." />
-                <InfoRow label="Code"          value={str(p?.["code"])}          mono copyable hint="Human-readable code, unique per tenant." />
-                <InfoRow label="Login Email"   value={bff.email}                 verified hint="Trigger-maintained; source of truth is contact_link." />
+                <InfoRow label="Code"        value={str(p?.["code"])}  mono copyable hint="Human-readable code, unique per tenant." />
+                <InfoRow label="Login Email" value={bff.email}         verified hint="Trigger-maintained; source of truth is contact_link." />
               </div>
               <div>
                 <InfoRow label="Type"          value={str(p?.["principal_type"], "user")}     hint="user or service_account" />
@@ -139,7 +138,7 @@ export function ProfileSection({ active }: { active: boolean }) {
             managedBy={{
               manager:     "You (via profile request)",
               source:      "master.principal_profile",
-              lastUpdated: str(pp?.["updated_at"]),
+              lastUpdated: pp?.["updated_at"] as string | undefined,
               editPath:    "Submit UPUPR workflow",
             }}
           >
@@ -198,7 +197,9 @@ export function ProfileSection({ active }: { active: boolean }) {
                   syncStatus === "synced" ? "success"
                   : syncStatus === "error" ? "destructive"
                   : syncStatus === "drift" ? "warning"
-                  : "muted";
+                  : "info";
+
+                const providerVariant = ab["idp_enabled"] !== false ? "secondary" : "outline";
 
                 const requiredActions = Array.isArray(ab["keycloak_required_actions"])
                   ? (ab["keycloak_required_actions"] as string[])
@@ -208,13 +209,12 @@ export function ProfileSection({ active }: { active: boolean }) {
                   <div key={i}>
                     <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
                       <div>
-                        <InfoRow label="Provider"    value={<Badge variant="info" className="text-2xs">{str(ab["provider_code"])}</Badge>} />
-                        <InfoRow label="Subject ID"  value={str(ab["keycloak_id"] ?? ab["subject_id"])} mono copyable hint="Unique ID at the identity provider" />
-                        <InfoRow label="Username"    value={str(ab["keycloak_username"] ?? ab["username"])} mono hint="Login username at the identity provider" />
+                        <InfoRow label="Provider" value={<Badge variant={providerVariant}>{str(ab["provider_code"])}</Badge>} />
+                        <InfoRow label="Username" value={str(ab["keycloak_username"] ?? ab["username"])} mono hint="Login username at the identity provider" />
                       </div>
                       <div>
                         <InfoRow label="Sync Status"
-                          value={<Badge variant={syncVariant} className="text-2xs">{syncStatus}</Badge>}
+                          value={<Badge variant={syncVariant}>{syncStatus}</Badge>}
                           hint={
                             syncStatus === "synced"  ? "Identity record matches provider" :
                             syncStatus === "drift"   ? "Mismatch detected — re-sync recommended" :

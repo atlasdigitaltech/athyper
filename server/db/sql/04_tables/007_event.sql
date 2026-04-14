@@ -1,6 +1,18 @@
 -- 04_tables/007_event.sql
 -- Depends on: 01_schemas, 02_types_domains
--- Event schema tables. Column order: Identity → Table-specific → Metadata → Lifecycle → Audit.
+-- Event and integration hub schema tables.
+-- Column order: Identity → Table-specific → Metadata → Lifecycle → Audit.
+--
+-- Tables:
+--   §1  event.outbox                    — unified transactional outbox
+--   §2  event.notification_message      — notification dispatch envelope
+--   §3  event.notification_delivery     — per-channel delivery record (partitioned)
+--   §4  event.digest_staging            — pending digest items (work queue)
+--   §5  event.endpoint                  — integration endpoint registry
+--   §6  event.webhook_subscription      — per-tenant webhook subscriptions
+--   §7  event.comment_flag              — user-submitted abuse report
+--   §8  event.lifecycle_timer_schedule  — active timer work queue
+--   §9  event.work_item                 — individual human task
 
 -- ============================================================================
 -- §1  outbox — unified transactional outbox (replaces core.outbox)
@@ -313,7 +325,136 @@ COMMENT ON COLUMN event.digest_staging.frequency IS
 
 
 -- ============================================================================
--- §10  event.comment_flag — user-submitted abuse report
+-- §5  event.endpoint — integration endpoint registry
+-- ============================================================================
+-- Registered outbound integration targets. Each row is a named endpoint
+-- that the platform can call (webhook target, external API, etc.).
+-- Tenant-scoped: one tenant's endpoints are invisible to others.
+-- config jsonb holds adapter-specific fields (base_url, headers, auth, timeout).
+-- Sensitive values (API keys, secrets) must be encrypted at rest via
+-- CredentialEncryptionService (Platform Migration Phase 1.7).
+-- Consolidated from int.endpoint into event schema (no separate int schema).
+
+CREATE TABLE IF NOT EXISTS event.endpoint (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+
+    -- Classification
+    service         text        NOT NULL,
+    code            text        NOT NULL,
+    name            text        NOT NULL,
+    description     text,
+
+    -- Target
+    path            text        NOT NULL,
+    method          text        NOT NULL DEFAULT 'POST',
+
+    -- Config (adapter-specific: base_url, headers, auth, timeout_ms, retry_policy)
+    -- auth object MUST be encrypted via CredentialEncryptionService before storage
+    config          jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Health
+    health          text        NOT NULL DEFAULT 'healthy',
+    last_checked_at timestamptz,
+
+    -- Lifecycle
+    is_active       boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT endpoint_pkey        PRIMARY KEY (id),
+    CONSTRAINT endpoint_tenant_uq   UNIQUE (tenant_id, id),
+    CONSTRAINT endpoint_code_uq     UNIQUE (tenant_id, service, code),
+    CONSTRAINT endpoint_method_chk  CHECK (method IN ('GET','POST','PUT','PATCH','DELETE')),
+    CONSTRAINT endpoint_health_chk  CHECK (health IN ('healthy','degraded','down')),
+    CONSTRAINT endpoint_path_chk    CHECK (btrim(path) <> ''),
+    CONSTRAINT endpoint_service_chk CHECK (btrim(service) <> ''),
+    CONSTRAINT endpoint_code_chk    CHECK (btrim(code) <> '')
+);
+
+COMMENT ON TABLE  event.endpoint IS
+    'Outbound integration endpoint registry. One row per named target '
+    '(webhook, external API, partner endpoint). config holds adapter-specific '
+    'settings; config.auth MUST be encrypted at rest. '
+    'Consolidated from int schema into event schema.';
+COMMENT ON COLUMN event.endpoint.service IS
+    'Logical service grouping (e.g. erp, payment_gateway, id_provider).';
+COMMENT ON COLUMN event.endpoint.config IS
+    'Adapter config: base_url, headers, auth (type + credentials), '
+    'timeout_ms, retry_policy. config.auth encrypted via CredentialEncryptionService.';
+COMMENT ON COLUMN event.endpoint.health IS
+    'Last known health state. Updated by the integration health-check worker. '
+    'healthy | degraded | down.';
+
+
+-- ============================================================================
+-- §6  event.webhook_subscription — per-tenant webhook target registrations
+-- ============================================================================
+-- Subscription record for outbound webhook delivery.
+-- Each row declares: which event topics to forward, to what target URL,
+-- and with what signing secret.
+-- event.notification_delivery rows reference subscription_id for traceability.
+-- Consolidated from int.webhook_subscription into event schema (no separate int schema).
+
+CREATE TABLE IF NOT EXISTS event.webhook_subscription (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+
+    -- Target
+    target_url      text        NOT NULL,
+    signing_secret  text,
+
+    -- Subscription config
+    topics          text[]      NOT NULL DEFAULT '{}',
+    description     text,
+
+    -- Delivery policy
+    max_retries     smallint    NOT NULL DEFAULT 3,
+    timeout_ms      integer     NOT NULL DEFAULT 10000,
+
+    -- Health
+    last_delivery_at     timestamptz,
+    last_delivery_status text,
+    failure_count        integer     NOT NULL DEFAULT 0,
+
+    -- Lifecycle
+    is_active       boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT ws_pkey              PRIMARY KEY (id),
+    CONSTRAINT ws_tenant_uq         UNIQUE (tenant_id, id),
+    CONSTRAINT ws_url_chk           CHECK (btrim(target_url) <> ''),
+    CONSTRAINT ws_timeout_chk       CHECK (timeout_ms > 0),
+    CONSTRAINT ws_retries_chk       CHECK (max_retries >= 0),
+    CONSTRAINT ws_failure_chk       CHECK (failure_count >= 0)
+);
+
+COMMENT ON TABLE  event.webhook_subscription IS
+    'Per-tenant webhook subscription registry. Each row is a target URL '
+    'that receives event.outbox payloads for the subscribed topics. '
+    'event.notification_delivery.subscription_id references this table. '
+    'Consolidated from int schema into event schema.';
+COMMENT ON COLUMN event.webhook_subscription.signing_secret IS
+    'HMAC-SHA256 signing secret for payload signature header. '
+    'Store encrypted at rest via CredentialEncryptionService. NULL = unsigned delivery.';
+COMMENT ON COLUMN event.webhook_subscription.topics IS
+    'List of event.outbox topic values this subscription receives. '
+    'Empty array = subscribe to all topics.';
+
+
+-- ============================================================================
+-- §7  event.comment_flag — user-submitted abuse report
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS event.comment_flag (
     -- Identity
@@ -367,9 +508,8 @@ COMMENT ON COLUMN event.comment_flag.review_note IS
     'Moderator decision note. Required when status = actioned.';
 
 
-
 -- =============================================================================
--- §9  event.lifecycle_timer_schedule — active timer work queue
+-- §8  event.lifecycle_timer_schedule — active timer work queue
 -- =============================================================================
 -- One row per scheduled timer event for an entity in a state.
 -- Moved from control.* (backup) to event.* — it is an actionable work item.
@@ -434,9 +574,8 @@ COMMENT ON TABLE  event.lifecycle_timer_schedule IS
     'Moved from control.* to event.* — it is an active work item, not config.';
 
 
-
 -- =============================================================================
--- §8  event.work_item — individual human task
+-- §9  event.work_item — individual human task
 -- =============================================================================
 -- One row per human task within a workflow. The primitive that a person
 -- actually sees in their inbox and acts upon.

@@ -1152,6 +1152,9 @@ CREATE TABLE IF NOT EXISTS master.item_category (
     level_no         smallint,
     sort_order       smallint     NOT NULL DEFAULT 0,
 
+    -- Tax default (FK → control.tax_group)
+    default_tax_group_id uuid,
+
     -- Metadata
     metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
 
@@ -1178,6 +1181,8 @@ CREATE TABLE IF NOT EXISTS master.item_category (
 COMMENT ON TABLE master.item_category IS
     'Hierarchical product taxonomy. Self-referential tree via parent_id. '
     'Classifications via commodity_classification bridge.';
+COMMENT ON COLUMN master.item_category.default_tax_group_id IS
+    'FK → control.tax_group (tenant-composite). Category-level fallback tax group.';
 
 
 -- §P5  master.product — tenant-level catalog item (SKU, pricing, tax)
@@ -1199,6 +1204,9 @@ CREATE TABLE IF NOT EXISTS master.product (
     currency_code    character(3),
     is_taxable       boolean      NOT NULL DEFAULT true,
     tax_code         text,
+
+    -- Tax default (FK → control.tax_group)
+    default_tax_group_id uuid,
 
     -- Metadata
     metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
@@ -1228,6 +1236,9 @@ COMMENT ON TABLE master.product IS
     'Tenant-level catalog item. Sellable/purchasable. SKU optional (partial unique). '
     'category_id → item_category, spend_category_id → spend_category. '
     'Classifications via commodity_classification bridge.';
+COMMENT ON COLUMN master.product.default_tax_group_id IS
+    'FK → control.tax_group (tenant-composite). Replaces free-text tax_code. '
+    'Resolution order: product → item_category → spend_category → scoped tax_rate_schedule.';
 
 
 -- §P6  master.item — company-level inventory config (dual-path entry)
@@ -1643,6 +1654,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_supplier_profile (
     payment_method_id                  uuid,
     preferred_remittance_bank_link_id  uuid,
     tax_group_id                       uuid,
+    default_wht_tax_group_id           uuid,       -- FK → control.tax_group; WHT components only
     settlement_profile_id              uuid,
     default_dimension_set_id           uuid,
     supplier_reconciliation_profile_id uuid,
@@ -1693,6 +1705,9 @@ COMMENT ON COLUMN master.company_code_supplier_profile.preferred_remittance_bank
     'supplier and compatible company scope. Replaces inline bank_account_* columns.';
 COMMENT ON COLUMN master.company_code_supplier_profile.tax_group_id IS
     'Default tax group for AP transactions with this supplier x company.';
+COMMENT ON COLUMN master.company_code_supplier_profile.default_wht_tax_group_id IS
+    'FK → control.tax_group (tenant-composite). Replaces free-text withholding_tax_code. '
+    'Group should contain components where tax_type.category = WITHHOLDING.';
 COMMENT ON COLUMN master.company_code_supplier_profile.settlement_profile_id IS
     'FUTURE ANCHOR — no FK target yet. Settlement behavior configuration.';
 COMMENT ON COLUMN master.company_code_supplier_profile.default_dimension_set_id IS

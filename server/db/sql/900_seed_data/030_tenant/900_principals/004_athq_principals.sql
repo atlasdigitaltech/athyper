@@ -6,7 +6,7 @@
 -- Purpose:  Pre-seed ATHQ entity users (principal + profile only).
 --
 -- WHY no auth binding here:
---   principal_auth_binding.subject_id must equal the Keycloak user's UUID
+--   principal_identity_binding.subject_id must equal the Keycloak user's UUID
 --   (the `sub` JWT claim). For users created manually in Keycloak the UUID
 --   is auto-generated and NOT predictable at seed time.
 --   The JIT service (jit.service.ts) creates/updates the binding on first
