@@ -26,7 +26,8 @@ export type {
   JobsQueues,
 } from "./jobs.service.js";
 
-export { registerJobsRoutes } from "./routes/index.js";
+export { registerJobsRoutes, registerJobsAdminRoutes } from "./routes/index.js";
+export type { JobsAdminRouteDeps } from "./routes/index.js";
 
 export type { NotificationChannelHandler } from "./workers/notification.worker.js";
 export type { OutboxTopicHandler, OutboxEvent } from "./workers/domain-outbox.worker.js";
@@ -49,5 +50,6 @@ export type {
   SendNotificationJobData,
   DrainOutboxJobData,
   SlaCheckJobData,
+  ImportChunkJobData,
   JobLogger,
 } from "./jobs.types.js";

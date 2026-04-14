@@ -1,7 +1,8 @@
 -- 04_tables/002_control.sql
 -- Scope: Control schema — lookup domains, MFA, notifications, lifecycle engine,
 --        workflow definitions, accounting profiles, dimension policies, document
---        sequences, tax configuration, planning engine, and bank format rules.
+--        sequences, tax configuration, planning engine, bank format rules,
+--        and automation cron schedules.
 -- Depends on: 01_schemas, 03_bootstrap_functions (shared.uuidv7)
 --
 -- Groups (formerly 002a / 002b / 002c):
@@ -22,6 +23,7 @@
 --   ── Planning:   forecast_line, planning_driver, planning_driver_formula,
 --                  planning_driver_assumption, planning_driver_version,
 --                  bank_format_rule
+--   ── Automation: cron_schedule, connector_type
 
 
 -- §1 lookup_domain — registry of named lookup sets
@@ -4894,3 +4896,139 @@ COMMENT ON COLUMN control.metadata_change_request.workflow_request_id IS
 COMMENT ON COLUMN control.metadata_change_request.applied_at IS
     'Timestamp when EntityCompilerService.invalidate() was called and '
     'the change was promoted to status=applied. NULL until approval + application.';
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- §AUTO-1  cron_schedule — runtime-configurable BullMQ scheduled jobs
+-- ══════════════════════════════════════════════════════════════════════════════
+-- DB-managed complement to the code-based cron-registry.ts.
+-- NULL tenant_id = platform-global schedule; non-null = tenant-scoped.
+-- Code-based entries always win on code conflict (scheduler logs a warning).
+-- Scheduler polls this table every 60s for runtime changes — no restart needed.
+CREATE TABLE IF NOT EXISTS control.cron_schedule (
+    -- Identity
+    id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid,                           -- NULL = platform-global
+
+    -- Schedule identity
+    code                text            NOT NULL,
+    name                text            NOT NULL,
+    description         text,
+
+    -- Execution target
+    handler_type        text            NOT NULL,       -- BullMQ job name / worker handler
+    cron_expression     text            NOT NULL,       -- 5 or 6-field cron expression
+    timezone            text            NOT NULL DEFAULT 'UTC',
+    target_queue        text            NOT NULL,       -- BullMQ queue name
+    payload_template    jsonb           NOT NULL DEFAULT '{}',
+
+    -- Concurrency & retry
+    priority            smallint        NOT NULL DEFAULT 0,
+    max_retries         smallint        NOT NULL DEFAULT 3,
+    concurrency_limit   smallint,                       -- NULL = unlimited
+
+    -- Lifecycle window
+    effective_from      timestamptz,                    -- NULL = immediately
+    effective_until     timestamptz,                    -- NULL = no expiry
+    is_enabled          boolean         NOT NULL DEFAULT true,
+
+    -- Leader election (multi-instance safety)
+    lock_key            text,                           -- Redis SETNX key; NULL = no lock
+
+    -- Runtime state (updated by scheduler)
+    last_run_at         timestamptz,
+    next_run_at         timestamptz,
+
+    -- Audit
+    created_at          timestamptz     NOT NULL DEFAULT now(),
+    created_by          uuid            NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT cron_schedule_pkey              PRIMARY KEY (id),
+    CONSTRAINT cron_schedule_tenant_code_uq    UNIQUE NULLS NOT DISTINCT (tenant_id, code),
+    CONSTRAINT cron_schedule_code_fmt          CHECK (btrim(code) <> ''),
+    CONSTRAINT cron_schedule_name_fmt          CHECK (btrim(name) <> ''),
+    CONSTRAINT cron_schedule_handler_fmt       CHECK (btrim(handler_type) <> ''),
+    CONSTRAINT cron_schedule_cron_fmt          CHECK (btrim(cron_expression) <> ''),
+    CONSTRAINT cron_schedule_queue_fmt         CHECK (btrim(target_queue) <> ''),
+    CONSTRAINT cron_schedule_timezone_fmt      CHECK (btrim(timezone) <> ''),
+    CONSTRAINT cron_schedule_priority_chk      CHECK (priority BETWEEN -10 AND 10),
+    CONSTRAINT cron_schedule_retries_chk       CHECK (max_retries >= 0),
+    CONSTRAINT cron_schedule_concurrency_chk   CHECK (concurrency_limit IS NULL OR concurrency_limit > 0),
+    CONSTRAINT cron_schedule_window_chk        CHECK (
+        effective_from IS NULL OR effective_until IS NULL OR effective_until > effective_from
+    ),
+    CONSTRAINT cron_schedule_payload_chk       CHECK (jsonb_typeof(payload_template) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS cron_schedule_active_idx
+    ON control.cron_schedule (is_enabled, effective_from, effective_until)
+    WHERE is_enabled = true;
+
+CREATE INDEX IF NOT EXISTS cron_schedule_tenant_idx
+    ON control.cron_schedule (tenant_id)
+    WHERE tenant_id IS NOT NULL;
+
+COMMENT ON TABLE  control.cron_schedule IS
+    'Runtime-configurable BullMQ scheduled jobs. '
+    'NULL tenant_id = platform-global. Code-based cron-registry.ts entries win on conflict. '
+    'Scheduler polls every 60 s for runtime changes without restart.';
+COMMENT ON COLUMN control.cron_schedule.payload_template IS
+    'Job data template. Supports {{tenant_id}} and {{now}} interpolation at enqueue time.';
+COMMENT ON COLUMN control.cron_schedule.lock_key IS
+    'Redis SETNX key for leader-election in multi-instance deployments. '
+    'NULL = no leader lock (idempotent jobs only).';
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- §AUTO-2  connector_type — catalog of available integration connector types
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Platform-seeded types have is_system = true. Tenant-registered custom types
+-- have is_system = false. config_schema drives dynamic UI form generation —
+-- adding a new connector type requires zero changes to frontend code.
+CREATE TABLE IF NOT EXISTS control.connector_type (
+    -- Identity
+    id              uuid            NOT NULL DEFAULT shared.uuidv7(),
+    code            text            NOT NULL,
+
+    -- Catalog display
+    name            text            NOT NULL,
+    category        text            NOT NULL,   -- api | file_transfer | messaging | erp | payment | custom
+    description     text,
+    icon_key        text,
+
+    -- Capability declaration
+    config_schema   jsonb           NOT NULL,   -- JSON Schema; drives dynamic UI form
+    auth_types      text[]          NOT NULL DEFAULT '{}',
+    capabilities    text[]          NOT NULL DEFAULT '{}',
+
+    -- Health probe configuration
+    health_check_config jsonb       NOT NULL DEFAULT '{}',
+
+    -- Classification
+    is_system       boolean         NOT NULL DEFAULT false,
+    status          text            NOT NULL DEFAULT 'active',
+
+    -- Audit
+    created_at      timestamptz     NOT NULL DEFAULT now(),
+    created_by      uuid            NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT connector_type_pkey          PRIMARY KEY (id),
+    CONSTRAINT connector_type_code_uq       UNIQUE (code),
+    CONSTRAINT connector_type_code_fmt      CHECK (btrim(code) <> ''),
+    CONSTRAINT connector_type_name_fmt      CHECK (btrim(name) <> ''),
+    CONSTRAINT connector_type_category_chk  CHECK (category IN (
+        'api', 'file_transfer', 'messaging', 'erp', 'payment', 'custom'
+    )),
+    CONSTRAINT connector_type_status_chk    CHECK (status IN ('active', 'deprecated')),
+    CONSTRAINT connector_type_schema_chk    CHECK (jsonb_typeof(config_schema) = 'object'),
+    CONSTRAINT connector_type_hc_chk        CHECK (jsonb_typeof(health_check_config) = 'object')
+);
+
+COMMENT ON TABLE  control.connector_type IS
+    'Integration connector type catalog. config_schema (JSON Schema) drives UI form generation '
+    'automatically — no frontend changes needed to add a new connector type. '
+    'is_system = true entries are platform-seeded and cannot be deleted by tenants.';

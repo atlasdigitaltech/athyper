@@ -30,7 +30,8 @@ JOIN (VALUES
     ('withdraw', 'Withdraw', 'workflow', 'record', 'low',    false, 60),
     ('escalate', 'Escalate', 'workflow', 'record', 'low',    false, 70),
     ('approve',  'Approve',  'workflow', 'record', 'medium', false, 80),
-    ('deny',     'Deny',     'workflow', 'record', 'medium', false, 90)
+    ('deny',     'Deny',     'workflow', 'record', 'medium', false, 90),
+    ('void',     'Void',     'workflow', 'record', 'high',   false, 95)
 ) AS v(code, name, cat, st, rl, pr, so) ON c.code = v.cat
 ON CONFLICT (code) DO NOTHING;
 

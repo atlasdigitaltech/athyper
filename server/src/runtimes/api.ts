@@ -30,6 +30,7 @@ import {
   registerNotificationRoutes,
 } from "@athyper/svc-platform";
 import { registerJobsRoutes } from "@athyper/svc-jobs";
+import { registerJobsAdminRoutes } from "../../framework/runtime/services/jobs/routes/jobs.admin.route.js";
 
 import { registerWorkflowRoutes } from "../../framework/runtime/services/workflow/routes/index.js";
 import { registerPolicyRoutes } from "../../framework/runtime/services/policy/routes/index.js";
@@ -37,7 +38,7 @@ import { registerAuditRoutes } from "../../framework/runtime/services/audit/rout
 import { registerContentRoutes } from "../../framework/runtime/services/content/routes/index.js";
 import { registerIntegrationRoutes } from "../../framework/runtime/services/integration/routes/index.js";
 
-import { createCacheMetrics, metricsHandler } from "../metrics.js";
+import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
 import { runWithContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
@@ -82,10 +83,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     audit,
     breakers,
     serviceHealthChecks,
+    credentialEncryption,
   } = deps;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
+
+  // Register BullMQ queues for /metrics queue depth gauges.
+  // Cast to Record<string, unknown> — DepthQueue duck-type is satisfied by BullMQ Queue.
+  registerJobQueues(jobs.queues as unknown as Parameters<typeof registerJobQueues>[0]);
 
   // ─── IAM cache client ──────────────────────────────────────────────────────
   // Provides the full CacheClient surface used by IAM and platform routes:
@@ -269,9 +275,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   });
 
   registerRecordsRoutes(apiRouter, {
-    db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    db:           db.kysely,
+    auth:         { verifyToken: (token: string) => auth.verifyToken(token) },
     logger,
+    objectStorage: objectStorageRef.current ?? undefined,
   });
 
   registerDocumentsRoutes(apiRouter, {
@@ -348,6 +355,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
   });
 
+  registerJobsAdminRoutes(apiRouter, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    queues: jobs.queues as any,
+    db:     _db,
+    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
   registerAuditRoutes(apiRouter, {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
@@ -365,6 +380,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
     logger,
+    credentialEncryption: credentialEncryption ?? undefined,
   });
 
   registerNotificationRoutes(apiRouter, {

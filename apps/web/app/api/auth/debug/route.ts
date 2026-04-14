@@ -14,9 +14,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = Date.now();
-  const ttlSeconds = Math.max(0, Math.floor((session.accessExpiresAt - now) / 1000));
-  const tokenExpires = new Date(session.accessExpiresAt).toISOString();
+  const nowSec = Math.floor(Date.now() / 1000);
+  const ttlSeconds = Math.max(0, session.accessExpiresAt - nowSec);
+  const tokenExpires = new Date(session.accessExpiresAt * 1000).toISOString();
 
   return NextResponse.json({
     session: {

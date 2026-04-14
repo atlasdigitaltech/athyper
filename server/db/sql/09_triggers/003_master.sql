@@ -2260,16 +2260,31 @@ CREATE TRIGGER trg_principal_bump_auth_epoch
     WHEN (OLD.is_locked IS DISTINCT FROM NEW.is_locked)
     EXECUTE FUNCTION master.fn_bump_auth_epoch();
 
--- ── Trigger B: deny access_grant inserted, revoked (status change), or deleted ──
+-- ── Trigger B: deny access_grant inserted or revoked (status change) ─────────
+-- NOTE: DELETE is handled by a separate trigger (trg_access_grant_delete_bump_auth_epoch)
+-- because PostgreSQL does not allow WHEN conditions to reference NEW in DELETE triggers.
 
 DROP TRIGGER IF EXISTS trg_access_grant_bump_auth_epoch ON master.access_grant;
 CREATE TRIGGER trg_access_grant_bump_auth_epoch
-    AFTER INSERT OR UPDATE OF status OR DELETE
+    AFTER INSERT OR UPDATE OF status
     ON master.access_grant
     FOR EACH ROW
     WHEN (
         COALESCE(NEW.effect, OLD.effect) = 'deny'
         AND COALESCE(NEW.principal_id, OLD.principal_id) IS NOT NULL
+    )
+    EXECUTE FUNCTION master.fn_bump_auth_epoch();
+
+-- ── Trigger B2: deny access_grant deleted ────────────────────────────────────
+
+DROP TRIGGER IF EXISTS trg_access_grant_delete_bump_auth_epoch ON master.access_grant;
+CREATE TRIGGER trg_access_grant_delete_bump_auth_epoch
+    AFTER DELETE
+    ON master.access_grant
+    FOR EACH ROW
+    WHEN (
+        OLD.effect = 'deny'
+        AND OLD.principal_id IS NOT NULL
     )
     EXECUTE FUNCTION master.fn_bump_auth_epoch();
 

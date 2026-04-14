@@ -1,15 +1,15 @@
 /**
- * DagOrchestrationService — Phase 3.2
+ * DagOrchestrationService
  *
  * Executes multi-step job DAGs (directed acyclic graphs) where each step
- * is a BullMQ job and progression is event-driven via Job.waitUntilFinished().
+ * is a BullMQ job and progression is event-driven.
  *
- * Execution model (I1 from PLATFORM_MIGRATION.md §3.2):
- *   - Each DAG step is a BullMQ job in the "jobs-orchestration" queue.
- *   - On completion, a step job enqueues the next step (if any).
- *   - Do NOT poll — use BullMQ's event-driven Job.waitUntilFinished().
- *   - DAG state persisted to event.work_item so in-flight DAGs survive
- *     process restart.
+ * Execution model:
+ *   - Each DAG step maps to a BullMQ job in the caller-supplied queue.
+ *   - Ready steps (no un-completed deps) are enqueued immediately.
+ *   - On step completion, the service checks for newly-unblocked steps.
+ *   - State is persisted to event.orchestration_run + event.orchestration_node,
+ *     so in-flight DAGs survive process restarts.
  *
  * DAG definition format:
  *   {
@@ -21,15 +21,9 @@
  *     ]
  *   }
  *
- * State persisted in event.work_item:
- *   - One work_item row per DAG step.
- *   - item_type = 'dag_step'
- *   - status: pending | active | completed | failed | skipped
- *   - metadata: { dagRunId, stepId, jobId, error? }
- *
- * Process restart recovery:
- *   On startup, DagOrchestrationService scans for in-progress DAG runs
- *   (active steps with no completed BullMQ job) and re-enqueues them.
+ * Recovery:
+ *   On startup call recoverOrphanedRuns() — it finds 'running' nodes whose
+ *   BullMQ job no longer exists and re-enqueues them.
  */
 
 import type { Queue, Job } from "bullmq";
@@ -63,7 +57,7 @@ export interface DagRunStatus {
 export interface DagStepStatus {
   stepId:     string;
   jobName:    string;
-  status:     "pending" | "active" | "completed" | "failed" | "skipped";
+  status:     "pending" | "running" | "completed" | "failed" | "skipped" | "canceled";
   jobId:      string | null;
   error:      string | null;
   startedAt:  string | null;
@@ -83,6 +77,9 @@ export interface DagOrchestrationDeps {
 
 const SYSTEM_ACTOR = "00000000-0000-7000-a000-000000000001";
 
+// Terminal node statuses — run is done when all nodes are in one of these
+const TERMINAL_NODE_STATUSES = new Set(["completed", "failed", "skipped", "canceled"]);
+
 // ── DagOrchestrationService ───────────────────────────────────────────────────
 
 export class DagOrchestrationService {
@@ -100,42 +97,46 @@ export class DagOrchestrationService {
 
   /**
    * Enqueue a new DAG run.
-   * Creates work_item rows for each step and enqueues the first ready step(s).
+   * Creates orchestration_run + orchestration_node rows, then enqueues the
+   * first ready steps (those with no dependencies).
    */
   async startRun(
-    dag: DagDefinition,
-    tenantId: string,
+    dag:           DagDefinition,
+    tenantId:      string,
     correlationId?: string,
   ): Promise<string> {
-    const dagRunId = crypto.randomUUID();
-    const now      = new Date().toISOString();
+    const run = await this.db
+      .insertInto("event.orchestration_run" as never)
+      .values({
+        tenant_id:      tenantId,
+        dag_id:         dag.id,
+        trigger_type:   "manual",
+        correlation_id: correlationId ?? null,
+        total_nodes:    dag.steps.length,
+        created_by:     SYSTEM_ACTOR,
+      } as never)
+      .returning(["id"] as never[])
+      .executeTakeFirstOrThrow() as { id: string };
 
-    // Persist step state rows
-    await this.db.transaction().execute(async (tx) => {
-      for (const step of dag.steps) {
-        await tx
-          .insertInto("event.work_item" as never)
-          .values({
-            id:          crypto.randomUUID(),
-            tenant_id:   tenantId,
-            item_type:   "dag_step",
-            status:      "pending",
-            metadata:    JSON.stringify({
-              dagRunId,
-              dagId:    dag.id,
-              stepId:   step.id,
-              jobName:  step.jobName,
-              dependsOn: step.dependsOn ?? [],
-              correlationId: correlationId ?? null,
-            }),
-            created_by:  SYSTEM_ACTOR,
-            created_at:  now,
-          } as never)
-          .execute();
-      }
-    });
+    const dagRunId = run.id;
 
-    // Enqueue first steps (no dependencies)
+    // Insert one node per step (all start as 'pending')
+    for (const step of dag.steps) {
+      await this.db
+        .insertInto("event.orchestration_node" as never)
+        .values({
+          tenant_id:  tenantId,
+          run_id:     dagRunId,
+          node_code:  step.id,
+          node_type:  step.jobName,
+          depends_on: step.dependsOn ?? [],
+          status:     "pending",
+          input:      step.data ? JSON.stringify(step.data) : null,
+        } as never)
+        .execute();
+    }
+
+    // Enqueue steps that have no dependencies
     const ready = dag.steps.filter((s) => !s.dependsOn || s.dependsOn.length === 0);
     for (const step of ready) {
       await this.enqueueStep(dagRunId, dag.id, step, tenantId);
@@ -146,38 +147,41 @@ export class DagOrchestrationService {
   }
 
   /**
-   * Called by the orchestration worker when a step job completes successfully.
-   * Updates step status and enqueues the next ready step(s).
+   * Called when a step job completes successfully.
+   * Updates node status, rolls up counters, enqueues newly-unblocked steps,
+   * and finalises the run if all steps are done.
    */
   async onStepCompleted(
-    dagRunId:  string,
-    dagId:     string,
-    stepId:    string,
-    tenantId:  string,
-    dag:       DagDefinition,
+    dagRunId: string,
+    dagId:    string,
+    stepId:   string,
+    tenantId: string,
+    dag:      DagDefinition,
   ): Promise<void> {
-    await this.markStepStatus(dagRunId, stepId, tenantId, "completed");
+    await this.markNodeStatus(dagRunId, stepId, tenantId, "completed");
 
-    // Find next steps whose dependencies are all completed
-    const completedSteps = await this.getCompletedStepIds(dagRunId, tenantId);
+    const completedCodes = await this.getCompletedNodeCodes(dagRunId, tenantId);
+
+    // Enqueue steps whose dependencies are all now completed
     const nextReady = dag.steps.filter((s) =>
-      !completedSteps.has(s.id) &&
-      (s.dependsOn ?? []).every((dep) => completedSteps.has(dep))
+      !completedCodes.has(s.id) &&
+      (s.dependsOn ?? []).every((dep) => completedCodes.has(dep)),
     );
-
     for (const step of nextReady) {
       await this.enqueueStep(dagRunId, dagId, step, tenantId);
     }
 
-    // Check if the entire DAG is done
-    if (nextReady.length === 0 && dag.steps.every((s) => completedSteps.has(s.id))) {
-      this.logger?.info("dag_run_completed", { dagRunId, dagId, tenantId });
+    // Finalise run if all steps are done
+    await this.tryFinaliseRun(dagRunId, tenantId);
+
+    if (nextReady.length === 0) {
+      this.logger?.info("dag_run_step_completed_no_next", { dagRunId, dagId, stepId, tenantId });
     }
   }
 
   /**
-   * Called when a step job fails.
-   * Marks the step failed; does NOT automatically retry (BullMQ handles retries).
+   * Called when a step job fails permanently (after BullMQ retries exhausted).
+   * Marks the node failed and finalises the run.
    */
   async onStepFailed(
     dagRunId: string,
@@ -185,112 +189,127 @@ export class DagOrchestrationService {
     tenantId: string,
     error:    string,
   ): Promise<void> {
-    await this.markStepStatus(dagRunId, stepId, tenantId, "failed", error);
+    await this.markNodeStatus(dagRunId, stepId, tenantId, "failed", error);
+    await this.tryFinaliseRun(dagRunId, tenantId);
     this.logger?.error("dag_step_failed", { dagRunId, stepId, tenantId, error });
   }
 
   /**
-   * Cancel a running DAG run. Marks all pending steps as canceled.
+   * Cancel all pending/running nodes in a run.
    */
   async cancelRun(dagRunId: string, tenantId: string): Promise<void> {
+    const now = new Date().toISOString();
+
     await this.db
-      .updateTable("event.work_item" as never)
-      .set({ status: "skipped" as never, updated_at: new Date().toISOString() as never } as never)
+      .updateTable("event.orchestration_node" as never)
+      .set({ status: "canceled" as never, completed_at: now as never } as never)
+      .where("run_id" as never, "=", dagRunId as never)
       .where("tenant_id" as never, "=", tenantId as never)
-      .where("item_type" as never, "=", "dag_step" as never)
-      .where("status" as never, "in", ["pending", "active"] as never)
-      .where(sql`metadata->>'dagRunId'` as never, "=" as never, dagRunId as never)
+      .where("status" as never, "in", ["pending", "running"] as never)
+      .execute();
+
+    await this.db
+      .updateTable("event.orchestration_run" as never)
+      .set({ status: "canceled" as never, completed_at: now as never } as never)
+      .where("id" as never, "=", dagRunId as never)
+      .where("tenant_id" as never, "=", tenantId as never)
+      .where("status" as never, "=", "running" as never)
       .execute();
 
     this.logger?.info("dag_run_canceled", { dagRunId, tenantId });
   }
 
   /**
-   * Get the status of a DAG run including all step states.
+   * Get the status of a DAG run including all node states.
    */
   async getRunStatus(dagRunId: string, tenantId: string): Promise<DagRunStatus | null> {
-    const stepRows = await this.db
-      .selectFrom("event.work_item as wi" as never)
-      .selectAll("wi" as never)
-      .where("wi.tenant_id" as never, "=", tenantId as never)
-      .where("wi.item_type" as never, "=", "dag_step" as never)
-      .where(sql`wi.metadata->>'dagRunId'` as never, "=" as never, dagRunId as never)
+    const run = await this.db
+      .selectFrom("event.orchestration_run as r" as never)
+      .selectAll("r" as never)
+      .where("r.id" as never, "=", dagRunId as never)
+      .where("r.tenant_id" as never, "=", tenantId as never)
+      .executeTakeFirst() as Record<string, unknown> | undefined;
+
+    if (!run) return null;
+
+    const nodes = await this.db
+      .selectFrom("event.orchestration_node as n" as never)
+      .selectAll("n" as never)
+      .where("n.run_id" as never, "=", dagRunId as never)
+      .where("n.tenant_id" as never, "=", tenantId as never)
+      .orderBy("n.started_at" as never, "asc nulls first" as never)
       .execute() as Record<string, unknown>[];
 
-    if (stepRows.length === 0) return null;
-
-    const steps: DagStepStatus[] = stepRows.map((r) => {
-      const meta = JSON.parse(r["metadata"] as string ?? "{}") as Record<string, unknown>;
-      return {
-        stepId:     meta["stepId"] as string,
-        jobName:    meta["jobName"] as string,
-        status:     r["status"] as DagStepStatus["status"],
-        jobId:      meta["jobId"] as string | null ?? null,
-        error:      meta["error"] as string | null ?? null,
-        startedAt:  r["started_at"] as string | null ?? null,
-        finishedAt: r["finished_at"] as string | null ?? null,
-      };
-    });
-
-    const hasFailed    = steps.some((s) => s.status === "failed");
-    const allCompleted = steps.every((s) => s.status === "completed" || s.status === "skipped");
-    const status: DagRunStatus["status"] = hasFailed ? "failed" : allCompleted ? "completed" : "running";
-
-    const firstMeta = JSON.parse(stepRows[0]!["metadata"] as string ?? "{}") as Record<string, unknown>;
+    const steps: DagStepStatus[] = nodes.map((n) => ({
+      stepId:     n["node_code"] as string,
+      jobName:    n["node_type"] as string,
+      status:     n["status"] as DagStepStatus["status"],
+      jobId:      n["job_id"] as string | null ?? null,
+      error:      n["error"] as string | null ?? null,
+      startedAt:  n["started_at"] as string | null ?? null,
+      finishedAt: n["completed_at"] as string | null ?? null,
+    }));
 
     return {
       dagRunId,
-      dagId:      firstMeta["dagId"] as string,
+      dagId:      run["dag_id"] as string,
       tenantId,
-      status,
+      status:     run["status"] as DagRunStatus["status"],
       steps,
-      startedAt:  stepRows[0]!["created_at"] as string,
-      finishedAt: allCompleted || hasFailed
-        ? (stepRows.map((r) => r["updated_at"] as string | null).filter(Boolean).sort().pop() ?? null)
-        : null,
+      startedAt:  run["started_at"] as string,
+      finishedAt: run["completed_at"] as string | null ?? null,
     };
   }
 
   /**
-   * Recover in-progress DAG runs on startup.
-   * Scans for 'active' step rows and re-enqueues them if their BullMQ job
-   * no longer exists.
+   * Recover in-progress runs after a process restart.
+   * Finds 'running' nodes whose BullMQ job no longer exists and re-enqueues.
    */
   async recoverOrphanedRuns(tenantId?: string): Promise<number> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = this.db
-      .selectFrom("event.work_item as wi" as never)
-      .selectAll("wi" as never)
-      .where("wi.item_type" as never, "=", "dag_step" as never)
-      .where("wi.status" as never, "=", "active" as never);
+    let q: any = (this.db as any)
+      .selectFrom("event.orchestration_node as n")
+      .innerJoin("event.orchestration_run as r", "r.id", "n.run_id")
+      .select([
+        "n.run_id" as never,
+        "n.node_code" as never,
+        "n.node_type" as never,
+        "n.job_id" as never,
+        "n.tenant_id" as never,
+        "n.input" as never,
+        "r.dag_id" as never,
+      ])
+      .where("n.status" as never, "=", "running" as never)
+      .where("r.status" as never, "=", "running" as never);
 
     if (tenantId) {
-      q = q.where("wi.tenant_id" as never, "=", tenantId as never);
+      q = q.where("n.tenant_id" as never, "=", tenantId as never);
     }
 
-    const activeRows = await q.execute() as Record<string, unknown>[];
+    const activeNodes = await q.execute() as Record<string, unknown>[];
     let recovered = 0;
 
-    for (const row of activeRows) {
-      const meta = JSON.parse(row["metadata"] as string ?? "{}") as Record<string, unknown>;
-      const jobId = meta["jobId"] as string | null;
+    for (const node of activeNodes) {
+      const jobId = node["job_id"] as string | null;
 
       if (jobId) {
         const job = await this.queue.getJob(jobId).catch(() => null) as Job | null;
-        if (job) continue; // Job still exists — not orphaned
+        if (job) continue; // Still alive — not orphaned
       }
 
-      // Re-enqueue the step
       const step: DagStep = {
-        id:      meta["stepId"] as string,
-        jobName: meta["jobName"] as string,
-        data:    meta["data"] as Record<string, unknown> | undefined,
+        id:      node["node_code"] as string,
+        jobName: node["node_type"] as string,
+        data:    node["input"]
+          ? (JSON.parse(node["input"] as string) as Record<string, unknown>)
+          : undefined,
       };
+
       await this.enqueueStep(
-        meta["dagRunId"] as string,
-        meta["dagId"] as string,
+        node["run_id"] as string,
+        node["dag_id"] as string,
         step,
-        row["tenant_id"] as string,
+        node["tenant_id"] as string,
       );
       recovered++;
     }
@@ -301,7 +320,7 @@ export class DagOrchestrationService {
     return recovered;
   }
 
-  // ── Private ─────────────────────────────────────────────────────────────────
+  // ── Private helpers ──────────────────────────────────────────────────────────
 
   private async enqueueStep(
     dagRunId: string,
@@ -309,6 +328,8 @@ export class DagOrchestrationService {
     step:     DagStep,
     tenantId: string,
   ): Promise<void> {
+    const now = new Date().toISOString();
+
     const job = await this.queue.add(
       step.jobName,
       {
@@ -325,60 +346,99 @@ export class DagOrchestrationService {
       },
     );
 
-    // Update work_item with jobId and set status to active
     await this.db
-      .updateTable("event.work_item" as never)
+      .updateTable("event.orchestration_node" as never)
       .set({
-        status:     "active" as never,
-        metadata:   sql`jsonb_set(metadata, '{jobId}', to_jsonb(${job.id ?? ""}::text))` as never,
-        started_at: new Date().toISOString() as never,
-        updated_at: new Date().toISOString() as never,
+        status:     "running" as never,
+        job_id:     (job.id ?? "") as never,
+        started_at: now as never,
       } as never)
-      .where("tenant_id" as never, "=", tenantId as never)
-      .where("item_type" as never, "=", "dag_step" as never)
-      .where(sql`metadata->>'dagRunId'` as never, "=" as never, dagRunId as never)
-      .where(sql`metadata->>'stepId'` as never, "=" as never, step.id as never)
+      .where("run_id" as never, "=", dagRunId as never)
+      .where("node_code" as never, "=", step.id as never)
       .execute()
-      .catch(() => { /* best-effort */ });
+      .catch(() => { /* best-effort — job is already enqueued */ });
   }
 
-  private async markStepStatus(
+  private async markNodeStatus(
     dagRunId:  string,
-    stepId:    string,
+    nodeCode:  string,
     tenantId:  string,
-    status:    "completed" | "failed" | "skipped",
+    status:    "completed" | "failed" | "skipped" | "canceled",
     error?:    string,
   ): Promise<void> {
+    const now = new Date().toISOString();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates: Record<string, any> = {
+      status:       status,
+      completed_at: now,
+    };
+    if (error) updates["error"] = error;
+
     await this.db
-      .updateTable("event.work_item" as never)
-      .set({
-        status:      status as never,
-        finished_at: new Date().toISOString() as never,
-        updated_at:  new Date().toISOString() as never,
-        ...(error ? { metadata: sql`jsonb_set(metadata, '{error}', to_jsonb(${error}::text))` as never } : {}),
-      } as never)
+      .updateTable("event.orchestration_node" as never)
+      .set(updates as never)
+      .where("run_id" as never, "=", dagRunId as never)
       .where("tenant_id" as never, "=", tenantId as never)
-      .where("item_type" as never, "=", "dag_step" as never)
-      .where(sql`metadata->>'dagRunId'` as never, "=" as never, dagRunId as never)
-      .where(sql`metadata->>'stepId'` as never, "=" as never, stepId as never)
+      .where("node_code" as never, "=", nodeCode as never)
       .execute()
       .catch(() => { /* best-effort */ });
+
+    // Roll-up counter on parent run
+    const counterField =
+      status === "completed" ? "completed_nodes" :
+      status === "failed"    ? "failed_nodes" :
+      status === "skipped"   ? "skipped_nodes" : null;
+
+    if (counterField) {
+      await this.db
+        .updateTable("event.orchestration_run" as never)
+        .set({ [counterField]: sql`${sql.raw(counterField)} + 1` as never } as never)
+        .where("id" as never, "=", dagRunId as never)
+        .execute()
+        .catch(() => { /* best-effort */ });
+    }
   }
 
-  private async getCompletedStepIds(dagRunId: string, tenantId: string): Promise<Set<string>> {
+  private async getCompletedNodeCodes(dagRunId: string, tenantId: string): Promise<Set<string>> {
     const rows = await this.db
-      .selectFrom("event.work_item as wi" as never)
-      .select("wi.metadata" as never)
-      .where("wi.tenant_id" as never, "=", tenantId as never)
-      .where("wi.item_type" as never, "=", "dag_step" as never)
-      .where("wi.status" as never, "=", "completed" as never)
-      .where(sql`wi.metadata->>'dagRunId'` as never, "=" as never, dagRunId as never)
-      .execute() as Array<{ metadata: string }>;
+      .selectFrom("event.orchestration_node as n" as never)
+      .select("n.node_code" as never)
+      .where("n.run_id" as never, "=", dagRunId as never)
+      .where("n.tenant_id" as never, "=", tenantId as never)
+      .where("n.status" as never, "=", "completed" as never)
+      .execute() as Array<{ node_code: string }>;
 
-    return new Set(rows.map((r) => {
-      const m = JSON.parse(r.metadata ?? "{}") as Record<string, unknown>;
-      return m["stepId"] as string;
-    }));
+    return new Set(rows.map((r) => r.node_code));
+  }
+
+  private async tryFinaliseRun(dagRunId: string, tenantId: string): Promise<void> {
+    const allNodes = await this.db
+      .selectFrom("event.orchestration_node as n" as never)
+      .select("n.status" as never)
+      .where("n.run_id" as never, "=", dagRunId as never)
+      .where("n.tenant_id" as never, "=", tenantId as never)
+      .execute() as Array<{ status: string }>;
+
+    const allTerminal = allNodes.every((n) => TERMINAL_NODE_STATUSES.has(n.status));
+    if (!allTerminal) return;
+
+    const hasFailed = allNodes.some((n) => n.status === "failed");
+    const finalStatus = hasFailed ? "failed" : "completed";
+
+    await this.db
+      .updateTable("event.orchestration_run" as never)
+      .set({
+        status:       finalStatus as never,
+        completed_at: new Date().toISOString() as never,
+      } as never)
+      .where("id" as never, "=", dagRunId as never)
+      .where("tenant_id" as never, "=", tenantId as never)
+      .where("status" as never, "=", "running" as never)
+      .execute()
+      .catch(() => { /* already finalised by a concurrent worker */ });
+
+    this.logger?.info("dag_run_finalised", { dagRunId, tenantId, status: finalStatus });
   }
 }
 

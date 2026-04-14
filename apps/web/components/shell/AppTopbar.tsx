@@ -17,6 +17,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { NeonIcon } from "@athyper/brand";
 import { Topbar } from "@athyper/shell";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { CommandPalette } from "@/components/shell/CommandPalette";
@@ -97,8 +98,8 @@ export function AppTopbar({
       href="/home"
       className="flex items-center gap-1.5 outline-none"
     >
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
-        N
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary p-1 text-primary-foreground">
+        <NeonIcon className="h-full w-full" />
       </div>
       <span className="hidden text-sm font-semibold tracking-tight lg:block">neon</span>
     </Link>

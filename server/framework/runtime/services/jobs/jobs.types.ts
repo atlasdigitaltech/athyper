@@ -16,6 +16,8 @@ export const QUEUE_NAME = {
   DOMAIN_OUTBOX:    "jobs-domain-outbox",
   /** SLA breach detection across governance.cycle_task and event.work_item */
   SLA_CHECK:        "jobs-sla-check",
+  /** Bulk import chunk processing — isolated for volume separation */
+  IMPORT:           "jobs-import",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
@@ -25,17 +27,19 @@ export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
 
 export const JOB_NAME = {
   /** sweep jobs: scan DB and self-enqueue action jobs */
-  SWEEP:          "sweep",
+  SWEEP:           "sweep",
   /** lifecycle timer: execute one timer action */
-  FIRE:           "fire",
+  FIRE:            "fire",
   /** notification: dispatch one message */
-  SEND:           "send",
+  SEND:            "send",
   /** SLA check: escalate overdue tasks/work-items */
-  CHECK:          "check",
+  CHECK:           "check",
   /** digest flush: batch staged rows into digest message and dispatch */
-  DIGEST_FLUSH:   "digest-flush",
+  DIGEST_FLUSH:    "digest-flush",
   /** provider health check: test connectivity and update health column */
   PROVIDER_HEALTH: "provider-health",
+  /** import: process one chunk of rows from a bulk import request */
+  PROCESS_CHUNK:   "process-chunk",
 } as const;
 
 /**
@@ -99,6 +103,13 @@ export interface DigestFlushJobData {
 
 /** Provider health check — no payload; worker checks all enabled providers */
 export type ProviderHealthJobData = Record<string, never>;
+
+/** Import chunk processor — processes one batch of rows from a bulk import */
+export interface ImportChunkJobData {
+  importRequestId: string;
+  chunkId:         string;
+  tenantId:        string;
+}
 
 // ─── Shared logger interface ──────────────────────────────────────────────────
 

@@ -28,6 +28,19 @@
  *   POST   /integration/webhooks               — register subscription
  *   PATCH  /integration/webhooks/:id           — update topics/config
  *   POST   /integration/webhooks/:id/disable   — is_active=false
+ *
+ * Connector type catalog (control.connector_type — global, read-only):
+ *   GET    /integration/connector-types        — list types (filter by category)
+ *   GET    /integration/connector-types/:id    — type detail with config_schema
+ *
+ * Connection instances (event.connector_instance — per-tenant CRUD):
+ *   GET    /integration/connections            — list instances (filter by type, status)
+ *   POST   /integration/connections            — create instance
+ *   GET    /integration/connections/:id        — instance detail with config
+ *   PATCH  /integration/connections/:id        — update config/name/description
+ *   POST   /integration/connections/:id/test   — health probe → update health_status
+ *   POST   /integration/connections/:id/deactivate — is_active=false
+ *   DELETE /integration/connections/:id        — hard delete
  */
 
 import type { RequestHandler, Router } from "express";
@@ -51,6 +64,16 @@ export interface IntegrationRouteDeps {
   };
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
+  };
+  /**
+   * Optional AES-256-GCM field encryption for connector_instance.config.
+   * When provided, credential fields (keys matching /secret|password|key|token|credential/i)
+   * are encrypted on write and decrypted on read. Absent when CREDENTIAL_MASTER_KEY
+   * is not configured.
+   */
+  credentialEncryption?: {
+    encryptJsonField(tenantId: string, obj: Record<string, unknown>, fields: string[]): Promise<Record<string, unknown>>;
+    decryptJsonField(tenantId: string, obj: Record<string, unknown>, fields: string[]): Promise<Record<string, unknown>>;
   };
 }
 
@@ -134,10 +157,18 @@ function toWebhook(r: Record<string, unknown>) {
   };
 }
 
+// ── Credential field detection ────────────────────────────────────────────────
+// Returns the subset of config object keys that look like credential fields.
+// Used to selectively encrypt/decrypt only sensitive values, leaving non-sensitive
+// config (baseUrl, timeout, etc.) stored in plaintext.
+function credentialKeys(config: Record<string, unknown>): string[] {
+  return Object.keys(config).filter((k) => /secret|password|key|token|credential/i.test(k));
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDeps): void {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, credentialEncryption } = deps;
 
   async function resolveCtx(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1]) {
     const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -552,5 +583,386 @@ export function createIntegrationRoutes(router: Router, deps: IntegrationRouteDe
       if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
       res.json({ ok: true, data: toWebhook(row) });
     } catch (err) { logger?.error("integration_disable_webhook_error", { err: String(err) }); next(err); }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CONNECTOR TYPE CATALOG (control.connector_type — global, read-only)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function toConnectorType(r: Record<string, unknown>, includeSchema = false) {
+    return {
+      id:                r["id"],
+      code:              r["code"],
+      name:              r["name"],
+      category:          r["category"],
+      description:       r["description"] ?? null,
+      iconKey:           r["icon_key"] ?? null,
+      authTypes:         r["auth_types"],
+      capabilities:      r["capabilities"],
+      isSystem:          r["is_system"],
+      status:            r["status"],
+      createdAt:         r["created_at"],
+      ...(includeSchema ? {
+        configSchema:      r["config_schema"],
+        healthCheckConfig: r["health_check_config"],
+      } : {}),
+    };
+  }
+
+  // GET /integration/connector-types — global catalog, no tenant scope
+  router.get("/integration/connector-types", async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const q = req.query as Record<string, unknown>;
+      const { limit, offset } = parsePagination(q);
+
+      let query = db
+        .selectFrom("control.connector_type as ct" as never)
+        .select([
+          "ct.id", "ct.code", "ct.name", "ct.category", "ct.description",
+          "ct.icon_key", "ct.auth_types", "ct.capabilities",
+          "ct.is_system", "ct.status", "ct.created_at",
+        ] as never[])
+        .where("ct.status" as never, "=", "active" as never)
+        .orderBy("ct.category" as never).orderBy("ct.name" as never)
+        .limit(limit + 1).offset(offset);
+
+      if (q["category"]) query = query.where("ct.category" as never, "=", q["category"] as never);
+
+      const rows = await query.execute() as Record<string, unknown>[];
+      const hasMore = rows.length > limit;
+      res.json({ ok: true, data: rows.slice(0, limit).map((r) => toConnectorType(r)), hasMore });
+    } catch (err) { logger?.error("integration_list_connector_types_error", { err: String(err) }); next(err); }
+  });
+
+  // GET /integration/connector-types/:id — full detail with config_schema
+  router.get("/integration/connector-types/:id", async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const row = await db
+        .selectFrom("control.connector_type as ct" as never)
+        .selectAll("ct" as never)
+        .where("ct.id" as never, "=", id as never)
+        .where("ct.status" as never, "=", "active" as never)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.json({ ok: true, data: toConnectorType(row, true) });
+    } catch (err) { logger?.error("integration_get_connector_type_error", { err: String(err) }); next(err); }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CONNECTION INSTANCES (event.connector_instance — per-tenant CRUD)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function toConnection(r: Record<string, unknown>, includeConfig = false) {
+    return {
+      id:                  r["id"],
+      tenantId:            r["tenant_id"],
+      connectorTypeId:     r["connector_type_id"],
+      connectorTypeName:   r["connector_type_name"] ?? null,
+      connectorTypeCode:   r["connector_type_code"] ?? null,
+      connectorTypeCategory: r["connector_type_category"] ?? null,
+      connectorTypeIcon:   r["connector_type_icon"] ?? null,
+      code:                r["code"],
+      name:                r["name"],
+      description:         r["description"] ?? null,
+      status:              r["status"],
+      healthStatus:        r["health_status"],
+      lastHealthCheckAt:   r["last_health_check_at"] ?? null,
+      lastErrorMessage:    r["last_error_message"] ?? null,
+      isActive:            r["is_active"],
+      createdAt:           r["created_at"],
+      updatedAt:           r["updated_at"] ?? null,
+      ...(includeConfig ? { config: r["config"] } : {}),
+    };
+  }
+
+  // GET /integration/connections — list tenant instances joined with type name
+  router.get("/integration/connections", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
+      const q = req.query as Record<string, unknown>;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = (db as any)
+        .selectFrom("event.connector_instance as ci")
+        .innerJoin("control.connector_type as ct", "ct.id", "ci.connector_type_id")
+        .select([
+          "ci.id", "ci.tenant_id", "ci.connector_type_id", "ci.code", "ci.name",
+          "ci.description", "ci.status", "ci.health_status",
+          "ci.last_health_check_at", "ci.last_error_message", "ci.is_active",
+          "ci.created_at", "ci.updated_at",
+          "ct.name as connector_type_name", "ct.code as connector_type_code",
+          "ct.category as connector_type_category", "ct.icon_key as connector_type_icon",
+        ])
+        .where("ci.tenant_id" as never, "=", c.tenantId as never)
+        .orderBy("ci.created_at" as never, "desc")
+        .limit(limit + 1).offset(offset);
+
+      if (q["connectorTypeId"] && isUuid(String(q["connectorTypeId"])))
+        query = query.where("ci.connector_type_id" as never, "=", q["connectorTypeId"] as never);
+      if (q["status"])
+        query = query.where("ci.status" as never, "=", q["status"] as never);
+      if (q["isActive"] !== undefined)
+        query = query.where("ci.is_active" as never, "=", (q["isActive"] !== "false") as never);
+
+      const rows = await query.execute() as Record<string, unknown>[];
+      const hasMore = rows.length > limit;
+      res.json({ ok: true, data: rows.slice(0, limit).map((r) => toConnection(r)), hasMore });
+    } catch (err) { logger?.error("integration_list_connections_error", { err: String(err) }); next(err); }
+  });
+
+  // POST /integration/connections — create a new instance
+  router.post("/integration/connections", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const body = req.body as Record<string, unknown>;
+
+      if (!body["connectorTypeId"] || !body["code"] || !body["name"]) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "connectorTypeId, code, name required" }); return;
+      }
+      if (!isUuid(String(body["connectorTypeId"]))) {
+        res.status(400).json({ error: "INVALID_CONNECTOR_TYPE_ID" }); return;
+      }
+
+      // Verify connector type exists
+      const typeExists = await db
+        .selectFrom("control.connector_type as ct" as never)
+        .select("ct.id" as never)
+        .where("ct.id" as never, "=", body["connectorTypeId"] as never)
+        .where("ct.status" as never, "=", "active" as never)
+        .executeTakeFirst() as { id: string } | undefined;
+
+      if (!typeExists) { res.status(422).json({ error: "CONNECTOR_TYPE_NOT_FOUND" }); return; }
+
+      let configObj = (body["config"] ?? {}) as Record<string, unknown>;
+      if (credentialEncryption) {
+        const keys = credentialKeys(configObj);
+        if (keys.length) configObj = await credentialEncryption.encryptJsonField(c.tenantId, configObj, keys);
+      }
+
+      const row = await db
+        .insertInto("event.connector_instance" as never)
+        .values({
+          tenant_id:         c.tenantId,
+          connector_type_id: body["connectorTypeId"],
+          code:              String(body["code"]).trim().toLowerCase(),
+          name:              String(body["name"]).trim(),
+          description:       body["description"] ?? null,
+          config:            JSON.stringify(configObj),
+          created_by:        c.principalId,
+        } as never)
+        .returningAll().executeTakeFirstOrThrow() as Record<string, unknown>;
+
+      res.status(201).json({ ok: true, data: toConnection(row, true) });
+    } catch (err) {
+      if (String(err).includes("unique")) {
+        res.status(409).json({ error: "CODE_CONFLICT", message: "A connection with this code already exists" }); return;
+      }
+      logger?.error("integration_create_connection_error", { err: String(err) }); next(err);
+    }
+  });
+
+  // GET /integration/connections/:id — detail with full config
+  router.get("/integration/connections/:id", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db as any)
+        .selectFrom("event.connector_instance as ci")
+        .innerJoin("control.connector_type as ct", "ct.id", "ci.connector_type_id")
+        .select([
+          "ci.id", "ci.tenant_id", "ci.connector_type_id", "ci.code", "ci.name",
+          "ci.description", "ci.config", "ci.status", "ci.health_status",
+          "ci.last_health_check_at", "ci.last_error_message", "ci.is_active",
+          "ci.created_at", "ci.updated_at",
+          "ct.name as connector_type_name", "ct.code as connector_type_code",
+          "ct.category as connector_type_category", "ct.icon_key as connector_type_icon",
+          "ct.config_schema as connector_type_schema", "ct.auth_types",
+        ] as never[])
+        .where("ci.id" as never, "=", id as never)
+        .where("ci.tenant_id" as never, "=", c.tenantId as never)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (credentialEncryption && row["config"]) {
+        const cfg = row["config"] as Record<string, unknown>;
+        row["config"] = await credentialEncryption.decryptJsonField(c.tenantId, cfg, credentialKeys(cfg));
+      }
+      res.json({ ok: true, data: toConnection(row, true) });
+    } catch (err) { logger?.error("integration_get_connection_error", { err: String(err) }); next(err); }
+  });
+
+  // PATCH /integration/connections/:id — update name/description/config
+  router.patch("/integration/connections/:id", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const body = req.body as Record<string, unknown>;
+
+      const updates: Record<string, unknown> = { updated_at: new Date(), updated_by: c.principalId };
+      if (body["name"]        !== undefined) updates["name"]        = String(body["name"]).trim();
+      if (body["description"] !== undefined) updates["description"] = body["description"];
+      if (body["config"]      !== undefined) {
+        let configObj = body["config"] as Record<string, unknown>;
+        if (credentialEncryption) {
+          const keys = credentialKeys(configObj);
+          if (keys.length) configObj = await credentialEncryption.encryptJsonField(c.tenantId, configObj, keys);
+        }
+        updates["config"] = JSON.stringify(configObj);
+      }
+      if (body["status"]      !== undefined) updates["status"]      = body["status"];
+
+      const row = await db
+        .updateTable("event.connector_instance" as never)
+        .set(updates as never)
+        .where("id" as never, "=", id as never)
+        .where("tenant_id" as never, "=", c.tenantId as never)
+        .returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.json({ ok: true, data: toConnection(row, true) });
+    } catch (err) { logger?.error("integration_update_connection_error", { err: String(err) }); next(err); }
+  });
+
+  // POST /integration/connections/:id/test — probe health and update health_status
+  router.post("/integration/connections/:id/test", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      // Load instance + connector type for health_check_config
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db as any)
+        .selectFrom("event.connector_instance as ci")
+        .innerJoin("control.connector_type as ct", "ct.id", "ci.connector_type_id")
+        .select([
+          "ci.id", "ci.config",
+          "ct.health_check_config",
+        ])
+        .where("ci.id" as never, "=", id as never)
+        .where("ci.tenant_id" as never, "=", c.tenantId as never)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      let instanceConfig = (row["config"] ?? {}) as Record<string, unknown>;
+      if (credentialEncryption) {
+        instanceConfig = await credentialEncryption.decryptJsonField(
+          c.tenantId, instanceConfig, credentialKeys(instanceConfig),
+        );
+      }
+      const hcConfig = (row["health_check_config"] ?? {}) as Record<string, unknown>;
+
+      let newHealth: string;
+      let lastError: string | null = null;
+
+      const baseUrl = instanceConfig["baseUrl"] as string | undefined
+        ?? instanceConfig["url"] as string | undefined
+        ?? instanceConfig["host"] as string | undefined;
+      const probePath = (hcConfig["path"] as string | undefined) ?? "/health";
+      const probeTimeout = (hcConfig["timeout_ms"] as number | undefined) ?? 5000;
+
+      if (baseUrl) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), probeTimeout);
+        try {
+          const probeUrl = `${baseUrl.replace(/\/$/, "")}${probePath}`;
+          const response = await fetch(probeUrl, {
+            method: "GET",
+            signal: controller.signal,
+            headers: { "Accept": "application/json" },
+          });
+          clearTimeout(timer);
+          newHealth = response.ok ? "healthy" : "degraded";
+          if (!response.ok) lastError = `HTTP ${response.status} from ${probePath}`;
+        } catch (e) {
+          clearTimeout(timer);
+          newHealth = "down";
+          lastError = e instanceof Error ? e.message : "connection_error";
+        }
+      } else {
+        // No URL configured — cannot probe
+        newHealth = "unknown";
+        lastError = "no_base_url_in_config";
+      }
+
+      const updated = await db
+        .updateTable("event.connector_instance" as never)
+        .set({
+          health_status:         newHealth as never,
+          last_health_check_at:  new Date() as never,
+          last_error_message:    lastError as never,
+          updated_at:            new Date() as never,
+          updated_by:            c.principalId as never,
+        } as never)
+        .where("id" as never, "=", id as never)
+        .where("tenant_id" as never, "=", c.tenantId as never)
+        .returning(["id", "health_status", "last_health_check_at", "last_error_message"] as never[])
+        .executeTakeFirst() as Record<string, unknown>;
+
+      res.json({
+        ok: true,
+        healthStatus: updated["health_status"],
+        lastHealthCheckAt: updated["last_health_check_at"],
+        lastErrorMessage: updated["last_error_message"],
+        probed: !!baseUrl,
+      });
+    } catch (err) { logger?.error("integration_test_connection_error", { err: String(err) }); next(err); }
+  });
+
+  // POST /integration/connections/:id/deactivate — soft deactivate
+  router.post("/integration/connections/:id/deactivate", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const row = await db
+        .updateTable("event.connector_instance" as never)
+        .set({ is_active: false as never, status: "paused" as never, updated_at: new Date() as never, updated_by: c.principalId as never } as never)
+        .where("id" as never, "=", id as never)
+        .where("tenant_id" as never, "=", c.tenantId as never)
+        .returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
+      if (!row) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.json({ ok: true, data: toConnection(row) });
+    } catch (err) { logger?.error("integration_deactivate_connection_error", { err: String(err) }); next(err); }
+  });
+
+  // DELETE /integration/connections/:id — hard delete
+  router.delete("/integration/connections/:id", async (req, res, next) => {
+    try {
+      const c = await resolveCtx(req, res);
+      if (!c) return;
+      const { id } = req.params;
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const deleted = await db
+        .deleteFrom("event.connector_instance" as never)
+        .where("id" as never, "=", id as never)
+        .where("tenant_id" as never, "=", c.tenantId as never)
+        .returning("id" as never)
+        .executeTakeFirst() as { id: string } | undefined;
+      if (!deleted) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      res.status(204).end();
+    } catch (err) { logger?.error("integration_delete_connection_error", { err: String(err) }); next(err); }
   });
 }

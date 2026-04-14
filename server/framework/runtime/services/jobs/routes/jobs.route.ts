@@ -28,7 +28,7 @@ interface JobsRouteDeps {
   logger?: JobLogger;
 }
 
-const QUEUE_KEYS = ["lifecycleTimers", "notifications", "domainOutbox", "slaCheck"] as const;
+const QUEUE_KEYS = ["lifecycleTimers", "notifications", "domainOutbox", "slaCheck", "import"] as const;
 type QueueKey = (typeof QUEUE_KEYS)[number];
 
 function resolveQueue(queues: JobsQueues, name: string): Queue | undefined {
@@ -42,6 +42,8 @@ function resolveQueue(queues: JobsQueues, name: string): Queue | undefined {
     "domainOutbox":       "domainOutbox",
     "sla-check":          "slaCheck",
     "slaCheck":           "slaCheck",
+    "import":             "import",
+    "jobs-import":        "import",
   };
   const key = aliasMap[name];
   return key ? queues[key] : undefined;

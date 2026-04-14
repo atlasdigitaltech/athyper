@@ -17,7 +17,8 @@
 
 import { Queue, Worker } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
+import { cronRegistry } from "../../../../src/foundation/jobs/cron-registry.js";
 import {
   QUEUE_NAME,
   JOB_NAME,
@@ -38,6 +39,7 @@ import { createLifecycleTimerWorker } from "./workers/lifecycle-timer.worker.js"
 import { createNotificationWorker, type NotificationChannelHandler } from "./workers/notification.worker.js";
 import { createDomainOutboxWorker, type OutboxTopicHandler } from "./workers/domain-outbox.worker.js";
 import { createSlaCheckWorker } from "./workers/sla-check.worker.js";
+import { createImportWorker, type ImportObjectStorage } from "./workers/import.worker.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
@@ -80,6 +82,8 @@ export interface JobsServiceDeps {
    * Keys: 'fin' | 'wf' | 'audit'
    */
   topicHandlers?: Map<string, OutboxTopicHandler>;
+  /** Object storage adapter for import file downloads. Optional — import worker inactive if absent. */
+  objectStorage?: ImportObjectStorage;
 }
 
 // ─── Redis URL parser ─────────────────────────────────────────────────────────
@@ -95,6 +99,18 @@ function parseRedisUrl(url: string): ConnectionOptions {
   };
 }
 
+// ─── Queue name → queues key resolution ──────────────────────────────────────
+// Maps BullMQ queue name strings (used in cron_schedule.target_queue and
+// CronEntry.queue) to the JobsQueues property key.
+
+const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
+  [QUEUE_NAME.LIFECYCLE_TIMERS]: "lifecycleTimers",
+  [QUEUE_NAME.NOTIFICATIONS]:    "notifications",
+  [QUEUE_NAME.DOMAIN_OUTBOX]:    "domainOutbox",
+  [QUEUE_NAME.SLA_CHECK]:        "slaCheck",
+  [QUEUE_NAME.IMPORT]:           "import",
+};
+
 // ─── Exported queue map type ──────────────────────────────────────────────────
 
 export interface JobsQueues {
@@ -102,6 +118,7 @@ export interface JobsQueues {
   notifications:   Queue<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>;
   domainOutbox:    Queue<DrainOutboxJobData>;
   slaCheck:        Queue<SlaCheckJobData>;
+  import:          Queue;
 }
 
 // ─── Service factory ──────────────────────────────────────────────────────────
@@ -120,6 +137,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     logger,
     channelHandlers,
     topicHandlers,
+    objectStorage,
     options = {},
   } = deps;
 
@@ -146,6 +164,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     notifications:   new Queue(QUEUE_NAME.NOTIFICATIONS,    { connection: conn }),
     domainOutbox:    new Queue(QUEUE_NAME.DOMAIN_OUTBOX,    { connection: conn }),
     slaCheck:        new Queue(QUEUE_NAME.SLA_CHECK,        { connection: conn }),
+    import:          new Queue(QUEUE_NAME.IMPORT,           { connection: conn }),
   };
 
   // ── Workers (consumers) ──────────────────────────────────────────────────
@@ -176,6 +195,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       connection: conn,
       logger,
     }),
+    ...(objectStorage ? [createImportWorker({ db, objectStorage, connection: conn, logger })] : []),
   ];
 
   // ── Error handlers on workers ────────────────────────────────────────────
@@ -265,6 +285,69 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         { every: notificationProviderHealthMs },
         { name: JOB_NAME.PROVIDER_HEALTH, data: {} satisfies ProviderHealthJobData },
       );
+
+      // ── Code-based CronRegistry entries ──────────────────────────────────
+      // Modules call cronRegistry.register() before start(); we apply them here.
+      // upsertJobScheduler is idempotent — safe to call from every instance.
+      for (const entry of cronRegistry.list()) {
+        const queueKey = QUEUE_NAME_TO_KEY[entry.queue];
+        if (!queueKey) {
+          logger?.error("jobs_cron_registry_unknown_queue", { queue: entry.queue, name: entry.name });
+          continue;
+        }
+        const schedule = entry.cron
+          ? { pattern: entry.cron }
+          : { every: entry.intervalMs! };
+        await queues[queueKey].upsertJobScheduler(
+          entry.schedulerId,
+          schedule,
+          { name: entry.jobName, data: entry.data ?? {} },
+        );
+        logger?.info("jobs_cron_registry_wired", { schedulerId: entry.schedulerId, queue: entry.queue });
+      }
+
+      // ── DB-driven cron schedules (control.cron_schedule) ─────────────────
+      // Rows with is_enabled=true whose effective window covers now() are
+      // loaded and registered as BullMQ repeatable jobs. Runtime admins can
+      // add/edit rows in the UI without restarting the process (the scheduler
+      // calls this path again via periodic reload — see recoverDbSchedules).
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dbSchedules = await (db as any)
+          .selectFrom("control.cron_schedule as cs")
+          .select([
+            "cs.code", "cs.name", "cs.handler_type",
+            "cs.cron_expression", "cs.timezone",
+            "cs.target_queue", "cs.payload_template",
+          ])
+          .where("cs.is_enabled" as never, "=", true as never)
+          .where(sql`(cs.effective_from IS NULL OR cs.effective_from <= now())`)
+          .where(sql`(cs.effective_until IS NULL OR cs.effective_until > now())`)
+          .execute() as Array<{
+            code: string; name: string; handler_type: string;
+            cron_expression: string; timezone: string;
+            target_queue: string; payload_template: Record<string, unknown>;
+          }>;
+
+        for (const cs of dbSchedules) {
+          const queueKey = QUEUE_NAME_TO_KEY[cs.target_queue];
+          if (!queueKey) {
+            logger?.error("jobs_db_schedule_unknown_queue", { code: cs.code, queue: cs.target_queue });
+            continue;
+          }
+          // Code-registry entries take precedence — skip if same scheduler ID exists
+          const dbSchedulerId = `sched:db:${cs.code}`;
+          await queues[queueKey].upsertJobScheduler(
+            dbSchedulerId,
+            { pattern: cs.cron_expression, tz: cs.timezone },
+            { name: cs.handler_type, data: cs.payload_template ?? {} },
+          );
+          logger?.info("jobs_db_schedule_wired", { schedulerId: dbSchedulerId, queue: cs.target_queue, code: cs.code });
+        }
+      } catch (err) {
+        // DB unavailable at start — not fatal; schedules will be absent until next reload
+        logger?.error("jobs_db_schedules_load_failed", { err: String(err) });
+      }
 
       logger?.info("jobs_service_started", {
         queues:                      Object.keys(queues),
