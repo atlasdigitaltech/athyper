@@ -76,7 +76,7 @@ export function ApAgingView({ scope }: ApAgingViewProps) {
           return (
             <div key={b.key} className="rounded-lg border p-2.5 space-y-1">
               <div className="text-[10px] text-muted-foreground">{b.label}</div>
-              <div className={`text-sm font-semibold font-mono ${isOverdue && val > 0 ? "text-amber-600" : ""}`}>
+              <div className={`text-sm font-semibold font-mono ${isOverdue && val > 0 ? "text-warning" : ""}`}>
                 {fmtCompact(val)}
               </div>
               <div className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</div>
@@ -116,7 +116,7 @@ export function ApAgingView({ scope }: ApAgingViewProps) {
                   {BUCKETS.map((b) => {
                     const val = row[b.key] as number;
                     return (
-                      <td key={b.key} className={`py-1.5 px-3 text-right font-mono ${b.key !== "current" && val > 0 ? "text-amber-600" : ""}`}>
+                      <td key={b.key} className={`py-1.5 px-3 text-right font-mono ${b.key !== "current" && val > 0 ? "text-warning" : ""}`}>
                         {val ? fmtFull(val) : "—"}
                       </td>
                     );

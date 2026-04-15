@@ -14,7 +14,10 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "rls:verify": "tsx scripts/verify-rls.ts",
+    "field-security:verify": "tsx scripts/verify-field-security.ts",
+    "lookup:diff": "tsx scripts/lookup-diff.ts"
   },
   "dependencies": {
     "@athyper/adapter-auth": "workspace:*",

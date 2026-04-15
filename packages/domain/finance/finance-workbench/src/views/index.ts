@@ -19,3 +19,4 @@ export { CashFlowView } from "./CashFlowView";
 export { ApAgingView } from "./ApAgingView";
 export { ArAgingView } from "./ArAgingView";
 export { AccountAnalysisView } from "./AccountAnalysisView";
+export { ArWorkbenchView } from "./ArWorkbenchView";

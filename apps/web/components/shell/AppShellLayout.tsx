@@ -30,6 +30,8 @@ import { getWorkbenchTheme } from "@/lib/workbench-theme";
 import { useRecentTracker } from "@/hooks/useRecentTracker";
 
 // ── Notification count (shared query key with AppTopbar) ─────────────────────
+// Reads from the same cache key that AppTopbar writes via useNotificationCount
+// and the SSE stream (useNotificationStream). No redundant polling here.
 
 function useUnreadCount(enabled: boolean) {
   return useQuery<{ count: number }>({
@@ -43,8 +45,8 @@ function useUnreadCount(enabled: boolean) {
       return res.json() as Promise<{ count: number }>;
     },
     enabled,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 300_000,
+    refetchInterval: false,  // SSE stream in AppTopbar provides live updates
     throwOnError: false,
     placeholderData: { count: 0 },
   });

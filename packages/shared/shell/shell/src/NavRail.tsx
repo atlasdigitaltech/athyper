@@ -87,8 +87,8 @@ function RailIcon({
         "relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
         isPlatform
           ? active
-            ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
-            : "bg-violet-50 text-violet-500 hover:bg-violet-100 hover:text-violet-700 dark:bg-transparent dark:text-violet-400 dark:hover:bg-violet-900/30"
+            ? "bg-accent/10 text-accent-foreground"
+            : "bg-accent/5 text-accent-foreground/60 hover:bg-accent/10 hover:text-accent-foreground"
           : active
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",

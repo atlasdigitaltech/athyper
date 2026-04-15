@@ -178,6 +178,7 @@ export default function NotificationsPage() {
     <PageFrame
       title="Notifications"
       description="In-app alerts and workflow events"
+      width="default"
       actions={
         <div className="flex items-center gap-2">
           <Button
@@ -205,7 +206,7 @@ export default function NotificationsPage() {
         </div>
       }
     >
-      <div className="max-w-3xl space-y-2">
+      <div className="space-y-2">
         {isLoading ? (
           [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 w-full" />)
         ) : notifications.length === 0 ? (

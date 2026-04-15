@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Database, Search } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
+import { FilterPillBar } from "@athyper/ui/composites";
 import { Badge, Button, Input, Skeleton } from "@athyper/ui/primitives";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,11 +32,11 @@ interface EntityEntry {
 }
 
 const CLASS_COLORS: Record<string, string> = {
-  REFERENCE: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800/40",
-  MASTER:    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800/40",
-  DOCUMENT:  "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800/40",
-  CONTROL:   "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700",
-  JOURNAL:   "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40",
+  REFERENCE: "bg-primary/10 text-primary border-primary/30",
+  MASTER:    "bg-accent/10 text-accent-foreground border-accent/30",
+  DOCUMENT:  "bg-warning/10 text-warning border-warning/30",
+  CONTROL:   "bg-muted text-muted-foreground border-border",
+  JOURNAL:   "bg-success/10 text-success border-success/30",
 };
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -126,19 +127,12 @@ export default function MetadataSetupPage() {
               onKeyDown={(e) => e.key === "Enter" && setActiveSearch(search)}
             />
           </div>
-          <div className="flex items-center gap-1">
-            {CLASS_OPTIONS.map((cls) => (
-              <Button
-                key={cls || "all"}
-                variant={entityClass === cls ? "primary" : "ghost"}
-                size="sm"
-                className="h-8 text-xs"
-                onClick={() => setEntityClass(cls)}
-              >
-                {cls || "All"}
-              </Button>
-            ))}
-          </div>
+          <FilterPillBar
+            items={["REFERENCE", "MASTER", "DOCUMENT", "CONTROL", "JOURNAL"].map((cls) => ({ value: cls, label: cls }))}
+            value={entityClass}
+            onChange={setEntityClass}
+            allItem={{ label: "All" }}
+          />
         </div>
 
         {/* Results */}

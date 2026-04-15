@@ -46,8 +46,8 @@ function EntityRow({
           className={cn(
             "flex h-5 w-5 items-center justify-center rounded text-[8px] font-bold shrink-0",
             entity.entityType === "holding"
-              ? "bg-purple-100 text-purple-700"
-              : "bg-blue-100 text-blue-700",
+              ? "bg-accent/10 text-accent-foreground"
+              : "bg-info/10 text-info",
           )}
         >
           {entity.country}
@@ -60,7 +60,7 @@ function EntityRow({
           <ConsolBadge method={entity.consolidationMethod} />
         )}
         {!entity.consolidationMethod && (
-          <Badge variant="outline" className="text-[10px] py-0 bg-purple-50 text-purple-700 border-purple-200">
+          <Badge variant="outline" className="text-[10px] py-0 bg-accent/10 text-accent-foreground border-accent/30">
             root
           </Badge>
         )}
@@ -69,7 +69,7 @@ function EntityRow({
           <span
             className={cn(
               "text-[10px] font-mono w-10 text-right",
-              entity.ownershipPct < 100 ? "text-amber-600 font-medium" : "text-muted-foreground",
+              entity.ownershipPct < 100 ? "text-warning font-medium" : "text-muted-foreground",
             )}
           >
             {entity.ownershipPct}%
@@ -145,9 +145,9 @@ export function LegalEntityView() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />full</span>
-            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" />proportional</span>
-            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />equity</span>
+            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-success" />full</span>
+            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-info" />proportional</span>
+            <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-warning" />equity</span>
           </div>
         </div>
 
@@ -178,8 +178,8 @@ export function LegalEntityView() {
               className={cn(
                 "text-[10px] py-0",
                 selected.entityType === "holding"
-                  ? "bg-purple-50 text-purple-700 border-purple-200"
-                  : "bg-blue-50 text-blue-700 border-blue-200",
+                  ? "bg-accent/10 text-accent-foreground border-accent/30"
+                  : "bg-info/10 text-info border-info/30",
               )}
             >
               {selected.entityType}
@@ -194,7 +194,7 @@ export function LegalEntityView() {
           <div className="flex items-center gap-4 text-xs py-1 px-2 bg-muted/30 rounded-md">
             <div>
               <span className="text-[9px] text-muted-foreground uppercase mr-1">Own</span>
-              <span className={cn("font-semibold", selected.ownershipPct !== null && selected.ownershipPct < 100 ? "text-amber-600" : "")}>
+              <span className={cn("font-semibold", selected.ownershipPct !== null && selected.ownershipPct < 100 ? "text-warning" : "")}>
                 {selected.ownershipPct !== null ? `${selected.ownershipPct}%` : "Root"}
               </span>
               {selected.ownershipPct !== null && selected.ownershipPct < 100 && (
@@ -246,7 +246,7 @@ export function LegalEntityView() {
                   <span className="font-mono text-[10px] text-muted-foreground w-14">{child.code}</span>
                   <span className="flex-1 truncate">{child.name}</span>
                   <ConsolBadge method={child.consolidationMethod!} />
-                  <span className={cn("text-[10px] font-mono", child.ownershipPct! < 100 ? "text-amber-600" : "text-muted-foreground")}>
+                  <span className={cn("text-[10px] font-mono", child.ownershipPct! < 100 ? "text-warning" : "text-muted-foreground")}>
                     {child.ownershipPct}%
                   </span>
                 </div>

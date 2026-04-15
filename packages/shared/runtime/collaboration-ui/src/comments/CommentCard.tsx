@@ -8,10 +8,28 @@
  */
 
 import { useState, useCallback } from "react";
-import { Reply, Pencil, Trash2, Flag, Check, X } from "lucide-react";
+import { Reply, Pencil, Trash2, Flag, Check, X, Loader2 } from "lucide-react";
 
 import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
+
+// ── Flag reasons ──────────────────────────────────────────────────────────────
+
+const FLAG_REASONS = [
+  { value: "spam",         label: "Spam" },
+  { value: "harassment",   label: "Harassment" },
+  { value: "misinformation", label: "Misinformation" },
+  { value: "off_topic",    label: "Off-topic" },
+  { value: "other",        label: "Other" },
+] as const;
+
+type FlagReason = typeof FLAG_REASONS[number]["value"];
+
+function getCsrfToken(): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]!) : "";
+}
 import { useCommentActions, type EntityComment } from "../hooks/collab";
 
 import { CommentForm } from "./CommentForm";
@@ -56,15 +74,35 @@ export function CommentCard({
   const [showReply, setShowReply] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.commentText);
+  const [showFlag, setShowFlag] = useState(false);
+  const [flagReason, setFlagReason] = useState<FlagReason>("spam");
+  const [flagNote, setFlagNote] = useState("");
+  const [isFlagging, setIsFlagging] = useState(false);
+  const [flagDone, setFlagDone] = useState(false);
 
-  const { updateComment, deleteComment } = useCommentActions(entityType, entityId);
+  const { replyToComment, updateComment, deleteComment } = useCommentActions(entityType, entityId);
+
+  const handleFlag = useCallback(async () => {
+    setIsFlagging(true);
+    try {
+      await fetch(`/api/collab/comments/${comment.id}/flag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify({ flagReason, note: flagNote || undefined }),
+      });
+      setFlagDone(true);
+      setShowFlag(false);
+    } finally {
+      setIsFlagging(false);
+    }
+  }, [comment.id, flagReason, flagNote]);
 
   const handleReply = useCallback(
     async (text: string) => {
-      await updateComment({ id: comment.id, commentText: text });
+      await replyToComment({ parentId: comment.id, commentText: text });
       setShowReply(false);
     },
-    [comment.id, updateComment],
+    [comment.id, replyToComment],
   );
 
   const handleEdit = useCallback(async () => {
@@ -171,15 +209,23 @@ export function CommentCard({
               <Trash2 className="mr-1 size-3" />
               Delete
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs"
-            >
-              <Flag className="mr-1 size-3" />
-              Flag
-            </Button>
+            {!flagDone ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => setShowFlag((v) => !v)}
+              >
+                <Flag className="mr-1 size-3" />
+                Flag
+              </Button>
+            ) : (
+              <span className="h-6 px-2 text-xs text-muted-foreground flex items-center">
+                <Flag className="mr-1 size-3 text-warning" />
+                Flagged
+              </span>
+            )}
           </div>
 
           {/* Inline reply form */}
@@ -194,6 +240,57 @@ export function CommentCard({
                 placeholder="Write a reply…"
                 autoFocus
               />
+            </div>
+          )}
+
+          {/* Inline flag form */}
+          {showFlag && (
+            <div className="mt-2 rounded-md border border-warning/30 bg-warning/5 p-3 space-y-2">
+              <p className="text-xs font-medium text-warning">Report this comment</p>
+              <div className="flex gap-2 flex-wrap">
+                {FLAG_REASONS.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setFlagReason(r.value)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                      flagReason === r.value
+                        ? "border-warning bg-warning/10 text-warning font-medium"
+                        : "text-muted-foreground hover:border-warning/50",
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={flagNote}
+                onChange={(e) => setFlagNote(e.target.value)}
+                placeholder="Additional context (optional)"
+                rows={2}
+                className="w-full rounded-md border bg-background p-2 text-xs"
+              />
+              <div className="flex gap-1 justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowFlag(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-6 px-2 text-xs bg-warning text-warning-foreground hover:bg-warning/90"
+                  onClick={() => void handleFlag()}
+                  disabled={isFlagging}
+                >
+                  {isFlagging ? <Loader2 className="size-3 animate-spin" /> : "Submit report"}
+                </Button>
+              </div>
             </div>
           )}
 

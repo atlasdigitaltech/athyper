@@ -100,18 +100,18 @@ function BulkResultPanel({
   return (
     <div className={cn(
       "rounded-lg border px-4 py-3 space-y-2",
-      result.failed > 0 ? "border-amber-200 bg-amber-50/60" : "border-emerald-200 bg-emerald-50/60",
+      result.failed > 0 ? "border-warning/30 bg-warning/10" : "border-success/30 bg-success/10",
     )}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-sm">
           {result.succeeded > 0 && (
-            <span className="flex items-center gap-1 text-emerald-700">
+            <span className="flex items-center gap-1 text-success">
               <CheckCircle2 className="h-4 w-4" />
               {result.succeeded} succeeded
             </span>
           )}
           {result.failed > 0 && (
-            <span className="flex items-center gap-1 text-amber-700">
+            <span className="flex items-center gap-1 text-warning">
               <AlertCircle className="h-4 w-4" />
               {result.failed} failed
             </span>
@@ -138,7 +138,7 @@ function BulkResultPanel({
           {result.rows
             .filter((r) => !r.success)
             .map((r) => (
-              <div key={r.id} className="flex items-center gap-2 text-xs text-amber-700">
+              <div key={r.id} className="flex items-center gap-2 text-xs text-warning">
                 <span className="font-mono shrink-0">{r.id.slice(0, 12)}</span>
                 <span className="text-muted-foreground">{r.error?.message ?? "Unknown error"}</span>
               </div>

@@ -1471,6 +1471,16 @@ export type comment_draft = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type comment_feed_cursor = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    entity_type: string;
+    entity_id: string;
+    last_read_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp>;
+    updated_at: Timestamp | null;
+};
 export type comment_flag = {
     id: Generated<string>;
     tenant_id: string;
@@ -2280,6 +2290,19 @@ export type content_item_version = {
     checksum: string;
     created_at: Generated<Timestamp>;
     created_by: string;
+};
+export type content_quota = {
+    id: Generated<string>;
+    tenant_id: string;
+    kind: string;
+    max_items: string | null;
+    max_storage_bytes: string | null;
+    warn_at_pct: Generated<number>;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type conversation = {
     id: Generated<string>;
@@ -4636,6 +4659,45 @@ export type legal_entity = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type legal_hold = {
+    id: Generated<string>;
+    tenant_id: string;
+    hold_name: string;
+    hold_code: string;
+    description: string | null;
+    custodian_id: string;
+    scope_entity_type: string | null;
+    scope_entity_id_lo: string | null;
+    scope_entity_id_hi: string | null;
+    scope_date_from: Timestamp | null;
+    scope_date_to: Timestamp | null;
+    scope_log_schemas: string[];
+    status: Generated<string>;
+    effective_from: Generated<Timestamp>;
+    effective_to: Timestamp | null;
+    release_date: Timestamp | null;
+    release_reason: string | null;
+    released_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type legal_hold_manifest = {
+    id: Generated<string>;
+    tenant_id: string;
+    legal_hold_id: string;
+    partition_schema: string;
+    partition_table: string;
+    partition_range_lo: Timestamp;
+    partition_range_hi: Timestamp;
+    is_released: Generated<boolean>;
+    released_at: Timestamp | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type letterhead = {
     id: Generated<string>;
     tenant_id: string;
@@ -5443,6 +5505,7 @@ export type payment_entry = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    cleared_date: Timestamp | null;
 };
 export type payment_entry_allocation = {
     id: Generated<string>;
@@ -6092,6 +6155,36 @@ export type policy_rule = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type policy_rule_version = {
+    id: Generated<string>;
+    tenant_id: string;
+    policy_rule_id: string;
+    policy_id: string;
+    version_no: number;
+    rule_snapshot: unknown;
+    effective_from: Generated<Timestamp>;
+    effective_until: Timestamp | null;
+    published_by: string | null;
+    published_at: Generated<Timestamp>;
+};
+export type policy_test_case = {
+    id: Generated<string>;
+    tenant_id: string;
+    policy_definition_id: string;
+    test_name: string;
+    description: string | null;
+    input_payload: unknown;
+    expected_outcome: unknown;
+    last_run_at: Timestamp | null;
+    last_run_passed: boolean | null;
+    last_run_result: unknown | null;
+    last_run_ms: number | null;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type principal = {
     id: Generated<string>;
     tenant_id: string;
@@ -6232,6 +6325,37 @@ export type principal_ui_profile = {
     default_book_id: string | null;
     default_dashboard_id: string | null;
     metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type print_profile = {
+    id: Generated<string>;
+    tenant_id: string;
+    code: string;
+    name: string;
+    paper_size: Generated<string>;
+    orientation: Generated<string>;
+    color_mode: Generated<string>;
+    quality_dpi: Generated<number>;
+    output_format: Generated<string>;
+    duplex: Generated<string>;
+    margins: Generated<string>;
+    compression: Generated<string>;
+    header_footer: Generated<boolean>;
+    background_graphics: Generated<boolean>;
+    watermark_enabled: Generated<boolean>;
+    watermark_text: string | null;
+    encrypt_pdf: Generated<boolean>;
+    archive_after_render: Generated<boolean>;
+    email_after_render: Generated<boolean>;
+    is_default: Generated<boolean>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -6613,6 +6737,26 @@ export type purchase_requisition_line = {
     notes: string | null;
     metadata: Generated<unknown>;
     status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type push_subscription = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    platform: string;
+    device_id: string;
+    endpoint: string;
+    p256dh_key: string | null;
+    auth_key: string | null;
+    device_token: string | null;
+    user_agent: string | null;
+    metadata: Generated<unknown>;
+    is_active: Generated<boolean>;
+    last_used_at: Timestamp | null;
+    expires_at: Timestamp | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -7594,6 +7738,23 @@ export type warehouse = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type whatsapp_consent = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    phone_e164: string;
+    consent_status: Generated<string>;
+    consented_at: Timestamp | null;
+    revoked_at: Timestamp | null;
+    consent_source: string | null;
+    waba_id: string | null;
+    namespace: string | null;
+    metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type work_item = {
     id: Generated<string>;
     tenant_id: string;
@@ -7825,6 +7986,7 @@ export type DB = {
     "control.classification_config": classification_config;
     "control.classification_to_intent_rule": classification_to_intent_rule;
     "control.commodity_to_spend_category_rule": commodity_to_spend_category_rule;
+    "control.content_quota": content_quota;
     "control.dimension_policy": dimension_policy;
     "control.dimension_policy_allowed_value": dimension_policy_allowed_value;
     "control.document_sequence_config": document_sequence_config;
@@ -7869,6 +8031,8 @@ export type DB = {
     "control.planning_driver_version": planning_driver_version;
     "control.policy_definition": policy_definition;
     "control.policy_rule": policy_rule;
+    "control.policy_rule_version": policy_rule_version;
+    "control.policy_test_case": policy_test_case;
     "control.rounding_rule": rounding_rule;
     "control.tax_group": tax_group;
     "control.tax_group_component": tax_group_component;
@@ -7938,6 +8102,8 @@ export type DB = {
     "event.notification_delivery": notification_delivery;
     "event.notification_message": notification_message;
     "event.outbox": outbox;
+    "event.push_subscription": push_subscription;
+    "event.whatsapp_consent": whatsapp_consent;
     "event.work_item": work_item;
     "governance.book_period_status": book_period_status;
     "governance.comment_moderation": comment_moderation;
@@ -7952,6 +8118,8 @@ export type DB = {
     "governance.cycle_task_dependency": cycle_task_dependency;
     "governance.cycle_task_template": cycle_task_template;
     "governance.cycle_type": cycle_type;
+    "governance.legal_hold": legal_hold;
+    "governance.legal_hold_manifest": legal_hold_manifest;
     "ledger.asset_revaluation_reserve": asset_revaluation_reserve;
     "ledger.budget_balance": budget_balance;
     "ledger.budget_transaction": budget_transaction;
@@ -8023,6 +8191,7 @@ export type DB = {
     "master.chart_of_account": chart_of_account;
     "master.comment": comment;
     "master.comment_draft": comment_draft;
+    "master.comment_feed_cursor": comment_feed_cursor;
     "master.comment_mention": comment_mention;
     "master.comment_reaction": comment_reaction;
     "master.commodity_classification": commodity_classification;
@@ -8089,6 +8258,7 @@ export type DB = {
     "master.principal_profile": principal_profile;
     "master.principal_ui_preference": principal_ui_preference;
     "master.principal_ui_profile": principal_ui_profile;
+    "master.print_profile": print_profile;
     "master.product": product;
     "master.profit_center": profit_center;
     "master.project": project;

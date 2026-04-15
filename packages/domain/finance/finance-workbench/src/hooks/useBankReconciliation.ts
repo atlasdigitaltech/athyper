@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FinanceScope } from "../lib/scope";
 import { scopeCacheKey, scopeToParams } from "../lib/scope";
 
@@ -112,5 +112,31 @@ export function useBankUnreconciled(scope: FinanceScope, bankAccountId: string |
     },
     enabled: !!scope.scopeId && !!bankAccountId,
     staleTime: 30 * 1000,
+  });
+}
+
+// ── Bank Reconcile (mutation) ─────────────────────────────────────────────────
+
+export interface ReconcileResult {
+  cleared: number;
+  cleared_date: string;
+}
+
+export function useBankReconcile(bankAccountId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation<ReconcileResult, Error, { payment_ids: string[]; cleared_date?: string }>({
+    mutationFn: async (payload) => {
+      const res = await fetch("/api/finance/bank/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bank_account_id: bankAccountId, ...payload }),
+      });
+      if (!res.ok) throw new Error("Failed to mark payments as cleared");
+      return res.json() as Promise<ReconcileResult>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "bank", "unreconciled", bankAccountId] });
+      void queryClient.invalidateQueries({ queryKey: ["finance", "bank", "statement", bankAccountId] });
+    },
   });
 }

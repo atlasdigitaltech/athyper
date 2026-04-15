@@ -1,8 +1,13 @@
 /**
- * IAM JIT Provisioning Service — v4.1
+ * IAM JIT Provisioning Service — v4.2 (Phase 2 — binding primary)
  *
  * Creates a principal + profile + auth binding on first login for any
  * Keycloak user who has no pre-existing DB identity in a given tenant.
+ *
+ * Phase 2 change: principal_profile.keycloak_* columns are NO LONGER written
+ * by this service. All IdP identity data is stored exclusively in
+ * principal_identity_binding. The keycloak_* columns on principal_profile
+ * are frozen for writes (controlled by app.iam_profile_kc_frozen setting).
  *
  * Design goals
  * ────────────
@@ -118,7 +123,9 @@ export async function jitProvisionPrincipal(
         // Binding is already correct — nothing to do.
         return { principal_id: principalId, created: false };
       }
-      // Wrong subject_id (seed mismatch) — update to the real KC UUID.
+      // Wrong subject_id (seed mismatch) — update binding to the real KC UUID.
+      // principal_profile.keycloak_* is intentionally NOT updated here (Phase 2:
+      // binding table is the sole authority for IdP identity data).
       await db
         .updateTable("master.principal_identity_binding")
         .set({
@@ -132,21 +139,6 @@ export async function jitProvisionPrincipal(
         .where("tenant_id", "=", tenant_id)
         .where("principal_id", "=", principalId)
         .where("provider_code", "=", "keycloak")
-        .execute();
-
-      // Sync the keycloak_id on the profile too.
-      await db
-        .updateTable("master.principal_profile")
-        .set({
-          keycloak_id: sub,
-          keycloak_username: username || null,
-          keycloak_sync_status: "synced",
-          keycloak_synced_at: new Date(),
-          updated_at: new Date(),
-          updated_by: SYSTEM_UUID,
-        })
-        .where("tenant_id", "=", tenant_id)
-        .where("principal_id", "=", principalId)
         .execute();
 
       return { principal_id: principalId, created: false };
@@ -216,6 +208,8 @@ export async function jitProvisionPrincipal(
     const givenName = nameParts[0] ?? username;
     const familyName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
+    // Phase 2: keycloak_* columns are NOT written here — principal_identity_binding
+    // is the sole authority for IdP identity data (inserted in Step 3c below).
     await db
       .insertInto("master.principal_profile")
       .values({
@@ -224,10 +218,6 @@ export async function jitProvisionPrincipal(
         given_name: givenName,
         family_name: familyName || null,
         display_name: display_name || username,
-        keycloak_id: sub,
-        keycloak_username: username || null,
-        keycloak_sync_status: "synced",
-        keycloak_synced_at: new Date(),
         created_by: SYSTEM_UUID,
       })
       .onConflict((oc) => oc.columns(["tenant_id", "principal_id"]).doNothing())

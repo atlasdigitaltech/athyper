@@ -35,8 +35,14 @@ export interface SemanticColorSet {
   border: string;
   /** Dot/indicator class */
   dot: string;
-  /** Badge shorthand: bg + text combined */
+  /** Badge shorthand: bg + text combined (full saturation) */
   badge: string;
+  /**
+   * Subtle badge: low-opacity background + semantic text + faint border.
+   * Uses Tailwind opacity modifiers (e.g. bg-success/10) so it automatically
+   * adapts to all theme presets and dark mode without extra CSS variables.
+   */
+  subtleBadge: string;
 }
 
 /**
@@ -50,6 +56,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-border",
     dot: "bg-muted-foreground",
     badge: "bg-muted text-muted-foreground",
+    subtleBadge: "bg-muted text-muted-foreground border-border",
   },
   info: {
     bg: "bg-info",
@@ -57,6 +64,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-info",
     dot: "bg-info",
     badge: "bg-info text-info-foreground",
+    subtleBadge: "bg-info/10 text-info border-info/30",
   },
   success: {
     bg: "bg-success",
@@ -64,6 +72,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-success",
     dot: "bg-success",
     badge: "bg-success text-success-foreground",
+    subtleBadge: "bg-success/10 text-success border-success/30",
   },
   warning: {
     bg: "bg-warning",
@@ -71,6 +80,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-warning",
     dot: "bg-warning",
     badge: "bg-warning text-warning-foreground",
+    subtleBadge: "bg-warning/10 text-warning border-warning/30",
   },
   error: {
     bg: "bg-destructive",
@@ -78,6 +88,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-destructive",
     dot: "bg-destructive",
     badge: "bg-destructive text-destructive-foreground",
+    subtleBadge: "bg-destructive/10 text-destructive border-destructive/30",
   },
   primary: {
     bg: "bg-primary",
@@ -85,6 +96,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-primary",
     dot: "bg-primary",
     badge: "bg-primary text-primary-foreground",
+    subtleBadge: "bg-primary/10 text-primary border-primary/30",
   },
   accent: {
     bg: "bg-accent",
@@ -92,6 +104,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-accent",
     dot: "bg-accent",
     badge: "bg-accent text-accent-foreground",
+    subtleBadge: "bg-accent/10 text-accent-foreground border-accent/30",
   },
   muted: {
     bg: "bg-muted",
@@ -99,6 +112,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-border",
     dot: "bg-border",
     badge: "bg-muted text-muted-foreground",
+    subtleBadge: "bg-muted/60 text-muted-foreground border-border",
   },
 };
 

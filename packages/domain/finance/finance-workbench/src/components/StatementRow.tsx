@@ -74,7 +74,7 @@ export function StatementRow({
               className={cn(
                 "font-mono text-[11px] w-20 text-right",
                 variance !== null && variance > 0
-                  ? "text-emerald-700"
+                  ? "text-success"
                   : variance !== null && variance < 0
                     ? "text-destructive"
                     : "text-muted-foreground",

@@ -44,7 +44,7 @@ export function StatementLayout({
           companyCode={companyCode}
         />
         {isLive && (
-          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-blue-50 text-blue-600 border-blue-200">
+          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-info/10 text-info border-info/30">
             Live
           </span>
         )}
@@ -124,7 +124,7 @@ export function StatementTotal({
               className={cn(
                 "font-mono text-xs w-20 text-right",
                 variance !== null && variance > 0
-                  ? "text-emerald-700"
+                  ? "text-success"
                   : variance !== null && variance < 0
                     ? "text-destructive"
                     : "text-muted-foreground",

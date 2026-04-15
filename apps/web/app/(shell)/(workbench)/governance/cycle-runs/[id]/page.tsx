@@ -15,8 +15,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
+  Button, Badge, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Label, Textarea, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
@@ -74,8 +75,8 @@ function PhaseRail({ phases, currentPhaseCode }: { phases: RunPhase[]; currentPh
         return (
           <div key={p.id} className={`flex items-center gap-3 rounded-lg border p-3 ${isActive ? "border-primary/50 bg-primary/5" : ""}`}>
             <div className="shrink-0">
-              {isDone ? <CheckCircle2 className="h-4 w-4 text-green-500" /> :
-               isActive ? <AlertCircle className="h-4 w-4 text-amber-500" /> :
+              {isDone ? <CheckCircle2 className="h-4 w-4 text-success" /> :
+               isActive ? <AlertCircle className="h-4 w-4 text-warning" /> :
                <Circle className="h-4 w-4 text-muted-foreground/40" />}
             </div>
             <div className="flex-1 min-w-0">
@@ -150,36 +151,31 @@ function TasksTab({ runId, phases }: { runId: string; phases: RunPhase[] }) {
             </div>
             <div className="space-y-1.5">
               {phaseTasks.map((t) => (
-                <Card key={t.id}>
-                  <CardContent className="p-3 flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={TASK_STATUS_VARIANT[t.status]} className="text-[10px]">{t.status}</Badge>
-                        <span className="text-sm">{t.taskName}</span>
-                        {t.isMandatory && <span className="text-[10px] text-amber-600 font-medium">mandatory</span>}
-                      </div>
-                      {t.completedAt && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Completed {new Date(t.completedAt).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      {(t.status === "PENDING" || t.status === "IN_PROGRESS" || t.status === "BLOCKED") && (
-                        <Button size="sm" variant="outline" className="h-7 text-xs"
-                          onClick={() => { setActiveTask(t); setTaskAction("complete"); }}>
-                          Complete
-                        </Button>
-                      )}
-                      {t.status === "COMPLETE" && (
-                        <Button size="sm" variant="ghost" className="h-7 text-xs"
-                          onClick={() => { setActiveTask(t); setTaskAction("reopen"); }}>
-                          Reopen
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <RowCard
+                  key={t.id}
+                  badge={<>
+                    <Badge variant={TASK_STATUS_VARIANT[t.status]} className="text-[10px]">{t.status}</Badge>
+                    {t.isMandatory && <span className="text-[10px] text-warning font-medium">mandatory</span>}
+                  </>}
+                  title={t.taskName}
+                  metadata={t.completedAt ? (
+                    <span>Completed {new Date(t.completedAt).toLocaleString()}</span>
+                  ) : undefined}
+                  actions={<>
+                    {(t.status === "PENDING" || t.status === "IN_PROGRESS" || t.status === "BLOCKED") && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs"
+                        onClick={() => { setActiveTask(t); setTaskAction("complete"); }}>
+                        Complete
+                      </Button>
+                    )}
+                    {t.status === "COMPLETE" && (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs"
+                        onClick={() => { setActiveTask(t); setTaskAction("reopen"); }}>
+                        Reopen
+                      </Button>
+                    )}
+                  </>}
+                />
               ))}
             </div>
           </div>
@@ -251,7 +247,7 @@ function DeviationsTab({ runId }: { runId: string }) {
     },
   });
 
-  if (isLoading) return <Skeleton className="h-32 w-full" />;
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
 
   return (
     <div className="space-y-3">
@@ -263,16 +259,15 @@ function DeviationsTab({ runId }: { runId: string }) {
       ) : (
         <div className="space-y-2">
           {devs.map((d) => (
-            <Card key={d.id}>
-              <CardContent className="p-3 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={DEV_VARIANT[d.status]} className="text-[10px]">{d.status}</Badge>
-                  {d.severity && <Badge variant="outline" className="text-[10px]">{d.severity}</Badge>}
-                  <span className="text-sm font-medium">{d.title}</span>
-                </div>
-                <p className="text-[10px] text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</p>
-              </CardContent>
-            </Card>
+            <RowCard
+              key={d.id}
+              badge={<>
+                <Badge variant={DEV_VARIANT[d.status]} className="text-[10px]">{d.status}</Badge>
+                {d.severity && <Badge variant="outline" className="text-[10px]">{d.severity}</Badge>}
+              </>}
+              title={d.title}
+              metadata={<span className="text-[10px]">{new Date(d.createdAt).toLocaleString()}</span>}
+            />
           ))}
         </div>
       )}
@@ -342,7 +337,7 @@ function CertificationsTab({ runId }: { runId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["governance-run-certs", runId] }),
   });
 
-  if (isLoading) return <Skeleton className="h-32 w-full" />;
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
 
   return (
     <div className="space-y-2">
@@ -350,34 +345,31 @@ function CertificationsTab({ runId }: { runId: string }) {
         <p className="py-8 text-center text-sm text-muted-foreground">No certifications. Advance run to PENDING_CERT to trigger sign-off.</p>
       ) : (
         certs.map((c) => (
-          <Card key={c.id}>
-            <CardContent className="p-3 flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Badge variant={CERT_VARIANT[c.status]} className="text-[10px]">{c.status}</Badge>
-                  <span className="text-sm font-mono">{c.certCode}</span>
-                </div>
-                {c.certifiedAt && (
-                  <p className="text-[10px] text-muted-foreground">
-                    {c.status === "CERTIFIED" ? "Certified" : "Rejected"} {new Date(c.certifiedAt).toLocaleString()}
-                  </p>
-                )}
-                {c.notes && <p className="text-xs text-muted-foreground">{c.notes}</p>}
-              </div>
-              {c.status === "PENDING" && (
-                <div className="flex gap-1 shrink-0">
-                  <Button size="sm" variant="outline" className="h-7 text-xs"
-                    onClick={() => certify.mutate({ certId: c.id, action: "certify" })}>
-                    <ShieldCheck className="mr-1 h-3 w-3" />Certify
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive"
-                    onClick={() => certify.mutate({ certId: c.id, action: "reject" })}>
-                    Reject
-                  </Button>
-                </div>
+          <RowCard
+            key={c.id}
+            badge={<Badge variant={CERT_VARIANT[c.status]} className="text-[10px]">{c.status}</Badge>}
+            title={<span className="font-mono">{c.certCode}</span>}
+            metadata={<>
+              {c.certifiedAt && (
+                <span className="text-[10px]">
+                  {c.status === "CERTIFIED" ? "Certified" : "Rejected"} {new Date(c.certifiedAt).toLocaleString()}
+                </span>
               )}
-            </CardContent>
-          </Card>
+              {c.notes && <p>{c.notes}</p>}
+            </>}
+            actions={c.status === "PENDING" ? (
+              <>
+                <Button size="sm" variant="outline" className="h-7 text-xs"
+                  onClick={() => certify.mutate({ certId: c.id, action: "certify" })}>
+                  <ShieldCheck className="mr-1 h-3 w-3" />Certify
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive"
+                  onClick={() => certify.mutate({ certId: c.id, action: "reject" })}>
+                  Reject
+                </Button>
+              </>
+            ) : undefined}
+          />
         ))
       )}
     </div>
@@ -483,18 +475,18 @@ export default function CycleRunDetailPage() {
           <TabsTrigger value="deviations">Deviations</TabsTrigger>
           <TabsTrigger value="certifications">Certifications</TabsTrigger>
         </TabsList>
-        <TabsContent value="phases">
+        <TabsContent value="phases" className="mt-4">
           {phases.length === 0
             ? <Skeleton className="h-40 w-full" />
             : <PhaseRail phases={phases} currentPhaseCode={run?.currentPhaseCode} />}
         </TabsContent>
-        <TabsContent value="tasks">
+        <TabsContent value="tasks" className="mt-4">
           <TasksTab runId={runId} phases={phases} />
         </TabsContent>
-        <TabsContent value="deviations">
+        <TabsContent value="deviations" className="mt-4">
           <DeviationsTab runId={runId} />
         </TabsContent>
-        <TabsContent value="certifications">
+        <TabsContent value="certifications" className="mt-4">
           <CertificationsTab runId={runId} />
         </TabsContent>
       </Tabs>

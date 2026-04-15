@@ -92,9 +92,9 @@ export function CompanyControlsView() {
             <SelectItem value="proj">Requires Project</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-[10px] text-blue-600">{stats.customer} customer</span>
-        <span className="text-[10px] text-purple-600">{stats.supplier} supplier</span>
-        <span className="text-[10px] text-amber-600">{stats.employee} employee</span>
+        <span className="text-[10px] text-primary">{stats.customer} customer</span>
+        <span className="text-[10px] text-accent-foreground">{stats.supplier} supplier</span>
+        <span className="text-[10px] text-warning">{stats.employee} employee</span>
         <span className="flex-1" />
         <span className="text-[10px] text-muted-foreground">{rows.length} of {allRows.length} shown</span>
       </div>

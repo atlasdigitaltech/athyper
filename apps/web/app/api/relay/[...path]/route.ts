@@ -82,14 +82,18 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
       return new NextResponse(null, { status: 204 });
     }
 
-    const contentType = upstream.headers.get("Content-Type") ?? "application/json";
+    const contentType        = upstream.headers.get("Content-Type") ?? "application/json";
+    const contentDisposition = upstream.headers.get("Content-Disposition");
 
     // Use arrayBuffer for all response bodies — preserves binary content (file downloads)
     const body = await upstream.arrayBuffer();
 
+    const resHeaders: Record<string, string> = { "Content-Type": contentType };
+    if (contentDisposition) resHeaders["Content-Disposition"] = contentDisposition;
+
     return new NextResponse(body, {
       status: upstream.status,
-      headers: { "Content-Type": contentType },
+      headers: resHeaders,
     });
   } catch (err) {
     console.error("[relay] upstream error", err);

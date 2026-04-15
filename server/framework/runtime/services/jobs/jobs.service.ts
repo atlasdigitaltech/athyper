@@ -18,7 +18,7 @@
 import { Queue, Worker } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
 import { sql, type Kysely } from "kysely";
-import { cronRegistry } from "../../../../src/foundation/jobs/cron-registry.js";
+import { cronRegistry } from "./cron-registry.js";
 import {
   QUEUE_NAME,
   JOB_NAME,
@@ -33,6 +33,7 @@ import {
   type SlaCheckJobData,
   type DigestFlushJobData,
   type ProviderHealthJobData,
+  type KcSyncJobData,
   type JobLogger,
 } from "./jobs.types.js";
 import { createLifecycleTimerWorker } from "./workers/lifecycle-timer.worker.js";
@@ -40,6 +41,11 @@ import { createNotificationWorker, type NotificationChannelHandler } from "./wor
 import { createDomainOutboxWorker, type OutboxTopicHandler } from "./workers/domain-outbox.worker.js";
 import { createSlaCheckWorker } from "./workers/sla-check.worker.js";
 import { createImportWorker, type ImportObjectStorage } from "./workers/import.worker.js";
+import { createCmsPreviewWorker } from "./workers/cms-preview.worker.js";
+import { createRenderDocumentWorker, type RenderObjectStorage } from "./workers/render-document.worker.js";
+import { createKcSyncWorker, type KcAdminConfig } from "./workers/kc-sync.worker.js";
+import { createEndpointHealthWorker } from "./workers/endpoint-health.worker.js";
+import type { PreviewContentJobData, RenderDocumentJobData } from "./jobs.types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
@@ -63,6 +69,12 @@ export interface JobsServiceOptions {
   notificationDigestWeeklyMs?: number;
   /** Milliseconds between provider health checks (default: 900 000) */
   notificationProviderHealthMs?: number;
+  /** Milliseconds between render document sweeps (default: 30 000) */
+  renderDocumentSweepMs?: number;
+  /** Milliseconds between KC user reconciliation runs (default: 900 000) */
+  kcSyncMs?: number;
+  /** Milliseconds between endpoint health sweeps (default: 300 000) */
+  endpointHealthSweepMs?: number;
 }
 
 export interface JobsServiceDeps {
@@ -84,6 +96,10 @@ export interface JobsServiceDeps {
   topicHandlers?: Map<string, OutboxTopicHandler>;
   /** Object storage adapter for import file downloads. Optional — import worker inactive if absent. */
   objectStorage?: ImportObjectStorage;
+  /** Object storage adapter for rendered document uploads (put + presignedUrl). Optional — render worker falls back to HTML-only if absent. */
+  renderStorage?: RenderObjectStorage;
+  /** Keycloak Admin API config for user reconciliation. Optional — KC sync worker inactive if absent. */
+  kcAdmin?: KcAdminConfig;
 }
 
 // ─── Redis URL parser ─────────────────────────────────────────────────────────
@@ -104,11 +120,15 @@ function parseRedisUrl(url: string): ConnectionOptions {
 // CronEntry.queue) to the JobsQueues property key.
 
 const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
-  [QUEUE_NAME.LIFECYCLE_TIMERS]: "lifecycleTimers",
-  [QUEUE_NAME.NOTIFICATIONS]:    "notifications",
-  [QUEUE_NAME.DOMAIN_OUTBOX]:    "domainOutbox",
-  [QUEUE_NAME.SLA_CHECK]:        "slaCheck",
-  [QUEUE_NAME.IMPORT]:           "import",
+  [QUEUE_NAME.LIFECYCLE_TIMERS]:  "lifecycleTimers",
+  [QUEUE_NAME.NOTIFICATIONS]:     "notifications",
+  [QUEUE_NAME.DOMAIN_OUTBOX]:     "domainOutbox",
+  [QUEUE_NAME.SLA_CHECK]:         "slaCheck",
+  [QUEUE_NAME.IMPORT]:            "import",
+  [QUEUE_NAME.CMS_PREVIEW]:       "cmsPreview",
+  [QUEUE_NAME.RENDER_DOCUMENT]:   "renderDocument",
+  [QUEUE_NAME.IAM_KC_SYNC]:       "iamKcSync",
+  [QUEUE_NAME.ENDPOINT_HEALTH]:   "endpointHealth",
 };
 
 // ─── Exported queue map type ──────────────────────────────────────────────────
@@ -119,6 +139,10 @@ export interface JobsQueues {
   domainOutbox:    Queue<DrainOutboxJobData>;
   slaCheck:        Queue<SlaCheckJobData>;
   import:          Queue;
+  cmsPreview:      Queue<PreviewContentJobData>;
+  renderDocument:  Queue<RenderDocumentJobData | SweepJobData>;
+  iamKcSync:       Queue<KcSyncJobData>;
+  endpointHealth:  Queue<SweepJobData>;
 }
 
 // ─── Service factory ──────────────────────────────────────────────────────────
@@ -138,6 +162,8 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     channelHandlers,
     topicHandlers,
     objectStorage,
+    renderStorage,
+    kcAdmin,
     options = {},
   } = deps;
 
@@ -150,6 +176,9 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     notificationDigestDailyMs    = DEFAULT_INTERVALS.NOTIFICATION_DIGEST_DAILY_MS,
     notificationDigestWeeklyMs   = DEFAULT_INTERVALS.NOTIFICATION_DIGEST_WEEKLY_MS,
     notificationProviderHealthMs = DEFAULT_INTERVALS.NOTIFICATION_PROVIDER_HEALTH_MS,
+    renderDocumentSweepMs        = DEFAULT_INTERVALS.RENDER_DOCUMENT_SWEEP_MS,
+    kcSyncMs                     = DEFAULT_INTERVALS.IAM_KC_SYNC_MS,
+    endpointHealthSweepMs        = DEFAULT_INTERVALS.ENDPOINT_HEALTH_SWEEP_MS,
   } = options;
 
   // BullMQ recommends separate IORedis connections per Queue/Worker.
@@ -160,11 +189,15 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
   // ── Queues (producers) ───────────────────────────────────────────────────
 
   const queues: JobsQueues = {
-    lifecycleTimers: new Queue(QUEUE_NAME.LIFECYCLE_TIMERS, { connection: conn }),
-    notifications:   new Queue(QUEUE_NAME.NOTIFICATIONS,    { connection: conn }),
-    domainOutbox:    new Queue(QUEUE_NAME.DOMAIN_OUTBOX,    { connection: conn }),
-    slaCheck:        new Queue(QUEUE_NAME.SLA_CHECK,        { connection: conn }),
-    import:          new Queue(QUEUE_NAME.IMPORT,           { connection: conn }),
+    lifecycleTimers: new Queue(QUEUE_NAME.LIFECYCLE_TIMERS,  { connection: conn }),
+    notifications:   new Queue(QUEUE_NAME.NOTIFICATIONS,     { connection: conn }),
+    domainOutbox:    new Queue(QUEUE_NAME.DOMAIN_OUTBOX,     { connection: conn }),
+    slaCheck:        new Queue(QUEUE_NAME.SLA_CHECK,         { connection: conn }),
+    import:          new Queue(QUEUE_NAME.IMPORT,            { connection: conn }),
+    cmsPreview:      new Queue(QUEUE_NAME.CMS_PREVIEW,       { connection: conn }),
+    renderDocument:  new Queue(QUEUE_NAME.RENDER_DOCUMENT,   { connection: conn }),
+    iamKcSync:       new Queue(QUEUE_NAME.IAM_KC_SYNC,       { connection: conn }),
+    endpointHealth:  new Queue(QUEUE_NAME.ENDPOINT_HEALTH,   { connection: conn }),
   };
 
   // ── Workers (consumers) ──────────────────────────────────────────────────
@@ -196,6 +229,16 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       logger,
     }),
     ...(objectStorage ? [createImportWorker({ db, objectStorage, connection: conn, logger })] : []),
+    createCmsPreviewWorker({ db, connection: conn, logger }),
+    createRenderDocumentWorker({
+      db,
+      queue:         queues.renderDocument,
+      connection:    conn,
+      objectStorage: renderStorage,
+      logger,
+    }),
+    ...(kcAdmin ? [createKcSyncWorker({ db, kcAdmin, connection: conn, logger })] : []),
+    createEndpointHealthWorker({ db, connection: conn, logger }),
   ];
 
   // ── Error handlers on workers ────────────────────────────────────────────
@@ -286,6 +329,29 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         { name: JOB_NAME.PROVIDER_HEALTH, data: {} satisfies ProviderHealthJobData },
       );
 
+      // ── Render document sweep ─────────────────────────────────────────────
+      await queues.renderDocument.upsertJobScheduler(
+        SCHEDULER_ID.RENDER_DOCUMENT_SWEEP,
+        { every: renderDocumentSweepMs },
+        { name: JOB_NAME.SWEEP, data: {} as Record<string, never> },
+      );
+
+      // ── KC user sync (only when kcAdmin is configured) ────────────────────
+      if (kcAdmin) {
+        await queues.iamKcSync.upsertJobScheduler(
+          SCHEDULER_ID.IAM_KC_SYNC,
+          { every: kcSyncMs },
+          { name: JOB_NAME.KC_SYNC, data: {} as KcSyncJobData },
+        );
+      }
+
+      // ── Endpoint health sweep ─────────────────────────────────────────────
+      await queues.endpointHealth.upsertJobScheduler(
+        SCHEDULER_ID.ENDPOINT_HEALTH_SWEEP,
+        { every: endpointHealthSweepMs },
+        { name: JOB_NAME.ENDPOINT_HEALTH_SWEEP, data: {} as Record<string, never> },
+      );
+
       // ── Code-based CronRegistry entries ──────────────────────────────────
       // Modules call cronRegistry.register() before start(); we apply them here.
       // upsertJobScheduler is idempotent — safe to call from every instance.
@@ -301,7 +367,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         await queues[queueKey].upsertJobScheduler(
           entry.schedulerId,
           schedule,
-          { name: entry.jobName, data: entry.data ?? {} },
+          { name: entry.jobName, data: entry.data ?? {} } as never,
         );
         logger?.info("jobs_cron_registry_wired", { schedulerId: entry.schedulerId, queue: entry.queue });
       }
@@ -340,7 +406,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
           await queues[queueKey].upsertJobScheduler(
             dbSchedulerId,
             { pattern: cs.cron_expression, tz: cs.timezone },
-            { name: cs.handler_type, data: cs.payload_template ?? {} },
+            { name: cs.handler_type, data: cs.payload_template ?? {} } as never,
           );
           logger?.info("jobs_db_schedule_wired", { schedulerId: dbSchedulerId, queue: cs.target_queue, code: cs.code });
         }
@@ -359,6 +425,11 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         notificationDigestDailyMs,
         notificationDigestWeeklyMs,
         notificationProviderHealthMs,
+        renderDocumentSweepMs,
+        renderStorageEnabled:        renderStorage != null,
+        kcSyncMs,
+        kcSyncEnabled:               kcAdmin != null,
+        endpointHealthSweepMs,
       });
     },
 

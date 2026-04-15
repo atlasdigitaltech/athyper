@@ -18,6 +18,7 @@
 import { sql } from "kysely";
 import type { Kysely, Transaction } from "kysely";
 import { evaluateJsonLogic } from "./jsonlogic.js";
+import type { ApproverResolverService } from "./approver-resolver.service.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,13 @@ export interface WorkflowEngineDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     info?(event: string, fields?: Record<string, unknown>): void;
   };
+  /**
+   * Optional approver resolver. When present the engine delegates assign_to
+   * resolution to it, enabling role_based, group_based, and hierarchy_based
+   * strategies. Without it the engine falls back to treating assign_to.value
+   * as a direct principal or group UUID.
+   */
+  approverResolver?: ApproverResolverService;
 }
 
 interface CompiledStage {
@@ -737,7 +745,20 @@ export class WorkflowEngine {
   ): Promise<void> {
     const { tenantId, requestId, stageId, stageMode, rules, payload, slaPolicyId, createdBy } = params;
 
-    const assignees = this.resolveAssignees(rules, payload);
+    // Use ApproverResolverService when available (supports role/group/hierarchy strategies)
+    // Fall back to synchronous inline resolution for backward compatibility.
+    let assignees: Array<{ type: string; id: string }>;
+    if (this.deps.approverResolver) {
+      assignees = await this.deps.approverResolver.resolveFromRules(rules, {
+        trx,
+        tenantId,
+        requestedBy: createdBy,
+        payload,
+      });
+    } else {
+      assignees = this.resolveAssignees(rules, payload);
+    }
+
     if (assignees.length === 0) {
       this.deps.logger?.error("workflow_no_assignees", {
         stageId,
@@ -759,17 +780,17 @@ export class WorkflowEngine {
           workflow_request_id: requestId,
           workflow_stage_id: stageId,
           designated_id:
-            assignee.type === "principal" || assignee.type === "requester_manager"
+            assignee.type === "principal"
               ? assignee.id || null
               : null,
           designated_group_id:
             assignee.type === "group" ? assignee.id || null : null,
           assignee_id:
-            assignee.type === "principal" || assignee.type === "requester_manager"
+            assignee.type === "principal"
               ? assignee.id || null
               : null,
           assignee_group_id:
-            assignee.type === "group" || assignee.type === "ou"
+            assignee.type === "group"
               ? assignee.id || null
               : null,
           assignee_team_id:

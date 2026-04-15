@@ -20,7 +20,27 @@ export async function GET(req: Request) {
     const body = await res.json().catch(() => ({ error: "Upstream error" }));
     return NextResponse.json(body, { status: res.status });
   } catch (e) {
-    console.error("[api/finance/journals]", e instanceof Error ? e.message : e);
+    console.error("[api/finance/journals GET]", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  }
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const payload = await req.json();
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals`, {
+      method: "POST",
+      headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+    const body = await res.json().catch(() => ({ error: "Upstream error" }));
+    return NextResponse.json(body, { status: res.status });
+  } catch (e) {
+    console.error("[api/finance/journals POST]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
   }
 }

@@ -16,11 +16,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Textarea,
 } from "@athyper/ui/primitives";
+import { IntegrationSubNav } from "../_components/integration-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,8 +57,8 @@ interface ConnectionDetail extends Connection {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const HEALTH_ICON: Record<HealthStatus, React.ReactNode> = {
-  healthy:  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />,
-  degraded: <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />,
+  healthy:  <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
+  degraded: <AlertTriangle className="h-3.5 w-3.5 text-warning" />,
   down:     <XCircle className="h-3.5 w-3.5 text-destructive" />,
   unknown:  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />,
 };
@@ -85,31 +89,6 @@ function fmtRelative(iso: string | null): string {
 
 function isCredentialField(key: string): boolean {
   return /secret|password|key|token|credential/i.test(key);
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function IntegrationSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/integrations",              label: "Endpoints" },
-    { href: "/setup/integrations/providers",    label: "Providers" },
-    { href: "/setup/integrations/outbox",       label: "Outbox" },
-    { href: "/setup/integrations/deliveries",   label: "Deliveries" },
-    { href: "/setup/integrations/webhooks",     label: "Webhooks" },
-    { href: "/setup/integrations/connectors",   label: "Connectors" },
-    { href: "/setup/integrations/connections",  label: "Connections" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 // ── Delete confirm dialog ─────────────────────────────────────────────────────
@@ -270,91 +249,78 @@ function ConnectionRow({ conn }: { conn: Connection }) {
 
   return (
     <>
-      <Card className={!conn.isActive ? "opacity-60" : ""}>
-        <CardContent className="p-3">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            {/* Info */}
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                {conn.connectorTypeIcon && (
-                  <span className="text-base">{conn.connectorTypeIcon}</span>
-                )}
-                <span className="font-medium text-sm">{conn.name}</span>
-                <Badge variant={STATUS_BADGE[conn.status]} className="text-[10px]">
-                  {conn.status}
-                </Badge>
-                <Badge variant={HEALTH_BADGE[displayHealth]} className="text-[10px] gap-1">
-                  {HEALTH_ICON[displayHealth]}
-                  {displayHealth}
-                </Badge>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="font-mono">{conn.code}</span>
-                {conn.connectorTypeName && (
-                  <span>{conn.connectorTypeName}</span>
-                )}
-                {conn.connectorTypeCategory && (
-                  <Badge variant="outline" className="text-[10px]">
-                    {conn.connectorTypeCategory.replace(/_/g, " ")}
-                  </Badge>
-                )}
-                <span>tested {fmtRelative(conn.lastHealthCheckAt)}</span>
-              </div>
-
-              {conn.lastErrorMessage && displayHealth !== "healthy" && (
-                <p className="text-[11px] text-destructive font-mono truncate max-w-xs">
-                  {conn.lastErrorMessage}
-                </p>
-              )}
-
-              {testResult && (
-                <p className="text-[11px] text-muted-foreground">
-                  {testResult.probed
-                    ? `Probe result: ${testResult.healthStatus}`
-                    : "No base URL configured — marked as unknown"}
-                </p>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                size="sm" variant="ghost" className="h-7 text-xs"
-                disabled={testing}
-                onClick={() => { setTestResult(null); test.mutate(); }}
-                title="Test connection health"
-              >
-                <FlaskConical className="h-3.5 w-3.5 mr-1" />
-                {testing ? "Testing…" : "Test"}
-              </Button>
-              <Button
-                size="sm" variant="ghost" className="h-7 w-7 p-0"
-                onClick={() => setEditOpen(true)}
-                title="Edit config"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              {conn.isActive && (
-                <Button
-                  size="sm" variant="ghost" className="h-7 w-7 p-0"
-                  onClick={() => deactivate.mutate()}
-                  title="Deactivate"
-                >
-                  <Power className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              )}
-              <Button
-                size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                onClick={() => setDeleteOpen(true)}
-                title="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+      <RowCard
+        className={!conn.isActive ? "opacity-60" : ""}
+        leading={conn.connectorTypeIcon ? <span className="text-base">{conn.connectorTypeIcon}</span> : undefined}
+        badge={<>
+          <Badge variant={STATUS_BADGE[conn.status]} className="text-[10px]">
+            {conn.status}
+          </Badge>
+          <Badge variant={HEALTH_BADGE[displayHealth]} className="text-[10px] gap-1">
+            {HEALTH_ICON[displayHealth]}
+            {displayHealth}
+          </Badge>
+        </>}
+        title={conn.name}
+        metadata={<>
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+            <span className="font-mono">{conn.code}</span>
+            {conn.connectorTypeName && <span>{conn.connectorTypeName}</span>}
+            {conn.connectorTypeCategory && (
+              <Badge variant="outline" className="text-[10px]">
+                {conn.connectorTypeCategory.replace(/_/g, " ")}
+              </Badge>
+            )}
+            <span>tested {fmtRelative(conn.lastHealthCheckAt)}</span>
           </div>
-        </CardContent>
-      </Card>
+          {conn.lastErrorMessage && displayHealth !== "healthy" && (
+            <p className="text-[11px] text-destructive font-mono truncate max-w-xs">
+              {conn.lastErrorMessage}
+            </p>
+          )}
+          {testResult && (
+            <p className="text-[11px]">
+              {testResult.probed
+                ? `Probe result: ${testResult.healthStatus}`
+                : "No base URL configured — marked as unknown"}
+            </p>
+          )}
+        </>}
+        actions={<>
+          <Button
+            size="sm" variant="ghost" className="h-7 text-xs"
+            disabled={testing}
+            onClick={() => { setTestResult(null); test.mutate(); }}
+            title="Test connection health"
+          >
+            <FlaskConical className="h-3.5 w-3.5 mr-1" />
+            {testing ? "Testing…" : "Test"}
+          </Button>
+          <Button
+            size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={() => setEditOpen(true)}
+            title="Edit config"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          {conn.isActive && (
+            <Button
+              size="sm" variant="ghost" className="h-7 w-7 p-0"
+              onClick={() => deactivate.mutate()}
+              title="Deactivate"
+            >
+              <Power className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          )}
+          <Button
+            size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+            title="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </>}
+      />
 
       {editOpen   && <EditDialog   conn={conn} open={editOpen}   onOpenChange={setEditOpen}   />}
       {deleteOpen && <DeleteDialog conn={conn} open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={() => del.mutate()} />}
@@ -414,35 +380,29 @@ export default function ConnectionsPage() {
     >
       <IntegrationSubNav active="/setup/integrations/connections" />
 
-      {/* Status filter */}
-      <div className="mb-4 flex flex-wrap gap-1">
-        {STATUS_OPTIONS.map((opt) => (
-          <Button
-            key={opt.value}
-            size="sm"
-            variant={statusFilter === opt.value ? "primary" : "ghost"}
-            className="h-7 text-xs"
-            onClick={() => setStatus(opt.value)}
-          >
-            {opt.label}
-          </Button>
-        ))}
-      </div>
+      <FilterPillBar
+        items={STATUS_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+        value={statusFilter}
+        onChange={setStatus}
+        allItem={{ label: "All statuses" }}
+        className="mb-4"
+      />
 
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : connections.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Plug2 className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No connections configured.</p>
-          <Link href="/setup/integrations/connectors">
-            <Button variant="outline" size="sm">
-              Browse connector catalog
-            </Button>
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Plug2 className="h-10 w-10 text-muted-foreground/30" />}
+          title="No connections configured."
+          action={
+            <Link href="/setup/integrations/connectors">
+              <Button variant="outline" size="sm">Browse connector catalog</Button>
+            </Link>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {connections.map((c) => <ConnectionRow key={c.id} conn={c} />)}

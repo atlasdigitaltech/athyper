@@ -11,13 +11,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Plug2, ChevronDown, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Textarea,
 } from "@athyper/ui/primitives";
+import { IntegrationSubNav } from "../_components/integration-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,31 +63,6 @@ const CATEGORY_BADGE: Record<string, "secondary" | "outline" | "warning" | "succ
 
 function isCredentialField(key: string): boolean {
   return /secret|password|key|token|credential/i.test(key);
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function IntegrationSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/integrations",              label: "Endpoints" },
-    { href: "/setup/integrations/providers",    label: "Providers" },
-    { href: "/setup/integrations/outbox",       label: "Outbox" },
-    { href: "/setup/integrations/deliveries",   label: "Deliveries" },
-    { href: "/setup/integrations/webhooks",     label: "Webhooks" },
-    { href: "/setup/integrations/connectors",   label: "Connectors" },
-    { href: "/setup/integrations/connections",  label: "Connections" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 // ── Dynamic config form ───────────────────────────────────────────────────────
@@ -232,7 +209,7 @@ function NewConnectionDialog({
         <DialogHeader>
           <DialogTitle>New Connection — {connectorType.name}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-3 py-2">
           {/* Identity */}
           <div className="space-y-3">
             <div className="space-y-1">
@@ -416,33 +393,25 @@ export default function ConnectorCatalogPage() {
     >
       <IntegrationSubNav active="/setup/integrations/connectors" />
 
-      {/* Category filter */}
-      <div className="mb-4 flex flex-wrap gap-1">
-        {CATEGORIES.map((cat) => (
-          <Button
-            key={cat.value}
-            size="sm"
-            variant={category === cat.value ? "primary" : "ghost"}
-            className="h-7 text-xs"
-            onClick={() => setCategory(cat.value)}
-          >
-            {cat.label}
-          </Button>
-        ))}
-      </div>
+      <FilterPillBar
+        items={CATEGORIES.filter((c) => c.value !== "").map((c) => ({ value: c.value, label: c.label }))}
+        value={category}
+        onChange={setCategory}
+        allItem={{ label: "All" }}
+        className="mb-4"
+      />
 
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : types.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Plug2 className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No connector types found.</p>
-          <p className="text-xs text-muted-foreground">
-            Seed <span className="font-mono">control.connector_type</span> rows to populate the catalog.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Plug2 className="h-10 w-10 text-muted-foreground/30" />}
+          title="No connector types found."
+          description={<>Seed <code className="font-mono">control.connector_type</code> rows to populate the catalog.</>}
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {types.map((t) => <ConnectorCard key={t.id} type={t} />)}

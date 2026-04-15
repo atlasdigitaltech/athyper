@@ -15,10 +15,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@athyper/ui/primitives";
+import { JobsSubNav } from "./_components/jobs-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,29 +72,6 @@ const HEALTH_BADGE: Record<string, "success" | "warning" | "destructive"> = {
   degraded: "warning",
   down:     "destructive",
 };
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function JobsSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/jobs",                  label: "Queues" },
-    { href: "/setup/jobs/dlq",              label: "Dead Letter" },
-    { href: "/setup/jobs/history",          label: "Run History" },
-    { href: "/setup/jobs/schedules",        label: "Schedules" },
-    { href: "/setup/jobs/orchestrations",   label: "Orchestrations" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 // ── Pause confirm dialog ──────────────────────────────────────────────────────
 
@@ -164,7 +143,7 @@ function QueueCard({ queue }: { queue: QueueStat }) {
                 title={queue.isPaused ? "Resume queue" : "Pause queue"}
               >
                 {queue.isPaused
-                  ? <Play className="h-3.5 w-3.5 text-green-500" />
+                  ? <Play className="h-3.5 w-3.5 text-success" />
                   : <Pause className="h-3.5 w-3.5" />}
               </Button>
             </div>
@@ -174,7 +153,7 @@ function QueueCard({ queue }: { queue: QueueStat }) {
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="space-y-0.5">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Active</p>
-              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+              <p className="text-lg font-semibold text-primary">
                 {queue.counts.active}
               </p>
             </div>
@@ -296,15 +275,16 @@ export default function JobsConsolePage() {
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+            <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
       ) : queues.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Activity className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No queues found.</p>
-          <p className="text-xs text-muted-foreground">Start the jobs service to see queue status.</p>
-        </div>
+        <EmptyState
+          icon={<Activity className="h-10 w-10 text-muted-foreground/30" />}
+          title="No queues found."
+          description="Start the jobs service to see queue status."
+          className="py-20"
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {queues.map((q) => (

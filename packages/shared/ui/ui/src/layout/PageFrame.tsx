@@ -1,16 +1,26 @@
 import { type ReactNode, type HTMLAttributes } from "react";
 import { cn } from "@athyper/theme/utils";
 
+type PageFrameWidth = "narrow" | "default" | "wide" | "full";
+
+const WIDTH_CLASS: Record<PageFrameWidth, string> = {
+  narrow:  "max-w-content-sm  w-full",
+  default: "max-w-content-md  w-full",
+  wide:    "max-w-content-lg  w-full",
+  full:    "max-w-content-full w-full",
+};
+
 export interface PageFrameProps extends HTMLAttributes<HTMLDivElement> {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  width?: PageFrameWidth;
 }
 
-export function PageFrame({ title, description, actions, children, className, ...props }: PageFrameProps) {
+export function PageFrame({ title, description, actions, children, className, width, ...props }: PageFrameProps) {
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn("flex flex-col gap-6", width && WIDTH_CLASS[width], className)} {...props}>
       {(title || actions) && (
         <div className="flex items-start justify-between gap-4">
           <div>

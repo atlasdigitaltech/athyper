@@ -35,6 +35,22 @@ export interface UploadParams {
   sizeBytes:   number;
   principalId: string;
   linkKind?:   "primary" | "related" | "supporting" | "compliance" | "audit";
+  /**
+   * Override the initial attachment status.
+   * Default: "active". Set to "quarantined" when a virus is detected so the
+   * file is stored for admin review but blocked from normal downloads.
+   */
+  initialStatus?: "active" | "quarantined";
+  /**
+   * Whether the file has been through virus scanning.
+   * Default: false (scanning not configured or not yet run).
+   */
+  isVirusScanned?: boolean;
+  /**
+   * Structured scan result stored in metadata.scan JSONB.
+   * Included for both clean and quarantined results so admins have context.
+   */
+  scanMeta?: Record<string, unknown>;
 }
 
 export interface UploadResult {
@@ -163,6 +179,9 @@ export class ContentAttachmentService {
       tenantId, entityType, entityId,
       fileBuffer, fileName, contentType, sizeBytes,
       principalId, linkKind = "related",
+      initialStatus = "active",
+      isVirusScanned = false,
+      scanMeta,
     } = params;
 
     const attachmentId = crypto.randomUUID();
@@ -191,14 +210,15 @@ export class ContentAttachmentService {
             version_no:                1,
             reference_count:           1,
             is_current:                true,
-            is_active:                 true,
-            is_virus_scanned:          false,
+            is_active:                 initialStatus !== "quarantined",
+            is_virus_scanned:          isVirusScanned,
             is_preview_generation_failed: false,
             is_auto_delete_on_expiry:  false,
-            status:                    "active",
+            status:                    initialStatus,
+            status_changed_at:         initialStatus === "quarantined" ? new Date() : null,
             uploaded_by:               principalId,
             created_by:                principalId,
-            metadata:                  {},
+            metadata:                  scanMeta ? { scan: scanMeta } : {},
           } as never)
           .returning([
             "id", "file_name", "content_type", "size_bytes",

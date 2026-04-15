@@ -12,8 +12,11 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, FileText, ChevronRight } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Textarea,
@@ -175,14 +178,12 @@ export default function ContentBrowserPage() {
     >
       {/* Filters */}
       <div className="mb-4 space-y-2">
-        <div className="flex flex-wrap gap-1">
-          {(["", ...STATUSES] as const).map((s) => (
-            <Button key={s} size="sm" variant={statusFilter === s ? "primary" : "ghost"} className="h-7 text-xs"
-              onClick={() => setStatusFilter(s as ContentStatus | "")}>
-              {s === "" ? "All" : s}
-            </Button>
-          ))}
-        </div>
+        <FilterPillBar
+          items={STATUSES.map((s) => ({ value: s, label: s }))}
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v as ContentStatus | "")}
+          allItem={{ label: "All" }}
+        />
         <div className="flex gap-2">
           <Input
             className="h-8 max-w-xs text-sm"
@@ -203,35 +204,35 @@ export default function ContentBrowserPage() {
       {isLoading ? (
         <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <FileText className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No content items found.</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Create first item
-          </Button>
-        </div>
+        <EmptyState
+          icon={<FileText className="h-10 w-10 text-muted-foreground/30" />}
+          title="No content items found."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Create first item
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <Card key={item.id} className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => router.push(`/content/${item.id}`)}>
-              <CardContent className="p-3 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={STATUS_VARIANT[item.status]} className="text-[10px]">{item.status}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{item.contentType}</Badge>
-                    <span className="font-medium text-sm">{item.title}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">{item.itemCode}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    {item.locale && <span>{item.locale}</span>}
-                    {item.tags?.length ? <span>{item.tags.join(", ")}</span> : null}
-                    <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
+            <RowCard
+              key={item.id}
+              onClick={() => router.push(`/content/${item.id}`)}
+              badge={<>
+                <Badge variant={STATUS_VARIANT[item.status]} className="text-[10px]">{item.status}</Badge>
+                <Badge variant="outline" className="text-[10px]">{item.contentType}</Badge>
+              </>}
+              title={item.title}
+              metadata={<div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono">{item.itemCode}</span>
+                {item.locale && <span>{item.locale}</span>}
+                {item.tags?.length ? <span>{item.tags.join(", ")}</span> : null}
+                <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
+              </div>}
+              actions={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            />
           ))}
         </div>
       )}

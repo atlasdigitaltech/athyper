@@ -4,7 +4,8 @@
  * GET    /api/records/:entity           — paginated list
  * GET    /api/records/:entity/:id       — single record
  * POST   /api/records/:entity           — create
- * PUT    /api/records/:entity/:id       — update
+ * PUT    /api/records/:entity/:id       — full update (requires { data: {...} } wrapper)
+ * PATCH  /api/records/:entity/:id       — partial update (flat body or { data: {...} } wrapper)
  * DELETE /api/records/:entity/:id       — delete
  *
  * Routes resolve the entity's backing table from control.entity,
@@ -26,6 +27,7 @@ import {
   resolvePrincipalIdWithJit,
   resolveFieldMap,
 } from "@athyper/svc-shared";
+import { applyFieldSecurityMask } from "../../policy/field-security.middleware.js";
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,6 +79,21 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10)));
       const offset = (page - 1) * pageSize;
 
+      // Optional full-text search term
+      const searchTerm = typeof req.query["q"] === "string" && req.query["q"].trim()
+        ? req.query["q"].trim()
+        : null;
+
+      // Optional column equality filters (JSON-encoded key→value map)
+      let columnFilters: Record<string, unknown> = {};
+      if (typeof req.query["filters"] === "string") {
+        try {
+          columnFilters = JSON.parse(req.query["filters"]) as Record<string, unknown>;
+        } catch {
+          // Ignore malformed filters
+        }
+      }
+
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
       // Filter by tenant if X-Org is present
@@ -84,12 +101,55 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
 
-      let listQuery = db.selectFrom(fullTable).selectAll();
-      let countQuery = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let listQuery: any  = db.selectFrom(fullTable).selectAll();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let countQuery: any = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
 
       if (tenantId) {
-        listQuery = listQuery.where("tenant_id" as never, "=", tenantId as never);
+        listQuery  = listQuery.where("tenant_id" as never, "=", tenantId as never);
         countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
+      }
+
+      // ── Column equality filters ──────────────────────────────────────────────
+      if (Object.keys(columnFilters).length > 0) {
+        const fieldMap = await resolveFieldMap(db, entityCode);
+        for (const [fieldName, value] of Object.entries(columnFilters)) {
+          if (value === undefined || value === null || fieldName.startsWith("_")) continue;
+          const colName = fieldMap.get(fieldName) ?? fieldName;
+          listQuery  = listQuery.where(colName  as never, "=", value as never);
+          countQuery = countQuery.where(colName as never, "=", value as never);
+        }
+      }
+
+      // ── Full-text search (ILIKE on is_searchable fields) ────────────────────
+      if (searchTerm) {
+        // Fetch searchable field column names for this entity
+        const searchableFields = await db
+          .selectFrom("control.entity_field as ef")
+          .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+          .innerJoin("control.entity as e",          "e.id",  "ev.entity_id")
+          .select(["ef.column_name"])
+          .where("e.name",          "=",    entityCode)
+          .where("e.tenant_id",     "is",   null)
+          .where("ef.is_searchable","=",    true)
+          .where("ef.is_active",    "=",    true)
+          .where("ev.status",       "=",    "EFFECTIVE")
+          .execute() as { column_name: string }[];
+
+        if (searchableFields.length > 0) {
+          const pattern = `%${searchTerm}%`;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const applySearch = (q: any) => q.where((eb: any) =>
+            eb.or(
+              searchableFields.map(({ column_name }) =>
+                eb(column_name as never, "ilike", pattern as never),
+              ),
+            ),
+          );
+          listQuery  = applySearch(listQuery);
+          countQuery = applySearch(countQuery);
+        }
       }
 
       const [rows, countResult, fieldMap] = await Promise.all([
@@ -113,7 +173,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return out;
       });
 
-      res.json({
+      const responseBody = {
         data: remappedRows,
         pagination: {
           total,
@@ -121,7 +181,14 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           page_size: pageSize,
           total_pages: Math.ceil(total / pageSize),
         },
-      });
+      };
+
+      if (tenantId) {
+        const roles = Array.isArray(claims["roles"]) ? (claims["roles"] as string[]) : [];
+        await applyFieldSecurityMask(db, tenantId, entityCode, roles, responseBody, logger);
+      }
+
+      res.json(responseBody);
     } catch (err) {
       logger?.error("records_list_error", { err: String(err) });
       next(err);
@@ -166,7 +233,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         data[fieldName] = val;
       }
 
-      res.json({
+      const detailBody: Record<string, unknown> = {
         id: rowData.id,
         entity_code: entityCode,
         tenant_id: rowData.tenant_id,
@@ -179,7 +246,15 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         status_changed_at: rowData.status_changed_at ?? null,
         status_changed_by: rowData.status_changed_by ?? null,
         data,
-      });
+      };
+
+      // Apply field-security masking using tenantId from the fetched row
+      if (typeof rowData.tenant_id === "string") {
+        const roles = Array.isArray(claims["roles"]) ? (claims["roles"] as string[]) : [];
+        await applyFieldSecurityMask(db, rowData.tenant_id, entityCode, roles, detailBody, logger);
+      }
+
+      res.json(detailBody);
     } catch (err) {
       logger?.error("records_get_error", { err: String(err) });
       next(err);
@@ -299,6 +374,83 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── PATCH ─────────────────────────────────────────────────────────────────────
+  // Partial update. Accepts either:
+  //   Flat body:   { fieldName: value, ... }          — used by KanbanView status transitions
+  //   Wrapped:     { data: { fieldName: value, ... } } — matches PUT convention
+  // Only the provided fields are written; omitted fields are left unchanged.
+  const patchHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = req.params["entity"] as string;
+      const id = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      // Resolve tenant + principal
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      // Unwrap body — support both flat and { data: {...} } forms
+      const body = req.body as Record<string, unknown>;
+      const inputData: Record<string, unknown> =
+        typeof body["data"] === "object" && body["data"] !== null && !Array.isArray(body["data"])
+          ? (body["data"] as Record<string, unknown>)
+          : body;
+
+      if (Object.keys(inputData).length === 0) {
+        res.status(400).json({ error: "EMPTY_PATCH", message: "PATCH body must contain at least one field" });
+        return;
+      }
+
+      // Map logical field names → physical column names
+      const fieldMap = await resolveFieldMap(db, entityCode);
+      const mappedData: Record<string, unknown> = {};
+      for (const [fieldName, value] of Object.entries(inputData)) {
+        // Accept both logical name and direct column name (fallback)
+        const columnName = fieldMap.get(fieldName) ?? fieldName;
+        // Skip system-managed audit columns that callers must not overwrite
+        if (["id", "tenant_id", "created_by", "created_at"].includes(columnName)) continue;
+        mappedData[columnName] = value;
+      }
+
+      mappedData.updated_by = principalId ?? undefined;
+      mappedData.updated_at = new Date().toISOString();
+
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db.updateTable(fullTable) as any)
+        .set(mappedData)
+        .where("id", "=", id)
+        .where("tenant_id", "=", tenantId)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!row) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      res.json(row);
+    } catch (err) {
+      logger?.error("records_patch_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── DELETE ────────────────────────────────────────────────────────────────────
   const deleteHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -378,6 +530,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.get("/records/:entity/:id", getHandler);
   router.post("/records/:entity", createHandler);
   router.put("/records/:entity/:id", updateHandler);
+  router.patch("/records/:entity/:id", patchHandler);
   router.delete("/records/:entity/:id", deleteHandler);
 
   return router;

@@ -55,6 +55,26 @@ export type { ThemePresetMeta } from "./presets/registry";
 export { resolveSemanticColors, SEMANTIC_INTENTS } from "./semantic-colors";
 export type { SemanticIntent, SemanticColorSet } from "./semantic-colors";
 
+// Domain intent mappings (business status/class → SemanticIntent)
+export {
+  adminStatusIntent,
+  kanbanStatusIntent,
+  entityClassIntent,
+  dataTypeIntent,
+  FIELD_FLAG_INTENT,
+  accountClassIntent,
+  chartTierIntent,
+  consolMethodIntent,
+  ownerTypeIntent,
+  paymentDirectionIntent,
+  reconTypeIntent,
+  closeRunStatusIntent,
+  closeTaskStatusIntent,
+  apArStatusIntent,
+  glSchemaIntent,
+} from "./domain-intents";
+export type { AdminStatus } from "./domain-intents";
+
 // Validator
 export { validatePresetCSS } from "./preset-validator";
 export type { PresetValidationResult } from "./preset-validator";

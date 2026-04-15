@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, History } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import { Button, Badge, Skeleton } from "@athyper/ui/primitives";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -69,12 +70,13 @@ export default function ContentVersionsPage() {
       }
     >
       {isLoading ? (
-        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : versions.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-20 text-center">
-          <History className="h-8 w-8 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No versions yet. Save a body to create the first version.</p>
-        </div>
+        <EmptyState
+          icon={<History className="h-8 w-8 text-muted-foreground/30" />}
+          title="No versions yet. Save a body to create the first version."
+          className="py-20"
+        />
       ) : (
         <div className="overflow-auto">
           <table className="w-full text-sm">

@@ -2,6 +2,8 @@
    Period utilities — fiscal period labels, status helpers, navigation.
    --------------------------------------------------------------------------- */
 
+import { resolveSemanticColors } from "@athyper/theme";
+
 export type FiscalPeriodStatus =
   | "future"
   | "open"
@@ -61,11 +63,11 @@ export function priorYearPeriod(
 /** Color class for a period status badge. */
 export function periodStatusColor(status: FiscalPeriodStatus | null): string {
   switch (status) {
-    case "open":       return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "soft_close": return "bg-amber-50 text-amber-700 border-amber-200";
-    case "hard_close": return "bg-red-50 text-red-700 border-red-200";
-    case "future":     return "bg-muted text-muted-foreground border-border";
-    default:           return "bg-muted text-muted-foreground border-border";
+    case "open":       return resolveSemanticColors("success").subtleBadge;
+    case "soft_close": return resolveSemanticColors("warning").subtleBadge;
+    case "hard_close": return resolveSemanticColors("error").subtleBadge;
+    case "future":     return resolveSemanticColors("neutral").subtleBadge;
+    default:           return resolveSemanticColors("neutral").subtleBadge;
   }
 }
 

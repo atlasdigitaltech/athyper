@@ -11,13 +11,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Webhook, Link2, Link2Off, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Textarea,
 } from "@athyper/ui/primitives";
+import { IntegrationSubNav } from "../_components/integration-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,31 +34,6 @@ interface WebhookSubscription {
   failureCount: number;
   lastFailureAt: string | null;
   createdAt: string;
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function IntegrationSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/integrations",              label: "Endpoints" },
-    { href: "/setup/integrations/providers",    label: "Providers" },
-    { href: "/setup/integrations/outbox",       label: "Outbox" },
-    { href: "/setup/integrations/deliveries",   label: "Deliveries" },
-    { href: "/setup/integrations/webhooks",     label: "Webhooks" },
-    { href: "/setup/integrations/connectors",   label: "Connectors" },
-    { href: "/setup/integrations/connections",  label: "Connections" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 // ── New Webhook Dialog ────────────────────────────────────────────────────────
@@ -198,20 +175,23 @@ export default function WebhooksPage() {
       <IntegrationSubNav active="/setup/integrations/webhooks" />
 
       {isLoading ? (
-        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : subscriptions.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Webhook className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No webhook subscriptions configured.</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Add first webhook
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Webhook className="h-10 w-10 text-muted-foreground/30" />}
+          title="No webhook subscriptions configured."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Add first webhook
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {subscriptions.map((sub) => (
-            <Card key={sub.id} className={!sub.isActive ? "opacity-60" : ""}>
-              <CardContent className="p-3 flex items-start justify-between gap-3">
+            <RowCard key={sub.id} className={!sub.isActive ? "opacity-60" : ""}>
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     {!sub.isActive && <Badge variant="muted" className="text-[10px]">inactive</Badge>}
@@ -241,7 +221,7 @@ export default function WebhooksPage() {
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
                     onClick={() => toggle.mutate({ id: sub.id, isActive: !sub.isActive })}>
                     {sub.isActive
-                      ? <Link2 className="h-3.5 w-3.5 text-green-500" />
+                      ? <Link2 className="h-3.5 w-3.5 text-success" />
                       : <Link2Off className="h-3.5 w-3.5 text-muted-foreground" />}
                   </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive"
@@ -249,8 +229,8 @@ export default function WebhooksPage() {
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </RowCard>
           ))}
         </div>
       )}

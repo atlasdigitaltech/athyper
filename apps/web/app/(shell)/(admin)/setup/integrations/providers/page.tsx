@@ -10,13 +10,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Link2, Link2Off } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { IntegrationSubNav } from "../_components/integration-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,31 +41,6 @@ const CHANNEL_VARIANT: Record<ProviderChannel, "success" | "warning" | "muted" |
 };
 
 const CHANNELS: ProviderChannel[] = ["EMAIL", "SMS", "PUSH", "WEBHOOK", "SLACK", "TEAMS", "IN_APP"];
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function IntegrationSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/integrations",              label: "Endpoints" },
-    { href: "/setup/integrations/providers",    label: "Providers" },
-    { href: "/setup/integrations/outbox",       label: "Outbox" },
-    { href: "/setup/integrations/deliveries",   label: "Deliveries" },
-    { href: "/setup/integrations/webhooks",     label: "Webhooks" },
-    { href: "/setup/integrations/connectors",   label: "Connectors" },
-    { href: "/setup/integrations/connections",  label: "Connections" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 // ── New Provider Dialog ───────────────────────────────────────────────────────
 
@@ -191,41 +169,39 @@ export default function ProvidersPage() {
     >
       <IntegrationSubNav active="/setup/integrations/providers" />
 
-      {/* Channel filter */}
-      <div className="mb-4 flex flex-wrap gap-1">
-        <Button size="sm" variant={channelFilter === "" ? "primary" : "ghost"} className="h-7 text-xs"
-          onClick={() => setChannelFilter("")}>All</Button>
-        {CHANNELS.map((c) => (
-          <Button key={c} size="sm" variant={channelFilter === c ? "primary" : "ghost"} className="h-7 text-xs"
-            onClick={() => setChannelFilter(c)}>{c}</Button>
-        ))}
-      </div>
+      <FilterPillBar
+        items={CHANNELS.map((c) => ({ value: c, label: c }))}
+        value={channelFilter}
+        onChange={(v) => setChannelFilter(v as ProviderChannel | "")}
+        allItem={{ label: "All" }}
+        className="mb-4"
+      />
 
       {isLoading ? (
-        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : providers.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">No providers configured.</p>
+        <EmptyState title="No providers configured." className="py-16" />
       ) : (
         <div className="space-y-2">
           {providers.map((p) => (
-            <Card key={p.id} className={!p.isActive ? "opacity-60" : ""}>
-              <CardContent className="p-3 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={CHANNEL_VARIANT[p.channel]} className="text-[10px]">{p.channel}</Badge>
-                    {p.isDefault && <Badge variant="success" className="text-[10px]">default</Badge>}
-                    <span className="font-medium text-sm">{p.name}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">{p.code}</span>
-                  </div>
-                </div>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0"
+            <RowCard
+              key={p.id}
+              className={!p.isActive ? "opacity-60" : ""}
+              badge={<>
+                <Badge variant={CHANNEL_VARIANT[p.channel]} className="text-[10px]">{p.channel}</Badge>
+                {p.isDefault && <Badge variant="success" className="text-[10px]">default</Badge>}
+              </>}
+              title={p.name}
+              metadata={<span className="font-mono">{p.code}</span>}
+              actions={
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
                   onClick={() => toggle.mutate({ id: p.id, isActive: !p.isActive })}>
                   {p.isActive
-                    ? <Link2 className="h-3.5 w-3.5 text-green-500" />
+                    ? <Link2 className="h-3.5 w-3.5 text-success" />
                     : <Link2Off className="h-3.5 w-3.5 text-muted-foreground" />}
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ))}
         </div>
       )}

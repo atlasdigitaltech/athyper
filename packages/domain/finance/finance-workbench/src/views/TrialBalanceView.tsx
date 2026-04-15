@@ -75,7 +75,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
           Source: ledger.gl_balance
           {data.asAt && ` · As at ${new Date(data.asAt).toLocaleString()}`}
           {data.isLive && (
-            <span className="ml-1.5 text-emerald-600 font-medium">● Live</span>
+            <span className="ml-1.5 text-success font-medium">● Live</span>
           )}
         </span>
         <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                 <td className="py-2 px-3 font-medium">Total</td>
                 <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalDr)}</td>
                 <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalCr)}</td>
-                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-emerald-600" : "text-destructive")}>
+                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
                 <td className="py-2 px-3 text-right text-muted-foreground">{rows.length}</td>
@@ -202,7 +202,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                 <td colSpan={3} className="py-2 px-3 font-medium">Total</td>
                 <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalDr)}</td>
                 <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalCr)}</td>
-                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-emerald-600" : "text-destructive")}>
+                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
               </tr>

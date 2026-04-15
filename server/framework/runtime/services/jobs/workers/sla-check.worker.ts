@@ -419,6 +419,111 @@ async function checkWorkflowWorkItems(db: DB, logger?: JobLogger): Promise<void>
   });
 }
 
+// ─── Workflow recovery: stuck work items ─────────────────────────────────────
+//
+// Detects work items in active states that have had no event_log activity for
+// longer than STUCK_THRESHOLD_HOURS. Publishes a `wf.work_item.stuck` outbox
+// event so operators can review and retry or escalate manually.
+//
+// Idempotency window: a `wf:stuck:<id>:<day>` key prevents re-alerting within
+// the same calendar day. The day suffix rolls automatically each day.
+
+const STUCK_THRESHOLD_HOURS = 24;
+
+interface StuckWorkItem {
+  id:                  string;
+  tenant_id:           string;
+  workflow_request_id: string | null;
+  workflow_stage_id:   string | null;
+  task_type:           string;
+  assignee_id:         string | null;
+  started_at:          string | null;
+  status:              string;
+}
+
+async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
+  // Find work items that are in an active state, started more than N hours ago,
+  // and have had no workflow_event_log entry in the last N hours.
+  const stuck = await sql<StuckWorkItem>`
+    SELECT
+      wi.id,
+      wi.tenant_id,
+      wi.workflow_request_id::text,
+      wi.workflow_stage_id::text,
+      wi.task_type,
+      wi.assignee_id::text,
+      wi.started_at::text,
+      wi.status
+    FROM   event.work_item wi
+    WHERE  wi.status IN ('pending', 'in_progress')
+      AND  wi.started_at IS NOT NULL
+      AND  wi.started_at < now() - (${STUCK_THRESHOLD_HOURS} * interval '1 hour')
+      AND  NOT EXISTS (
+             SELECT 1
+             FROM   log.workflow_event_log el
+             WHERE  el.work_item_id = wi.id
+               AND  el.created_at   > now() - (${STUCK_THRESHOLD_HOURS} * interval '1 hour')
+           )
+    ORDER  BY wi.started_at ASC
+    LIMIT  ${BATCH}
+  `.execute(db);
+
+  if (stuck.rows.length === 0) return;
+
+  // Day key prevents re-alerting more than once per day per item
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Batch idempotency check
+  const allKeys = stuck.rows.map((wi) => `wf:stuck:${wi.id}:${today}`);
+  const existingResult = await sql<{ event_key: string }>`
+    SELECT event_key FROM event.outbox
+    WHERE  topic      = 'wf'
+      AND  event_key  = ANY(${allKeys})
+      AND  status    != 'dead_letter'
+  `.execute(db);
+  const alreadyPublished = new Set(existingResult.rows.map((r) => r.event_key));
+
+  let flagged = 0;
+  for (const item of stuck.rows) {
+    const outboxKey = `wf:stuck:${item.id}:${today}`;
+    if (alreadyPublished.has(outboxKey)) continue;
+
+    const payload = JSON.stringify({
+      workItemId:         item.id,
+      taskType:           item.task_type,
+      workflowRequestId:  item.workflow_request_id,
+      workflowStageId:    item.workflow_stage_id,
+      assigneeId:         item.assignee_id,
+      status:             item.status,
+      startedAt:          item.started_at,
+      stuckThresholdHours: STUCK_THRESHOLD_HOURS,
+      detectedAt:         new Date().toISOString(),
+    });
+
+    await sql`
+      INSERT INTO event.outbox
+        (tenant_id,              topic, event_type,          event_key,
+         payload,                status, created_by)
+      VALUES
+        (${item.tenant_id}::uuid, 'wf', 'wf.work_item.stuck', ${outboxKey},
+         ${payload}::jsonb,       'pending', ${SYSTEM_ACTOR_ID}::uuid)
+      ON CONFLICT DO NOTHING
+    `.execute(db);
+
+    flagged++;
+  }
+
+  if (flagged > 0) {
+    logger?.warn("wf_recovery_stuck_items_flagged", {
+      scanned: stuck.rows.length,
+      flagged,
+      thresholdHours: STUCK_THRESHOLD_HOURS,
+    });
+  } else {
+    logger?.info("wf_recovery_check", { scanned: stuck.rows.length, flagged: 0 });
+  }
+}
+
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export interface SlaCheckWorkerDeps {
@@ -433,10 +538,11 @@ export function createSlaCheckWorker(deps: SlaCheckWorkerDeps): Worker {
   return new Worker<SlaCheckJobData>(
     QUEUE_NAME.SLA_CHECK,
     async (_job: Job<SlaCheckJobData>) => {
-      // Run both checks in parallel — they touch separate tables and are independent
+      // Run all three checks in parallel — they touch separate tables
       await Promise.all([
         checkCycleTasks(db, logger),
         checkWorkflowWorkItems(db, logger),
+        checkStuckWorkItems(db, logger),
       ]);
     },
     { connection, concurrency: 1 },

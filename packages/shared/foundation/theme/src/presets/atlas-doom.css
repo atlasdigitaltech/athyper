@@ -44,7 +44,7 @@ value: atlas-doom
   --sidebar-ring: oklch(0.5016 0.1887 27.4816);
   --success: oklch(0.4955 0.0896 126.1858);
   --success-foreground: oklch(1.0000 0 0);
-  --warning: oklch(0.7076 0.1975 46.4558);
+  --warning: oklch(0.65 0.16 90);
   --warning-foreground: oklch(0 0 0);
   --info: oklch(0.5880 0.0993 245.7394);
   --info-foreground: oklch(1.0000 0 0);
@@ -98,7 +98,7 @@ value: atlas-doom
   --sidebar-ring: oklch(0.6083 0.2090 27.0276);
   --success: oklch(0.6423 0.1467 133.0145);
   --success-foreground: oklch(0 0 0);
-  --warning: oklch(0.7839 0.1719 68.0943);
+  --warning: oklch(0.72 0.14 90);
   --warning-foreground: oklch(0 0 0);
   --info: oklch(0.7482 0.1235 244.7492);
   --info-foreground: oklch(0 0 0);

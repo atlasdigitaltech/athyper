@@ -31,3 +31,8 @@ export {
   type CommandItemProps,
   type PaletteTab,
 } from "./CommandPaletteBase";
+export {
+  FilterPillBar,
+  type FilterPillBarProps,
+  type FilterPillItem,
+} from "./FilterPillBar";

@@ -17,9 +17,9 @@ import { MappingWorkbenchView } from "./views/MappingWorkbenchView";
 import { TrialBalanceView } from "./views/TrialBalanceView";
 
 const SCHEMA_STYLE: Record<string, string> = {
-  master:  "text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400",
-  control: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
-  ledger:  "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
+  master:  "text-primary bg-primary/10",
+  control: "text-accent-foreground bg-accent/10",
+  ledger:  "text-success bg-success/10",
 };
 
 const TAB_DEFS = [

@@ -12,8 +12,11 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, GitBranch, Calendar, ChevronRight } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Textarea,
@@ -200,14 +203,12 @@ export default function CycleRunsPage() {
     >
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <div className="flex flex-wrap gap-1">
-          {(["", ...RUN_STATUSES] as const).map((s) => (
-            <Button key={s} size="sm" variant={statusFilter === s ? "primary" : "ghost"} className="h-7 text-xs"
-              onClick={() => setStatusFilter(s as RunStatus | "")}>
-              {s === "" ? "All" : s}
-            </Button>
-          ))}
-        </div>
+        <FilterPillBar
+          items={RUN_STATUSES.map((s) => ({ value: s, label: s }))}
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v as RunStatus | "")}
+          allItem={{ label: "All" }}
+        />
         {cycleTypes.length > 0 && (
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="All types" /></SelectTrigger>
@@ -220,42 +221,38 @@ export default function CycleRunsPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
       ) : runs.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <GitBranch className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No cycle runs found.</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Create first run
-          </Button>
-        </div>
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10 text-muted-foreground/30" />}
+          title="No cycle runs found."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Create first run
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {runs.map((run) => (
-            <Card key={run.id} className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => router.push(`/governance/cycle-runs/${run.id}`)}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={STATUS_VARIANT[run.status]} className="text-[10px]">{run.status}</Badge>
-                    <span className="font-medium text-sm">{run.runLabel || run.runCode}</span>
-                    {run.cycleTypeName && (
-                      <span className="text-xs text-muted-foreground">{run.cycleTypeName}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(run.periodStart).toLocaleDateString()} – {new Date(run.periodEnd).toLocaleDateString()}
-                    </span>
-                    {run.targetCloseDate && (
-                      <span>Target: {new Date(run.targetCloseDate).toLocaleDateString()}</span>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
+            <RowCard
+              key={run.id}
+              onClick={() => router.push(`/governance/cycle-runs/${run.id}`)}
+              badge={<Badge variant={STATUS_VARIANT[run.status]} className="text-[10px]">{run.status}</Badge>}
+              title={run.runLabel || run.runCode}
+              metadata={<div className="flex flex-wrap items-center gap-3">
+                {run.cycleTypeName && <span>{run.cycleTypeName}</span>}
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(run.periodStart).toLocaleDateString()} – {new Date(run.periodEnd).toLocaleDateString()}
+                </span>
+                {run.targetCloseDate && (
+                  <span>Target: {new Date(run.targetCloseDate).toLocaleDateString()}</span>
+                )}
+              </div>}
+              actions={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            />
           ))}
         </div>
       )}

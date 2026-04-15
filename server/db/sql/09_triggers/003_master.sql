@@ -3072,3 +3072,59 @@ DROP TRIGGER IF EXISTS trg_ptdt_immutable ON master.payment_term_discount_tier;
 CREATE TRIGGER trg_ptdt_immutable
     BEFORE UPDATE ON master.payment_term_discount_tier
     FOR EACH ROW EXECUTE FUNCTION master.trg_payment_term_discount_tier_immutable();
+
+
+-- ── Phase 2 IAM: keycloak column freeze ─────────────────────────────────────
+-- Write-freeze trigger for principal_profile.keycloak_* columns.
+-- Enable by: ALTER DATABASE <db> SET app.iam_profile_kc_frozen = 'true';
+-- While unset or 'false' the trigger is a no-op — safe to deploy pre-migration.
+
+CREATE OR REPLACE FUNCTION master.trg_fn_freeze_keycloak_profile_columns()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = master
+AS $$
+BEGIN
+    IF current_setting('app.iam_profile_kc_frozen', true) <> 'true' THEN
+        RETURN NEW;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND (
+        NEW.keycloak_id               IS DISTINCT FROM OLD.keycloak_id
+        OR NEW.keycloak_username      IS DISTINCT FROM OLD.keycloak_username
+        OR NEW.keycloak_sync_status   IS DISTINCT FROM OLD.keycloak_sync_status
+        OR NEW.keycloak_synced_at     IS DISTINCT FROM OLD.keycloak_synced_at
+        OR NEW.keycloak_federation_link    IS DISTINCT FROM OLD.keycloak_federation_link
+        OR NEW.keycloak_not_before         IS DISTINCT FROM OLD.keycloak_not_before
+        OR NEW.keycloak_created_at_millis  IS DISTINCT FROM OLD.keycloak_created_at_millis
+        OR NEW.keycloak_required_actions   IS DISTINCT FROM OLD.keycloak_required_actions
+        OR NEW.keycloak_service_client_id  IS DISTINCT FROM OLD.keycloak_service_client_id
+    ) THEN
+        RAISE EXCEPTION
+            'principal_profile.keycloak_* columns are frozen — write to master.principal_identity_binding instead. '
+            'To disable this guard: SET app.iam_profile_kc_frozen = ''false'''
+            USING ERRCODE = 'check_violation',
+                  HINT    = 'Run SELECT * FROM master.fn_migrate_principal_identity_bindings(false) to backfill bindings, then verify no code paths write keycloak_* before enabling the freeze.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_fn_freeze_keycloak_profile_columns IS
+    'Phase 2 IAM freeze guard. Raises check_violation when app.iam_profile_kc_frozen = ''true'' '
+    'and an UPDATE tries to modify any keycloak_* column on principal_profile. '
+    'Enable by setting the GUC after all write paths are migrated to principal_identity_binding.';
+
+DROP TRIGGER IF EXISTS trg_freeze_keycloak_profile_columns ON master.principal_profile;
+
+CREATE TRIGGER trg_freeze_keycloak_profile_columns
+    BEFORE UPDATE ON master.principal_profile
+    FOR EACH ROW
+    EXECUTE FUNCTION master.trg_fn_freeze_keycloak_profile_columns();
+
+COMMENT ON TRIGGER trg_freeze_keycloak_profile_columns ON master.principal_profile IS
+    'Phase 2 IAM: no-op while app.iam_profile_kc_frozen is unset/false. '
+    'Becomes a write guard once the GUC is set to ''true''. '
+    'See fn_migrate_principal_identity_bindings() for activation instructions.';

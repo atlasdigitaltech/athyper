@@ -10,12 +10,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, SkipForward } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { JobsSubNav } from "../_components/jobs-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,35 +45,12 @@ interface HistoryResponse {
   offset: number;
 }
 
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function JobsSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/jobs",                  label: "Queues" },
-    { href: "/setup/jobs/dlq",              label: "Dead Letter" },
-    { href: "/setup/jobs/history",          label: "Run History" },
-    { href: "/setup/jobs/schedules",        label: "Schedules" },
-    { href: "/setup/jobs/orchestrations",   label: "Orchestrations" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
-  success:   <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />,
+  success:   <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
   failed:    <XCircle      className="h-3.5 w-3.5 text-destructive" />,
-  timeout:   <Clock        className="h-3.5 w-3.5 text-orange-500" />,
+  timeout:   <Clock        className="h-3.5 w-3.5 text-warning" />,
   cancelled: <XCircle      className="h-3.5 w-3.5 text-muted-foreground" />,
   skipped:   <SkipForward  className="h-3.5 w-3.5 text-muted-foreground" />,
 };
@@ -96,84 +76,82 @@ function HistoryRow({ entry }: { entry: JobLogEntry }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Card className={entry.status === "failed" ? "border-destructive/30" : ""}>
-      <CardContent className="p-3">
-        <div
-          className="flex items-center gap-2 cursor-pointer"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          <span className="shrink-0">
-            {STATUS_ICON[entry.status] ?? <CheckCircle2 className="h-3.5 w-3.5" />}
-          </span>
-          <span className="font-mono text-xs font-medium flex-1 min-w-0 truncate">
-            {entry.job_type}
-          </span>
-          <Badge variant={STATUS_VARIANT[entry.status]} className="text-[10px] shrink-0">
-            {entry.status}
-          </Badge>
-          <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
-            {formatDuration(entry.duration_ms)}
-          </span>
-          <span className="text-[10px] text-muted-foreground shrink-0 hidden md:block">
-            {entry.started_at ? new Date(entry.started_at).toLocaleString() : "—"}
-          </span>
-          <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0">
-            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          </Button>
-        </div>
+    <RowCard className={entry.status === "failed" ? "border-destructive/30" : ""}>
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <span className="shrink-0">
+          {STATUS_ICON[entry.status] ?? <CheckCircle2 className="h-3.5 w-3.5" />}
+        </span>
+        <span className="font-mono text-xs font-medium flex-1 min-w-0 truncate">
+          {entry.job_type}
+        </span>
+        <Badge variant={STATUS_VARIANT[entry.status]} className="text-[10px] shrink-0">
+          {entry.status}
+        </Badge>
+        <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
+          {formatDuration(entry.duration_ms)}
+        </span>
+        <span className="text-[10px] text-muted-foreground shrink-0 hidden md:block">
+          {entry.started_at ? new Date(entry.started_at).toLocaleString() : "—"}
+        </span>
+        <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0">
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
 
-        {expanded && (
-          <div className="mt-2 pt-2 border-t grid gap-1.5">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-              <div>
-                <p className="text-muted-foreground uppercase">Flow ID</p>
-                <p className="font-mono truncate">{entry.flow_id}</p>
-              </div>
-              {entry.run_id && (
-                <div>
-                  <p className="text-muted-foreground uppercase">Run ID</p>
-                  <p className="font-mono truncate">{entry.run_id}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-muted-foreground uppercase">Step</p>
-                <p>{entry.step_index} {entry.step_type ? `(${entry.step_type})` : ""}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground uppercase">Attempt</p>
-                <p>#{entry.attempt_no}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground uppercase">Duration</p>
-                <p>{formatDuration(entry.duration_ms)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground uppercase">Started</p>
-                <p>{entry.started_at ? new Date(entry.started_at).toLocaleString() : "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground uppercase">Completed</p>
-                <p>{entry.completed_at ? new Date(entry.completed_at).toLocaleString() : "—"}</p>
-              </div>
-              {entry.purge_after && (
-                <div>
-                  <p className="text-muted-foreground uppercase">Purge After</p>
-                  <p>{new Date(entry.purge_after).toLocaleDateString()}</p>
-                </div>
-              )}
+      {expanded && (
+        <div className="mt-2 pt-2 border-t grid gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+            <div>
+              <p className="text-muted-foreground uppercase">Flow ID</p>
+              <p className="font-mono truncate">{entry.flow_id}</p>
             </div>
-            {entry.error && (
-              <div className="mt-1">
-                <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Error</p>
-                <pre className="text-[10px] text-destructive bg-destructive/5 rounded p-2 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
-                  {entry.error}
-                </pre>
+            {entry.run_id && (
+              <div>
+                <p className="text-muted-foreground uppercase">Run ID</p>
+                <p className="font-mono truncate">{entry.run_id}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-muted-foreground uppercase">Step</p>
+              <p>{entry.step_index} {entry.step_type ? `(${entry.step_type})` : ""}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground uppercase">Attempt</p>
+              <p>#{entry.attempt_no}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground uppercase">Duration</p>
+              <p>{formatDuration(entry.duration_ms)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground uppercase">Started</p>
+              <p>{entry.started_at ? new Date(entry.started_at).toLocaleString() : "—"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground uppercase">Completed</p>
+              <p>{entry.completed_at ? new Date(entry.completed_at).toLocaleString() : "—"}</p>
+            </div>
+            {entry.purge_after && (
+              <div>
+                <p className="text-muted-foreground uppercase">Purge After</p>
+                <p>{new Date(entry.purge_after).toLocaleDateString()}</p>
               </div>
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          {entry.error && (
+            <div className="mt-1">
+              <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Error</p>
+              <pre className="text-[10px] text-destructive bg-destructive/5 rounded p-2 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
+                {entry.error}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </RowCard>
   );
 }
 
@@ -249,16 +227,15 @@ export default function RunHistoryPage() {
         )}
       </div>
 
-      {/* Quick job type filters */}
       {jobTypes.length > 1 && (
-        <div className="mb-3 flex flex-wrap gap-1">
-          <Button size="sm" variant={jobType === "" ? "primary" : "ghost"} className="h-6 text-[10px] font-mono"
-            onClick={() => { setJobType(""); setPage(0); }}>All</Button>
-          {jobTypes.map((jt) => (
-            <Button key={jt} size="sm" variant={jobType === jt ? "primary" : "ghost"} className="h-6 text-[10px] font-mono"
-              onClick={() => { setJobType(jt); setPage(0); }}>{jt}</Button>
-          ))}
-        </div>
+        <FilterPillBar
+          items={jobTypes.map((jt) => ({ value: jt, label: jt }))}
+          value={jobType}
+          onChange={(v) => { setJobType(v); setPage(0); }}
+          allItem={{ label: "All" }}
+          compact
+          className="mb-3"
+        />
       )}
 
       {/* Content */}
@@ -267,10 +244,11 @@ export default function RunHistoryPage() {
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Clock className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No run history found.</p>
-        </div>
+        <EmptyState
+          icon={<Clock className="h-10 w-10 text-muted-foreground/30" />}
+          title="No run history found."
+          className="py-20"
+        />
       ) : (
         <>
           <div className="space-y-2 mb-4">

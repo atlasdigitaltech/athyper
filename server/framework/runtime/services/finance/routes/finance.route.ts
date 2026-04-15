@@ -27,6 +27,7 @@ export interface FinanceRouteDeps {
   };
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
+    info?(event: string, fields?: Record<string, unknown>): void;
   };
 }
 
@@ -228,8 +229,12 @@ function sumSectionsPrior(sections: StatementSectionShape[]): number | undefined
 // • allCompanies=true  → no restriction (user has a tenant-wide role)
 // • allCompanies=false → restrict to allowedIds (may be empty → show all as fallback)
 //
-// Resolution path: JWT sub → principal_profile.keycloak_id → principal →
-//   auth_group_member → auth_group_role (assignment_scope_type / assignment_scope_ref_id)
+// Resolution path: JWT sub → principal_identity_binding (provider_code='keycloak') →
+//   principal → auth_group_member → auth_group_role
+//   (assignment_scope_type / assignment_scope_ref_id)
+//
+// Phase 2: principal_profile.keycloak_id is deprecated — resolution uses
+// principal_identity_binding.subject_id exclusively.
 //
 // Two-dimension scope model:
 //   assignment_scope_type = 'tenant'       → allCompanies = true
@@ -253,13 +258,14 @@ async function resolveUserCompanyAccess(
         gr.assignment_scope_type,
         gr.assignment_scope_ref_id,
         gr.include_descendants
-      FROM   master.principal_profile  pp
-      JOIN   master.principal           p  ON p.id = pp.principal_id AND p.tenant_id = ${tenantId}::uuid
+      FROM   master.principal_identity_binding pib
+      JOIN   master.principal           p  ON p.id = pib.principal_id AND p.tenant_id = ${tenantId}::uuid
       JOIN   master.auth_group_member   gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
       JOIN   master.auth_group_role     gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
-      WHERE  pp.keycloak_id = ${keycloakSub}
-        AND  pp.tenant_id   = ${tenantId}::uuid
-        AND  gr.status      = 'active'
+      WHERE  pib.subject_id    = ${keycloakSub}
+        AND  pib.provider_code = 'keycloak'
+        AND  pib.tenant_id     = ${tenantId}::uuid
+        AND  gr.status         = 'active'
     ),
     scoped_ccs AS (
       -- Direct company_code scope

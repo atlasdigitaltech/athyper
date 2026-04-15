@@ -21,3 +21,11 @@ export {
   Sheet, SheetPortal, SheetOverlay, SheetTrigger, SheetClose,
   SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription,
 } from "./Sheet";
+export { Switch } from "./Switch";
+export {
+  AlertDialog, AlertDialogTrigger, AlertDialogPortal, AlertDialogOverlay,
+  AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
+  AlertDialogTitle, AlertDialogDescription,
+  AlertDialogCancel, AlertDialogAction,
+} from "./AlertDialog";
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./Collapsible";

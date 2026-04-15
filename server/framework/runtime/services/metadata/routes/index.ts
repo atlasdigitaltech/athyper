@@ -4,7 +4,20 @@
  * Routes registered:
  *   GET /api/metadata/entities/:entity/compiled    — compiled entity descriptor
  *   GET /api/metadata/entities/:entity/operations  — entity action operations
- *   GET /api/metadata/lookups/:domain              — lookup domain bundle
+ *   GET /api/metadata/lookups/:domain              — lookup domain bundle (values)
+ *   POST/PATCH /api/metadata/lookups/:domain/values — tenant value mutations
+ *
+ *   Admin CRUD (setup pages):
+ *   GET/POST   /api/metadata/admin/lookup-domains
+ *   PATCH      /api/metadata/admin/lookup-domains/:code
+ *   GET/POST   /api/metadata/admin/lifecycle-bindings
+ *   PATCH/DEL  /api/metadata/admin/lifecycle-bindings/:id
+ *   GET/POST   /api/metadata/admin/entity-operations
+ *   PATCH/DEL  /api/metadata/admin/entity-operations/:id
+ *   GET/POST   /api/metadata/admin/field-groups
+ *   PATCH/DEL  /api/metadata/admin/field-groups/:key
+ *   GET        /api/metadata/admin/lifecycles   — catalogue picker
+ *   GET        /api/metadata/admin/entities     — catalogue picker
  */
 
 import type { Router } from "express";
@@ -12,6 +25,7 @@ import type { Kysely } from "kysely";
 import { createCompiledEntityRoute } from "./compiled-entity.route.js";
 import { createLookupRoute } from "./lookup.route.js";
 import { createEntityOperationsRoute } from "./entity-operations.route.js";
+import { createMetadataAdminRoutes } from "./metadata-admin.route.js";
 
 export interface MetadataRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,5 +43,6 @@ export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps)
   createCompiledEntityRoute(router, deps);
   createLookupRoute(router, deps);
   createEntityOperationsRoute(router, deps);
+  createMetadataAdminRoutes(router, deps);
   return router;
 }

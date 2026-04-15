@@ -24,6 +24,7 @@ import {
   Separator,
 } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 
 // ── Priority badge ────────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ function InboxRow({ item }: { item: InboxItem }) {
     <Card>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 
           <div className="min-w-0 flex-1">
             {/* Title row */}
@@ -187,17 +188,16 @@ export default function InboxPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Inbox className="h-10 w-10 text-muted-foreground/40" />
-          <p className="text-sm font-medium text-muted-foreground">No pending tasks</p>
-          <p className="max-w-xs text-xs text-muted-foreground/70">
-            Approval requests and workflow tasks assigned to you will appear here.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Inbox className="h-10 w-10 text-muted-foreground/40" />}
+          title="No pending tasks"
+          description="Approval requests and workflow tasks assigned to you will appear here."
+          className="py-20"
+        />
       ) : (
         <div className="space-y-3">
           {items.map((item) => (

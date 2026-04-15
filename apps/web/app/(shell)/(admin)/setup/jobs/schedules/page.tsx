@@ -11,13 +11,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, ToggleLeft, ToggleRight, Pencil, Trash2, Lock } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Textarea, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { JobsSubNav } from "../_components/jobs-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,29 +45,6 @@ interface CronSchedule {
   next_run_at:       string | null;
   created_at:        string;
   updated_at:        string | null;
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function JobsSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/jobs",                  label: "Queues" },
-    { href: "/setup/jobs/dlq",              label: "Dead Letter" },
-    { href: "/setup/jobs/history",          label: "Run History" },
-    { href: "/setup/jobs/schedules",        label: "Schedules" },
-    { href: "/setup/jobs/orchestrations",   label: "Orchestrations" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -386,8 +365,8 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
 
   return (
     <>
-      <Card className={!schedule.is_enabled ? "opacity-60" : ""}>
-        <CardContent className="p-3 space-y-1.5">
+      <RowCard className={!schedule.is_enabled ? "opacity-60" : ""}>
+        <div className="space-y-1.5">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               {isPlatformGlobal && (
@@ -402,7 +381,7 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
               </Badge>
               <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => toggle.mutate()} title="Toggle">
                 {schedule.is_enabled
-                  ? <ToggleRight className="h-3.5 w-3.5 text-green-500" />
+                  ? <ToggleRight className="h-3.5 w-3.5 text-success" />
                   : <ToggleLeft  className="h-3.5 w-3.5 text-muted-foreground" />}
               </Button>
               <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setEditOpen(true)}>
@@ -438,8 +417,8 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
           {schedule.description && (
             <p className="text-[10px] text-muted-foreground">{schedule.description}</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </RowCard>
 
       {editOpen && (
         <EditScheduleDialog schedule={schedule} open={editOpen} onOpenChange={setEditOpen} />
@@ -515,20 +494,20 @@ export default function SchedulesPage() {
 
       {isLoading ? (
         <div className="space-y-2">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : all.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Lock className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No DB-managed schedules yet.</p>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Code-based schedules from cron-registry.ts are not shown here.
-            Create a DB schedule to override intervals at runtime without redeployment.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Create first schedule
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Lock className="h-10 w-10 text-muted-foreground/30" />}
+          title="No DB-managed schedules yet."
+          description="Code-based schedules from cron-registry.ts are not shown here. Create a DB schedule to override intervals at runtime without redeployment."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Create first schedule
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-5">
           {global.length > 0 && (

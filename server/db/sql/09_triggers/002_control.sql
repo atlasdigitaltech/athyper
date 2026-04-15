@@ -1199,3 +1199,74 @@ DROP TRIGGER IF EXISTS trg_acbp_posting_roles_validate ON control.asset_class_bo
 CREATE TRIGGER trg_acbp_posting_roles_validate
     BEFORE INSERT OR UPDATE ON control.asset_class_book_policy
     FOR EACH ROW EXECUTE FUNCTION control.trg_acbp_validate_posting_roles();
+
+
+-- ── Policy rule versioning trigger ──────────────────────────────────────────
+-- BEFORE UPDATE on control.policy_rule:
+--   1. Close the current open version (effective_until = now()).
+--   2. Insert a snapshot of the OLD row as a new policy_rule_version row.
+-- Routes should SET LOCAL app.principal_id = '<uuid>' before each UPDATE.
+
+CREATE OR REPLACE FUNCTION control.trg_fn_version_policy_rule()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_next_version integer;
+  v_principal_id uuid;
+BEGIN
+  SELECT COALESCE(MAX(version_no), 0) + 1
+    INTO v_next_version
+    FROM control.policy_rule_version
+   WHERE policy_rule_id = OLD.id;
+
+  BEGIN
+    v_principal_id := current_setting('app.principal_id', true)::uuid;
+  EXCEPTION WHEN OTHERS THEN
+    v_principal_id := NULL;
+  END;
+
+  UPDATE control.policy_rule_version
+     SET effective_until = now(),
+         updated_at      = now()
+   WHERE policy_rule_id = OLD.id
+     AND effective_until IS NULL;
+
+  INSERT INTO control.policy_rule_version (
+    tenant_id,
+    policy_rule_id,
+    policy_id,
+    version_no,
+    rule_snapshot,
+    effective_from,
+    effective_until,
+    published_by,
+    published_at
+  ) VALUES (
+    OLD.tenant_id,
+    OLD.id,
+    OLD.policy_id,
+    v_next_version,
+    to_jsonb(OLD),
+    COALESCE(OLD.updated_at, OLD.created_at, now()),
+    now(),
+    v_principal_id,
+    now()
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_version_policy_rule ON control.policy_rule;
+
+CREATE TRIGGER trg_version_policy_rule
+  BEFORE UPDATE ON control.policy_rule
+  FOR EACH ROW
+  EXECUTE FUNCTION control.trg_fn_version_policy_rule();
+
+COMMENT ON FUNCTION control.trg_fn_version_policy_rule() IS
+  'BEFORE UPDATE trigger on control.policy_rule. Closes the previous '
+  'policy_rule_version row (sets effective_until) and inserts a snapshot '
+  'of the OLD row as a new version. Enables full rule change audit trail.';

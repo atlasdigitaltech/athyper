@@ -130,6 +130,12 @@ CREATE TABLE IF NOT EXISTS control.mfa_config (
     -- Table-specific (delivery address — required for email/sms, NULL for totp/webauthn/backup)
     contact_link_id    uuid,
 
+    -- Table-specific (credential storage — base32 TOTP secret; bcrypt hash of backup codes; NULL for webauthn)
+    credential_hash    text,
+
+    -- Table-specific (display label set by user in KC account console, e.g. "My YubiKey")
+    user_label         text,
+
     -- Table-specific (Keycloak binding)
     keycloak_credential_id      text,
     keycloak_synced_at          timestamptz,
@@ -5032,3 +5038,163 @@ COMMENT ON TABLE  control.connector_type IS
     'Integration connector type catalog. config_schema (JSON Schema) drives UI form generation '
     'automatically — no frontend changes needed to add a new connector type. '
     'is_system = true entries are platform-seeded and cannot be deleted by tenants.';
+
+
+-- ============================================================================
+-- §PRV  control.policy_rule_version — immutable rule change log
+-- ============================================================================
+-- Append-only: a trigger auto-inserts a version row before any UPDATE to
+-- control.policy_rule. Makes policy changes fully auditable.
+
+CREATE TABLE IF NOT EXISTS control.policy_rule_version (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+
+    -- Parent rule
+    policy_rule_id  uuid        NOT NULL,
+    policy_id       uuid        NOT NULL,                -- denormalized for fast history queries
+
+    -- Version number (auto-incremented by trigger)
+    version_no      integer     NOT NULL,
+
+    -- Snapshot of the rule AT THIS VERSION (taken before the update)
+    rule_snapshot   jsonb       NOT NULL,               -- full control.policy_rule row as JSON
+
+    -- Effectivity window
+    effective_from  timestamptz NOT NULL DEFAULT now(), -- when this version became active
+    effective_until timestamptz,                        -- set when superseded by next version; NULL = current
+
+    -- Who made the change that superseded this version
+    published_by    uuid,                               -- principal_id who triggered the UPDATE
+    published_at    timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT prv_pkey         PRIMARY KEY (id),
+    CONSTRAINT prv_tenant_uq    UNIQUE (tenant_id, id),
+    CONSTRAINT prv_natural_uq   UNIQUE (policy_rule_id, version_no),
+    CONSTRAINT prv_version_chk  CHECK (version_no > 0),
+    CONSTRAINT prv_window_chk   CHECK (
+        effective_until IS NULL OR effective_from <= effective_until
+    )
+);
+
+COMMENT ON TABLE control.policy_rule_version IS
+    'Append-only audit trail for policy rule changes. A new row is inserted '
+    'BEFORE each UPDATE to control.policy_rule via trg_version_policy_rule. '
+    'rule_snapshot captures the full row state that was REPLACED by the update '
+    '(i.e. the previous version). effective_until is set on the previous version '
+    'when a new edit comes in.';
+
+COMMENT ON COLUMN control.policy_rule_version.rule_snapshot IS
+    'Full JSONB snapshot of the control.policy_rule row as it existed before '
+    'the superseding update. Enables diff views between versions.';
+
+COMMENT ON COLUMN control.policy_rule_version.effective_until IS
+    'Timestamp when this version was superseded. NULL = this is the current version. '
+    'Set by the trigger on the PREVIOUS version row when a new edit is applied.';
+
+
+-- ============================================================================
+-- §PTC  control.policy_test_case — persisted simulation test cases
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS control.policy_test_case (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Parent policy
+    policy_definition_id uuid       NOT NULL,
+
+    -- Test definition
+    test_name           varchar(150) NOT NULL,
+    description         text,
+
+    -- Input payload to evaluate against the policy
+    input_payload       jsonb       NOT NULL,            -- the entity data / context to evaluate
+
+    -- Expected result
+    expected_outcome    jsonb       NOT NULL,            -- { action, score?, confidence?, decision? }
+
+    -- Last execution result (updated on each run via POST /api/policy/test-cases/:id/run)
+    last_run_at         timestamptz,
+    last_run_passed     boolean,
+    last_run_result     jsonb,                           -- actual outcome from last run
+    last_run_ms         integer,                         -- evaluation latency of last run
+
+    -- Lifecycle
+    is_active           boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT ptc_pkey         PRIMARY KEY (id),
+    CONSTRAINT ptc_tenant_uq    UNIQUE (tenant_id, id),
+    CONSTRAINT ptc_name_uq      UNIQUE (tenant_id, policy_definition_id, test_name),
+    CONSTRAINT ptc_policy_fk    FOREIGN KEY (policy_definition_id)
+        REFERENCES control.policy_definition (id)
+        ON DELETE CASCADE
+);
+
+COMMENT ON TABLE control.policy_test_case IS
+    'Persisted simulation test cases for a policy definition. '
+    'Used by the simulation harness (POST /api/policy/definitions/:id/test) '
+    'to run batch assertions and surface pass/fail results. '
+    'last_run_* columns are updated on each execution, enabling a "last run" status badge in the UI.';
+
+COMMENT ON COLUMN control.policy_test_case.input_payload IS
+    'The entity data context to feed into the policy engine. '
+    'Shape must match the entity_type targeted by the parent policy_definition.';
+
+COMMENT ON COLUMN control.policy_test_case.expected_outcome IS
+    'Expected evaluation result. Compared against actual outcome during test runs. '
+    'Minimum shape: { "action": "approve" | "reject" | "review" | ... }. '
+    'May also include score_min/score_max bounds for scoring policies.';
+
+CREATE INDEX IF NOT EXISTS prv_rule_id_idx
+    ON control.policy_rule_version (policy_rule_id, version_no DESC);
+
+CREATE INDEX IF NOT EXISTS prv_policy_id_idx
+    ON control.policy_rule_version (policy_id, published_at DESC);
+
+CREATE INDEX IF NOT EXISTS ptc_policy_idx
+    ON control.policy_test_case (tenant_id, policy_definition_id, is_active);
+
+
+-- ============================================================================
+-- §CQ  control.content_quota — per-tenant, per-kind content quota enforcement
+-- ============================================================================
+-- quota check order (POST /content/items):
+--   1. Exact kind match for tenant
+--   2. Wildcard '*' for tenant
+--   3. No quota row → unlimited (pass-through)
+
+CREATE TABLE IF NOT EXISTS control.content_quota (
+    id                 uuid        PRIMARY KEY DEFAULT shared.uuidv7(),
+    tenant_id          uuid        NOT NULL REFERENCES shared.tenant(id) ON DELETE CASCADE,
+    kind               text        NOT NULL CHECK (kind ~ '^[a-z_*][a-z0-9_*]*$' AND length(kind) <= 64),
+    max_items          bigint      CHECK (max_items IS NULL OR max_items > 0),
+    max_storage_bytes  bigint      CHECK (max_storage_bytes IS NULL OR max_storage_bytes > 0),
+    warn_at_pct        integer     NOT NULL DEFAULT 80 CHECK (warn_at_pct BETWEEN 1 AND 100),
+    is_active          boolean     NOT NULL DEFAULT true,
+    created_at         timestamptz NOT NULL DEFAULT now(),
+    created_by         uuid        NOT NULL,
+    updated_at         timestamptz,
+    updated_by         uuid,
+
+    CONSTRAINT content_quota_tenant_kind_uq UNIQUE (tenant_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS cq_tenant_active_idx
+    ON control.content_quota (tenant_id)
+    WHERE is_active = true;
+
+ALTER TABLE control.content_quota ENABLE ROW LEVEL SECURITY;
+
+COMMENT ON TABLE control.content_quota IS
+    'Per-tenant per-kind content item and storage quotas. '
+    'max_items / max_storage_bytes = NULL means unlimited. '
+    'Use kind = ''*'' for a catch-all default for the tenant.';

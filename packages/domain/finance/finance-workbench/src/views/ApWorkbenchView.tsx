@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown, ChevronRight, CreditCard } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
-import { useApInvoices, useApPayments, useApAging, useArReceipts } from "../hooks/useApWorkbench";
+import {
+  useApInvoices, useApPayments, useApAging, useArReceipts,
+  useApInvoiceDetail, useApPaymentMethods, useCreateApPayment,
+} from "../hooks/useApWorkbench";
+import type { ApInvoice } from "../hooks/useApWorkbench";
 
 type ApTab = "invoices" | "aging" | "payments" | "ar-receipts";
 
@@ -16,10 +21,10 @@ const TABS: Array<{ id: ApTab; label: string }> = [
 
 const STATUS_COLORS: Record<string, string> = {
   draft:     "text-muted-foreground",
-  submitted: "text-blue-600",
-  approved:  "text-emerald-600",
-  posted:    "text-emerald-700 font-medium",
-  paid:      "text-emerald-600",
+  submitted: "text-primary",
+  approved:  "text-success",
+  posted:    "text-success font-medium",
+  paid:      "text-success",
   overdue:   "text-destructive font-medium",
   voided:    "text-muted-foreground line-through",
   cancelled: "text-muted-foreground",
@@ -42,11 +47,279 @@ interface ApWorkbenchViewProps {
   scope: FinanceScope;
 }
 
+// ── Pay Invoice dialog ────────────────────────────────────────────────────────
+
+function PayInvoiceDialog({
+  invoiceId,
+  outstandingAmount,
+  currencyCode,
+  open,
+  onOpenChange,
+}: {
+  invoiceId: string;
+  outstandingAmount: number;
+  currencyCode: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { data: methods } = useApPaymentMethods();
+  const createPayment = useCreateApPayment();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [valueDate, setValueDate]             = useState(today);
+  const [notes, setNotes]                     = useState("");
+  const [error, setError]                     = useState<string | null>(null);
+
+  function reset() {
+    setPaymentMethodId("");
+    setValueDate(today);
+    setNotes("");
+    setError(null);
+  }
+
+  async function handleSubmit() {
+    setError(null);
+    if (!paymentMethodId) { setError("Select a payment method"); return; }
+
+    try {
+      await createPayment.mutateAsync({
+        invoice_id:        invoiceId,
+        payment_method_id: paymentMethodId,
+        value_date:        valueDate,
+        notes:             notes.trim() || undefined,
+      });
+      reset();
+      onOpenChange(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create payment");
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/40",
+        open ? "" : "hidden",
+      )}
+      onClick={(e) => { if (e.target === e.currentTarget) { reset(); onOpenChange(false); } }}
+    >
+      <div className="bg-background rounded-xl shadow-xl border p-5 w-full max-w-sm space-y-4">
+        <div className="font-semibold text-sm">Pay Invoice</div>
+
+        <div className="space-y-3">
+          <div>
+            <div className="text-[10px] text-muted-foreground mb-1">Amount</div>
+            <div className="font-mono font-medium text-sm">
+              {fmt(outstandingAmount, currencyCode)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] text-muted-foreground mb-1">Payment Method</div>
+            <select
+              value={paymentMethodId}
+              onChange={(e) => setPaymentMethodId(e.target.value)}
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            >
+              <option value="">Select…</option>
+              {(methods?.items ?? []).map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="text-[10px] text-muted-foreground mb-1">Value Date</div>
+            <input
+              type="date"
+              value={valueDate}
+              onChange={(e) => setValueDate(e.target.value)}
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            />
+          </div>
+
+          <div>
+            <div className="text-[10px] text-muted-foreground mb-1">Notes (optional)</div>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Payment reference or memo"
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs border rounded-md hover:bg-muted/40"
+            onClick={() => { reset(); onOpenChange(false); }}
+            disabled={createPayment.isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={createPayment.isPending}
+          >
+            {createPayment.isPending ? "Creating…" : "Create Payment Draft"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Invoice detail panel ──────────────────────────────────────────────────────
+
+function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const { data, isLoading, isError } = useApInvoiceDetail(invoiceId);
+
+  if (isLoading) {
+    return <div className="py-4 text-xs text-muted-foreground animate-pulse">Loading invoice details…</div>;
+  }
+  if (isError || !data) {
+    return <div className="py-4 text-xs text-destructive">Failed to load invoice details.</div>;
+  }
+
+  return (
+    <div className="space-y-3 p-3">
+      {/* Header meta */}
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+        <div>
+          <span className="text-muted-foreground">Currency: </span>
+          <span className="font-mono">{data.currencyCode}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Period: </span>
+          <span>FY{data.fiscalYear} / P{data.periodNumber}</span>
+        </div>
+        {data.tax_amount > 0 && (
+          <div>
+            <span className="text-muted-foreground">Tax: </span>
+            <span className="font-mono">{fmt(data.tax_amount)}</span>
+          </div>
+        )}
+        {data.outstandingAmount > 0 && (
+          <div>
+            <span className="text-muted-foreground">Outstanding: </span>
+            <span className="font-mono text-warning font-medium">{fmt(data.outstandingAmount)}</span>
+          </div>
+        )}
+      </div>
+
+      {data.description && (
+        <p className="text-xs text-muted-foreground italic border-l-2 border-muted pl-2">{data.description}</p>
+      )}
+
+      {/* Lines table */}
+      {data.lines.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-muted/40 border-b">
+                <th className="py-1.5 px-2 text-left font-medium text-muted-foreground w-8">#</th>
+                <th className="py-1.5 px-2 text-left font-medium text-muted-foreground">Description</th>
+                <th className="py-1.5 px-2 text-right font-medium text-muted-foreground w-20">Qty</th>
+                <th className="py-1.5 px-2 text-right font-medium text-muted-foreground w-28">Unit Price</th>
+                <th className="py-1.5 px-2 text-right font-medium text-muted-foreground w-28">Net Amount</th>
+                <th className="py-1.5 px-2 text-right font-medium text-muted-foreground w-24">Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.lines.map((l) => (
+                <tr key={l.id} className="border-b last:border-0">
+                  <td className="py-1 px-2 text-muted-foreground">{l.line_no}</td>
+                  <td className="py-1 px-2">{l.item_description}</td>
+                  <td className="py-1 px-2 text-right tabular-nums">{l.quantity}</td>
+                  <td className="py-1 px-2 text-right tabular-nums font-mono">{fmt(Number(l.unit_price))}</td>
+                  <td className="py-1 px-2 text-right tabular-nums font-mono font-medium">{fmt(Number(l.net_amount))}</td>
+                  <td className="py-1 px-2 text-right tabular-nums font-mono text-muted-foreground">
+                    {Number(l.tax_amount) > 0 ? fmt(Number(l.tax_amount)) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-muted/30 border-t">
+                <td colSpan={4} className="py-1.5 px-2 text-right font-medium text-muted-foreground">Total Payable</td>
+                <td className="py-1.5 px-2 text-right tabular-nums font-mono font-bold">{fmt(data.payableAmount)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* Allocations */}
+      {data.allocations.length > 0 && (
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground mb-1">Payment Allocations</p>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/40 border-b">
+                  <th className="py-1 px-2 text-left font-medium text-muted-foreground">Payment #</th>
+                  <th className="py-1 px-2 text-left font-medium text-muted-foreground">Date</th>
+                  <th className="py-1 px-2 text-right font-medium text-muted-foreground">Allocated</th>
+                  <th className="py-1 px-2 text-left font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.allocations.map((a) => (
+                  <tr key={a.id} className="border-b last:border-0">
+                    <td className="py-1 px-2 font-mono text-[10px]">{a.paymentNumber}</td>
+                    <td className="py-1 px-2 text-muted-foreground">{fmtDate(a.postingDate)}</td>
+                    <td className="py-1 px-2 text-right tabular-nums font-mono">{fmt(Number(a.allocatedAmount))}</td>
+                    <td className={cn("py-1 px-2 capitalize", STATUS_COLORS[a.paymentStatus] ?? "")}>{a.paymentStatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pay action — only when outstanding balance remains */}
+      {data.outstandingAmount > 0 && (
+        <div className="flex justify-end pt-1">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            onClick={() => setPayDialogOpen(true)}
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Pay Invoice
+          </button>
+        </div>
+      )}
+
+      {payDialogOpen && (
+        <PayInvoiceDialog
+          invoiceId={invoiceId}
+          outstandingAmount={data.outstandingAmount}
+          currencyCode={data.currencyCode}
+          open={payDialogOpen}
+          onOpenChange={setPayDialogOpen}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── AP Invoices tab ───────────────────────────────────────────────────────────
 
 function InvoicesTab({ scope }: { scope: FinanceScope }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading, isError } = useApInvoices(scope, {
     status: statusFilter || undefined,
     page,
@@ -56,6 +329,10 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
   if (!scope.scopeId) return <EmptyState message="Select a scope to view invoices." />;
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState />;
+
+  function toggleExpand(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }
 
   return (
     <div className="space-y-2">
@@ -79,6 +356,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
+              <th className="w-7" />
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Invoice #</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Supplier</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Date</th>
@@ -90,25 +368,43 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
           </thead>
           <tbody>
             {(data?.items ?? []).length === 0 && (
-              <tr><td colSpan={7} className="py-8 text-center text-xs text-muted-foreground">No invoices</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">No invoices</td></tr>
             )}
             {(data?.items ?? []).map((inv) => (
-              <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="py-1.5 px-3 font-mono text-muted-foreground">{inv.invoiceNumber}</td>
-                <td className="py-1.5 px-3">{inv.supplierName ?? <span className="text-muted-foreground">—</span>}</td>
-                <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.invoiceDate)}</td>
-                <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.dueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{fmt(inv.payableAmount)}</td>
-                <td className="py-1.5 px-3 text-right font-mono">
-                  {inv.outstandingAmount > 0
-                    ? <span className="text-amber-600 font-medium">{fmt(inv.outstandingAmount)}</span>
-                    : <span className="text-muted-foreground">—</span>
-                  }
-                </td>
-                <td className={cn("py-1.5 px-3 capitalize", STATUS_COLORS[inv.status] ?? "")}>
-                  {inv.status}
-                </td>
-              </tr>
+              <>
+                <tr
+                  key={inv.id}
+                  className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
+                  onClick={() => toggleExpand(inv.id)}
+                >
+                  <td className="py-1.5 px-2 w-7">
+                    {expandedId === inv.id
+                      ? <ChevronDown  className="h-3.5 w-3.5 text-muted-foreground" />
+                      : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </td>
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{inv.invoiceNumber}</td>
+                  <td className="py-1.5 px-3">{inv.supplierName ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.invoiceDate)}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.dueDate)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono">{fmt(inv.payableAmount)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono">
+                    {inv.outstandingAmount > 0
+                      ? <span className="text-warning font-medium">{fmt(inv.outstandingAmount)}</span>
+                      : <span className="text-muted-foreground">—</span>
+                    }
+                  </td>
+                  <td className={cn("py-1.5 px-3 capitalize", STATUS_COLORS[inv.status] ?? "")}>
+                    {inv.status}
+                  </td>
+                </tr>
+                {expandedId === inv.id && (
+                  <tr key={`${inv.id}-detail`} className="border-b bg-muted/10">
+                    <td colSpan={8}>
+                      <InvoiceDetailPanel invoiceId={inv.id} />
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
@@ -174,8 +470,8 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
                 <td className="py-1.5 px-3">{r.supplierName ?? <span className="text-muted-foreground italic">Unknown</span>}</td>
                 <td className="py-1.5 px-3 text-right font-mono">{r.current > 0 ? fmt(r.current) : "—"}</td>
                 <td className="py-1.5 px-3 text-right font-mono">{r.days1to30 > 0 ? fmt(r.days1to30) : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.days31to60 > 0 ? <span className="text-amber-600">{fmt(r.days31to60)}</span> : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.days61to90 > 0 ? <span className="text-orange-600">{fmt(r.days61to90)}</span> : "—"}</td>
+                <td className="py-1.5 px-3 text-right font-mono">{r.days31to60 > 0 ? <span className="text-warning">{fmt(r.days31to60)}</span> : "—"}</td>
+                <td className="py-1.5 px-3 text-right font-mono">{r.days61to90 > 0 ? <span className="text-warning/80">{fmt(r.days61to90)}</span> : "—"}</td>
                 <td className="py-1.5 px-3 text-right font-mono">{r.over90 > 0 ? <span className="text-destructive font-medium">{fmt(r.over90)}</span> : "—"}</td>
                 <td className="py-1.5 px-3 text-right font-mono font-medium">{fmt(r.total)}</td>
               </tr>
@@ -293,7 +589,7 @@ function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
                 <td className="py-1.5 px-3 font-mono text-muted-foreground">{r.paymentNumber}</td>
                 <td className="py-1.5 px-3">{r.counterpartyName ?? "—"}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(r.valueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono text-emerald-600 font-medium">{fmt(r.paymentAmount)}</td>
+                <td className="py-1.5 px-3 text-right font-mono text-success font-medium">{fmt(r.paymentAmount)}</td>
                 <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">{r.paymentReference ?? "—"}</td>
                 <td className={cn("py-1.5 px-3 capitalize", STATUS_COLORS[r.status] ?? "")}>{r.status}</td>
               </tr>

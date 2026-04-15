@@ -80,15 +80,15 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
 
   // ── Finance ───────────────────────────────────────────────────────────────
   ACC: [
-    { key: "invoices",  label: "Invoices",          href: "/document/invoice" },
-    { key: "payments",  label: "Payments",          href: "/document/payment" },
-    { key: "journals",  label: "Journal entries",   href: "/document/journal" },
-    { key: "gl",        label: "GL workbench",      href: "/ledger/gl-workbench" },
-    { key: "coa",       label: "Chart of accounts", href: "/ledger/coa" },
+    { key: "ap",        label: "AP workbench",      href: "/finance/ap" },
+    { key: "ar",        label: "AR workbench",      href: "/finance/ar" },
+    { key: "journals",  label: "Journal entries",   href: "/finance/gl?tab=gl-detail" },
+    { key: "gl",        label: "GL workbench",      href: "/finance/gl" },
+    { key: "coa",       label: "Chart of accounts", href: "/finance/coa" },
   ],
   PAY: [
     { key: "runs",      label: "Payment runs",      href: "/document/payment-run" },
-    { key: "bank",      label: "Bank reconciliation",href: "/ledger/gl-workbench?tab=bank-recon" },
+    { key: "bank",      label: "Bank reconciliation",href: "/finance/bank-recon" },
     { key: "views",     label: "Saved views",       href: "/saved-views", withModuleParam: true },
   ],
   BUDGET: [
@@ -179,15 +179,20 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "blueprints", label: "Blueprints",       href: "/setup/blueprints" },
   ],
   META: [
-    { key: "entities",   label: "Entities",         href: "/setup/metadata" },
-    { key: "modules",    label: "Modules",           href: "/setup/metadata/modules" },
-    { key: "studio",     label: "Meta Studio",      href: "/metadata-studio" },
-    { key: "blueprints", label: "Blueprints",       href: "/setup/blueprints" },
+    { key: "entities",    label: "Entities",          href: "/setup/metadata" },
+    { key: "lookups",     label: "Lookup domains",    href: "/setup/metadata/lookups" },
+    { key: "lifecycle",   label: "Lifecycle bindings",href: "/setup/metadata/lifecycle" },
+    { key: "operations",  label: "Entity operations", href: "/setup/metadata/operations" },
+    { key: "fieldgroups", label: "Field groups",      href: "/setup/metadata/field-groups" },
+    { key: "erd",         label: "Schema ERD",        href: "/setup/metadata/erd" },
+    { key: "descriptor",  label: "Descriptor tool",   href: "/setup/metadata/descriptor" },
+    { key: "modules",     label: "Modules",           href: "/setup/metadata/modules" },
+    { key: "studio",      label: "Meta Studio",       href: "/metadata-studio" },
   ],
   IAM: [
-    { key: "users",      label: "Users",            href: "/master/principal" },
-    { key: "roles",      label: "Roles",            href: "/master/role" },
-    { key: "groups",     label: "Groups",           href: "/master/group" },
+    { key: "users",      label: "Users",            href: "/setup/users" },
+    { key: "roles",      label: "Roles",            href: "/setup/roles" },
+    { key: "groups",     label: "Groups",           href: "/setup/groups" },
   ],
   AUD: [
     { key: "log",        label: "Audit log",        href: "/audit/events" },
@@ -200,16 +205,18 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "evaluator",  label: "Evaluator",          href: "/setup/policies?tab=evaluator" },
   ],
   WFL: [
-    { key: "definitions",label: "Workflows",          href: "/master/workflow-definition" },
-    { key: "requests",   label: "Requests",           href: "/master/workflow-request" },
-    { key: "inbox",      label: "Inbox",              href: "/inbox" },
+    { key: "definitions", label: "Workflows",    href: "/master/workflow-definition" },
+    { key: "templates",   label: "Templates",    href: "/setup/workflows" },
+    { key: "compliance",  label: "Compliance",   href: "/setup/workflows/compliance" },
+    { key: "requests",    label: "Requests",     href: "/master/workflow-request" },
+    { key: "inbox",       label: "Inbox",        href: "/inbox" },
   ],
   JOB: [
     { key: "jobs",       label: "Jobs",             href: "/master/job-definition" },
     { key: "runs",       label: "Runs",             href: "/master/job-run" },
   ],
   NTF: [
-    { key: "templates",  label: "Templates",        href: "/master/notification-template" },
+    { key: "admin",      label: "Admin console",    href: "/setup/notifications" },
     { key: "all",        label: "All notifications",href: "/notifications" },
   ],
   INT: [
@@ -224,6 +231,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
   ],
   CMS: [
     { key: "browser",    label: "Content",          href: "/content" },
+    { key: "quarantine", label: "Quarantine",        href: "/setup/content" },
   ],
   ACT: [
     { key: "activity",   label: "Activity feed",    href: "/master/activity" },

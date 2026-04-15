@@ -163,8 +163,9 @@ export default function SavedViewsPage() {
     <PageFrame
       title="Saved Views"
       description="Named filter and column presets for entity lists"
+      width="default"
     >
-      <div className="max-w-3xl space-y-6">
+      <div className="space-y-6">
 
         {/* Entity selector */}
         <div className="rounded-lg border bg-card p-4 space-y-2">
@@ -190,7 +191,7 @@ export default function SavedViewsPage() {
         {entityCode && (
           <div className="space-y-4">
             {isLoading ? (
-              [1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)
+              [1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)
             ) : !views || views.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
                 <Bookmark className="h-8 w-8 text-muted-foreground/30" />

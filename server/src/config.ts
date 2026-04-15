@@ -76,6 +76,46 @@ const ServerConfigSchema = z.object({
     .optional(),
 
   /**
+   * SMS (Twilio).
+   * Optional — when absent the sms notification channel is not registered.
+   * Required env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER.
+   * Optional: TWILIO_MESSAGING_SERVICE_SID (preferred over FROM_NUMBER for pool delivery).
+   */
+  sms: z
+    .object({
+      accountSid:          z.string().min(1),
+      authToken:           z.string().min(1),
+      fromNumber:          z.string().min(1),
+      messagingServiceSid: z.string().optional(),
+    })
+    .optional(),
+
+  /**
+   * Push notifications — FCM HTTP v1 (Android/iOS) + VAPID Web Push (browser).
+   * Optional — when absent the push notification channel is not registered.
+   *
+   * FCM env vars (required for Android/iOS push):
+   *   PUSH_FCM_PROJECT_ID          — Firebase project ID
+   *   PUSH_FCM_SERVICE_ACCOUNT_KEY — JSON string of GCP service account key file
+   *
+   * VAPID env vars (required for browser Web Push):
+   *   VAPID_SUBJECT     — "mailto:noreply@example.com" or "https://example.com"
+   *   VAPID_PUBLIC_KEY  — base64url uncompressed P-256 public key (65 bytes)
+   *   VAPID_PRIVATE_KEY — base64url raw P-256 private key (32 bytes)
+   *
+   * Generate VAPID keys: npx web-push generate-vapid-keys
+   */
+  push: z
+    .object({
+      fcmProjectId:            z.string().optional(),
+      fcmServiceAccountKeyJson: z.string().optional(),
+      vapidSubject:            z.string().optional(),
+      vapidPublicKey:          z.string().optional(),
+      vapidPrivateKey:         z.string().optional(),
+    })
+    .optional(),
+
+  /**
    * Object storage (S3 / MinIO).
    * Optional — when absent, attachment routes return 503 and the health
    * check reports this contributor as degraded rather than unhealthy.
@@ -108,6 +148,25 @@ const ServerConfigSchema = z.object({
        * 900 s = 15 minutes — narrow window reduces misuse risk.
        */
       presignedTtlSeconds: z.coerce.number().int().min(60).default(900),
+    })
+    .optional(),
+
+  /**
+   * ClamAV daemon — virus scanning for CMS attachment uploads.
+   * Optional — when absent, uploads proceed without scanning (is_virus_scanned=false).
+   * Required env vars: CLAMD_HOST, CLAMD_PORT (default 3310).
+   */
+  clamd: z
+    .object({
+      host:    z.string().min(1),
+      port:    z.coerce.number().int().positive().default(3310),
+      /** Scan timeout in ms. Default: 10 000. */
+      timeoutMs: z.coerce.number().int().positive().default(10_000),
+      /**
+       * fail-open  (default): unreachable clamd allows the upload through (is_virus_scanned=false).
+       * fail-closed: unreachable clamd blocks the upload with 503.
+       */
+      onUnavailable: z.enum(["fail-open", "fail-closed"]).default("fail-open"),
     })
     .optional(),
 
@@ -224,6 +283,45 @@ export function loadConfig(): ServerConfig {
           multipartQueueSize:  process.env.S3_MULTIPART_QUEUE_SIZE,
           maxUploadMb:         process.env.S3_MAX_UPLOAD_MB,
           presignedTtlSeconds: process.env.S3_PRESIGNED_TTL_SECONDS,
+        }
+      : undefined,
+
+    email: process.env.SMTP_HOST
+      ? {
+          host:         process.env.SMTP_HOST,
+          port:         process.env.SMTP_PORT,
+          secure:       process.env.SMTP_SECURE,
+          user:         process.env.SMTP_USER,
+          pass:         process.env.SMTP_PASS,
+          from_address: process.env.SMTP_FROM ?? "",
+        }
+      : undefined,
+
+    sms: process.env.TWILIO_ACCOUNT_SID
+      ? {
+          accountSid:          process.env.TWILIO_ACCOUNT_SID,
+          authToken:           process.env.TWILIO_AUTH_TOKEN,
+          fromNumber:          process.env.TWILIO_FROM_NUMBER ?? "",
+          messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+        }
+      : undefined,
+
+    push: (process.env.PUSH_FCM_PROJECT_ID ?? process.env.VAPID_PUBLIC_KEY)
+      ? {
+          fcmProjectId:            process.env.PUSH_FCM_PROJECT_ID,
+          fcmServiceAccountKeyJson: process.env.PUSH_FCM_SERVICE_ACCOUNT_KEY,
+          vapidSubject:            process.env.VAPID_SUBJECT,
+          vapidPublicKey:          process.env.VAPID_PUBLIC_KEY,
+          vapidPrivateKey:         process.env.VAPID_PRIVATE_KEY,
+        }
+      : undefined,
+
+    clamd: process.env.CLAMD_HOST
+      ? {
+          host:          process.env.CLAMD_HOST,
+          port:          process.env.CLAMD_PORT,
+          timeoutMs:     process.env.CLAMD_TIMEOUT_MS,
+          onUnavailable: process.env.CLAMD_ON_UNAVAILABLE,
         }
       : undefined,
 

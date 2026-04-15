@@ -14,8 +14,16 @@
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { extractOrgHeaders, resolveTenantId } from "@athyper/svc-shared";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/** Minimal Redis interface for server-side descriptor caching. */
+export interface DescriptorCache {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ttlSeconds: number): Promise<void>;
+  del(key: string): Promise<void>;
+}
 
 export interface CompiledEntityRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,6 +35,35 @@ export interface CompiledEntityRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
   };
+  /**
+   * Optional server-side descriptor cache (Redis recommended).
+   * When provided, compiled descriptors are cached for DESCRIPTOR_CACHE_TTL_S.
+   * Cache is keyed by entityCode; entry is invalidated when entity version changes
+   * (detected by ETag mismatch on the cached payload vs recomputed hash).
+   */
+  cache?: DescriptorCache;
+}
+
+// ─── Cache helpers ─────────────────────────────────────────────────────────────
+
+const DESCRIPTOR_CACHE_TTL_S = 300; // 5 min
+
+/**
+ * Content-addressed payload key.
+ * Format: desc:v2:{tenantId}:{entityCode}:{versionHash}
+ * Different hashes create different keys → stale entries expire naturally (no explicit DEL needed).
+ */
+function descriptorCacheKey(tenantId: string, entityCode: string, versionHash: string): string {
+  return `desc:v2:${tenantId}:${entityCode}:${versionHash}`;
+}
+
+/**
+ * Pointer key — stores the current compiledHash for a tenant+entity pair.
+ * Short-lived (same TTL as payload). Deleting this key invalidates the cache
+ * without having to know the current hash.
+ */
+function descriptorCachePointerKey(tenantId: string, entityCode: string): string {
+  return `desc:v2:${tenantId}:${entityCode}:ptr`;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,7 +125,7 @@ function mapField(row: Record<string, any>) {
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRoutesDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
@@ -109,6 +146,41 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // ── Resolve entity + effective version ────────────────────────────────
       // Normalise URL slug → DB name (journal-entry → journal_entry)
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+
+      // ── Resolve tenant (required for tenant-isolated cache key) ───────────
+      // Fail-open: if X-Org is absent we skip the cache (prevents cross-tenant leakage).
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+
+      // ── Server-side cache check ───────────────────────────────────────────
+      // Only use cache when tenantId is known — prevents v1-style cross-tenant leakage.
+      // Two-level lookup: pointer (desc:v2:{tenantId}:{entityCode}:ptr) → compiledHash
+      //                   payload (desc:v2:{tenantId}:{entityCode}:{compiledHash})
+      if (cache && tenantId) {
+        try {
+          const ptr = await cache.get(descriptorCachePointerKey(tenantId, entityCode));
+          if (ptr) {
+            const cached = await cache.get(descriptorCacheKey(tenantId, entityCode, ptr));
+            if (cached) {
+              const payload = JSON.parse(cached) as Record<string, unknown>;
+              const etagValue = `"ced-${payload["compiled_hash"]}"`;
+              res.setHeader("ETag", etagValue);
+              res.setHeader("Cache-Control", "no-cache");
+              res.setHeader("X-Cache", "HIT");
+
+              if (req.headers["if-none-match"] === etagValue) {
+                res.status(304).end();
+                return;
+              }
+              res.json(payload);
+              return;
+            }
+          }
+        } catch (cacheErr) {
+          logger?.warn("compiled_entity_cache_read_failed", { entityCode, tenantId, err: String(cacheErr) });
+          // Fail-open: fall through to DB
+        }
+      }
 
       const entityRow = await db
         .selectFrom("control.entity as e")
@@ -227,6 +299,28 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         compiled_hash: compiledHash,
       };
 
+      // ETag / 304 — descriptor is content-addressed by compiled_hash
+      const etagValue = `"ced-${compiledHash}"`;
+      res.setHeader("ETag", etagValue);
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("X-Cache", "MISS");
+
+      if (req.headers["if-none-match"] === etagValue) {
+        res.status(304).end();
+        return;
+      }
+
+      // Populate server-side cache (best-effort; do not block response).
+      // Write both the content-addressed payload and the pointer.
+      // Deleting the pointer (invalidateDescriptorCache) is sufficient to invalidate;
+      // the old content-addressed entry expires naturally after TTL.
+      if (cache && tenantId) {
+        Promise.all([
+          cache.set(descriptorCacheKey(tenantId, entityCode, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
+          cache.set(descriptorCachePointerKey(tenantId, entityCode), compiledHash, DESCRIPTOR_CACHE_TTL_S),
+        ]).catch((err) => logger?.warn("compiled_entity_cache_write_failed", { entityCode, tenantId, err: String(err) }));
+      }
+
       res.json(payload);
       return;
     } catch (err) {
@@ -237,4 +331,21 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
 
   router.get("/metadata/entities/:entity/compiled", handler);
   return router;
+}
+
+/**
+ * Invalidate the server-side descriptor cache for a specific entity + tenant.
+ * Deletes the pointer key; the content-addressed payload expires naturally after TTL.
+ * Call this after any schema change (entity version publish, field add/remove).
+ */
+export async function invalidateDescriptorCache(
+  cache:      DescriptorCache,
+  tenantId:   string,
+  entityCode: string,
+): Promise<void> {
+  try {
+    await cache.del(descriptorCachePointerKey(tenantId, entityCode));
+  } catch {
+    // best-effort
+  }
 }

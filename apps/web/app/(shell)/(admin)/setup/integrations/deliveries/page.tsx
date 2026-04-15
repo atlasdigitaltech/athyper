@@ -10,12 +10,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Activity } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import {
   Button, Badge, Skeleton,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { IntegrationSubNav } from "../_components/integration-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,31 +38,6 @@ const STATUS_VARIANT: Record<DeliveryStatus, "warning" | "muted" | "success" | "
   queued: "outline", sent: "warning", delivered: "success",
   bounced: "destructive", failed: "destructive", cancelled: "muted",
 };
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function IntegrationSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/integrations",              label: "Endpoints" },
-    { href: "/setup/integrations/providers",    label: "Providers" },
-    { href: "/setup/integrations/outbox",       label: "Outbox" },
-    { href: "/setup/integrations/deliveries",   label: "Deliveries" },
-    { href: "/setup/integrations/webhooks",     label: "Webhooks" },
-    { href: "/setup/integrations/connectors",   label: "Connectors" },
-    { href: "/setup/integrations/connections",  label: "Connections" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 const WINDOW_OPTIONS = [
   { label: "Last 24 hours", days: 1 },
@@ -146,10 +122,11 @@ export default function DeliveriesPage() {
       {isLoading ? (
         <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
       ) : records.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <Activity className="h-8 w-8 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No delivery records in the selected window.</p>
-        </div>
+        <EmptyState
+          icon={<Activity className="h-8 w-8 text-muted-foreground/30" />}
+          title="No delivery records in the selected window."
+          className="py-16"
+        />
       ) : (
         <div className="overflow-auto">
           <table className="w-full text-xs">

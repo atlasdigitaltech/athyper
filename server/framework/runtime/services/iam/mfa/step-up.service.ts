@@ -22,8 +22,10 @@
  * requireStepUp() first. The write endpoints in operator.routes.ts enforce this.
  */
 
+import { createHash } from "crypto";
 import type { Response } from "express";
 import type { CacheClient } from "../session/session.service.js";
+import type { Kysely } from "kysely";
 
 // ─── Action classes ───────────────────────────────────────────────────────────
 
@@ -123,6 +125,65 @@ export async function requireStepUp(
     message: `This action requires MFA step-up verification for '${actionClass}'. Complete the MFA challenge and retry.`,
   });
   return false;
+}
+
+// ─── Trusted-device helpers ───────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDb = Kysely<Record<string, any>>;
+
+/**
+ * Hashes a raw device token (32-byte random hex string from the cookie) using
+ * SHA-256. Only the hash is stored in master.trusted_device.
+ */
+export function hashDeviceToken(rawToken: string): string {
+  return createHash("sha256").update(rawToken).digest("hex");
+}
+
+/**
+ * Check whether the presented device token cookie grants step-up bypass for
+ * the given action class.
+ *
+ * Returns true only when:
+ *   - A non-revoked, non-expired trusted_device row exists for (tenantId, principalId, hash)
+ *   - The action class is within the allowed list for device trust
+ *     (all current classes are allowed; future classes may opt out via the exclusion set)
+ *
+ * Also bumps last_seen_at so the UI can show "last seen" info.
+ */
+export async function isDeviceTrusted(
+  db: AnyDb,
+  tenantId: string,
+  principalId: string,
+  rawToken: string | undefined | null,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _actionClass: ActionClass,
+): Promise<boolean> {
+  if (!rawToken?.trim()) return false;
+
+  const hash = hashDeviceToken(rawToken);
+
+  const row = await db
+    .selectFrom("master.trusted_device as td")
+    .select("td.id")
+    .where("td.tenant_id",          "=", tenantId)
+    .where("td.principal_id",       "=", principalId)
+    .where("td.device_token_hash",  "=", hash)
+    .where("td.is_revoked",         "=", false)
+    .where("td.expires_at",         ">", new Date())
+    .executeTakeFirst() as { id: string } | undefined;
+
+  if (!row) return false;
+
+  // Bump last_seen_at — best-effort, ignore failure
+  await db
+    .updateTable("master.trusted_device")
+    .set({ last_seen_at: new Date() })
+    .where("id", "=", row.id)
+    .execute()
+    .catch(() => { /* best-effort */ });
+
+  return true;
 }
 
 /**

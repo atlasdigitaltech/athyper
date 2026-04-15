@@ -11,10 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@athyper/brand": "workspace:*",
     "@athyper/api-client": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
     "@athyper/auth": "workspace:*",
+    "@athyper/brand": "workspace:*",
     "@athyper/collaboration-ui": "workspace:*",
     "@athyper/content-ui": "workspace:*",
     "@athyper/document-runtime": "workspace:*",
@@ -36,6 +36,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-query": "^5.97.0",
     "@tanstack/react-virtual": "^3.11.2",
+    "@xyflow/react": "^12.10.2",
     "cmdk": "^1.0.4",
     "geist": "^1.7.0",
     "lucide-react": "^1.8.0",

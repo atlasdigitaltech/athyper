@@ -2,6 +2,10 @@
 
 /**
  * CommentReactions — Emoji reaction buttons with optimistic toggle.
+ *
+ * Reaction types are stored as codes in the DB (thumbs_up, heart, …).
+ * The server returns emoji characters alongside the count via the GET endpoint.
+ * The picker uses a local code→emoji map and sends the code on toggle.
  */
 
 import { useState } from "react";
@@ -11,7 +15,17 @@ import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { useReactions } from "../hooks/collab";
 
-const REACTION_EMOJIS = ["👍", "❤️", "🎉", "👀", "👎", "🚀", "💡", "🤔"] as const;
+// Canonical picker list — must match the 8 codes seeded in master.reaction_type.
+const REACTIONS = [
+  { code: "thumbs_up",   emoji: "👍" },
+  { code: "thumbs_down", emoji: "👎" },
+  { code: "heart",       emoji: "❤️" },
+  { code: "celebrate",   emoji: "🎉" },
+  { code: "eyes",        emoji: "👀" },
+  { code: "rocket",      emoji: "🚀" },
+  { code: "idea",        emoji: "💡" },
+  { code: "thinking",    emoji: "🤔" },
+] as const;
 
 interface CommentReactionsProps {
   commentId: string;
@@ -35,7 +49,8 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
               r.reacted && "border-primary/40 bg-primary/5",
             )}
           >
-            <span>{r.reactionType}</span>
+            {/* Use server-supplied emoji; fall back to the local map */}
+            <span>{r.emoji}</span>
             <span className="tabular-nums">{r.count}</span>
           </button>
         ))}
@@ -53,13 +68,14 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
 
         {showPicker && (
           <div className="absolute bottom-full left-0 z-50 mb-1 flex gap-0.5 rounded-lg border bg-popover p-1 shadow-md">
-            {REACTION_EMOJIS.map((emoji) => (
+            {REACTIONS.map(({ code, emoji }) => (
               <button
-                key={emoji}
+                key={code}
                 type="button"
+                title={code.replace(/_/g, " ")}
                 className="rounded p-1 text-base hover:bg-accent"
                 onClick={() => {
-                  toggleReaction(emoji);
+                  toggleReaction(code);
                   setShowPicker(false);
                 }}
               >

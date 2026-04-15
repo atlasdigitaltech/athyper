@@ -35,7 +35,7 @@ import { PageFrame } from "@athyper/ui/layout";
 // ── Event timeline ────────────────────────────────────────────────────────────
 
 const EVENT_ICON: Record<string, React.ReactNode> = {
-  approved:    <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />,
+  approved:    <CheckCircle className="h-3.5 w-3.5 text-success" />,
   rejected:    <XCircle    className="h-3.5 w-3.5 text-destructive" />,
   delegated:   <Forward    className="h-3.5 w-3.5 text-info" />,
   escalated:   <AlertTriangle className="h-3.5 w-3.5 text-warning" />,

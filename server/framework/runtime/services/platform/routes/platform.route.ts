@@ -3,16 +3,22 @@
  *                   user preferences, entity field browser
  *
  * GET    /api/platform/saved-views/:entity              — user + shared saved filter views
- * POST   /api/platform/saved-views/:entity              — create a saved view
+ * POST   /api/platform/saved-views/:entity              — create a saved view (entity in path)
+ * POST   /api/platform/saved-views                      — create a saved view (entity_code in body)
  * DELETE /api/platform/saved-views/:entity/:id          — delete a saved view
  * PATCH  /api/platform/saved-views/:entity/:id/default  — set as default
+ *
+ * GET    /api/user/saved-views                          — all saved views for current principal
+ * PATCH  /api/user/saved-views/:id/:action              — pin | star | share | archive
  * GET    /api/platform/modules                          — tenant module subscriptions
  * GET    /api/platform/entities                         — entity catalog (admin)
  * GET    /api/platform/entities/:name/fields            — fields for a specific entity
  * GET    /api/platform/preferences                      — current user's UI preferences
  * PATCH  /api/platform/preferences                      — update UI preferences
  * GET    /api/platform/notifications/unread-count       — unread notification count
- * GET    /api/platform/blueprints                      — blueprint catalog with applied status per tenant
+ * GET    /api/platform/blueprints                       — blueprint catalog with applied status per tenant
+ * POST   /api/platform/blueprints/:code/apply           — mark a blueprint as applied for this tenant
+ * DELETE /api/platform/blueprints/:code/apply           — unmark (set status='removed') a blueprint
  */
 
 import type { RequestHandler, Router } from "express";
@@ -211,6 +217,29 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     }
   };
 
+  // ── POST /platform/saved-views (entity_code in body) ──────────────────────
+  //
+  // Bodyless variant used by PlatformClient.saveSavedView() which posts to
+  // /api/platform/saved-views with entity_code in the JSON body rather than
+  // in the URL path. Delegates to createSavedViewHandler after injecting the
+  // entity param so the same logic handles both call shapes.
+
+  const createSavedViewBodyHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const body      = req.body as Record<string, unknown>;
+      const entityKey = typeof body["entity_code"] === "string" ? body["entity_code"].trim() : "";
+      if (!entityKey) {
+        res.status(400).json({ error: "ENTITY_CODE_REQUIRED", message: "entity_code is required in the request body" });
+        return;
+      }
+      // Inject entity as a URL param so createSavedViewHandler can read it normally
+      req.params["entity"] = entityKey;
+      return createSavedViewHandler(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   // ── DELETE /platform/saved-views/:entity/:viewId ───────────────────────────
 
   const deleteSavedViewHandler: RequestHandler = async (req, res, next) => {
@@ -297,6 +326,199 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       res.json({ ok: true });
     } catch (err) {
       logger?.error("platform_saved_views_default_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /user/saved-views — all views for the current principal ───────────
+
+  const userListSavedViewsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      // Fetch all personal + shared views across all entities for this principal
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = db
+        .selectFrom("master.saved_view as sv")
+        .select([
+          "sv.id", "sv.name", "sv.description",
+          "sv.surface_code", "sv.entity_key",
+          "sv.scope", "sv.is_pinned", "sv.metadata",
+          "sv.status", "sv.created_at", "sv.updated_at",
+        ] as never[])
+        .where("sv.tenant_id" as never, "=", tenantId as never)
+        .where("sv.deleted_at" as never, "is", null);
+
+      if (principalId) {
+        query = query.where((eb: any) =>
+          eb.or([
+            eb.and([
+              eb("sv.scope" as never, "=", "personal" as never),
+              eb("sv.owner_principal_id" as never, "=", principalId as never),
+            ]),
+            eb("sv.scope" as never, "in", ["shared", "system"] as never),
+          ]),
+        );
+      } else {
+        query = query.where("sv.scope" as never, "in", ["shared", "system"] as never);
+      }
+
+      const rows = await query
+        .orderBy("sv.is_pinned" as never, "desc")
+        .orderBy("sv.name" as never, "asc")
+        .execute() as Array<{
+          id: string;
+          name: string;
+          description: string | null;
+          surface_code: string;
+          entity_key: string | null;
+          scope: string;
+          is_pinned: boolean;
+          metadata: Record<string, unknown> | null;
+          status: string;
+          created_at: string | Date;
+          updated_at: string | Date | null;
+        }>;
+
+      const views = rows.map((row) => ({
+        id:          row.id,
+        name:        row.name,
+        description: row.description ?? null,
+        view_type:   row.surface_code,
+        module_code: row.entity_key ?? "",
+        is_pinned:   row.is_pinned,
+        is_starred:  (row.metadata?.["is_starred"] === true),
+        is_shared:   row.scope === "shared" || row.scope === "system",
+        is_archived: row.status === "archived",
+        created_at:  row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+        updated_at:  row.updated_at
+          ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at))
+          : null,
+      }));
+
+      res.json(views);
+    } catch (err) {
+      logger?.error("user_saved_views_list_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /user/saved-views/:viewId/:action — toggle pin/star/share/archive ─
+
+  const userSavedViewActionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const viewId = String(req.params["viewId"] ?? "");
+      const action = String(req.params["action"] ?? "").toLowerCase() as "pin" | "star" | "share" | "archive";
+
+      if (!isUuid(viewId)) {
+        res.status(400).json({ error: "INVALID_ID", message: "viewId must be a valid UUID" });
+        return;
+      }
+
+      if (!["pin", "star", "share", "archive"].includes(action)) {
+        res.status(400).json({ error: "INVALID_ACTION", message: "action must be one of: pin, star, share, archive" });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      // Fetch current view to verify ownership + read current state
+      const current = await db
+        .selectFrom("master.saved_view as sv")
+        .select(["sv.id", "sv.scope", "sv.is_pinned", "sv.metadata", "sv.owner_principal_id"] as never[])
+        .where("sv.id" as never, "=", viewId as never)
+        .where("sv.tenant_id" as never, "=", tenantId as never)
+        .where("sv.deleted_at" as never, "is", null)
+        .executeTakeFirst() as {
+          id: string;
+          scope: string;
+          is_pinned: boolean;
+          metadata: Record<string, unknown> | null;
+          owner_principal_id: string | null;
+        } | undefined;
+
+      if (!current) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Saved view not found" });
+        return;
+      }
+
+      // Ownership check: personal views can only be modified by their owner
+      if (current.scope === "personal" && principalId && current.owner_principal_id !== principalId) {
+        res.status(403).json({ error: "FORBIDDEN", message: "You do not own this view" });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let updateClause: Record<string, unknown>;
+
+      switch (action) {
+        case "pin": {
+          updateClause = {
+            is_pinned:  !current.is_pinned,
+            updated_at: new Date(),
+            updated_by: principalId ?? undefined,
+          };
+          break;
+        }
+        case "star": {
+          const meta = { ...(current.metadata ?? {}), is_starred: !(current.metadata?.["is_starred"] === true) };
+          updateClause = {
+            metadata:   meta,
+            updated_at: new Date(),
+            updated_by: principalId ?? undefined,
+          };
+          break;
+        }
+        case "share": {
+          const newScope = current.scope === "shared" ? "personal" : "shared";
+          updateClause = {
+            scope:      newScope,
+            updated_at: new Date(),
+            updated_by: principalId ?? undefined,
+          };
+          break;
+        }
+        case "archive": {
+          updateClause = {
+            status:            "archived",
+            status_changed_at: new Date(),
+            status_changed_by: principalId ?? undefined,
+            deleted_at:        new Date(),
+            updated_at:        new Date(),
+            updated_by:        principalId ?? undefined,
+          };
+          break;
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db.updateTable("master.saved_view" as never) as any)
+        .set(updateClause)
+        .where("id" as never, "=", viewId as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .execute();
+
+      res.json({ ok: true });
+    } catch (err) {
+      logger?.error("user_saved_views_action_error", { err: String(err) });
       next(err);
     }
   };
@@ -540,6 +762,145 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     }
   };
 
+  // ── GET /platform/notifications/stream ────────────────────────────────────
+  // Server-Sent Events stream for real-time in-app notifications.
+  // The client receives events:
+  //   notification:new       — a new unread notification arrived
+  //   notification:count     — current unread count (sent on connect + on each new notification)
+  // A comment `:heartbeat` is emitted every 25 s to prevent proxy timeouts.
+  //
+  // The stream polls the DB every 15 s for notifications created after the
+  // connection was established. This is a simple, database-friendly approach
+  // that avoids needing a Redis Pub/Sub subscriber connection per SSE client.
+
+  const notificationStreamHandler: RequestHandler = async (req, res) => {
+    let claims: Record<string, unknown> | null = null;
+    try {
+      claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+    } catch {
+      res.status(401).end();
+      return;
+    }
+    if (!claims) return;
+
+    const xOrg   = (req.headers["x-org"]   as string) ?? "";
+    const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+    let tenantId: string | null = null;
+    let principalId: string | null = null;
+    try {
+      tenantId    = await resolveTenantId(db, xOrg, xRealm);
+      const sub   = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+    } catch {
+      res.status(401).end();
+      return;
+    }
+
+    if (!tenantId || !principalId) {
+      res.status(401).end();
+      return;
+    }
+
+    // ── SSE headers ──────────────────────────────────────────────────────────
+    res.setHeader("Content-Type",  "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection",    "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    const sendComment = (text: string) => {
+      res.write(`:${text}\n\n`);
+    };
+
+    // ── Initial count ────────────────────────────────────────────────────────
+    const getUnreadCount = async (): Promise<number> => {
+      try {
+        const row = await db
+          .selectFrom("event.notification_delivery as nd")
+          .select(db.fn.countAll<number>().as("count"))
+          .where("nd.tenant_id",   "=", tenantId as string)
+          .where("nd.recipient_id","=", principalId as string)
+          .where("nd.channel",     "=", "in_app")
+          .where("nd.read_at" as never, "is", null)
+          .executeTakeFirst() as { count: number | string } | undefined;
+        return row ? Number(row.count) : 0;
+      } catch { return 0; }
+    };
+
+    const initialCount = await getUnreadCount();
+    sendEvent("notification:count", { count: initialCount });
+
+    // ── Poll for new deliveries ──────────────────────────────────────────────
+    const sinceAt = new Date().toISOString();
+    let lastSeenAt = sinceAt;
+
+    const poll = async () => {
+      try {
+        const newRows = await db
+          .selectFrom("event.notification_delivery as nd")
+          .innerJoin("event.notification_message as nm", "nm.id" as never, "nd.message_id" as never)
+          .select([
+            "nd.id", "nm.subject", "nm.event_code",
+            "nm.entity_type", "nm.entity_id", "nm.priority", "nd.created_at",
+          ] as never[])
+          .where("nd.tenant_id",    "=", tenantId as string)
+          .where("nd.recipient_id", "=", principalId as string)
+          .where("nd.channel",      "=", "in_app")
+          .where("nd.created_at" as never, ">", lastSeenAt as never)
+          .orderBy("nd.created_at" as never, "asc")
+          .limit(20)
+          .execute() as Array<Record<string, unknown>>;
+
+        if (newRows.length > 0) {
+          for (const row of newRows) {
+            sendEvent("notification:new", {
+              id:          row["id"],
+              subject:     row["subject"] ?? null,
+              event_code:  row["event_code"],
+              entity_type: row["entity_type"] ?? null,
+              entity_id:   row["entity_id"] ?? null,
+              priority:    row["priority"] ?? "normal",
+              created_at:  row["created_at"] instanceof Date
+                           ? (row["created_at"] as Date).toISOString()
+                           : String(row["created_at"]),
+            });
+          }
+          // Update lastSeenAt to the most recent row
+          const latest = newRows[newRows.length - 1];
+          if (latest?.["created_at"]) {
+            lastSeenAt = latest["created_at"] instanceof Date
+              ? (latest["created_at"] as Date).toISOString()
+              : String(latest["created_at"]);
+          }
+          // Send updated count
+          const count = await getUnreadCount();
+          sendEvent("notification:count", { count });
+        }
+      } catch (err) {
+        logger?.error("notif_stream_poll_error", { err: String(err) });
+      }
+    };
+
+    // Poll every 15 s, heartbeat every 25 s
+    const pollTimer      = setInterval(() => void poll(), 15_000);
+    const heartbeatTimer = setInterval(() => sendComment("heartbeat"), 25_000);
+
+    // ── Cleanup on close ─────────────────────────────────────────────────────
+    const cleanup = () => {
+      clearInterval(pollTimer);
+      clearInterval(heartbeatTimer);
+    };
+
+    req.on("close",  cleanup);
+    req.on("end",    cleanup);
+    res.on("finish", cleanup);
+    res.on("close",  cleanup);
+  };
+
   // ── GET /platform/stats ───────────────────────────────────────────────────
 
   const statsHandler: RequestHandler = async (req, res, next) => {
@@ -628,6 +989,126 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       logger?.error("platform_blueprints_error", { err: String(err) });
       // Fall back to empty array so the page uses its static catalog
       res.json([]);
+    }
+  };
+
+  // ── POST /platform/blueprints/:code/apply ────────────────────────────────
+  //
+  // Marks a blueprint as applied for the current tenant.
+  // Idempotent — upserts via ON CONFLICT (tenant_id, blueprint_code) DO UPDATE.
+  // Validates that the blueprint code exists in control.blueprint_registry.
+
+  const applyBlueprintHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const code = (req.params["code"] as string | undefined)?.trim().toLowerCase();
+      if (!code) {
+        res.status(400).json({ error: "MISSING_CODE", message: "blueprint code is required" }); return;
+      }
+
+      // Validate blueprint exists
+      const bp = await db
+        .selectFrom("control.blueprint_registry as br" as never)
+        .select(["br.code" as never, "br.name" as never, "br.category" as never, "br.dependencies" as never])
+        .where("br.code"   as never, "=", code as never)
+        .where("br.status" as never, "=", "active" as never)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!bp) {
+        res.status(404).json({ error: "BLUEPRINT_NOT_FOUND", message: `Blueprint "${code}" not found or not active` });
+        return;
+      }
+
+      // Upsert — re-applying an already-applied blueprint resets its applied_at
+      const sub = claims["sub"];
+      const principalId = typeof sub === "string" && sub ? sub : null;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = await (db as any)
+        .insertInto("control.tenant_blueprint_application")
+        .values({
+          tenant_id:        tenantId,
+          blueprint_code:   code,
+          applied_version:  "1.0.0",   // current registry version
+          applied_at:       new Date(),
+          applied_by:       principalId ?? null,
+          status:           "applied",
+          error_detail:     null,
+        })
+        .onConflict((oc: any) =>
+          oc
+            .columns(["tenant_id", "blueprint_code"])
+            .doUpdateSet({
+              status:          "applied",
+              applied_at:      new Date(),
+              applied_by:      principalId ?? null,
+              error_detail:    null,
+            })
+        )
+        .returningAll()
+        .executeTakeFirst() as Record<string, unknown>;
+
+      res.status(200).json({
+        ok:            true,
+        blueprintCode: row["blueprint_code"],
+        appliedAt:     row["applied_at"],
+        status:        row["status"],
+      });
+    } catch (err) {
+      logger?.error("platform_blueprint_apply_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /platform/blueprints/:code/apply ───────────────────────────────
+  //
+  // Unmarks a blueprint — sets status to 'removed'. Does NOT roll back any data
+  // that was seeded when the blueprint was applied (blueprints are additive).
+
+  const unapplyBlueprintHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const code = (req.params["code"] as string | undefined)?.trim().toLowerCase();
+      if (!code) {
+        res.status(400).json({ error: "MISSING_CODE" }); return;
+      }
+
+      const unapplySub = claims["sub"];
+      const principalId = typeof unapplySub === "string" && unapplySub ? unapplySub : null;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updated = await (db as any)
+        .updateTable("control.tenant_blueprint_application")
+        .set({ status: "removed", applied_by: principalId ?? null })
+        .where("tenant_id",      "=", tenantId)
+        .where("blueprint_code", "=", code)
+        .where("status",         "=", "applied")
+        .returningAll()
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!updated) {
+        res.status(404).json({ error: "NOT_APPLIED", message: `Blueprint "${code}" is not currently applied` });
+        return;
+      }
+
+      res.status(200).json({ ok: true, blueprintCode: updated["blueprint_code"], status: updated["status"] });
+    } catch (err) {
+      logger?.error("platform_blueprint_unapply_error", { err: String(err) });
+      next(err);
     }
   };
 
@@ -941,18 +1422,28 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .where("tp.left_at" as never, "is", null)
         .execute() as Record<string, unknown>[];
 
-      // Delegations
+      // Delegations — include counterparty names for display
       const now = new Date();
       const [delegationsReceived, delegationsGiven] = await Promise.all([
         db.selectFrom("master.delegation_grant as d")
-          .select(["d.id", "d.delegator_id", "d.scope_type", "d.scope_ref", "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at"])
+          .leftJoin("master.principal as delegator", "delegator.id", "d.delegator_id")
+          .select([
+            "d.id", "d.delegator_id", "d.scope_type", "d.scope_ref",
+            "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at",
+            "delegator.name as delegator_name",
+          ])
           .where("d.tenant_id", "=", tenantId)
           .where("d.delegate_id", "=", principalId)
           .where("d.is_revoked", "=", false)
           .where("d.expires_at", ">", now as never)
           .execute(),
         db.selectFrom("master.delegation_grant as d")
-          .select(["d.id", "d.delegate_id", "d.scope_type", "d.scope_ref", "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at"])
+          .leftJoin("master.principal as delegate", "delegate.id", "d.delegate_id")
+          .select([
+            "d.id", "d.delegate_id", "d.scope_type", "d.scope_ref",
+            "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at",
+            "delegate.name as delegate_name",
+          ])
           .where("d.tenant_id", "=", tenantId)
           .where("d.delegator_id", "=", principalId)
           .where("d.is_revoked", "=", false)
@@ -1056,10 +1547,15 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
   // ── Register routes ───────────────────────────────────────────────────────
 
-  router.get("/platform/saved-views/:entity", listSavedViewsHandler);
-  router.post("/platform/saved-views/:entity", createSavedViewHandler);
-  router.delete("/platform/saved-views/:entity/:viewId", deleteSavedViewHandler);
-  router.patch("/platform/saved-views/:entity/:viewId/default", setDefaultViewHandler);
+  router.get("/platform/saved-views/:entity",                    listSavedViewsHandler);
+  router.post("/platform/saved-views/:entity",                   createSavedViewHandler);
+  router.post("/platform/saved-views",                           createSavedViewBodyHandler);
+  router.delete("/platform/saved-views/:entity/:viewId",         deleteSavedViewHandler);
+  router.patch("/platform/saved-views/:entity/:viewId/default",  setDefaultViewHandler);
+
+  router.get("/user/saved-views",                     userListSavedViewsHandler);
+  router.patch("/user/saved-views/:viewId/:action",   userSavedViewActionHandler);
+
   router.get("/platform/modules", modulesHandler);
   // entity fields before entity catalog to avoid :name capture on /entities
   router.get("/platform/entities/:name/fields", entityFieldsHandler);
@@ -1069,12 +1565,15 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
   router.get("/platform/profile", getProfileHandler);
   router.get("/platform/identity", getIdentityHandler);
   router.get("/platform/tenant-admin", getTenantAdminHandler);
-  router.get("/platform/blueprints", blueprintsHandler);
+  router.get("/platform/blueprints",                blueprintsHandler);
+  router.post("/platform/blueprints/:code/apply",   applyBlueprintHandler);
+  router.delete("/platform/blueprints/:code/apply", unapplyBlueprintHandler);
   router.get("/platform/stats", statsHandler);
   router.get("/platform/notifications", listNotificationsHandler);
   router.post("/platform/notifications/read-all", markAllReadHandler);
   router.post("/platform/notifications/:id/read", markReadHandler);
   router.get("/platform/notifications/unread-count", unreadCountHandler);
+  router.get("/platform/notifications/stream", notificationStreamHandler);
 
   // Paths without /platform/ prefix — BFF proxies to these directly
   router.get("/notifications/unread-count", unreadCountHandler);

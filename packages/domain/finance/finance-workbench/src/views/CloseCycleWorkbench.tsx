@@ -79,13 +79,13 @@ function fmtDate(d: string | null): string {
 }
 
 const RUN_STATUS_COLOR: Record<string, string> = {
-  PLANNED:     "bg-slate-100 text-slate-600",
-  OPEN:        "bg-blue-50 text-blue-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  PHASE_GATE:  "bg-violet-50 text-violet-700",
-  COMPLETED:   "bg-emerald-50 text-emerald-700",
-  CERTIFIED:   "bg-emerald-100 text-emerald-800 font-medium",
-  CLOSED:      "bg-slate-100 text-slate-500",
+  PLANNED:     "bg-muted text-muted-foreground",
+  OPEN:        "bg-info/10 text-info",
+  IN_PROGRESS: "bg-warning/10 text-warning",
+  PHASE_GATE:  "bg-accent/10 text-accent-foreground",
+  COMPLETED:   "bg-success/10 text-success",
+  CERTIFIED:   "bg-success/20 text-success font-medium",
+  CLOSED:      "bg-muted text-muted-foreground",
 };
 
 const TASK_ICON: Record<string, React.ElementType> = {
@@ -126,10 +126,10 @@ function TaskRow({
       <div className="flex items-start gap-2">
         <Icon className={cn(
           "mt-0.5 h-4 w-4 shrink-0",
-          task.status === "COMPLETED"   && "text-emerald-500",
-          task.status === "IN_PROGRESS" && "text-amber-500 animate-spin",
+          task.status === "COMPLETED"   && "text-success",
+          task.status === "IN_PROGRESS" && "text-warning animate-spin",
           task.status === "FAILED"      && "text-destructive",
-          task.status === "BLOCKED"     && "text-orange-500",
+          task.status === "BLOCKED"     && "text-warning/80",
           task.status === "PENDING"     && "text-muted-foreground",
         )} />
         <div className="flex-1 min-w-0">
@@ -260,7 +260,7 @@ function PhasePanel({
           </div>
           <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
             <div
-              className={cn("h-full rounded-full transition-all", hasIssue ? "bg-amber-500" : "bg-emerald-500")}
+              className={cn("h-full rounded-full transition-all", hasIssue ? "bg-warning" : "bg-success")}
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -274,7 +274,7 @@ function PhasePanel({
             className={cn(
               "h-7 gap-1.5 text-xs shrink-0",
               canSignOff
-                ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                ? "border-success/30 text-success hover:bg-success/10"
                 : "cursor-not-allowed opacity-60",
             )}
             onClick={() => canSignOff && setShowSignOff(!showSignOff)}
@@ -289,10 +289,10 @@ function PhasePanel({
 
       {/* Blockers */}
       {isActive && blockers.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 space-y-0.5">
-          <p className="text-[10px] font-medium text-amber-700">Sign-off blocked:</p>
+        <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 space-y-0.5">
+          <p className="text-[10px] font-medium text-warning">Sign-off blocked:</p>
           {blockers.map((b) => (
-            <p key={b.type} className="text-[10px] text-amber-600">
+            <p key={b.type} className="text-[10px] text-warning/80">
               • {b.label} ({b.count})
             </p>
           ))}
@@ -311,7 +311,7 @@ function PhasePanel({
             className="text-xs"
           />
           <div className="flex gap-2">
-            <Button size="sm" className="h-7 text-xs gap-1 border-emerald-300 bg-emerald-600 hover:bg-emerald-700 text-white"
+            <Button size="sm" className="h-7 text-xs gap-1 bg-success hover:bg-success/90 text-success-foreground"
               onClick={() => void handleSignOff()}
               disabled={signOff.isPending}
             >
@@ -400,14 +400,14 @@ function RunSidebar({
             </div>
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
               <div
-                className={cn("h-full rounded-full", (ts.blocked > 0 || ts.failed > 0) ? "bg-amber-500" : "bg-emerald-500")}
+                className={cn("h-full rounded-full", (ts.blocked > 0 || ts.failed > 0) ? "bg-warning" : "bg-success")}
                 style={{ width: `${ts.completionPct}%` }}
               />
             </div>
             <div className="flex gap-2 text-[10px] text-muted-foreground">
-              <span className="text-emerald-600">{ts.completed} done</span>
-              {ts.inProgress > 0 && <span className="text-amber-600">{ts.inProgress} active</span>}
-              {ts.blocked > 0  && <span className="text-orange-600">{ts.blocked} blocked</span>}
+              <span className="text-success">{ts.completed} done</span>
+              {ts.inProgress > 0 && <span className="text-warning">{ts.inProgress} active</span>}
+              {ts.blocked > 0  && <span className="text-warning/80">{ts.blocked} blocked</span>}
               {ts.failed > 0   && <span className="text-destructive">{ts.failed} failed</span>}
               <span className="ml-auto">{ts.completionPct}%</span>
             </div>

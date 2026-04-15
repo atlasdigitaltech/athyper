@@ -10,13 +10,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, RotateCcw, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { JobsSubNav } from "../_components/jobs-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,29 +44,6 @@ interface DlqSection {
 
 interface DlqResponse {
   dlq: DlqSection[];
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function JobsSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/jobs",                  label: "Queues" },
-    { href: "/setup/jobs/dlq",              label: "Dead Letter" },
-    { href: "/setup/jobs/history",          label: "Run History" },
-    { href: "/setup/jobs/schedules",        label: "Schedules" },
-    { href: "/setup/jobs/orchestrations",   label: "Orchestrations" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,8 +82,8 @@ function DlqRow({
   try { parsedPayload = JSON.parse(item.payload); } catch { /* keep null */ }
 
   return (
-    <Card className={alreadyRetried ? "opacity-60" : ""}>
-      <CardContent className="p-3 space-y-1.5">
+    <RowCard className={alreadyRetried ? "opacity-60" : ""}>
+      <div className="space-y-1.5">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <Badge
@@ -126,7 +105,7 @@ function DlqRow({
                   title="Retry this job"
                   onClick={() => onRetry(item.id, table)}
                 >
-                  <RotateCcw className="h-3.5 w-3.5 text-blue-500" />
+                  <RotateCcw className="h-3.5 w-3.5 text-primary" />
                 </Button>
                 <Button
                   size="sm" variant="ghost" className="h-6 w-6 p-0"
@@ -145,7 +124,6 @@ function DlqRow({
           </div>
         </div>
 
-        {/* Error summary */}
         <p className="text-xs text-destructive line-clamp-1">{item.error_message}</p>
 
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -153,7 +131,6 @@ function DlqRow({
           <span>{new Date(item.created_at).toLocaleString()}</span>
         </div>
 
-        {/* Expanded detail */}
         {expanded && (
           <div className="mt-2 pt-2 border-t space-y-2">
             <div>
@@ -177,8 +154,8 @@ function DlqRow({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </RowCard>
   );
 }
 
@@ -294,18 +271,19 @@ export default function DlqBrowserPage() {
       {/* Content */}
       {isLoading ? (
         <div className="space-y-2">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
       ) : sections.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <AlertTriangle className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No dead-letter records found.</p>
-          {unretriedOnly && (
+        <EmptyState
+          icon={<AlertTriangle className="h-10 w-10 text-muted-foreground/30" />}
+          title="No dead-letter records found."
+          action={unretriedOnly ? (
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => setUnretriedOnly(false)}>
               Show all (including retried)
             </Button>
-          )}
-        </div>
+          ) : undefined}
+          className="py-20"
+        />
       ) : (
         <div className="space-y-6">
           {sections.map((sec) => (

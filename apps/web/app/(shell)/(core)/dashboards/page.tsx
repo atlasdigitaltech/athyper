@@ -42,8 +42,8 @@ const KPI_DEFS: {
     key:   "revenueMtd",
     label: "Revenue (MTD)",
     sub:   "month-to-date",
-    color: "text-emerald-600",
-    bg:    "bg-emerald-50",
+    color: "text-success",
+    bg:    "bg-success/10",
     icon:  TrendingUp,
     href:  "/finance/gl?tab=profit-loss",
   },
@@ -51,8 +51,8 @@ const KPI_DEFS: {
     key:   "expensesMtd",
     label: "Expenses (MTD)",
     sub:   "month-to-date",
-    color: "text-rose-600",
-    bg:    "bg-rose-50",
+    color: "text-destructive",
+    bg:    "bg-destructive/10",
     icon:  TrendingDown,
     href:  "/finance/gl?tab=profit-loss",
   },
@@ -60,8 +60,8 @@ const KPI_DEFS: {
     key:   "openAp",
     label: "Open AP",
     sub:   "payables outstanding",
-    color: "text-amber-600",
-    bg:    "bg-amber-50",
+    color: "text-warning",
+    bg:    "bg-warning/10",
     icon:  CreditCard,
     href:  "/finance/reports?report=ap-aging",
   },
@@ -69,8 +69,8 @@ const KPI_DEFS: {
     key:   "openAr",
     label: "Open AR",
     sub:   "receivables outstanding",
-    color: "text-blue-600",
-    bg:    "bg-blue-50",
+    color: "text-info",
+    bg:    "bg-info/10",
     icon:  CreditCard,
     href:  "/finance/reports?report=ar-aging",
   },
@@ -78,8 +78,8 @@ const KPI_DEFS: {
     key:   "cashBalance",
     label: "Cash Balance",
     sub:   "across all bank accounts",
-    color: "text-cyan-600",
-    bg:    "bg-cyan-50",
+    color: "text-primary",
+    bg:    "bg-primary/10",
     icon:  Landmark,
     href:  "/finance/gl?tab=bank-recon",
   },
@@ -87,8 +87,8 @@ const KPI_DEFS: {
     key:   "journalCount",
     label: "Journal Entries",
     sub:   "posted this period",
-    color: "text-slate-600",
-    bg:    "bg-slate-100",
+    color: "text-muted-foreground",
+    bg:    "bg-muted",
     icon:  ScrollText,
     href:  "/finance/views/journal",
   },
@@ -102,48 +102,48 @@ const FINANCE_MODULES = [
     description: "Period debit/credit balances across all accounts",
     icon:  Scale,
     href:  "/finance/views/trial-balance",
-    color: "text-blue-600",
-    bg:    "bg-blue-50",
+    color: "text-primary",
+    bg:    "bg-primary/10",
   },
   {
     title:       "Profit & Loss",
     description: "Revenue, cost, and net income summary",
     icon:  TrendingUp,
     href:  "/finance/gl?tab=profit-loss",
-    color: "text-emerald-600",
-    bg:    "bg-emerald-50",
+    color: "text-success",
+    bg:    "bg-success/10",
   },
   {
     title:       "Balance Sheet",
     description: "Assets, liabilities, and equity position",
     icon:  Building2,
     href:  "/finance/gl?tab=balance-sheet",
-    color: "text-violet-600",
-    bg:    "bg-violet-50",
+    color: "text-accent-foreground",
+    bg:    "bg-accent/10",
   },
   {
     title:       "AP / AR Aging",
     description: "Payables and receivables by aging bucket",
     icon:  CreditCard,
     href:  "/finance/reports?report=ap-aging",
-    color: "text-amber-600",
-    bg:    "bg-amber-50",
+    color: "text-warning",
+    bg:    "bg-warning/10",
   },
   {
     title:       "Bank Reconciliation",
     description: "Statement vs. ledger — uncleared items",
     icon:  Landmark,
     href:  "/finance/gl?tab=bank-recon",
-    color: "text-cyan-600",
-    bg:    "bg-cyan-50",
+    color: "text-info",
+    bg:    "bg-info/10",
   },
   {
     title:       "Period Close",
     description: "Month-end cycle status and task checklist",
     icon:  ClipboardCheck,
     href:  "/finance/close",
-    color: "text-rose-600",
-    bg:    "bg-rose-50",
+    color: "text-destructive",
+    bg:    "bg-destructive/10",
   },
 ];
 
@@ -220,7 +220,7 @@ export default function DashboardsPage() {
       <div className="space-y-6">
 
         {/* ── KPI tiles ───────────────────────────────────────────────────── */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {KPI_DEFS.map(({ key, label, sub, icon, color, bg, href }) => (
             <KpiTile
               key={key}
@@ -269,7 +269,7 @@ export default function DashboardsPage() {
             <CardTitle className="text-sm font-medium">Finance Tools</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {QUICK_LINKS.map(({ label, icon: Icon, href }) => (
                 <a
                   key={href}

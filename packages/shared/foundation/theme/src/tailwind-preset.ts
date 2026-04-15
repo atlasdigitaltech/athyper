@@ -134,6 +134,8 @@ const athyperPreset: Config = {
       width: {
         sidebar: "256px",
         "sidebar-collapsed": "64px",
+        "nav-rail": "54px",
+        "context-panel": "252px",
       },
       maxWidth: {
         "content-sm":   "640px",

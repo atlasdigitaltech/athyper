@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn, resolveSemanticColors, paymentDirectionIntent } from "@athyper/theme";
 import type { FinanceScope } from "../lib/scope";
 import {
   useBankAccounts,
   useBankStatement,
   useBankUnreconciled,
+  useBankReconcile,
   type BankAccount,
 } from "../hooks/useBankReconciliation";
 
@@ -93,15 +94,17 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Debit</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Credit</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Balance</th>
+              <th className="py-2 px-3 text-left font-medium text-muted-foreground">Cleared</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Status</th>
             </tr>
           </thead>
           <tbody>
             {(data?.items ?? []).length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">No entries for this period</td></tr>
+              <tr><td colSpan={9} className="py-8 text-center text-xs text-muted-foreground">No entries for this period</td></tr>
             )}
             {(data?.items ?? []).map((item) => {
               const isInbound = item.paymentDirection === "INBOUND";
+              const isCleared = item.status === "cleared";
               return (
                 <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
@@ -114,11 +117,14 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
                     {isInbound ? "—" : <span className="text-destructive">{fmt(item.paymentAmount)}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono">
-                    {isInbound ? <span className="text-emerald-600">{fmt(item.paymentAmount)}</span> : "—"}
+                    {isInbound ? <span className="text-success">{fmt(item.paymentAmount)}</span> : "—"}
                   </td>
                   <td className={cn("py-1.5 px-3 text-right font-mono font-medium",
-                    item.runningBalance >= 0 ? "text-emerald-700" : "text-destructive")}>
+                    item.runningBalance >= 0 ? "text-success" : "text-destructive")}>
                     {fmt(Math.abs(item.runningBalance))}{item.runningBalance < 0 ? " DR" : ""}
+                  </td>
+                  <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
+                    {isCleared ? fmtDate(((item as unknown) as Record<string, unknown>)["clearedDate"] as string | null) : "—"}
                   </td>
                   <td className="py-1.5 px-3 capitalize text-muted-foreground">{item.status}</td>
                 </tr>
@@ -135,12 +141,39 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
 
 function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccountId: string | null }) {
   const { data, isLoading, isError } = useBankUnreconciled(scope, bankAccountId);
+  const reconcile = useBankReconcile(bankAccountId);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Reset selection when account changes or data reloads
+  useEffect(() => { setSelected(new Set()); }, [bankAccountId, data]);
 
   if (!bankAccountId) return <EmptyState message="Select a bank account above." />;
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState />;
 
+  const items      = data?.items ?? [];
+  const allIds     = items.map((i) => i.id);
+  const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const unreconTotal = data?.totalUnreconciled ?? 0;
+
+  function toggleAll() {
+    if (allChecked) setSelected(new Set());
+    else setSelected(new Set(allIds));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleMarkCleared() {
+    if (selected.size === 0) return;
+    await reconcile.mutateAsync({ payment_ids: Array.from(selected) });
+    setSelected(new Set());
+  }
 
   return (
     <div className="space-y-2">
@@ -149,40 +182,78 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
           {data?.count ?? 0} unreconciled item{data?.count !== 1 ? "s" : ""}
         </div>
         <div className={cn(
-          "ml-auto text-xs font-mono font-medium",
-          unreconTotal >= 0 ? "text-amber-600" : "text-destructive",
+          "text-xs font-mono font-medium",
+          unreconTotal >= 0 ? "text-warning" : "text-destructive",
         )}>
-          Net unreconciled: {fmt(Math.abs(unreconTotal))}{unreconTotal < 0 ? " DR" : ""}
+          Net: {fmt(Math.abs(unreconTotal))}{unreconTotal < 0 ? " DR" : ""}
         </div>
+        {selected.size > 0 && (
+          <button
+            type="button"
+            onClick={() => void handleMarkCleared()}
+            disabled={reconcile.isPending}
+            className="ml-auto flex items-center gap-1.5 rounded-md bg-success px-3 py-1 text-xs font-medium text-success-foreground hover:bg-success/90 disabled:opacity-60"
+          >
+            {reconcile.isPending ? "Clearing…" : `Mark ${selected.size} Cleared`}
+          </button>
+        )}
+        {reconcile.isSuccess && selected.size === 0 && (
+          <span className="ml-auto text-[10px] text-success">
+            {reconcile.data?.cleared} payment{reconcile.data?.cleared !== 1 ? "s" : ""} cleared
+          </span>
+        )}
       </div>
 
       <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
+              <th className="py-2 px-2 w-8">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  onChange={toggleAll}
+                  className="h-3.5 w-3.5 cursor-pointer"
+                  title="Select all"
+                />
+              </th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Value Date</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Payment #</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Direction</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Counterparty</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Amount</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Bank Ref</th>
+              <th className="py-2 px-3 text-left font-medium text-muted-foreground">Cleared</th>
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Status</th>
             </tr>
           </thead>
           <tbody>
-            {(data?.items ?? []).length === 0 && (
-              <tr><td colSpan={7} className="py-8 text-center text-xs text-muted-foreground">All payments reconciled</td></tr>
+            {items.length === 0 && (
+              <tr><td colSpan={9} className="py-8 text-center text-xs text-muted-foreground">All payments reconciled</td></tr>
             )}
-            {(data?.items ?? []).map((item) => (
-              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
+            {items.map((item) => (
+              <tr
+                key={item.id}
+                className={cn(
+                  "border-b last:border-0 hover:bg-muted/30 cursor-pointer",
+                  selected.has(item.id) ? "bg-success/10" : "",
+                )}
+                onClick={() => toggleOne(item.id)}
+              >
+                <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(item.id)}
+                    onChange={() => toggleOne(item.id)}
+                    className="h-3.5 w-3.5 cursor-pointer"
+                  />
+                </td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
                 <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">{item.paymentNumber}</td>
                 <td className="py-1.5 px-3">
                   <span className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                    item.paymentDirection === "INBOUND"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-blue-50 text-blue-700",
+                    "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                    resolveSemanticColors(paymentDirectionIntent(item.paymentDirection)).subtleBadge,
                   )}>
                     {item.paymentDirection}
                   </span>
@@ -190,19 +261,27 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
                 <td className="py-1.5 px-3">{item.counterpartyName ?? "—"}</td>
                 <td className="py-1.5 px-3 text-right font-mono font-medium">
                   {item.paymentDirection === "INBOUND"
-                    ? <span className="text-emerald-600">{fmt(item.paymentAmount)}</span>
+                    ? <span className="text-success">{fmt(item.paymentAmount)}</span>
                     : <span>{fmt(item.paymentAmount)}</span>
                   }
                 </td>
                 <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">
                   {item.bankReference ?? "—"}
                 </td>
-                <td className="py-1.5 px-3 capitalize text-amber-600 font-medium">{item.status}</td>
+                <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
+                  {((item as unknown) as Record<string, unknown>)["clearedDate"]
+                    ? fmtDate(((item as unknown) as Record<string, unknown>)["clearedDate"] as string)
+                    : "—"}
+                </td>
+                <td className="py-1.5 px-3 capitalize text-warning font-medium">{item.status}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {reconcile.isError && (
+        <p className="text-xs text-destructive">Failed to mark payments as cleared. Try again.</p>
+      )}
     </div>
   );
 }

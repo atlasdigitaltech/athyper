@@ -7,12 +7,15 @@ import { FinanceContextBar } from "@athyper/finance-workbench/components";
  * Finance workbench layout — (workbench)/finance
  *
  * Wraps all finance bespoke control surfaces:
- *   /finance/coa     — Chart of Accounts workbench
- *   /finance/gl      — GL Workbench
- *   /finance/admin   — Finance Administration console
- *   /finance/close   — Period Close workbench
- *   /finance/reports — Financial Reports hub
- *   /finance/views/* — Ledger-style analytical views (trial balance, inquiry, analysis)
+ *   /finance/coa        — Chart of Accounts workbench
+ *   /finance/gl         — GL Workbench
+ *   /finance/ap         — AP / AR Workbench (invoices, aging, payments, receipts)
+ *   /finance/ar         — AR Workbench (aging + receipts)
+ *   /finance/bank-recon — Bank Reconciliation (statement + mark-cleared)
+ *   /finance/admin      — Finance Administration console
+ *   /finance/close      — Period Close workbench
+ *   /finance/reports    — Financial Reports hub
+ *   /finance/views/*    — Ledger-style analytical views (trial balance, inquiry, analysis)
  *
  * ── Scope state model ─────────────────────────────────────────────────────────
  *

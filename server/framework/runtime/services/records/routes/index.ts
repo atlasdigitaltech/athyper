@@ -2,7 +2,7 @@
  * Records Routes — registration entry point
  *
  * Routes registered:
- *   GET    /api/records/:entity                — list master records (paginated)
+ *   GET    /api/records/:entity                — list master records (paginated, ?q=, ?filters=)
  *   GET    /api/records/:entity/:id            — single record detail
  *   POST   /api/records/:entity                — create record
  *   PUT    /api/records/:entity/:id            — update record
@@ -12,14 +12,30 @@
  *   POST   /api/records/:entity/import         — dry-run validate OR execute (enqueue chunks)
  *   GET    /api/records/:entity/import/:jobId  — poll import status
  *   GET    /api/records/:entity/import         — recent import history
+ *
+ *   POST   /api/records/:entity/bulk-action    — bulk status_transition or set_field
+ *   PATCH  /api/records/:entity/bulk           — bulk multi-field patch
+ *   DELETE /api/records/:entity/bulk           — bulk soft-delete
+ *
+ *   POST   /api/records/:entity/export         — mint export token (CSV/XLSX)
+ *   GET    /api/records/:entity/export/download — stream export file via token
+ *
+ *   POST   /api/records/:entity/:id/action/:code — execute entity operation (ActionBar)
+ *
+ *   GET    /api/activity/:entity/:id           — per-record activity log
  */
 
 import type { Router } from "express";
 import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
-import { createRecordsRoute } from "./records.route.js";
-import { createImportRoutes } from "./import.route.js";
-import type { ImportObjectStorage } from "./import.route.js";
+import { createRecordsRoute }         from "./records.route.js";
+import { createImportRoutes }         from "./import.route.js";
+import type { ImportObjectStorage }   from "./import.route.js";
+import { createBulkActionRoute }      from "./bulk-action.route.js";
+import { createBulkCrudRoutes }       from "./bulk-crud.route.js";
+import { createExportRoutes }         from "./export.route.js";
+import { createActionDispatcherRoute } from "./action-dispatcher.route.js";
+import { createActivityRoute }        from "./activity.route.js";
 
 export interface RecordsRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +54,12 @@ export interface RecordsRoutesDeps {
 }
 
 export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): Router {
-  createRecordsRoute(router, deps);
+  createRecordsRoute(router,           deps);
+  createBulkActionRoute(router,        deps);
+  createBulkCrudRoutes(router,         deps);
+  createExportRoutes(router,           deps);
+  createActionDispatcherRoute(router,  deps);
+  createActivityRoute(router,          deps);
 
   if (deps.importQueue && deps.objectStorage) {
     createImportRoutes(router, {

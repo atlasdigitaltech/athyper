@@ -70,6 +70,8 @@ services:
         condition: service_healthy
       memorycache:
         condition: service_healthy
+      clamav:
+        condition: service_started
     environment:
       # Runtime identity
       MODE: "${MODE}"
@@ -97,6 +99,9 @@ services:
       S3_REGION: "${S3_REGION}"
       S3_BUCKET: "${S3_BUCKET}"
       S3_USE_SSL: "${S3_USE_SSL}"
+      # Virus scanning (ClamAV)
+      CLAMD_HOST: "${CLAMD_HOST:-clamav}"
+      CLAMD_PORT: "${CLAMD_PORT:-3310}"
       # IAM
       IAM_ISSUER_URL: "${IAM_ISSUER_URL}"
       IAM_CLIENT_ID: "${IAM_CLIENT_ID}"
@@ -182,6 +187,8 @@ services:
       S3_REGION: "${S3_REGION}"
       S3_BUCKET: "${S3_BUCKET}"
       S3_USE_SSL: "${S3_USE_SSL}"
+      CLAMD_HOST: "${CLAMD_HOST:-clamav}"
+      CLAMD_PORT: "${CLAMD_PORT:-3310}"
       IAM_ISSUER_URL: "${IAM_ISSUER_URL}"
       IAM_CLIENT_ID: "${IAM_CLIENT_ID}"
       IAM_CLIENT_SECRET: "${IAM_CLIENT_SECRET}"

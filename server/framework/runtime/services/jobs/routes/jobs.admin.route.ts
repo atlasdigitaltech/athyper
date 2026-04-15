@@ -34,7 +34,7 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 
 import { verifyBearer } from "@athyper/svc-shared";
-import { listDlq, retryFromDlq, DLQ_TABLE } from "../../../../../src/foundation/jobs/dlq.middleware.js";
+import { listDlq, retryFromDlq, DLQ_TABLE } from "../dlq.middleware.js";
 import type { JobsQueues } from "../jobs.service.js";
 import type { JobLogger } from "../jobs.types.js";
 

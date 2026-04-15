@@ -73,7 +73,7 @@ export function BalanceSheetView({ scope, onDrillDown }: BalanceSheetViewProps) 
           <div className={cn(
             "text-[9px] px-2 py-0.5 text-right",
             Math.abs(data.totalAssets - data.totalLiabilitiesAndEquity) < 0.01
-              ? "text-emerald-600"
+              ? "text-success"
               : "text-destructive",
           )}>
             {Math.abs(data.totalAssets - data.totalLiabilitiesAndEquity) < 0.01

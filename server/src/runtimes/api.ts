@@ -36,7 +36,10 @@ import { registerWorkflowRoutes } from "../../framework/runtime/services/workflo
 import { registerPolicyRoutes } from "../../framework/runtime/services/policy/routes/index.js";
 import { registerAuditRoutes } from "../../framework/runtime/services/audit/routes/index.js";
 import { registerContentRoutes } from "../../framework/runtime/services/content/routes/index.js";
+import { ClamavScanner } from "../../framework/runtime/services/content/services/clamav.service.js";
 import { registerIntegrationRoutes } from "../../framework/runtime/services/integration/routes/index.js";
+import { registerDocServicesRoutes } from "../../framework/runtime/services/docservices/routes/index.js";
+import { createOpenApiRouter } from "../../framework/runtime/openapi/openapi-generator.js";
 
 import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
@@ -84,6 +87,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     breakers,
     serviceHealthChecks,
     credentialEncryption,
+    mentionService,
   } = deps;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -259,6 +263,41 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   const apiRouter = Router();
 
+  // ── KC admin token factory (client_credentials grant) ─────────────────────
+  // Derives the KC base URL from the issuer URL by stripping /realms/{realm}.
+  // Used by WebAuthn AIA routes and MFA sync to call KC Admin REST API.
+  const kcBaseUrl = config.iam.issuerUrl
+    .replace(/\/realms\/[^/]+\/?$/, "")
+    .replace(/\/$/, "");
+
+  let _cachedAdminToken: { token: string; expiresAt: number } | null = null;
+  const getKcAdminToken = async (): Promise<string> => {
+    const now = Date.now();
+    if (_cachedAdminToken && _cachedAdminToken.expiresAt > now + 30_000) {
+      return _cachedAdminToken.token;
+    }
+    const tokenUrl = `${kcBaseUrl}/realms/${config.iam.realm}/protocol/openid-connect/token`;
+    const resp = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type:    "client_credentials",
+        client_id:     config.iam.clientId,
+        client_secret: config.iam.clientSecret,
+      }),
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => "");
+      throw new Error(`KC admin token fetch failed: ${resp.status} — ${body}`);
+    }
+    const data = await resp.json() as { access_token: string; expires_in: number };
+    _cachedAdminToken = {
+      token:     data.access_token,
+      expiresAt: now + data.expires_in * 1000,
+    };
+    return data.access_token;
+  };
+
   registerIamRoutes(apiRouter, {
     db: db.kysely,
     cache: iamCache,
@@ -266,6 +305,12 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     sessionMetrics: createCacheMetrics("session"),
     bootstrapMetrics: createCacheMetrics("bootstrap"),
+    kc: {
+      baseUrl:       kcBaseUrl,
+      realm:         config.iam.realm,
+      clientId:      config.iam.clientId,
+      getAdminToken: getKcAdminToken,
+    },
   });
 
   registerMetadataRoutes(apiRouter, {
@@ -297,6 +342,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerCollabRoutes(apiRouter, {
     db: db.kysely,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    mentionService,
+    redis,
     logger,
   });
 
@@ -373,6 +420,22 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerContentRoutes(apiRouter, {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    objectStorage: objectStorageRef.current
+      ? {
+          adapter:     objectStorageRef.current,
+          bucket:      config.objectStorage!.bucket,
+          maxUploadMb: config.objectStorage!.maxUploadMb,
+        }
+      : undefined,
+    previewQueue:  jobs.queues.cmsPreview,
+    virusScanner:  config.clamd
+      ? new ClamavScanner({
+          host:          config.clamd.host,
+          port:          config.clamd.port,
+          timeoutMs:     config.clamd.timeoutMs,
+          onUnavailable: config.clamd.onUnavailable,
+        })
+      : undefined,
     logger,
   });
 
@@ -389,7 +452,18 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
   });
 
+  registerDocServicesRoutes(apiRouter, {
+    db: _db,
+    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
   app.use("/api", apiRouter);
+
+  // ─── OpenAPI / Swagger UI ──────────────────────────────────────────────────
+  // Serves /openapi.json, /openapi.yaml, and /docs (Swagger UI).
+  // Unauthenticated — documentation is not sensitive and CI tooling needs it.
+  app.use("/", createOpenApiRouter());
 
   // ─── Prometheus metrics ────────────────────────────────────────────────────
   // /metrics is on the same port as the API but only reachable on the internal

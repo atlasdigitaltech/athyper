@@ -11,8 +11,10 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Flag, RefreshCw, CheckCircle2, XCircle, ShieldAlert } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
+  Button, Badge, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Label, Textarea,
 } from "@athyper/ui/primitives";
 
@@ -115,10 +117,11 @@ function FlagList({ status }: { status: FlagStatus }) {
 
   if (flags.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-center">
-        <CheckCircle2 className="h-8 w-8 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">No {status} flags.</p>
-      </div>
+      <EmptyState
+        icon={<CheckCircle2 className="h-8 w-8 text-muted-foreground/30" />}
+        title={`No ${status} flags.`}
+        className="py-16"
+      />
     );
   }
 
@@ -126,24 +129,23 @@ function FlagList({ status }: { status: FlagStatus }) {
     <>
       <div className="space-y-2">
         {flags.map((f) => (
-          <Card key={f.id}>
-            <CardContent className="p-3 flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={STATUS_VARIANT[f.status]} className="text-[10px]">{f.status}</Badge>
-                  <span className="text-xs font-medium">{f.flagReason}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">{f.contextType}</span>
-                </div>
-                {f.note && <p className="text-xs text-muted-foreground truncate">{f.note}</p>}
-                <p className="text-[10px] text-muted-foreground">{new Date(f.createdAt).toLocaleString()}</p>
-              </div>
-              {(f.status === "pending" || f.status === "reviewed") && (
-                <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={() => setSelectedFlag(f)}>
+          <RowCard
+            key={f.id}
+            badge={<Badge variant={STATUS_VARIANT[f.status]} className="text-[10px]">{f.status}</Badge>}
+            title={f.flagReason}
+            metadata={<>
+              <span className="font-mono text-[10px]">{f.contextType}</span>
+              {f.note && <p className="truncate">{f.note}</p>}
+              <p className="text-[10px]">{new Date(f.createdAt).toLocaleString()}</p>
+            </>}
+            actions={
+              (f.status === "pending" || f.status === "reviewed") ? (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSelectedFlag(f)}>
                   Moderate
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              ) : undefined
+            }
+          />
         ))}
       </div>
       {selectedFlag && (
@@ -171,7 +173,7 @@ export default function ModerationPage() {
       <Tabs defaultValue="pending">
         <TabsList className="mb-4">
           <TabsTrigger value="pending">
-            <Flag className="mr-1.5 h-3.5 w-3.5 text-amber-500" />Pending
+            <Flag className="mr-1.5 h-3.5 w-3.5 text-warning" />Pending
           </TabsTrigger>
           <TabsTrigger value="reviewed">
             <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />Reviewed
@@ -184,7 +186,7 @@ export default function ModerationPage() {
           </TabsTrigger>
         </TabsList>
         {(["pending", "reviewed", "dismissed", "actioned"] as FlagStatus[]).map((s) => (
-          <TabsContent key={s} value={s}><FlagList status={s} /></TabsContent>
+          <TabsContent key={s} value={s} className="mt-4"><FlagList status={s} /></TabsContent>
         ))}
       </Tabs>
     </PageFrame>

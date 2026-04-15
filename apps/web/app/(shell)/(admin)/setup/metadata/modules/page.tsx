@@ -89,8 +89,9 @@ export default function ModulesSetupPage() {
     <PageFrame
       title="Module Subscriptions"
       description="Product modules enabled for this tenant"
+      width="default"
     >
-      <div className="max-w-3xl space-y-3">
+      <div className="space-y-3">
         {isLoading ? (
           [1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)
         ) : !modules || modules.length === 0 ? (

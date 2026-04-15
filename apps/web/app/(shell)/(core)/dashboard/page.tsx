@@ -16,6 +16,7 @@
 import { ArrowRight, Bell, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/ui/primitives";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { useInbox } from "@athyper/query";
@@ -28,48 +29,48 @@ const WORKSPACES = [
     label: "Finance",
     description: "Accounting, GL, COA, close cycle",
     icon: Building2,
-    color: "text-blue-600",
-    bg: "bg-blue-50 dark:bg-blue-950/30",
+    color: "text-primary",
+    bg: "bg-primary/10",
   },
   {
     href: "/supply-chain",
     label: "Supply Chain",
     description: "Procurement, inventory, logistics",
     icon: Package,
-    color: "text-amber-600",
-    bg: "bg-amber-50 dark:bg-amber-950/30",
+    color: "text-warning",
+    bg: "bg-warning/10",
   },
   {
     href: "/people",
     label: "People",
     description: "HR, payroll, org management",
     icon: Users,
-    color: "text-violet-600",
-    bg: "bg-violet-50 dark:bg-violet-950/30",
+    color: "text-accent-foreground",
+    bg: "bg-accent/10",
   },
   {
     href: "/projects",
     label: "Projects",
     description: "Project costing, ITSM",
     icon: FolderKanban,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    color: "text-success",
+    bg: "bg-success/10",
   },
   {
     href: "/manufacturing",
     label: "Manufacturing",
     description: "Production, maintenance",
     icon: Factory,
-    color: "text-rose-600",
-    bg: "bg-rose-50 dark:bg-rose-950/30",
+    color: "text-destructive",
+    bg: "bg-destructive/10",
   },
   {
     href: "/asset-management",
     label: "Asset Management",
     description: "Fixed assets, real estate, facilities",
     icon: Briefcase,
-    color: "text-cyan-600",
-    bg: "bg-cyan-50 dark:bg-cyan-950/30",
+    color: "text-info",
+    bg: "bg-info/10",
   },
 ] as const;
 
@@ -130,7 +131,7 @@ export default function DashboardPage() {
             className="group flex items-center justify-between rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
           >
             <div className="flex items-center gap-3">
-              <Inbox className="h-4 w-4 text-amber-500" />
+              <Inbox className="h-4 w-4 text-warning" />
               <span className="text-sm font-medium">Inbox</span>
             </div>
             {inboxLoading ? (
@@ -163,12 +164,11 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <LayoutDashboard className="h-8 w-8 text-muted-foreground/20" />
-              <p className="text-xs text-muted-foreground">
-                Recent documents, entity changes, and workflow events will appear here.
-              </p>
-            </div>
+            <EmptyState
+              icon={<LayoutDashboard className="h-8 w-8 text-muted-foreground/20" />}
+              description="Recent documents, entity changes, and workflow events will appear here."
+              className="py-8"
+            />
           </CardContent>
         </Card>
 

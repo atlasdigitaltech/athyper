@@ -32,4 +32,5 @@ include:
   - telemetry/mesh-metrics.yml
   - telemetry/mesh-tracing.yml
   - telemetry/mesh-telemetry.yml
+  - security/mesh-clamav.yml
   - apps/mesh-athyper.yml

@@ -2628,6 +2628,61 @@ COMMENT ON COLUMN master.entity_document_link.entity_id IS
 
 
 -- ============================================================================
+-- §trusted_device — step-up suppression tokens (app-owned, NOT a KC credential)
+-- ============================================================================
+-- Design: the browser holds an opaque random secret (HttpOnly cookie).
+--         Only the SHA-256 hash is stored here.  Presenting the cookie on a
+--         subsequent high-risk action bypasses the MFA step-up challenge.
+--         This table is NOT an authentication credential store.
+-- Scope:  one row per (tenant, principal, device token).
+--         A principal may have multiple trusted devices (e.g. laptop + phone).
+-- Expiry: controlled by expires_at; a background sweep or per-request check
+--         removes/ignores expired rows.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS master.trusted_device (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Scope
+    principal_id        uuid        NOT NULL,
+
+    -- Token (opaque random 32-byte secret — cookie value; only hash stored)
+    device_token_hash   text        NOT NULL,
+
+    -- Context recorded at registration for display purposes only
+    user_agent          text,
+    ip_address          inet,
+    device_name         text,       -- optional human-readable label set by the user
+
+    -- Lifecycle
+    is_revoked          boolean     NOT NULL DEFAULT false,
+    revoked_at          timestamptz,
+    expires_at          timestamptz NOT NULL,
+    last_seen_at        timestamptz,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT trusted_device_pkey          PRIMARY KEY (id),
+    CONSTRAINT trusted_device_token_uq      UNIQUE (tenant_id, principal_id, device_token_hash),
+    CONSTRAINT trusted_device_expires_chk   CHECK  (expires_at > created_at)
+);
+
+COMMENT ON TABLE  master.trusted_device IS
+  'Step-up MFA suppression tokens. One row per trusted browser session. '
+  'App-owned — not a Keycloak credential. Cookie holds raw token; only SHA-256 hash stored.';
+COMMENT ON COLUMN master.trusted_device.device_token_hash IS
+  'SHA-256 hex digest of the opaque random 32-byte cookie value. Never store the raw token.';
+COMMENT ON COLUMN master.trusted_device.device_name IS
+  'User-assigned label for this device (e.g. "Work laptop"). NULL if not set.';
+
+
+-- ============================================================================
 -- CORE FINANCE MASTER TABLES (lookup-governed)
 -- ============================================================================
 -- 12 tables: legal_entity, company_code, cost_center, profit_center, site,

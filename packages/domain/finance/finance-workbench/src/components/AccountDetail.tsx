@@ -48,10 +48,10 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
               <div className="text-sm font-semibold font-mono">{fmtFull(node.closingCredit)}</div>
             </CardContent>
           </Card>
-          <Card className={cn("border-0 shadow-none", net >= 0 ? "bg-emerald-50" : "bg-destructive/5")}>
+          <Card className={cn("border-0 shadow-none", net >= 0 ? "bg-success/10" : "bg-destructive/5")}>
             <CardContent className="p-3">
               <div className="text-[10px] text-muted-foreground uppercase mb-1">Net</div>
-              <div className={cn("text-sm font-semibold font-mono", net >= 0 ? "text-emerald-700" : "text-destructive")}>
+              <div className={cn("text-sm font-semibold font-mono", net >= 0 ? "text-success" : "text-destructive")}>
                 {fmtFull(Math.abs(net))}
               </div>
             </CardContent>

@@ -1,10 +1,10 @@
 import { GlWorkbench } from "@athyper/finance-workbench";
+import { PageFrame } from "@athyper/ui/layout";
 
 /**
  * GL Workbench — /finance/gl
  *
- * Bespoke workbench surface. No [id] child routes.
- * Full-bleed workbench — no PageFrame wrapper.
+ * Full-width workbench surface. No [id] child routes.
  *
  * Accepts query params to preserve workbench context:
  *   /finance/gl?tab=trial-balance      (default)
@@ -39,5 +39,9 @@ export default async function GlWorkbenchPage({
   const raw = Array.isArray(params["tab"]) ? params["tab"][0] : params["tab"];
   const defaultTab: WorkbenchTab = isValidTab(raw) ? raw : "trial-balance";
 
-  return <GlWorkbench defaultTab={defaultTab} />;
+  return (
+    <PageFrame width="full">
+      <GlWorkbench defaultTab={defaultTab} />
+    </PageFrame>
+  );
 }

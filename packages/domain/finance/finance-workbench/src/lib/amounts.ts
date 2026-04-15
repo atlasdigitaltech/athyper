@@ -61,9 +61,9 @@ export function varianceColor(
   if (value === 0) return "text-muted-foreground";
   const isPositive = value > 0;
   if (positiveIsGood) {
-    return isPositive ? "text-emerald-700" : "text-destructive";
+    return isPositive ? "text-success" : "text-destructive";
   }
-  return isPositive ? "text-destructive" : "text-emerald-700";
+  return isPositive ? "text-destructive" : "text-success";
 }
 
 /** BS/P&L sign convention: P&L income should show as positive when credit-normal. */

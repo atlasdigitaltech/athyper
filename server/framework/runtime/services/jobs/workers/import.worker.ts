@@ -42,8 +42,6 @@ interface RowError {
 }
 
 // ── Simple CSV parser (no external deps) ──────────────────────────────────────
-// Handles quoted fields and standard comma/tab delimiters.
-// For production-grade parsing, replace with papaparse.
 
 function parseLine(line: string, delimiter = ","): string[] {
   const fields: string[] = [];
@@ -73,6 +71,40 @@ function parseCSV(buffer: Buffer, delimiter = ","): string[][] {
 
 function delimiterFor(format: string): string {
   return format === "tsv" ? "\t" : ",";
+}
+
+// ── XLSX parser (ExcelJS — dynamic import) ─────────────────────────────────────
+// Returns all rows as a 2D string array (row 0 = headers).
+
+async function parseXLSX(buffer: Buffer): Promise<string[][]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const exceljs = await import("exceljs" as any) as any;
+  const ExcelJSWorkbook = exceljs.default?.Workbook ?? exceljs.Workbook;
+  const wb = new ExcelJSWorkbook();
+  await wb.xlsx.load(buffer);
+
+  const ws = wb.worksheets[0];
+  if (!ws) return [];
+
+  const rows: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row: { values: unknown[] }) => {
+    const cells = (Array.isArray(row.values) ? row.values.slice(1) : []) as unknown[];
+    rows.push(
+      cells.map((v) => {
+        if (v == null) return "";
+        if (typeof v === "object" && "text" in (v as object)) return String((v as { text: unknown }).text ?? "");
+        if (typeof v === "object" && "result" in (v as object)) return String((v as { result: unknown }).result ?? "");
+        return String(v);
+      }),
+    );
+  });
+  return rows;
+}
+
+/** Parse file bytes → 2D string rows. Row 0 is always the header row. */
+async function parseFile(buffer: Buffer, fileFormat: string): Promise<string[][]> {
+  if (fileFormat === "xlsx") return parseXLSX(buffer);
+  return parseCSV(buffer, delimiterFor(fileFormat));
 }
 
 // ── Entity table resolver ─────────────────────────────────────────────────────
@@ -174,7 +206,7 @@ export function createImportWorker(deps: {
       try {
         // ── 3. Download + parse file ──────────────────────────────────────────
         const buffer = await objectStorage.get(fileRef);
-        const rows   = parseCSV(buffer, delimiterFor(fileFormat));
+        const rows   = await parseFile(buffer, fileFormat);
 
         if (rows.length < 2) {
           throw new Error("File has no data rows");

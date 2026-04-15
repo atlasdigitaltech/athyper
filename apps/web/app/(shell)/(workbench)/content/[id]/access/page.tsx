@@ -13,8 +13,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Trash2, Shield } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton,
+  Button, Badge, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
@@ -170,37 +172,39 @@ export default function ContentAccessPage() {
       }
     >
       {isLoading ? (
-        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : grants.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <Shield className="h-8 w-8 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No access grants. Add grants to control visibility.</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Add Grant
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Shield className="h-8 w-8 text-muted-foreground/30" />}
+          title="No access grants. Add grants to control visibility."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Add Grant
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="space-y-2">
           {grants.map((g) => (
-            <Card key={g.id}>
-              <CardContent className="p-3 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={LEVEL_VARIANT[g.accessLevel]} className="text-[10px]">{g.accessLevel}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{g.principalType}</Badge>
-                    <span className="font-mono text-xs">{g.principalId}</span>
-                  </div>
-                  <div className="flex gap-3 text-[10px] text-muted-foreground">
-                    <span>Granted {new Date(g.grantedAt).toLocaleDateString()}</span>
-                    {g.expiresAt && <span>Expires {new Date(g.expiresAt).toLocaleDateString()}</span>}
-                  </div>
-                </div>
+            <RowCard
+              key={g.id}
+              badge={<>
+                <Badge variant={LEVEL_VARIANT[g.accessLevel]} className="text-[10px]">{g.accessLevel}</Badge>
+                <Badge variant="outline" className="text-[10px]">{g.principalType}</Badge>
+              </>}
+              title={<span className="font-mono">{g.principalId}</span>}
+              metadata={<div className="flex gap-3">
+                <span>Granted {new Date(g.grantedAt).toLocaleDateString()}</span>
+                {g.expiresAt && <span>Expires {new Date(g.expiresAt).toLocaleDateString()}</span>}
+              </div>}
+              actions={
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive"
                   onClick={() => revoke.mutate(g.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ))}
         </div>
       )}

@@ -22,8 +22,10 @@ import { Topbar } from "@athyper/shell";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { CommandPalette } from "@/components/shell/CommandPalette";
 import { NotifPanel } from "@/components/shell/NotifPanel";
+import { useNotificationStream } from "@/hooks/useNotificationStream";
 
 // ── Notification count ────────────────────────────────────────────────────────
+// Initial fetch only — live updates come from the SSE stream (useNotificationStream).
 
 function useNotificationCount(enabled: boolean) {
   return useQuery<{ count: number }>({
@@ -37,8 +39,8 @@ function useNotificationCount(enabled: boolean) {
       return res.json() as Promise<{ count: number }>;
     },
     enabled,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 300_000,        // 5 min — SSE stream keeps it fresh in real-time
+    refetchInterval: 300_000,  // poll as a fallback if SSE is unavailable
     throwOnError: false,
     placeholderData: { count: 0 },
   });
@@ -71,6 +73,9 @@ export function AppTopbar({
   const [notifOpen, setNotifOpen] = useState(false);
 
   const { data: unreadData } = useNotificationCount(!!bff.activeOrg);
+
+  // SSE stream: keeps unread count and panel list live without polling
+  useNotificationStream({ enabled: !!bff.activeOrg });
 
   // ⌘K / Ctrl+K shortcut
   useEffect(() => {

@@ -177,6 +177,54 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     return backendCount + frontendCount;
   }
 
+  // ─── Security cleanup ────────────────────────────────────────────────────
+
+  /**
+   * Revoke all trusted devices for a principal when they are deactivated or
+   * locked out. Trusted devices allow step-up bypass — a deactivated principal
+   * must not retain that bypass regardless of cookie state.
+   *
+   * Best-effort: errors are logged but do not block session invalidation.
+   */
+  async function revokeTrustedDevices(
+    tenantId: string,
+    principalId: string,
+    reason: string,
+  ): Promise<number> {
+    try {
+      const result = await db
+        .updateTable("master.trusted_device")
+        .set({
+          is_revoked:  true,
+          revoked_at:  new Date() as unknown as string,
+          updated_at:  new Date() as unknown as string,
+          updated_by:  null, // system action — no user principal
+        })
+        .where("tenant_id",    "=", tenantId)
+        .where("principal_id", "=", principalId)
+        .where("is_revoked",   "=", false)
+        .executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
+
+      const n = Number(result?.numUpdatedRows ?? 0);
+      if (n > 0) {
+        logger?.info("iam_trusted_devices_revoked", {
+          principal_id: principalId,
+          tenant_id:    tenantId,
+          count:        n,
+          reason,
+        });
+      }
+      return n;
+    } catch (err) {
+      logger?.warn("iam_trusted_device_revoke_failed", {
+        principal_id: principalId,
+        tenant_id:    tenantId,
+        err: String(err),
+      });
+      return 0;
+    }
+  }
+
   // ─── Batch processing ────────────────────────────────────────────────────
 
   async function claimBatch(): Promise<ClaimedEvent[]> {
@@ -214,10 +262,25 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     for (const event of events) {
       try {
         let invalidated = 0;
+        let devicesRevoked = 0;
 
         // The principal's UUID is stored in entity_id for all IAM events.
         if (event.entity_id) {
           invalidated = await invalidatePrincipalSessions(event.entity_id);
+
+          // On deactivation or lock: revoke all trusted devices.
+          // Trusted devices grant step-up bypass — an inactive/locked principal
+          // must not retain that capability.
+          if (
+            event.event_type === "principal.deactivated" ||
+            event.event_type === "principal.locked"
+          ) {
+            devicesRevoked = await revokeTrustedDevices(
+              event.tenant_id,
+              event.entity_id,
+              event.event_type,
+            );
+          }
         }
 
         // Mark as completed
@@ -236,7 +299,8 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
           id: event.id,
           event_type: event.event_type,
           principal_id: event.entity_id,
-          cache_keys_deleted: invalidated,  // backend + frontend combined
+          cache_keys_deleted: invalidated,       // backend + frontend combined
+          trusted_devices_revoked: devicesRevoked,
         });
       } catch (err) {
         logger?.error("iam_event_failed", { id: event.id, err: String(err) });

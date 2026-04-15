@@ -63,6 +63,8 @@ export interface IntegrationRouteDeps {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
   logger?: {
+    info?(event: string, fields?: Record<string, unknown>): void;
+    warn?(event: string, fields?: Record<string, unknown>): void;
     error(event: string, fields?: Record<string, unknown>): void;
   };
   /**
@@ -96,7 +98,9 @@ function toEndpoint(r: Record<string, unknown>) {
     code: r["code"], name: r["name"], description: r["description"] ?? null,
     path: r["path"], method: r["method"],
     config: r["config"], health: r["health"],
+    healthCheckUrl: r["health_check_url"] ?? null,
     lastCheckedAt: r["last_checked_at"] ?? null,
+    responseTimeMs: r["last_response_ms"] ?? null,
     isActive: r["is_active"], createdAt: r["created_at"], updatedAt: r["updated_at"] ?? null,
   };
 }

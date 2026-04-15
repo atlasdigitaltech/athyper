@@ -4,116 +4,54 @@
  * Renders a master record list from compiled metadata.
  * Columns, filters, sort, and search are all driven by the descriptor.
  *
- * View modes: list (default DataTable) | board (kanban by status) | compact (card grid)
+ * View modes:
+ *   list      — DataTable (default)
+ *   board     — KanbanView grouped by status/groupable field, with inline transitions
+ *   compact   — Card grid
+ *   dashboard — Aggregate KPI tiles + status distribution + numeric aggregates
+ *
+ * Board and dashboard modes are gated:
+ *   board     — only shown when the entity has a groupable field
+ *   dashboard — always available (falls back to total/today counts only)
+ *
  * Saved views: tabs driven by useSavedViews()
- * Bulk ops: selection bar when 1+ rows selected in list mode
+ * Bulk ops:    selection bar when 1+ rows selected in list mode
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Columns,
   LayoutList,
   LayoutGrid,
   Trash2,
   Download,
   Tag,
+  Kanban,
+  BarChart2,
 } from "lucide-react";
 import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews } from "@athyper/query";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
 import { DataTable, type ColumnDef, type RowSelectionState } from "@athyper/ui/data";
 import { PageFrame } from "@athyper/ui/layout";
 import { Button, Badge, Skeleton } from "@athyper/ui/primitives";
+import { SearchInput } from "@athyper/ui/composites";
 import { cn } from "@athyper/theme/utils";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { ActionBar } from "../actions/ActionBar";
+import { KanbanView, findKanbanGroupField } from "./KanbanView";
+import { DashboardView } from "./DashboardView";
 
 export interface EntityListPageProps {
   entityCode: string;
 }
 
-type ViewMode = "list" | "board" | "compact";
+type ViewMode = "list" | "board" | "compact" | "dashboard";
 
-// ── Board view helpers ────────────────────────────────────────────────────────
+// ── Compact card grid ─────────────────────────────────────────────────────────
 
 function getStatus(row: Record<string, unknown>): string {
   return String(row.status ?? row.record_status ?? row.state ?? "—");
-}
-
-function groupByStatus(
-  rows: Record<string, unknown>[],
-): Map<string, Record<string, unknown>[]> {
-  const map = new Map<string, Record<string, unknown>[]>();
-  for (const row of rows) {
-    const s = getStatus(row);
-    if (!map.has(s)) map.set(s, []);
-    map.get(s)!.push(row);
-  }
-  return map;
-}
-
-// ── Sub-views ─────────────────────────────────────────────────────────────────
-
-function BoardView({
-  rows,
-  titleKey,
-  onRowClick,
-}: {
-  rows: Record<string, unknown>[];
-  titleKey: string;
-  onRowClick?: (row: Record<string, unknown>) => void;
-}) {
-  const groups = groupByStatus(rows);
-  const columns = Array.from(groups.entries());
-
-  if (columns.length === 0) {
-    return (
-      <div className="py-16 text-center text-sm text-muted-foreground">
-        No records
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
-      {columns.map(([status, items]) => (
-        <div key={status} className="min-w-[240px] flex-shrink-0">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {status}
-            </span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
-              {items.length}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {items.map((row) => {
-              const id = String(row.id ?? "");
-              const title = String(row[titleKey] ?? row.name ?? row.code ?? id);
-              return (
-                <div
-                  key={id}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn(
-                    "rounded-lg border bg-card p-3 shadow-xs transition-shadow hover:shadow-sm",
-                    onRowClick && "cursor-pointer",
-                  )}
-                >
-                  <p className="text-sm font-medium truncate">{title}</p>
-                  {id && (
-                    <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                      {id.slice(0, 8)}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function CompactView({
@@ -122,24 +60,22 @@ function CompactView({
   entityCode,
   onRowClick,
 }: {
-  rows: Record<string, unknown>[];
-  titleKey: string;
-  entityCode: string;
+  rows:        Record<string, unknown>[];
+  titleKey:    string;
+  entityCode:  string;
   onRowClick?: (row: Record<string, unknown>) => void;
 }) {
   if (rows.length === 0) {
     return (
-      <div className="py-16 text-center text-sm text-muted-foreground">
-        No records
-      </div>
+      <div className="py-16 text-center text-sm text-muted-foreground">No records</div>
     );
   }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {rows.map((row) => {
-        const id = String(row.id ?? "");
-        const title = String(row[titleKey] ?? row.name ?? row.code ?? id);
+        const id     = String(row.id ?? "");
+        const title  = String(row[titleKey] ?? row.name ?? row.code ?? id);
         const status = getStatus(row);
         return (
           <div
@@ -157,8 +93,8 @@ function CompactView({
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                {status}
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground capitalize">
+                {status.replace(/_/g, " ")}
               </span>
               {id && (
                 <span className="font-mono text-[9px] text-muted-foreground/50">
@@ -178,34 +114,41 @@ function CompactView({
 function ViewModeSwitcher({
   mode,
   onChange,
+  hasGroupable,
 }: {
-  mode: ViewMode;
-  onChange: (m: ViewMode) => void;
+  mode:         ViewMode;
+  onChange:     (m: ViewMode) => void;
+  hasGroupable: boolean;
 }) {
-  const options: { value: ViewMode; Icon: typeof LayoutList; label: string }[] = [
-    { value: "list",    Icon: LayoutList, label: "List" },
-    { value: "board",   Icon: Columns,    label: "Board" },
-    { value: "compact", Icon: LayoutGrid, label: "Compact" },
+  type Option = { value: ViewMode; Icon: typeof LayoutList; label: string; gated?: boolean };
+
+  const options: Option[] = [
+    { value: "list",      Icon: LayoutList, label: "List" },
+    { value: "board",     Icon: Kanban,     label: "Board",     gated: !hasGroupable },
+    { value: "compact",   Icon: LayoutGrid, label: "Compact" },
+    { value: "dashboard", Icon: BarChart2,  label: "Dashboard" },
   ];
 
   return (
     <div className="flex rounded-md border overflow-hidden">
-      {options.map(({ value, Icon, label }) => (
-        <button
-          key={value}
-          onClick={() => onChange(value)}
-          title={label}
-          className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors",
-            mode === value
-              ? "bg-muted text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-          )}
-        >
-          <Icon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{label}</span>
-        </button>
-      ))}
+      {options
+        .filter((o) => !o.gated)
+        .map(({ value, Icon, label }) => (
+          <button
+            key={value}
+            onClick={() => onChange(value)}
+            title={label}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors",
+              mode === value
+                ? "bg-muted text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        ))}
     </div>
   );
 }
@@ -216,7 +159,7 @@ function BulkOpsBar({
   count,
   onClear,
 }: {
-  count: number;
+  count:   number;
   onClear: () => void;
 }) {
   return (
@@ -254,14 +197,44 @@ function BulkOpsBar({
 
 export function EntityListPage({ entityCode }: EntityListPageProps) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [activeView, setActiveView] = useState<string>("__all");
+  const [viewMode,      setViewMode]      = useState<ViewMode>("list");
+  const [rowSelection,  setRowSelection]  = useState<RowSelectionState>({});
+  const [activeView,    setActiveView]    = useState<string>("__all");
+  const [searchQuery,   setSearchQuery]   = useState<string>("");
 
-  const { data: entity, isLoading: metaLoading, error: metaError } = useCompiledEntity(entityCode);
-  const { data: listData, isLoading: dataLoading } = useEntityList(entityCode);
-  const { data: operations } = useEntityOperations(entityCode);
-  const { data: savedViews = [] } = useSavedViews(entityCode);
+  const { data: entity,     isLoading: metaLoading, error: metaError } = useCompiledEntity(entityCode);
+  const { data: operations }                                            = useEntityOperations(entityCode);
+  const { data: savedViews = [] }                                       = useSavedViews(entityCode);
+
+  // Build list query params from active saved view + search term
+  const listParams = useMemo(() => {
+    const activeViewObj = activeView !== "__all"
+      ? savedViews.find((v) => v.id === activeView)
+      : undefined;
+
+    // Convert saved view filters (array) → equality filter map for the backend
+    const viewFilters: Record<string, unknown> = {};
+    if (activeViewObj?.config.filters) {
+      for (const f of activeViewObj.config.filters) {
+        // Apply equality and common comparison operators
+        if (["eq", "=", "equals", "is"].includes(f.operator)) {
+          viewFilters[f.field] = f.value;
+        }
+      }
+    }
+
+    const hasFilters = Object.keys(viewFilters).length > 0;
+    const hasSearch  = searchQuery.trim().length > 0;
+
+    if (!hasFilters && !hasSearch) return undefined;
+
+    return {
+      ...(hasSearch  ? { q: searchQuery.trim() }  : {}),
+      ...(hasFilters ? { filters: viewFilters }   : {}),
+    };
+  }, [activeView, savedViews, searchQuery]);
+
+  const { data: listData, isLoading: dataLoading } = useEntityList(entityCode, listParams);
 
   // Fail fast on unknown entity code
   if (metaError) {
@@ -287,19 +260,20 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     );
   }
 
-  const listConfig = resolveListConfig(entity);
-  const titleKey = listConfig.columns[0]?.name ?? "name";
+  const listConfig    = resolveListConfig(entity);
+  const titleKey      = listConfig.columns[0]?.name ?? "name";
+  const hasGroupable  = !!findKanbanGroupField(entity);
 
-  const allRows = (listData?.data ?? []) as Record<string, unknown>[];
+  const allRows       = (listData?.data ?? []) as Record<string, unknown>[];
   const selectedCount = Object.keys(rowSelection).length;
 
-  // Apply saved view filter (currently just a label switch — full filter in later sprint)
+  // Rows are already filtered by the backend (search + saved view filters)
   const rows = allRows;
 
   // Build TanStack Table columns from descriptor fields
   const columns: ColumnDef<Record<string, unknown>>[] = listConfig.columns.map((field) => ({
     accessorKey: field.name,
-    header: field.label ?? field.name,
+    header:      field.label ?? field.name,
     enableSorting: field.is_sortable,
     cell: ({ getValue }) => {
       const Renderer = resolveFieldRenderer(field);
@@ -318,7 +292,17 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       description={`${rows.length} records`}
       actions={
         <div className="flex items-center gap-2">
-          <ViewModeSwitcher mode={viewMode} onChange={setViewMode} />
+          <SearchInput
+            placeholder={`Search ${entity.entity_name}…`}
+            onSearch={setSearchQuery}
+            loading={dataLoading && searchQuery.length > 0}
+            className="w-48 sm:w-64"
+          />
+          <ViewModeSwitcher
+            mode={viewMode}
+            onChange={setViewMode}
+            hasGroupable={hasGroupable}
+          />
           {operations ? (
             <ActionBar operations={operations} surface="LIST" entityCode={entityCode} />
           ) : null}
@@ -330,7 +314,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         {savedViews.length > 0 && (
           <div className="flex gap-1 border-b pb-0">
             <button
-              onClick={() => setActiveView("__all")}
+              onClick={() => { setActiveView("__all"); setSearchQuery(""); }}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
                 activeView === "__all"
@@ -343,7 +327,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             {savedViews.map((view) => (
               <button
                 key={view.id}
-                onClick={() => setActiveView(view.id)}
+                onClick={() => { setActiveView(view.id); setSearchQuery(""); }}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
                   activeView === view.id
@@ -357,12 +341,12 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
           </div>
         )}
 
-        {/* Bulk ops bar */}
+        {/* Bulk ops bar (list mode only) */}
         {selectedCount > 0 && viewMode === "list" && (
           <BulkOpsBar count={selectedCount} onClear={() => setRowSelection({})} />
         )}
 
-        {/* Content */}
+        {/* ── Views ── */}
         {viewMode === "list" && (
           <DataTable
             columns={columns}
@@ -377,7 +361,13 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         )}
 
         {viewMode === "board" && (
-          <BoardView rows={rows} titleKey={titleKey} onRowClick={handleRowClick} />
+          <KanbanView
+            rows={rows}
+            entity={entity}
+            titleKey={titleKey}
+            entityCode={entityCode}
+            onRowClick={handleRowClick}
+          />
         )}
 
         {viewMode === "compact" && (
@@ -386,6 +376,13 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             titleKey={titleKey}
             entityCode={entityCode}
             onRowClick={handleRowClick}
+          />
+        )}
+
+        {viewMode === "dashboard" && (
+          <DashboardView
+            rows={rows}
+            entity={entity}
           />
         )}
       </div>

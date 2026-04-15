@@ -5,15 +5,17 @@ MESH (Managed Environment Services Hub) provides the complete infrastructure sta
 ## Quick Start
 
 ```bash
-# First-time setup
-cd mesh/scripts
-./up.sh              # Select environment when prompted
-./init-data.sh       # Initialize database and IAM
+# First-time setup (run once)
+bash mesh/scripts/setup/create-data-dirs.sh   # create Docker volume mount dirs
+bash mesh/scripts/setup/setup-env.sh local    # copy env template
 
-# Daily use
-./up.sh              # Start infrastructure
-./logs.sh            # View logs
-./down.sh            # Stop infrastructure
+# Start / stop (daily use)
+bash mesh/scripts/stack/up.sh     # start infrastructure
+bash mesh/scripts/stack/logs.sh   # view logs
+bash mesh/scripts/stack/down.sh   # stop infrastructure
+
+# Seed the database
+bash mesh/scripts/db/seed-db.sh   # run DDL migrations + seed data
 ```
 
 ## Architecture
@@ -88,11 +90,20 @@ mesh/
 │   ├── local.env.example      # Local development template
 │   ├── staging.env.example    # Staging template
 │   └── production.env.example # Production template
-└── scripts/                   # Management scripts
-    ├── up.sh                  # Start services
-    ├── down.sh                # Stop services
-    ├── logs.sh                # View logs
-    └── init-data.sh           # Initialize data
+└── scripts/
+    ├── setup/                 # First-time setup (run once)
+    │   ├── create-data-dirs.sh/.bat   # Create Docker volume mount dirs
+    │   ├── setup-env.sh/.bat          # Copy env template to mesh/env/.env
+    │   ├── setup-config.sh/.bat       # Generate service configs
+    │   └── generate-mesh-certs.sh/.bat # Generate self-signed TLS certs
+    ├── stack/                 # Daily stack management
+    │   ├── up.sh/.bat         # Start services
+    │   ├── down.sh/.bat       # Stop services
+    │   └── logs.sh/.bat       # View logs
+    └── db/                    # Database operations
+        ├── seed-db.sh/.bat    # Run DB migrations + seed data
+        ├── import-iam.sh/.bat # Import Keycloak realm
+        └── export-iam.sh/.bat # Export Keycloak realm
 ```
 
 ## Environments
@@ -195,48 +206,55 @@ The MESH scripts automatically detect and configure the environment:
 
 ## Scripts Reference
 
-### up.sh - Start Services
+### stack/up.sh — Start Services
 
 ```bash
 # Start with default profile (mesh)
-./up.sh
+bash mesh/scripts/stack/up.sh
 
 # Start specific profile
-./up.sh mesh        # Core infrastructure only
-./up.sh telemetry   # Telemetry stack only
-./up.sh apps        # Application services only
-./up.sh all         # All services (no profile filter)
+bash mesh/scripts/stack/up.sh mesh        # Core infrastructure only
+bash mesh/scripts/stack/up.sh telemetry   # Telemetry stack only
+bash mesh/scripts/stack/up.sh apps        # Application services only
+bash mesh/scripts/stack/up.sh all         # All services (no profile filter)
 ```
 
-### down.sh - Stop Services
+### stack/down.sh — Stop Services
 
 ```bash
-# Stop all services
-./down.sh
+bash mesh/scripts/stack/down.sh
 
 # Stop specific profile
-./down.sh mesh
-./down.sh telemetry
+bash mesh/scripts/stack/down.sh mesh
+bash mesh/scripts/stack/down.sh telemetry
 ```
 
-### logs.sh - View Logs
+### stack/logs.sh — View Logs
 
 ```bash
-# View all logs
-./logs.sh
+bash mesh/scripts/stack/logs.sh
 
 # View specific service logs
-./logs.sh iam
-./logs.sh gateway
-./logs.sh memorycache
+bash mesh/scripts/stack/logs.sh iam
+bash mesh/scripts/stack/logs.sh gateway
+bash mesh/scripts/stack/logs.sh memorycache
 ```
 
-### init-data.sh - Initialize Data
+### db/seed-db.sh — Seed the Database
 
 ```bash
-# Run database migrations and IAM setup
-./init-data.sh
+# Full seed: DDL + system seed + demo data (default)
+bash mesh/scripts/db/seed-db.sh
+
+# Show migration status
+bash mesh/scripts/db/seed-db.sh --status
+
+# Drop all schemas and re-seed from scratch (destructive — local dev only)
+bash mesh/scripts/db/seed-db.sh --reset
 ```
+
+The script delegates to `tsx db/seed/migrate.ts` inside the `server/` package and reads
+`DATABASE_ADMIN_URL` from `mesh/env/.env` (or falls back to individual `DB_*` vars).
 
 ## Service Profiles
 
@@ -450,6 +468,5 @@ docker exec -it athyper-mesh-memorycache redis-cli ping
 
 ## See Also
 
-- [Quick Start Guide](../docs/deployment/QUICKSTART.md)
-- [Environment Configuration](../docs/deployment/ENVIRONMENTS.md)
-- [Architecture Overview](../docs/architecture/OVERVIEW.md)
+- [Developer Onboarding Guide](../docs/developer-onboarding.md)
+- [Runbooks](../docs/runbooks/README.md)

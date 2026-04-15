@@ -801,3 +801,199 @@ COMMENT ON COLUMN governance.report_pack.storage_key IS
     'NULL while status is pending/generating/failed.';
 COMMENT ON COLUMN governance.report_pack.format IS
     'Output format. html (Phase 4.4 stub), pdf (Phase 5.1+), xlsx (optional).';
+
+
+-- ============================================================================
+-- §CCERT-IMM  Certification snapshot immutability (Phase 6 hardening)
+-- ============================================================================
+-- Once a cycle_certification reaches CERTIFIED, ATTESTED, or SUPERSEDED status,
+-- snapshot_payload and content_hash are frozen. Any UPDATE to those columns
+-- raises an exception — create a superseding certification instead.
+-- The status column may still advance (CERTIFIED → ATTESTED → SUPERSEDED);
+-- only the evidence payload columns are locked.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION governance.trg_certification_snapshot_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.status IN ('CERTIFIED', 'ATTESTED', 'SUPERSEDED') THEN
+        IF OLD.snapshot_payload IS DISTINCT FROM NEW.snapshot_payload THEN
+            RAISE EXCEPTION
+                'governance.cycle_certification.snapshot_payload is immutable once '
+                'status = %. Create a superseding certification instead.',
+                OLD.status
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        IF OLD.content_hash IS DISTINCT FROM NEW.content_hash THEN
+            RAISE EXCEPTION
+                'governance.cycle_certification.content_hash is immutable once '
+                'status = %.',
+                OLD.status
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ccert_snapshot_immutable ON governance.cycle_certification;
+CREATE TRIGGER trg_ccert_snapshot_immutable
+    BEFORE UPDATE ON governance.cycle_certification
+    FOR EACH ROW EXECUTE FUNCTION governance.trg_certification_snapshot_immutable();
+
+COMMENT ON FUNCTION governance.trg_certification_snapshot_immutable() IS
+    'Prevents modification of snapshot_payload and content_hash once a '
+    'cycle_certification has reached CERTIFIED, ATTESTED, or SUPERSEDED. '
+    'Evidence integrity: once signed off the audit evidence is frozen in place.';
+
+
+-- ============================================================================
+-- §LH  governance.legal_hold — legal hold registry
+-- ============================================================================
+-- Active holds block partition archive workers from detaching / moving
+-- partitions to cold storage. The archive worker cross-references
+-- governance.legal_hold before any DETACH CONCURRENTLY operation.
+--
+-- Lifecycle:
+--   legal_hold.status: active → released | expired
+
+CREATE TABLE IF NOT EXISTS governance.legal_hold (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Hold definition
+    hold_name           varchar(200) NOT NULL,
+    hold_code           varchar(60)  NOT NULL,           -- slugified, used in UI + API
+    description         text,
+    custodian_id        uuid         NOT NULL,           -- principal_id of hold owner
+
+    -- Scope (at least one scope dimension must be set)
+    scope_entity_type   varchar(50),                     -- e.g. 'journal_entry', NULL = all types
+    scope_entity_id_lo  uuid,                            -- optional range start (entity id)
+    scope_entity_id_hi  uuid,                            -- optional range end  (entity id)
+    scope_date_from     timestamptz,                     -- inclusive start of time range
+    scope_date_to       timestamptz,                     -- inclusive end of time range
+    scope_log_schemas   text[],                          -- NULL = all log schemas; otherwise ['log','audit']
+
+    -- Lifecycle
+    status              text         NOT NULL DEFAULT 'active',
+
+    -- Effectivity
+    effective_from      timestamptz  NOT NULL DEFAULT now(),
+    effective_to        timestamptz,                     -- NULL = indefinite
+
+    -- Release
+    release_date        timestamptz,
+    release_reason      text,
+    released_by         uuid,
+
+    -- Audit
+    created_at          timestamptz  NOT NULL DEFAULT now(),
+    created_by          uuid         NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT lh_pkey          PRIMARY KEY (id),
+    CONSTRAINT lh_tenant_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT lh_code_uq       UNIQUE (tenant_id, hold_code),
+    CONSTRAINT lh_status_chk    CHECK (status IN ('active', 'released', 'expired')),
+    CONSTRAINT lh_scope_chk     CHECK (
+        scope_entity_type IS NOT NULL
+        OR scope_date_from IS NOT NULL
+        OR scope_log_schemas IS NOT NULL
+    ),
+    CONSTRAINT lh_date_range_chk CHECK (
+        scope_date_from IS NULL OR scope_date_to IS NULL OR scope_date_from <= scope_date_to
+    ),
+    CONSTRAINT lh_effectivity_chk CHECK (
+        effective_to IS NULL OR effective_from <= effective_to
+    ),
+    CONSTRAINT lh_release_chk   CHECK (
+        (status <> 'released') OR (release_date IS NOT NULL AND released_by IS NOT NULL AND release_reason IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE governance.legal_hold IS
+    'Legal hold registry. Active holds block the partition archive worker from '
+    'detaching / archiving log partitions whose time range overlaps the hold scope. '
+    'status: active (blocking) → released (manually lifted) | expired (effective_to passed).';
+
+COMMENT ON COLUMN governance.legal_hold.hold_code IS
+    'Slugified hold identifier. Used in API paths and UI labels. '
+    'Must be unique per tenant. Pattern: [a-z0-9-]{1,60}.';
+
+COMMENT ON COLUMN governance.legal_hold.scope_entity_type IS
+    'If set, only audit rows for this entity type are in scope. '
+    'NULL means all entity types are in scope.';
+
+COMMENT ON COLUMN governance.legal_hold.scope_log_schemas IS
+    'Array of log schema names covered by this hold (e.g. {''log'',''audit''}). '
+    'NULL means all log schemas.';
+
+COMMENT ON COLUMN governance.legal_hold.custodian_id IS
+    'Principal ID of the responsible custodian. Must be a valid master.principal.id. '
+    'No FK enforced here — principal may be deleted; legal hold remains.';
+
+
+-- ============================================================================
+-- §LHM  governance.legal_hold_manifest — partitions blocked by a hold
+-- ============================================================================
+-- Populated by the archive worker when it encounters a partition that
+-- would be archived but is blocked by an active hold.
+-- Also pre-populated via POST /api/governance/legal-holds/:id/manifest/refresh.
+
+CREATE TABLE IF NOT EXISTS governance.legal_hold_manifest (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Parent hold
+    legal_hold_id       uuid        NOT NULL,
+
+    -- Blocked partition
+    partition_schema    text        NOT NULL,            -- e.g. 'log'
+    partition_table     text        NOT NULL,            -- e.g. 'audit_log_2024_01'
+    partition_range_lo  timestamptz NOT NULL,            -- inclusive
+    partition_range_hi  timestamptz NOT NULL,            -- exclusive
+
+    -- Status
+    is_released         boolean     NOT NULL DEFAULT false,
+    released_at         timestamptz,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT lhm_pkey          PRIMARY KEY (id),
+    CONSTRAINT lhm_tenant_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT lhm_unique        UNIQUE (tenant_id, legal_hold_id, partition_schema, partition_table),
+    CONSTRAINT lhm_hold_fk       FOREIGN KEY (tenant_id, legal_hold_id)
+        REFERENCES governance.legal_hold (tenant_id, id)
+        ON DELETE CASCADE,
+    CONSTRAINT lhm_range_chk     CHECK (partition_range_lo < partition_range_hi),
+    CONSTRAINT lhm_release_chk   CHECK (
+        (is_released = false AND released_at IS NULL)
+        OR (is_released = true AND released_at IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE governance.legal_hold_manifest IS
+    'Inventory of log partitions blocked by a legal hold. '
+    'One row per (hold, partition). Populated by the archive worker or on-demand '
+    'via POST /api/governance/legal-holds/:id/manifest/refresh. '
+    'is_released is set true when the hold is lifted and the partition is free to archive. '
+    'CASCADE DELETE from legal_hold cleans up manifest rows when hold is hard-deleted '
+    '(soft-delete via status=released is preferred for audit trail).';
+
+CREATE INDEX IF NOT EXISTS lh_tenant_status_idx
+    ON governance.legal_hold (tenant_id, status)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS lhm_hold_idx
+    ON governance.legal_hold_manifest (tenant_id, legal_hold_id);
+
+CREATE INDEX IF NOT EXISTS lhm_partition_idx
+    ON governance.legal_hold_manifest (partition_schema, partition_table, is_released);

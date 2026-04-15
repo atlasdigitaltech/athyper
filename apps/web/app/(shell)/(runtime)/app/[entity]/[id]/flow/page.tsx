@@ -118,10 +118,10 @@ function useWorkItemAction(requestId: string | null) {
 
 function WorkItemRow({ item }: { item: WorkItem }) {
   const statusColor: Record<string, string> = {
-    approved:  "text-emerald-600",
-    rejected:  "text-rose-600",
-    pending:   "text-amber-600",
-    delegated: "text-blue-600",
+    approved:  "text-success",
+    rejected:  "text-destructive",
+    pending:   "text-warning",
+    delegated: "text-primary",
     timed_out: "text-muted-foreground",
   };
   const StatusIcon = item.status === "approved"
@@ -145,8 +145,8 @@ function WorkItemRow({ item }: { item: WorkItem }) {
 function StageCard({ stage, isCurrent }: { stage: WorkflowStageDetail; isCurrent: boolean }) {
   const stageStatusColor: Record<string, string> = {
     active:    "border-primary/60 bg-primary/5",
-    completed: "border-emerald-300/60 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20",
-    rejected:  "border-rose-300/60   bg-rose-50/50   dark:border-rose-800/40   dark:bg-rose-950/20",
+    completed: "border-success/30 bg-success/5",
+    rejected:  "border-destructive/30 bg-destructive/5",
     pending:   "border-border bg-background",
     skipped:   "border-border/40 bg-muted/20 opacity-60",
   };
@@ -172,10 +172,10 @@ function StageCard({ stage, isCurrent }: { stage: WorkflowStageDetail; isCurrent
       </div>
       {qp && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="text-emerald-600 font-medium">✓ {qp.approved_count} approved</span>
-          {qp.rejected_count > 0 && <span className="text-rose-600 font-medium">✗ {qp.rejected_count} rejected</span>}
+          <span className="text-success font-medium">✓ {qp.approved_count} approved</span>
+          {qp.rejected_count > 0 && <span className="text-destructive font-medium">✗ {qp.rejected_count} rejected</span>}
           <span>{qp.pending_count} pending</span>
-          <span className="ml-auto">Quorum: {qp.is_met ? <span className="text-emerald-600">Met</span> : <span className="text-amber-600">Not met</span>}</span>
+          <span className="ml-auto">Quorum: {qp.is_met ? <span className="text-success">Met</span> : <span className="text-warning">Not met</span>}</span>
         </div>
       )}
       {stage.work_items.length > 0 && (
@@ -222,7 +222,7 @@ function ActionPanel({ context, requestId }: { context: ApprovalContext; request
       <div className="flex gap-2">
         <Button
           variant="outline" size="sm"
-          className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          className="gap-1.5 border-success/30 text-success hover:bg-success/10"
           onClick={() => submit("approve")}
           loading={actionInFlight === "approve"}
           disabled={!!actionInFlight}
@@ -231,7 +231,7 @@ function ActionPanel({ context, requestId }: { context: ApprovalContext; request
         </Button>
         <Button
           variant="outline" size="sm"
-          className="gap-1.5 border-rose-300 text-rose-700 hover:bg-rose-50"
+          className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
           onClick={() => submit("reject")}
           loading={actionInFlight === "reject"}
           disabled={!!actionInFlight}
@@ -281,13 +281,14 @@ export default function AppEntityFlowPage() {
     <PageFrame
       title="Approval Flow"
       description={`${formatTitle(entity)} — workflow state`}
+      width="narrow"
       actions={
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
         </Button>
       }
     >
-      <div className="mx-auto max-w-2xl space-y-4">
+      <div className="space-y-4">
         {isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />

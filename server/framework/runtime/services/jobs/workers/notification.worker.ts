@@ -24,7 +24,7 @@ import { Worker, Queue } from "bullmq";
 import type { Job, ConnectionOptions } from "bullmq";
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import {
   QUEUE_NAME,
   JOB_NAME,
@@ -38,6 +38,9 @@ import {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
+// Alias used in dedup helpers (matches DB above)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDb = Kysely<Record<string, any>>;
 
 // ─── Channel handler interface ────────────────────────────────────────────────
 
@@ -45,13 +48,21 @@ export interface NotificationChannelHandler {
   /**
    * Dispatch a single notification delivery attempt.
    * Should throw on failure (worker will retry the "send" job).
+   *
+   * tenantId and recipientId are provided so channel-specific adapters
+   * (e.g. push) can perform per-tenant DB lookups (device registries, etc.)
+   * without embedding tenantId in recipientAddr.
    */
   send(opts: {
-    channel:      string;
+    channel:       string;
     recipientAddr: string;
-    templateKey:  string;
-    subject:      string | null;
-    payload:      Record<string, unknown>;
+    templateKey:   string;
+    subject:       string | null;
+    payload:       Record<string, unknown>;
+    /** Tenant UUID — required by push adapter for subscription lookup */
+    tenantId?:     string;
+    /** Principal UUID — preferred over recipientAddr for push lookup */
+    recipientId?:  string;
   }): Promise<{ externalId?: string }>;
 
   /**
@@ -63,13 +74,92 @@ export interface NotificationChannelHandler {
 }
 
 interface PendingMessage {
-  id:              string;
-  tenant_id:       string;
-  template_key:    string;
+  id:               string;
+  tenant_id:        string;
+  template_key:     string;
   template_version: number;
-  subject:         string | null;
-  payload:         Record<string, unknown>;
-  channels:        string[] | null;
+  subject:          string | null;
+  payload:          Record<string, unknown>;
+  channels:         string[] | null;
+  /** FK to control.notification_routing_rule — present when created by routing rule evaluation */
+  rule_id:          string | null;
+  event_code:       string;
+  entity_type:      string | null;
+  entity_id:        string | null;
+}
+
+// ─── Semantic dedup ───────────────────────────────────────────────────────────
+//
+// Prevents delivering semantically duplicate notifications to the same recipient
+// within a routing rule's dedup_window_ms window.
+//
+// Fingerprint: sha256 of (rule_id|event_code|entity_ref|recipient_id|channel).
+// "Same event, same entity, same recipient, same channel within window = skip."
+// Stored in event.notification_delivery.idempotency_key — a unique index on
+// (tenant_id, idempotency_key) ensures exactly-once DB semantics.
+//
+// Implementation note (user correction applied): fingerprint is persisted to DB,
+// not just Redis. Redis is an optional fast-path cache only.
+
+/** Default dedup window (ms) when routing rule is not available: 5 min */
+const DEFAULT_DEDUP_WINDOW_MS = 300_000;
+
+/** In-memory dedup cache: fingerprint → expiresAt (ms). Process-local fast path. */
+const dedupCache = new Map<string, number>();
+
+function buildFingerprint(
+  ruleId:      string | null,
+  eventCode:   string,
+  entityType:  string | null,
+  entityId:    string | null,
+  recipientId: string,
+  channel:     string,
+): string {
+  const raw = [ruleId ?? "", eventCode, entityType ?? "", entityId ?? "", recipientId, channel].join("|");
+  return createHash("sha256").update(raw).digest("hex");
+}
+
+async function isDuplicate(
+  db:          AnyDb,
+  tenantId:    string,
+  fingerprint: string,
+  windowMs:    number,
+): Promise<boolean> {
+  // 1. Fast path: in-process cache (prune expired entries opportunistically)
+  const now = Date.now();
+  const cached = dedupCache.get(fingerprint);
+  if (cached !== undefined && cached > now) return true;
+  if (cached !== undefined) dedupCache.delete(fingerprint);
+
+  // 2. DB check: look for a recent delivery with this idempotency_key
+  const windowSec = Math.ceil(windowMs / 1000);
+  const result = await sql<{ exists: boolean }>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM   event.notification_delivery
+      WHERE  tenant_id        = ${tenantId}::uuid
+        AND  idempotency_key  = ${fingerprint}
+        AND  created_at       > now() - (${windowSec} || ' seconds')::interval
+        AND  status NOT IN ('failed', 'cancelled')
+    ) AS exists
+  `.execute(db);
+
+  return result.rows[0]?.exists ?? false;
+}
+
+async function getRuleDedupWindowMs(
+  db:     AnyDb,
+  ruleId: string,
+): Promise<number> {
+  try {
+    const result = await sql<{ dedup_window_ms: number }>`
+      SELECT dedup_window_ms FROM control.notification_routing_rule
+      WHERE  id = ${ruleId}::uuid LIMIT 1
+    `.execute(db);
+    return result.rows[0]?.dedup_window_ms ?? DEFAULT_DEDUP_WINDOW_MS;
+  } catch {
+    return DEFAULT_DEDUP_WINDOW_MS;
+  }
 }
 
 // ─── Sweep ────────────────────────────────────────────────────────────────────
@@ -94,7 +184,8 @@ async function sweep(
       LIMIT  ${BATCH}
       FOR UPDATE SKIP LOCKED
     )
-    RETURNING id, tenant_id, template_key, template_version, subject, payload, channels
+    RETURNING id, tenant_id, template_key, template_version, subject, payload, channels,
+              rule_id, event_code, entity_type, entity_id
   `.execute(db);
 
   const msgs = result.rows;
@@ -129,7 +220,8 @@ async function send(
 
   // Load message — must be in 'planning' state
   const msgResult = await sql<PendingMessage>`
-    SELECT id, tenant_id, template_key, template_version, subject, payload, channels
+    SELECT id, tenant_id, template_key, template_version, subject, payload, channels,
+           rule_id, event_code, entity_type, entity_id
     FROM   event.notification_message
     WHERE  id = ${messageId}::uuid AND tenant_id = ${tenantId}::uuid
       AND  status IN ('planning', 'delivering')
@@ -168,6 +260,7 @@ async function send(
 
   let deliveredCount = 0;
   let failedCount    = 0;
+  let dedupCount     = 0;
 
   for (const recipient of recipients) {
     for (const channel of channels) {
@@ -175,16 +268,18 @@ async function send(
       const result  = await deliverOne(db, {
         messageId, tenantId, msg, recipient, channel, handler, logger,
       });
-      if (result === "ok") deliveredCount++;
-      else                 failedCount++;
+      if      (result === "ok")    deliveredCount++;
+      else if (result === "dedup") dedupCount++;
+      else                         failedCount++;
     }
   }
 
-
+  // All deduplicated — treat as completed (not failed) so it doesn't re-enter queue
   const finalStatus =
-    failedCount === 0                           ? "completed"
-    : deliveredCount === 0                      ? "failed"
-    :                                             "partial";
+    failedCount === 0 && (deliveredCount > 0 || dedupCount > 0) ? "completed"
+    : failedCount === 0 && deliveredCount === 0                  ? "completed"
+    : deliveredCount === 0 && dedupCount === 0                   ? "failed"
+    :                                                              "partial";
 
   await sql`
     UPDATE event.notification_message
@@ -197,7 +292,7 @@ async function send(
   `.execute(db);
 
   logger?.info("notification_send_complete", {
-    messageId, status: finalStatus, deliveredCount, failedCount,
+    messageId, status: finalStatus, deliveredCount, failedCount, dedupCount,
   });
 }
 
@@ -265,8 +360,32 @@ async function deliverOne(
     handler:   NotificationChannelHandler | undefined;
     logger?:   JobLogger;
   },
-): Promise<"ok" | "fail"> {
+): Promise<"ok" | "fail" | "dedup"> {
   const { messageId, tenantId, msg, recipient, channel, handler, logger } = opts;
+
+  // ── Semantic dedup check ───────────────────────────────────────────────────
+  // Build a fingerprint of (rule, event, entity, recipient, channel). If a
+  // non-failed delivery with this fingerprint exists within dedup_window_ms,
+  // skip silently. This prevents duplicate notifications caused by outbox
+  // retries, double-triggers, or sweep races.
+  if (msg.rule_id) {
+    const fingerprint = buildFingerprint(
+      msg.rule_id, msg.event_code,
+      msg.entity_type, msg.entity_id,
+      recipient.id, channel,
+    );
+    const windowMs = await getRuleDedupWindowMs(db, msg.rule_id);
+    const dup = await isDuplicate(db, tenantId, fingerprint, windowMs);
+    if (dup) {
+      logger?.info("notification_dedup_skip", {
+        messageId, channel, recipientId: recipient.id,
+        ruleId: msg.rule_id, eventCode: msg.event_code,
+      });
+      return "dedup";
+    }
+    // Store fingerprint in process cache for duration of window
+    dedupCache.set(fingerprint, Date.now() + windowMs);
+  }
 
   if (!handler) {
     logger?.warn("notification_channel_unhandled", { channel, messageId });
@@ -284,11 +403,19 @@ async function deliverOne(
       templateKey:   msg.template_key,
       subject:       msg.subject,
       payload:       (msg.payload ?? {}) as Record<string, unknown>,
+      tenantId,
+      recipientId:   recipient.id,
     });
 
     await insertDelivery(db, tenantId, {
       messageId, recipientId: recipient.id, recipientAddr: recipient.addr,
       channel, status: "sent", externalId,
+      // Store fingerprint as idempotency_key for DB-level dedup on retry
+      idempotencyKey: msg.rule_id ? buildFingerprint(
+        msg.rule_id, msg.event_code,
+        msg.entity_type, msg.entity_id,
+        recipient.id, channel,
+      ) : undefined,
     });
     return "ok";
   } catch (err) {
@@ -305,13 +432,15 @@ async function insertDelivery(
   db:       DB,
   tenantId: string,
   opts: {
-    messageId:     string;
-    recipientId:   string;
-    recipientAddr: string;
-    channel:       string;
-    status:        string;
-    externalId?:   string;
-    lastError?:    string;
+    messageId:      string;
+    recipientId:    string;
+    recipientAddr:  string;
+    channel:        string;
+    status:         string;
+    externalId?:    string;
+    lastError?:     string;
+    /** SHA-256 semantic dedup fingerprint — stored for cross-worker idempotency */
+    idempotencyKey?: string;
   },
 ): Promise<void> {
   // notification_delivery is partitioned by created_at — the default partition catches all rows.
@@ -320,11 +449,12 @@ async function insertDelivery(
       (tenant_id,         message_id,         recipient_id,
        recipient_addr,    channel,             status,
        external_id,       last_error,          attempt_count,
-       sent_at,           created_by)
+       idempotency_key,   sent_at,             created_by)
     VALUES
       (${tenantId}::uuid, ${opts.messageId}::uuid, ${opts.recipientId}::uuid,
        ${opts.recipientAddr}, ${opts.channel},     ${opts.status},
        ${opts.externalId ?? null}, ${opts.lastError ?? null}, 1,
+       ${opts.idempotencyKey ?? null},
        CASE WHEN ${opts.status} = 'sent' THEN now() ELSE NULL END,
        ${SYSTEM_ACTOR_ID}::uuid)
     ON CONFLICT DO NOTHING

@@ -1,5 +1,6 @@
 import { CloseCycleWorkbench } from "@athyper/finance-workbench/views";
 import { parseFinanceScope } from "@athyper/finance-workbench/lib/scope";
+import { PageFrame } from "@athyper/ui/layout";
 
 /**
  * Period Close Workbench — /finance/close
@@ -19,5 +20,9 @@ export default async function PeriodClosePage({
   const runId     = Array.isArray(raw["runId"])     ? raw["runId"][0]     : raw["runId"];
   const phaseCode = Array.isArray(raw["phaseCode"]) ? raw["phaseCode"][0] : raw["phaseCode"];
 
-  return <CloseCycleWorkbench scope={scope} runId={runId} phaseCode={phaseCode} />;
+  return (
+    <PageFrame width="full">
+      <CloseCycleWorkbench scope={scope} runId={runId} phaseCode={phaseCode} />
+    </PageFrame>
+  );
 }

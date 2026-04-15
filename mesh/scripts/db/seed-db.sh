@@ -23,7 +23,8 @@ export MSYS2_ARG_CONV_EXCL="*"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MESH_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-SEED_DIR="$(cd "$MESH_DIR/../framework/adapters/db" && pwd)"
+# server/ sits next to mesh/ at the repo root
+SERVER_DIR="$(cd "$MESH_DIR/../server" && pwd)"
 if [ -f "${MESH_DIR}/env/.env" ]; then
   ENV_FILE="${MESH_DIR}/env/.env"
 else
@@ -83,15 +84,29 @@ export DATABASE_ADMIN_URL
 # Show connection target (mask password)
 DB_TARGET="${DATABASE_ADMIN_URL#*@}"
 echo -e "${GREEN}Database: ${DB_TARGET}${NC}"
-echo -e "${GREEN}Seed directory: ${SEED_DIR}${NC}"
+echo -e "${GREEN}Server directory: ${SERVER_DIR}${NC}"
 echo -e "${GREEN}Arguments: ${*:-<none>}${NC}"
 echo ""
 
 # ---------------------------------------------------------------------------
+# Translate seed-db.sh args → migrate.ts flags
+# ---------------------------------------------------------------------------
+MIGRATE_ARGS=""
+case "${1:-}" in
+  "")           MIGRATE_ARGS="--all" ;;
+  --no-demo)    MIGRATE_ARGS="--phase=1 --phase=2" ;;
+  --demo-only)  MIGRATE_ARGS="--phase=3" ;;
+  --reset)      MIGRATE_ARGS="--reset" ;;
+  --status)     MIGRATE_ARGS="--status" ;;
+  --force)      MIGRATE_ARGS="--all --force" ;;
+  *)            MIGRATE_ARGS="$*" ;;  # pass any other flags through verbatim
+esac
+
+# ---------------------------------------------------------------------------
 # Run the provisioner
 # ---------------------------------------------------------------------------
-cd "$SEED_DIR"
-npx tsx src/seed/seed.ts "$@"
+cd "$SERVER_DIR"
+npx tsx db/seed/migrate.ts $MIGRATE_ARGS
 
 echo ""
 echo -e "${GREEN}=== Seed complete ===${NC}"

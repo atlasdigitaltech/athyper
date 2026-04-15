@@ -35,6 +35,8 @@ export interface EntityComment {
 
 export interface ReactionSummary {
   reactionType: string;
+  /** Emoji character for display (e.g. "👍"). Falls back to reactionType code if not resolved. */
+  emoji: string;
   count: number;
   /** Whether the current user has reacted. */
   reacted: boolean;
@@ -166,6 +168,7 @@ export function useReactions(commentId: string | null) {
               ...prev.data.filter((r) => r.reactionType !== reactionType),
               {
                 reactionType,
+                emoji: existing?.emoji ?? reactionType,
                 count: (existing?.count ?? 0) + 1,
                 reacted: true,
               },

@@ -15,13 +15,14 @@ import {
   ChevronDown, ChevronRight, RefreshCw, Ban, RotateCcw,
   GitBranch,
 } from "lucide-react";
-import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
+import { JobsSubNav } from "../_components/jobs-sub-nav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -93,36 +94,13 @@ const STATUS_BADGE: Record<string, "success" | "destructive" | "warning" | "seco
 };
 
 const NODE_STATUS_ICON: Record<string, React.ReactNode> = {
-  completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+  completed: <CheckCircle2 className="h-4 w-4 text-success" />,
   failed:    <XCircle      className="h-4 w-4 text-destructive" />,
-  running:   <Loader2      className="h-4 w-4 animate-spin text-blue-500" />,
+  running:   <Loader2      className="h-4 w-4 animate-spin text-primary" />,
   pending:   <Clock        className="h-4 w-4 text-muted-foreground" />,
   skipped:   <SkipForward  className="h-4 w-4 text-muted-foreground" />,
   canceled:  <Ban          className="h-4 w-4 text-muted-foreground" />,
 };
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-
-function JobsSubNav({ active }: { active: string }) {
-  const tabs = [
-    { href: "/setup/jobs",                  label: "Queues" },
-    { href: "/setup/jobs/dlq",              label: "Dead Letter" },
-    { href: "/setup/jobs/history",          label: "Run History" },
-    { href: "/setup/jobs/schedules",        label: "Schedules" },
-    { href: "/setup/jobs/orchestrations",   label: "Orchestrations" },
-  ];
-  return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b pb-3">
-      {tabs.map((t) => (
-        <Link key={t.href} href={t.href}>
-          <Button size="sm" variant={active === t.href ? "primary" : "ghost"} className="h-7 text-xs">
-            {t.label}
-          </Button>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 // ── Cancel dialog ─────────────────────────────────────────────────────────────
 
@@ -323,7 +301,7 @@ function RunRow({ run }: { run: OrchRun }) {
             {/* Progress pills */}
             <div className="hidden sm:flex items-center gap-1 text-[11px]">
               {run.completed_nodes > 0 && (
-                <span className="text-green-600 dark:text-green-400">
+                <span className="text-success">
                   {run.completed_nodes}✓
                 </span>
               )}
@@ -354,7 +332,7 @@ function RunRow({ run }: { run: OrchRun }) {
             <div
               className={`h-full rounded-full transition-all ${
                 run.status === "failed" ? "bg-destructive" :
-                run.status === "completed" ? "bg-green-500" : "bg-blue-500"
+                run.status === "completed" ? "bg-success" : "bg-primary"
               }`}
               style={{ width: `${progress}%` }}
             />
@@ -495,17 +473,16 @@ export default function OrchestrationPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
       ) : runs.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <GitBranch className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No orchestration runs found.</p>
-          <p className="text-xs text-muted-foreground">
-            Runs appear here when DagOrchestrationService.startRun() is called.
-          </p>
-        </div>
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10 text-muted-foreground/30" />}
+          title="No orchestration runs found."
+          description="Runs appear here when DagOrchestrationService.startRun() is called."
+          className="py-20"
+        />
       ) : (
         <>
           <div className="space-y-3">

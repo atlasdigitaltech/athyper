@@ -156,8 +156,9 @@ export default function TenantSetupPage() {
     <PageFrame
       title="Tenant Configuration"
       description="Company codes and legal entity structure"
+      width="wide"
     >
-      <div className="max-w-4xl space-y-6">
+      <div className="space-y-6">
         <Tabs defaultValue="companies">
           <TabsList>
             <TabsTrigger value="companies">

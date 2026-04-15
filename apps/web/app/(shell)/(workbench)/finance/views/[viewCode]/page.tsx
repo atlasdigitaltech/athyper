@@ -87,7 +87,7 @@ function JournalView({ scope }: { scope: FinanceScope }) {
   return (
     <div className="space-y-4">
       {!scope.scopeId && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-300">
+        <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Pass <code className="font-mono text-xs">?scopeType=company&amp;scopeId=AUKA&amp;fiscalYear=2026</code> to filter by company and period.
         </div>
       )}

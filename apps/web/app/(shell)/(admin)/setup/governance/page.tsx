@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, GitBranch, Calendar } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
+import { FilterPillBar } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -158,26 +160,27 @@ export default function GovernanceSetupPage() {
         </div>
       }
     >
-      {/* Domain filter */}
-      <div className="mb-4 flex flex-wrap gap-1">
-        {["", ...DOMAINS].map((d) => (
-          <Button key={d} size="sm" variant={domainFilter === d ? "primary" : "ghost"} className="h-7 text-xs"
-            onClick={() => setDomainFilter(d)}>
-            {d === "" ? "All" : d}
-          </Button>
-        ))}
-      </div>
+      <FilterPillBar
+        items={DOMAINS.map((d) => ({ value: d, label: d }))}
+        value={domainFilter}
+        onChange={setDomainFilter}
+        allItem={{ label: "All" }}
+        className="mb-4"
+      />
 
       {isLoading ? (
-        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>
+        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}</div>
       ) : types.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <GitBranch className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">No cycle types defined yet.</p>
-          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Create your first cycle type
-          </Button>
-        </div>
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10 text-muted-foreground/30" />}
+          title="No cycle types defined yet."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Create your first cycle type
+            </Button>
+          }
+          className="py-20"
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {types.map((ct) => (

@@ -14,7 +14,7 @@ function DeltaBadge({ value }: { value: number }) {
   if (!value) return <span className="text-muted-foreground">—</span>;
   const pos = value > 0;
   return (
-    <span className={cn("font-mono", pos ? "text-emerald-600" : "text-rose-600")}>
+    <span className={cn("font-mono", pos ? "text-success" : "text-destructive")}>
       {pos ? "+" : ""}{fmtCompact(value)}
     </span>
   );
@@ -70,7 +70,7 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
           Normal: {data.normalBalance}
         </span>
         {data.isLive && (
-          <span className="text-[10px] rounded border bg-blue-50 border-blue-200 px-1.5 py-0.5 text-blue-600 font-medium">
+          <span className="text-[10px] rounded border bg-info/10 border-info/30 px-1.5 py-0.5 text-info font-medium">
             Live
           </span>
         )}
@@ -119,10 +119,10 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">
                     {fmtFull(p.openingBalance)}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-emerald-700">
+                  <td className="py-1.5 px-3 text-right font-mono text-success">
                     {p.totalDebits ? fmtFull(p.totalDebits) : "—"}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-rose-700">
+                  <td className="py-1.5 px-3 text-right font-mono text-destructive">
                     {p.totalCredits ? fmtFull(p.totalCredits) : "—"}
                   </td>
                   <td className="py-1.5 px-3 text-right">
@@ -139,8 +139,8 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
               <tr className="bg-muted/50 border-t-2 font-semibold">
                 <td className="py-2 px-3">FY Total</td>
                 <td className="py-2 px-3 text-right font-mono">{fmtFull(data.yearOpeningBalance)}</td>
-                <td className="py-2 px-3 text-right font-mono text-emerald-700">{fmtFull(data.yearTotalDebits)}</td>
-                <td className="py-2 px-3 text-right font-mono text-rose-700">{fmtFull(data.yearTotalCredits)}</td>
+                <td className="py-2 px-3 text-right font-mono text-success">{fmtFull(data.yearTotalDebits)}</td>
+                <td className="py-2 px-3 text-right font-mono text-destructive">{fmtFull(data.yearTotalCredits)}</td>
                 <td className="py-2 px-3 text-right">
                   <DeltaBadge value={data.yearClosingBalance - data.yearOpeningBalance} />
                 </td>

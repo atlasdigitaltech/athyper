@@ -64,7 +64,7 @@ function parseLine(line: string, delim = ","): string[] {
   return fields;
 }
 
-function parsePreview(buf: Buffer, format: string): {
+function parseCsvPreview(buf: Buffer, format: string): {
   headers: string[]; previewRows: string[][]; rowCount: number;
 } {
   const delim   = format === "tsv" ? "\t" : ",";
@@ -73,6 +73,49 @@ function parsePreview(buf: Buffer, format: string): {
   const headers = parseLine(lines[0] ?? "", delim);
   const preview = lines.slice(1, 11).map((l) => parseLine(l, delim)); // first 10 data rows
   return { headers, previewRows: preview, rowCount: lines.length - 1 };
+}
+
+/** Parse XLSX preview using ExcelJS (dynamic import — optional dep). */
+async function parseXlsxPreview(buf: Buffer): Promise<{
+  headers: string[]; previewRows: string[][]; rowCount: number;
+}> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const exceljs = await import("exceljs" as any) as any;
+  const ExcelJSWorkbook = exceljs.default?.Workbook ?? exceljs.Workbook;
+  const wb = new ExcelJSWorkbook();
+  await wb.xlsx.load(buf);
+
+  const ws = wb.worksheets[0];
+  if (!ws || ws.rowCount === 0) {
+    return { headers: [], previewRows: [], rowCount: 0 };
+  }
+
+  const allRows: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row: { values: unknown[] }) => {
+    // row.values is 1-indexed: index 0 is undefined
+    const cells = (Array.isArray(row.values) ? row.values.slice(1) : []) as unknown[];
+    allRows.push(
+      cells.map((v) => {
+        if (v == null) return "";
+        if (typeof v === "object" && "text" in (v as object)) return String((v as { text: unknown }).text ?? "");
+        if (typeof v === "object" && "result" in (v as object)) return String((v as { result: unknown }).result ?? "");
+        return String(v);
+      }),
+    );
+  });
+
+  const headers    = allRows[0] ?? [];
+  const previewRows = allRows.slice(1, 11);
+  const rowCount   = Math.max(0, allRows.length - 1);
+
+  return { headers, previewRows, rowCount };
+}
+
+async function parsePreview(buf: Buffer, format: string): Promise<{
+  headers: string[]; previewRows: string[][]; rowCount: number;
+}> {
+  if (format === "xlsx") return parseXlsxPreview(buf);
+  return parseCsvPreview(buf, format);
 }
 
 // ── Chunk size ────────────────────────────────────────────────────────────────
@@ -127,7 +170,7 @@ export function createImportRoutes(router: Router, deps: ImportRouteDeps): void 
       const sizeBytes = buffer.byteLength;
 
       // Parse headers + preview rows
-      const { headers, previewRows, rowCount } = parsePreview(buffer, fileFormat);
+      const { headers, previewRows, rowCount } = await parsePreview(buffer, fileFormat);
 
       // Create import_request row first to get the UUID for S3 key
       const request = await db

@@ -17,8 +17,8 @@
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Activity, Building2, FileText, LogOut, MessageSquare,
-  Palette, ShieldCheck, User,
+  Activity, Bell, Building2, FileText, LogOut, MessageSquare,
+  Palette, ShieldCheck, ShieldAlert, User,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { PageFrame } from "@athyper/ui/layout";
@@ -30,20 +30,24 @@ import {
 
 // ─── Section imports ──────────────────────────────────────────────────────────
 
-import { ProfileSection     } from "./_sections/profile-section";
-import { IdentitySection    } from "./_sections/identity-section";
-import { PreferencesSection } from "./_sections/preferences-section";
-import { TenantSection      } from "./_sections/tenant-section";
-import { DiagnosticsSection } from "./_sections/diagnostics-section";
-import { DocsSection        } from "./_sections/docs-section";
-import { FeedbackSection    } from "./_sections/feedback-section";
+import { ProfileSection       } from "./_sections/profile-section";
+import { IdentitySection      } from "./_sections/identity-section";
+import { MfaSection           } from "./_sections/mfa-section";
+import { PreferencesSection   } from "./_sections/preferences-section";
+import { NotificationsSection } from "./_sections/notifications-section";
+import { TenantSection        } from "./_sections/tenant-section";
+import { DiagnosticsSection   } from "./_sections/diagnostics-section";
+import { DocsSection          } from "./_sections/docs-section";
+import { FeedbackSection      } from "./_sections/feedback-section";
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
 type SectionId =
   | "profile"
   | "identity"
+  | "security"
   | "preferences"
+  | "notifications"
   | "tenant"
   | "diagnostics"
   | "docs"
@@ -55,23 +59,27 @@ const NAV_ITEMS: {
   icon: React.ElementType;
   adminOnly?: boolean;
 }[] = [
-  { id: "profile",     label: "Profile",               icon: User        },
-  { id: "identity",    label: "Identity & Access",     icon: ShieldCheck },
-  { id: "preferences", label: "Preferences",           icon: Palette     },
-  { id: "tenant",      label: "Tenant Administration", icon: Building2,  adminOnly: true },
-  { id: "diagnostics", label: "Diagnostics",           icon: Activity,   adminOnly: true },
-  { id: "docs",        label: "Documentation",         icon: FileText    },
-  { id: "feedback",    label: "Feedback",              icon: MessageSquare },
+  { id: "profile",       label: "Profile",               icon: User        },
+  { id: "identity",      label: "Identity & Access",     icon: ShieldCheck },
+  { id: "security",      label: "Security & MFA",        icon: ShieldAlert },
+  { id: "preferences",   label: "Preferences",           icon: Palette     },
+  { id: "notifications", label: "Notifications",         icon: Bell        },
+  { id: "tenant",        label: "Tenant Administration", icon: Building2,  adminOnly: true },
+  { id: "diagnostics",   label: "Diagnostics",           icon: Activity,   adminOnly: true },
+  { id: "docs",          label: "Documentation",         icon: FileText    },
+  { id: "feedback",      label: "Feedback",              icon: MessageSquare },
 ];
 
 const SECTION_TITLE: Record<SectionId, string> = {
-  profile:     "Profile",
-  identity:    "Identity & Access",
-  preferences: "Preferences",
-  tenant:      "Tenant Administration",
-  diagnostics: "Diagnostics",
-  docs:        "Documentation",
-  feedback:    "Feedback",
+  profile:       "Profile",
+  identity:      "Identity & Access",
+  security:      "Security & MFA",
+  preferences:   "Preferences",
+  notifications: "Notification Preferences",
+  tenant:        "Tenant Administration",
+  diagnostics:   "Diagnostics",
+  docs:          "Documentation",
+  feedback:      "Feedback",
 };
 
 const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
@@ -167,8 +175,14 @@ export default function SettingsPage() {
           <div className={active === "identity"    ? "block" : "hidden"}>
             {activated.current.has("identity")    && <IdentitySection    active={active === "identity"} />}
           </div>
+          <div className={active === "security"    ? "block" : "hidden"}>
+            {activated.current.has("security")    && <MfaSection         active={active === "security"} />}
+          </div>
           <div className={active === "preferences" ? "block" : "hidden"}>
             {activated.current.has("preferences") && <PreferencesSection active={active === "preferences"} />}
+          </div>
+          <div className={active === "notifications" ? "block" : "hidden"}>
+            {activated.current.has("notifications") && <NotificationsSection active={active === "notifications"} />}
           </div>
           <div className={active === "tenant"      ? "block" : "hidden"}>
             {activated.current.has("tenant")      && <TenantSection      active={active === "tenant"} />}

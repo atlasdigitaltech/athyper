@@ -355,8 +355,10 @@ CREATE TABLE IF NOT EXISTS event.endpoint (
     config          jsonb       NOT NULL DEFAULT '{}'::jsonb,
 
     -- Health
+    health_check_url text,
     health          text        NOT NULL DEFAULT 'healthy',
     last_checked_at timestamptz,
+    last_response_ms integer,
 
     -- Lifecycle
     is_active       boolean     NOT NULL DEFAULT true,
@@ -390,6 +392,15 @@ COMMENT ON COLUMN event.endpoint.config IS
 COMMENT ON COLUMN event.endpoint.health IS
     'Last known health state. Updated by the integration health-check worker. '
     'healthy | degraded | down.';
+COMMENT ON COLUMN event.endpoint.health_check_url IS
+    'Optional URL probed via HTTP HEAD every 5 min by the endpoint-health worker. '
+    'NULL = no automated health checking for this endpoint.';
+COMMENT ON COLUMN event.endpoint.last_response_ms IS
+    'HTTP response time (ms) from the most recent health probe. NULL if never checked.';
+
+-- Schema evolution — safe to run against existing databases
+ALTER TABLE event.endpoint ADD COLUMN IF NOT EXISTS health_check_url  text;
+ALTER TABLE event.endpoint ADD COLUMN IF NOT EXISTS last_response_ms  integer;
 
 
 -- ============================================================================
@@ -689,3 +700,158 @@ COMMENT ON COLUMN event.work_item.decision IS
     'review   — acknowledge | flag | escalate. '
     'watcher  — read. '
     'Validated by trg_fn_wi_decision_guard against task_type lookup metadata.';
+
+
+-- ============================================================================
+-- §10  event.push_subscription — web/mobile push device registry
+-- ============================================================================
+-- One row per (principal, platform, device). Tracks the endpoint and keys
+-- required to deliver push notifications via VAPID (Web Push) or FCM/APNs.
+-- Expired or inactive subscriptions pruned by cron.
+
+CREATE TABLE IF NOT EXISTS event.push_subscription (
+    -- Identity
+    id              uuid            NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid            NOT NULL,
+    principal_id    uuid            NOT NULL,
+
+    -- Subscription identity
+    platform        text            NOT NULL,   -- 'web', 'android', 'ios'
+    device_id       text            NOT NULL,   -- browser fingerprint or OS device ID
+    endpoint        text            NOT NULL,   -- push service URL (FCM / APNs / Web Push)
+
+    -- Web Push VAPID keys (required when platform = 'web')
+    p256dh_key      text,                       -- client public key
+    auth_key        text,                       -- client auth secret
+
+    -- FCM / APNs token (required when platform IN ('android', 'ios'))
+    device_token    text,
+
+    -- Optional metadata
+    user_agent      text,
+    metadata        jsonb           NOT NULL DEFAULT '{}',
+
+    -- Lifecycle
+    is_active       boolean         NOT NULL DEFAULT true,
+    last_used_at    timestamptz,
+    expires_at      timestamptz,
+
+    -- Audit
+    created_at      timestamptz     NOT NULL DEFAULT now(),
+    created_by      uuid            NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT ps_pkey              PRIMARY KEY (id),
+    CONSTRAINT ps_tenant_uq         UNIQUE (tenant_id, id),
+    CONSTRAINT ps_device_uq         UNIQUE (tenant_id, principal_id, platform, device_id),
+    CONSTRAINT ps_endpoint_chk      CHECK  (btrim(endpoint) <> ''),
+    CONSTRAINT ps_platform_chk      CHECK  (platform IN ('web', 'android', 'ios')),
+    CONSTRAINT ps_web_keys_chk      CHECK  (
+        platform <> 'web'
+        OR (p256dh_key IS NOT NULL AND auth_key IS NOT NULL)
+    ),
+    CONSTRAINT ps_mobile_token_chk  CHECK  (
+        platform = 'web'
+        OR device_token IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE event.push_subscription IS
+    'Web/mobile push device registry. One row per (principal, platform, device). '
+    'Web Push requires VAPID keys (p256dh_key + auth_key). '
+    'FCM (android) and APNs (ios) use device_token. '
+    'Expired or inactive subscriptions pruned by a periodic cron.';
+
+COMMENT ON COLUMN event.push_subscription.platform IS
+    'Push platform discriminator: ''web'' (VAPID), ''android'' (FCM), ''ios'' (APNs).';
+COMMENT ON COLUMN event.push_subscription.device_id IS
+    'Stable per-browser or per-device identifier used for deduplication on re-registration.';
+COMMENT ON COLUMN event.push_subscription.endpoint IS
+    'Push service delivery URL. For Web Push this is the browser-generated URL. '
+    'For FCM/APNs this is the gateway endpoint for the device_token.';
+
+CREATE INDEX IF NOT EXISTS ps_principal_active_idx
+    ON event.push_subscription (tenant_id, principal_id)
+    WHERE is_active = true;
+
+CREATE INDEX IF NOT EXISTS ps_expired_pidx
+    ON event.push_subscription (expires_at)
+    WHERE is_active = true AND expires_at IS NOT NULL;
+
+
+-- ============================================================================
+-- §11  event.whatsapp_consent — WhatsApp Business API opt-in registry
+-- ============================================================================
+-- Tracks per-principal consent for outbound WhatsApp Business API messages.
+-- consent_status lifecycle: pending → opted_in → opted_out / revoked.
+-- Outbound WhatsApp messages are blocked unless consent_status = 'opted_in'.
+-- Phone numbers stored in E.164 format (+[country][number]).
+
+CREATE TABLE IF NOT EXISTS event.whatsapp_consent (
+    -- Identity
+    id              uuid            NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid            NOT NULL,
+    principal_id    uuid            NOT NULL,
+
+    -- Phone number (E.164)
+    phone_e164      text            NOT NULL,
+
+    -- Consent state
+    consent_status  text            NOT NULL DEFAULT 'pending',
+    consented_at    timestamptz,
+    revoked_at      timestamptz,
+    consent_source  text,           -- 'web_form', 'api', 'import'
+
+    -- WhatsApp Business Account linkage
+    waba_id         text,           -- WhatsApp Business Account ID
+    namespace       text,           -- Template namespace for this tenant
+
+    -- Optional metadata
+    metadata        jsonb           NOT NULL DEFAULT '{}',
+
+    -- Audit
+    created_at      timestamptz     NOT NULL DEFAULT now(),
+    created_by      uuid            NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT wac_pkey             PRIMARY KEY (id),
+    CONSTRAINT wac_tenant_uq        UNIQUE (tenant_id, id),
+    CONSTRAINT wac_phone_uq         UNIQUE (tenant_id, principal_id, phone_e164),
+    CONSTRAINT wac_phone_chk        CHECK  (phone_e164 ~ '^\+[1-9]\d{1,14}$'),
+    CONSTRAINT wac_status_chk       CHECK  (consent_status IN (
+        'pending', 'opted_in', 'opted_out', 'revoked'
+    )),
+    CONSTRAINT wac_consent_chk      CHECK  (
+        (consent_status = 'opted_in' AND consented_at IS NOT NULL)
+        OR consent_status <> 'opted_in'
+    ),
+    CONSTRAINT wac_revoke_chk       CHECK  (
+        (consent_status = 'revoked' AND revoked_at IS NOT NULL)
+        OR consent_status <> 'revoked'
+    )
+);
+
+COMMENT ON TABLE event.whatsapp_consent IS
+    'WhatsApp Business API opt-in registry. Tracks per-principal consent status for '
+    'outbound WhatsApp messages. consent_status lifecycle: pending → opted_in → revoked. '
+    'Outbound messages blocked unless consent_status = ''opted_in''. '
+    'Phone numbers stored in E.164 format.';
+
+COMMENT ON COLUMN event.whatsapp_consent.phone_e164 IS
+    'Recipient phone number in E.164 format (e.g. +14155552671). '
+    'Must match the number registered with the WhatsApp Business Account.';
+COMMENT ON COLUMN event.whatsapp_consent.consent_source IS
+    'How consent was obtained: ''web_form'', ''api'', or ''import''.';
+COMMENT ON COLUMN event.whatsapp_consent.waba_id IS
+    'WhatsApp Business Account ID used to send messages to this recipient. '
+    'Required by Meta Cloud API for template message dispatch.';
+
+CREATE INDEX IF NOT EXISTS wac_principal_active_idx
+    ON event.whatsapp_consent (tenant_id, principal_id)
+    WHERE consent_status = 'opted_in';
+
+CREATE INDEX IF NOT EXISTS wac_phone_lookup_idx
+    ON event.whatsapp_consent (tenant_id, phone_e164)
+    WHERE consent_status = 'opted_in';

@@ -40,6 +40,7 @@ import { createFeatureFlagService } from "../foundation/features/feature-flag.se
 import { createMetadataApprovalBridge } from "../foundation/metadata/metadata-approval-bridge.js";
 import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
 import { WorkflowEngine } from "../../framework/runtime/services/workflow/engine.js";
+import { ApproverResolverService } from "../../framework/runtime/services/workflow/approver-resolver.service.js";
 import { createPdfRendererClient } from "../foundation/render/pdf-renderer-client.js";
 import { createRenderService } from "../foundation/render/render.service.js";
 import { createHttpConnectorClient, createOAuth2TokenCache } from "../foundation/integration/http-connector-client.js";
@@ -50,6 +51,9 @@ import { createNotificationOrchestrator } from "../foundation/notifications/noti
 
 import { createEmailAdapter } from "../../framework/runtime/services/jobs/adapters/email.adapter.js";
 import { createWebhookAdapter } from "../../framework/runtime/services/jobs/adapters/webhook.adapter.js";
+import { createSmsAdapter } from "../../framework/runtime/services/jobs/adapters/sms.adapter.js";
+import { createPushAdapter } from "../../framework/runtime/services/jobs/adapters/push.adapter.js";
+import { createWebhookDeliveryWorker } from "../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
 
 import type { ServerConfig } from "../config.js";
 import type { ResolvedKernelConfig } from "../kernel-config.js";
@@ -279,13 +283,43 @@ export async function bootstrap(
           [
             "email",
             createEmailAdapter({
-              host: config.email.host,
-              port: config.email.port,
-              secure: config.email.secure ?? false,
-              user: config.email.user,
-              pass: config.email.pass,
+              host:         config.email.host,
+              port:         config.email.port,
+              secure:       config.email.secure ?? false,
+              user:         config.email.user,
+              pass:         config.email.pass,
               from_address: config.email.from_address,
             }),
+          ],
+        ] as [string, NotificationChannelHandler][])
+      : []),
+    ...(config.sms
+      ? ([
+          [
+            "sms",
+            createSmsAdapter({
+              accountSid:          config.sms.accountSid,
+              authToken:           config.sms.authToken,
+              fromNumber:          config.sms.fromNumber,
+              messagingServiceSid: config.sms.messagingServiceSid,
+            }),
+          ],
+        ] as [string, NotificationChannelHandler][])
+      : []),
+    ...(config.push
+      ? ([
+          [
+            "push",
+            createPushAdapter(
+              {
+                fcmProjectId:            config.push.fcmProjectId,
+                fcmServiceAccountKeyJson: config.push.fcmServiceAccountKeyJson,
+                vapidSubject:            config.push.vapidSubject,
+                vapidPublicKey:          config.push.vapidPublicKey,
+                vapidPrivateKey:         config.push.vapidPrivateKey,
+              },
+              _db,
+            ),
           ],
         ] as [string, NotificationChannelHandler][])
       : []),
@@ -298,6 +332,20 @@ export async function bootstrap(
     topicHandlers: new Map([["wf", createWfOutboxHandler(_db)]]),
     channelHandlers,
   });
+
+  // ─── Webhook Delivery Worker — Sprint 30 ─────────────────────────────────────
+  // Fans out pending event.outbox rows to matching webhook subscriptions.
+  // Signs each delivery with HMAC-SHA256 if signing_secret is configured.
+  // BullMQ Workers require maxRetriesPerRequest: null — use a dedicated connection.
+  const webhookRedis = createRedisClient({
+    ...parseRedisUrl(config.redis.url),
+    connectTimeout: config.redis.connectTimeout,
+    maxRetriesPerRequest: null,
+    errorLogCooldownMs: config.redis.errorLogCooldownMs,
+    logger,
+  });
+  lifecycle.onShutdown(() => webhookRedis.disconnect());
+  const webhookDelivery = createWebhookDeliveryWorker(_db, webhookRedis, logger);
 
   // ─── Feature flag service ────────────────────────────────────────────────────
   // Phase 1.6: Redis cache-first, DB fallback. <1ms p99 cache hit.
@@ -361,7 +409,8 @@ export async function bootstrap(
   // are guaranteed to be ready.
   const metadataApprovalBridge = createMetadataApprovalBridge(_db);
   const entityCompiler = createEntityCompilerService(_db);
-  const workflowEngine = new WorkflowEngine({ db: _db, logger });
+  const approverResolver = new ApproverResolverService({ db: _db, logger: { warn: (e, f) => logger.warn?.(e, f) } });
+  const workflowEngine = new WorkflowEngine({ db: _db, logger, approverResolver });
 
   lifecycle.onReady(() => {
     metadataApprovalBridge.wire({
@@ -422,5 +471,7 @@ export async function bootstrap(
     // Phase 6.4 — Notification Orchestrator + Mention Service
     notificationOrchestrator,
     mentionService,
+    // Sprint 30 — Webhook delivery worker (HMAC-signed outbound webhooks)
+    webhookDelivery,
   };
 }

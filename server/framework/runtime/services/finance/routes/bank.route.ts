@@ -4,10 +4,11 @@
  * GET  /api/finance/bank/accounts                     — house bank accounts for a scope
  * GET  /api/finance/bank/statement/:bankAccountId     — payment_entry rows for a bank account
  * GET  /api/finance/bank/unreconciled/:bankAccountId  — uncleared payments (pending recon)
+ * POST /api/finance/bank/reconcile                    — mark selected payments as cleared
  */
 
 import type { RequestHandler, Router } from "express";
-import { type Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { type FinanceRouteDeps, parseScopeParams, resolveCompanyIds } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, isUuid } from "@athyper/svc-shared";
 
@@ -108,6 +109,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
           "pe.is_transmitted as isTransmitted",
           "pe.is_voided as isVoided",
           "pe.status",
+          "pe.cleared_date as clearedDate",
           "pe.fiscal_year as fiscalYear",
           "pe.period_number as periodNumber",
         ])
@@ -164,6 +166,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
           "pe.bank_reference as bankReference",
           "pe.payment_reference as paymentReference",
           "pe.status", "pe.is_posted as isPosted",
+          "pe.cleared_date as clearedDate",
         ])
         .where("pe.tenant_id", "=", tenantId)
         .where("pe.bank_account_id", "=", bankAccountId)
@@ -185,6 +188,61 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         asAt: new Date().toISOString(),
       });
     } catch (err) { logger?.error("finance_bank_unreconciled_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── POST /api/finance/bank/reconcile ─────────────────────────────────────
+  // Mark a set of payment_entry rows as cleared (bank reconciliation action).
+  // Body: { bank_account_id: string, payment_ids: string[], cleared_date?: string }
+  // Only updates posted, un-cleared payments. Returns { cleared, cleared_date }.
+  router.post("/finance/bank/reconcile", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER", message: "Tenant resolution failed" }); return; }
+
+      const body = req.body as {
+        bank_account_id?: string;
+        payment_ids?: string[];
+        cleared_date?: string;
+      };
+
+      if (!body.bank_account_id?.trim() || !isUuid(body.bank_account_id)) {
+        res.status(400).json({ error: "MISSING_FIELD", message: "'bank_account_id' is required" });
+        return;
+      }
+      if (!Array.isArray(body.payment_ids) || body.payment_ids.length === 0) {
+        res.status(400).json({ error: "MISSING_FIELD", message: "'payment_ids' must be a non-empty array" });
+        return;
+      }
+      // Sanitise: only accept valid UUIDs
+      const paymentIds = body.payment_ids.filter(isUuid);
+      if (paymentIds.length === 0) {
+        res.status(400).json({ error: "INVALID_VALUE", message: "No valid payment UUIDs provided" });
+        return;
+      }
+
+      const clearedDate = body.cleared_date ? new Date(body.cleared_date) : new Date();
+      const clearedDateStr = clearedDate.toISOString().split("T")[0]!; // YYYY-MM-DD
+
+      const result = await db
+        .updateTable("document.payment_entry")
+        .set({ status: "cleared", cleared_date: clearedDateStr, updated_at: sql`now()` })
+        .where("tenant_id", "=", tenantId)
+        .where("bank_account_id", "=", body.bank_account_id)
+        .where("id", "in", paymentIds)
+        .where("is_posted", "=", true)
+        .where("status", "not in", ["cleared", "reversed", "voided", "cancelled"])
+        .executeTakeFirst();
+
+      const cleared = Number(result?.numUpdatedRows ?? 0);
+      res.json({ cleared, cleared_date: clearedDate.toISOString() });
+    } catch (err) {
+      logger?.error("finance_bank_reconcile_error", { err: String(err) });
+      next(err);
+    }
   }) as RequestHandler);
 
   return router;

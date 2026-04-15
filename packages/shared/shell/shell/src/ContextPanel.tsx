@@ -121,7 +121,7 @@ function ModuleItem({
         className={cn(
           "relative flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors",
           active && !isPlatform && "font-semibold",
-          active && isPlatform && "bg-violet-100 font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+          active && isPlatform && "bg-accent/10 font-semibold text-accent-foreground",
           !active && "text-foreground/70 hover:bg-accent hover:text-foreground",
         )}
         style={
@@ -216,7 +216,7 @@ export function ContextPanel({
       <div
         className={cn(
           "flex shrink-0 items-start justify-between border-b px-3.5 py-3",
-          isPlatform ? "border-violet-100 dark:border-violet-800/40" : "border-border",
+          isPlatform ? "border-accent/20" : "border-border",
         )}
         style={
           !isPlatform && accentColor
@@ -228,7 +228,7 @@ export function ContextPanel({
           <p
             className={cn(
               "text-[13px] font-semibold",
-              isPlatform && "text-violet-700 dark:text-violet-300",
+              isPlatform && "text-accent-foreground",
             )}
             style={!isPlatform && accentColor ? { color: accentColor } : undefined}
           >

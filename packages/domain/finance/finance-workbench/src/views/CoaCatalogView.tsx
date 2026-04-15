@@ -60,7 +60,7 @@ export function CoaCatalogView({ onOpenChart }: CoaCatalogViewProps) {
                     <td className="py-2 px-3 text-center text-muted-foreground">v{chart.version}</td>
                     <td className="py-2 px-3 text-center">
                       {chart.isLocked
-                        ? <Lock size={12} className="text-amber-500 mx-auto" />
+                        ? <Lock size={12} className="text-warning mx-auto" />
                         : <Unlock size={12} className="text-muted-foreground/30 mx-auto" />}
                     </td>
                     <td className="py-2 px-3 text-right text-muted-foreground">

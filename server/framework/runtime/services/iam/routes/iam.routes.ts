@@ -125,5 +125,66 @@ export function createIamRoutes(router: Router, deps: IamRoutesDepsExtra): Route
   };
 
   router.get("/iam/my-company-codes", getMyCompanyCodes);
+
+  /**
+   * GET /api/iam/roles
+   * Lists all active roles from shared.role. Used by the role assignment UI
+   * to populate the role picker. No permission check required — roles are
+   * non-sensitive platform reference data.
+   */
+  router.get("/iam/roles", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const rows = await db
+        .selectFrom("shared.role as r")
+        .leftJoin("shared.persona as ps", "ps.id", "r.persona_id")
+        .select(["r.id", "r.code", "r.name", "ps.code as persona_code"])
+        .orderBy("r.code")
+        .execute();
+
+      setCachePrivate(res, 300);
+      res.json({ items: rows });
+    } catch (err) {
+      logger?.error("iam_list_roles_error", { err: String(err) });
+      next(err);
+    }
+  }) as import("express").RequestHandler);
+
+  /**
+   * GET /api/iam/permissions?module=<code>
+   * Lists all active permissions from shared.permission, optionally filtered by
+   * module code. Used by the delegation grant dialog to let users choose which
+   * permissions to delegate. No permission check — permissions are non-sensitive
+   * reference data (names/codes only, no grant information returned).
+   */
+  router.get("/iam/permissions", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const moduleFilter = typeof req.query["module"] === "string" ? req.query["module"].trim() : "";
+
+      let query = db
+        .selectFrom("shared.permission as p")
+        .select(["p.id", "p.code", "p.name", "p.description", "p.module_code", "p.status"])
+        .where("p.status", "=", "active")
+        .orderBy("p.module_code")
+        .orderBy("p.code");
+
+      if (moduleFilter) {
+        query = query.where("p.module_code", "=", moduleFilter);
+      }
+
+      const rows = await query.execute();
+      setCachePrivate(res, 300);
+      res.json({ items: rows });
+    } catch (err) {
+      logger?.error("iam_list_permissions_error", { err: String(err) });
+      next(err);
+    }
+  }) as import("express").RequestHandler);
+
   return router;
 }

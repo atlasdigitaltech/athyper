@@ -6,14 +6,15 @@
  * Tabs: Phases | Categories | Templates | Dependencies | Carryforward Rules
  */
 
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
+import { RowCard } from "@athyper/ui/data";
 import {
-  Button, Badge, Card, CardContent, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
+  Button, Badge, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@athyper/ui/primitives";
@@ -65,25 +66,20 @@ function PhasesTab({ typeId }: { typeId: string }) {
         <Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-1.5 h-3.5 w-3.5" />Add Phase</Button>
       </div>
 
-      {isLoading ? <Skeleton className="h-32 w-full" /> : (
+      {isLoading ? <Skeleton className="h-24 w-full" /> : (
         <div className="space-y-2">
           {phases.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No phases defined.</p>}
           {phases.map((p) => (
-            <Card key={p.id}>
-              <CardContent className="p-3 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground w-6 text-right">{p.sortOrder}.</span>
-                    <span className="font-medium text-sm">{p.phaseName}</span>
-                    <Badge variant="outline" className="text-[10px] font-mono">{p.phaseCode}</Badge>
-                  </div>
-                  <div className="ml-8 flex gap-3 mt-0.5 text-xs text-muted-foreground">
-                    <span>Gate: {p.isGateEnforced ? "enforced" : "optional"}</span>
-                    {p.minReadinessPct !== null && <span>Min readiness: {p.minReadinessPct}%</span>}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <RowCard
+              key={p.id}
+              leading={<span className="text-xs font-mono text-muted-foreground w-6 text-right">{p.sortOrder}.</span>}
+              badge={<Badge variant="outline" className="text-[10px] font-mono">{p.phaseCode}</Badge>}
+              title={p.phaseName}
+              metadata={<div className="flex gap-3">
+                <span>Gate: {p.isGateEnforced ? "enforced" : "optional"}</span>
+                {p.minReadinessPct !== null && <span>Min readiness: {p.minReadinessPct}%</span>}
+              </div>}
+            />
           ))}
         </div>
       )}
@@ -174,7 +170,7 @@ function CategoriesTab({ typeId }: { typeId: string }) {
           {cats.length === 0 && <p className="py-8 text-sm text-muted-foreground w-full text-center">No categories yet.</p>}
           {cats.map((c) => (
             <div key={c.id} className="flex items-center gap-1.5 rounded-full border px-3 py-1">
-              {c.colorCode && <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.colorCode }} />}
+              {c.colorCode && <span className="h-2.5 w-2.5 rounded-full bg-[var(--category-color)]" style={{ "--category-color": c.colorCode } as CSSProperties} />}
               <span className="text-sm font-medium">{c.categoryName}</span>
               <span className="text-[10px] font-mono text-muted-foreground">{c.categoryCode}</span>
             </div>
@@ -214,7 +210,7 @@ function TemplatesTab({ typeId }: { typeId: string }) {
 
   return (
     <div className="space-y-3">
-      {isLoading ? <Skeleton className="h-32 w-full" /> : templates.length === 0 ? (
+      {isLoading ? <Skeleton className="h-24 w-full" /> : templates.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">No task templates. Add phases and categories first.</p>
       ) : (
         <div className="overflow-auto">
@@ -283,9 +279,9 @@ export default function GovernanceCycleTypeDetailPage() {
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
-        <TabsContent value="phases"><PhasesTab typeId={typeId} /></TabsContent>
-        <TabsContent value="categories"><CategoriesTab typeId={typeId} /></TabsContent>
-        <TabsContent value="templates"><TemplatesTab typeId={typeId} /></TabsContent>
+        <TabsContent value="phases" className="mt-4"><PhasesTab typeId={typeId} /></TabsContent>
+        <TabsContent value="categories" className="mt-4"><CategoriesTab typeId={typeId} /></TabsContent>
+        <TabsContent value="templates" className="mt-4"><TemplatesTab typeId={typeId} /></TabsContent>
       </Tabs>
     </PageFrame>
   );

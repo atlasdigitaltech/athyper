@@ -184,6 +184,7 @@ export default function AppEntityAttachmentsPage() {
     <PageFrame
       title="Attachments"
       description={`${formatTitle(entity)} — file attachments`}
+      width="narrow"
       actions={
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="mr-1.5 h-4 w-4" />
@@ -191,7 +192,7 @@ export default function AppEntityAttachmentsPage() {
         </Button>
       }
     >
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-6">
 
         {/* Upload zone */}
         <div>
@@ -218,7 +219,7 @@ export default function AppEntityAttachmentsPage() {
 
           {isLoading ? (
             <div className="space-y-2">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
           ) : !attachments || attachments.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">

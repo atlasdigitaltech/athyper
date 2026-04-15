@@ -64,10 +64,10 @@ function TraceRow({ line }: { line: PostingTraceLine }) {
       <td className="px-3 py-2"><DimCell code={line.costCenterCode}   name={line.costCenterName} /></td>
       <td className="px-3 py-2"><DimCell code={line.profitCenterCode} name={line.profitCenterName} /></td>
       <td className="px-3 py-2"><DimCell code={line.projectCode}      name={line.projectName} /></td>
-      <td className="px-3 py-2 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">
+      <td className="px-3 py-2 text-right tabular-nums font-medium text-success">
         {line.debitAmount  > 0 ? fmt(line.debitAmount)  : ""}
       </td>
-      <td className="px-3 py-2 text-right tabular-nums font-medium text-rose-700 dark:text-rose-400">
+      <td className="px-3 py-2 text-right tabular-nums font-medium text-destructive">
         {line.creditAmount > 0 ? fmt(line.creditAmount) : ""}
       </td>
       <td className="px-3 py-2 text-xs text-muted-foreground">{line.itemText ?? line.assignment ?? "—"}</td>
@@ -145,19 +145,19 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
         <div className="mt-3 flex gap-6 border-t pt-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground">Total Debit</p>
-            <p className="tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
+            <p className="tabular-nums font-semibold text-success">
               {je.currencyCode} {fmt(je.totalDebit)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total Credit</p>
-            <p className="tabular-nums font-semibold text-rose-700 dark:text-rose-400">
+            <p className="tabular-nums font-semibold text-destructive">
               {je.currencyCode} {fmt(je.totalCredit)}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-1.5 text-xs">
             {isBalanced ? (
-              <><CheckCircle2 className="h-4 w-4 text-emerald-500" /><span className="text-emerald-600">Balanced</span></>
+              <><CheckCircle2 className="h-4 w-4 text-success" /><span className="text-success">Balanced</span></>
             ) : (
               <><AlertCircle  className="h-4 w-4 text-destructive"  /><span className="text-destructive">Unbalanced</span></>
             )}
@@ -189,10 +189,10 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
               <td colSpan={6} className="px-3 py-2.5 text-xs font-medium text-muted-foreground">
                 {lines.length} line{lines.length !== 1 ? "s" : ""}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-success">
                 {fmt(totalDebit)}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-rose-700 dark:text-rose-400">
+              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-destructive">
                 {fmt(totalCredit)}
               </td>
               <td />

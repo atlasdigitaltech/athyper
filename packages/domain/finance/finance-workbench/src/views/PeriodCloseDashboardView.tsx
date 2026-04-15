@@ -18,22 +18,22 @@ function fmtDate(d: string | null): string {
 }
 
 const RUN_STATUS_COLOR: Record<string, string> = {
-  PLANNED:     "bg-slate-100 text-slate-600",
-  OPEN:        "bg-blue-50 text-blue-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  PHASE_GATE:  "bg-violet-50 text-violet-700",
-  COMPLETED:   "bg-emerald-50 text-emerald-700",
-  CERTIFIED:   "bg-emerald-100 text-emerald-800 font-medium",
-  CLOSED:      "bg-slate-100 text-slate-500",
+  PLANNED:     "bg-muted text-muted-foreground",
+  OPEN:        "bg-info/10 text-info",
+  IN_PROGRESS: "bg-warning/10 text-warning",
+  PHASE_GATE:  "bg-accent/10 text-accent-foreground",
+  COMPLETED:   "bg-success/10 text-success",
+  CERTIFIED:   "bg-success/20 text-success font-medium",
+  CLOSED:      "bg-muted text-muted-foreground",
 };
 
 const TASK_STATUS_COLOR: Record<string, string> = {
-  PENDING:     "bg-slate-100 text-slate-500",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  COMPLETED:   "bg-emerald-50 text-emerald-700",
-  BLOCKED:     "bg-orange-50 text-orange-700",
-  FAILED:      "bg-red-50 text-red-700",
-  DEVIATED:    "bg-violet-50 text-violet-700",
+  PENDING:     "bg-muted text-muted-foreground",
+  IN_PROGRESS: "bg-warning/10 text-warning",
+  COMPLETED:   "bg-success/10 text-success",
+  BLOCKED:     "bg-warning/20 text-warning",
+  FAILED:      "bg-destructive/10 text-destructive",
+  DEVIATED:    "bg-accent/10 text-accent-foreground",
 };
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ function ProgressBar({ pct, blocked, failed }: { pct: number; blocked: number; f
   return (
     <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
       <div
-        className={cn("h-full rounded-full transition-all", hasIssues ? "bg-amber-500" : "bg-emerald-500")}
+        className={cn("h-full rounded-full transition-all", hasIssues ? "bg-warning" : "bg-success")}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -78,9 +78,9 @@ function RunCard({ run, selected, onClick }: { run: CycleRun; selected: boolean;
       <ProgressBar pct={ts.completionPct} blocked={ts.blocked} failed={ts.failed} />
 
       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-        <span className="text-emerald-600 font-medium">{ts.completed} done</span>
-        {ts.inProgress > 0 && <span className="text-amber-600">{ts.inProgress} in progress</span>}
-        {ts.blocked > 0 && <span className="text-orange-600">{ts.blocked} blocked</span>}
+        <span className="text-success font-medium">{ts.completed} done</span>
+        {ts.inProgress > 0 && <span className="text-warning">{ts.inProgress} in progress</span>}
+        {ts.blocked > 0 && <span className="text-warning/80">{ts.blocked} blocked</span>}
         {ts.failed > 0 && <span className="text-destructive">{ts.failed} failed</span>}
         <span className="ml-auto">{ts.completionPct}%</span>
       </div>

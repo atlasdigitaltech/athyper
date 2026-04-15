@@ -91,6 +91,9 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
     voided_by               uuid,
     void_reason             text,
 
+    -- Bank reconciliation
+    cleared_date            date,
+
     -- Line count + notes
     line_count              smallint        NOT NULL DEFAULT 0,
     notes                   text,

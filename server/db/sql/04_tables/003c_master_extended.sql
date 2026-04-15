@@ -1814,3 +1814,150 @@ COMMENT ON COLUMN master.payment_method.instrument_mode IS
     'Instrument classification. Lookup: master.payment_method_instrument_mode. '
     'BANK_TRANSFER, CHECK, CASH, CARD, GATEWAY, DIRECT_DEBIT, NETTING, '
     'OFFSET, UPI, WALLET_TRANSFER.';
+
+
+-- =============================================================================
+-- master.print_profile — named render output presets (Module 8)
+-- =============================================================================
+-- A print_profile bundles all renderer knobs (paper size, colour mode, DPI,
+-- compression, watermark, encryption, post-render actions) into a named preset
+-- that can be referenced by render_output.manifest_json["print_profile_id"].
+--
+-- Exactly one active default per tenant is enforced by the partial unique index
+-- master_print_profile_default_uq (07_indexes/003_master.sql) and the
+-- fn_enforce_single_default() trigger (09_triggers/003_master.sql).
+--
+-- Status lifecycle: active → archived
+-- No soft-delete — profiles are archived, not deleted, to preserve render_output
+-- manifest_json references.
+-- FKs → 06_constraints/003_master.sql | Seed → 900_seed_data/.../009_print_profiles.sql
+
+CREATE TABLE IF NOT EXISTS master.print_profile (
+    -- ── Identity ──────────────────────────────────────────────────────────────
+    id              uuid            NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid            NOT NULL,
+
+    -- ── Natural key ───────────────────────────────────────────────────────────
+    code            text            NOT NULL,
+    name            text            NOT NULL,
+
+    -- ── Paper & orientation ───────────────────────────────────────────────────
+    paper_size      text            NOT NULL DEFAULT 'A4',
+    orientation     text            NOT NULL DEFAULT 'portrait',
+
+    -- ── Colour & quality ──────────────────────────────────────────────────────
+    color_mode      text            NOT NULL DEFAULT 'color',
+    quality_dpi     integer         NOT NULL DEFAULT 300,
+
+    -- ── Output format & duplex ────────────────────────────────────────────────
+    output_format   text            NOT NULL DEFAULT 'pdf',
+    duplex          text            NOT NULL DEFAULT 'none',
+
+    -- ── Page layout ───────────────────────────────────────────────────────────
+    margins         text            NOT NULL DEFAULT 'normal',
+    compression     text            NOT NULL DEFAULT 'medium',
+
+    -- ── Page decoration ───────────────────────────────────────────────────────
+    header_footer           boolean NOT NULL DEFAULT true,
+    background_graphics     boolean NOT NULL DEFAULT true,
+
+    -- ── Watermark ─────────────────────────────────────────────────────────────
+    watermark_enabled   boolean     NOT NULL DEFAULT false,
+    watermark_text      text,
+
+    -- ── PDF security ──────────────────────────────────────────────────────────
+    encrypt_pdf         boolean     NOT NULL DEFAULT false,
+
+    -- ── Post-render actions ───────────────────────────────────────────────────
+    archive_after_render    boolean NOT NULL DEFAULT true,
+    email_after_render      boolean NOT NULL DEFAULT false,
+
+    -- ── Flags ─────────────────────────────────────────────────────────────────
+    is_default          boolean     NOT NULL DEFAULT false,
+
+    -- ── Metadata ──────────────────────────────────────────────────────────────
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- ── Lifecycle ─────────────────────────────────────────────────────────────
+    status              text        NOT NULL DEFAULT 'active',
+    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at   timestamptz,
+    status_changed_by   uuid,
+
+    -- ── Audit ─────────────────────────────────────────────────────────────────
+    created_at      timestamptz     NOT NULL DEFAULT now(),
+    created_by      uuid            NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    -- ── Constraints ───────────────────────────────────────────────────────────
+    CONSTRAINT pp_pkey                  PRIMARY KEY (id),
+    CONSTRAINT pp_tenant_id_uq          UNIQUE (tenant_id, id),
+    CONSTRAINT pp_tenant_code_uq        UNIQUE (tenant_id, code),
+    CONSTRAINT pp_code_nonempty         CHECK (btrim(code) <> ''),
+    CONSTRAINT pp_name_nonempty         CHECK (btrim(name) <> ''),
+    CONSTRAINT pp_paper_size_chk        CHECK (paper_size IN (
+        'A3', 'A4', 'A5', 'B4', 'Letter', 'Legal'
+    )),
+    CONSTRAINT pp_orientation_chk       CHECK (orientation IN (
+        'portrait', 'landscape'
+    )),
+    CONSTRAINT pp_color_mode_chk        CHECK (color_mode IN (
+        'color', 'bw', 'grayscale'
+    )),
+    CONSTRAINT pp_output_format_chk     CHECK (output_format IN (
+        'pdf', 'html', 'png'
+    )),
+    CONSTRAINT pp_duplex_chk            CHECK (duplex IN (
+        'none', 'long', 'short'
+    )),
+    CONSTRAINT pp_margins_chk           CHECK (margins IN (
+        'normal', 'narrow', 'wide', 'none'
+    )),
+    CONSTRAINT pp_compression_chk       CHECK (compression IN (
+        'none', 'low', 'medium', 'high'
+    )),
+    CONSTRAINT pp_dpi_pos               CHECK (quality_dpi > 0),
+    CONSTRAINT pp_status_chk            CHECK (status IN (
+        'active', 'archived'
+    )),
+    CONSTRAINT pp_watermark_text_chk    CHECK (
+        watermark_enabled = false
+        OR watermark_text IS NOT NULL
+    )
+    -- Partial unique index for single default per tenant:
+    --   UNIQUE (tenant_id) WHERE is_default = true AND status = 'active'
+    --   → 07_indexes/003_master.sql: master_print_profile_default_uq
+);
+
+COMMENT ON TABLE  master.print_profile IS
+    'Named render output preset. Bundles paper, DPI, colour, compression, and '
+    'post-render action settings for reference in render_output.manifest_json. '
+    'Exactly one active default per tenant enforced by '
+    'master_print_profile_default_uq partial index + fn_enforce_single_default(). '
+    'Module 8 — PDF/HTML Generation & Print Services.';
+
+COMMENT ON COLUMN master.print_profile.paper_size IS
+    'ISO/ANSI paper size: A3, A4, A5, B4, Letter, Legal.';
+COMMENT ON COLUMN master.print_profile.color_mode IS
+    'Renderer colour mode: color (full CMYK), grayscale, bw (true black-and-white).';
+COMMENT ON COLUMN master.print_profile.quality_dpi IS
+    'Render resolution in dots per inch. Common values: 72 (screen), 150 (draft), 300 (print), 600 (high-quality).';
+COMMENT ON COLUMN master.print_profile.output_format IS
+    'Primary output: pdf (default), html (email/web), png (thumbnail/preview).';
+COMMENT ON COLUMN master.print_profile.duplex IS
+    'Printer duplex binding: none (simplex), long (long-edge bind), short (short-edge bind).';
+COMMENT ON COLUMN master.print_profile.compression IS
+    'PDF stream compression level: none → low → medium → high.';
+COMMENT ON COLUMN master.print_profile.watermark_enabled IS
+    'When true, watermark_text must not be NULL (enforced by pp_watermark_text_chk).';
+COMMENT ON COLUMN master.print_profile.encrypt_pdf IS
+    'Encrypt output PDF with AES-256. Decryption key managed by vault.';
+COMMENT ON COLUMN master.print_profile.archive_after_render IS
+    'Write rendered output to object storage after successful render.';
+COMMENT ON COLUMN master.print_profile.email_after_render IS
+    'Send rendered output to the document''s primary email recipient after delivery.';
+COMMENT ON COLUMN master.print_profile.is_default IS
+    'Partial unique index ensures at most one active default per tenant.';
+COMMENT ON COLUMN master.print_profile.metadata IS
+    'Freeform extension payload for tenant-specific renderer hints.';

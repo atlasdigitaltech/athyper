@@ -14,12 +14,13 @@ import { useState } from "react";
 import { ChevronRight, Database, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { PageFrame } from "@athyper/ui/layout";
+import { EmptyState } from "@athyper/ui/feedback";
 import {
   Badge,
   Input,
   Skeleton,
 } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { cn, resolveSemanticColors, entityClassIntent, dataTypeIntent, FIELD_FLAG_INTENT } from "@athyper/theme";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,28 +54,6 @@ interface EntityField {
   origin: string;
   cardinality: string;
 }
-
-// ── Class badge colours ───────────────────────────────────────────────────────
-
-const CLASS_COLORS: Record<string, string> = {
-  REFERENCE: "bg-slate-100 text-slate-700 border-slate-200",
-  MASTER:    "bg-blue-50 text-blue-700 border-blue-200",
-  DOCUMENT:  "bg-amber-50 text-amber-700 border-amber-200",
-  CONTROL:   "bg-violet-50 text-violet-700 border-violet-200",
-  JOURNAL:   "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-const DATA_TYPE_BADGE: Record<string, string> = {
-  text:     "bg-sky-50 text-sky-700",
-  integer:  "bg-indigo-50 text-indigo-700",
-  decimal:  "bg-purple-50 text-purple-700",
-  boolean:  "bg-teal-50 text-teal-700",
-  uuid:     "bg-orange-50 text-orange-700",
-  date:     "bg-rose-50 text-rose-700",
-  datetime: "bg-rose-50 text-rose-700",
-  enum:     "bg-yellow-50 text-yellow-700",
-  json:     "bg-slate-100 text-slate-600",
-};
 
 const CLASS_OPTIONS = ["REFERENCE", "MASTER", "DOCUMENT", "CONTROL", "JOURNAL"];
 
@@ -137,7 +116,7 @@ function EntityRow({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1 mt-0.5">
-          <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", CLASS_COLORS[entity.entity_class] ?? "bg-muted text-muted-foreground")}>
+          <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", resolveSemanticColors(entityClassIntent(entity.entity_class)).subtleBadge)}>
             {entity.entity_class}
           </span>
           {selected && <ChevronRight className="h-3 w-3 text-primary" />}
@@ -150,7 +129,9 @@ function EntityRow({
 // ── Field table ───────────────────────────────────────────────────────────────
 
 function FieldRow({ field }: { field: EntityField }) {
-  const typeBadge = DATA_TYPE_BADGE[field.data_type] ?? "bg-muted text-muted-foreground";
+  const typeBadge = resolveSemanticColors(dataTypeIntent(field.data_type)).subtleBadge;
+  const flagCls = (key: string) =>
+    cn("text-[9px] px-1 py-0 h-4", resolveSemanticColors(FIELD_FLAG_INTENT[key] ?? "neutral").subtleBadge);
   return (
     <tr className="border-b last:border-0 hover:bg-muted/20 text-xs">
       <td className="py-2 px-3 font-medium">{field.label ?? field.name}</td>
@@ -163,11 +144,11 @@ function FieldRow({ field }: { field: EntityField }) {
       <td className="py-2 px-3 font-mono text-[10px] text-muted-foreground">{field.column_name}</td>
       <td className="py-2 px-3">
         <div className="flex flex-wrap gap-1">
-          {field.is_required  && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-200 text-amber-700">req</Badge>}
-          {field.is_unique    && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-indigo-200 text-indigo-700">uniq</Badge>}
-          {field.is_read_only && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">ro</Badge>}
-          {field.is_computed  && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-teal-200 text-teal-700">calc</Badge>}
-          {field.is_searchable && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-sky-200 text-sky-700">search</Badge>}
+          {field.is_required   && <Badge variant="outline" className={flagCls("required")}>req</Badge>}
+          {field.is_unique     && <Badge variant="outline" className={flagCls("unique")}>uniq</Badge>}
+          {field.is_read_only  && <Badge variant="outline" className={flagCls("read_only")}>ro</Badge>}
+          {field.is_computed   && <Badge variant="outline" className={flagCls("computed")}>calc</Badge>}
+          {field.is_searchable && <Badge variant="outline" className={flagCls("searchable")}>search</Badge>}
         </div>
       </td>
       <td className="py-2 px-3 text-[10px] text-muted-foreground capitalize">{field.origin}</td>
@@ -246,10 +227,12 @@ export default function MetadataStudioPage() {
                 {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
               </div>
             ) : !entities || entities.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <Database className="h-7 w-7 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground">No entities found</p>
-              </div>
+              <EmptyState
+                icon={<Database className="h-7 w-7 text-muted-foreground/30" />}
+                title="No entities found"
+                size="sm"
+                className="py-10"
+              />
             ) : (
               entities.map((entity) => (
                 <EntityRow
@@ -280,7 +263,7 @@ export default function MetadataStudioPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-semibold">{selected.name}</h2>
-                    <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", CLASS_COLORS[selected.entity_class] ?? "bg-muted")}>
+                    <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", resolveSemanticColors(entityClassIntent(selected.entity_class)).subtleBadge)}>
                       {selected.entity_class}
                     </span>
                   </div>

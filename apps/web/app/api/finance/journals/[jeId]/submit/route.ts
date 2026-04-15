@@ -37,7 +37,8 @@ export async function POST(
 
     const data = await res.json().catch(() => ({}));
     return NextResponse.json(data, { status: res.status });
-  } catch {
+  } catch (e) {
+    console.error("[api/finance/journals/[jeId]/submit POST]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "UPSTREAM_UNAVAILABLE" }, { status: 502 });
   }
 }

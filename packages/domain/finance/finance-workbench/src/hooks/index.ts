@@ -7,7 +7,11 @@ export { useBalanceSheet, useProfitLoss, useCashFlow } from "./useFinancialState
 export { useGlDetail } from "./useGlDetail";
 export { usePeriodStatus } from "./usePeriodStatus";
 export { usePeriodCloseRuns, usePeriodCloseTasks, usePeriodCloseChecklist } from "./usePeriodClose";
-export { useApInvoices, useApPayments, useApAging, useArAging, useArReceipts } from "./useApWorkbench";
+export {
+  useApInvoices, useApPayments, useApAging,
+  useArAging, useArReceipts, useArInvoices, useArPaymentMethods, useCreateArReceipt,
+  type ArInvoice, type ArPaymentMethod, type CreateArReceiptPayload, type CreateArReceiptResult,
+} from "./useApWorkbench";
 export { useBankAccounts, useBankStatement, useBankUnreconciled } from "./useBankReconciliation";
 export { useJournalList } from "./useJournalList";
 export { usePostingTrace } from "./usePostingTrace";
@@ -15,3 +19,5 @@ export { useCompleteTask, useSignOffPhase, useStartCloseRun } from "./usePeriodC
 export { useAccountAnalysis, type AccountAnalysisData, type AccountAnalysisPeriod } from "./useAccountAnalysis";
 export { useFinanceDashboardKpis, type FinanceDashboardKpis } from "./useFinanceDashboardKpis";
 export { useFiscalPeriods, type FiscalPeriodRow } from "./useFiscalPeriods";
+export { useCreateJournal, type CreateJournalPayload, type CreateJournalLine, type CreateJournalResult } from "./useCreateJournal";
+export { useReverseJournal, type ReverseJournalPayload, type ReverseJournalResult } from "./useReverseJournal";

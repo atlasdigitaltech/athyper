@@ -54,7 +54,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
           status={null}
         />
         {data.isLive && (
-          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-blue-50 text-blue-600 border-blue-200">
+          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-primary/10 text-primary border-primary/30">
             Live
           </span>
         )}

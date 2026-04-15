@@ -18,6 +18,18 @@ export const QUEUE_NAME = {
   SLA_CHECK:        "jobs-sla-check",
   /** Bulk import chunk processing — isolated for volume separation */
   IMPORT:           "jobs-import",
+  /** Document render jobs — PDF/HTML generation via render worker */
+  RENDER_DOCUMENT:  "jobs-render-document",
+  /** Monthly log partition archive: detach, compress, move to cold storage */
+  PARTITION_ARCHIVE: "jobs-partition-archive",
+  /** Webhook delivery: fan-out outbox events to matching webhook subscriptions */
+  WEBHOOK_DELIVERY: "jobs-webhook-delivery",
+  /** CMS preview generation: extract preview_text + preview_html from body_json */
+  CMS_PREVIEW: "jobs-cms-preview",
+  /** Keycloak user reconciliation: sync KC user state → master.principal */
+  IAM_KC_SYNC: "jobs-iam-kc-sync",
+  /** Integration endpoint health probing: HEAD each active endpoint with health_check_url */
+  ENDPOINT_HEALTH: "jobs-endpoint-health",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
@@ -40,6 +52,20 @@ export const JOB_NAME = {
   PROVIDER_HEALTH: "provider-health",
   /** import: process one chunk of rows from a bulk import request */
   PROCESS_CHUNK:   "process-chunk",
+  /** render: process one document.render_output row */
+  RENDER:          "render",
+  /** cms preview: extract preview text + HTML from a content version's body_json */
+  PREVIEW:         "preview",
+  /** partition archive: detach one old log partition to cold storage */
+  ARCHIVE_PARTITION: "archive-partition",
+  /** webhook delivery sweep: discover pending outbox events and fan-out */
+  SWEEP_WEBHOOKS: "sweep-webhooks",
+  /** webhook delivery: deliver one outbox event to one webhook subscription */
+  DELIVER_WEBHOOK: "deliver-webhook",
+  /** kc-sync: reconcile Keycloak user state with master.principal */
+  KC_SYNC: "kc-sync",
+  /** endpoint-health-sweep: probe all active endpoints with health_check_url */
+  ENDPOINT_HEALTH_SWEEP: "endpoint-health-sweep",
 } as const;
 
 /**
@@ -66,6 +92,11 @@ export const SCHEDULER_ID = {
   NOTIFICATION_DIGEST_DAILY:   "sched:notification-digest-daily",
   NOTIFICATION_DIGEST_WEEKLY:  "sched:notification-digest-weekly",
   NOTIFICATION_PROVIDER_HEALTH: "sched:notification-provider-health",
+  PARTITION_ARCHIVE_SWEEP:     "sched:partition-archive-sweep",
+  WEBHOOK_DELIVERY_SWEEP:      "sched:webhook-delivery-sweep",
+  RENDER_DOCUMENT_SWEEP:       "sched:render-document-sweep",
+  IAM_KC_SYNC:                 "sched:iam-kc-sync",
+  ENDPOINT_HEALTH_SWEEP:       "sched:endpoint-health-sweep",
 } as const;
 
 // ─── Job payload types ────────────────────────────────────────────────────────
@@ -111,6 +142,49 @@ export interface ImportChunkJobData {
   tenantId:        string;
 }
 
+/** Document render — process one render_output row (QUEUED → RENDERING → RENDERED) */
+export interface RenderDocumentJobData {
+  outputId:  string;
+  tenantId:  string;
+  jobId:     string;
+}
+
+/** Partition archive sweep — no payload; worker scans candidate partitions per tenant */
+export type PartitionArchiveSweepData = Record<string, never>;
+
+/** Archive one log partition to cold storage (after legal hold check) */
+export interface ArchivePartitionJobData {
+  partitionSchema: string;
+  partitionTable:  string;
+  /** ISO string of partition range start — used for hold overlap check */
+  rangeLo:         string;
+  /** ISO string of partition range end */
+  rangeHi:         string;
+}
+
+/** CMS preview generation — extract preview_text/preview_html from a content version */
+export interface PreviewContentJobData {
+  /** master.content_item.id */
+  contentItemId: string;
+  /** snapshot.content_item_version.id — the version whose body_json should be rendered */
+  versionId:     string;
+  tenantId:      string;
+}
+
+/** Webhook delivery: deliver one outbox event to one webhook subscription */
+export interface DeliverWebhookJobData {
+  /** event.outbox.id — the source event */
+  outboxEventId:          string;
+  /** event.webhook_subscription.id — the target subscriber */
+  webhookSubscriptionId:  string;
+  tenantId:               string;
+  /** Attempt number (1-based); used for exponential back-off logging */
+  attemptNo:              number;
+}
+
+/** KC sync — no payload; worker fetches all realms from config */
+export type KcSyncJobData = Record<string, never>;
+
 // ─── Shared logger interface ──────────────────────────────────────────────────
 
 export interface JobLogger {
@@ -137,4 +211,7 @@ export const DEFAULT_INTERVALS = {
   NOTIFICATION_DIGEST_DAILY_MS:   86_400_000,   // 24 h  — daily digest window
   NOTIFICATION_DIGEST_WEEKLY_MS:  604_800_000,  // 7 d   — weekly digest window
   NOTIFICATION_PROVIDER_HEALTH_MS: 900_000,     // 15 min — provider health polling
+  RENDER_DOCUMENT_SWEEP_MS:        30_000,       // 30 s   — render sweep matches domain outbox cadence
+  IAM_KC_SYNC_MS:                  900_000,      // 15 min — KC reconciliation runs infrequently to reduce KC load
+  ENDPOINT_HEALTH_SWEEP_MS:        300_000,      // 5 min  — endpoint health probe cadence per task spec
 } as const;

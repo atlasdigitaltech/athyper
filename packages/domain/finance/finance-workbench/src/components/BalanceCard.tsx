@@ -13,12 +13,12 @@ interface BalanceCardProps {
 export function BalanceCard({ label, value, variant = "neutral", compact = false }: BalanceCardProps) {
   const isBalanced = variant === "check" && value === 0;
   const bg =
-    variant === "positive" || isBalanced ? "bg-emerald-50" :
+    variant === "positive" || isBalanced ? "bg-success/10" :
     variant === "negative" || (variant === "check" && !isBalanced) ? "bg-destructive/5" :
     "bg-muted/50";
 
   const textColor =
-    variant === "positive" || isBalanced ? "text-emerald-700" :
+    variant === "positive" || isBalanced ? "text-success" :
     variant === "negative" || (variant === "check" && !isBalanced) ? "text-destructive" :
     "text-foreground";
 

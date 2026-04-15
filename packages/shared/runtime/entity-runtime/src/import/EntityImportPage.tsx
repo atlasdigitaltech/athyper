@@ -215,7 +215,7 @@ function MapStep({
   return (
     <div className="space-y-4">
       {unmappedRequired.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700">
+        <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
           Required fields not mapped: {unmappedRequired.join(", ")}
         </div>
       )}
@@ -358,18 +358,18 @@ function DryRunStep({
   const canImport = result.failed === 0;
   return (
     <div className="space-y-4 max-w-lg mx-auto">
-      <div className={`rounded-lg border p-4 space-y-2 ${canImport ? "border-emerald-200 bg-emerald-50/60" : "border-amber-200 bg-amber-50/60"}`}>
+      <div className={`rounded-lg border p-4 space-y-2 ${canImport ? "border-success/30 bg-success/10" : "border-warning/30 bg-warning/10"}`}>
         <div className="flex items-center gap-2 text-sm font-medium">
           {canImport
-            ? <><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Validation passed</>
-            : <><AlertCircle className="h-4 w-4 text-amber-600" /> Validation found {result.failed} error{result.failed !== 1 ? "s" : ""}</>
+            ? <><CheckCircle2 className="h-4 w-4 text-success" /> Validation passed</>
+            : <><AlertCircle className="h-4 w-4 text-warning" /> Validation found {result.failed} error{result.failed !== 1 ? "s" : ""}</>
           }
         </div>
         <div className="flex gap-4 text-xs text-muted-foreground">
-          {result.created > 0  && <span className="text-emerald-700">+{result.created} to create</span>}
-          {result.updated > 0  && <span className="text-blue-700">~{result.updated} to update</span>}
+          {result.created > 0  && <span className="text-success">+{result.created} to create</span>}
+          {result.updated > 0  && <span className="text-primary">~{result.updated} to update</span>}
           {result.skipped > 0  && <span>skip {result.skipped}</span>}
-          {result.failed > 0   && <span className="text-amber-700">✗ {result.failed} errors</span>}
+          {result.failed > 0   && <span className="text-warning">✗ {result.failed} errors</span>}
         </div>
       </div>
 
@@ -434,19 +434,19 @@ function ResultStep({
   const success = result.failed === 0;
   return (
     <div className="flex flex-col items-center gap-6 py-8 max-w-sm mx-auto text-center">
-      <div className={`flex h-16 w-16 items-center justify-center rounded-full ${success ? "bg-emerald-100" : "bg-amber-100"}`}>
+      <div className={`flex h-16 w-16 items-center justify-center rounded-full ${success ? "bg-success/20" : "bg-warning/20"}`}>
         {success
-          ? <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-          : <AlertCircle className="h-8 w-8 text-amber-600" />
+          ? <CheckCircle2 className="h-8 w-8 text-success" />
+          : <AlertCircle className="h-8 w-8 text-warning" />
         }
       </div>
       <div className="space-y-2">
         <p className="text-sm font-medium">{success ? "Import complete" : "Import completed with errors"}</p>
         <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-          {result.created > 0  && <span className="text-emerald-700">+{result.created} created</span>}
-          {result.updated > 0  && <span className="text-blue-700">~{result.updated} updated</span>}
+          {result.created > 0  && <span className="text-success">+{result.created} created</span>}
+          {result.updated > 0  && <span className="text-primary">~{result.updated} updated</span>}
           {result.skipped > 0  && <span>skip {result.skipped}</span>}
-          {result.failed > 0   && <span className="text-amber-700">✗ {result.failed} failed</span>}
+          {result.failed > 0   && <span className="text-warning">✗ {result.failed} failed</span>}
         </div>
       </div>
       <div className="flex gap-2">

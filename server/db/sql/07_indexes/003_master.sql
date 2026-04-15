@@ -1149,3 +1149,26 @@ CREATE INDEX IF NOT EXISTS ptdt_term_idx
     ON master.payment_term_discount_tier (payment_term_id);
 
 
+-- ── content_item: full-text search + kind/locale covering index ──────────────
+-- Covers DRAFT, REVIEW, PUBLISHED statuses. ARCHIVED items excluded to keep
+-- index small (seq-scan fallback for archived). Sprint 30.
+
+CREATE INDEX IF NOT EXISTS content_item_fts_idx
+    ON master.content_item
+    USING GIN (
+        to_tsvector(
+            'english',
+            coalesce(title, '') || ' ' || coalesce(summary, '')
+        )
+    )
+    WHERE status <> 'ARCHIVED';
+
+CREATE INDEX IF NOT EXISTS content_item_kind_locale_idx
+    ON master.content_item (tenant_id, kind, locale_code, status)
+    WHERE status <> 'ARCHIVED';
+
+COMMENT ON INDEX content_item_fts_idx IS
+    'GIN full-text search over title + summary for GET /content/search. '
+    'Updated automatically on INSERT/UPDATE. Sprint 30.';
+
+
