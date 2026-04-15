@@ -1133,6 +1133,9 @@ CREATE TABLE IF NOT EXISTS master.employee (
     CONSTRAINT employee_email_norm_chk    CHECK (email IS NULL OR email = lower(trim(email)))
 );
 
+-- Backfill: company_code_id added after initial deploy — idempotent ALTER
+ALTER TABLE master.employee ADD COLUMN IF NOT EXISTS company_code_id uuid;
+
 COMMENT ON TABLE master.employee IS
     'Internal workforce. principal_id links to login identity (1:1 optional). '
     'Party for expense claims, payroll, advances. manager_id = self-ref hierarchy.';

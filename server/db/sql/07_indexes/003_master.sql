@@ -1167,7 +1167,7 @@ CREATE INDEX IF NOT EXISTS content_item_kind_locale_idx
     ON master.content_item (tenant_id, kind, locale_code, status)
     WHERE status <> 'ARCHIVED';
 
-COMMENT ON INDEX content_item_fts_idx IS
+COMMENT ON INDEX master.content_item_fts_idx IS
     'GIN full-text search over title + summary for GET /content/search. '
     'Updated automatically on INSERT/UPDATE. Sprint 30.';
 

@@ -5174,7 +5174,7 @@ CREATE INDEX IF NOT EXISTS ptc_policy_idx
 
 CREATE TABLE IF NOT EXISTS control.content_quota (
     id                 uuid        PRIMARY KEY DEFAULT shared.uuidv7(),
-    tenant_id          uuid        NOT NULL REFERENCES shared.tenant(id) ON DELETE CASCADE,
+    tenant_id          uuid        NOT NULL REFERENCES master.tenant(id) ON DELETE CASCADE,
     kind               text        NOT NULL CHECK (kind ~ '^[a-z_*][a-z0-9_*]*$' AND length(kind) <= 64),
     max_items          bigint      CHECK (max_items IS NULL OR max_items > 0),
     max_storage_bytes  bigint      CHECK (max_storage_bytes IS NULL OR max_storage_bytes > 0),

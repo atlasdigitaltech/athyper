@@ -101,6 +101,9 @@ CREATE TABLE IF NOT EXISTS master.principal (
         OR principal_source IN ('internal', 'scim', 'saml_jit', 'oidc_jit', 'import', 'api'))
 );
 
+-- Backfill: auth_epoch added after initial deploy — idempotent ALTER
+ALTER TABLE master.principal ADD COLUMN IF NOT EXISTS auth_epoch integer NOT NULL DEFAULT 0;
+
 COMMENT ON TABLE  master.principal IS
   'Universal actor: users, service accounts, bots. Core identity only — see principal_profile for display data, contact_link for addresses.';
 COMMENT ON COLUMN master.principal.auth_epoch IS

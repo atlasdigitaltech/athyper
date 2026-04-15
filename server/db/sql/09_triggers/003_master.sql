@@ -2264,9 +2264,22 @@ CREATE TRIGGER trg_principal_bump_auth_epoch
 -- NOTE: DELETE is handled by a separate trigger (trg_access_grant_delete_bump_auth_epoch)
 -- because PostgreSQL does not allow WHEN conditions to reference NEW in DELETE triggers.
 
+-- INSERT: cannot reference OLD in WHEN clause — use NEW only
+DROP TRIGGER IF EXISTS trg_access_grant_insert_bump_auth_epoch ON master.access_grant;
+CREATE TRIGGER trg_access_grant_insert_bump_auth_epoch
+    AFTER INSERT
+    ON master.access_grant
+    FOR EACH ROW
+    WHEN (
+        NEW.effect = 'deny'
+        AND NEW.principal_id IS NOT NULL
+    )
+    EXECUTE FUNCTION master.fn_bump_auth_epoch();
+
+-- UPDATE: can reference both OLD and NEW in WHEN clause
 DROP TRIGGER IF EXISTS trg_access_grant_bump_auth_epoch ON master.access_grant;
 CREATE TRIGGER trg_access_grant_bump_auth_epoch
-    AFTER INSERT OR UPDATE OF status
+    AFTER UPDATE OF status
     ON master.access_grant
     FOR EACH ROW
     WHEN (
