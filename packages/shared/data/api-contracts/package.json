@@ -1,0 +1,32 @@
+{
+  "name": "@athyper/api-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./common": "./src/schemas/common.ts",
+    "./metadata": "./src/schemas/metadata.ts",
+    "./records": "./src/schemas/records.ts",
+    "./documents": "./src/schemas/documents.ts",
+    "./workflow": "./src/schemas/workflow.ts",
+    "./ledger": "./src/schemas/ledger.ts",
+    "./platform": "./src/schemas/platform.ts",
+    "./query-keys": "./src/query-keys.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "contracts:check": "tsx src/check-drift.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "typescript": "^6.0.2",
+    "tsx": "^4.19.0"
+  }
+}

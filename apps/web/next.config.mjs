@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   serverExternalPackages: ["redis"],
   turbopack: {
-    root: __dirname,
+    root: path.resolve(__dirname, "../.."),
   },
   transpilePackages: [
     "@athyper/ui",

@@ -114,7 +114,7 @@ Desktop.ini
 # =========================
 
 # Docker volume data / runtime data
-data/
+/data/
 mesh/data/
 mesh/**/data/
 mesh/logs/
