@@ -94,20 +94,28 @@ export function useLookupDomain(domainCode: string) {
 
 // ── Records Hooks ───────────────────────────────────────────────
 
+import type { EntityListParams } from "@athyper/api-client";
+
 export function useEntityList(
   entityCode: string,
-  params?: { q?: string; filters?: Record<string, unknown> },
+  params?: EntityListParams,
 ) {
-  // Build a stable cache key that combines q + filters
-  const cacheParams = params
-    ? { ...(params.q ? { _q: params.q } : {}), ...(params.filters ?? {}) }
-    : undefined;
+  // Build a stable, complete cache key from all request params.
+  // Sort, filters, search, page, pageSize, and facets all determine unique data.
+  const cacheKey = params ? {
+    ...(params.q        ? { _q:      params.q                    } : {}),
+    ...(params.sort     ? { _sort:   `${params.sort.key}:${params.sort.dir}` } : {}),
+    ...(params.page     ? { _page:   params.page                 } : {}),
+    ...(params.pageSize ? { _size:   params.pageSize             } : {}),
+    ...(params.facets   ? { _facets: params.facets               } : {}),
+    ...(params.filters  ? params.filters                         : {}),
+  } : undefined;
 
   return useQuery({
-    queryKey: cacheParams && Object.keys(cacheParams).length > 0
-      ? queryKeys.entityList.byTypeFiltered(entityCode, cacheParams)
+    queryKey: cacheKey && Object.keys(cacheKey).length > 0
+      ? queryKeys.entityList.byTypeFiltered(entityCode, cacheKey)
       : queryKeys.entityList.byType(entityCode),
-    queryFn: () => records().list(entityCode, params ?? undefined),
+    queryFn: () => records().list(entityCode, params),
     staleTime: 30 * 1000,
   });
 }
@@ -275,6 +283,17 @@ export function useSaveView() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.savedViews.byEntity(variables.entity_code),
       });
+    },
+  });
+}
+
+export function useUpdateView(entityCode: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ viewId, config, name }: { viewId: string; config: SavedView["config"]; name?: string }) =>
+      platform().updateSavedView(entityCode, viewId, { config, name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.savedViews.byEntity(entityCode) });
     },
   });
 }

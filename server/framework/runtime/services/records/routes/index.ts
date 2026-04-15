@@ -13,7 +13,8 @@
  *   GET    /api/records/:entity/import/:jobId  — poll import status
  *   GET    /api/records/:entity/import         — recent import history
  *
- *   POST   /api/records/:entity/bulk-action    — bulk status_transition or set_field
+ *   POST   /api/records/:entity/bulk-preflight  — dry-run eligibility check (call before confirm)
+ *   POST   /api/records/:entity/bulk-action    — bulk status_transition or set_field (post-preflight)
  *   PATCH  /api/records/:entity/bulk           — bulk multi-field patch
  *   DELETE /api/records/:entity/bulk           — bulk soft-delete
  *
@@ -31,6 +32,7 @@ import type { Queue } from "bullmq";
 import { createRecordsRoute }         from "./records.route.js";
 import { createImportRoutes }         from "./import.route.js";
 import type { ImportObjectStorage }   from "./import.route.js";
+import { createBulkPreflightRoute }   from "./bulk-preflight.route.js";
 import { createBulkActionRoute }      from "./bulk-action.route.js";
 import { createBulkCrudRoutes }       from "./bulk-crud.route.js";
 import { createExportRoutes }         from "./export.route.js";
@@ -55,6 +57,7 @@ export interface RecordsRoutesDeps {
 
 export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): Router {
   createRecordsRoute(router,           deps);
+  createBulkPreflightRoute(router,     deps);
   createBulkActionRoute(router,        deps);
   createBulkCrudRoutes(router,         deps);
   createExportRoutes(router,           deps);

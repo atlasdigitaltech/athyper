@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { EntityListPage } from "@athyper/entity-runtime/list";
 
 /**
@@ -34,5 +35,11 @@ export default async function AppEntityListRoute({
   params: Promise<{ entity: string }>;
 }) {
   const { entity } = await params;
-  return <EntityListPage entityCode={entity} />;
+  // Suspense boundary is required because EntityListPage uses useSearchParams()
+  // (via useEntityListUrl) which opts the subtree into Suspense in Next.js App Router.
+  return (
+    <Suspense>
+      <EntityListPage entityCode={entity} />
+    </Suspense>
+  );
 }

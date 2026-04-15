@@ -58,6 +58,22 @@ export interface BulkExportResult {
   rowCount:    number;
 }
 
+// ── Pre-flight check ──────────────────────────────────────────────────────────
+//
+// Call POST /api/records/:entity/bulk-preflight BEFORE showing the confirm dialog.
+// The result feeds the pre-confirm summary ("43 will post, 4 skipped, 2 denied").
+// On confirm, call the execute route; never call execute without a preflight first.
+
+export interface BulkPreflightRequest {
+  action:        "status_transition" | "set_field";
+  ids:           string[];
+  /** Required for status_transition. */
+  targetStatus?: string;
+  /** Required for set_field. */
+  field?:        string;
+  value?:        unknown;
+}
+
 // ── Update ────────────────────────────────────────────────────────────────────
 
 export interface BulkUpdateRequest {

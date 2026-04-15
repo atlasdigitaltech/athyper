@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS event.outbox (
     available_at    timestamptz       NOT NULL DEFAULT now(),
     locked_at       timestamptz,
     locked_by       text,
+    locked_until    timestamptz,
     last_error      text,
     processed_at    timestamptz,
 
@@ -65,8 +66,8 @@ CREATE TABLE IF NOT EXISTS event.outbox (
     CONSTRAINT outbox_attempts_chk    CHECK (attempts >= 0),
     CONSTRAINT outbox_max_attempts_chk CHECK (max_attempts > 0),
     CONSTRAINT outbox_locked_chk      CHECK (
-        (locked_at IS NULL AND locked_by IS NULL)
-        OR (locked_at IS NOT NULL AND locked_by IS NOT NULL)
+        (locked_at IS NULL AND locked_by IS NULL AND locked_until IS NULL)
+        OR (locked_at IS NOT NULL AND locked_by IS NOT NULL AND locked_until IS NOT NULL)
     )
 );
 

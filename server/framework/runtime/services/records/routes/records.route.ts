@@ -19,6 +19,7 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import {
   verifyBearer,
   resolveTenantId,
@@ -63,43 +64,72 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   const { db, auth, logger } = deps;
 
   // ── LIST ──────────────────────────────────────────────────────────────────────
+  //
+  // Query params (canonical — matches EntityListQueryState URL serialization):
+  //   ?page=<n>          current page (1-based, default 1)
+  //   ?page_size=<n>     records per page (default 20, max 100)
+  //   ?q=<term>          free-text ILIKE search on is_searchable fields
+  //   ?filters=<json>    JSON map: { field: value | value[] }
+  //                      arrays → WHERE column IN (...); single → WHERE col = val
+  //   ?sort=<field>:<dir>  field = logical field name; dir = asc | desc
+  //   ?facets=cheap|all  return value-count map for enum/boolean fields
+  //
   const listHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const entityCode = req.params["entity"] as string;
+      // Normalise URL slug → DB entity name (journal-entry → journal_entry).
+      // resolveEntityTable and resolveFieldMap do this internally; the direct
+      // control.entity queries below must use the same normalised form.
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
       const table = await resolveEntityTable(db, entityCode);
       if (!table) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
         return;
       }
 
-      const page = Math.max(1, parseInt(String(req.query["page"] ?? "1"), 10));
-      const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10)));
-      const offset = (page - 1) * pageSize;
+      const page     = Math.max(1, parseInt(String(req.query["page"]      ?? "1"),  10) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10) || 20));
+      const offset   = (page - 1) * pageSize;
 
-      // Optional full-text search term
+      // Full-text search term
       const searchTerm = typeof req.query["q"] === "string" && req.query["q"].trim()
         ? req.query["q"].trim()
         : null;
 
-      // Optional column equality filters (JSON-encoded key→value map)
+      // Column filters — JSON-encoded map: { field: value | value[] }
       let columnFilters: Record<string, unknown> = {};
       if (typeof req.query["filters"] === "string") {
         try {
           columnFilters = JSON.parse(req.query["filters"]) as Record<string, unknown>;
-        } catch {
-          // Ignore malformed filters
+        } catch { /* ignore malformed */ }
+      }
+
+      // Sort — canonical: "field_name:asc" or "field_name:desc"
+      const sortRaw = typeof req.query["sort"] === "string" ? req.query["sort"].trim() : null;
+      let sortFieldName: string | null = null;
+      let sortDir: "asc" | "desc" = "asc";
+      if (sortRaw) {
+        const colonIdx = sortRaw.lastIndexOf(":");
+        if (colonIdx > 0) {
+          sortFieldName = sortRaw.slice(0, colonIdx);
+          sortDir = sortRaw.slice(colonIdx + 1) === "desc" ? "desc" : "asc";
         }
       }
 
+      // Facets — "cheap" = enum + boolean fields; "all" = + any field
+      const facetsParam = typeof req.query["facets"] === "string" ? req.query["facets"] : null;
+      const includeFacets = facetsParam === "cheap" || facetsParam === "all";
+
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
-      // Filter by tenant if X-Org is present
-      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      // ── Resolve field map once (used for filters + sort + remap) ────────────
+      const fieldMap = await resolveFieldMap(db, entityCode);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let listQuery: any  = db.selectFrom(fullTable).selectAll();
@@ -107,60 +137,79 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       let countQuery: any = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
 
       if (tenantId) {
-        listQuery  = listQuery.where("tenant_id" as never, "=", tenantId as never);
+        listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId as never);
         countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
       }
 
-      // ── Column equality filters ──────────────────────────────────────────────
+      // ── Column filters ───────────────────────────────────────────────────────
+      // Supports: { field: "value" } (equality) or { field: ["v1","v2"] } (IN)
       if (Object.keys(columnFilters).length > 0) {
-        const fieldMap = await resolveFieldMap(db, entityCode);
         for (const [fieldName, value] of Object.entries(columnFilters)) {
           if (value === undefined || value === null || fieldName.startsWith("_")) continue;
           const colName = fieldMap.get(fieldName) ?? fieldName;
-          listQuery  = listQuery.where(colName  as never, "=", value as never);
-          countQuery = countQuery.where(colName as never, "=", value as never);
+
+          if (Array.isArray(value) && value.length > 0) {
+            // Multi-value → IN(...)
+            listQuery  = listQuery.where(colName  as never, "in", value as never);
+            countQuery = countQuery.where(colName as never, "in", value as never);
+          } else if (Array.isArray(value) && value.length === 0) {
+            // Empty array → no results for this filter
+            listQuery  = listQuery.where(sql<boolean>`false` as never);
+            countQuery = countQuery.where(sql<boolean>`false` as never);
+          } else {
+            listQuery  = listQuery.where(colName  as never, "=", value as never);
+            countQuery = countQuery.where(colName as never, "=", value as never);
+          }
         }
       }
 
       // ── Full-text search (ILIKE on is_searchable fields) ────────────────────
       if (searchTerm) {
-        // Fetch searchable field column names for this entity
         const searchableFields = await db
           .selectFrom("control.entity_field as ef")
           .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
           .innerJoin("control.entity as e",          "e.id",  "ev.entity_id")
           .select(["ef.column_name"])
-          .where("e.name",          "=",    entityCode)
-          .where("e.tenant_id",     "is",   null)
-          .where("ef.is_searchable","=",    true)
-          .where("ef.is_active",    "=",    true)
-          .where("ev.status",       "=",    "EFFECTIVE")
+          .where("e.name",           "=",  entityCode)
+          .where("e.tenant_id",      "is", null)
+          .where("ef.is_searchable", "=",  true)
+          .where("ef.is_active",     "=",  true)
+          .where("ev.status",        "=",  "EFFECTIVE")
           .execute() as { column_name: string }[];
 
         if (searchableFields.length > 0) {
           const pattern = `%${searchTerm}%`;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const applySearch = (q: any) => q.where((eb: any) =>
-            eb.or(
-              searchableFields.map(({ column_name }) =>
-                eb(column_name as never, "ilike", pattern as never),
-              ),
-            ),
+            eb.or(searchableFields.map(({ column_name }) =>
+              eb(column_name as never, "ilike", pattern as never),
+            )),
           );
           listQuery  = applySearch(listQuery);
           countQuery = applySearch(countQuery);
+        } else {
+          logger?.warn("records_search_no_searchable_fields", { entityCode, searchTerm });
         }
       }
 
-      const [rows, countResult, fieldMap] = await Promise.all([
+      // ── Sort ─────────────────────────────────────────────────────────────────
+      if (sortFieldName) {
+        const sortColumn = fieldMap.get(sortFieldName) ?? sortFieldName;
+        listQuery = listQuery.orderBy(sortColumn as never, sortDir as never);
+      } else {
+        // Default: newest first when no sort requested
+        listQuery = listQuery.orderBy("created_at" as never, "desc" as never);
+      }
+
+      // ── Execute list + count (parallel) ──────────────────────────────────────
+      const [rows, countResult] = await Promise.all([
         listQuery.limit(pageSize).offset(offset).execute(),
         countQuery.executeTakeFirst(),
-        resolveFieldMap(db, entityCode),
       ]);
 
       const total = parseInt(String(countResult?.count ?? "0"), 10);
 
-      // Remap each row: physical column_name → logical field name
+      // Remap: physical column_name → logical field name
       const reverseMap = new Map<string, string>();
       for (const [fieldName, columnName] of fieldMap.entries()) {
         reverseMap.set(columnName, fieldName);
@@ -173,7 +222,49 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return out;
       });
 
-      const responseBody = {
+      // ── Cheap facets (enum + boolean fields only) ─────────────────────────────
+      let facets: Record<string, { value: string; count: number }[]> | undefined;
+      if (includeFacets && tenantId) {
+        const facetFields = await db
+          .selectFrom("control.entity_field as ef")
+          .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+          .innerJoin("control.entity as e",          "e.id",  "ev.entity_id")
+          .select(["ef.name", "ef.column_name"])
+          .where("e.name",       "=",  entityCode)
+          .where("e.tenant_id",  "is", null)
+          .where("ev.status",    "=",  "EFFECTIVE")
+          .where("ef.is_active", "=",  true)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .where((eb: any) => eb.or([
+            eb("ef.data_type", "=", "enum"),
+            eb("ef.data_type", "=", "boolean"),
+          ]))
+          .execute() as { name: string; column_name: string }[];
+
+        facets = {};
+        await Promise.all(
+          facetFields.map(async ({ name, column_name }) => {
+            const counts = await db
+              .selectFrom(fullTable)
+              .select([
+                column_name   as never,
+                db.fn.countAll<string>().as("count") as never,
+              ])
+              .where("tenant_id" as never, "=", tenantId as never)
+              .groupBy(column_name as never)
+              .orderBy(db.fn.countAll<string>() as never, "desc" as never)
+              .limit(100)
+              .execute() as Record<string, string>[];
+
+            facets![name] = counts.map((row) => ({
+              value: String(row[column_name] ?? ""),
+              count: parseInt(row["count"] ?? "0", 10),
+            }));
+          }),
+        );
+      }
+
+      const responseBody: Record<string, unknown> = {
         data: remappedRows,
         pagination: {
           total,
@@ -181,6 +272,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           page_size: pageSize,
           total_pages: Math.ceil(total / pageSize),
         },
+        ...(facets ? { facets } : {}),
       };
 
       if (tenantId) {
@@ -493,7 +585,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const entityCode = req.params["entity"] as string;
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
       const table = await resolveEntityTable(db, entityCode);
 
       const fieldRows = await db

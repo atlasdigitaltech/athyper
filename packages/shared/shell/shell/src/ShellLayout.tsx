@@ -78,7 +78,7 @@ export function ShellLayout({
 
         {/* Main content */}
         <main className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <div className="flex-1 overflow-y-auto px-4 py-2 lg:px-6 lg:py-3">
             {children}
           </div>
         </main>

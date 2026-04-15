@@ -180,12 +180,13 @@ export function setCachePrivate(
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function resolveFieldMap(db: Kysely<any>, entityCode: string): Promise<Map<string, string>> {
+  const name = entityCode.replace(/-/g, "_");
   const rows = await db
     .selectFrom("control.entity_field as ef")
     .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
     .innerJoin("control.entity as e", "e.id", "ev.entity_id")
     .select(["ef.name", "ef.column_name"])
-    .where("e.name", "=", entityCode)
+    .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .where("ev.status", "=", "EFFECTIVE")
     .where("ef.is_active", "=", true)

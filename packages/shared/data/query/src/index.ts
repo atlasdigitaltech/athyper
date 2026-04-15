@@ -26,6 +26,7 @@ export {
   // Saved Views
   useSavedViews,
   useSaveView,
+  useUpdateView,
 } from "./hooks";
 
 export {

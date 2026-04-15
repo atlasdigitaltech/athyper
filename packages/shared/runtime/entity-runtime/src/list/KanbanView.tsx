@@ -181,11 +181,17 @@ function KanbanCard({
 // ── Main KanbanView ───────────────────────────────────────────────────────────
 
 export interface KanbanViewProps {
-  rows:        Record<string, unknown>[];
-  entity:      CompiledEntity;
-  titleKey:    string;
-  entityCode:  string;
-  onRowClick?: (row: Record<string, unknown>) => void;
+  rows:               Record<string, unknown>[];
+  entity:             CompiledEntity;
+  titleKey:           string;
+  entityCode:         string;
+  onRowClick?:        (row: Record<string, unknown>) => void;
+  /**
+   * Override which field is used for grouping.
+   * Must be a field where EntityField.is_groupable = true.
+   * Falls back to findKanbanGroupField(entity) when absent or invalid.
+   */
+  groupFieldOverride?: string;
 }
 
 export function KanbanView({
@@ -194,8 +200,12 @@ export function KanbanView({
   titleKey,
   entityCode,
   onRowClick,
+  groupFieldOverride,
 }: KanbanViewProps) {
-  const groupField   = findKanbanGroupField(entity);
+  // Resolve group field: explicit override → metadata default
+  const groupField = groupFieldOverride
+    ? (entity.fields.find((f) => f.name === groupFieldOverride && f.is_groupable) ?? findKanbanGroupField(entity))
+    : findKanbanGroupField(entity);
   const subtitleKey  = entity.display_config?.subtitle_field;
 
   if (!groupField) {

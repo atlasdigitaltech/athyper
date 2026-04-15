@@ -19,6 +19,16 @@ export function createPlatformClient(fetch: ApiFetch) {
     async saveSavedView(view: Omit<SavedView, "id" | "created_by" | "created_at">): Promise<SavedView> {
       return fetch(`/api/platform/saved-views`, { method: "POST", body: JSON.stringify(view) });
     },
+    async updateSavedView(
+      entityCode: string,
+      viewId: string,
+      patch: { config: SavedView["config"]; name?: string },
+    ): Promise<SavedView> {
+      return fetch(
+        `/api/platform/saved-views/${encodeURIComponent(entityCode)}/${encodeURIComponent(viewId)}`,
+        { method: "PATCH", body: JSON.stringify(patch) },
+      );
+    },
   };
 }
 

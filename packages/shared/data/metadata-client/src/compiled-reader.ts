@@ -15,6 +15,10 @@ import {
   type EntityField,
   type FieldGroup,
 } from "@athyper/api-contracts/metadata";
+import {
+  type EntityListPresentationConfig,
+  type ColumnPresentation,
+} from "@athyper/api-contracts/entity-list";
 
 export interface ResolvedListConfig {
   columns: EntityField[];
@@ -140,4 +144,100 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
   }
 
   return { sections, requiredFields, validationRules };
+}
+
+// ── Semantic resolver detection ───────────────────────────────────────────────
+
+const STATUS_FIELD_NAMES = new Set([
+  "status", "record_status", "state", "lifecycle_state",
+  "approval_status", "workflow_status", "payment_status",
+]);
+
+const CLOSE_RUN_ENTITIES  = ["close_run", "period_close"];
+const CLOSE_TASK_ENTITIES = ["close_task", "close_step"];
+const AP_AR_ENTITIES      = [
+  "ap_invoice", "ar_invoice", "purchase_invoice", "sales_invoice",
+  "payment_entry", "journal_entry", "receipt",
+];
+
+function detectSemanticResolver(entityCode: string, fieldName: string): string | undefined {
+  if (!STATUS_FIELD_NAMES.has(fieldName) && !fieldName.endsWith("_status")) return undefined;
+
+  if (CLOSE_TASK_ENTITIES.some((e) => entityCode.includes(e))) return "closeTaskStatusIntent";
+  if (CLOSE_RUN_ENTITIES.some((e)  => entityCode.includes(e))) return "closeRunStatusIntent";
+  if (AP_AR_ENTITIES.some((e)      => entityCode.includes(e))) return "apArStatusIntent";
+
+  return "kanbanStatusIntent";
+}
+
+// ── Formatter detection from field type ──────────────────────────────────────
+
+const NUMERIC_TYPES = new Set(["integer", "bigint", "decimal", "numeric", "money"]);
+const DATE_TYPES    = new Set(["date"]);
+const DT_TYPES      = new Set(["datetime", "timestamptz"]);
+
+function detectFormatter(field: EntityField): string | undefined {
+  if (field.data_type === "money")                                    return "currency";
+  if (field.data_type === "decimal" && field.format === "percent")   return "percent";
+  if (DATE_TYPES.has(field.data_type))                               return "date-short";
+  if (DT_TYPES.has(field.data_type))                                 return "datetime-relative";
+  return undefined;
+}
+
+/**
+ * Derive EntityListPresentationConfig from compiled entity metadata.
+ *
+ * PRESENTATION ONLY — does not repeat capability flags from EntityField.
+ * Sources in precedence order that the consumer should apply:
+ *   1. EntityListPresentationConfig (system defaults, from this function)
+ *   2. principal_ui_preference overrides (per-user, per-surface)
+ *   3. saved_view.state_json overrides (per-view columns / sort)
+ *   4. URL query params (session-level, from useEntityListUrl)
+ *
+ * The config here establishes the baseline that all higher layers override.
+ */
+export function resolvePresentationConfig(entity: CompiledEntity): EntityListPresentationConfig {
+  const { fields, display_config, entity_code } = entity;
+
+  // Determine which fields appear in the list
+  const listColumnNames = display_config.list_columns;
+  const listFields: EntityField[] = listColumnNames
+    ? fields.filter((f) => listColumnNames.includes(f.name))
+    : fields.filter((f) => f.is_filterable || f.is_sortable).slice(0, 8);
+
+  const sortedFields = [...listFields].sort((a, b) => a.sort_order - b.sort_order);
+
+  const columns: ColumnPresentation[] = sortedFields.map((field) => {
+    const col: ColumnPresentation = { fieldName: field.name };
+
+    // Semantic badge resolver for status-like fields
+    const resolver = detectSemanticResolver(entity_code, field.name);
+    if (resolver) col.semanticResolver = resolver;
+
+    // Formatter from data_type
+    const fmt = detectFormatter(field);
+    if (fmt) col.formatter = fmt;
+
+    // Footer aggregation when field is aggregatable
+    if (field.is_aggregatable) {
+      col.aggregation = NUMERIC_TYPES.has(field.data_type) ? "sum" : "count";
+    }
+
+    // Compact visibility: show only key fields (first 3 in sort order)
+    col.compactVisible = sortedFields.indexOf(field) < 3;
+
+    // Excel: all list fields are exported by default
+    col.excelVisible = true;
+
+    return col;
+  });
+
+  return {
+    columns,
+    defaultViewMode:  "list",
+    defaultPageSize:  25,
+    defaultSort: display_config.default_sort_field
+      ? { key: display_config.default_sort_field, dir: display_config.default_sort_order ?? "asc" }
+      : undefined,
+  };
 }

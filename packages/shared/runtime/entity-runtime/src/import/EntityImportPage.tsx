@@ -26,8 +26,13 @@ import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
 import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Button, Input, Label, Progress, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@athyper/ui/primitives";
 import { DragDropUploadZone } from "@athyper/content-ui";
-import { formatTitle } from "@/lib/format";
-import { getCsrfToken } from "@/lib/bff-fetch";
+const formatTitle = (code: string) =>
+  code.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+const getCsrfToken = () => {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]!) : "";
+};
 import type {
   ColumnMapping,
   ImportMode,

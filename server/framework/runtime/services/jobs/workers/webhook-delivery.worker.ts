@@ -53,7 +53,12 @@ async function sweepWebhooks(
     .selectFrom("event.outbox as o" as never)
     .select(["o.id" as never, "o.tenant_id" as never, "o.topic" as never])
     .where("o.status" as never, "=", "pending" as never)
-    .where("o.locked_until" as never, "is" as never, null as never)
+    .where((eb: any) =>
+      eb.or([
+        eb("o.locked_until" as never, "is" as never, null as never),
+        eb("o.locked_until" as never, "<" as never, new Date() as never),
+      ])
+    )
     .orderBy("o.created_at" as never, "asc")
     .limit(SWEEP_BATCH_SIZE)
     .execute() as Record<string, unknown>[];

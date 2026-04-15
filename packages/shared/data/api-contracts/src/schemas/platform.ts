@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { UuidSchema } from "./common";
+import { EntityListQueryStateSchema } from "./entity-list";
 
 // ── Session ─────────────────────────────────────────────────────
 
@@ -62,6 +63,11 @@ export const NotificationSchema = z.object({
 export type Notification = z.infer<typeof NotificationSchema>;
 
 // ── Saved Views ─────────────────────────────────────────────────
+//
+// SavedView.config IS EntityListQueryState.
+// One canonical shape: URL params ↔ store ↔ saved_view.state_json ↔ API.
+// The server writes EntityListQueryState directly to state_json.
+// The mapper passes state_json through as-is; no field extraction.
 
 export const SavedViewSchema = z.object({
   id: UuidSchema,
@@ -69,17 +75,8 @@ export const SavedViewSchema = z.object({
   name: z.string(),
   is_default: z.boolean(),
   is_shared: z.boolean(),
-  config: z.object({
-    columns: z.array(z.string()).optional(),
-    sort_by: z.string().optional(),
-    sort_order: z.enum(["asc", "desc"]).optional(),
-    filters: z.array(z.object({
-      field: z.string(),
-      operator: z.string(),
-      value: z.unknown(),
-    })).optional(),
-    page_size: z.number().int().optional(),
-  }),
+  /** Canonical list query state — same shape stored in URL params and Zustand store. */
+  config: EntityListQueryStateSchema,
   created_by: UuidSchema,
   created_at: z.string().datetime(),
 });

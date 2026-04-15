@@ -15,6 +15,7 @@
  *   import { ... } from "@athyper/api-contracts/workflow";
  *   import { ... } from "@athyper/api-contracts/ledger";
  *   import { ... } from "@athyper/api-contracts/platform";
+ *   import { ... } from "@athyper/api-contracts/entity-list";
  *   import { queryKeys } from "@athyper/api-contracts/query-keys";
  */
 
@@ -25,4 +26,5 @@ export * from "./schemas/documents";
 export * from "./schemas/workflow";
 export * from "./schemas/ledger";
 export * from "./schemas/platform";
+export * from "./schemas/entity-list";
 export { queryKeys } from "./query-keys";

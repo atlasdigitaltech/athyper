@@ -6,6 +6,7 @@
  * POST   /api/platform/saved-views/:entity              — create a saved view (entity in path)
  * POST   /api/platform/saved-views                      — create a saved view (entity_code in body)
  * DELETE /api/platform/saved-views/:entity/:id          — delete a saved view
+ * PATCH  /api/platform/saved-views/:entity/:id          — update config (state_json)
  * PATCH  /api/platform/saved-views/:entity/:id/default  — set as default
  *
  * GET    /api/user/saved-views                          — all saved views for current principal
@@ -54,20 +55,16 @@ export interface PlatformRoutesDeps {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toSavedView(row: Record<string, any>) {
-  const state = (row.state_json ?? {}) as Record<string, unknown>;
+  // config IS EntityListQueryState — pass state_json through directly.
+  // _v defaults to 1 for legacy rows that pre-date the canonical schema.
+  const config = { _v: 1, ...(row.state_json ?? {}) } as Record<string, unknown>;
   return {
-    id:         row.id as string,
+    id:          row.id as string,
     entity_code: (row.entity_key ?? "") as string,
-    name:       row.name as string,
-    is_default: (row.is_default ?? false) as boolean,
-    is_shared:  (row.scope === "shared" || row.scope === "system") as boolean,
-    config: {
-      columns:    (state["columns"]    ?? undefined) as string[] | undefined,
-      sort_by:    (state["sort_by"]    ?? undefined) as string   | undefined,
-      sort_order: (state["sort_order"] ?? undefined) as "asc" | "desc" | undefined,
-      filters:    (state["filters"]    ?? undefined) as unknown[] | undefined,
-      page_size:  (state["page_size"]  ?? undefined) as number   | undefined,
-    },
+    name:        row.name as string,
+    is_default:  (row.is_default ?? false) as boolean,
+    is_shared:   (row.scope === "shared" || row.scope === "system") as boolean,
+    config,
     created_by:  row.created_by as string,
     created_at:  (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)),
   };
@@ -281,6 +278,64 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       res.status(204).end();
     } catch (err) {
       logger?.error("platform_saved_views_delete_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /platform/saved-views/:entity/:viewId — update config ───────────
+
+  const updateSavedViewHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const viewId  = req.params["viewId"] as string;
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (!isUuid(viewId)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      const existing = await db
+        .selectFrom("master.saved_view as sv")
+        .select(["sv.id", "sv.scope", "sv.owner_principal_id", "sv.state_json"] as never[])
+        .where("sv.id", "=", viewId)
+        .where("sv.tenant_id", "=", tenantId)
+        .where("sv.deleted_at" as never, "is", null)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!existing) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (existing["scope"] === "personal" && existing["owner_principal_id"] !== principalId) {
+        res.status(403).json({ error: "FORBIDDEN" }); return;
+      }
+
+      const body   = req.body as Record<string, unknown>;
+      const config = (body["config"] ?? {}) as Record<string, unknown>;
+      const name   = typeof body["name"] === "string" ? body["name"].trim() : undefined;
+
+      const updateClause: Record<string, unknown> = {
+        state_json: JSON.stringify(config),
+        updated_at: new Date(),
+        updated_by: principalId,
+      };
+      if (name) updateClause["name"] = name;
+
+      const row = await db
+        .updateTable("master.saved_view" as never)
+        .set(updateClause as never)
+        .where("id" as never, "=", viewId as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .returning(["id", "entity_key", "name", "scope", "is_default", "state_json", "created_by", "created_at"] as never[])
+        .executeTakeFirstOrThrow();
+
+      res.json(toSavedView(row as Record<string, unknown>));
+    } catch (err) {
+      logger?.error("platform_saved_views_update_error", { err: String(err) });
       next(err);
     }
   };
@@ -1551,6 +1606,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
   router.post("/platform/saved-views/:entity",                   createSavedViewHandler);
   router.post("/platform/saved-views",                           createSavedViewBodyHandler);
   router.delete("/platform/saved-views/:entity/:viewId",         deleteSavedViewHandler);
+  router.patch("/platform/saved-views/:entity/:viewId",          updateSavedViewHandler);
   router.patch("/platform/saved-views/:entity/:viewId/default",  setDefaultViewHandler);
 
   router.get("/user/saved-views",                     userListSavedViewsHandler);
