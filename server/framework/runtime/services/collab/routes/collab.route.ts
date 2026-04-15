@@ -31,8 +31,19 @@ import {
   SYSTEM_PRINCIPAL_UUID,
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
-import type { MentionService } from "../../../../../src/foundation/collab/mention.service.js";
 import type { RedisClient } from "@athyper/adapter-memorycache";
+
+// Local duck-type for MentionService (avoids cross-package rootDir import)
+interface MentionObject { userId: string; displayName: string }
+interface ProcessMentionsInput {
+  commentId: string; contextType: string; tenantId: string; authorId: string;
+  commentText: string; entityType: string; entityId: string;
+  previousMentions?: MentionObject[];
+}
+interface ProcessMentionsResult { added: MentionObject[]; removed: MentionObject[]; total: MentionObject[] }
+interface MentionService {
+  processMentions(input: ProcessMentionsInput): Promise<ProcessMentionsResult>;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

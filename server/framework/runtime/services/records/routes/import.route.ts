@@ -19,7 +19,13 @@ import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
 
 import { verifyBearer } from "@athyper/svc-shared";
-import type { JobLogger } from "../../jobs/jobs.types.js";
+
+// Local duck-type (avoids cross-package rootDir import for DTS builds)
+interface JobLogger {
+  info(event: string, fields?: Record<string, unknown>): void;
+  warn(event: string, fields?: Record<string, unknown>): void;
+  error(event: string, fields?: Record<string, unknown>): void;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
