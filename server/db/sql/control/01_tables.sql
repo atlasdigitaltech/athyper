@@ -570,7 +570,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
     required_operations  jsonb,
 
     -- Precondition type B: approval workflow that must have returned APPROVED
-    approval_template_id uuid,
+    workflow_definition_id uuid,   -- FK → control.workflow_definition(id); set NULL on delete
 
     -- Precondition type C: CEL / JSONLogic expressions against entity payload
     conditions           jsonb,
@@ -599,7 +599,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
     -- At least one precondition must be set
     CONSTRAINT ltg_nonempty_chk     CHECK (
         required_operations IS NOT NULL
-        OR approval_template_id IS NOT NULL
+        OR workflow_definition_id IS NOT NULL
         OR conditions IS NOT NULL
         OR threshold_rules IS NOT NULL
     )
@@ -609,7 +609,7 @@ COMMENT ON TABLE  control.lifecycle_transition_gate IS
     'Preconditions evaluated before a transition fires. '
     'One gate per transition (UNIQUE on transition_id) — all conditions combined in one row. '
     'required_operations: [{code: ''review'', completed_by: ''any''}] '
-    'approval_template_id: approval workflow must have returned APPROVED. '
+    'workflow_definition_id: FK → control.workflow_definition; async approval that must reach APPROVED terminal state before transition fires. '
     'conditions: JSONLogic/CEL expression evaluated against entity payload. '
     'threshold_rules: [{field: ''amount'', op: ''>='', value: 10000}]. '
     'P2-FIX: updated_at/updated_by added — gate conditions are refined over time.';
@@ -970,7 +970,7 @@ COMMENT ON TABLE  control.workflow_definition IS
     'Policy: when is a workflow required for an entity? '
     'rules jsonb array: [{condition: jsonlogic, template_code, workflow_type}]. '
     'First match wins. NULL condition = always applies. '
-    'Linked to control.lifecycle_transition_gate.workflow_definition_id. '
+    'Referenced by control.lifecycle_transition_gate.workflow_definition_id; when a gate has this FK set, the engine starts a workflow_definition-governed approval and blocks the transition until the request reaches an APPROVED terminal state. '
     'Replaces control.approval_definition (backup).';
 COMMENT ON COLUMN control.workflow_definition.rules IS
     'Array of policy rules. Each: '
@@ -2584,6 +2584,39 @@ COMMENT ON TABLE control.book_posting_rule IS
 -- ============================================================================
 -- Engine 4.13: Unified Transaction Resolution Engine additions
 -- ============================================================================
+
+-- §0  transaction_event_catalog — canonical registry of lifecycle event codes
+--     Platform-global (no tenant_id). Both transaction_flow_template.event_code
+--     and acct_profile_event.event_code FK into this table (Step 4 / R1).
+--     is_active=false deprecates a code without breaking existing rows.
+CREATE TABLE IF NOT EXISTS control.transaction_event_catalog (
+    -- Identity
+    id            uuid        NOT NULL DEFAULT shared.uuidv7(),
+    code          text        NOT NULL,
+
+    -- Catalog fields
+    label         text        NOT NULL,
+    description   text,
+    is_active     boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    created_by    uuid        NOT NULL,
+    updated_at    timestamptz,
+    updated_by    uuid,
+
+    CONSTRAINT tec_pkey          PRIMARY KEY (id),
+    CONSTRAINT tec_code_uq       UNIQUE (code),
+    CONSTRAINT tec_code_nonempty CHECK (btrim(code) <> ''),
+    CONSTRAINT tec_label_nonempty CHECK (btrim(label) <> '')
+);
+
+COMMENT ON TABLE control.transaction_event_catalog IS
+    'R1: canonical registry of transaction lifecycle event codes. '
+    'Platform-global (no tenant_id). transaction_flow_template.event_code and '
+    'acct_profile_event.event_code reference this table via FK (03_constraints.sql §TEC-REF). '
+    'is_active=false deprecates a code without violating child-table FKs.';
+
 
 -- §1  transaction_flow_template — canonical lifecycle events per transaction flow
 --     tenant_id IS NULL = platform-global row; tenant_id = UUID = tenant override.
@@ -5210,3 +5243,103 @@ COMMENT ON TABLE control.content_quota IS
     'Per-tenant per-kind content item and storage quotas. '
     'max_items / max_storage_bytes = NULL means unlimited. '
     'Use kind = ''*'' for a catch-all default for the tenant.';
+
+
+-- =============================================================================
+-- §PROV-1  control.blueprint_registry — catalogue of available blueprint packs
+-- =============================================================================
+-- R6: Migrated from 900_seed_data/020_blueprint/000_registry/ into the main DDL
+-- bundle so the table is always present regardless of seed execution order or
+-- environment. Seed file retains only the INSERT rows and the catalogue view.
+--
+-- Platform-global: no tenant_id — blueprints are installed at system level.
+-- Idempotent: seed uses ON CONFLICT (code) DO UPDATE.
+
+CREATE TABLE IF NOT EXISTS control.blueprint_registry (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    code                text        NOT NULL,
+    name                text        NOT NULL,
+    category            text        NOT NULL,
+    industry_vertical   text[],
+    framework           text,
+    base_version        text        NOT NULL DEFAULT '1.0.0',
+    status              text        NOT NULL DEFAULT 'active',
+    dependencies        text[],
+    seed_files          text[],
+    description         text,
+    metadata            jsonb,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT br_pkey          PRIMARY KEY (id),
+    CONSTRAINT br_code_uq       UNIQUE (code),
+    CONSTRAINT br_code_chk      CHECK (btrim(code) <> ''),
+    CONSTRAINT br_category_chk  CHECK (category IN (
+        'base', 'industry_pack', 'coa_framework', 'default_rules'
+    )),
+    CONSTRAINT br_status_chk    CHECK (status IN ('active', 'deprecated'))
+);
+
+COMMENT ON TABLE  control.blueprint_registry IS
+    'Catalogue of available blueprint packs selectable during tenant provisioning. '
+    'Platform-global (no tenant_id). '
+    'system-seeded rows have created_by = ''00000000-0000-0000-0000-000000000000''. '
+    'R6: migrated from seed file into main DDL bundle.';
+COMMENT ON COLUMN control.blueprint_registry.code IS
+    'Stable identifier used as FK target and in dependency arrays. '
+    'E.g. ''base'', ''pack_utilities'', ''coa_ifrs''.';
+COMMENT ON COLUMN control.blueprint_registry.category IS
+    'base=universal prereq; industry_pack=vertical-specific; '
+    'coa_framework=accounting framework; default_rules=system defaults.';
+COMMENT ON COLUMN control.blueprint_registry.dependencies IS
+    'Ordered list of blueprint codes that must be applied before this one.';
+COMMENT ON COLUMN control.blueprint_registry.seed_files IS
+    'Ordered relative file paths under 020_blueprint/ for the runner to execute.';
+
+
+-- =============================================================================
+-- §PROV-2  control.tenant_blueprint_application — provisioning audit log
+-- =============================================================================
+-- Records which blueprint packs have been applied to each tenant, when, by whom,
+-- and with what outcome. Enables incremental pack additions and upgrade tracking.
+-- applied_by is nullable: automated provisioning runs may have no human actor.
+
+CREATE TABLE IF NOT EXISTS control.tenant_blueprint_application (
+    id               uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id        uuid        NOT NULL,
+    blueprint_code   text        NOT NULL,
+    applied_version  text        NOT NULL,
+    applied_at       timestamptz NOT NULL DEFAULT now(),
+    applied_by       uuid,
+    status           text        NOT NULL DEFAULT 'applied',
+    error_detail     text,
+    metadata         jsonb,
+
+    -- Audit
+    created_at       timestamptz NOT NULL DEFAULT now(),
+    created_by       uuid        NOT NULL,
+    updated_at       timestamptz,
+    updated_by       uuid,
+
+    CONSTRAINT tba_pkey         PRIMARY KEY (id),
+    CONSTRAINT tba_tenant_bp_uq UNIQUE (tenant_id, blueprint_code),
+    CONSTRAINT tba_status_chk   CHECK (status IN ('applied', 'rolled_back', 'failed'))
+);
+
+COMMENT ON TABLE  control.tenant_blueprint_application IS
+    'Audit log of blueprint packs applied per tenant. '
+    'applied_by: principal who triggered provisioning (NULL for automated runs). '
+    'created_by: audit trail — use system sentinel for automated inserts. '
+    'applied_version: snapshot of blueprint version at time of application; '
+    'survives future registry updates. '
+    'R6: migrated from seed file into main DDL bundle.';
+COMMENT ON COLUMN control.tenant_blueprint_application.blueprint_code IS
+    'References control.blueprint_registry.code.';
+COMMENT ON COLUMN control.tenant_blueprint_application.applied_version IS
+    'Snapshot of blueprint base_version at time of application.';
+COMMENT ON COLUMN control.tenant_blueprint_application.applied_by IS
+    'Principal who triggered provisioning. NULL when applied by automation.';

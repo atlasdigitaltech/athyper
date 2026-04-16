@@ -286,6 +286,54 @@ CREATE TRIGGER trg_lho_safety_guard
 
 
 -- =============================================================================
+-- E2. R3: action registry guard on lifecycle_hook_override.replacement_action
+-- =============================================================================
+-- Validates that override.replacement_action exists in hook_action_registry.
+-- Trigger (not FK) because validation is existence + is_active + tenant-scope
+-- combined — a plain FK can only enforce existence on a single unique column.
+-- Skips 'suppress' overrides where replacement_action IS NULL (guaranteed by
+-- lho_replacement_chk CHECK constraint on the table).
+
+CREATE OR REPLACE FUNCTION control.trg_lho_action_registry_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = control AS $$
+BEGIN
+    -- suppress overrides have NULL replacement_action — nothing to validate.
+    IF NEW.override_kind = 'suppress' THEN
+        RETURN NEW;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM control.hook_action_registry
+        WHERE action_key = NEW.replacement_action
+          AND is_active   = true
+          AND (tenant_id IS NULL OR tenant_id = NEW.tenant_id)
+    ) THEN
+        RAISE EXCEPTION
+            'control.lifecycle_hook_override: replacement_action ''%'' is not '
+            'registered in control.hook_action_registry or is inactive. '
+            'Register the action before creating an override.',
+            NEW.replacement_action
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION control.trg_lho_action_registry_guard() IS
+    'R3: validates lifecycle_hook_override.replacement_action against '
+    'hook_action_registry (existence + is_active + tenant scope). '
+    'Mirrors trg_lth_action_registry_guard on lifecycle_transition_hook. '
+    'suppress overrides (replacement_action IS NULL) are skipped.';
+
+DROP TRIGGER IF EXISTS trg_lho_action_registry_guard ON control.lifecycle_hook_override;
+CREATE TRIGGER trg_lho_action_registry_guard
+    BEFORE INSERT OR UPDATE OF replacement_action, override_kind
+    ON control.lifecycle_hook_override
+    FOR EACH ROW EXECUTE FUNCTION control.trg_lho_action_registry_guard();
+
+
+-- =============================================================================
 -- E. hook action registry guard on lifecycle_transition_hook
 -- =============================================================================
 -- Validates that hook.action exists in control.hook_action_registry.
@@ -1300,3 +1348,31 @@ CREATE TRIGGER trg_er_validate_target_entity
     BEFORE INSERT OR UPDATE OF target_entity
     ON control.entity_relation
     FOR EACH ROW EXECUTE FUNCTION control.trg_fn_validate_target_entity();
+
+
+-- =============================================================================
+-- §TEC  updated_at maintenance for transaction_event_catalog
+-- =============================================================================
+-- R1: new catalog table — updated_at trigger follows schema convention.
+
+DROP TRIGGER IF EXISTS trg_tec_updated_at ON control.transaction_event_catalog;
+CREATE TRIGGER trg_tec_updated_at
+    BEFORE UPDATE ON control.transaction_event_catalog
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §PROV  updated_at maintenance for blueprint tables
+-- =============================================================================
+-- R6: blueprint_registry and tenant_blueprint_application migrated from seed
+-- file into main DDL; updated_at triggers added here to match schema convention.
+
+DROP TRIGGER IF EXISTS trg_br_updated_at ON control.blueprint_registry;
+CREATE TRIGGER trg_br_updated_at
+    BEFORE UPDATE ON control.blueprint_registry
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_tba_updated_at ON control.tenant_blueprint_application;
+CREATE TRIGGER trg_tba_updated_at
+    BEFORE UPDATE ON control.tenant_blueprint_application
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

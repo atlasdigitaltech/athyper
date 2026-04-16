@@ -148,3 +148,39 @@ COMMENT ON VIEW control.v_acct_profile_full IS
     'Now exposes default_tax_group_id + default_tax_group_code/name from control.tax_group. '
     'Legacy default_tax_code retained for backward compatibility. '
     'has_commitment_config / has_revenue_config / has_settlement_config derived flags.';
+
+
+-- ============================================================================
+-- §V3  control.v_blueprint_catalogue
+-- Active blueprint packs for tenant provisioning wizard and API.
+-- R6: moved from 900_seed_data/020_blueprint/000_registry/000_blueprint_registry.sql
+-- into the main view bundle so it is always present after 07_views.sql runs,
+-- regardless of whether blueprint seed files have executed.
+-- ============================================================================
+CREATE OR REPLACE VIEW control.v_blueprint_catalogue AS
+SELECT
+    code,
+    name,
+    category,
+    industry_vertical,
+    framework,
+    base_version,
+    status,
+    dependencies,
+    seed_files,
+    description
+FROM control.blueprint_registry
+WHERE status = 'active'
+ORDER BY
+    CASE category
+        WHEN 'base'          THEN 1
+        WHEN 'coa_framework' THEN 2
+        WHEN 'default_rules' THEN 3
+        WHEN 'industry_pack' THEN 4
+    END,
+    code;
+
+COMMENT ON VIEW control.v_blueprint_catalogue IS
+    'Active blueprint packs ordered for the tenant provisioning wizard. '
+    'base packs first, then coa_framework, default_rules, industry_packs. '
+    'R6: moved from seed file into main view bundle.';

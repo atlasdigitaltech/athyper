@@ -926,7 +926,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
     required_operations  jsonb,
 
     -- Precondition type B: approval workflow that must have returned APPROVED
-    approval_template_id uuid,
+    workflow_definition_id uuid,   -- FK → control.workflow_definition(id); set NULL on delete
 
     -- Precondition type C: CEL / JSONLogic expressions against entity payload
     conditions           jsonb,
@@ -955,7 +955,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
     -- At least one precondition must be set
     CONSTRAINT ltg_nonempty_chk     CHECK (
         required_operations IS NOT NULL
-        OR approval_template_id IS NOT NULL
+        OR workflow_definition_id IS NOT NULL
         OR conditions IS NOT NULL
         OR threshold_rules IS NOT NULL
     )
@@ -965,7 +965,7 @@ COMMENT ON TABLE  control.lifecycle_transition_gate IS
     'Preconditions evaluated before a transition fires. '
     'One gate per transition (UNIQUE on transition_id) — all conditions combined in one row. '
     'required_operations: [{code: ''review'', completed_by: ''any''}] '
-    'approval_template_id: approval workflow must have returned APPROVED. '
+    'workflow_definition_id: FK → control.workflow_definition; async approval that must reach APPROVED terminal state before transition fires. '
     'conditions: JSONLogic/CEL expression evaluated against entity payload. '
     'threshold_rules: [{field: ''amount'', op: ''>='', value: 10000}]. '
     'P2-FIX: updated_at/updated_by added — gate conditions are refined over time.';
@@ -1326,7 +1326,7 @@ COMMENT ON TABLE  control.workflow_definition IS
     'Policy: when is a workflow required for an entity? '
     'rules jsonb array: [{condition: jsonlogic, template_code, workflow_type}]. '
     'First match wins. NULL condition = always applies. '
-    'Linked to control.lifecycle_transition_gate.workflow_definition_id. '
+    'Referenced by control.lifecycle_transition_gate.workflow_definition_id; when a gate has this FK set, the engine starts a workflow_definition-governed approval and blocks the transition until the request reaches an APPROVED terminal state. '
     'Replaces control.approval_definition (backup).';
 COMMENT ON COLUMN control.workflow_definition.rules IS
     'Array of policy rules. Each: '
@@ -5773,6 +5773,10 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.lifecycle_transition_gate ADD CONSTRAINT ltg_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.lifecycle_transition_gate ADD CONSTRAINT ltg_workflow_definition_fk
+    FOREIGN KEY (workflow_definition_id)
+    REFERENCES control.workflow_definition (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── §5  control.lifecycle_transition_hook ────────────────────────────────────
 DO $$ BEGIN ALTER TABLE control.lifecycle_transition_hook ADD CONSTRAINT lth_transition_fk
@@ -7543,7 +7547,7 @@ BEGIN
             SELECT jsonb_object_agg(g.transition_id::text, jsonb_build_object(
                 'id', g.id,
                 'required_operations', g.required_operations,
-                'approval_template_id', g.approval_template_id,
+                'workflow_definition_id', g.workflow_definition_id,
                 'conditions', g.conditions,
                 'threshold_rules', g.threshold_rules
             ))

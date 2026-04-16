@@ -1054,7 +1054,9 @@ export type blueprint_registry = {
     description: string | null;
     metadata: unknown | null;
     created_at: Generated<Timestamp>;
-    updated_at: Generated<Timestamp>;
+    updated_at: Timestamp | null;
+    created_by: string;
+    updated_by: string | null;
 };
 export type book_period_status = {
     id: Generated<string>;
@@ -2145,6 +2147,24 @@ export type company_code_supplier_profile = {
     default_wht_tax_group_id: string | null;
     payment_term_id: string | null;
 };
+export type connector_type = {
+    id: Generated<string>;
+    code: string;
+    name: string;
+    category: string;
+    description: string | null;
+    icon_key: string | null;
+    config_schema: unknown;
+    auth_types: Generated<string[]>;
+    capabilities: Generated<string[]>;
+    health_check_config: Generated<unknown>;
+    is_system: Generated<boolean>;
+    status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type consolidation_elimination = {
     id: Generated<string>;
     tenant_id: string;
@@ -2256,6 +2276,9 @@ export type content_item = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    preview_text: string | null;
+    preview_html: string | null;
+    preview_generated_at: Timestamp | null;
 };
 export type content_item_access_grant = {
     id: Generated<string>;
@@ -2393,6 +2416,31 @@ export type country = {
     is_active: Generated<boolean | null>;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type cron_schedule = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    code: string;
+    name: string;
+    description: string | null;
+    handler_type: string;
+    cron_expression: string;
+    timezone: Generated<string>;
+    target_queue: string;
+    payload_template: Generated<unknown>;
+    priority: Generated<number>;
+    max_retries: Generated<number>;
+    concurrency_limit: number | null;
+    effective_from: Timestamp | null;
+    effective_until: Timestamp | null;
+    is_enabled: Generated<boolean>;
+    lock_key: string | null;
+    last_run_at: Timestamp | null;
+    next_run_at: Timestamp | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -3157,6 +3205,27 @@ export type employee = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    company_code_id: string | null;
+};
+export type endpoint = {
+    id: Generated<string>;
+    tenant_id: string;
+    service: string;
+    code: string;
+    name: string;
+    description: string | null;
+    path: string;
+    method: Generated<string>;
+    config: Generated<unknown>;
+    health_check_url: string | null;
+    health: Generated<string>;
+    last_checked_at: Timestamp | null;
+    last_response_ms: number | null;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type enterprise_feature = {
     id: Generated<string>;
@@ -3483,6 +3552,21 @@ export type export_log = {
     correlation_id: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
+};
+export type feature_flag = {
+    id: Generated<string>;
+    code: string;
+    name: string;
+    description: string | null;
+    is_enabled: Generated<boolean>;
+    tenant_overrides: unknown | null;
+    rollout_pct: number | null;
+    expires_at: Timestamp | null;
+    metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type field_access_log = {
     id: Generated<string>;
@@ -4841,7 +4925,7 @@ export type lifecycle_transition_gate = {
     tenant_id: string | null;
     transition_id: string;
     required_operations: unknown | null;
-    approval_template_id: string | null;
+    workflow_definition_id: string | null;
     conditions: unknown | null;
     threshold_rules: unknown | null;
     created_at: Generated<Timestamp>;
@@ -4955,6 +5039,24 @@ export type match_exception = {
     workflow_request_id: string | null;
     metadata: Generated<unknown>;
     status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type metadata_change_request = {
+    id: Generated<string>;
+    tenant_id: string;
+    entity_code: string;
+    change_type: string;
+    payload: unknown;
+    status: Generated<string>;
+    submitted_by: string;
+    reviewed_by: string | null;
+    reviewed_at: Timestamp | null;
+    review_note: string | null;
+    applied_at: Timestamp | null;
+    workflow_request_id: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -5374,6 +5476,7 @@ export type outbox = {
     processed_at: Timestamp | null;
     created_at: Generated<Timestamp>;
     created_by: string;
+    locked_until: Timestamp | null;
 };
 export type overlay = {
     id: Generated<string>;
@@ -6205,6 +6308,7 @@ export type principal = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    auth_epoch: Generated<number>;
 };
 export type principal_feature_grant = {
     id: Generated<string>;
@@ -6830,6 +6934,23 @@ export type render_output = {
     revoked_at: Timestamp | null;
     revoked_by: string | null;
     revoke_reason: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type report_pack = {
+    id: Generated<string>;
+    tenant_id: string;
+    cycle_run_id: string;
+    report_type: Generated<string>;
+    format: Generated<string>;
+    status: Generated<string>;
+    storage_key: string | null;
+    file_size_bytes: string | null;
+    content_type: Generated<string>;
+    generated_at: Timestamp | null;
+    error_message: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -7578,6 +7699,10 @@ export type tenant_blueprint_application = {
     status: Generated<string>;
     error_detail: string | null;
     metadata: unknown | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type tenant_feature_entitlement = {
     id: Generated<string>;
@@ -7656,6 +7781,17 @@ export type timezone = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type transaction_event_catalog = {
+    id: Generated<string>;
+    code: string;
+    label: string;
+    description: string | null;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type transaction_flow_template = {
     id: Generated<string>;
     tenant_id: string | null;
@@ -7674,6 +7810,23 @@ export type transaction_flow_template = {
     is_active: Generated<boolean | null>;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type trusted_device = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    device_token_hash: string;
+    user_agent: string | null;
+    ip_address: string | null;
+    device_name: string | null;
+    is_revoked: Generated<boolean>;
+    revoked_at: Timestamp | null;
+    expires_at: Timestamp;
+    last_seen_at: Timestamp | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -7733,6 +7886,24 @@ export type warehouse = {
     is_active: Generated<boolean | null>;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type webhook_subscription = {
+    id: Generated<string>;
+    tenant_id: string;
+    target_url: string;
+    signing_secret: string | null;
+    topics: Generated<string[]>;
+    description: string | null;
+    max_retries: Generated<number>;
+    timeout_ms: Generated<number>;
+    last_delivery_at: Timestamp | null;
+    last_delivery_status: string | null;
+    failure_count: Generated<number>;
+    is_active: Generated<boolean>;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -7986,7 +8157,9 @@ export type DB = {
     "control.classification_config": classification_config;
     "control.classification_to_intent_rule": classification_to_intent_rule;
     "control.commodity_to_spend_category_rule": commodity_to_spend_category_rule;
+    "control.connector_type": connector_type;
     "control.content_quota": content_quota;
+    "control.cron_schedule": cron_schedule;
     "control.dimension_policy": dimension_policy;
     "control.dimension_policy_allowed_value": dimension_policy_allowed_value;
     "control.document_sequence_config": document_sequence_config;
@@ -8000,6 +8173,7 @@ export type DB = {
     "control.entity_publish_state": entity_publish_state;
     "control.entity_relation": entity_relation;
     "control.entity_version": entity_version;
+    "control.feature_flag": feature_flag;
     "control.field_group": field_group;
     "control.field_group_member": field_group_member;
     "control.field_security_policy": field_security_policy;
@@ -8016,6 +8190,7 @@ export type DB = {
     "control.lifecycle_transition_hook": lifecycle_transition_hook;
     "control.lookup_domain": lookup_domain;
     "control.lookup_value": lookup_value;
+    "control.metadata_change_request": metadata_change_request;
     "control.mfa_config": mfa_config;
     "control.notification_provider": notification_provider;
     "control.notification_routing_rule": notification_routing_rule;
@@ -8038,6 +8213,7 @@ export type DB = {
     "control.tax_group_component": tax_group_component;
     "control.tax_rate_schedule": tax_rate_schedule;
     "control.tenant_blueprint_application": tenant_blueprint_application;
+    "control.transaction_event_catalog": transaction_event_catalog;
     "control.transaction_flow_template": transaction_flow_template;
     "control.workflow_definition": workflow_definition;
     "control.workflow_sla_policy": workflow_sla_policy;
@@ -8098,11 +8274,13 @@ export type DB = {
     "document.workflow_stage": workflow_stage;
     "event.comment_flag": comment_flag;
     "event.digest_staging": digest_staging;
+    "event.endpoint": endpoint;
     "event.lifecycle_timer_schedule": lifecycle_timer_schedule;
     "event.notification_delivery": notification_delivery;
     "event.notification_message": notification_message;
     "event.outbox": outbox;
     "event.push_subscription": push_subscription;
+    "event.webhook_subscription": webhook_subscription;
     "event.whatsapp_consent": whatsapp_consent;
     "event.work_item": work_item;
     "governance.book_period_status": book_period_status;
@@ -8120,6 +8298,7 @@ export type DB = {
     "governance.cycle_type": cycle_type;
     "governance.legal_hold": legal_hold;
     "governance.legal_hold_manifest": legal_hold_manifest;
+    "governance.report_pack": report_pack;
     "ledger.asset_revaluation_reserve": asset_revaluation_reserve;
     "ledger.budget_balance": budget_balance;
     "ledger.budget_transaction": budget_transaction;
@@ -8278,6 +8457,7 @@ export type DB = {
     "master.tenant_module_subscription": tenant_module_subscription;
     "master.tenant_permission_override": tenant_permission_override;
     "master.tenant_profile": tenant_profile;
+    "master.trusted_device": trusted_device;
     "master.warehouse": warehouse;
     schema_provisions: schema_provisions;
     "shared.commodity_code": commodity_code;

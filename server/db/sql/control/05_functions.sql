@@ -275,7 +275,7 @@ BEGIN
             SELECT jsonb_object_agg(g.transition_id::text, jsonb_build_object(
                 'id', g.id,
                 'required_operations', g.required_operations,
-                'approval_template_id', g.approval_template_id,
+                'workflow_definition_id', g.workflow_definition_id,
                 'conditions', g.conditions,
                 'threshold_rules', g.threshold_rules
             ))

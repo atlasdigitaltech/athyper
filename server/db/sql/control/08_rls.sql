@@ -466,6 +466,20 @@ CREATE POLICY admin_write   ON control.book_posting_rule FOR ALL    TO athyperad
 
 
 -- ============================================================================
+-- §0  control.transaction_event_catalog
+--     Platform-global lookup (no tenant_id). Open read for all authenticated
+--     sessions (event-code pickers, flow template UI). Admin-only write.
+-- ============================================================================
+ALTER TABLE control.transaction_event_catalog ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.transaction_event_catalog FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS open_read   ON control.transaction_event_catalog;
+DROP POLICY IF EXISTS admin_write ON control.transaction_event_catalog;
+CREATE POLICY open_read   ON control.transaction_event_catalog FOR SELECT USING (true);
+CREATE POLICY admin_write ON control.transaction_event_catalog FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
 -- §1  control.transaction_flow_template
 --     tenant_id IS NULL = platform-global (read by all, managed by admin only).
 --     tenant_id = UUID  = tenant override (own tenant read + write).
@@ -808,3 +822,29 @@ CREATE POLICY tenant_update ON control.asset_class_book_policy FOR UPDATE USING 
 CREATE POLICY tenant_delete ON control.asset_class_book_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON control.asset_class_book_policy FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON control.asset_class_book_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── blueprint_registry ────────────────────────────────────────────────────────
+-- R6: platform-global table (no tenant_id). Open read for all authenticated
+-- sessions (provisioning API, tenant wizard). Write restricted to athyperadmin.
+ALTER TABLE control.blueprint_registry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.blueprint_registry FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS open_read  ON control.blueprint_registry;
+DROP POLICY IF EXISTS admin_write ON control.blueprint_registry;
+CREATE POLICY open_read   ON control.blueprint_registry FOR SELECT USING (true);
+CREATE POLICY admin_write ON control.blueprint_registry FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── tenant_blueprint_application ──────────────────────────────────────────────
+-- R6: tenant-scoped provisioning audit log. Tenants read their own applications.
+-- athyperadmin has full cross-tenant access for provisioning operations.
+ALTER TABLE control.tenant_blueprint_application ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.tenant_blueprint_application FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS scoped_read  ON control.tenant_blueprint_application;
+DROP POLICY IF EXISTS admin_write  ON control.tenant_blueprint_application;
+CREATE POLICY scoped_read ON control.tenant_blueprint_application
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_write ON control.tenant_blueprint_application
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

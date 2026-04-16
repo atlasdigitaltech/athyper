@@ -149,6 +149,10 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.lifecycle_transition_gate ADD CONSTRAINT ltg_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.lifecycle_transition_gate ADD CONSTRAINT ltg_workflow_definition_fk
+    FOREIGN KEY (workflow_definition_id)
+    REFERENCES control.workflow_definition (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── §5  control.lifecycle_transition_hook ────────────────────────────────────
 DO $$ BEGIN ALTER TABLE control.lifecycle_transition_hook ADD CONSTRAINT lth_transition_fk
@@ -367,6 +371,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- ============================================================================
 -- Engine 4.13: Unified Transaction Resolution Engine additions
 -- ============================================================================
+
+-- ── §TEC  control.transaction_event_catalog ──────────────────────────────────
+-- R1: catalog table own-FK constraints (created_by / updated_by).
+-- FK references from child tables (tft_event_code_fk, ape_event_code_fk)
+-- are deferred to §TEC-REF in a later migration step.
+
+DO $$ BEGIN ALTER TABLE control.transaction_event_catalog ADD CONSTRAINT tec_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.transaction_event_catalog ADD CONSTRAINT tec_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- TENANT FK — master.tenant confirmed present
@@ -1018,4 +1035,41 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE control.policy_rule ADD CONSTRAINT prule_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ── §PROV-1  control.blueprint_registry ──────────────────────────────────────
+-- R6: FKs for blueprint_registry (DDL migrated from seed file into 01_tables.sql)
+
+DO $$ BEGIN ALTER TABLE control.blueprint_registry ADD CONSTRAINT br_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.blueprint_registry ADD CONSTRAINT br_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ── §PROV-2  control.tenant_blueprint_application ────────────────────────────
+-- R6: FKs for tenant_blueprint_application (DDL migrated from seed file)
+-- blueprint_code FK was previously an inline constraint on the seed-file table.
+
+DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_blueprint_fk
+    FOREIGN KEY (blueprint_code) REFERENCES control.blueprint_registry (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_applied_by_fk
+    FOREIGN KEY (applied_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

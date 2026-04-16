@@ -609,3 +609,26 @@ CREATE INDEX IF NOT EXISTS pdef_module_idx
 -- Rules ordered for evaluation: policy_id → priority ASC
 CREATE INDEX IF NOT EXISTS prule_policy_priority_idx
     ON control.policy_rule (policy_id, priority ASC);
+
+-- ── §TEC  transaction_event_catalog ──────────────────────────────────────────
+-- R1: only active codes returned for picker queries; covering index for full scan
+CREATE INDEX IF NOT EXISTS tec_active_code_pidx
+    ON control.transaction_event_catalog (code)
+    WHERE is_active = true;
+
+-- ── §PROV-1  blueprint_registry ───────────────────────────────────────────────
+-- R6: active packs for provisioning wizard queries
+CREATE INDEX IF NOT EXISTS br_status_active_pidx
+    ON control.blueprint_registry (category, code)
+    WHERE status = 'active';
+
+-- ── §PROV-2  tenant_blueprint_application ────────────────────────────────────
+-- R6: primary access pattern — all packs applied to a given tenant
+-- (tba_tenant_idx was previously created in the seed file; IF NOT EXISTS is idempotent)
+CREATE INDEX IF NOT EXISTS tba_tenant_idx
+    ON control.tenant_blueprint_application (tenant_id);
+
+-- status filter — find failed or rolled-back applications
+CREATE INDEX IF NOT EXISTS tba_status_pidx
+    ON control.tenant_blueprint_application (tenant_id, status)
+    WHERE status <> 'applied';
