@@ -374,8 +374,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── §TEC  control.transaction_event_catalog ──────────────────────────────────
 -- R1: catalog table own-FK constraints (created_by / updated_by).
--- FK references from child tables (tft_event_code_fk, ape_event_code_fk)
--- are deferred to §TEC-REF in a later migration step.
 
 DO $$ BEGIN ALTER TABLE control.transaction_event_catalog ADD CONSTRAINT tec_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
@@ -383,6 +381,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE control.transaction_event_catalog ADD CONSTRAINT tec_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── §TEC-REF  event_code FK references into the catalog ──────────────────────
+-- R1 Step 4: both child columns become FKs after orphan-check confirmed 0 rows.
+-- ON DELETE RESTRICT: prevents catalog code deletion while any flow template or
+-- profile event row references it (safe deprecation path: set is_active=false first).
+
+DO $$ BEGIN ALTER TABLE control.transaction_flow_template ADD CONSTRAINT tft_event_code_fk
+    FOREIGN KEY (event_code) REFERENCES control.transaction_event_catalog (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.acct_profile_event ADD CONSTRAINT ape_event_code_fk
+    FOREIGN KEY (event_code) REFERENCES control.transaction_event_catalog (code) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
