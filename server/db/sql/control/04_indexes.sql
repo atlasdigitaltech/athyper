@@ -659,3 +659,43 @@ CREATE INDEX IF NOT EXISTS tba_tenant_idx
 CREATE INDEX IF NOT EXISTS tba_status_pidx
     ON control.tenant_blueprint_application (tenant_id, status)
     WHERE status <> 'applied';
+
+
+-- ── §R9  notification_routing_rule — workflow_phase lookup ───────────────────
+-- Phase-filtered routing lookup (most queries will filter by phase or phase IS NULL)
+CREATE INDEX IF NOT EXISTS nrr_phase_event_idx
+    ON control.notification_routing_rule (workflow_phase, event_type)
+    WHERE is_enabled = true;
+
+
+-- ── §R10  entity_policy — extended_scope / eval_order lookups ────────────────
+-- Policies with non-default eval order (field_first or parallel are uncommon, small set)
+CREATE INDEX IF NOT EXISTS ep_eval_order_pidx
+    ON control.entity_policy (tenant_id, field_scope_eval_order)
+    WHERE field_scope_eval_order <> 'row_first';
+
+
+-- ── §R8  ai_action_policy ────────────────────────────────────────────────────
+-- Active policy lookup: tenant × action × doc_class (sorted by specificity, most specific first)
+CREATE INDEX IF NOT EXISTS aap_tenant_action_idx
+    ON control.ai_action_policy (tenant_id, action_code, doc_class)
+    WHERE is_active = true;
+
+
+-- ── §R8  ai_confidence_threshold ─────────────────────────────────────────────
+-- Active threshold lookup: same layered resolution pattern
+CREATE INDEX IF NOT EXISTS act_tenant_action_idx
+    ON control.ai_confidence_threshold (tenant_id, action_code, doc_class, model_id)
+    WHERE is_active = true;
+
+
+-- ── §R8  ai_drift_baseline ───────────────────────────────────────────────────
+-- Current baseline per scope (most queries target is_current = true)
+CREATE UNIQUE INDEX IF NOT EXISTS adb_current_uq
+    ON control.ai_drift_baseline
+    (tenant_id, action_code, COALESCE(doc_class, ''), model_id)
+    WHERE is_current = true;
+
+-- History: all baselines for a scope ordered by date descending
+CREATE INDEX IF NOT EXISTS adb_scope_history_idx
+    ON control.ai_drift_baseline (tenant_id, action_code, model_id, baseline_date DESC);

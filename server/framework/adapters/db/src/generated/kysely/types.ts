@@ -327,6 +327,23 @@ export type address_link = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type ai_action_policy = {
+    id: Generated<string>;
+    tenant_id: string;
+    action_code: string;
+    doc_class: string | null;
+    autonomy_level: Generated<string>;
+    min_confidence_for_auto: string | null;
+    requires_human_confirmation: Generated<boolean>;
+    override_policy_definition_id: string | null;
+    is_active: Generated<boolean>;
+    effective_from: Generated<Timestamp>;
+    effective_to: Timestamp | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type ai_calibration_log = {
     id: Generated<string>;
     tenant_id: string;
@@ -360,6 +377,44 @@ export type ai_call_transcript = {
     segments: unknown | null;
     created_at: Generated<Timestamp>;
     created_by: string;
+};
+export type ai_confidence_threshold = {
+    id: Generated<string>;
+    tenant_id: string;
+    action_code: string;
+    doc_class: string | null;
+    model_id: string | null;
+    min_for_suggest: Generated<string>;
+    min_for_assist: Generated<string>;
+    min_for_auto: Generated<string>;
+    drift_alert_below: string | null;
+    drift_window_hours: Generated<number>;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type ai_drift_baseline = {
+    id: Generated<string>;
+    tenant_id: string;
+    action_code: string;
+    doc_class: string | null;
+    model_id: string;
+    baseline_date: Generated<Timestamp>;
+    sample_size: number;
+    mean_confidence: string;
+    std_dev_confidence: string;
+    p5_confidence: string | null;
+    p95_confidence: string | null;
+    feature_stats: unknown | null;
+    is_current: Generated<boolean>;
+    superseded_at: Timestamp | null;
+    superseded_by_id: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type ai_feedback_log = {
     id: Generated<string>;
@@ -3495,6 +3550,8 @@ export type entity_policy = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    field_scope_eval_order: Generated<string>;
+    extended_scope: Generated<unknown>;
 };
 export type entity_publish_state = {
     entity_id: string;
@@ -5324,6 +5381,7 @@ export type notification_routing_rule = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    workflow_phase: string | null;
 };
 export type notification_template = {
     id: Generated<string>;
@@ -8247,6 +8305,9 @@ export type DB = {
     "control.acct_profile_event": acct_profile_event;
     "control.acct_profile_revenue_config": acct_profile_revenue_config;
     "control.acct_profile_settlement_config": acct_profile_settlement_config;
+    "control.ai_action_policy": ai_action_policy;
+    "control.ai_confidence_threshold": ai_confidence_threshold;
+    "control.ai_drift_baseline": ai_drift_baseline;
     "control.asset_class_book_policy": asset_class_book_policy;
     "control.bank_format_rule": bank_format_rule;
     "control.bank_interface_profile": bank_interface_profile;

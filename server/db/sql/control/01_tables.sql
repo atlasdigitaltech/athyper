@@ -249,6 +249,9 @@ CREATE TABLE IF NOT EXISTS control.notification_routing_rule (
     event_type      text            NOT NULL,
     entity_type     text,
     lifecycle_state text,
+    -- R9: phase discriminator — NULL = any phase, 'in_workflow' = while WF request open,
+    -- 'post_workflow' = after terminal WF state. Enables In-WF vs Post-WF routing.
+    workflow_phase  text,
     condition_expr  jsonb,
 
     -- Dispatch target
@@ -281,14 +284,19 @@ CREATE TABLE IF NOT EXISTS control.notification_routing_rule (
     CONSTRAINT nrr_dedup_chk         CHECK (dedup_window_ms >= 0),
     CONSTRAINT nrr_recipient_chk     CHECK (jsonb_typeof(recipient_rules) = 'object'),
     CONSTRAINT nrr_condition_chk     CHECK (condition_expr IS NULL
-                                        OR jsonb_typeof(condition_expr) = 'object')
+                                        OR jsonb_typeof(condition_expr) = 'object'),
+    CONSTRAINT nrr_workflow_phase_chk CHECK (workflow_phase IS NULL
+                                        OR workflow_phase IN ('in_workflow', 'post_workflow'))
     -- priority: 09_triggers — control.trg_validate_lookup_columns('notification.priority')
 );
 
 COMMENT ON TABLE  control.notification_routing_rule IS
     'Event-driven notification routing rules. tenant_id=NULL = platform global rule. '
     'channels[] references notification.channel lookup codes. '
-    'priority validated via notification.priority lookup.';
+    'priority validated via notification.priority lookup. '
+    'R9: workflow_phase discriminator — NULL = any phase; '
+    'in_workflow = approval-request / SLA-nearing notifications while WF is open; '
+    'post_workflow = completion / rejection notifications after terminal WF state.';
 COMMENT ON COLUMN control.notification_routing_rule.recipient_rules IS
     'JSONB recipient resolution rules: '
     '{actor: true, ou_members: true, role: "approver", explicit_ids: [uuid,...]}.';
@@ -2526,6 +2534,23 @@ CREATE TABLE IF NOT EXISTS control.entity_policy (
     default_filters             jsonb       NOT NULL DEFAULT '{}',
     cache_flags                 jsonb       NOT NULL DEFAULT '{}',
 
+    -- R10: row-scope composition with field_security_policy
+    -- When both a row-scope predicate (company_scope_mode) and a field-security policy apply
+    -- to the same read, field_scope_eval_order defines which is applied first.
+    -- row_first (default): row predicate filters the result set, then field masking is applied
+    --   to the surviving rows. Masked fields cannot participate in row predicate resolution.
+    -- field_first: field masking is applied before row predicate; masked columns are NULLed
+    --   before the row predicate runs. Use when masked fields drive row-level visibility.
+    -- parallel: both predicates are evaluated independently and combined (AND). No ordering
+    --   dependency; safe only when row and field predicates operate on disjoint columns.
+    field_scope_eval_order      text        NOT NULL DEFAULT 'row_first',
+
+    -- R10: extended scope axes beyond LE/OU (department, project, cost-center).
+    -- Shape: { "department_ids": [uuid,...], "project_ids": [uuid,...],
+    --          "cost_center_ids": [uuid,...] }
+    -- Empty object (default) = no additional axis constraints applied.
+    extended_scope              jsonb       NOT NULL DEFAULT '{}',
+
     -- Audit columns
     created_at                  timestamptz NOT NULL DEFAULT now(),
     created_by                  uuid        NOT NULL,
@@ -2547,12 +2572,21 @@ CREATE TABLE IF NOT EXISTS control.entity_policy (
     ])),
     CONSTRAINT ep_retention_chk         CHECK (jsonb_typeof(retention_policy) = 'object'),
     CONSTRAINT ep_filters_chk           CHECK (jsonb_typeof(default_filters) = 'object'),
-    CONSTRAINT ep_cache_chk             CHECK (jsonb_typeof(cache_flags) = 'object')
+    CONSTRAINT ep_cache_chk             CHECK (jsonb_typeof(cache_flags) = 'object'),
+    CONSTRAINT ep_field_scope_eval_chk  CHECK (field_scope_eval_order IN (
+        'row_first', 'field_first', 'parallel')),
+    CONSTRAINT ep_extended_scope_chk    CHECK (jsonb_typeof(extended_scope) = 'object')
 );
 
 COMMENT ON TABLE  control.entity_policy IS
-    'Access, audit, and retention policy per entity or entity version. '
-    'entity_version_id IS NULL: applies to all versions of the entity. '
+    'Canonical row-scope surface for entity-level access, audit, and retention policy. '
+    'R10: company_scope_mode (none/single/subtree/full) is the primary LE/OU row-scope axis. '
+    'field_scope_eval_order defines composition order vs field_security_policy: '
+    '  row_first (default) → row predicate filters first, then field masking on survivors; '
+    '  field_first → field masking nulls columns before row predicate runs; '
+    '  parallel → both predicates evaluated independently and ANDed. '
+    'extended_scope carries dept/project/cost-centre axis constraints beyond LE/OU. '
+    'entity_version_id IS NULL: policy applies to all versions of the entity. '
     'audit_mode overrides entity_class_profile.compliance_profile.audit_rules '
     'at the entity level. '
     'Moved from association.entity_policy to control.*.';
@@ -5501,3 +5535,203 @@ COMMENT ON COLUMN control.tenant_blueprint_application.applied_version IS
     'Snapshot of blueprint base_version at time of application.';
 COMMENT ON COLUMN control.tenant_blueprint_application.applied_by IS
     'Principal who triggered provisioning. NULL when applied by automation.';
+
+
+-- =============================================================================
+-- §AI1  control.ai_action_policy — autonomy ceiling per action × doc class
+-- =============================================================================
+-- R8: governs how autonomous Atlas AI is allowed to be for a given action and
+-- document class within a tenant. autonomy_level is the ceiling — the runtime
+-- engine never exceeds it regardless of confidence.
+-- Layered lookup: (tenant, action_code, doc_class) → (tenant, action_code, NULL)
+-- → platform default. First enabled match wins.
+CREATE TABLE IF NOT EXISTS control.ai_action_policy (
+    -- Identity
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+
+    -- Scope
+    action_code                 text        NOT NULL,   -- e.g. 'classify', 'extract', 'suggest', 'autofill', 'approve'
+    doc_class                   text,                   -- NULL = catch-all for all doc classes
+
+    -- Autonomy ceiling
+    -- disabled  → Atlas never acts; feature off for this action/tenant
+    -- suggest   → Atlas surfaces a suggestion; human always decides (L1)
+    -- assist    → Atlas pre-fills/pre-selects; human confirms before commit (L2)
+    -- auto      → Atlas acts without human confirmation when confidence ≥ threshold (L3)
+    autonomy_level              text        NOT NULL DEFAULT 'suggest',
+
+    -- Confidence gate for auto-execution (NULL = use ai_confidence_threshold row)
+    min_confidence_for_auto     numeric(5,4),
+
+    -- Whether human confirmation dialog is shown even in assist mode
+    requires_human_confirmation boolean     NOT NULL DEFAULT true,
+
+    -- Override approval path when confidence < threshold or action is blocked
+    override_policy_definition_id uuid,      -- FK → control.policy_definition ON DELETE SET NULL
+
+    -- Lifecycle
+    is_active                   boolean     NOT NULL DEFAULT true,
+    effective_from              timestamptz NOT NULL DEFAULT now(),
+    effective_to                timestamptz,
+
+    -- Audit
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT aap_pkey              PRIMARY KEY (id),
+    CONSTRAINT aap_natural_uq        UNIQUE NULLS NOT DISTINCT (tenant_id, action_code, doc_class),
+    CONSTRAINT aap_action_nonempty   CHECK (btrim(action_code) <> ''),
+    CONSTRAINT aap_autonomy_chk      CHECK (autonomy_level IN (
+        'disabled', 'suggest', 'assist', 'auto')),
+    CONSTRAINT aap_confidence_chk    CHECK (min_confidence_for_auto IS NULL
+                                        OR min_confidence_for_auto BETWEEN 0 AND 1),
+    CONSTRAINT aap_effective_order   CHECK (effective_to IS NULL
+                                        OR effective_to > effective_from)
+);
+
+COMMENT ON TABLE control.ai_action_policy IS
+    'R8: Atlas AI autonomy ceiling per tenant × action_code × doc_class. '
+    'autonomy_level is the hard ceiling — runtime never exceeds it regardless of confidence. '
+    'Layered lookup: (tenant, action, doc_class) → (tenant, action, NULL) → platform default. '
+    'disabled=feature off; suggest=L1 surface only; assist=L2 pre-fill+confirm; auto=L3 act. '
+    'min_confidence_for_auto: NULL defers to ai_confidence_threshold row for the same scope.';
+COMMENT ON COLUMN control.ai_action_policy.action_code IS
+    'Stable action identifier. E.g. classify, extract, suggest, autofill, approve, fx_rate.';
+COMMENT ON COLUMN control.ai_action_policy.doc_class IS
+    'Document class this policy applies to. NULL = applies to all classes for this action.';
+
+
+-- =============================================================================
+-- §AI2  control.ai_confidence_threshold — tiered confidence thresholds per action
+-- =============================================================================
+-- R8: defines the confidence levels that gate L1/L2/L3 autonomy tiers.
+-- Three levels must satisfy: min_for_suggest ≤ min_for_assist ≤ min_for_auto.
+-- Also configures drift-alert threshold + lookback window for monitoring.
+-- Layered lookup same as ai_action_policy: doc_class=NULL is catch-all,
+-- model_id=NULL applies to all model versions.
+CREATE TABLE IF NOT EXISTS control.ai_confidence_threshold (
+    -- Identity
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+
+    -- Scope
+    action_code                 text        NOT NULL,
+    doc_class                   text,                   -- NULL = catch-all
+    model_id                    text,                   -- NULL = all model versions
+
+    -- Autonomy-tier confidence gates (0.0–1.0)
+    min_for_suggest             numeric(5,4) NOT NULL DEFAULT 0.5000,   -- L1: show suggestion
+    min_for_assist              numeric(5,4) NOT NULL DEFAULT 0.7000,   -- L2: pre-fill + confirm
+    min_for_auto                numeric(5,4) NOT NULL DEFAULT 0.9000,   -- L3: auto-execute
+
+    -- Drift alerting
+    drift_alert_below           numeric(5,4),           -- alert when rolling avg drops below this
+    drift_window_hours          smallint    NOT NULL DEFAULT 24,
+
+    -- Lifecycle
+    is_active                   boolean     NOT NULL DEFAULT true,
+
+    -- Audit
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT act_pkey              PRIMARY KEY (id),
+    CONSTRAINT act_natural_uq        UNIQUE NULLS NOT DISTINCT (
+        tenant_id, action_code, doc_class, model_id),
+    CONSTRAINT act_action_nonempty   CHECK (btrim(action_code) <> ''),
+    CONSTRAINT act_suggest_chk       CHECK (min_for_suggest BETWEEN 0 AND 1),
+    CONSTRAINT act_assist_chk        CHECK (min_for_assist  BETWEEN 0 AND 1),
+    CONSTRAINT act_auto_chk          CHECK (min_for_auto    BETWEEN 0 AND 1),
+    CONSTRAINT act_threshold_order   CHECK (min_for_suggest <= min_for_assist
+                                        AND min_for_assist  <= min_for_auto),
+    CONSTRAINT act_drift_chk         CHECK (drift_alert_below IS NULL
+                                        OR drift_alert_below BETWEEN 0 AND 1),
+    CONSTRAINT act_window_pos        CHECK (drift_window_hours > 0)
+);
+
+COMMENT ON TABLE control.ai_confidence_threshold IS
+    'R8: tiered confidence thresholds governing Atlas AI autonomy levels. '
+    'Three gate values (suggest ≤ assist ≤ auto) map to L1/L2/L3 autonomy. '
+    'drift_alert_below: trigger drift alert when rolling-window avg confidence '
+    'drops below this threshold. Layered lookup: (tenant, action, doc_class, model) '
+    '→ (tenant, action, doc_class, NULL) → (tenant, action, NULL, NULL).';
+COMMENT ON COLUMN control.ai_confidence_threshold.model_id IS
+    'Model version identifier (e.g. atlas-classifier-v3). NULL = applies to all models.';
+COMMENT ON COLUMN control.ai_confidence_threshold.drift_window_hours IS
+    'Lookback window for rolling-average confidence used in drift detection.';
+
+
+-- =============================================================================
+-- §AI3  control.ai_drift_baseline — statistical reference distributions
+-- =============================================================================
+-- R8: stores the reference confidence distribution for a (tenant, action, doc_class, model)
+-- combination at a point in time. Drift monitoring compares live rolling stats against
+-- the current baseline. Multiple baselines per scope are retained for history;
+-- is_current=true marks the active reference.
+-- Corrections: set old is_current=false, superseded_by_id points to new baseline.
+CREATE TABLE IF NOT EXISTS control.ai_drift_baseline (
+    -- Identity
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+
+    -- Scope
+    action_code                 text        NOT NULL,
+    doc_class                   text,                   -- NULL = applies to all classes
+    model_id                    text        NOT NULL,   -- specific model version that produced this baseline
+
+    -- Baseline establishment
+    baseline_date               date        NOT NULL DEFAULT CURRENT_DATE,
+    sample_size                 integer     NOT NULL,
+
+    -- Statistical reference (confidence distribution)
+    mean_confidence             numeric(7,6) NOT NULL,   -- 0.000000–1.000000
+    std_dev_confidence          numeric(7,6) NOT NULL,
+    p5_confidence               numeric(7,6),            -- 5th percentile
+    p95_confidence              numeric(7,6),            -- 95th percentile
+
+    -- Optional per-feature distribution stats
+    feature_stats               jsonb,                   -- { "field_name": { "mean": ..., "std_dev": ... } }
+
+    -- Status / history chain
+    is_current                  boolean     NOT NULL DEFAULT false,
+    superseded_at               timestamptz,
+    superseded_by_id            uuid,                   -- FK → self (newer baseline that supersedes this one)
+
+    -- Audit
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT adb_pkey              PRIMARY KEY (id),
+    CONSTRAINT adb_action_nonempty   CHECK (btrim(action_code) <> ''),
+    CONSTRAINT adb_model_nonempty    CHECK (btrim(model_id) <> ''),
+    CONSTRAINT adb_sample_pos        CHECK (sample_size > 0),
+    CONSTRAINT adb_mean_range_chk    CHECK (mean_confidence BETWEEN 0 AND 1),
+    CONSTRAINT adb_std_nonneg_chk    CHECK (std_dev_confidence >= 0),
+    CONSTRAINT adb_p5_range_chk      CHECK (p5_confidence IS NULL
+                                        OR p5_confidence BETWEEN 0 AND 1),
+    CONSTRAINT adb_p95_range_chk     CHECK (p95_confidence IS NULL
+                                        OR p95_confidence BETWEEN 0 AND 1),
+    CONSTRAINT adb_percentile_order  CHECK (p5_confidence IS NULL OR p95_confidence IS NULL
+                                        OR p5_confidence <= p95_confidence),
+    CONSTRAINT adb_feature_chk       CHECK (feature_stats IS NULL
+                                        OR jsonb_typeof(feature_stats) = 'object')
+);
+
+COMMENT ON TABLE control.ai_drift_baseline IS
+    'R8: statistical reference distributions for Atlas AI drift monitoring. '
+    'One row per (tenant, action_code, doc_class, model_id, baseline_date). '
+    'is_current=true marks the active reference for live drift comparison. '
+    'superseded_by_id forms a history chain when baselines are refreshed. '
+    'feature_stats holds per-field distributional stats for multivariate drift detection.';
+COMMENT ON COLUMN control.ai_drift_baseline.model_id IS
+    'Model version that produced this baseline. Baselines are model-version-specific.';
+COMMENT ON COLUMN control.ai_drift_baseline.is_current IS
+    'True for the single active baseline per (tenant, action_code, doc_class, model_id). '
+    'Partial unique index adb_current_uq enforces at most one current baseline per scope.';

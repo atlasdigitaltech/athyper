@@ -1406,3 +1406,23 @@ DROP TRIGGER IF EXISTS trg_tba_updated_at ON control.tenant_blueprint_applicatio
 CREATE TRIGGER trg_tba_updated_at
     BEFORE UPDATE ON control.tenant_blueprint_application
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §R8  updated_at maintenance for AI control tables
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_aap_updated_at ON control.ai_action_policy;
+CREATE TRIGGER trg_aap_updated_at
+    BEFORE UPDATE ON control.ai_action_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_act_updated_at ON control.ai_confidence_threshold;
+CREATE TRIGGER trg_act_updated_at
+    BEFORE UPDATE ON control.ai_confidence_threshold
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_adb_updated_at ON control.ai_drift_baseline;
+CREATE TRIGGER trg_adb_updated_at
+    BEFORE UPDATE ON control.ai_drift_baseline
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

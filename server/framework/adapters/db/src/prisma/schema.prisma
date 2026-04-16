@@ -394,6 +394,97 @@ model acct_profile_settlement_config {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ai_action_policy {
+  id                                               String             @id(map: "aap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                        String             @db.Uuid
+  action_code                                      String
+  doc_class                                        String?
+  autonomy_level                                   String             @default("suggest")
+  min_confidence_for_auto                          Decimal?           @db.Decimal(5, 4)
+  requires_human_confirmation                      Boolean            @default(true)
+  override_policy_definition_id                    String?            @db.Uuid
+  is_active                                        Boolean            @default(true)
+  effective_from                                   DateTime           @default(now()) @db.Timestamptz(6)
+  effective_to                                     DateTime?          @db.Timestamptz(6)
+  created_at                                       DateTime           @default(now()) @db.Timestamptz(6)
+  created_by                                       String             @db.Uuid
+  updated_at                                       DateTime?          @db.Timestamptz(6)
+  updated_by                                       String?            @db.Uuid
+  principal_ai_action_policy_created_byToprincipal principal          @relation("ai_action_policy_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "aap_created_by_fk")
+  policy_definition                                policy_definition? @relation(fields: [override_policy_definition_id], references: [id], onUpdate: NoAction, map: "aap_override_policy_fk")
+  tenant                                           tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "aap_tenant_fk")
+  principal_ai_action_policy_updated_byToprincipal principal?         @relation("ai_action_policy_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "aap_updated_by_fk")
+
+  @@unique([tenant_id, action_code, doc_class], map: "aap_natural_uq")
+  @@index([tenant_id, action_code, doc_class], map: "aap_tenant_action_idx", where: raw("(is_active = true)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ai_confidence_threshold {
+  id                                                      String     @id(map: "act_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                               String     @db.Uuid
+  action_code                                             String
+  doc_class                                               String?
+  model_id                                                String?
+  min_for_suggest                                         Decimal    @default(0.5000) @db.Decimal(5, 4)
+  min_for_assist                                          Decimal    @default(0.7000) @db.Decimal(5, 4)
+  min_for_auto                                            Decimal    @default(0.9000) @db.Decimal(5, 4)
+  drift_alert_below                                       Decimal?   @db.Decimal(5, 4)
+  drift_window_hours                                      Int        @default(24) @db.SmallInt
+  is_active                                               Boolean    @default(true)
+  created_at                                              DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                              String     @db.Uuid
+  updated_at                                              DateTime?  @db.Timestamptz(6)
+  updated_by                                              String?    @db.Uuid
+  principal_ai_confidence_threshold_created_byToprincipal principal  @relation("ai_confidence_threshold_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "act_created_by_fk")
+  tenant                                                  tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "act_tenant_fk")
+  principal_ai_confidence_threshold_updated_byToprincipal principal? @relation("ai_confidence_threshold_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "act_updated_by_fk")
+
+  @@unique([tenant_id, action_code, doc_class, model_id], map: "act_natural_uq")
+  @@index([tenant_id, action_code, doc_class, model_id], map: "act_tenant_action_idx", where: raw("(is_active = true)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model ai_drift_baseline {
+  id                                                String              @id(map: "adb_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                         String              @db.Uuid
+  action_code                                       String
+  doc_class                                         String?
+  model_id                                          String
+  baseline_date                                     DateTime            @default(dbgenerated("CURRENT_DATE")) @db.Date
+  sample_size                                       Int
+  mean_confidence                                   Decimal             @db.Decimal(7, 6)
+  std_dev_confidence                                Decimal             @db.Decimal(7, 6)
+  p5_confidence                                     Decimal?            @db.Decimal(7, 6)
+  p95_confidence                                    Decimal?            @db.Decimal(7, 6)
+  feature_stats                                     Json?
+  is_current                                        Boolean             @default(false)
+  superseded_at                                     DateTime?           @db.Timestamptz(6)
+  superseded_by_id                                  String?             @db.Uuid
+  created_at                                        DateTime            @default(now()) @db.Timestamptz(6)
+  created_by                                        String              @db.Uuid
+  updated_at                                        DateTime?           @db.Timestamptz(6)
+  updated_by                                        String?             @db.Uuid
+  principal_ai_drift_baseline_created_byToprincipal principal           @relation("ai_drift_baseline_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "adb_created_by_fk")
+  ai_drift_baseline                                 ai_drift_baseline?  @relation("ai_drift_baselineToai_drift_baseline", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "adb_superseded_by_fk")
+  other_ai_drift_baseline                           ai_drift_baseline[] @relation("ai_drift_baselineToai_drift_baseline")
+  tenant                                            tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "adb_tenant_fk")
+  principal_ai_drift_baseline_updated_byToprincipal principal?          @relation("ai_drift_baseline_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "adb_updated_by_fk")
+
+  @@index([tenant_id, action_code, model_id, baseline_date(sort: Desc)], map: "adb_scope_history_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model asset_class_book_policy {
   id                                    String       @id(map: "acbp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                             String       @db.Uuid
@@ -1153,24 +1244,27 @@ model entity_operation {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_policy {
-  id                String    @id(map: "ep_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String    @db.Uuid
-  entity_id         String    @db.Uuid
-  entity_version_id String?   @db.Uuid
-  access_mode       String    @default("default_deny")
-  ou_scope_mode     String    @default("none")
-  audit_mode        String    @default("enabled")
-  retention_policy  Json      @default("{}")
-  default_filters   Json      @default("{}")
-  cache_flags       Json      @default("{}")
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  created_by        String    @db.Uuid
-  updated_at        DateTime? @db.Timestamptz(6)
-  updated_by        String?   @db.Uuid
-  entity            entity    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ep_entity_fk")
-  tenant            tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ep_tenant_fk")
+  id                     String    @id(map: "ep_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String    @db.Uuid
+  entity_id              String    @db.Uuid
+  entity_version_id      String?   @db.Uuid
+  access_mode            String    @default("default_deny")
+  ou_scope_mode          String    @default("none")
+  audit_mode             String    @default("enabled")
+  retention_policy       Json      @default("{}")
+  default_filters        Json      @default("{}")
+  cache_flags            Json      @default("{}")
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  created_by             String    @db.Uuid
+  updated_at             DateTime? @db.Timestamptz(6)
+  updated_by             String?   @db.Uuid
+  field_scope_eval_order String    @default("row_first")
+  extended_scope         Json      @default("{}")
+  entity                 entity    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ep_entity_fk")
+  tenant                 tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ep_tenant_fk")
 
   @@unique([entity_id, entity_version_id], map: "ep_entity_version_uq")
+  @@index([tenant_id, field_scope_eval_order], map: "ep_eval_order_pidx", where: raw("(field_scope_eval_order <> 'row_first'::text)"))
   @@schema("control")
 }
 
@@ -1871,6 +1965,7 @@ model notification_routing_rule {
   created_by                                                String                 @db.Uuid
   updated_at                                                DateTime?              @db.Timestamptz(6)
   updated_by                                                String?                @db.Uuid
+  workflow_phase                                            String?
   principal_notification_routing_rule_created_byToprincipal principal              @relation("notification_routing_rule_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "nrr_created_by_fk")
   tenant                                                    tenant?                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "nrr_tenant_fk")
   principal_notification_routing_rule_updated_byToprincipal principal?             @relation("notification_routing_rule_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "nrr_updated_by_fk")
@@ -1880,6 +1975,7 @@ model notification_routing_rule {
   @@index([condition_expr], map: "nrr_condition_gin", type: Gin, where: raw("(condition_expr IS NOT NULL)"))
   @@index([event_type, entity_type], map: "nrr_entity_type_pidx", where: raw("((entity_type IS NOT NULL) AND (is_enabled = true))"))
   @@index([event_type, sort_order], map: "nrr_event_active_idx", where: raw("(is_enabled = true)"))
+  @@index([workflow_phase, event_type], map: "nrr_phase_event_idx", where: raw("(is_enabled = true)"))
   @@index([tenant_id], map: "nrr_tenant_idx", where: raw("(tenant_id IS NOT NULL)"))
   @@schema("control")
 }
@@ -2274,6 +2370,7 @@ model policy_definition {
   created_by          String                @db.Uuid
   updated_at          DateTime?             @db.Timestamptz(6)
   updated_by          String?               @db.Uuid
+  ai_action_policy    ai_action_policy[]
   budget_check_config budget_check_config[]
   principal           principal             @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "pdef_created_by_fk")
   module              module?               @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "pdef_module_fk")
@@ -11493,6 +11590,12 @@ model principal {
   wht_vendor_accumulator_wht_vendor_accumulator_counterparty_idToprincipal             wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_counterparty_idToprincipal")
   wht_vendor_accumulator_wht_vendor_accumulator_created_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_created_byToprincipal")
   wht_vendor_accumulator_wht_vendor_accumulator_updated_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_updated_byToprincipal")
+  ai_action_policy_ai_action_policy_created_byToprincipal                              ai_action_policy[]              @relation("ai_action_policy_created_byToprincipal")
+  ai_action_policy_ai_action_policy_updated_byToprincipal                              ai_action_policy[]              @relation("ai_action_policy_updated_byToprincipal")
+  ai_confidence_threshold_ai_confidence_threshold_created_byToprincipal                ai_confidence_threshold[]       @relation("ai_confidence_threshold_created_byToprincipal")
+  ai_confidence_threshold_ai_confidence_threshold_updated_byToprincipal                ai_confidence_threshold[]       @relation("ai_confidence_threshold_updated_byToprincipal")
+  ai_drift_baseline_ai_drift_baseline_created_byToprincipal                            ai_drift_baseline[]             @relation("ai_drift_baseline_created_byToprincipal")
+  ai_drift_baseline_ai_drift_baseline_updated_byToprincipal                            ai_drift_baseline[]             @relation("ai_drift_baseline_updated_byToprincipal")
   asset_class_book_policy                                                              asset_class_book_policy[]
   blueprint_registry_blueprint_registry_created_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_created_byToprincipal")
   blueprint_registry_blueprint_registry_updated_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_updated_byToprincipal")
@@ -12691,6 +12794,9 @@ model tenant {
   acct_profile_event                acct_profile_event[]
   acct_profile_revenue_config       acct_profile_revenue_config[]
   acct_profile_settlement_config    acct_profile_settlement_config[]
+  ai_action_policy                  ai_action_policy[]
+  ai_confidence_threshold           ai_confidence_threshold[]
+  ai_drift_baseline                 ai_drift_baseline[]
   asset_class_book_policy           asset_class_book_policy[]
   bank_format_rule                  bank_format_rule[]
   bank_interface_profile            bank_interface_profile[]

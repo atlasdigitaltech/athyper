@@ -906,3 +906,50 @@ CREATE POLICY scoped_read ON control.tenant_blueprint_application
     FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_write ON control.tenant_blueprint_application
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── R8  ai_action_policy ──────────────────────────────────────────────────────
+-- Tenant-scoped: tenants configure their own AI policies. Admin has full access.
+ALTER TABLE control.ai_action_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.ai_action_policy FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON control.ai_action_policy;
+DROP POLICY IF EXISTS tenant_write ON control.ai_action_policy;
+DROP POLICY IF EXISTS admin_write  ON control.ai_action_policy;
+CREATE POLICY tenant_read  ON control.ai_action_policy
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.ai_action_policy
+    FOR ALL USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write  ON control.ai_action_policy
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── R8  ai_confidence_threshold ───────────────────────────────────────────────
+ALTER TABLE control.ai_confidence_threshold ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.ai_confidence_threshold FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON control.ai_confidence_threshold;
+DROP POLICY IF EXISTS tenant_write ON control.ai_confidence_threshold;
+DROP POLICY IF EXISTS admin_write  ON control.ai_confidence_threshold;
+CREATE POLICY tenant_read  ON control.ai_confidence_threshold
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.ai_confidence_threshold
+    FOR ALL USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write  ON control.ai_confidence_threshold
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── R8  ai_drift_baseline ────────────────────────────────────────────────────
+-- Read: own tenant (drift baselines are tenant-specific). Write: own tenant or admin.
+ALTER TABLE control.ai_drift_baseline ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.ai_drift_baseline FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON control.ai_drift_baseline;
+DROP POLICY IF EXISTS tenant_write ON control.ai_drift_baseline;
+DROP POLICY IF EXISTS admin_write  ON control.ai_drift_baseline;
+CREATE POLICY tenant_read  ON control.ai_drift_baseline
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.ai_drift_baseline
+    FOR ALL USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write  ON control.ai_drift_baseline
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

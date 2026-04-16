@@ -1177,3 +1177,103 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- R9  control.notification_routing_rule — workflow_phase column migration
+-- ============================================================================
+
+DO $nrr1$ BEGIN
+    ALTER TABLE control.notification_routing_rule ADD COLUMN workflow_phase text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $nrr1$;
+
+-- Idempotent: drop then re-add (constraint may not exist on first run)
+ALTER TABLE control.notification_routing_rule
+    DROP CONSTRAINT IF EXISTS nrr_workflow_phase_chk;
+ALTER TABLE control.notification_routing_rule
+    ADD CONSTRAINT nrr_workflow_phase_chk
+    CHECK (workflow_phase IS NULL OR workflow_phase IN ('in_workflow', 'post_workflow'));
+
+
+-- ============================================================================
+-- R10  control.entity_policy — field_scope_eval_order + extended_scope migration
+-- ============================================================================
+
+DO $ep1$ BEGIN
+    ALTER TABLE control.entity_policy
+        ADD COLUMN field_scope_eval_order text NOT NULL DEFAULT 'row_first';
+EXCEPTION WHEN duplicate_column THEN NULL; END $ep1$;
+
+DO $ep2$ BEGIN
+    ALTER TABLE control.entity_policy
+        ADD COLUMN extended_scope jsonb NOT NULL DEFAULT '{}';
+EXCEPTION WHEN duplicate_column THEN NULL; END $ep2$;
+
+ALTER TABLE control.entity_policy DROP CONSTRAINT IF EXISTS ep_field_scope_eval_chk;
+ALTER TABLE control.entity_policy ADD CONSTRAINT ep_field_scope_eval_chk
+    CHECK (field_scope_eval_order IN ('row_first', 'field_first', 'parallel'));
+
+ALTER TABLE control.entity_policy DROP CONSTRAINT IF EXISTS ep_extended_scope_chk;
+ALTER TABLE control.entity_policy ADD CONSTRAINT ep_extended_scope_chk
+    CHECK (jsonb_typeof(extended_scope) = 'object');
+
+
+-- ============================================================================
+-- R8  control.ai_action_policy
+-- ============================================================================
+
+DO $aap1$ BEGIN ALTER TABLE control.ai_action_policy ADD CONSTRAINT aap_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $aap1$;
+
+DO $aap2$ BEGIN ALTER TABLE control.ai_action_policy ADD CONSTRAINT aap_override_policy_fk
+    FOREIGN KEY (override_policy_definition_id)
+    REFERENCES control.policy_definition (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $aap2$;
+
+DO $aap3$ BEGIN ALTER TABLE control.ai_action_policy ADD CONSTRAINT aap_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $aap3$;
+
+DO $aap4$ BEGIN ALTER TABLE control.ai_action_policy ADD CONSTRAINT aap_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $aap4$;
+
+
+-- ============================================================================
+-- R8  control.ai_confidence_threshold
+-- ============================================================================
+
+DO $act1$ BEGIN ALTER TABLE control.ai_confidence_threshold ADD CONSTRAINT act_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $act1$;
+
+DO $act2$ BEGIN ALTER TABLE control.ai_confidence_threshold ADD CONSTRAINT act_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $act2$;
+
+DO $act3$ BEGIN ALTER TABLE control.ai_confidence_threshold ADD CONSTRAINT act_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $act3$;
+
+
+-- ============================================================================
+-- R8  control.ai_drift_baseline
+-- ============================================================================
+
+DO $adb1$ BEGIN ALTER TABLE control.ai_drift_baseline ADD CONSTRAINT adb_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $adb1$;
+
+DO $adb2$ BEGIN ALTER TABLE control.ai_drift_baseline ADD CONSTRAINT adb_superseded_by_fk
+    FOREIGN KEY (superseded_by_id)
+    REFERENCES control.ai_drift_baseline (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $adb2$;
+
+DO $adb3$ BEGIN ALTER TABLE control.ai_drift_baseline ADD CONSTRAINT adb_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $adb3$;
+
+DO $adb4$ BEGIN ALTER TABLE control.ai_drift_baseline ADD CONSTRAINT adb_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $adb4$;
