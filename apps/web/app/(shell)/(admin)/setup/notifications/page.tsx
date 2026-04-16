@@ -348,7 +348,7 @@ function RoutingRulesTab() {
       {isLoading ? (
         <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : rules.length === 0 ? (
-        <EmptyState icon={Zap} title="No routing rules"
+        <EmptyState icon={<Zap />} title="No routing rules"
           description="Create routing rules to map events to notification channels."
           action={<Button size="sm" className="gap-1" onClick={() => setCreate(true)}><Plus className="size-3" /> New rule</Button>} />
       ) : (
@@ -565,7 +565,7 @@ function TemplatesTab() {
       {isLoading ? (
         <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : templates.length === 0 ? (
-        <EmptyState icon={Mail} title="No templates" description="Create templates to format notification messages."
+        <EmptyState icon={<Mail />} title="No templates" description="Create templates to format notification messages."
           action={<Button size="sm" className="gap-1" onClick={() => setCreate(true)}><Plus className="size-3" /> New template</Button>} />
       ) : (
         <div className="rounded-lg border bg-card divide-y divide-border/50">
@@ -668,7 +668,7 @@ function ProvidersTab() {
       {isLoading ? (
         <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : providers.length === 0 ? (
-        <EmptyState icon={Activity} title="No providers" description="No notification channel providers registered." />
+        <EmptyState icon={<Activity />} title="No providers" description="No notification channel providers registered." />
       ) : (
         <div className="rounded-lg border bg-card divide-y divide-border/50">
           {providers.sort((a, b) => a.priority - b.priority).map((p) => {
@@ -751,7 +751,7 @@ function DeliveriesTab() {
       {isLoading ? (
         <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : messages.length === 0 ? (
-        <EmptyState icon={Bell} title="No messages" description="No notification messages matching the current filter." />
+        <EmptyState icon={<Bell />} title="No messages" description="No notification messages matching the current filter." />
       ) : (
         <div className="rounded-lg border bg-card divide-y divide-border/50">
           {messages.map((m) => {

@@ -23,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" dir="ltr" data-theme-preset={DEFAULT_PRESET}>
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} ${sourceSerif4.variable} min-h-screen font-sans antialiased`}
+        suppressHydrationWarning
       >
         <QueryProvider>
           <ThemeProvider />

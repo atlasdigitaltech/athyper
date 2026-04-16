@@ -381,7 +381,7 @@ export default function FieldGroupsPage() {
           </div>
         ) : groups.length === 0 ? (
           <EmptyState
-            icon={Layers}
+            icon={<Layers />}
             title="No field groups"
             description="Create field groups to organise fields into UI sections in entity detail views."
             action={

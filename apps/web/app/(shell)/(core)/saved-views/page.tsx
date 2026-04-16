@@ -88,7 +88,7 @@ function ViewRow({
   isDeleting: boolean;
   isSettingDefault: boolean;
 }) {
-  const filterCount = view.config.filters?.length ?? 0;
+  const filterCount = view.config.filters ? Object.keys(view.config.filters).length : 0;
   const columnCount = view.config.columns?.length ?? 0;
 
   return (
@@ -104,8 +104,8 @@ function ViewRow({
           {[
             filterCount > 0 ? `${filterCount} filter${filterCount !== 1 ? "s" : ""}` : null,
             columnCount > 0 ? `${columnCount} column${columnCount !== 1 ? "s" : ""}` : null,
-            view.config.sort_by ? `sorted by ${view.config.sort_by}` : null,
-            view.config.page_size ? `${view.config.page_size} per page` : null,
+            view.config.sort ? `sorted by ${view.config.sort.key} ${view.config.sort.dir}` : null,
+            view.config.pageSize ? `${view.config.pageSize} per page` : null,
           ].filter(Boolean).join(" · ") || "No configuration"}
           {" · "}
           {fmtDate(view.created_at)}

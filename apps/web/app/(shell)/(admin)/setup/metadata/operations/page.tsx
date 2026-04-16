@@ -449,7 +449,7 @@ export default function EntityOperationsPage() {
           </div>
         ) : ops.length === 0 ? (
           <EmptyState
-            icon={MousePointerClick}
+            icon={<MousePointerClick />}
             title="No entity operations"
             description="Register operations to add action buttons to entity list and detail pages."
             action={

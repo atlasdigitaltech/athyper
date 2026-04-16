@@ -361,7 +361,7 @@ export default function LifecycleAdminPage() {
           </div>
         ) : bindings.length === 0 ? (
           <EmptyState
-            icon={GitMerge}
+            icon={<GitMerge />}
             title="No lifecycle bindings"
             description="Bind a lifecycle state machine to an entity type to control its status transitions."
             action={

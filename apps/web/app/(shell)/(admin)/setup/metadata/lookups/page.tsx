@@ -488,7 +488,7 @@ export default function LookupDomainsPage() {
           </div>
         ) : domains.length === 0 ? (
           <EmptyState
-            icon={List}
+            icon={<List />}
             title="No lookup domains found"
             description={search ? "Try a different search term." : "Create your first lookup domain to get started."}
             action={

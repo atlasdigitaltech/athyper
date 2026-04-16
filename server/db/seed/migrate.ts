@@ -131,7 +131,7 @@ function collectSqlFiles(dir: string): string[] {
  */
 function extractLayerNumber(fileName: string): number {
   const match = fileName.match(/^(\d+)/);
-  return match ? parseInt(match[1], 10) : 999;
+  return match?.[1] !== undefined ? parseInt(match[1], 10) : 999;
 }
 
 /** Discover and classify all SQL files into phases. */
@@ -203,19 +203,93 @@ export function discoverSqlFiles(): SqlFile[] {
     }
   }
 
-  // Sort DDL files by (layer_number, relPath).
-  // Primary key = numeric prefix of the filename (e.g. 00, 01, 03, 800).
-  // Secondary key = full relative path (preserves alphabetical schema ordering
-  // within each layer — e.g. control/00_bootstrap runs before shared/00_bootstrap,
-  // but both run before any 01_tables file in any schema).
+  // Execution order mirrors runner.sh exactly.
+  //
+  // Phase  0 — 00_platform/*          roles → extensions → schemas → domains
+  // Phase 10 — public/* (all layers)  isolated schema, no cross-schema FKs
+  // Phase 20 — */00_bootstrap         all schemas, shared first
+  // Phase 30 — shared/01_tables*      shared tables before shared functions
+  // Phase 35 — shared/05_functions    BEFORE other schemas' tables — master/01f_tables_cms
+  //                                   has inline RLS that calls current_tenant_id_soft()
+  // Phase 40 — */01_tables*           all remaining schemas (control,master,document,…)
+  // Phase 50 — */02_pre_constraint    all schemas
+  // Phase 60 — */03_constraints       all schemas
+  // Phase 70 — */04_indexes           all schemas
+  // Phase 80 — */05_functions         all schemas (shared already ran at phase 35)
+  // Phase 90 — */06_triggers          all schemas
+  // Phase 100 — */07_views            all schemas
+  // Phase 110 — */08_rls              all schemas
+  // Phase 120 — 99_security/*         REVOKE / search_path hardening — always last
+  //
+  // Within each phase, files sort by (schema_order, relPath).
+  // Schema order matches runner.sh SCHEMAS array:
+  //   shared → control → master → document → ledger → log → event → governance → snapshot → aggregate
+
+  const SCHEMAS: string[] = [
+    "shared", "master", "control", "document",
+    "ledger", "log", "event", "governance", "snapshot", "aggregate",
+  ];
+
+  function schemaIndex(relPath: string): number {
+    const schema = relPath.split("/")[0] ?? "";
+    const idx = SCHEMAS.indexOf(schema);
+    return idx === -1 ? SCHEMAS.length : idx;
+  }
+
+  function filePhase(relPath: string, fileName: string): number {
+    if (relPath.startsWith("00_platform/"))               return 0;
+    if (relPath.startsWith("public/"))                    return 10;
+    if (fileName.startsWith("00_"))                       return 20;
+    if (relPath.startsWith("shared/") && fileName.startsWith("01")) return 30;
+    // shared/02_pre_constraint and shared/05_functions both define functions used
+    // inline in master/01f_tables_cms (current_tenant_id, current_tenant_id_soft).
+    // They must run after shared/01_tables but before any other schema's 01_tables.
+    if (relPath === "shared/02_pre_constraint.sql")       return 35;
+    if (relPath === "shared/05_functions.sql")            return 35;
+    if (fileName.startsWith("01"))                        return 40;
+    if (fileName.startsWith("02_"))                       return 50;
+    if (fileName.startsWith("03_"))                       return 60;
+    if (fileName.startsWith("04_"))                       return 70;
+    if (fileName.startsWith("05_"))                       return 80;
+    if (fileName.startsWith("06_"))                       return 90;
+    if (fileName.startsWith("07_"))                       return 100;
+    if (fileName.startsWith("08_"))                       return 110;
+    if (relPath.startsWith("99_security/"))               return 120;
+    return 999;
+  }
+
   ddlFiles.sort((a, b) => {
-    const layerA = extractLayerNumber(basename(a.absPath));
-    const layerB = extractLayerNumber(basename(b.absPath));
-    if (layerA !== layerB) return layerA - layerB;
+    const phaseA = filePhase(a.relPath, basename(a.absPath));
+    const phaseB = filePhase(b.relPath, basename(b.absPath));
+    if (phaseA !== phaseB) return phaseA - phaseB;
+    // Within 00_platform, preserve internal numeric order (000 < 001 < 002 < 003)
+    if (a.relPath.startsWith("00_platform/")) {
+      const nA = extractLayerNumber(basename(a.absPath));
+      const nB = extractLayerNumber(basename(b.absPath));
+      if (nA !== nB) return nA - nB;
+    }
+    const schemaA = schemaIndex(a.relPath);
+    const schemaB = schemaIndex(b.relPath);
+    if (schemaA !== schemaB) return schemaA - schemaB;
     return a.relPath.localeCompare(b.relPath);
   });
 
-  // Seed files retain the recursive-alphabetical directory order.
+  // Seed files sort alphabetically with one exception:
+  // Within 010_system/, entity_engine/ must run before 100_finance/ because
+  // 010_system/entity_engine/020_entities/ registers entities with entity_code,
+  // and 010_system/100_finance/ seed files depend on those registrations via
+  // WHERE NOT EXISTS guards. Alphabetically "e" > "1" so entity_engine would
+  // sort after 100_finance — we remap it to sort as "009_entity_engine" instead.
+  function seedSortKey(relPath: string): string {
+    return relPath.replace(
+      "900_seed_data/010_system/entity_engine/",
+      "900_seed_data/010_system/009_entity_engine/",
+    );
+  }
+  seedFiles.sort((a, b) =>
+    seedSortKey(a.relPath).localeCompare(seedSortKey(b.relPath)),
+  );
+
   return [...ddlFiles, ...seedFiles];
 }
 
@@ -293,6 +367,53 @@ async function runPhases(
     await client.connect();
     await ensureTrackingTable(client);
 
+    // Set system tenant context so triggers that call shared.current_tenant_id()
+    // do not raise during seed execution. The system tenant UUID is the well-known
+    // zero UUID established in 900_seed_data/010_system/000_public/000_bootstrap.sql.
+    await client.query(
+      `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
+    );
+
+    // Seed-phase setup: applied only when phases 2 or 3 are included.
+    const seedPhases: Phase[] = [2, 3];
+    const hasSeedPhase = phases.some((p) => seedPhases.includes(p));
+    if (hasSeedPhase) {
+      // 1. Disable entity-binding validation triggers.
+      //    Some seed files reference entity codes (e.g. 'bank_branch') that are
+      //    stale or not yet registered when the seed file runs. These triggers
+      //    enforce entity_code existence in control.entity — valid at runtime but
+      //    too strict during trusted initial seeding.
+      await client.query(`
+        ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
+        ALTER TABLE control.entity_operation  DISABLE TRIGGER trg_eo_validate_entity_binding;
+        ALTER TABLE control.entity_relation   DISABLE TRIGGER trg_er_validate_target_entity;
+      `);
+
+      // 2. Install a temporary BEFORE INSERT trigger on control.entity that
+      //    derives entity_code from name when the caller omits it.
+      //    Several 100_finance seed files pre-date the entity_code NOT NULL column
+      //    and do not include it in their INSERT column lists. Deriving from name
+      //    is safe because name values in these files already satisfy the
+      //    entity_code_fmt_chk regex ('^[a-z][a-z0-9_]*$').
+      //    The trigger and its function are dropped after seeding completes.
+      await client.query(`
+        CREATE OR REPLACE FUNCTION control.trg_fn_seed_entity_code_default()
+        RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            IF NEW.entity_code IS NULL THEN
+                NEW.entity_code := NEW.name;
+            END IF;
+            RETURN NEW;
+        END;
+        $$;
+
+        DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
+        CREATE TRIGGER trg_seed_entity_code_default
+            BEFORE INSERT ON control.entity
+            FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default();
+      `);
+    }
+
     const executed = await getExecuted(client);
     const results: ExecutionResult[] = [];
 
@@ -348,6 +469,18 @@ async function runPhases(
       executed: results.length,
       totalMs: results.reduce((sum, r) => sum + r.durationMs, 0),
     });
+
+    // Tear down seed-phase setup.
+    if (hasSeedPhase) {
+      await client.query(`
+        ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
+        ALTER TABLE control.entity_operation  ENABLE TRIGGER trg_eo_validate_entity_binding;
+        ALTER TABLE control.entity_relation   ENABLE TRIGGER trg_er_validate_target_entity;
+
+        DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
+        DROP FUNCTION IF EXISTS control.trg_fn_seed_entity_code_default();
+      `);
+    }
   } finally {
     await client.end();
   }

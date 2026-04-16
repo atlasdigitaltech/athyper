@@ -416,7 +416,7 @@ export default function AuditEventsPage() {
         </div>
       ) : events.length === 0 ? (
         <EmptyState
-          icon={Database}
+          icon={<Database />}
           title="No audit events found"
           description="Try extending the date range or clearing the filters."
         />

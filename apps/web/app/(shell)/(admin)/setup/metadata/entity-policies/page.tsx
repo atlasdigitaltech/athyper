@@ -495,7 +495,7 @@ export default function EntityPoliciesPage() {
           </div>
         ) : policies.length === 0 ? (
           <EmptyState
-            icon={ShieldCheck}
+            icon={<ShieldCheck />}
             title="No entity policies"
             description="Create policies to configure access mode, audit settings, and data scope per entity type."
             action={
