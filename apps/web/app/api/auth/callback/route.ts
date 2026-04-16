@@ -162,11 +162,15 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
+  // Use the canonical public base URL for all redirects so that binding the
+  // dev server to 0.0.0.0 (all interfaces) never leaks into redirect targets.
+  const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+
   if (error) {
     const desc =
       url.searchParams.get("error_description") ?? "Authentication failed";
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(desc)}`, url.origin),
+      new URL(`/login?error=${encodeURIComponent(desc)}`, publicBaseUrl),
     );
   }
 
@@ -176,7 +180,6 @@ export async function GET(req: Request) {
 
   const baseUrl =
     process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
-  const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
   const env = process.env.ENVIRONMENT ?? "local";
 
@@ -194,7 +197,7 @@ export async function GET(req: Request) {
       return NextResponse.redirect(
         new URL(
           `/login?error=${encodeURIComponent("Login session expired. Please sign in again.")}`,
-          url.origin,
+          publicBaseUrl,
         ),
       );
     }
@@ -241,7 +244,7 @@ export async function GET(req: Request) {
     if (!hasAccessRole(claims.resource_access)) {
       console.warn("[auth/callback] ACCESS role missing for user:", sub);
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent("NO_PLATFORM_ACCESS")}`, url.origin),
+        new URL(`/login?error=${encodeURIComponent("NO_PLATFORM_ACCESS")}`, publicBaseUrl),
       );
     }
 
@@ -368,7 +371,7 @@ export async function GET(req: Request) {
 
     // ─── Step 8: Redirect ────────────────────────────────────────────────────
     if (isPlatformLogin) {
-      const target = new URL("/platform", url.origin);
+      const target = new URL("/platform", publicBaseUrl);
       const response = NextResponse.redirect(target);
       response.cookies.set("neon_realm", "platform", {
         httpOnly: true,
@@ -381,7 +384,7 @@ export async function GET(req: Request) {
     }
 
     // Tenant login → entity/workbench selector
-    const selectUrl = new URL("/auth/select", url.origin);
+    const selectUrl = new URL("/auth/select", publicBaseUrl);
     if (returnUrl && returnUrl !== "/") {
       selectUrl.searchParams.set("returnUrl", returnUrl);
     }
@@ -392,7 +395,7 @@ export async function GET(req: Request) {
     const message = e instanceof Error ? e.message : "Callback error";
     console.error("[auth/callback] Error:", message);
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(message)}`, url.origin),
+      new URL(`/login?error=${encodeURIComponent(message)}`, publicBaseUrl),
     );
   }
 }
