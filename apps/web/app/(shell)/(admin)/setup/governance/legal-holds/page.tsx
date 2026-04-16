@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { cn } from "@athyper/theme/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Lock, LockOpen, RefreshCw, Plus, ChevronDown, ChevronRight,
@@ -209,11 +210,12 @@ function NewHoldDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
                     onClick={() => setScopeLogSchemas((prev) =>
                       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
                     )}
-                    className={`rounded px-2 py-0.5 text-xs font-mono border transition-colors ${
+                    className={cn(
+                      "rounded px-2 py-0.5 text-xs font-mono border transition-colors",
                       scopeLogSchemas.includes(s)
                         ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
+                        : "border-border text-muted-foreground hover:border-primary/50",
+                    )}
                   >
                     {s}
                   </button>
@@ -358,7 +360,7 @@ function HoldCard({
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
-      <Card className={`${hold.status === "active" ? "border-destructive/30" : ""}`}>
+      <Card className={cn(hold.status === "active" && "border-destructive/30")}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -388,7 +390,7 @@ function HoldCard({
                     disabled={refreshManifest.isPending}
                     title="Refresh partition manifest"
                   >
-                    <RefreshCw className={`h-3.5 w-3.5 ${refreshManifest.isPending ? "animate-spin" : ""}`} />
+                    <RefreshCw className={cn("h-3.5 w-3.5", refreshManifest.isPending && "animate-spin")} />
                   </Button>
                   <Button
                     size="sm" variant="outline" className="h-7 text-xs border-warning text-warning hover:bg-warning/10"

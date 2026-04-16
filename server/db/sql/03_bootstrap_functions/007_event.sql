@@ -1,2 +1,0 @@
--- 03_bootstrap_functions/007_event.sql
--- No bootstrap functions required for this schema.

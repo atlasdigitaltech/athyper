@@ -1,3 +1,4 @@
+-- LookupDomain/control/bank_interface_profile_status.sql
 -- Lookup values for domain: control.bank_interface_profile_status
 
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)

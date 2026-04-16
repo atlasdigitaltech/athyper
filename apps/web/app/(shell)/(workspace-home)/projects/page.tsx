@@ -4,10 +4,11 @@
  * Domain launcher. No data entry. Action cards only.
  */
 
-import { ArrowRight, FolderKanban, HeadphonesIcon, Timer } from "lucide-react";
-import Link from "next/link";
+import { FolderKanban, HeadphonesIcon, Timer } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
+import { ActionLinkCard } from "@/components/home/ActionLinkCard";
+import { SectionLabel } from "@/components/home/SectionLabel";
 
 const WORKBENCH_ACTIONS = [
   {
@@ -15,24 +16,24 @@ const WORKBENCH_ACTIONS = [
     title: "Projects",
     description: "Project setup, milestones, and resource planning",
     icon: FolderKanban,
-    color: "text-success",
-    bg: "bg-success/10",
+    iconClass: "text-success",
+    iconBgClass: "bg-success/10",
   },
   {
     href: "/app/timesheet",
     title: "Timesheets",
     description: "Time and expense capture against project tasks",
     icon: Timer,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    iconClass: "text-primary",
+    iconBgClass: "bg-primary/10",
   },
   {
     href: "/app/support-ticket",
     title: "Support Tickets",
     description: "ITSM — service requests, incidents, and resolutions",
     icon: HeadphonesIcon,
-    color: "text-accent-foreground",
-    bg: "bg-accent/10",
+    iconClass: "text-accent-foreground",
+    iconBgClass: "bg-accent/10",
   },
 ] as const;
 
@@ -44,25 +45,10 @@ export default function ProjectsWorkspacePage() {
     >
       <div className="space-y-6">
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Projects
-          </h2>
+          <SectionLabel>Projects</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {WORKBENCH_ACTIONS.map(({ href, title, description, icon: Icon, color, bg }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/40"
-              >
-                <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${bg}`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-                </div>
-                <ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
+            {WORKBENCH_ACTIONS.map((action) => (
+              <ActionLinkCard key={action.href} {...action} />
             ))}
           </div>
         </div>

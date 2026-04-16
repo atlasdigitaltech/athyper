@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { cn } from "@athyper/theme/utils";
 import { useMutation } from "@tanstack/react-query";
 import {
   ShieldCheck, ShieldAlert, Loader2, Play,
@@ -197,7 +198,7 @@ function StatCell({
   return (
     <div className="rounded-md border bg-muted/20 px-3 py-2">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-0.5 text-sm font-medium ${highlight ? "text-destructive" : ""}`}>{value}</p>
+      <p className={cn("mt-0.5 text-sm font-medium", highlight && "text-destructive")}>{value}</p>
     </div>
   );
 }
@@ -272,11 +273,12 @@ export default function AuditIntegrityPage() {
                     key={p.label}
                     type="button"
                     onClick={() => applyPreset(p)}
-                    className={`rounded px-2.5 py-1 text-xs border transition-colors ${
+                    className={cn(
+                      "rounded px-2.5 py-1 text-xs border transition-colors",
                       fromDate === p.from && toDate === p.to
                         ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
+                        : "border-border text-muted-foreground hover:border-primary/50",
+                    )}
                   >
                     {p.label}
                   </button>

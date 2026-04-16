@@ -3,31 +3,38 @@
 //
 // Three-phase database provisioner — first-time setup and re-run safe.
 //
-// Phase 1 – DDL: All structural SQL (schemas, tables, constraints, indexes, triggers, views, RLS)
-//   Directories: 00_extensions → 12_function_security  (13_patches excluded — migration-only)
+// Phase 1 – DDL: All structural SQL (schema-first layout)
+//   Every top-level directory in server/db/sql/ except 900_seed_data is a DDL
+//   directory. .sql files are collected recursively, then sorted by the numeric
+//   layer prefix in each filename so all bootstrap files (00_*) run before all
+//   table files (01_*), table files before constraints (03_*), etc.
+//   This mirrors the runner.sh cross-schema phase ordering and preserves the
+//   shared.uuidv7() bootstrap dependency.
 //
 // Phase 2 – System Seed: Platform-wide reference and control data
 //   Directory: 900_seed_data/010_system/**
 //
-// Phase 3 – Blueprint + Tenant Seed: Industry blueprints and tenant org data
-//   Directories: 900_seed_data/020_blueprint/**, 900_seed_data/030_tenant/**
+// Phase 3 – Blueprint + Tenant + Prod Tenant Seed
+//   Directories: 900_seed_data/020_blueprint/**
+//                900_seed_data/030_tenant/**
+//                900_seed_data/040_prod_tenant/**
 //
 // Usage:
-//   tsx src/seed/migrate.ts --phase=1          # DDL only
-//   tsx src/seed/migrate.ts --phase=2          # System seed only
-//   tsx src/seed/migrate.ts --phase=3          # Blueprint + Tenant seed only
-//   tsx src/seed/migrate.ts --all              # Run all three phases sequentially
-//   tsx src/seed/migrate.ts --status           # Show status of all SQL files
-//   tsx src/seed/migrate.ts --reset            # Drop all schemas and reset tracking
-//   tsx src/seed/migrate.ts --force            # Re-run even if checksum unchanged
-//   tsx src/seed/migrate.ts --phase=1 --force  # Force-re-run DDL only
+//   tsx db/seed/migrate.ts --phase=1          # DDL only
+//   tsx db/seed/migrate.ts --phase=2          # System seed only
+//   tsx db/seed/migrate.ts --phase=3          # Blueprint + Tenant seed only
+//   tsx db/seed/migrate.ts --all              # Run all three phases sequentially
+//   tsx db/seed/migrate.ts --status           # Show status of all SQL files
+//   tsx db/seed/migrate.ts --reset            # Drop all schemas and reset tracking
+//   tsx db/seed/migrate.ts --force            # Re-run even if checksum unchanged
+//   tsx db/seed/migrate.ts --phase=1 --force  # Force-re-run DDL only
 //
 // Environment variables:
 //   DATABASE_ADMIN_URL  — Direct Postgres connection string (required)
 //                         Must NOT be PgBouncer. DDL requires a direct connection.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
@@ -43,9 +50,6 @@ const __dirname = dirname(__filename);
 
 const SQL_DIR = join(__dirname, "../sql");
 
-/** Directories that contain DDL (phases 00–12). Excludes 13_patches and 900_seed_data. */
-const DDL_DIR_PATTERN = /^(?:0\d|1[0-2])_/;
-
 /** Seed data root directory within sql/ */
 const SEED_DATA_DIR = "900_seed_data";
 
@@ -53,7 +57,7 @@ const SEED_DATA_DIR = "900_seed_data";
 const SYSTEM_PREFIX = "010_system";
 const BLUEPRINT_PREFIX = "020_blueprint";
 const TENANT_PREFIX = "030_tenant";
-const DEMO_PREFIX = "040_demo";
+const PROD_TENANT_PREFIX = "040_prod_tenant";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,7 +66,7 @@ const DEMO_PREFIX = "040_demo";
 export type Phase = 1 | 2 | 3;
 
 export type SqlFile = {
-  /** Relative path from SQL_DIR, using forward slashes, e.g. "04_tables/010_core.sql" */
+  /** Relative path from SQL_DIR, using forward slashes, e.g. "control/01_tables.sql" */
   relPath: string;
   /** Tracking key (relPath without extension) */
   key: string;
@@ -117,29 +121,37 @@ function collectSqlFiles(dir: string): string[] {
   return results;
 }
 
+/**
+ * Extract the leading numeric layer number from a filename.
+ *   "00_bootstrap.sql"      → 0
+ *   "01_tables.sql"         → 1
+ *   "01a_tables_core.sql"   → 1
+ *   "800_security.sql"      → 800
+ *   "no-prefix.sql"         → 999  (sorts last)
+ */
+function extractLayerNumber(fileName: string): number {
+  const match = fileName.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 999;
+}
+
 /** Discover and classify all SQL files into phases. */
 export function discoverSqlFiles(): SqlFile[] {
-  const results: SqlFile[] = [];
+  const ddlFiles: SqlFile[] = [];
+  const seedFiles: SqlFile[] = [];
 
-  const topEntries = readdirSync(SQL_DIR, { withFileTypes: true }).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  const topEntries = readdirSync(SQL_DIR, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   for (const entry of topEntries) {
-    if (!entry.isDirectory()) continue;
     const dirName = entry.name;
     const dirPath = join(SQL_DIR, dirName);
 
-    // ── Phase 1: DDL directories (00_* through 12_*) ──────────────────────
-    if (DDL_DIR_PATTERN.test(dirName)) {
-      const files = readdirSync(dirPath)
-        .filter((f) => f.endsWith(".sql"))
-        .sort();
-
-      for (const fileName of files) {
-        const absPath = join(dirPath, fileName);
-        const relPath = `${dirName}/${fileName}`;
-        results.push({
+    // ── Phase 1: DDL (every top-level dir except 900_seed_data) ──────────
+    if (dirName !== SEED_DATA_DIR) {
+      for (const absPath of collectSqlFiles(dirPath)) {
+        const relPath = relative(SQL_DIR, absPath).replace(/\\/g, "/");
+        ddlFiles.push({
           relPath,
           key: relPath.replace(/\.sql$/, ""),
           absPath,
@@ -150,56 +162,61 @@ export function discoverSqlFiles(): SqlFile[] {
       continue;
     }
 
-    // ── Seed data root ─────────────────────────────────────────────────────
-    if (dirName === SEED_DATA_DIR) {
-      const seedEntries = readdirSync(dirPath, { withFileTypes: true }).sort(
-        (a, b) => a.name.localeCompare(b.name),
-      );
+    // ── Phases 2 & 3: Seed data ──────────────────────────────────────────
+    const seedEntries = readdirSync(dirPath, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-      for (const seedEntry of seedEntries) {
-        if (!seedEntry.isDirectory()) continue;
-        const subDirName = seedEntry.name;
-        const subDirPath = join(dirPath, subDirName);
+    for (const seedEntry of seedEntries) {
+      const subDirName = seedEntry.name;
+      const subDirPath = join(dirPath, subDirName);
 
-        let phase: Phase | null = null;
-        let phaseLabel = "";
+      let phase: Phase;
+      let phaseLabel: string;
 
-        if (subDirName.startsWith(SYSTEM_PREFIX)) {
-          phase = 2;
-          phaseLabel = "System Seed";
-        } else if (
-          subDirName.startsWith(BLUEPRINT_PREFIX) ||
-          subDirName.startsWith(TENANT_PREFIX)
-        ) {
-          phase = 3;
-          phaseLabel =
-            subDirName.startsWith(BLUEPRINT_PREFIX)
-              ? "Blueprint Seed"
-              : "Tenant Seed";
-        } else if (subDirName.startsWith(DEMO_PREFIX)) {
-          // Demo data: phase 3, excluded by default
-          phase = 3;
-          phaseLabel = "Demo Seed";
-        } else {
-          continue;
-        }
+      if (subDirName.startsWith(SYSTEM_PREFIX)) {
+        phase = 2;
+        phaseLabel = "System Seed";
+      } else if (subDirName.startsWith(BLUEPRINT_PREFIX)) {
+        phase = 3;
+        phaseLabel = "Blueprint Seed";
+      } else if (subDirName.startsWith(TENANT_PREFIX)) {
+        phase = 3;
+        phaseLabel = "Tenant Seed";
+      } else if (subDirName.startsWith(PROD_TENANT_PREFIX)) {
+        phase = 3;
+        phaseLabel = "Prod Tenant Seed";
+      } else {
+        continue;
+      }
 
-        const absFiles = collectSqlFiles(subDirPath);
-        for (const absPath of absFiles) {
-          const relPath = relative(SQL_DIR, absPath).replace(/\\/g, "/");
-          results.push({
-            relPath,
-            key: relPath.replace(/\.sql$/, ""),
-            absPath,
-            phase,
-            phaseLabel,
-          });
-        }
+      for (const absPath of collectSqlFiles(subDirPath)) {
+        const relPath = relative(SQL_DIR, absPath).replace(/\\/g, "/");
+        seedFiles.push({
+          relPath,
+          key: relPath.replace(/\.sql$/, ""),
+          absPath,
+          phase,
+          phaseLabel,
+        });
       }
     }
   }
 
-  return results;
+  // Sort DDL files by (layer_number, relPath).
+  // Primary key = numeric prefix of the filename (e.g. 00, 01, 03, 800).
+  // Secondary key = full relative path (preserves alphabetical schema ordering
+  // within each layer — e.g. control/00_bootstrap runs before shared/00_bootstrap,
+  // but both run before any 01_tables file in any schema).
+  ddlFiles.sort((a, b) => {
+    const layerA = extractLayerNumber(basename(a.absPath));
+    const layerB = extractLayerNumber(basename(b.absPath));
+    if (layerA !== layerB) return layerA - layerB;
+    return a.relPath.localeCompare(b.relPath);
+  });
+
+  // Seed files retain the recursive-alphabetical directory order.
+  return [...ddlFiles, ...seedFiles];
 }
 
 // ---------------------------------------------------------------------------
@@ -261,16 +278,9 @@ async function markExecuted(
 async function runPhases(
   connectionString: string,
   phases: Phase[],
-  opts: { force: boolean; includeDemo: boolean },
+  opts: { force: boolean },
 ): Promise<void> {
-  const allFiles = discoverSqlFiles();
-
-  let files = allFiles.filter((f) => phases.includes(f.phase));
-
-  // Exclude demo data unless explicitly requested
-  if (!opts.includeDemo) {
-    files = files.filter((f) => f.phaseLabel !== "Demo Seed");
-  }
+  const files = discoverSqlFiles().filter((f) => phases.includes(f.phase));
 
   if (files.length === 0) {
     log({ msg: "migrate_noop", reason: "no matching SQL files", phases });
@@ -474,7 +484,6 @@ async function main(): Promise<void> {
   const force = args.includes("--force");
   const reset = args.includes("--reset");
   const status = args.includes("--status");
-  const includeDemo = args.includes("--demo");
 
   try {
     if (status) {
@@ -506,7 +515,7 @@ async function main(): Promise<void> {
       phases = [1, 2, 3];
     }
 
-    await runPhases(connectionString, phases, { force, includeDemo });
+    await runPhases(connectionString, phases, { force });
   } catch (err) {
     logError({ msg: "migrate_fatal", error: String(err) });
     process.exit(1);

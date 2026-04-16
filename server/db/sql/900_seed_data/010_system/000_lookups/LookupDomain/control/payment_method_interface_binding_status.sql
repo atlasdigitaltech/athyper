@@ -1,3 +1,4 @@
+-- LookupDomain/control/payment_method_interface_binding_status.sql
 -- Lookup values for domain: control.payment_method_interface_binding_status
 
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)

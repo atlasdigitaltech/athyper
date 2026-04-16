@@ -1,0 +1,9 @@
+-- ============================================================================
+-- 00_platform/002b_int_schema.sql
+-- Concept: Deprecated Tombstone — int schema removed, consolidated into event schema
+-- Depends on: (none — tombstone only, no DDL)
+-- DEPRECATED: int schema removed.
+-- int.endpoint and int.webhook_subscription have been consolidated into
+-- the event schema (see 04_tables/007_event.sql §5 and §6).
+-- This file is retained as a tombstone. Do not recreate the int schema.
+-- ============================================================================

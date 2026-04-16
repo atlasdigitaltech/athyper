@@ -1,11 +1,11 @@
 -- 900_seed_data/002_control/007_upupr_entity_registration.sql
 -- Purpose: control.entity + control.entity_version + control.entity_field (2 rows)
--- Depends on: 006_upupr_lookups.sql
+-- Depends on: 002_hook_actions.sql (control schema), shared.module rows (IAM)
 -- Idempotent: yes — WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 
 -- ── 1. control.entity ───────────────────────────────────────────────────
 INSERT INTO control.entity (
-    module_id, name, entity_short,
+    module_id, name, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
@@ -14,7 +14,7 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'IAM'),
-    'user_profile_update_request', 'UPUPR',
+    'user_profile_update_request', 'UPUPR', 'user_profile_update_request',
     'DOCUMENT', 'system', 'ent', 'table',
     'full', 'tenant_critical', 'controlled',
     'document', 'user_profile_update_request',

@@ -11,7 +11,6 @@
  */
 
 import {
-  ArrowRight,
   BookOpen,
   BarChart3,
   Building2,
@@ -26,6 +25,8 @@ import {
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
+import { ActionLinkCard } from "@/components/home/ActionLinkCard";
+import { SectionLabel } from "@/components/home/SectionLabel";
 import { FinanceKpiCards } from "./_components/FinanceKpiCards";
 
 // ── Workbench action cards ────────────────────────────────────────────────────
@@ -36,80 +37,80 @@ const WORKBENCH_ACTIONS = [
     title: "AP Workbench",
     description: "Payables invoices, aging buckets, outbound payments",
     icon: FileText,
-    color: "text-warning",
-    bg: "bg-warning/10",
+    iconClass: "text-warning",
+    iconBgClass: "bg-warning/10",
   },
   {
     href: "/finance/ar",
     title: "AR Workbench",
     description: "Receivables aging, inbound receipts, customer balances",
     icon: CreditCard,
-    color: "text-info",
-    bg: "bg-info/10",
+    iconClass: "text-info",
+    iconBgClass: "bg-info/10",
   },
   {
     href: "/finance/bank-recon",
     title: "Bank Reconciliation",
     description: "Bank statement review, mark cleared, unreconciled items",
     icon: Landmark,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    iconClass: "text-primary",
+    iconBgClass: "bg-primary/10",
   },
   {
     href: "/finance/gl",
     title: "GL Workbench",
     description: "Journal review, posting context, period filters, drill-through",
     icon: ScrollText,
-    color: "text-success",
-    bg: "bg-success/10",
+    iconClass: "text-success",
+    iconBgClass: "bg-success/10",
   },
   {
     href: "/finance/coa",
     title: "Chart of Accounts",
     description: "Account hierarchy explorer — browse, filter, drill by segment",
     icon: BookOpen,
-    color: "text-info",
-    bg: "bg-info/10",
+    iconClass: "text-info",
+    iconBgClass: "bg-info/10",
   },
   {
     href: "/finance/views/trial-balance",
     title: "Trial Balance",
     description: "Period debit/credit balances — parameterised, drill-capable",
     icon: Scale,
-    color: "text-accent-foreground",
-    bg: "bg-accent/10",
+    iconClass: "text-accent-foreground",
+    iconBgClass: "bg-accent/10",
   },
   {
     href: "/finance/reports",
     title: "Financial Reports",
     description: "P&L, Balance Sheet, Cash Flow — generate and export",
     icon: BarChart3,
-    color: "text-warning",
-    bg: "bg-warning/10",
+    iconClass: "text-warning",
+    iconBgClass: "bg-warning/10",
   },
   {
     href: "/finance/close",
     title: "Period Close",
     description: "Month-end cycle checklist, sign-off, inter-company elimination",
     icon: ClipboardCheck,
-    color: "text-destructive",
-    bg: "bg-destructive/10",
+    iconClass: "text-destructive",
+    iconBgClass: "bg-destructive/10",
   },
   {
     href: "/finance/admin",
     title: "Finance Administration",
     description: "Legal entities, company controls, COA mapping, period management",
     icon: Building2,
-    color: "text-muted-foreground",
-    bg: "bg-muted",
+    iconClass: "text-muted-foreground",
+    iconBgClass: "bg-muted",
   },
   {
     href: "/finance/views/account-analysis",
     title: "Account Analysis",
     description: "Deep-dive account activity, balance movement, period comparison",
     icon: Calculator,
-    color: "text-info",
-    bg: "bg-info/10",
+    iconClass: "text-info",
+    iconBgClass: "bg-info/10",
   },
 ] as const;
 
@@ -137,25 +138,10 @@ export default function FinanceWorkspacePage() {
 
         {/* ── Workbench action cards ───────────────────────────────────────── */}
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Finance Workbenches
-          </h2>
+          <SectionLabel>Finance Workbenches</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {WORKBENCH_ACTIONS.map(({ href, title, description, icon: Icon, color, bg }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex flex-col gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/40 hover:border-border/80"
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-md ${bg}`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{description}</p>
-                </div>
-                <ArrowRight className="mt-auto h-3.5 w-3.5 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
+            {WORKBENCH_ACTIONS.map((action) => (
+              <ActionLinkCard key={action.href} layout="vertical" {...action} />
             ))}
           </div>
         </div>

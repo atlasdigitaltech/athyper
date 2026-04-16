@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { cn } from "@athyper/theme/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Plus, RefreshCw, Shield, Trash2, UserPlus, Search, Lock, Settings,
@@ -298,9 +299,10 @@ function AddMemberDialog({
                   <button
                     key={p.id}
                     type="button"
-                    className={`w-full text-left rounded px-2 py-1.5 text-sm transition-colors hover:bg-muted/50 ${
-                      selectedId === p.id ? "bg-primary/10 text-primary" : ""
-                    }`}
+                    className={cn(
+                      "w-full text-left rounded px-2 py-1.5 text-sm transition-colors hover:bg-muted/50",
+                      selectedId === p.id && "bg-primary/10 text-primary",
+                    )}
                     onClick={() => setSelectedId(p.id)}
                   >
                     <span className="font-medium">{principalLabel(p)}</span>

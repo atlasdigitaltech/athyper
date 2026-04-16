@@ -1,2 +1,0 @@
--- 03_bootstrap_functions/006_log.sql
--- No bootstrap functions required for this schema.

@@ -1,0 +1,6 @@
+-- ============================================================================
+-- governance/07_views.sql
+-- Concept: Governance Views — no views defined yet
+-- Depends on: 04_tables/008_governance.sql
+-- Note: No views defined yet for the governance schema.
+-- ============================================================================

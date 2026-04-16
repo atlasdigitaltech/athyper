@@ -1,2 +1,0 @@
--- 03_bootstrap_functions/009_snapshot.sql
--- No bootstrap functions required for this schema.

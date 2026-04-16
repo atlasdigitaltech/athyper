@@ -1,5 +1,0 @@
--- 01_schemas/002_int_schema.sql
--- DEPRECATED: int schema removed.
--- int.endpoint and int.webhook_subscription have been consolidated into
--- the event schema (see 04_tables/007_event.sql §5 and §6).
--- This file is retained as a tombstone. Do not recreate the int schema.

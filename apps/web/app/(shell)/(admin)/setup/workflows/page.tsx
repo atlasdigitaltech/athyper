@@ -6,20 +6,15 @@ import {
   CheckCircle2, Clock, Settings2, Play, Layers,
   Users, UserCheck, Shield, Network,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
+  Input, Label,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+  Badge, Textarea, Switch,
+} from "@athyper/ui/primitives";
 import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
+import { cn } from "@athyper/theme/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

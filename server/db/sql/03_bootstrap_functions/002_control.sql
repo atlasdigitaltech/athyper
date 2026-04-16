@@ -1,3 +1,0 @@
--- 03_bootstrap_functions/002_control.sql
--- Depends on: 01_schemas
--- No bootstrap functions required for the control schema.

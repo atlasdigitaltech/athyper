@@ -29,9 +29,9 @@ BEGIN
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
         numbering_active, feature_flags, status, created_by)
-    VALUES (v_acc, 'supplier', 'SUPP', 'supplier', 'MASTER', 'system', 'ent', 'table',
+    VALUES (v_acc, 'vendor', 'VND', 'vendor', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'supplier',
-        'Supplier', 'Suppliers', 'truck', 'orange',
+        'Vendor', 'Vendors', 'truck', 'orange',
         false, '{"is_approvable":false}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 

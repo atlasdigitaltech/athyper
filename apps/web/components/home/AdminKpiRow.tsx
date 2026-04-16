@@ -45,28 +45,28 @@ export function AdminKpiRow() {
         title="Active Tenants"
         value={data?.active_tenants ?? "—"}
         Icon={Building2}
-        iconClass="text-blue-500"
+        iconClass="text-info"
         loading={isLoading}
       />
       <KpiCard
         title="Active Modules"
         value={data?.active_modules ?? "—"}
         Icon={Layers}
-        iconClass="text-violet-500"
+        iconClass="text-primary"
         loading={isLoading}
       />
       <KpiCard
         title="Principals"
         value={data?.active_principals ?? "—"}
         Icon={BadgeCheck}
-        iconClass="text-emerald-500"
+        iconClass="text-success"
         loading={isLoading}
       />
       <KpiCard
         title="System Health"
         value={healthLabel}
         Icon={Activity}
-        iconClass={data?.system_health === "ok" ? "text-emerald-500" : "text-amber-500"}
+        iconClass={data?.system_health === "ok" ? "text-success" : "text-warning"}
         loading={isLoading}
       />
     </div>

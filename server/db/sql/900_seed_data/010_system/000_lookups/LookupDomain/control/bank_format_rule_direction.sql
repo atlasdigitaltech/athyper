@@ -1,3 +1,4 @@
+-- LookupDomain/control/bank_format_rule_direction.sql
 -- Lookup values for domain: control.bank_format_rule_direction
 -- Idempotent: WHERE NOT EXISTS guard
 

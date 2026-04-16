@@ -76,10 +76,10 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
     >
       {/* Panel */}
-      <div className="relative mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
+      <div className="relative mx-4 w-full max-w-md rounded-2xl bg-card shadow-2xl">
 
         {/* Top accent strip */}
-        <div className="h-1.5 w-full rounded-t-2xl bg-amber-400" />
+        <div className="h-1.5 w-full rounded-t-2xl bg-warning" />
 
         <div className="px-8 pb-8 pt-6">
 
@@ -97,7 +97,7 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
                   cx="24" cy="24" r={radius}
                   fill="none"
                   strokeWidth="3"
-                  className="stroke-zinc-100 dark:stroke-zinc-800"
+                  className="stroke-border"
                 />
                 {/* Progress */}
                 <circle
@@ -107,13 +107,13 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={circumference - progress}
-                  className="stroke-amber-400 transition-[stroke-dashoffset] duration-1000 ease-linear"
+                  className="stroke-warning transition-[stroke-dashoffset] duration-1000 ease-linear"
                 />
               </svg>
               {/* Lock icon centred inside the ring */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <svg
-                  className="h-7 w-7 text-amber-500"
+                  className="h-7 w-7 text-warning"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
@@ -133,7 +133,7 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
           {/* Heading */}
           <h2
             id="session-expired-title"
-            className="text-center text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-center text-lg font-semibold text-foreground"
           >
             Your session has expired
           </h2>
@@ -141,7 +141,7 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
           {/* Body */}
           <p
             id="session-expired-desc"
-            className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400"
+            className="mt-2 text-center text-sm text-muted-foreground"
           >
             For your security, you were signed out after a period of inactivity.
             Sign in again to continue where you left off.
@@ -151,10 +151,10 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
           <p
             aria-live="polite"
             aria-atomic="true"
-            className="mt-4 text-center text-xs text-zinc-400 dark:text-zinc-500"
+            className="mt-4 text-center text-xs text-muted-foreground/70"
           >
             Redirecting to sign-in in{" "}
-            <span className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
+            <span className="font-semibold tabular-nums text-foreground/70">
               {seconds}s
             </span>
           </p>
@@ -164,7 +164,7 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
             <button
               type="button"
               onClick={signInNow}
-              className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-semibold text-background shadow-sm hover:bg-foreground/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               Sign in again
             </button>
@@ -175,14 +175,14 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
                 if (intervalRef.current) clearInterval(intervalRef.current);
                 onStay();
               }}
-              className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="w-full rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/60"
             >
               Stay on page
             </button>
           </div>
 
           {/* Fine print */}
-          <p className="mt-4 text-center text-xs text-zinc-400 dark:text-zinc-600">
+          <p className="mt-4 text-center text-xs text-muted-foreground/50">
             Your work is safe. You will be returned to this page after signing in.
           </p>
         </div>

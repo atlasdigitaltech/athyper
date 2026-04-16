@@ -1,0 +1,6 @@
+-- ============================================================================
+-- snapshot/02_pre_constraint.sql
+-- Concept: Snapshot Pre-Constraints — no functions required
+-- Depends on: 04_tables/009_snapshot.sql
+-- Note: No pre-constraint functions required for the snapshot schema.
+-- ============================================================================

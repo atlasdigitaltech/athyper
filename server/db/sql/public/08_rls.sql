@@ -1,0 +1,6 @@
+-- ============================================================================
+-- public/08_rls.sql
+-- Concept: Public Schema RLS — no row-level security policies required
+-- Depends on: 04_tables/000_public.sql
+-- Note: No row-level security policies required for the public schema.
+-- ============================================================================

@@ -1,0 +1,6 @@
+-- ============================================================================
+-- control/00_bootstrap.sql
+-- Concept: Control Bootstrap — no pre-table functions required for this schema
+-- Depends on: 01_schemas/001_schemas.sql
+-- Note: No bootstrap functions required for the control schema.
+-- ============================================================================

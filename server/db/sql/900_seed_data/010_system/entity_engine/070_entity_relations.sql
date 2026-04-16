@@ -12,7 +12,7 @@ BEGIN
     -- Guard: ensure entity versions exist
     IF NOT EXISTS (SELECT 1 FROM control.entity_version ev
                    JOIN control.entity e ON e.id = ev.entity_id
-                   WHERE e.name = 'principal' AND ev.version_no = 1) THEN
+                   WHERE e.entity_code = 'principal' AND e.tenant_id IS NULL AND ev.version_no = 1) THEN
         RAISE EXCEPTION 'entity_version rows missing — run 025_entity_versions.sql first';
     END IF;
 
@@ -67,16 +67,12 @@ BEGIN
         ('legal_entity', 'company_codes',    'has_many',   'company_code',          'legal_entity_id','restrict'),
 
         -- ── Finance org: company_code ─────────────────────────────────────────
-        ('company_code', 'tenant',           'belongs_to', 'tenant',                'tenant_id',       'restrict'),
-        ('company_code', 'legal_entity',     'belongs_to', 'legal_entity',          'legal_entity_id', 'restrict'),
-        ('company_code', 'business_units',   'has_many',   'business_unit',         'company_code_id', 'restrict'),
-        ('company_code', 'cost_centers',     'has_many',   'cost_center',           'company_code_id', 'restrict'),
-        ('company_code', 'profit_centers',   'has_many',   'profit_center',         'company_code_id', 'restrict'),
-        ('company_code', 'warehouses',       'has_many',   'warehouse',             'company_code_id', 'restrict'),
-
-        -- ── Finance org: business_unit ────────────────────────────────────────
-        ('business_unit', 'company_code',    'belongs_to', 'company_code',          'company_code_id', 'restrict'),
-        ('business_unit', 'cost_centers',    'has_many',   'cost_center',           'business_unit_id','restrict'),
+        ('company_code', 'tenant',           'belongs_to', 'tenant',       'tenant_id',       'restrict'),
+        ('company_code', 'legal_entity',     'belongs_to', 'legal_entity', 'legal_entity_id', 'restrict'),
+        ('company_code', 'cost_centers',     'has_many',   'cost_center',  'company_code_id', 'restrict'),
+        ('company_code', 'profit_centers',   'has_many',   'profit_center','company_code_id', 'restrict'),
+        ('company_code', 'sites',            'has_many',   'site',         'company_code_id', 'restrict'),
+        ('company_code', 'warehouses',       'has_many',   'warehouse',    'company_code_id', 'restrict'),
 
         -- ── Finance org: cost_center ──────────────────────────────────────────
         ('cost_center', 'company_code',      'belongs_to', 'company_code',          'company_code_id', 'restrict'),
@@ -89,18 +85,17 @@ BEGIN
         ('chart_of_account', 'gl_accounts',  'has_many',   'gl_account',            'chart_of_account_id', 'restrict'),
 
         -- ── COA / GL: gl_account ──────────────────────────────────────────────
-        ('gl_account', 'chart_of_account',   'belongs_to', 'chart_of_account',      'chart_of_account_id', 'restrict'),
-        ('gl_account', 'account_type',       'belongs_to', 'gl_account_type',       'account_type_id',     'restrict'),
-        ('gl_account', 'tenant',             'belongs_to', 'tenant',                'tenant_id',           'restrict'),
-        ('gl_account', 'hierarchy',          'belongs_to', 'gl_account_hierarchy',  'parent_id',           'set_null'),
+        ('gl_account', 'chart_of_account',   'belongs_to', 'chart_of_account', 'chart_of_account_id', 'restrict'),
+        ('gl_account', 'tenant',             'belongs_to', 'tenant',           'tenant_id',           'restrict'),
+        ('gl_account', 'parent',             'belongs_to', 'gl_account',       'parent_id',           'set_null'),
 
         -- ── Business partners: customer ───────────────────────────────────────
         ('customer', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('customer', 'company_profiles',     'has_many',   'company_code_customer_profile','customer_id','cascade'),
 
-        -- ── Business partners: supplier ───────────────────────────────────────
-        ('supplier', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
-        ('supplier', 'company_profiles',     'has_many',   'company_code_supplier_profile','supplier_id','cascade'),
+        -- ── Business partners: vendor ─────────────────────────────────────────
+        ('vendor', 'tenant',               'belongs_to', 'tenant',                      'tenant_id',   'restrict'),
+        ('vendor', 'company_profiles',     'has_many',   'company_code_supplier_profile','supplier_id', 'cascade'),
 
         -- ── Business partners: employee ───────────────────────────────────────
         ('employee', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
@@ -150,11 +145,13 @@ BEGIN
         ('item', 'tenant',                   'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('item', 'category',                 'belongs_to', 'item_category',         'category_id', 'set_null'),
 
-        -- ── Templates & workflow ──────────────────────────────────────────────
-        ('document_template', 'tenant',      'belongs_to', 'tenant',                'tenant_id',  'restrict'),
-        ('document_template', 'clauses',     'has_many',   'document_template_clause','template_id','cascade'),
-        ('workflow_template', 'tenant',      'belongs_to', 'tenant',                'tenant_id',  'restrict'),
-        ('workflow_template', 'stages',      'has_many',   'workflow_template_stage','template_id','cascade'),
+        -- ── DOC: Template & document ──────────────────────────────────────────
+        ('template',      'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),
+        ('template',      'bindings',        'has_many',   'template_binding','template_id','cascade'),
+        ('document',      'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),
+        ('brand_profile', 'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),
+        ('letterhead',    'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),
+        ('print_profile', 'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),
 
         -- ── CMS: content_item ─────────────────────────────────────────────────
         ('content_item', 'tenant',           'belongs_to', 'tenant',                'tenant_id',        'restrict'),
@@ -166,8 +163,8 @@ BEGIN
         ('dashboard', 'widgets',             'has_many',   'dashboard_widget',      'dashboard_id', 'cascade')
 
     ) AS r(entity, rel_name, kind, target_entity, fk_field, on_del)
-    JOIN control.entity         e  ON e.name       = r.entity
-    JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1
+    JOIN control.entity         e  ON e.entity_code = r.entity AND e.tenant_id IS NULL
+    JOIN control.entity_version ev ON ev.entity_id  = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
     ON CONFLICT (entity_version_id, name) DO NOTHING;
 
     GET DIAGNOSTICS cnt = ROW_COUNT;

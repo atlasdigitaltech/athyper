@@ -46,7 +46,7 @@ const ERROR_META: Record<
     treatment: "auth",
   },
 
-  // ── Infrastructure / outage errors → amber banner + Retry ─────────────────
+  // ── Infrastructure / outage errors → warning banner + Retry ──────────────
   NETWORK_ERROR: {
     title: "Platform service unreachable",
     detail: "The platform service could not be reached.",
@@ -73,7 +73,7 @@ const ERROR_META: Record<
     treatment: "infra",
   },
 
-  // ── Access / identity errors → red banner + contextual action ─────────────
+  // ── Access / identity errors → error banner + contextual action ───────────
   PRINCIPAL_NOT_FOUND: {
     title: "Account not set up for this entity",
     detail: "Your account has not been configured in this entity.",
@@ -184,15 +184,15 @@ export function SessionErrorBanner() {
       <div
         role="alert"
         aria-live="assertive"
-        className="border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900/40 dark:bg-amber-950/30"
+        className="border-b border-warning/30 bg-warning/10 px-4 py-2"
       >
         <div className="mx-auto flex max-w-screen-2xl items-center gap-3">
           <LockIcon />
-          <p className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-300">
+          <p className="min-w-0 flex-1 text-sm text-warning">
             <span className="font-medium">Session expired.</span>{" "}
             <a
               href={loginUrl()}
-              className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100"
+              className="underline underline-offset-2 hover:text-warning"
             >
               Sign in again
             </a>{" "}
@@ -203,18 +203,18 @@ export function SessionErrorBanner() {
     );
   }
 
-  // ── Infra treatment: amber banner + Retry ─────────────────────────────────
+  // ── Infra treatment: warning banner + Retry ───────────────────────────────
   if (meta.treatment === "infra") {
     if (dismissed === errorKey) return null;
     return (
       <div
         role="alert"
         aria-live="polite"
-        className="border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900/40 dark:bg-amber-950/30"
+        className="border-b border-warning/30 bg-warning/10 px-4 py-2"
       >
         <div className="mx-auto flex max-w-screen-2xl items-start gap-3">
           <WarningIcon />
-          <div className="min-w-0 flex-1 text-amber-800 dark:text-amber-300">
+          <div className="min-w-0 flex-1 text-warning">
             <span className="text-sm font-medium">{meta.title}. </span>
             <span className="text-xs opacity-80">{meta.detail}</span>
           </div>
@@ -228,7 +228,7 @@ export function SessionErrorBanner() {
               await new Promise((r) => setTimeout(r, 500));
               setRetrying(false);
             }}
-            className="shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200"
+            className="shrink-0 rounded-md border border-warning/40 bg-card px-2.5 py-1 text-xs font-medium text-warning hover:bg-warning/10 disabled:opacity-50"
           >
             {retrying ? "Retrying…" : "Retry"}
           </button>
@@ -238,7 +238,7 @@ export function SessionErrorBanner() {
     );
   }
 
-  // ── Access treatment: red banner + contextual action ──────────────────────
+  // ── Access treatment: error banner + contextual action ────────────────────
   if (dismissed === errorKey) return null;
 
   const needsAdmin = [
@@ -254,13 +254,13 @@ export function SessionErrorBanner() {
     <div
       role="alert"
       aria-live="assertive"
-      className="border-b border-red-200 bg-red-50 px-4 py-2 dark:border-red-900/40 dark:bg-red-950/30"
+      className="border-b border-destructive/30 bg-destructive/10 px-4 py-2"
     >
       <div className="mx-auto flex max-w-screen-2xl items-start gap-3">
         <WarningIcon />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-red-800 dark:text-red-300">{meta.title}</p>
-          <p className="mt-0.5 text-xs text-red-700/80 dark:text-red-400/80">
+          <p className="text-sm font-medium text-destructive">{meta.title}</p>
+          <p className="mt-0.5 text-xs text-destructive/80">
             {meta.detail}{" "}
             {needsAdmin && (
               <span>Contact your administrator to complete the setup.</span>
@@ -272,7 +272,7 @@ export function SessionErrorBanner() {
                   // Navigate to entity selection page
                   window.location.href = "/auth/select";
                 }}
-                className="ml-1 underline underline-offset-2 hover:text-red-900 dark:hover:text-red-200"
+                className="ml-1 underline underline-offset-2 hover:text-destructive"
               >
                 Switch entity
               </button>

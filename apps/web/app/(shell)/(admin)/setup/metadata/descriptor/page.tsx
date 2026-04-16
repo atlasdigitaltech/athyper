@@ -371,7 +371,7 @@ export default function DescriptorInspectorPage() {
 
         {!entityCode && !isLoading && (
           <EmptyState
-            icon={FileCode}
+            icon={<FileCode className="size-9 text-muted-foreground/30" />}
             title="Select an entity"
             description="Choose an entity from the dropdown or enter an entity code to inspect its compiled descriptor."
           />

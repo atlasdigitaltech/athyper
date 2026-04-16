@@ -1,3 +1,4 @@
+-- LookupDomain/master/bank_account_link_purpose.sql
 -- Lookup values for domain: master.bank_account_link_purpose
 -- Idempotent: WHERE NOT EXISTS guard
 

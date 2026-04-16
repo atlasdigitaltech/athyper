@@ -18,7 +18,7 @@ import {
   RefreshCw, TrendingDown, ShieldAlert, Timer, Loader2,
   ChevronUp, ChevronDown, ChevronsUpDown,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@athyper/theme/utils";
 import {
   useRelayQuery,
   SectionHeader,

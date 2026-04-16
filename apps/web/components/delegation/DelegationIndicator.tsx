@@ -23,7 +23,7 @@ export function DelegationIndicator() {
     <div
       role="status"
       aria-label={`Acting as ${delegator_name}`}
-      className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+      className="flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning"
     >
       {/* Person icon */}
       <svg
@@ -47,7 +47,7 @@ export function DelegationIndicator() {
       <button
         type="button"
         aria-label="Stop acting as delegate"
-        className="ml-0.5 rounded-full p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900/60"
+        className="ml-0.5 rounded-full p-0.5 hover:bg-warning/20"
         onClick={() => deactivateDelegation()}
       >
         <svg

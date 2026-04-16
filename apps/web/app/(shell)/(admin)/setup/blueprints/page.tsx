@@ -12,6 +12,7 @@
  */
 
 import { useState } from "react";
+import { cn } from "@athyper/theme/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen, CheckCircle2, CircleDashed, AlertTriangle,
@@ -165,7 +166,7 @@ function BlueprintCard({
               <p className="text-xs font-mono text-muted-foreground">{bp.code}</p>
             </div>
           </div>
-          <span className={`shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${colorClass}`}>
+          <span className={cn("shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium", colorClass)}>
             {CATEGORY_LABELS[bp.category]}
           </span>
         </div>
@@ -382,7 +383,7 @@ export default function BlueprintsPage() {
               disabled={isFetching}
               className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} />
             </button>
           </div>
         </div>

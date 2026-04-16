@@ -1,2 +1,0 @@
--- 05_pre_constraint_functions/005_ledger.sql
--- No pre-constraint functions required for this schema.

@@ -1,0 +1,6 @@
+-- ============================================================================
+-- log/02_pre_constraint.sql
+-- Concept: Audit Pre-Constraints — no functions required
+-- Depends on: 04_tables/006_log.sql
+-- Note: No pre-constraint functions required for the log schema.
+-- ============================================================================

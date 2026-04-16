@@ -17,7 +17,7 @@ import {
   ChevronDown, FileJson, FileSpreadsheet, AlertTriangle, Clock,
   User, Database, Pencil, Trash2, Plus, Eye,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@athyper/theme/utils";
 import {
   useRelayQuery,
   SearchInput,

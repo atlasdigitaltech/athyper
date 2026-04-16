@@ -93,6 +93,11 @@ BEGIN
         (NULL, 'tenant_feature_entitlement',   v_lc_active_inactive, 100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 
+    -- ── IAM: Self-service requests ────────────────────────────────────────────
+    INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
+        (NULL, 'user_profile_update_request', v_lc_master_doc, 100, v_su)
+    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+
     -- ── NTF: Notifications ───────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'notification',         v_lc_active_inactive_archived, 100, v_su),
@@ -106,27 +111,28 @@ BEGIN
         (NULL, 'conversation', v_lc_conversation, 100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 
-    -- ── DOC/WFL: Templates & definitions ─────────────────────────────────────
+    -- ── DOC: Document & template masters ─────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
-        (NULL, 'document_template',   v_lc_template,   100, v_su),
-        (NULL, 'workflow_template',   v_lc_template,   100, v_su),
-        (NULL, 'workflow_definition', v_lc_master_doc, 100, v_su)
+        (NULL, 'document',      v_lc_master_doc,      100, v_su),
+        (NULL, 'template',      v_lc_template,        100, v_su),
+        (NULL, 'brand_profile', v_lc_active_inactive, 100, v_su),
+        (NULL, 'letterhead',    v_lc_active_inactive, 100, v_su),
+        (NULL, 'print_profile', v_lc_active_inactive, 100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 
     -- ── Finance: Org structure ────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
-        (NULL, 'legal_entity',   v_lc_org_master,      100, v_su),
-        (NULL, 'company_code',   v_lc_org_master,      100, v_su),
-        (NULL, 'business_unit',  v_lc_org_master,      100, v_su),
-        (NULL, 'cost_center',    v_lc_org_master,      100, v_su),
-        (NULL, 'profit_center',  v_lc_org_master,      100, v_su),
-        (NULL, 'warehouse',      v_lc_active_inactive, 100, v_su)
+        (NULL, 'legal_entity',  v_lc_org_master,      100, v_su),
+        (NULL, 'company_code',  v_lc_org_master,      100, v_su),
+        (NULL, 'cost_center',   v_lc_org_master,      100, v_su),
+        (NULL, 'profit_center', v_lc_org_master,      100, v_su),
+        (NULL, 'site',          v_lc_org_master,      100, v_su),
+        (NULL, 'warehouse',     v_lc_active_inactive, 100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 
     -- ── Finance: Chart of Accounts / GL ──────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'chart_of_account', v_lc_active_inactive, 100, v_su),
-        (NULL, 'gl_account_type',  v_lc_active_inactive, 100, v_su),
         (NULL, 'gl_account',       v_lc_gl_account,      100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 
@@ -139,7 +145,7 @@ BEGIN
     -- ── Finance: Business Partners ────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'customer', v_lc_bp_master, 100, v_su),
-        (NULL, 'supplier', v_lc_bp_master, 100, v_su),
+        (NULL, 'vendor',   v_lc_bp_master, 100, v_su),
         (NULL, 'employee', v_lc_employee,  100, v_su)
     ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
 

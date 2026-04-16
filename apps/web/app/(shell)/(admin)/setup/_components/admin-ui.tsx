@@ -26,12 +26,13 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { Search, X, AlertTriangle, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
   Input, Badge, Button,
 } from "@athyper/ui/primitives";
-import { cn } from "@/lib/utils";
+import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors, adminStatusIntent } from "@athyper/theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,16 +70,16 @@ export function StatusPill({
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
   className,
 }: {
-  icon?: LucideIcon;
+  icon?: ReactNode;
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
 }) {
   return (
@@ -88,7 +89,7 @@ export function EmptyState({
         className
       )}
     >
-      {Icon && <Icon className="size-9 text-muted-foreground/30" />}
+      {icon}
       <div className="space-y-1">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         {description && (

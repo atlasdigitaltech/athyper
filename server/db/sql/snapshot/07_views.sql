@@ -1,0 +1,6 @@
+-- ============================================================================
+-- snapshot/07_views.sql
+-- Concept: Snapshot Views — no views defined yet
+-- Depends on: 04_tables/009_snapshot.sql
+-- Note: No views defined yet for the snapshot schema.
+-- ============================================================================

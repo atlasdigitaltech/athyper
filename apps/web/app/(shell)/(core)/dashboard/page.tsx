@@ -13,11 +13,13 @@
  *   - Quick navigation shortcuts
  */
 
-import { ArrowRight, Bell, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
+import { Bell, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
 import { EmptyState } from "@athyper/ui/feedback";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/ui/primitives";
+import { ActionLinkCard } from "@/components/home/ActionLinkCard";
+import { SectionLabel } from "@/components/home/SectionLabel";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { useInbox } from "@athyper/query";
 
@@ -26,51 +28,51 @@ import { useInbox } from "@athyper/query";
 const WORKSPACES = [
   {
     href: "/finance",
-    label: "Finance",
+    title: "Finance",
     description: "Accounting, GL, COA, close cycle",
     icon: Building2,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    iconClass: "text-primary",
+    iconBgClass: "bg-primary/10",
   },
   {
     href: "/supply-chain",
-    label: "Supply Chain",
+    title: "Supply Chain",
     description: "Procurement, inventory, logistics",
     icon: Package,
-    color: "text-warning",
-    bg: "bg-warning/10",
+    iconClass: "text-warning",
+    iconBgClass: "bg-warning/10",
   },
   {
     href: "/people",
-    label: "People",
+    title: "People",
     description: "HR, payroll, org management",
     icon: Users,
-    color: "text-accent-foreground",
-    bg: "bg-accent/10",
+    iconClass: "text-accent-foreground",
+    iconBgClass: "bg-accent/10",
   },
   {
     href: "/projects",
-    label: "Projects",
+    title: "Projects",
     description: "Project costing, ITSM",
     icon: FolderKanban,
-    color: "text-success",
-    bg: "bg-success/10",
+    iconClass: "text-success",
+    iconBgClass: "bg-success/10",
   },
   {
     href: "/manufacturing",
-    label: "Manufacturing",
+    title: "Manufacturing",
     description: "Production, maintenance",
     icon: Factory,
-    color: "text-destructive",
-    bg: "bg-destructive/10",
+    iconClass: "text-destructive",
+    iconBgClass: "bg-destructive/10",
   },
   {
     href: "/asset-management",
-    label: "Asset Management",
+    title: "Asset Management",
     description: "Fixed assets, real estate, facilities",
     icon: Briefcase,
-    color: "text-info",
-    bg: "bg-info/10",
+    iconClass: "text-info",
+    iconBgClass: "bg-info/10",
   },
 ] as const;
 
@@ -101,25 +103,10 @@ export default function DashboardPage() {
 
         {/* ── Workspace grid ──────────────────────────────────────────────── */}
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Workspaces
-          </h2>
+          <SectionLabel>Workspaces</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {WORKSPACES.map(({ href, label, description, icon: Icon, color, bg }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/40 hover:border-border/80"
-              >
-                <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${bg}`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-                </div>
-                <ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
+            {WORKSPACES.map((workspace) => (
+              <ActionLinkCard key={workspace.href} {...workspace} />
             ))}
           </div>
         </div>

@@ -1,0 +1,6 @@
+-- ============================================================================
+-- document/07_views.sql
+-- Concept: Document Views — no views defined yet
+-- Depends on: 04_tables/004_document.sql and sub-tables
+-- Note: No views defined yet for the document schema.
+-- ============================================================================

@@ -1,3 +1,4 @@
+-- LookupDomain/master/bank_account_reconciliation_mode.sql
 -- Lookup values for domain: master.bank_account_reconciliation_mode
 -- Idempotent: WHERE NOT EXISTS guard
 

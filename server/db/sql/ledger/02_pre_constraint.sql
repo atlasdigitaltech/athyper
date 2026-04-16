@@ -1,0 +1,6 @@
+-- ============================================================================
+-- ledger/02_pre_constraint.sql
+-- Concept: Ledger Pre-Constraints — no functions required
+-- Depends on: 04_tables/005_ledger.sql
+-- Note: No pre-constraint functions required for the ledger schema.
+-- ============================================================================

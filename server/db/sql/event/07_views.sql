@@ -1,0 +1,6 @@
+-- ============================================================================
+-- event/07_views.sql
+-- Concept: Event Views — no views defined yet
+-- Depends on: 04_tables/007_event.sql and sub-tables
+-- Note: No views defined yet for the event schema.
+-- ============================================================================

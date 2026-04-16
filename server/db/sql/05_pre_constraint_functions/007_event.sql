@@ -1,2 +1,0 @@
--- 05_pre_constraint_functions/007_event.sql
--- No pre-constraint functions required for this schema.

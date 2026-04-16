@@ -1,0 +1,6 @@
+-- ============================================================================
+-- event/02_pre_constraint.sql
+-- Concept: Event Pre-Constraints — no functions required
+-- Depends on: 04_tables/007_event.sql
+-- Note: No pre-constraint functions required for the event schema.
+-- ============================================================================

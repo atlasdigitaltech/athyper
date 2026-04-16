@@ -5,10 +5,11 @@
  * Routes users into supply-chain workbenches and document lists.
  */
 
-import { ArrowRight, FileText, Package, ShoppingCart, Truck, Warehouse } from "lucide-react";
-import Link from "next/link";
+import { FileText, Package, ShoppingCart, Truck, Warehouse } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
+import { ActionLinkCard } from "@/components/home/ActionLinkCard";
+import { SectionLabel } from "@/components/home/SectionLabel";
 
 const WORKBENCH_ACTIONS = [
   {
@@ -16,48 +17,48 @@ const WORKBENCH_ACTIONS = [
     title: "Purchase Orders",
     description: "Create and manage procurement orders",
     icon: ShoppingCart,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    iconClass: "text-primary",
+    iconBgClass: "bg-primary/10",
   },
   {
     href: "/app/purchase-invoice",
     title: "Supplier Invoices",
     description: "Receive, match, and approve supplier invoices",
     icon: FileText,
-    color: "text-warning",
-    bg: "bg-warning/10",
+    iconClass: "text-warning",
+    iconBgClass: "bg-warning/10",
   },
   {
     href: "/app/vendor",
     title: "Vendors",
     description: "Supplier master records and onboarding",
     icon: Package,
-    color: "text-success",
-    bg: "bg-success/10",
+    iconClass: "text-success",
+    iconBgClass: "bg-success/10",
   },
   {
     href: "/app/item",
     title: "Item Master",
     description: "Products, materials, and services catalog",
     icon: Package,
-    color: "text-accent-foreground",
-    bg: "bg-accent/10",
+    iconClass: "text-accent-foreground",
+    iconBgClass: "bg-accent/10",
   },
   {
     href: "/app/warehouse",
     title: "Warehouses",
     description: "Storage locations and inventory positions",
     icon: Warehouse,
-    color: "text-info",
-    bg: "bg-info/10",
+    iconClass: "text-info",
+    iconBgClass: "bg-info/10",
   },
   {
     href: "/app/shipment",
     title: "Shipments",
     description: "Logistics and transportation tracking",
     icon: Truck,
-    color: "text-destructive",
-    bg: "bg-destructive/10",
+    iconClass: "text-destructive",
+    iconBgClass: "bg-destructive/10",
   },
 ] as const;
 
@@ -69,25 +70,10 @@ export default function SupplyChainWorkspacePage() {
     >
       <div className="space-y-6">
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Supply Chain
-          </h2>
+          <SectionLabel>Supply Chain</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {WORKBENCH_ACTIONS.map(({ href, title, description, icon: Icon, color, bg }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/40"
-              >
-                <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${bg}`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-                </div>
-                <ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
+            {WORKBENCH_ACTIONS.map((action) => (
+              <ActionLinkCard key={action.href} {...action} />
             ))}
           </div>
         </div>

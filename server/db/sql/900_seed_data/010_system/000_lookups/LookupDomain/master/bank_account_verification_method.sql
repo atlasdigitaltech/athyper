@@ -1,3 +1,4 @@
+-- LookupDomain/master/bank_account_verification_method.sql
 -- Lookup values for domain: master.bank_account_verification_method
 -- Idempotent: WHERE NOT EXISTS guard
 

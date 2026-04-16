@@ -1,3 +1,4 @@
+-- LookupDomain/master/bank_party_institution_type.sql
 -- Lookup values for domain: master.bank_party_institution_type
 -- Idempotent: WHERE NOT EXISTS guard
 

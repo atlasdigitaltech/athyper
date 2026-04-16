@@ -7,7 +7,7 @@
 | `010_system/` | **System** | Once at install / migration. No tenant required. |
 | `020_blueprint/` | **Blueprint** | During tenant provisioning. User selects packs. |
 | `030_tenant/` | **Tenant** | During tenant provisioning, after blueprint applied. |
-| `040_demo/` | Demo | Optional, for demo/staging environments only. |
+| `040_prod_tenant/` | **Prod Tenant** | Production-specific tenant data (non-demo). |
 
 ---
 
@@ -74,6 +74,18 @@ Run once on first deploy and again on upgrades that add new lookup values.
 010_system/100_finance/100_master/*.sql
 010_system/100_finance/200_document/*.sql
 010_system/100_finance/900_operations/*.sql
+
+# Entity Engine registry (run after all schema seed data above)
+010_system/entity_engine/010_lifecycles/*.sql          ← 21 lifecycle state machines
+010_system/entity_engine/020_entities/*.sql            ← 111 entity registrations
+010_system/entity_engine/025_entity_versions.sql       ← version_no=1 rows for all entities
+010_system/entity_engine/030_canonical_fields/*.sql    ← 15 cross-entity canonical fields
+010_system/entity_engine/035_version_fields/*.sql      ← field→version bindings
+010_system/entity_engine/002_field_groups.sql
+010_system/entity_engine/040_field_group_members.sql
+010_system/entity_engine/060_entity_operations/*.sql   ← per-entity operation configs
+010_system/entity_engine/050_entity_lifecycles.sql     ← ~55 entity→lifecycle bindings
+010_system/entity_engine/070_entity_relations.sql      ← ~75 entity relation declarations
 ```
 
 ### Phase 2 — Blueprint Registry (020_blueprint/000_registry/)
@@ -163,10 +175,22 @@ Runs after all blueprint files are applied. Order is strict.
 030_tenant/900_principals/002_demo_principal_personas.sql       ← demo/staging only
 030_tenant/900_principals/003_demo_delegation_grants.sql        ← demo/staging only
 030_tenant/900_principals/004_athq_principals.sql
+030_tenant/900_principals/005_named_tenant_principals.sql
+030_tenant/900_principals/006_principal_users.sql
 030_tenant/950_rbac/001_demo_rbac.sql                          ← demo/staging only
 030_tenant/950_rbac/002_demo_group_members.sql                  ← demo/staging only
 030_tenant/200_finance/270_refresh_mv.sql          ← refresh MVs after all data loaded
 030_tenant/200_finance/280_validation_assertions.sql ← run last to verify integrity
+```
+
+### Phase 4 — Production Tenant Data (040_prod_tenant/)
+
+Run against production tenants only. Contains pre-configured tenant seeds that bypass
+demo/blueprint flows.
+
+```
+040_prod_tenant/01_technostat/001_technostat_final_tenant_seed.sql
+040_prod_tenant/01_technostat/002_technostat_test_ict_gl_robust.sql
 ```
 
 ---

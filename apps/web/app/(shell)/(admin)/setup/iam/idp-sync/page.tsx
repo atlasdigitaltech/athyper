@@ -249,13 +249,13 @@ export default function IdpSyncPage() {
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{p.total.toLocaleString()}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          <span className={p.synced > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                          <span className={p.synced > 0 ? "text-success" : "text-muted-foreground"}>
                             {p.synced.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
                           {p.drift > 0 ? (
-                            <span className="font-medium text-yellow-600 dark:text-yellow-400">{p.drift.toLocaleString()}</span>
+                            <span className="font-medium text-warning">{p.drift.toLocaleString()}</span>
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
@@ -294,7 +294,7 @@ export default function IdpSyncPage() {
 
             {conflicts.length === 0 ? (
               <div className="flex items-center gap-3 rounded-md border border-dashed p-6 text-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-500/60" />
+                <CheckCircle2 className="h-6 w-6 text-success/60" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">All bindings in sync</p>
                   <p className="text-xs text-muted-foreground/70">

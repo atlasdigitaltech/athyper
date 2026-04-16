@@ -647,16 +647,16 @@ function BulkActionDialog({
                           const paPill = pa && pa !== "allow" ? (
                             <span className={cn(
                               "rounded px-1.5 py-0.5 text-[9px] font-medium",
-                              pa === "deny"              ? "bg-destructive/10 text-destructive" :
-                              pa === "warn"              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                              pa === "require_workflow"  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
-                              /* escalate */               "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+                              pa === "deny"             ? resolveSemanticColors("error").subtleBadge :
+                              pa === "warn"             ? resolveSemanticColors("warning").subtleBadge :
+                              pa === "require_workflow" ? resolveSemanticColors("info").subtleBadge :
+                              /* escalate */              resolveSemanticColors("accent").subtleBadge,
                             )}>
                               {pa.replace(/_/g, " ")}
                             </span>
                           ) : null;
                           const statusColor =
-                            rec.status === "success" ? "text-emerald-600" :
+                            rec.status === "success" ? "text-success" :
                             rec.status === "error"   ? "text-destructive" :
                                                        "text-muted-foreground";
                           return (
@@ -744,13 +744,13 @@ function Stat({
   variant: "success" | "error" | "neutral";
 }) {
   const color = variant === "success"
-    ? "text-emerald-600"
+    ? "text-success"
     : variant === "error"
     ? "text-destructive"
     : "text-muted-foreground";
   return (
     <div className="flex items-center gap-1.5">
-      <Icon className={`h-3.5 w-3.5 shrink-0 ${color}`} />
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", color)} />
       <span className="text-muted-foreground">{label}</span>
       <span className="ml-auto font-semibold tabular-nums">{value}</span>
     </div>

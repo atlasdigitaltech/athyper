@@ -1,3 +1,4 @@
+-- LookupDomain/master/payment_method_direction.sql
 -- Lookup values for domain: master.payment_method_direction
 -- Shared across method, policy, binding, settlement tables
 

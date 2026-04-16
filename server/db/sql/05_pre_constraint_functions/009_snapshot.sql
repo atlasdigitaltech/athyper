@@ -1,2 +1,0 @@
--- 05_pre_constraint_functions/009_snapshot.sql
--- No pre-constraint functions required for this schema.

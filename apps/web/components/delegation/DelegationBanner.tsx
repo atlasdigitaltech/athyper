@@ -36,12 +36,12 @@ export function DelegationBanner() {
     <div
       role="region"
       aria-label="Available delegations"
-      className="border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900/40 dark:bg-amber-950/30"
+      className="border-b border-warning/30 bg-warning/10 px-4 py-2"
     >
       <div className="mx-auto flex max-w-screen-2xl items-start gap-3">
         {/* Icon */}
         <svg
-          className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+          className="mt-0.5 h-4 w-4 shrink-0 text-warning"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
@@ -57,7 +57,7 @@ export function DelegationBanner() {
 
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+          <p className="text-sm font-medium text-warning">
             {runtime.delegations_available.length === 1
               ? "You have an active delegation available"
               : `You have ${runtime.delegations_available.length} delegations available`}
@@ -75,7 +75,7 @@ export function DelegationBanner() {
                   key={d.delegation_id}
                   className="flex flex-wrap items-center gap-x-3 gap-y-1"
                 >
-                  <span className="text-sm text-amber-700 dark:text-amber-400">
+                  <span className="text-sm text-warning">
                     <span className="font-medium">{d.delegator_name}</span>
                     {d.delegator_persona !== "default" && (
                       <span className="ml-1 text-xs opacity-70">
@@ -85,20 +85,20 @@ export function DelegationBanner() {
                   </span>
 
                   {d.permissions.length > 0 && (
-                    <span className="text-xs text-amber-600/80 dark:text-amber-500/80">
+                    <span className="text-xs text-warning/80">
                       {d.permissions.slice(0, 3).join(", ")}
                       {d.permissions.length > 3 && ` +${d.permissions.length - 3} more`}
                     </span>
                   )}
 
-                  <span className="text-xs text-amber-600/60 dark:text-amber-500/60">
+                  <span className="text-xs text-warning/60">
                     {daysLeft === 1 ? "expires tomorrow" : `expires in ${daysLeft}d`}
                   </span>
 
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-6 border-amber-300 bg-amber-50 px-2 text-xs text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                    className="h-6 border-warning/40 bg-warning/10 px-2 text-xs text-warning hover:bg-warning/20"
                     onClick={() => activateDelegation(d.delegation_id)}
                   >
                     Act as {d.delegator_name.split(" ")[0]}
@@ -113,7 +113,7 @@ export function DelegationBanner() {
         <button
           type="button"
           aria-label="Dismiss delegation banner"
-          className="shrink-0 text-amber-500 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-300"
+          className="shrink-0 text-warning hover:text-warning/80"
           onClick={() => setDismissed(true)}
         >
           <svg

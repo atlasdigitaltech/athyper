@@ -67,7 +67,7 @@ export function HomeKpiRow() {
         value={inbox.data?.count ?? "—"}
         sub="tasks awaiting your action"
         Icon={Clock}
-        iconClass="text-amber-500"
+        iconClass="text-warning"
         loading={inbox.isLoading}
       />
       <KpiCard
@@ -75,14 +75,14 @@ export function HomeKpiRow() {
         value="—"
         sub="documents processed"
         Icon={CheckCircle2}
-        iconClass="text-emerald-500"
+        iconClass="text-success"
       />
       <KpiCard
         title="Notifications"
         value={unread.data?.count ?? "—"}
         sub="unread alerts"
         Icon={Bell}
-        iconClass="text-blue-500"
+        iconClass="text-info"
         loading={unread.isLoading}
       />
       <KpiCard
@@ -90,7 +90,7 @@ export function HomeKpiRow() {
         value="—"
         sub="in-progress"
         Icon={FileText}
-        iconClass="text-violet-500"
+        iconClass="text-primary"
       />
     </div>
   );

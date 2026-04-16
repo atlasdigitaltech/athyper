@@ -1,3 +1,4 @@
+-- LookupDomain/control/payment_settlement_rule_status.sql
 -- Lookup values for domain: control.payment_settlement_rule_status
 
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
