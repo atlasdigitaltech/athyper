@@ -3645,6 +3645,7 @@ export type feature_flag = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    flag_type: Generated<string>;
 };
 export type field_access_log = {
     id: Generated<string>;
@@ -3726,6 +3727,26 @@ export type fiscal_period = {
     is_active: Generated<boolean | null>;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type forecast_budget_bridge = {
+    id: Generated<string>;
+    tenant_id: string;
+    name: string;
+    fiscal_year: number;
+    budget_period_type: Generated<string>;
+    planning_driver_version_id: string | null;
+    status: Generated<string>;
+    locked_at: Timestamp | null;
+    locked_by: string | null;
+    approved_at: Timestamp | null;
+    approved_by: string | null;
+    superseded_by_id: string | null;
+    superseded_at: Timestamp | null;
+    metadata: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -5123,6 +5144,21 @@ export type match_exception = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+};
+export type metadata_change_application_log = {
+    id: Generated<string>;
+    tenant_id: string;
+    change_request_id: string;
+    entity_code: string;
+    applied_by: string;
+    applied_at: Generated<Timestamp>;
+    compiler_run_id: string | null;
+    entities_recompiled: string[];
+    duration_ms: number | null;
+    result: Generated<string>;
+    error_detail: unknown | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
 };
 export type metadata_change_request = {
     id: Generated<string>;
@@ -7132,6 +7168,7 @@ export type rounding_rule = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    gl_variance_approval_required: Generated<boolean>;
 };
 export type saved_view = {
     id: Generated<string>;
@@ -8342,6 +8379,7 @@ export type DB = {
     "control.field_group": field_group;
     "control.field_group_member": field_group_member;
     "control.field_security_policy": field_security_policy;
+    "control.forecast_budget_bridge": forecast_budget_bridge;
     "control.forecast_line": forecast_line;
     "control.hook_action_registry": hook_action_registry;
     "control.intent_profile_override": intent_profile_override;
@@ -8355,6 +8393,7 @@ export type DB = {
     "control.lifecycle_transition_hook": lifecycle_transition_hook;
     "control.lookup_domain": lookup_domain;
     "control.lookup_value": lookup_value;
+    "control.metadata_change_application_log": metadata_change_application_log;
     "control.metadata_change_request": metadata_change_request;
     "control.mfa_config": mfa_config;
     "control.notification_provider": notification_provider;

@@ -953,3 +953,35 @@ CREATE POLICY tenant_write ON control.ai_drift_baseline
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_write  ON control.ai_drift_baseline
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── H3  forecast_budget_bridge ───────────────────────────────────────────────
+-- Read: own tenant. Write: own tenant (finance controller role enforced at app layer).
+ALTER TABLE control.forecast_budget_bridge ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.forecast_budget_bridge FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON control.forecast_budget_bridge;
+DROP POLICY IF EXISTS tenant_write ON control.forecast_budget_bridge;
+DROP POLICY IF EXISTS admin_write  ON control.forecast_budget_bridge;
+CREATE POLICY tenant_read  ON control.forecast_budget_bridge
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.forecast_budget_bridge
+    FOR ALL USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write  ON control.forecast_budget_bridge
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── H4  metadata_change_application_log ─────────────────────────────────────
+-- Read: own tenant (finance/admin users inspect compiler run history).
+-- Write: platform service account (INSERT only at application time) + admin.
+ALTER TABLE control.metadata_change_application_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.metadata_change_application_log FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON control.metadata_change_application_log;
+DROP POLICY IF EXISTS tenant_insert ON control.metadata_change_application_log;
+DROP POLICY IF EXISTS admin_write  ON control.metadata_change_application_log;
+CREATE POLICY tenant_read   ON control.metadata_change_application_log
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.metadata_change_application_log
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write   ON control.metadata_change_application_log
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

@@ -3695,6 +3695,8 @@ CREATE TABLE IF NOT EXISTS control.document_sequence_counter (
 
 COMMENT ON TABLE control.document_sequence_counter IS
     'Mutable counter state for document numbering. Hot table — updated every txn. '
+    'Runtime state in control schema for locality (co-located with document_sequence_config). '
+    'Not an audit table — no created_by/created_at; updated_by nullable (batch increments). '
     'Natural composite PK (tenant, config, year, period) for efficient upsert. '
     'period_number = 0 for YEARLY/NONE strategies. '
     'Atomic increment via control.next_document_number().';
@@ -3863,6 +3865,11 @@ CREATE TABLE IF NOT EXISTS control.rounding_rule (
     precision_digits    smallint,
     minimum_unit        numeric(18,6),
 
+    -- GL variance approval (H5 P2-hygiene)
+    -- Regulated environments (e.g. IFRS statutory audit) may require explicit GL sign-off
+    -- when rounding produces a variance journal entry before the period can be closed.
+    gl_variance_approval_required boolean NOT NULL DEFAULT false,
+
     -- Metadata
     metadata            jsonb           NOT NULL DEFAULT '{}'::jsonb,
 
@@ -3890,7 +3897,10 @@ CREATE TABLE IF NOT EXISTS control.rounding_rule (
 COMMENT ON TABLE control.rounding_rule IS
     'Rounding configuration per tenant. precision_digits NULL = runtime reads '
     'shared.currency.minor_units. Explicit value overrides currency default. '
-    'minimum_unit for coinage gaps (CHF 0.05).';
+    'minimum_unit for coinage gaps (CHF 0.05). '
+    'gl_variance_approval_required: regulated environments (IFRS statutory audit) may require '
+    'explicit GL sign-off when rounding generates a variance journal entry; blocks period-close '
+    'gate until approved by a finance controller.';
 
 
 -- ── control.tax_rate_schedule ─────────────────────────────────────────────────
@@ -5060,6 +5070,9 @@ CREATE TABLE IF NOT EXISTS control.feature_flag (
     name                text        NOT NULL,
     description         text,
 
+    -- Discriminator (H1 P2-hygiene)
+    flag_type           text        NOT NULL DEFAULT 'release_gate',
+
     -- State
     is_enabled          boolean     NOT NULL DEFAULT false,
 
@@ -5086,11 +5099,15 @@ CREATE TABLE IF NOT EXISTS control.feature_flag (
     CONSTRAINT ff_code_uq       UNIQUE (code),
     CONSTRAINT ff_code_chk      CHECK (btrim(code) <> ''),
     CONSTRAINT ff_rollout_chk   CHECK (rollout_pct IS NULL OR (rollout_pct >= 0 AND rollout_pct <= 100)),
-    CONSTRAINT ff_overrides_chk CHECK (tenant_overrides IS NULL OR jsonb_typeof(tenant_overrides) = 'object')
+    CONSTRAINT ff_overrides_chk CHECK (tenant_overrides IS NULL OR jsonb_typeof(tenant_overrides) = 'object'),
+    CONSTRAINT ff_flag_type_chk CHECK (flag_type IN ('release_gate', 'capability_toggle', 'experiment'))
 );
 
 COMMENT ON TABLE  control.feature_flag IS
     'Platform feature flag registry. Redis cache-first (60s TTL), DB fallback. '
+    'flag_type discriminator: release_gate (temporary on/off for phased releases), '
+    'capability_toggle (permanent feature switch with no planned expiry), '
+    'experiment (A/B test or percentage rollout). '
     'is_enabled = global default. tenant_overrides = per-tenant map. '
     'rollout_pct = 0–100 stable-hash rollout when no tenant override present.';
 COMMENT ON COLUMN control.feature_flag.code IS
@@ -5186,6 +5203,145 @@ COMMENT ON COLUMN control.metadata_change_request.workflow_request_id IS
 COMMENT ON COLUMN control.metadata_change_request.applied_at IS
     'Timestamp when EntityCompilerService.invalidate() was called and '
     'the change was promoted to status=applied. NULL until approval + application.';
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- §H3  control.forecast_budget_bridge — planning → budget baseline link
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Links a planning_driver_version snapshot to a named budget baseline that
+-- can be locked and approved before the fiscal period begins.
+--
+-- Merge-order: draft → locked → approved; superseded_by_id chains history
+-- when a baseline is superseded by a revised version within the same year.
+--
+-- FK planning_driver_version_id → control.planning_driver_version ON DELETE SET NULL
+-- so baselines survive driver version archival.
+-- ══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS control.forecast_budget_bridge (
+    -- Identity
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+
+    -- Budget baseline identity
+    name                        text        NOT NULL,
+    fiscal_year                 smallint    NOT NULL,
+    budget_period_type          text        NOT NULL DEFAULT 'annual',
+
+    -- Planning link (nullable — bridge can exist without a driver version)
+    planning_driver_version_id  uuid,
+
+    -- Lock / approval state
+    status                      text        NOT NULL DEFAULT 'draft',
+    locked_at                   timestamptz,
+    locked_by                   uuid,
+    approved_at                 timestamptz,
+    approved_by                 uuid,
+
+    -- History chain
+    superseded_by_id            uuid,
+    superseded_at               timestamptz,
+
+    -- Metadata
+    metadata                    jsonb       NOT NULL DEFAULT '{}',
+
+    -- Audit
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT fbb_pkey                 PRIMARY KEY (id),
+    CONSTRAINT fbb_tenant_id_uq         UNIQUE (tenant_id, id),
+    CONSTRAINT fbb_name_year_uq         UNIQUE (tenant_id, name, fiscal_year),
+    CONSTRAINT fbb_name_chk             CHECK (btrim(name) <> ''),
+    CONSTRAINT fbb_fiscal_year_chk      CHECK (fiscal_year BETWEEN 2000 AND 2099),
+    CONSTRAINT fbb_period_type_chk      CHECK (budget_period_type IN ('annual', 'quarterly', 'monthly')),
+    CONSTRAINT fbb_status_chk           CHECK (status IN ('draft', 'locked', 'approved', 'superseded')),
+    CONSTRAINT fbb_lock_pair_chk        CHECK ((locked_at IS NULL) = (locked_by IS NULL)),
+    CONSTRAINT fbb_approve_pair_chk     CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT fbb_approval_order_chk   CHECK (approved_at IS NULL OR locked_at IS NOT NULL),
+    CONSTRAINT fbb_superseded_pair_chk  CHECK ((superseded_by_id IS NULL) = (superseded_at IS NULL)),
+    CONSTRAINT fbb_metadata_chk         CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+COMMENT ON TABLE control.forecast_budget_bridge IS
+    'H3 P2-hygiene: planning → budget baseline link. '
+    'Connects a planning_driver_version snapshot to a named annual/quarterly/monthly budget. '
+    'Lifecycle: draft → locked → approved; superseded_by_id chains history on revision. '
+    'GL period-close gate reads status=approved before allowing entries.';
+COMMENT ON COLUMN control.forecast_budget_bridge.planning_driver_version_id IS
+    'FK → control.planning_driver_version (ON DELETE SET NULL). '
+    'NULL when baseline is created standalone (no driver version yet pinned).';
+COMMENT ON COLUMN control.forecast_budget_bridge.budget_period_type IS
+    'Granularity of the budget: annual (one amount), quarterly (4 slices), monthly (12 slices). '
+    'Slice amounts are stored in a companion amounts table (Phase 2 extension).';
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- §H4  control.metadata_change_application_log — structured application audit
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Append-only log of each EntityCompilerService.invalidate() invocation that
+-- results from an approved metadata_change_request.
+--
+-- Separate from the applied_at timestamp on metadata_change_request — that is
+-- a point-in-time flag; this table captures duration, affected entities,
+-- and compiler error detail for incident analysis.
+--
+-- No updated_at trigger — rows are immutable after INSERT.
+-- ══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS control.metadata_change_application_log (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Source request
+    change_request_id   uuid        NOT NULL,
+
+    -- Application context
+    entity_code         text        NOT NULL,
+    applied_by          uuid        NOT NULL,
+    applied_at          timestamptz NOT NULL DEFAULT now(),
+
+    -- Compiler run tracing
+    compiler_run_id     uuid,
+    entities_recompiled text[],     -- all entity_codes recompiled in this run
+    duration_ms         integer,
+
+    -- Outcome
+    result              text        NOT NULL DEFAULT 'success',
+    error_detail        jsonb,      -- NULL on success; structured error on failure/partial
+
+    -- Audit (created only — immutable log)
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+
+    CONSTRAINT mcal_pkey              PRIMARY KEY (id),
+    CONSTRAINT mcal_tenant_id_uq      UNIQUE (tenant_id, id),
+    CONSTRAINT mcal_entity_code_chk   CHECK (btrim(entity_code) <> ''),
+    CONSTRAINT mcal_result_chk        CHECK (result IN ('success', 'partial', 'failed')),
+    CONSTRAINT mcal_error_pair_chk    CHECK (
+        result = 'success' OR error_detail IS NOT NULL
+    ),
+    CONSTRAINT mcal_duration_pos_chk  CHECK (duration_ms IS NULL OR duration_ms >= 0),
+    CONSTRAINT mcal_error_obj_chk     CHECK (
+        error_detail IS NULL OR jsonb_typeof(error_detail) = 'object'
+    )
+);
+
+COMMENT ON TABLE control.metadata_change_application_log IS
+    'H4 P2-hygiene: append-only audit of EntityCompilerService.invalidate() runs. '
+    'One row per application event triggered by an approved metadata_change_request. '
+    'duration_ms + entities_recompiled enable performance monitoring of compiler runs. '
+    'error_detail captures structured compiler errors for partial/failed outcomes. '
+    'Immutable — no updated_at column or trigger.';
+COMMENT ON COLUMN control.metadata_change_application_log.compiler_run_id IS
+    'Correlation ID passed into EntityCompilerService.invalidate(). '
+    'Allows joining multiple log rows that were part of the same batch recompile.';
+COMMENT ON COLUMN control.metadata_change_application_log.entities_recompiled IS
+    'All entity_codes whose descriptors were invalidated and recompiled in this run. '
+    'May include more than the change_request.entity_code when cascading dependencies exist.';
 
 
 -- ══════════════════════════════════════════════════════════════════════════════

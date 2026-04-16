@@ -1373,7 +1373,9 @@ model feature_flag {
   created_by       String    @db.Uuid
   updated_at       DateTime? @db.Timestamptz(6)
   updated_by       String?   @db.Uuid
+  flag_type        String    @default("release_gate")
 
+  @@index([flag_type], map: "ff_flag_type_idx", where: raw("(is_enabled = true)"))
   @@schema("control")
 }
 
@@ -1434,6 +1436,44 @@ model field_security_policy {
   entity             entity    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fsp_entity_fk")
   tenant             tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fsp_tenant_fk")
 
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model forecast_budget_bridge {
+  id                                                      String                   @id(map: "fbb_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                               String                   @db.Uuid
+  name                                                    String
+  fiscal_year                                             Int                      @db.SmallInt
+  budget_period_type                                      String                   @default("annual")
+  planning_driver_version_id                              String?                  @db.Uuid
+  status                                                  String                   @default("draft")
+  locked_at                                               DateTime?                @db.Timestamptz(6)
+  locked_by                                               String?                  @db.Uuid
+  approved_at                                             DateTime?                @db.Timestamptz(6)
+  approved_by                                             String?                  @db.Uuid
+  superseded_by_id                                        String?                  @db.Uuid
+  superseded_at                                           DateTime?                @db.Timestamptz(6)
+  metadata                                                Json                     @default("{}")
+  created_at                                              DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by                                              String                   @db.Uuid
+  updated_at                                              DateTime?                @db.Timestamptz(6)
+  updated_by                                              String?                  @db.Uuid
+  principal_forecast_budget_bridge_approved_byToprincipal principal?               @relation("forecast_budget_bridge_approved_byToprincipal", fields: [approved_by], references: [id], onUpdate: NoAction, map: "fbb_approved_by_fk")
+  principal_forecast_budget_bridge_created_byToprincipal  principal                @relation("forecast_budget_bridge_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "fbb_created_by_fk")
+  principal_forecast_budget_bridge_locked_byToprincipal   principal?               @relation("forecast_budget_bridge_locked_byToprincipal", fields: [locked_by], references: [id], onUpdate: NoAction, map: "fbb_locked_by_fk")
+  planning_driver_version                                 planning_driver_version? @relation(fields: [planning_driver_version_id], references: [id], onUpdate: NoAction, map: "fbb_planning_driver_version_fk")
+  forecast_budget_bridge                                  forecast_budget_bridge?  @relation("forecast_budget_bridgeToforecast_budget_bridge", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "fbb_superseded_by_fk")
+  other_forecast_budget_bridge                            forecast_budget_bridge[] @relation("forecast_budget_bridgeToforecast_budget_bridge")
+  tenant                                                  tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fbb_tenant_fk")
+  principal_forecast_budget_bridge_updated_byToprincipal  principal?               @relation("forecast_budget_bridge_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fbb_updated_by_fk")
+
+  @@unique([tenant_id, name, fiscal_year], map: "fbb_name_year_uq")
+  @@unique([tenant_id, id], map: "fbb_tenant_id_uq")
+  @@index([planning_driver_version_id], map: "fbb_driver_version_idx", where: raw("(planning_driver_version_id IS NOT NULL)"))
+  @@index([tenant_id, fiscal_year, status], map: "fbb_tenant_year_status_idx")
   @@schema("control")
 }
 
@@ -1865,23 +1905,53 @@ model lookup_value {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model metadata_change_application_log {
+  id                                                              String                  @id(map: "mcal_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                       String                  @db.Uuid
+  change_request_id                                               String                  @db.Uuid
+  entity_code                                                     String
+  applied_by                                                      String                  @db.Uuid
+  applied_at                                                      DateTime                @default(now()) @db.Timestamptz(6)
+  compiler_run_id                                                 String?                 @db.Uuid
+  entities_recompiled                                             String[]
+  duration_ms                                                     Int?
+  result                                                          String                  @default("success")
+  error_detail                                                    Json?
+  created_at                                                      DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                                                      String                  @db.Uuid
+  principal_metadata_change_application_log_applied_byToprincipal principal               @relation("metadata_change_application_log_applied_byToprincipal", fields: [applied_by], references: [id], onUpdate: NoAction, map: "mcal_applied_by_fk")
+  metadata_change_request                                         metadata_change_request @relation(fields: [change_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mcal_change_request_fk")
+  principal_metadata_change_application_log_created_byToprincipal principal               @relation("metadata_change_application_log_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "mcal_created_by_fk")
+  tenant                                                          tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mcal_tenant_fk")
+
+  @@unique([tenant_id, id], map: "mcal_tenant_id_uq")
+  @@index([change_request_id, applied_at(sort: Desc)], map: "mcal_change_request_idx")
+  @@index([compiler_run_id], map: "mcal_compiler_run_idx", where: raw("(compiler_run_id IS NOT NULL)"))
+  @@index([tenant_id, applied_at(sort: Desc)], map: "mcal_failed_idx", where: raw("(result <> 'success'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model metadata_change_request {
-  id                  String    @id(map: "mcr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id           String    @db.Uuid
-  entity_code         String
-  change_type         String
-  payload             Json
-  status              String    @default("submitted")
-  submitted_by        String    @db.Uuid
-  reviewed_by         String?   @db.Uuid
-  reviewed_at         DateTime? @db.Timestamptz(6)
-  review_note         String?
-  applied_at          DateTime? @db.Timestamptz(6)
-  workflow_request_id String?   @db.Uuid
-  created_at          DateTime  @default(now()) @db.Timestamptz(6)
-  created_by          String    @db.Uuid
-  updated_at          DateTime? @db.Timestamptz(6)
-  updated_by          String?   @db.Uuid
+  id                              String                            @id(map: "mcr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                       String                            @db.Uuid
+  entity_code                     String
+  change_type                     String
+  payload                         Json
+  status                          String                            @default("submitted")
+  submitted_by                    String                            @db.Uuid
+  reviewed_by                     String?                           @db.Uuid
+  reviewed_at                     DateTime?                         @db.Timestamptz(6)
+  review_note                     String?
+  applied_at                      DateTime?                         @db.Timestamptz(6)
+  workflow_request_id             String?                           @db.Uuid
+  created_at                      DateTime                          @default(now()) @db.Timestamptz(6)
+  created_by                      String                            @db.Uuid
+  updated_at                      DateTime?                         @db.Timestamptz(6)
+  updated_by                      String?                           @db.Uuid
+  metadata_change_application_log metadata_change_application_log[]
 
   @@unique([tenant_id, id], map: "mcr_tenant_id_uq")
   @@schema("control")
@@ -2340,19 +2410,20 @@ model planning_driver_formula {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model planning_driver_version {
-  id                   String          @id(map: "pdv_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String          @db.Uuid
-  driver_id            String          @db.Uuid
-  version_number       Int
-  version_label        String?
-  assumptions_snapshot Json
-  computed_output      Json?
-  snapshot_reason      String          @default("MANUAL")
-  triggered_by         String?
-  metadata             Json            @default("{}")
-  created_at           DateTime        @default(now()) @db.Timestamptz(6)
-  created_by           String          @db.Uuid
-  planning_driver      planning_driver @relation(fields: [driver_id], references: [id], onDelete: Cascade, map: "fk_pdv_driver")
+  id                     String                   @id(map: "pdv_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
+  driver_id              String                   @db.Uuid
+  version_number         Int
+  version_label          String?
+  assumptions_snapshot   Json
+  computed_output        Json?
+  snapshot_reason        String                   @default("MANUAL")
+  triggered_by           String?
+  metadata               Json                     @default("{}")
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  forecast_budget_bridge forecast_budget_bridge[]
+  planning_driver        planning_driver          @relation(fields: [driver_id], references: [id], onDelete: Cascade, map: "fk_pdv_driver")
 
   @@unique([driver_id, version_number], map: "pdv_driver_version_uq")
   @@index([driver_id], map: "idx_pdv_driver")
@@ -2473,25 +2544,26 @@ model policy_test_case {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model rounding_rule {
-  id                String              @id(map: "rr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String              @db.Uuid
-  code              String
-  name              String
-  method            String              @default("ROUND_HALF_UP")
-  precision_digits  Int?                @db.SmallInt
-  minimum_unit      Decimal?            @db.Decimal(18, 6)
-  metadata          Json                @default("{}")
-  status            String              @default("active")
-  is_active         Boolean?            @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime?           @db.Timestamptz(6)
-  status_changed_by String?             @db.Uuid
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  created_by        String              @db.Uuid
-  updated_at        DateTime?           @db.Timestamptz(6)
-  updated_by        String?             @db.Uuid
-  principal         principal           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "rr_created_by_fk")
-  tenant            tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rr_tenant_fk")
-  tax_rate_schedule tax_rate_schedule[]
+  id                            String              @id(map: "rr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                     String              @db.Uuid
+  code                          String
+  name                          String
+  method                        String              @default("ROUND_HALF_UP")
+  precision_digits              Int?                @db.SmallInt
+  minimum_unit                  Decimal?            @db.Decimal(18, 6)
+  metadata                      Json                @default("{}")
+  status                        String              @default("active")
+  is_active                     Boolean?            @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at             DateTime?           @db.Timestamptz(6)
+  status_changed_by             String?             @db.Uuid
+  created_at                    DateTime            @default(now()) @db.Timestamptz(6)
+  created_by                    String              @db.Uuid
+  updated_at                    DateTime?           @db.Timestamptz(6)
+  updated_by                    String?             @db.Uuid
+  gl_variance_approval_required Boolean             @default(false)
+  principal                     principal           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "rr_created_by_fk")
+  tenant                        tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rr_tenant_fk")
+  tax_rate_schedule             tax_rate_schedule[]
 
   @@unique([tenant_id, code], map: "rr_code_uq")
   @@unique([tenant_id, id], map: "rr_tenant_id_uq")
@@ -11576,301 +11648,307 @@ model planning_model {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal {
-  id                                                                                   String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                            String                          @db.Uuid
-  code                                                                                 String
-  name                                                                                 String
-  principal_type                                                                       String
-  is_active                                                                            Boolean?                        @default(dbgenerated("(status = 'active'::text)"))
-  is_locked                                                                            Boolean                         @default(false)
-  is_service_account                                                                   Boolean                         @default(false)
-  login_email                                                                          String?
-  external_ref                                                                         String?
-  principal_source                                                                     String?
-  metadata                                                                             Json                            @default("{}")
-  status                                                                               String                          @default("active")
-  status_changed_at                                                                    DateTime?                       @db.Timestamptz(6)
-  status_changed_by                                                                    String?                         @db.Uuid
-  created_at                                                                           DateTime                        @default(now()) @db.Timestamptz(6)
-  created_by                                                                           String                          @db.Uuid
-  updated_at                                                                           DateTime?                       @db.Timestamptz(6)
-  updated_by                                                                           String?                         @db.Uuid
-  auth_epoch                                                                           Int                             @default(0)
-  tax_credit_summary                                                                   tax_credit_summary[]
-  wht_vendor_accumulator_wht_vendor_accumulator_counterparty_idToprincipal             wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_counterparty_idToprincipal")
-  wht_vendor_accumulator_wht_vendor_accumulator_created_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_created_byToprincipal")
-  wht_vendor_accumulator_wht_vendor_accumulator_updated_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_updated_byToprincipal")
-  ai_action_policy_ai_action_policy_created_byToprincipal                              ai_action_policy[]              @relation("ai_action_policy_created_byToprincipal")
-  ai_action_policy_ai_action_policy_updated_byToprincipal                              ai_action_policy[]              @relation("ai_action_policy_updated_byToprincipal")
-  ai_confidence_threshold_ai_confidence_threshold_created_byToprincipal                ai_confidence_threshold[]       @relation("ai_confidence_threshold_created_byToprincipal")
-  ai_confidence_threshold_ai_confidence_threshold_updated_byToprincipal                ai_confidence_threshold[]       @relation("ai_confidence_threshold_updated_byToprincipal")
-  ai_drift_baseline_ai_drift_baseline_created_byToprincipal                            ai_drift_baseline[]             @relation("ai_drift_baseline_created_byToprincipal")
-  ai_drift_baseline_ai_drift_baseline_updated_byToprincipal                            ai_drift_baseline[]             @relation("ai_drift_baseline_updated_byToprincipal")
-  asset_class_book_policy                                                              asset_class_book_policy[]
-  blueprint_registry_blueprint_registry_created_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_created_byToprincipal")
-  blueprint_registry_blueprint_registry_updated_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_updated_byToprincipal")
-  book_posting_rule                                                                    book_posting_rule[]
-  budget_check_config_budget_check_config_created_byToprincipal                        budget_check_config[]           @relation("budget_check_config_created_byToprincipal")
-  budget_check_config_budget_check_config_updated_byToprincipal                        budget_check_config[]           @relation("budget_check_config_updated_byToprincipal")
-  entity                                                                               entity[]
-  hook_action_registry                                                                 hook_action_registry[]
-  lifecycle                                                                            lifecycle[]
-  lifecycle_hook_override                                                              lifecycle_hook_override[]
-  lifecycle_state                                                                      lifecycle_state[]
-  lifecycle_timer_policy                                                               lifecycle_timer_policy[]
-  lifecycle_transition                                                                 lifecycle_transition[]
-  lifecycle_transition_gate                                                            lifecycle_transition_gate[]
-  lifecycle_transition_hook                                                            lifecycle_transition_hook[]
-  mfa_config                                                                           mfa_config?
-  notification_provider                                                                notification_provider[]
-  notification_routing_rule_notification_routing_rule_created_byToprincipal            notification_routing_rule[]     @relation("notification_routing_rule_created_byToprincipal")
-  notification_routing_rule_notification_routing_rule_updated_byToprincipal            notification_routing_rule[]     @relation("notification_routing_rule_updated_byToprincipal")
-  notification_template_notification_template_created_byToprincipal                    notification_template[]         @relation("notification_template_created_byToprincipal")
-  notification_template_notification_template_updated_byToprincipal                    notification_template[]         @relation("notification_template_updated_byToprincipal")
-  outbox_routing_rule_outbox_routing_rule_created_byToprincipal                        outbox_routing_rule[]           @relation("outbox_routing_rule_created_byToprincipal")
-  outbox_routing_rule_outbox_routing_rule_updated_byToprincipal                        outbox_routing_rule[]           @relation("outbox_routing_rule_updated_byToprincipal")
-  policy_definition                                                                    policy_definition[]
-  policy_rule                                                                          policy_rule[]
-  rounding_rule                                                                        rounding_rule[]
-  tax_group                                                                            tax_group[]
-  tax_group_component                                                                  tax_group_component[]
-  tax_rate_schedule                                                                    tax_rate_schedule[]
-  tenant_blueprint_application_tenant_blueprint_application_applied_byToprincipal      tenant_blueprint_application[]  @relation("tenant_blueprint_application_applied_byToprincipal")
-  tenant_blueprint_application_tenant_blueprint_application_created_byToprincipal      tenant_blueprint_application[]  @relation("tenant_blueprint_application_created_byToprincipal")
-  tenant_blueprint_application_tenant_blueprint_application_updated_byToprincipal      tenant_blueprint_application[]  @relation("tenant_blueprint_application_updated_byToprincipal")
-  transaction_event_catalog_transaction_event_catalog_created_byToprincipal            transaction_event_catalog[]     @relation("transaction_event_catalog_created_byToprincipal")
-  transaction_event_catalog_transaction_event_catalog_updated_byToprincipal            transaction_event_catalog[]     @relation("transaction_event_catalog_updated_byToprincipal")
-  wht_threshold_config_wht_threshold_config_created_byToprincipal                      wht_threshold_config[]          @relation("wht_threshold_config_created_byToprincipal")
-  wht_threshold_config_wht_threshold_config_updated_byToprincipal                      wht_threshold_config[]          @relation("wht_threshold_config_updated_byToprincipal")
-  workflow_definition                                                                  workflow_definition[]
-  workflow_sla_policy                                                                  workflow_sla_policy[]
-  workflow_template                                                                    workflow_template[]
-  workflow_template_rule                                                               workflow_template_rule[]
-  workflow_template_stage                                                              workflow_template_stage[]
-  asset_transaction                                                                    asset_transaction[]
-  depreciation_run                                                                     depreciation_run[]
-  depreciation_run_line                                                                depreciation_run_line[]
-  depreciation_schedule                                                                depreciation_schedule[]
-  fx_revaluation_run                                                                   fx_revaluation_run[]
-  journal_entry                                                                        journal_entry[]
-  journal_line                                                                         journal_line[]
-  journal_line_reference                                                               journal_line_reference[]
-  payment_term_application                                                             payment_term_application[]
-  payment_term_discount_result                                                         payment_term_discount_result[]
-  render_job                                                                           render_job[]
-  render_output                                                                        render_output[]
-  stocktake_stocktake_completed_byToprincipal                                          stocktake[]                     @relation("stocktake_completed_byToprincipal")
-  stocktake_stocktake_created_byToprincipal                                            stocktake[]                     @relation("stocktake_created_byToprincipal")
-  stocktake_stocktake_status_changed_byToprincipal                                     stocktake[]                     @relation("stocktake_status_changed_byToprincipal")
-  stocktake_line_stocktake_line_created_byToprincipal                                  stocktake_line[]                @relation("stocktake_line_created_byToprincipal")
-  stocktake_line_stocktake_line_posted_byToprincipal                                   stocktake_line[]                @relation("stocktake_line_posted_byToprincipal")
-  user_profile_update_request_user_profile_update_request_principal_idToprincipal      user_profile_update_request[]   @relation("user_profile_update_request_principal_idToprincipal")
-  user_profile_update_request_user_profile_update_request_requested_byToprincipal      user_profile_update_request[]   @relation("user_profile_update_request_requested_byToprincipal")
-  user_profile_update_request_user_profile_update_request_status_changed_byToprincipal user_profile_update_request[]   @relation("user_profile_update_request_status_changed_byToprincipal")
-  user_profile_update_request_user_profile_update_request_updated_byToprincipal        user_profile_update_request[]   @relation("user_profile_update_request_updated_byToprincipal")
-  wht_certificate_wht_certificate_counterparty_idToprincipal                           wht_certificate[]               @relation("wht_certificate_counterparty_idToprincipal")
-  wht_certificate_wht_certificate_created_byToprincipal                                wht_certificate[]               @relation("wht_certificate_created_byToprincipal")
-  wht_certificate_wht_certificate_issued_byToprincipal                                 wht_certificate[]               @relation("wht_certificate_issued_byToprincipal")
-  wht_certificate_wht_certificate_updated_byToprincipal                                wht_certificate[]               @relation("wht_certificate_updated_byToprincipal")
-  wht_certificate_wht_certificate_voided_byToprincipal                                 wht_certificate[]               @relation("wht_certificate_voided_byToprincipal")
-  workflow_request_workflow_request_created_byToprincipal                              workflow_request[]              @relation("workflow_request_created_byToprincipal")
-  workflow_request_workflow_request_decided_byToprincipal                              workflow_request[]              @relation("workflow_request_decided_byToprincipal")
-  workflow_request_workflow_request_requested_byToprincipal                            workflow_request[]              @relation("workflow_request_requested_byToprincipal")
-  workflow_stage                                                                       workflow_stage[]
-  comment_flag_comment_flag_created_byToprincipal                                      comment_flag[]                  @relation("comment_flag_created_byToprincipal")
-  comment_flag_comment_flag_flagged_byToprincipal                                      comment_flag[]                  @relation("comment_flag_flagged_byToprincipal")
-  comment_flag_comment_flag_reviewed_byToprincipal                                     comment_flag[]                  @relation("comment_flag_reviewed_byToprincipal")
-  digest_staging_digest_staging_created_byToprincipal                                  digest_staging[]                @relation("digest_staging_created_byToprincipal")
-  digest_staging_digest_staging_recipient_idToprincipal                                digest_staging[]                @relation("digest_staging_recipient_idToprincipal")
-  notification_delivery_notification_delivery_created_byToprincipal                    notification_delivery[]         @relation("notification_delivery_created_byToprincipal")
-  notification_delivery_notification_delivery_recipient_idToprincipal                  notification_delivery[]         @relation("notification_delivery_recipient_idToprincipal")
-  notification_message                                                                 notification_message[]
-  work_item_work_item_assignee_idToprincipal                                           work_item[]                     @relation("work_item_assignee_idToprincipal")
-  work_item_work_item_created_byToprincipal                                            work_item[]                     @relation("work_item_created_byToprincipal")
-  work_item_work_item_designated_idToprincipal                                         work_item[]                     @relation("work_item_designated_idToprincipal")
-  book_period_status                                                                   book_period_status[]
-  comment_moderation_comment_moderation_created_byToprincipal                          comment_moderation[]            @relation("comment_moderation_created_byToprincipal")
-  comment_moderation_comment_moderation_hidden_byToprincipal                           comment_moderation[]            @relation("comment_moderation_hidden_byToprincipal")
-  cycle_carryforward_rule                                                              cycle_carryforward_rule[]
-  cycle_certification_cycle_certification_attested_byToprincipal                       cycle_certification[]           @relation("cycle_certification_attested_byToprincipal")
-  cycle_certification_cycle_certification_certified_byToprincipal                      cycle_certification[]           @relation("cycle_certification_certified_byToprincipal")
-  cycle_certification_cycle_certification_created_byToprincipal                        cycle_certification[]           @relation("cycle_certification_created_byToprincipal")
-  cycle_certification_cycle_certification_updated_byToprincipal                        cycle_certification[]           @relation("cycle_certification_updated_byToprincipal")
-  cycle_cross_dependency                                                               cycle_cross_dependency[]
-  cycle_deviation_cycle_deviation_assigned_toToprincipal                               cycle_deviation[]               @relation("cycle_deviation_assigned_toToprincipal")
-  cycle_deviation_cycle_deviation_created_byToprincipal                                cycle_deviation[]               @relation("cycle_deviation_created_byToprincipal")
-  cycle_deviation_cycle_deviation_requested_byToprincipal                              cycle_deviation[]               @relation("cycle_deviation_requested_byToprincipal")
-  cycle_deviation_cycle_deviation_resolved_byToprincipal                               cycle_deviation[]               @relation("cycle_deviation_resolved_byToprincipal")
-  cycle_deviation_cycle_deviation_updated_byToprincipal                                cycle_deviation[]               @relation("cycle_deviation_updated_byToprincipal")
-  cycle_phase_cycle_phase_created_byToprincipal                                        cycle_phase[]                   @relation("cycle_phase_created_byToprincipal")
-  cycle_phase_cycle_phase_updated_byToprincipal                                        cycle_phase[]                   @relation("cycle_phase_updated_byToprincipal")
-  cycle_run_cycle_run_cancelled_byToprincipal                                          cycle_run[]                     @relation("cycle_run_cancelled_byToprincipal")
-  cycle_run_cycle_run_certified_byToprincipal                                          cycle_run[]                     @relation("cycle_run_certified_byToprincipal")
-  cycle_run_cycle_run_completed_byToprincipal                                          cycle_run[]                     @relation("cycle_run_completed_byToprincipal")
-  cycle_run_cycle_run_created_byToprincipal                                            cycle_run[]                     @relation("cycle_run_created_byToprincipal")
-  cycle_run_cycle_run_started_byToprincipal                                            cycle_run[]                     @relation("cycle_run_started_byToprincipal")
-  cycle_run_cycle_run_updated_byToprincipal                                            cycle_run[]                     @relation("cycle_run_updated_byToprincipal")
-  cycle_task_cycle_task_assigned_toToprincipal                                         cycle_task[]                    @relation("cycle_task_assigned_toToprincipal")
-  cycle_task_cycle_task_completed_byToprincipal                                        cycle_task[]                    @relation("cycle_task_completed_byToprincipal")
-  cycle_task_cycle_task_created_byToprincipal                                          cycle_task[]                    @relation("cycle_task_created_byToprincipal")
-  cycle_task_cycle_task_updated_byToprincipal                                          cycle_task[]                    @relation("cycle_task_updated_byToprincipal")
-  cycle_task_category                                                                  cycle_task_category[]
-  cycle_task_dependency                                                                cycle_task_dependency[]
-  cycle_task_template_cycle_task_template_created_byToprincipal                        cycle_task_template[]           @relation("cycle_task_template_created_byToprincipal")
-  cycle_task_template_cycle_task_template_default_owner_user_idToprincipal             cycle_task_template[]           @relation("cycle_task_template_default_owner_user_idToprincipal")
-  cycle_task_template_cycle_task_template_updated_byToprincipal                        cycle_task_template[]           @relation("cycle_task_template_updated_byToprincipal")
-  cycle_type_cycle_type_created_byToprincipal                                          cycle_type[]                    @relation("cycle_type_created_byToprincipal")
-  cycle_type_cycle_type_updated_byToprincipal                                          cycle_type[]                    @relation("cycle_type_updated_byToprincipal")
-  asset_revaluation_reserve                                                            asset_revaluation_reserve[]
-  consolidation_elimination                                                            consolidation_elimination[]
-  fx_revaluation_line                                                                  fx_revaluation_line[]
-  gl_balance                                                                           gl_balance[]
-  inventory_balance                                                                    inventory_balance[]
-  inventory_movement_inventory_movement_created_byToprincipal                          inventory_movement[]            @relation("inventory_movement_created_byToprincipal")
-  inventory_movement_inventory_movement_performed_byToprincipal                        inventory_movement[]            @relation("inventory_movement_performed_byToprincipal")
-  inventory_movement_inventory_movement_posted_byToprincipal                           inventory_movement[]            @relation("inventory_movement_posted_byToprincipal")
-  inventory_valuation_layer                                                            inventory_valuation_layer[]
-  tax_calculation                                                                      tax_calculation[]
-  tax_credit_movement                                                                  tax_credit_movement[]
-  activity_log                                                                         activity_log[]
-  ai_calibration_log                                                                   ai_calibration_log[]
-  ai_call_transcript                                                                   ai_call_transcript[]
-  ai_feedback_log                                                                      ai_feedback_log[]
-  ai_inference_log_ai_inference_log_accepted_byToprincipal                             ai_inference_log[]              @relation("ai_inference_log_accepted_byToprincipal")
-  ai_inference_log_ai_inference_log_reversed_byToprincipal                             ai_inference_log[]              @relation("ai_inference_log_reversed_byToprincipal")
-  attachment_access_log                                                                attachment_access_log[]
-  audit_log                                                                            audit_log[]
-  close_activity_log                                                                   close_activity_log[]
-  close_override_log                                                                   close_override_log[]
-  comment_retention_log                                                                comment_retention_log[]
-  entity_lifecycle_log                                                                 entity_lifecycle_log[]
-  export_log                                                                           export_log[]
-  field_access_log                                                                     field_access_log[]
-  notification_delivery_attempt                                                        notification_delivery_attempt[]
-  password_history_password_history_changed_byToprincipal                              password_history[]              @relation("password_history_changed_byToprincipal")
-  password_history_password_history_principal_idToprincipal                            password_history[]              @relation("password_history_principal_idToprincipal")
-  permission_decision_log                                                              permission_decision_log[]
-  render_dlq                                                                           render_dlq[]
-  search_history                                                                       search_history[]
-  security_event_log                                                                   security_event_log[]
-  share_audit_log_share_audit_log_actor_idToprincipal                                  share_audit_log[]               @relation("share_audit_log_actor_idToprincipal")
-  share_audit_log_share_audit_log_target_principal_idToprincipal                       share_audit_log[]               @relation("share_audit_log_target_principal_idToprincipal")
-  workflow_event_log                                                                   workflow_event_log[]
-  access_grant_access_grant_granted_byToprincipal                                      access_grant[]                  @relation("access_grant_granted_byToprincipal")
-  access_grant_access_grant_principal_idToprincipal                                    access_grant[]                  @relation("access_grant_principal_idToprincipal")
-  access_grant_access_grant_revoked_byToprincipal                                      access_grant[]                  @relation("access_grant_revoked_byToprincipal")
-  asset                                                                                asset[]
-  asset_assignment_history_asset_assignment_history_assigned_byToprincipal             asset_assignment_history[]      @relation("asset_assignment_history_assigned_byToprincipal")
-  asset_assignment_history_asset_assignment_history_created_byToprincipal              asset_assignment_history[]      @relation("asset_assignment_history_created_byToprincipal")
-  asset_book                                                                           asset_book[]
-  asset_class                                                                          asset_class[]
-  asset_component                                                                      asset_component[]
-  attachment_attachment_created_byToprincipal                                          attachment[]                    @relation("attachment_created_byToprincipal")
-  attachment_attachment_uploaded_byToprincipal                                         attachment[]                    @relation("attachment_uploaded_byToprincipal")
-  attachment_acl_attachment_acl_created_byToprincipal                                  attachment_acl[]                @relation("attachment_acl_created_byToprincipal")
-  attachment_acl_attachment_acl_granted_byToprincipal                                  attachment_acl[]                @relation("attachment_acl_granted_byToprincipal")
-  attachment_acl_attachment_acl_principal_idToprincipal                                attachment_acl[]                @relation("attachment_acl_principal_idToprincipal")
-  auth_group_member                                                                    auth_group_member[]
-  brand_profile                                                                        brand_profile[]
-  chart_of_account                                                                     chart_of_account[]
-  comment_comment_archived_byToprincipal                                               comment[]                       @relation("comment_archived_byToprincipal")
-  comment_comment_commenter_idToprincipal                                              comment[]                       @relation("comment_commenter_idToprincipal")
-  comment_comment_created_byToprincipal                                                comment[]                       @relation("comment_created_byToprincipal")
-  comment_comment_deleted_byToprincipal                                                comment[]                       @relation("comment_deleted_byToprincipal")
-  comment_draft_comment_draft_created_byToprincipal                                    comment_draft[]                 @relation("comment_draft_created_byToprincipal")
-  comment_draft_comment_draft_principal_idToprincipal                                  comment_draft[]                 @relation("comment_draft_principal_idToprincipal")
-  comment_mention_comment_mention_created_byToprincipal                                comment_mention[]               @relation("comment_mention_created_byToprincipal")
-  comment_mention_comment_mention_mentioned_idToprincipal                              comment_mention[]               @relation("comment_mention_mentioned_idToprincipal")
-  comment_reaction_comment_reaction_created_byToprincipal                              comment_reaction[]              @relation("comment_reaction_created_byToprincipal")
-  comment_reaction_comment_reaction_principal_idToprincipal                            comment_reaction[]              @relation("comment_reaction_principal_idToprincipal")
-  commodity_classification                                                             commodity_classification[]
-  company_code                                                                         company_code[]
-  company_code_book_assignment                                                         company_code_book_assignment[]
-  company_code_chart_assignment                                                        company_code_chart_assignment[]
-  company_code_customer_profile                                                        company_code_customer_profile[]
-  company_code_gl_account                                                              company_code_gl_account[]
-  company_code_supplier_profile                                                        company_code_supplier_profile[]
-  content_item                                                                         content_item[]
-  content_item_access_grant                                                            content_item_access_grant[]
-  content_item_link                                                                    content_item_link[]
-  conversation_conversation_created_byToprincipal                                      conversation[]                  @relation("conversation_created_byToprincipal")
-  conversation_conversation_deleted_byToprincipal                                      conversation[]                  @relation("conversation_deleted_byToprincipal")
-  conversation_participant_conversation_participant_created_byToprincipal              conversation_participant[]      @relation("conversation_participant_created_byToprincipal")
-  conversation_participant_conversation_participant_principal_idToprincipal            conversation_participant[]      @relation("conversation_participant_principal_idToprincipal")
-  cost_center_cost_center_created_byToprincipal                                        cost_center[]                   @relation("cost_center_created_byToprincipal")
-  cost_center_cost_center_responsible_person_idToprincipal                             cost_center[]                   @relation("cost_center_responsible_person_idToprincipal")
-  customer                                                                             customer[]
-  dashboard_dashboard_created_byToprincipal                                            dashboard[]                     @relation("dashboard_created_byToprincipal")
-  dashboard_dashboard_tenant_id_owner_principal_idToprincipal                          dashboard[]                     @relation("dashboard_tenant_id_owner_principal_idToprincipal")
-  dashboard_dashboard_updated_byToprincipal                                            dashboard[]                     @relation("dashboard_updated_byToprincipal")
-  dashboard_widget_dashboard_widget_created_byToprincipal                              dashboard_widget[]              @relation("dashboard_widget_created_byToprincipal")
-  dashboard_widget_dashboard_widget_updated_byToprincipal                              dashboard_widget[]              @relation("dashboard_widget_updated_byToprincipal")
-  delegation_grant_delegation_grant_created_byToprincipal                              delegation_grant[]              @relation("delegation_grant_created_byToprincipal")
-  delegation_grant_delegation_grant_delegate_idToprincipal                             delegation_grant[]              @relation("delegation_grant_delegate_idToprincipal")
-  delegation_grant_delegation_grant_delegator_idToprincipal                            delegation_grant[]              @relation("delegation_grant_delegator_idToprincipal")
-  delegation_grant_delegation_grant_revoked_byToprincipal                              delegation_grant[]              @relation("delegation_grant_revoked_byToprincipal")
-  dimension_set                                                                        dimension_set[]
-  document                                                                             document[]
-  employee_employee_created_byToprincipal                                              employee[]                      @relation("employee_created_byToprincipal")
-  employee_employee_tenant_id_principal_idToprincipal                                  employee?                       @relation("employee_tenant_id_principal_idToprincipal")
-  entity_document_link                                                                 entity_document_link[]
-  fiscal_period                                                                        fiscal_period[]
-  fx_rate                                                                              fx_rate[]
-  gl_account                                                                           gl_account[]
-  holiday_calendar                                                                     holiday_calendar[]
-  holiday_calendar_day                                                                 holiday_calendar_day[]
-  item                                                                                 item[]
-  item_category                                                                        item_category[]
-  ledger_book                                                                          ledger_book[]
-  legal_entity                                                                         legal_entity[]
-  letterhead                                                                           letterhead[]
-  multipart_upload_multipart_upload_created_byToprincipal                              multipart_upload[]              @relation("multipart_upload_created_byToprincipal")
-  multipart_upload_multipart_upload_initiated_byToprincipal                            multipart_upload[]              @relation("multipart_upload_initiated_byToprincipal")
-  notification_notification_created_byToprincipal                                      notification[]                  @relation("notification_created_byToprincipal")
-  notification_notification_recipient_idToprincipal                                    notification[]                  @relation("notification_recipient_idToprincipal")
-  notification_notification_sender_idToprincipal                                       notification[]                  @relation("notification_sender_idToprincipal")
-  ou_spend_category_policy                                                             ou_spend_category_policy[]
-  payment_term                                                                         payment_term[]
-  payment_term_clause                                                                  payment_term_clause[]
-  payment_term_discount_tier                                                           payment_term_discount_tier[]
-  tenant                                                                               tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_tenant_fk")
-  principal_feature_grant                                                              principal_feature_grant[]
-  principal_identity_binding                                                           principal_identity_binding[]
-  principal_persona                                                                    principal_persona[]
-  principal_profile_principal_profile_tenant_id_principal_idToprincipal                principal_profile?              @relation("principal_profile_tenant_id_principal_idToprincipal")
-  principal_profile_principal_profile_supervisor_idToprincipal                         principal_profile[]             @relation("principal_profile_supervisor_idToprincipal")
-  principal_ui_preference_principal_ui_preference_created_byToprincipal                principal_ui_preference[]       @relation("principal_ui_preference_created_byToprincipal")
-  principal_ui_preference_principal_ui_preference_tenant_id_principal_idToprincipal    principal_ui_preference[]       @relation("principal_ui_preference_tenant_id_principal_idToprincipal")
-  principal_ui_preference_principal_ui_preference_updated_byToprincipal                principal_ui_preference[]       @relation("principal_ui_preference_updated_byToprincipal")
-  principal_ui_profile_principal_ui_profile_created_byToprincipal                      principal_ui_profile[]          @relation("principal_ui_profile_created_byToprincipal")
-  principal_ui_profile_principal_ui_profile_tenant_id_principal_idToprincipal          principal_ui_profile?           @relation("principal_ui_profile_tenant_id_principal_idToprincipal")
-  principal_ui_profile_principal_ui_profile_updated_byToprincipal                      principal_ui_profile[]          @relation("principal_ui_profile_updated_byToprincipal")
-  product                                                                              product[]
-  profit_center_profit_center_created_byToprincipal                                    profit_center[]                 @relation("profit_center_created_byToprincipal")
-  profit_center_profit_center_responsible_person_idToprincipal                         profit_center[]                 @relation("profit_center_responsible_person_idToprincipal")
-  project_project_created_byToprincipal                                                project[]                       @relation("project_created_byToprincipal")
-  project_project_responsible_person_idToprincipal                                     project[]                       @relation("project_responsible_person_idToprincipal")
-  project_item_project_item_created_byToprincipal                                      project_item[]                  @relation("project_item_created_byToprincipal")
-  project_item_project_item_responsible_person_idToprincipal                           project_item[]                  @relation("project_item_responsible_person_idToprincipal")
-  saved_view_saved_view_created_byToprincipal                                          saved_view[]                    @relation("saved_view_created_byToprincipal")
-  saved_view_saved_view_tenant_id_owner_principal_idToprincipal                        saved_view[]                    @relation("saved_view_tenant_id_owner_principal_idToprincipal")
-  saved_view_saved_view_updated_byToprincipal                                          saved_view[]                    @relation("saved_view_updated_byToprincipal")
-  site_site_created_byToprincipal                                                      site[]                          @relation("site_created_byToprincipal")
-  site_site_manager_idToprincipal                                                      site[]                          @relation("site_manager_idToprincipal")
-  spend_category                                                                       spend_category[]
-  supplier                                                                             supplier[]
-  tax_jurisdiction                                                                     tax_jurisdiction[]
-  tax_type                                                                             tax_type[]
-  team                                                                                 team[]
-  team_member                                                                          team_member[]
-  template                                                                             template[]
-  template_binding                                                                     template_binding[]
-  tenant_profile_tenant_profile_created_byToprincipal                                  tenant_profile[]                @relation("tenant_profile_created_byToprincipal")
-  tenant_profile_tenant_profile_updated_byToprincipal                                  tenant_profile[]                @relation("tenant_profile_updated_byToprincipal")
-  warehouse_warehouse_created_byToprincipal                                            warehouse[]                     @relation("warehouse_created_byToprincipal")
-  warehouse_warehouse_manager_idToprincipal                                            warehouse[]                     @relation("warehouse_manager_idToprincipal")
-  content_item_version                                                                 content_item_version[]
-  template_version                                                                     template_version[]
+  id                                                                                    String                            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                             String                            @db.Uuid
+  code                                                                                  String
+  name                                                                                  String
+  principal_type                                                                        String
+  is_active                                                                             Boolean?                          @default(dbgenerated("(status = 'active'::text)"))
+  is_locked                                                                             Boolean                           @default(false)
+  is_service_account                                                                    Boolean                           @default(false)
+  login_email                                                                           String?
+  external_ref                                                                          String?
+  principal_source                                                                      String?
+  metadata                                                                              Json                              @default("{}")
+  status                                                                                String                            @default("active")
+  status_changed_at                                                                     DateTime?                         @db.Timestamptz(6)
+  status_changed_by                                                                     String?                           @db.Uuid
+  created_at                                                                            DateTime                          @default(now()) @db.Timestamptz(6)
+  created_by                                                                            String                            @db.Uuid
+  updated_at                                                                            DateTime?                         @db.Timestamptz(6)
+  updated_by                                                                            String?                           @db.Uuid
+  auth_epoch                                                                            Int                               @default(0)
+  tax_credit_summary                                                                    tax_credit_summary[]
+  wht_vendor_accumulator_wht_vendor_accumulator_counterparty_idToprincipal              wht_vendor_accumulator[]          @relation("wht_vendor_accumulator_counterparty_idToprincipal")
+  wht_vendor_accumulator_wht_vendor_accumulator_created_byToprincipal                   wht_vendor_accumulator[]          @relation("wht_vendor_accumulator_created_byToprincipal")
+  wht_vendor_accumulator_wht_vendor_accumulator_updated_byToprincipal                   wht_vendor_accumulator[]          @relation("wht_vendor_accumulator_updated_byToprincipal")
+  ai_action_policy_ai_action_policy_created_byToprincipal                               ai_action_policy[]                @relation("ai_action_policy_created_byToprincipal")
+  ai_action_policy_ai_action_policy_updated_byToprincipal                               ai_action_policy[]                @relation("ai_action_policy_updated_byToprincipal")
+  ai_confidence_threshold_ai_confidence_threshold_created_byToprincipal                 ai_confidence_threshold[]         @relation("ai_confidence_threshold_created_byToprincipal")
+  ai_confidence_threshold_ai_confidence_threshold_updated_byToprincipal                 ai_confidence_threshold[]         @relation("ai_confidence_threshold_updated_byToprincipal")
+  ai_drift_baseline_ai_drift_baseline_created_byToprincipal                             ai_drift_baseline[]               @relation("ai_drift_baseline_created_byToprincipal")
+  ai_drift_baseline_ai_drift_baseline_updated_byToprincipal                             ai_drift_baseline[]               @relation("ai_drift_baseline_updated_byToprincipal")
+  asset_class_book_policy                                                               asset_class_book_policy[]
+  blueprint_registry_blueprint_registry_created_byToprincipal                           blueprint_registry[]              @relation("blueprint_registry_created_byToprincipal")
+  blueprint_registry_blueprint_registry_updated_byToprincipal                           blueprint_registry[]              @relation("blueprint_registry_updated_byToprincipal")
+  book_posting_rule                                                                     book_posting_rule[]
+  budget_check_config_budget_check_config_created_byToprincipal                         budget_check_config[]             @relation("budget_check_config_created_byToprincipal")
+  budget_check_config_budget_check_config_updated_byToprincipal                         budget_check_config[]             @relation("budget_check_config_updated_byToprincipal")
+  entity                                                                                entity[]
+  forecast_budget_bridge_forecast_budget_bridge_approved_byToprincipal                  forecast_budget_bridge[]          @relation("forecast_budget_bridge_approved_byToprincipal")
+  forecast_budget_bridge_forecast_budget_bridge_created_byToprincipal                   forecast_budget_bridge[]          @relation("forecast_budget_bridge_created_byToprincipal")
+  forecast_budget_bridge_forecast_budget_bridge_locked_byToprincipal                    forecast_budget_bridge[]          @relation("forecast_budget_bridge_locked_byToprincipal")
+  forecast_budget_bridge_forecast_budget_bridge_updated_byToprincipal                   forecast_budget_bridge[]          @relation("forecast_budget_bridge_updated_byToprincipal")
+  hook_action_registry                                                                  hook_action_registry[]
+  lifecycle                                                                             lifecycle[]
+  lifecycle_hook_override                                                               lifecycle_hook_override[]
+  lifecycle_state                                                                       lifecycle_state[]
+  lifecycle_timer_policy                                                                lifecycle_timer_policy[]
+  lifecycle_transition                                                                  lifecycle_transition[]
+  lifecycle_transition_gate                                                             lifecycle_transition_gate[]
+  lifecycle_transition_hook                                                             lifecycle_transition_hook[]
+  metadata_change_application_log_metadata_change_application_log_applied_byToprincipal metadata_change_application_log[] @relation("metadata_change_application_log_applied_byToprincipal")
+  metadata_change_application_log_metadata_change_application_log_created_byToprincipal metadata_change_application_log[] @relation("metadata_change_application_log_created_byToprincipal")
+  mfa_config                                                                            mfa_config?
+  notification_provider                                                                 notification_provider[]
+  notification_routing_rule_notification_routing_rule_created_byToprincipal             notification_routing_rule[]       @relation("notification_routing_rule_created_byToprincipal")
+  notification_routing_rule_notification_routing_rule_updated_byToprincipal             notification_routing_rule[]       @relation("notification_routing_rule_updated_byToprincipal")
+  notification_template_notification_template_created_byToprincipal                     notification_template[]           @relation("notification_template_created_byToprincipal")
+  notification_template_notification_template_updated_byToprincipal                     notification_template[]           @relation("notification_template_updated_byToprincipal")
+  outbox_routing_rule_outbox_routing_rule_created_byToprincipal                         outbox_routing_rule[]             @relation("outbox_routing_rule_created_byToprincipal")
+  outbox_routing_rule_outbox_routing_rule_updated_byToprincipal                         outbox_routing_rule[]             @relation("outbox_routing_rule_updated_byToprincipal")
+  policy_definition                                                                     policy_definition[]
+  policy_rule                                                                           policy_rule[]
+  rounding_rule                                                                         rounding_rule[]
+  tax_group                                                                             tax_group[]
+  tax_group_component                                                                   tax_group_component[]
+  tax_rate_schedule                                                                     tax_rate_schedule[]
+  tenant_blueprint_application_tenant_blueprint_application_applied_byToprincipal       tenant_blueprint_application[]    @relation("tenant_blueprint_application_applied_byToprincipal")
+  tenant_blueprint_application_tenant_blueprint_application_created_byToprincipal       tenant_blueprint_application[]    @relation("tenant_blueprint_application_created_byToprincipal")
+  tenant_blueprint_application_tenant_blueprint_application_updated_byToprincipal       tenant_blueprint_application[]    @relation("tenant_blueprint_application_updated_byToprincipal")
+  transaction_event_catalog_transaction_event_catalog_created_byToprincipal             transaction_event_catalog[]       @relation("transaction_event_catalog_created_byToprincipal")
+  transaction_event_catalog_transaction_event_catalog_updated_byToprincipal             transaction_event_catalog[]       @relation("transaction_event_catalog_updated_byToprincipal")
+  wht_threshold_config_wht_threshold_config_created_byToprincipal                       wht_threshold_config[]            @relation("wht_threshold_config_created_byToprincipal")
+  wht_threshold_config_wht_threshold_config_updated_byToprincipal                       wht_threshold_config[]            @relation("wht_threshold_config_updated_byToprincipal")
+  workflow_definition                                                                   workflow_definition[]
+  workflow_sla_policy                                                                   workflow_sla_policy[]
+  workflow_template                                                                     workflow_template[]
+  workflow_template_rule                                                                workflow_template_rule[]
+  workflow_template_stage                                                               workflow_template_stage[]
+  asset_transaction                                                                     asset_transaction[]
+  depreciation_run                                                                      depreciation_run[]
+  depreciation_run_line                                                                 depreciation_run_line[]
+  depreciation_schedule                                                                 depreciation_schedule[]
+  fx_revaluation_run                                                                    fx_revaluation_run[]
+  journal_entry                                                                         journal_entry[]
+  journal_line                                                                          journal_line[]
+  journal_line_reference                                                                journal_line_reference[]
+  payment_term_application                                                              payment_term_application[]
+  payment_term_discount_result                                                          payment_term_discount_result[]
+  render_job                                                                            render_job[]
+  render_output                                                                         render_output[]
+  stocktake_stocktake_completed_byToprincipal                                           stocktake[]                       @relation("stocktake_completed_byToprincipal")
+  stocktake_stocktake_created_byToprincipal                                             stocktake[]                       @relation("stocktake_created_byToprincipal")
+  stocktake_stocktake_status_changed_byToprincipal                                      stocktake[]                       @relation("stocktake_status_changed_byToprincipal")
+  stocktake_line_stocktake_line_created_byToprincipal                                   stocktake_line[]                  @relation("stocktake_line_created_byToprincipal")
+  stocktake_line_stocktake_line_posted_byToprincipal                                    stocktake_line[]                  @relation("stocktake_line_posted_byToprincipal")
+  user_profile_update_request_user_profile_update_request_principal_idToprincipal       user_profile_update_request[]     @relation("user_profile_update_request_principal_idToprincipal")
+  user_profile_update_request_user_profile_update_request_requested_byToprincipal       user_profile_update_request[]     @relation("user_profile_update_request_requested_byToprincipal")
+  user_profile_update_request_user_profile_update_request_status_changed_byToprincipal  user_profile_update_request[]     @relation("user_profile_update_request_status_changed_byToprincipal")
+  user_profile_update_request_user_profile_update_request_updated_byToprincipal         user_profile_update_request[]     @relation("user_profile_update_request_updated_byToprincipal")
+  wht_certificate_wht_certificate_counterparty_idToprincipal                            wht_certificate[]                 @relation("wht_certificate_counterparty_idToprincipal")
+  wht_certificate_wht_certificate_created_byToprincipal                                 wht_certificate[]                 @relation("wht_certificate_created_byToprincipal")
+  wht_certificate_wht_certificate_issued_byToprincipal                                  wht_certificate[]                 @relation("wht_certificate_issued_byToprincipal")
+  wht_certificate_wht_certificate_updated_byToprincipal                                 wht_certificate[]                 @relation("wht_certificate_updated_byToprincipal")
+  wht_certificate_wht_certificate_voided_byToprincipal                                  wht_certificate[]                 @relation("wht_certificate_voided_byToprincipal")
+  workflow_request_workflow_request_created_byToprincipal                               workflow_request[]                @relation("workflow_request_created_byToprincipal")
+  workflow_request_workflow_request_decided_byToprincipal                               workflow_request[]                @relation("workflow_request_decided_byToprincipal")
+  workflow_request_workflow_request_requested_byToprincipal                             workflow_request[]                @relation("workflow_request_requested_byToprincipal")
+  workflow_stage                                                                        workflow_stage[]
+  comment_flag_comment_flag_created_byToprincipal                                       comment_flag[]                    @relation("comment_flag_created_byToprincipal")
+  comment_flag_comment_flag_flagged_byToprincipal                                       comment_flag[]                    @relation("comment_flag_flagged_byToprincipal")
+  comment_flag_comment_flag_reviewed_byToprincipal                                      comment_flag[]                    @relation("comment_flag_reviewed_byToprincipal")
+  digest_staging_digest_staging_created_byToprincipal                                   digest_staging[]                  @relation("digest_staging_created_byToprincipal")
+  digest_staging_digest_staging_recipient_idToprincipal                                 digest_staging[]                  @relation("digest_staging_recipient_idToprincipal")
+  notification_delivery_notification_delivery_created_byToprincipal                     notification_delivery[]           @relation("notification_delivery_created_byToprincipal")
+  notification_delivery_notification_delivery_recipient_idToprincipal                   notification_delivery[]           @relation("notification_delivery_recipient_idToprincipal")
+  notification_message                                                                  notification_message[]
+  work_item_work_item_assignee_idToprincipal                                            work_item[]                       @relation("work_item_assignee_idToprincipal")
+  work_item_work_item_created_byToprincipal                                             work_item[]                       @relation("work_item_created_byToprincipal")
+  work_item_work_item_designated_idToprincipal                                          work_item[]                       @relation("work_item_designated_idToprincipal")
+  book_period_status                                                                    book_period_status[]
+  comment_moderation_comment_moderation_created_byToprincipal                           comment_moderation[]              @relation("comment_moderation_created_byToprincipal")
+  comment_moderation_comment_moderation_hidden_byToprincipal                            comment_moderation[]              @relation("comment_moderation_hidden_byToprincipal")
+  cycle_carryforward_rule                                                               cycle_carryforward_rule[]
+  cycle_certification_cycle_certification_attested_byToprincipal                        cycle_certification[]             @relation("cycle_certification_attested_byToprincipal")
+  cycle_certification_cycle_certification_certified_byToprincipal                       cycle_certification[]             @relation("cycle_certification_certified_byToprincipal")
+  cycle_certification_cycle_certification_created_byToprincipal                         cycle_certification[]             @relation("cycle_certification_created_byToprincipal")
+  cycle_certification_cycle_certification_updated_byToprincipal                         cycle_certification[]             @relation("cycle_certification_updated_byToprincipal")
+  cycle_cross_dependency                                                                cycle_cross_dependency[]
+  cycle_deviation_cycle_deviation_assigned_toToprincipal                                cycle_deviation[]                 @relation("cycle_deviation_assigned_toToprincipal")
+  cycle_deviation_cycle_deviation_created_byToprincipal                                 cycle_deviation[]                 @relation("cycle_deviation_created_byToprincipal")
+  cycle_deviation_cycle_deviation_requested_byToprincipal                               cycle_deviation[]                 @relation("cycle_deviation_requested_byToprincipal")
+  cycle_deviation_cycle_deviation_resolved_byToprincipal                                cycle_deviation[]                 @relation("cycle_deviation_resolved_byToprincipal")
+  cycle_deviation_cycle_deviation_updated_byToprincipal                                 cycle_deviation[]                 @relation("cycle_deviation_updated_byToprincipal")
+  cycle_phase_cycle_phase_created_byToprincipal                                         cycle_phase[]                     @relation("cycle_phase_created_byToprincipal")
+  cycle_phase_cycle_phase_updated_byToprincipal                                         cycle_phase[]                     @relation("cycle_phase_updated_byToprincipal")
+  cycle_run_cycle_run_cancelled_byToprincipal                                           cycle_run[]                       @relation("cycle_run_cancelled_byToprincipal")
+  cycle_run_cycle_run_certified_byToprincipal                                           cycle_run[]                       @relation("cycle_run_certified_byToprincipal")
+  cycle_run_cycle_run_completed_byToprincipal                                           cycle_run[]                       @relation("cycle_run_completed_byToprincipal")
+  cycle_run_cycle_run_created_byToprincipal                                             cycle_run[]                       @relation("cycle_run_created_byToprincipal")
+  cycle_run_cycle_run_started_byToprincipal                                             cycle_run[]                       @relation("cycle_run_started_byToprincipal")
+  cycle_run_cycle_run_updated_byToprincipal                                             cycle_run[]                       @relation("cycle_run_updated_byToprincipal")
+  cycle_task_cycle_task_assigned_toToprincipal                                          cycle_task[]                      @relation("cycle_task_assigned_toToprincipal")
+  cycle_task_cycle_task_completed_byToprincipal                                         cycle_task[]                      @relation("cycle_task_completed_byToprincipal")
+  cycle_task_cycle_task_created_byToprincipal                                           cycle_task[]                      @relation("cycle_task_created_byToprincipal")
+  cycle_task_cycle_task_updated_byToprincipal                                           cycle_task[]                      @relation("cycle_task_updated_byToprincipal")
+  cycle_task_category                                                                   cycle_task_category[]
+  cycle_task_dependency                                                                 cycle_task_dependency[]
+  cycle_task_template_cycle_task_template_created_byToprincipal                         cycle_task_template[]             @relation("cycle_task_template_created_byToprincipal")
+  cycle_task_template_cycle_task_template_default_owner_user_idToprincipal              cycle_task_template[]             @relation("cycle_task_template_default_owner_user_idToprincipal")
+  cycle_task_template_cycle_task_template_updated_byToprincipal                         cycle_task_template[]             @relation("cycle_task_template_updated_byToprincipal")
+  cycle_type_cycle_type_created_byToprincipal                                           cycle_type[]                      @relation("cycle_type_created_byToprincipal")
+  cycle_type_cycle_type_updated_byToprincipal                                           cycle_type[]                      @relation("cycle_type_updated_byToprincipal")
+  asset_revaluation_reserve                                                             asset_revaluation_reserve[]
+  consolidation_elimination                                                             consolidation_elimination[]
+  fx_revaluation_line                                                                   fx_revaluation_line[]
+  gl_balance                                                                            gl_balance[]
+  inventory_balance                                                                     inventory_balance[]
+  inventory_movement_inventory_movement_created_byToprincipal                           inventory_movement[]              @relation("inventory_movement_created_byToprincipal")
+  inventory_movement_inventory_movement_performed_byToprincipal                         inventory_movement[]              @relation("inventory_movement_performed_byToprincipal")
+  inventory_movement_inventory_movement_posted_byToprincipal                            inventory_movement[]              @relation("inventory_movement_posted_byToprincipal")
+  inventory_valuation_layer                                                             inventory_valuation_layer[]
+  tax_calculation                                                                       tax_calculation[]
+  tax_credit_movement                                                                   tax_credit_movement[]
+  activity_log                                                                          activity_log[]
+  ai_calibration_log                                                                    ai_calibration_log[]
+  ai_call_transcript                                                                    ai_call_transcript[]
+  ai_feedback_log                                                                       ai_feedback_log[]
+  ai_inference_log_ai_inference_log_accepted_byToprincipal                              ai_inference_log[]                @relation("ai_inference_log_accepted_byToprincipal")
+  ai_inference_log_ai_inference_log_reversed_byToprincipal                              ai_inference_log[]                @relation("ai_inference_log_reversed_byToprincipal")
+  attachment_access_log                                                                 attachment_access_log[]
+  audit_log                                                                             audit_log[]
+  close_activity_log                                                                    close_activity_log[]
+  close_override_log                                                                    close_override_log[]
+  comment_retention_log                                                                 comment_retention_log[]
+  entity_lifecycle_log                                                                  entity_lifecycle_log[]
+  export_log                                                                            export_log[]
+  field_access_log                                                                      field_access_log[]
+  notification_delivery_attempt                                                         notification_delivery_attempt[]
+  password_history_password_history_changed_byToprincipal                               password_history[]                @relation("password_history_changed_byToprincipal")
+  password_history_password_history_principal_idToprincipal                             password_history[]                @relation("password_history_principal_idToprincipal")
+  permission_decision_log                                                               permission_decision_log[]
+  render_dlq                                                                            render_dlq[]
+  search_history                                                                        search_history[]
+  security_event_log                                                                    security_event_log[]
+  share_audit_log_share_audit_log_actor_idToprincipal                                   share_audit_log[]                 @relation("share_audit_log_actor_idToprincipal")
+  share_audit_log_share_audit_log_target_principal_idToprincipal                        share_audit_log[]                 @relation("share_audit_log_target_principal_idToprincipal")
+  workflow_event_log                                                                    workflow_event_log[]
+  access_grant_access_grant_granted_byToprincipal                                       access_grant[]                    @relation("access_grant_granted_byToprincipal")
+  access_grant_access_grant_principal_idToprincipal                                     access_grant[]                    @relation("access_grant_principal_idToprincipal")
+  access_grant_access_grant_revoked_byToprincipal                                       access_grant[]                    @relation("access_grant_revoked_byToprincipal")
+  asset                                                                                 asset[]
+  asset_assignment_history_asset_assignment_history_assigned_byToprincipal              asset_assignment_history[]        @relation("asset_assignment_history_assigned_byToprincipal")
+  asset_assignment_history_asset_assignment_history_created_byToprincipal               asset_assignment_history[]        @relation("asset_assignment_history_created_byToprincipal")
+  asset_book                                                                            asset_book[]
+  asset_class                                                                           asset_class[]
+  asset_component                                                                       asset_component[]
+  attachment_attachment_created_byToprincipal                                           attachment[]                      @relation("attachment_created_byToprincipal")
+  attachment_attachment_uploaded_byToprincipal                                          attachment[]                      @relation("attachment_uploaded_byToprincipal")
+  attachment_acl_attachment_acl_created_byToprincipal                                   attachment_acl[]                  @relation("attachment_acl_created_byToprincipal")
+  attachment_acl_attachment_acl_granted_byToprincipal                                   attachment_acl[]                  @relation("attachment_acl_granted_byToprincipal")
+  attachment_acl_attachment_acl_principal_idToprincipal                                 attachment_acl[]                  @relation("attachment_acl_principal_idToprincipal")
+  auth_group_member                                                                     auth_group_member[]
+  brand_profile                                                                         brand_profile[]
+  chart_of_account                                                                      chart_of_account[]
+  comment_comment_archived_byToprincipal                                                comment[]                         @relation("comment_archived_byToprincipal")
+  comment_comment_commenter_idToprincipal                                               comment[]                         @relation("comment_commenter_idToprincipal")
+  comment_comment_created_byToprincipal                                                 comment[]                         @relation("comment_created_byToprincipal")
+  comment_comment_deleted_byToprincipal                                                 comment[]                         @relation("comment_deleted_byToprincipal")
+  comment_draft_comment_draft_created_byToprincipal                                     comment_draft[]                   @relation("comment_draft_created_byToprincipal")
+  comment_draft_comment_draft_principal_idToprincipal                                   comment_draft[]                   @relation("comment_draft_principal_idToprincipal")
+  comment_mention_comment_mention_created_byToprincipal                                 comment_mention[]                 @relation("comment_mention_created_byToprincipal")
+  comment_mention_comment_mention_mentioned_idToprincipal                               comment_mention[]                 @relation("comment_mention_mentioned_idToprincipal")
+  comment_reaction_comment_reaction_created_byToprincipal                               comment_reaction[]                @relation("comment_reaction_created_byToprincipal")
+  comment_reaction_comment_reaction_principal_idToprincipal                             comment_reaction[]                @relation("comment_reaction_principal_idToprincipal")
+  commodity_classification                                                              commodity_classification[]
+  company_code                                                                          company_code[]
+  company_code_book_assignment                                                          company_code_book_assignment[]
+  company_code_chart_assignment                                                         company_code_chart_assignment[]
+  company_code_customer_profile                                                         company_code_customer_profile[]
+  company_code_gl_account                                                               company_code_gl_account[]
+  company_code_supplier_profile                                                         company_code_supplier_profile[]
+  content_item                                                                          content_item[]
+  content_item_access_grant                                                             content_item_access_grant[]
+  content_item_link                                                                     content_item_link[]
+  conversation_conversation_created_byToprincipal                                       conversation[]                    @relation("conversation_created_byToprincipal")
+  conversation_conversation_deleted_byToprincipal                                       conversation[]                    @relation("conversation_deleted_byToprincipal")
+  conversation_participant_conversation_participant_created_byToprincipal               conversation_participant[]        @relation("conversation_participant_created_byToprincipal")
+  conversation_participant_conversation_participant_principal_idToprincipal             conversation_participant[]        @relation("conversation_participant_principal_idToprincipal")
+  cost_center_cost_center_created_byToprincipal                                         cost_center[]                     @relation("cost_center_created_byToprincipal")
+  cost_center_cost_center_responsible_person_idToprincipal                              cost_center[]                     @relation("cost_center_responsible_person_idToprincipal")
+  customer                                                                              customer[]
+  dashboard_dashboard_created_byToprincipal                                             dashboard[]                       @relation("dashboard_created_byToprincipal")
+  dashboard_dashboard_tenant_id_owner_principal_idToprincipal                           dashboard[]                       @relation("dashboard_tenant_id_owner_principal_idToprincipal")
+  dashboard_dashboard_updated_byToprincipal                                             dashboard[]                       @relation("dashboard_updated_byToprincipal")
+  dashboard_widget_dashboard_widget_created_byToprincipal                               dashboard_widget[]                @relation("dashboard_widget_created_byToprincipal")
+  dashboard_widget_dashboard_widget_updated_byToprincipal                               dashboard_widget[]                @relation("dashboard_widget_updated_byToprincipal")
+  delegation_grant_delegation_grant_created_byToprincipal                               delegation_grant[]                @relation("delegation_grant_created_byToprincipal")
+  delegation_grant_delegation_grant_delegate_idToprincipal                              delegation_grant[]                @relation("delegation_grant_delegate_idToprincipal")
+  delegation_grant_delegation_grant_delegator_idToprincipal                             delegation_grant[]                @relation("delegation_grant_delegator_idToprincipal")
+  delegation_grant_delegation_grant_revoked_byToprincipal                               delegation_grant[]                @relation("delegation_grant_revoked_byToprincipal")
+  dimension_set                                                                         dimension_set[]
+  document                                                                              document[]
+  employee_employee_created_byToprincipal                                               employee[]                        @relation("employee_created_byToprincipal")
+  employee_employee_tenant_id_principal_idToprincipal                                   employee?                         @relation("employee_tenant_id_principal_idToprincipal")
+  entity_document_link                                                                  entity_document_link[]
+  fiscal_period                                                                         fiscal_period[]
+  fx_rate                                                                               fx_rate[]
+  gl_account                                                                            gl_account[]
+  holiday_calendar                                                                      holiday_calendar[]
+  holiday_calendar_day                                                                  holiday_calendar_day[]
+  item                                                                                  item[]
+  item_category                                                                         item_category[]
+  ledger_book                                                                           ledger_book[]
+  legal_entity                                                                          legal_entity[]
+  letterhead                                                                            letterhead[]
+  multipart_upload_multipart_upload_created_byToprincipal                               multipart_upload[]                @relation("multipart_upload_created_byToprincipal")
+  multipart_upload_multipart_upload_initiated_byToprincipal                             multipart_upload[]                @relation("multipart_upload_initiated_byToprincipal")
+  notification_notification_created_byToprincipal                                       notification[]                    @relation("notification_created_byToprincipal")
+  notification_notification_recipient_idToprincipal                                     notification[]                    @relation("notification_recipient_idToprincipal")
+  notification_notification_sender_idToprincipal                                        notification[]                    @relation("notification_sender_idToprincipal")
+  ou_spend_category_policy                                                              ou_spend_category_policy[]
+  payment_term                                                                          payment_term[]
+  payment_term_clause                                                                   payment_term_clause[]
+  payment_term_discount_tier                                                            payment_term_discount_tier[]
+  tenant                                                                                tenant                            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_tenant_fk")
+  principal_feature_grant                                                               principal_feature_grant[]
+  principal_identity_binding                                                            principal_identity_binding[]
+  principal_persona                                                                     principal_persona[]
+  principal_profile_principal_profile_tenant_id_principal_idToprincipal                 principal_profile?                @relation("principal_profile_tenant_id_principal_idToprincipal")
+  principal_profile_principal_profile_supervisor_idToprincipal                          principal_profile[]               @relation("principal_profile_supervisor_idToprincipal")
+  principal_ui_preference_principal_ui_preference_created_byToprincipal                 principal_ui_preference[]         @relation("principal_ui_preference_created_byToprincipal")
+  principal_ui_preference_principal_ui_preference_tenant_id_principal_idToprincipal     principal_ui_preference[]         @relation("principal_ui_preference_tenant_id_principal_idToprincipal")
+  principal_ui_preference_principal_ui_preference_updated_byToprincipal                 principal_ui_preference[]         @relation("principal_ui_preference_updated_byToprincipal")
+  principal_ui_profile_principal_ui_profile_created_byToprincipal                       principal_ui_profile[]            @relation("principal_ui_profile_created_byToprincipal")
+  principal_ui_profile_principal_ui_profile_tenant_id_principal_idToprincipal           principal_ui_profile?             @relation("principal_ui_profile_tenant_id_principal_idToprincipal")
+  principal_ui_profile_principal_ui_profile_updated_byToprincipal                       principal_ui_profile[]            @relation("principal_ui_profile_updated_byToprincipal")
+  product                                                                               product[]
+  profit_center_profit_center_created_byToprincipal                                     profit_center[]                   @relation("profit_center_created_byToprincipal")
+  profit_center_profit_center_responsible_person_idToprincipal                          profit_center[]                   @relation("profit_center_responsible_person_idToprincipal")
+  project_project_created_byToprincipal                                                 project[]                         @relation("project_created_byToprincipal")
+  project_project_responsible_person_idToprincipal                                      project[]                         @relation("project_responsible_person_idToprincipal")
+  project_item_project_item_created_byToprincipal                                       project_item[]                    @relation("project_item_created_byToprincipal")
+  project_item_project_item_responsible_person_idToprincipal                            project_item[]                    @relation("project_item_responsible_person_idToprincipal")
+  saved_view_saved_view_created_byToprincipal                                           saved_view[]                      @relation("saved_view_created_byToprincipal")
+  saved_view_saved_view_tenant_id_owner_principal_idToprincipal                         saved_view[]                      @relation("saved_view_tenant_id_owner_principal_idToprincipal")
+  saved_view_saved_view_updated_byToprincipal                                           saved_view[]                      @relation("saved_view_updated_byToprincipal")
+  site_site_created_byToprincipal                                                       site[]                            @relation("site_created_byToprincipal")
+  site_site_manager_idToprincipal                                                       site[]                            @relation("site_manager_idToprincipal")
+  spend_category                                                                        spend_category[]
+  supplier                                                                              supplier[]
+  tax_jurisdiction                                                                      tax_jurisdiction[]
+  tax_type                                                                              tax_type[]
+  team                                                                                  team[]
+  team_member                                                                           team_member[]
+  template                                                                              template[]
+  template_binding                                                                      template_binding[]
+  tenant_profile_tenant_profile_created_byToprincipal                                   tenant_profile[]                  @relation("tenant_profile_created_byToprincipal")
+  tenant_profile_tenant_profile_updated_byToprincipal                                   tenant_profile[]                  @relation("tenant_profile_updated_byToprincipal")
+  warehouse_warehouse_created_byToprincipal                                             warehouse[]                       @relation("warehouse_created_byToprincipal")
+  warehouse_warehouse_manager_idToprincipal                                             warehouse[]                       @relation("warehouse_manager_idToprincipal")
+  content_item_version                                                                  content_item_version[]
+  template_version                                                                      template_version[]
 
   @@unique([tenant_id, external_ref], map: "principal_external_ref_uidx", where: raw("(external_ref IS NOT NULL)"))
   @@unique([tenant_id, code], map: "principal_tenant_code_uq")
@@ -12823,6 +12901,7 @@ model tenant {
   entity_policy                     entity_policy[]
   entity_version                    entity_version[]
   field_security_policy             field_security_policy[]
+  forecast_budget_bridge            forecast_budget_bridge[]
   hook_action_registry              hook_action_registry[]
   intent_profile_override           intent_profile_override[]
   intent_to_accounting_profile_rule intent_to_accounting_profile_rule[]
@@ -12830,6 +12909,7 @@ model tenant {
   lifecycle_state                   lifecycle_state[]
   lifecycle_timer_policy            lifecycle_timer_policy[]
   lookup_value                      lookup_value[]
+  metadata_change_application_log   metadata_change_application_log[]
   mfa_config                        mfa_config[]
   notification_routing_rule         notification_routing_rule[]
   notification_template             notification_template[]

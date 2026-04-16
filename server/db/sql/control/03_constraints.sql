@@ -1370,3 +1370,89 @@ ALTER TABLE control.entity_publish_state
 ALTER TABLE control.entity_publish_state
     ADD CONSTRAINT eps_precedence_chk
     CHECK (applied_precedence >= 0);
+
+
+-- ── H1: feature_flag.flag_type ───────────────────────────────────────────────
+
+DO $ff1$ BEGIN
+    ALTER TABLE control.feature_flag
+        ADD COLUMN flag_type text NOT NULL DEFAULT 'release_gate';
+EXCEPTION WHEN duplicate_column THEN NULL; END $ff1$;
+
+ALTER TABLE control.feature_flag
+    DROP CONSTRAINT IF EXISTS ff_flag_type_chk;
+ALTER TABLE control.feature_flag
+    ADD CONSTRAINT ff_flag_type_chk
+    CHECK (flag_type IN ('release_gate', 'capability_toggle', 'experiment'));
+
+
+-- ── H5: rounding_rule.gl_variance_approval_required ─────────────────────────
+
+DO $rr1$ BEGIN
+    ALTER TABLE control.rounding_rule
+        ADD COLUMN gl_variance_approval_required boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $rr1$;
+
+
+-- ── H3: forecast_budget_bridge — FKs ────────────────────────────────────────
+
+DO $fbb1$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb1$;
+
+DO $fbb2$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_planning_driver_version_fk
+        FOREIGN KEY (planning_driver_version_id)
+        REFERENCES control.planning_driver_version (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb2$;
+
+DO $fbb3$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_superseded_by_fk
+        FOREIGN KEY (superseded_by_id)
+        REFERENCES control.forecast_budget_bridge (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb3$;
+
+DO $fbb4$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_locked_by_fk
+        FOREIGN KEY (locked_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb4$;
+
+DO $fbb5$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_approved_by_fk
+        FOREIGN KEY (approved_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb5$;
+
+DO $fbb6$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb6$;
+
+DO $fbb7$ BEGIN
+    ALTER TABLE control.forecast_budget_bridge ADD CONSTRAINT fbb_updated_by_fk
+        FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $fbb7$;
+
+
+-- ── H4: metadata_change_application_log — FKs ───────────────────────────────
+
+DO $mcal1$ BEGIN
+    ALTER TABLE control.metadata_change_application_log ADD CONSTRAINT mcal_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $mcal1$;
+
+DO $mcal2$ BEGIN
+    ALTER TABLE control.metadata_change_application_log ADD CONSTRAINT mcal_change_request_fk
+        FOREIGN KEY (change_request_id)
+        REFERENCES control.metadata_change_request (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $mcal2$;
+
+DO $mcal3$ BEGIN
+    ALTER TABLE control.metadata_change_application_log ADD CONSTRAINT mcal_applied_by_fk
+        FOREIGN KEY (applied_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $mcal3$;
+
+DO $mcal4$ BEGIN
+    ALTER TABLE control.metadata_change_application_log ADD CONSTRAINT mcal_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $mcal4$;

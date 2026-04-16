@@ -1426,3 +1426,8 @@ DROP TRIGGER IF EXISTS trg_adb_updated_at ON control.ai_drift_baseline;
 CREATE TRIGGER trg_adb_updated_at
     BEFORE UPDATE ON control.ai_drift_baseline
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_fbb_updated_at ON control.forecast_budget_bridge;
+CREATE TRIGGER trg_fbb_updated_at
+    BEFORE UPDATE ON control.forecast_budget_bridge
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

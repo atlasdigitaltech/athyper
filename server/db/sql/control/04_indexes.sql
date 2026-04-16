@@ -718,3 +718,37 @@ CREATE INDEX IF NOT EXISTS eps_source_layer_idx
 CREATE INDEX IF NOT EXISTS eps_precedence_idx
     ON control.entity_publish_state (applied_precedence DESC)
     WHERE source_layer <> 'platform';
+
+
+-- ── H1: feature_flag — type-aware lookup ─────────────────────────────────────
+-- FeatureFlagService.listByType() — filter enabled flags by discriminator
+CREATE INDEX IF NOT EXISTS ff_flag_type_idx
+    ON control.feature_flag (flag_type)
+    WHERE is_enabled = true;
+
+
+-- ── H3: forecast_budget_bridge — browsing + status queries ──────────────────
+-- Finance admin: "show me all approved baselines for FY2026"
+CREATE INDEX IF NOT EXISTS fbb_tenant_year_status_idx
+    ON control.forecast_budget_bridge (tenant_id, fiscal_year, status);
+
+-- Driver-version lookup: "which baselines reference this planning snapshot?"
+CREATE INDEX IF NOT EXISTS fbb_driver_version_idx
+    ON control.forecast_budget_bridge (planning_driver_version_id)
+    WHERE planning_driver_version_id IS NOT NULL;
+
+
+-- ── H4: metadata_change_application_log — request + outcome browsing ─────────
+-- Show all application runs for a given change request (with outcome)
+CREATE INDEX IF NOT EXISTS mcal_change_request_idx
+    ON control.metadata_change_application_log (change_request_id, applied_at DESC);
+
+-- Compiler run correlation (batch recompile tracing)
+CREATE INDEX IF NOT EXISTS mcal_compiler_run_idx
+    ON control.metadata_change_application_log (compiler_run_id)
+    WHERE compiler_run_id IS NOT NULL;
+
+-- Failed/partial runs for incident triage
+CREATE INDEX IF NOT EXISTS mcal_failed_idx
+    ON control.metadata_change_application_log (tenant_id, applied_at DESC)
+    WHERE result <> 'success';
