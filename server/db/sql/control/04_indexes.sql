@@ -610,6 +610,33 @@ CREATE INDEX IF NOT EXISTS pdef_module_idx
 CREATE INDEX IF NOT EXISTS prule_policy_priority_idx
     ON control.policy_rule (policy_id, priority ASC);
 
+-- ── §R5  outbox_routing_rule ──────────────────────────────────────────────────
+-- Primary lookup: all enabled routes for a given event_type (platform + tenant)
+CREATE INDEX IF NOT EXISTS orr_event_type_idx
+    ON control.outbox_routing_rule (event_type, sort_order ASC)
+    WHERE is_enabled = true;
+
+-- Tenant-scoped lookup for overlay queries
+CREATE INDEX IF NOT EXISTS orr_tenant_event_idx
+    ON control.outbox_routing_rule (tenant_id, event_type)
+    WHERE is_enabled = true;
+
+-- ── §R11  budget_check_config ─────────────────────────────────────────────────
+-- Lookup from policy_rule.budget_check_config_id
+CREATE INDEX IF NOT EXISTS prule_bcc_idx
+    ON control.policy_rule (budget_check_config_id)
+    WHERE budget_check_config_id IS NOT NULL;
+
+-- Tenant + active configs for admin UI
+CREATE INDEX IF NOT EXISTS bcc_tenant_idx
+    ON control.budget_check_config (tenant_id);
+
+-- ── §R7-A  wht_threshold_config ───────────────────────────────────────────────
+-- Lookup: active thresholds for a jurisdiction + tax type
+CREATE INDEX IF NOT EXISTS wtc_jurisdiction_active_pidx
+    ON control.wht_threshold_config (tenant_id, jurisdiction_id, tax_type_id)
+    WHERE is_active = true;
+
 -- ── §TEC  transaction_event_catalog ──────────────────────────────────────────
 -- R1: only active codes returned for picker queries; covering index for full scan
 CREATE INDEX IF NOT EXISTS tec_active_code_pidx

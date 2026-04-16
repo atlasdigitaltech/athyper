@@ -461,6 +461,64 @@ CREATE POLICY admin_read    ON control.book_posting_rule FOR SELECT TO athyperad
 CREATE POLICY admin_write   ON control.book_posting_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 -- ============================================================================
+-- R5  control.outbox_routing_rule
+--     Platform-global + tenant-scoped. Tenants read their own rules + globals.
+--     Write restricted to athyperadmin (platform rules) or tenant admin for
+--     their own rows.
+-- ============================================================================
+ALTER TABLE control.outbox_routing_rule ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.outbox_routing_rule FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS scoped_read  ON control.outbox_routing_rule;
+DROP POLICY IF EXISTS admin_write  ON control.outbox_routing_rule;
+CREATE POLICY scoped_read ON control.outbox_routing_rule
+    FOR SELECT USING (
+        tenant_id IS NULL
+        OR tenant_id = shared.current_tenant_id_soft()
+    );
+CREATE POLICY admin_write ON control.outbox_routing_rule
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- R11  control.budget_check_config
+--      Tenant-scoped. Tenants manage their own configs.
+-- ============================================================================
+ALTER TABLE control.budget_check_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.budget_check_config FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON control.budget_check_config;
+DROP POLICY IF EXISTS tenant_write  ON control.budget_check_config;
+DROP POLICY IF EXISTS admin_write   ON control.budget_check_config;
+CREATE POLICY tenant_read  ON control.budget_check_config
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.budget_check_config
+    FOR ALL USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_write  ON control.budget_check_config
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- R7-A  control.wht_threshold_config
+--       Tenant-scoped. Tenants manage their own WHT threshold configs.
+-- ============================================================================
+ALTER TABLE control.wht_threshold_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.wht_threshold_config FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON control.wht_threshold_config;
+DROP POLICY IF EXISTS tenant_write  ON control.wht_threshold_config;
+DROP POLICY IF EXISTS admin_write   ON control.wht_threshold_config;
+CREATE POLICY tenant_read  ON control.wht_threshold_config
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.wht_threshold_config
+    FOR ALL USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_write  ON control.wht_threshold_config
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
 -- Engine 4.13: Unified Transaction Resolution Engine additions
 -- ============================================================================
 

@@ -60,6 +60,40 @@ model tax_credit_summary {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model wht_vendor_accumulator {
+  id                                                          String           @id(map: "wva_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                   String           @db.Uuid
+  company_code_id                                             String           @db.Uuid
+  counterparty_id                                             String           @db.Uuid
+  jurisdiction_id                                             String           @db.Uuid
+  tax_type_id                                                 String           @db.Uuid
+  section_code                                                String?
+  fiscal_year                                                 Int              @db.SmallInt
+  ytd_payment_amount                                          Decimal          @default(0) @db.Decimal(18, 4)
+  ytd_wht_amount                                              Decimal          @default(0) @db.Decimal(18, 4)
+  threshold_reached                                           Boolean          @default(false)
+  threshold_reached_at                                        DateTime?        @db.Timestamptz(6)
+  version                                                     Int              @default(1)
+  created_at                                                  DateTime         @default(now()) @db.Timestamptz(6)
+  created_by                                                  String           @db.Uuid
+  updated_at                                                  DateTime?        @db.Timestamptz(6)
+  updated_by                                                  String?          @db.Uuid
+  company_code                                                company_code     @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "wva_company_fk")
+  principal_wht_vendor_accumulator_counterparty_idToprincipal principal        @relation("wht_vendor_accumulator_counterparty_idToprincipal", fields: [counterparty_id], references: [id], onUpdate: NoAction, map: "wva_counterparty_fk")
+  principal_wht_vendor_accumulator_created_byToprincipal      principal        @relation("wht_vendor_accumulator_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "wva_created_by_fk")
+  tax_jurisdiction                                            tax_jurisdiction @relation(fields: [tenant_id, jurisdiction_id], references: [tenant_id, id], onUpdate: NoAction, map: "wva_jurisdiction_fk")
+  tax_type                                                    tax_type         @relation(fields: [tenant_id, tax_type_id], references: [tenant_id, id], onUpdate: NoAction, map: "wva_tax_type_fk")
+  tenant                                                      tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wva_tenant_fk")
+  principal_wht_vendor_accumulator_updated_byToprincipal      principal?       @relation("wht_vendor_accumulator_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "wva_updated_by_fk")
+
+  @@unique([tenant_id, company_code_id, counterparty_id, jurisdiction_id, tax_type_id, section_code, fiscal_year], map: "wva_natural_uq")
+  @@index([tenant_id, company_code_id, jurisdiction_id, tax_type_id, fiscal_year], map: "wva_company_jur_year_idx")
+  @@index([tenant_id, company_code_id, counterparty_id, fiscal_year], map: "wva_not_reached_pidx", where: raw("(threshold_reached = false)"))
+  @@schema("aggregate")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model acct_profile_book_rule {
   id                  String              @id(map: "apbr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -283,6 +317,7 @@ model acct_profile_event {
   updated_by                  String?                       @db.Uuid
   acct_profile_entry_template acct_profile_entry_template[]
   acct_profile_config         acct_profile_config           @relation(fields: [profile_config_id, tenant_id], references: [id, tenant_id], onDelete: Cascade, onUpdate: NoAction, map: "ape_config_fk")
+  transaction_event_catalog   transaction_event_catalog     @relation(fields: [event_code], references: [code], onUpdate: NoAction, map: "ape_event_code_fk")
   tenant                      tenant                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ape_tenant_fk")
 
   @@unique([profile_config_id, event_code], map: "ape_config_event_uq")
@@ -573,6 +608,37 @@ model book_posting_rule {
   @@index([tenant_id, company_code_id, source_book_id], map: "bpr_active_pidx", where: raw("(is_active = true)"))
   @@index([tenant_id, company_code_id], map: "bpr_company_idx")
   @@index([tenant_id, source_book_id], map: "bpr_source_book_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model budget_check_config {
+  id                                                  String             @id(map: "bcc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                           String             @db.Uuid
+  name                                                String
+  description                                         String?
+  book_id                                             String?            @db.Uuid
+  account_pattern                                     String?
+  period_scope                                        String             @default("fiscal_year")
+  ou_scope                                            String             @default("exact")
+  commitment_netting                                  String             @default("actuals_plus_committed")
+  warn_at_pct                                         Decimal            @default(80) @db.Decimal(5, 2)
+  block_at_pct                                        Decimal            @default(100) @db.Decimal(5, 2)
+  override_policy_definition_id                       String?            @db.Uuid
+  created_at                                          DateTime           @default(now()) @db.Timestamptz(6)
+  created_by                                          String             @db.Uuid
+  updated_at                                          DateTime?          @db.Timestamptz(6)
+  updated_by                                          String?            @db.Uuid
+  ledger_book                                         ledger_book?       @relation(fields: [book_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "bcc_book_fk")
+  principal_budget_check_config_created_byToprincipal principal          @relation("budget_check_config_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "bcc_created_by_fk")
+  policy_definition                                   policy_definition? @relation(fields: [override_policy_definition_id], references: [id], onUpdate: NoAction, map: "bcc_override_policy_fk")
+  tenant                                              tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bcc_tenant_fk")
+  principal_budget_check_config_updated_byToprincipal principal?         @relation("budget_check_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "bcc_updated_by_fk")
+  policy_rule                                         policy_rule[]
+
+  @@index([tenant_id], map: "bcc_tenant_idx")
   @@schema("control")
 }
 
@@ -1330,23 +1396,24 @@ model forecast_line {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model hook_action_registry {
-  id                    String    @id(map: "har_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id             String?   @db.Uuid
+  id                    String                @id(map: "har_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id             String?               @db.Uuid
   action_key            String
   label                 String
   description           String?
-  handler_type          String    @default("built_in")
+  handler_type          String                @default("built_in")
   handler_config        Json?
-  default_contract_role String    @default("extension")
-  default_safety_level  String    @default("replaceable")
-  origin                String    @default("system")
-  is_active             Boolean   @default(true)
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  created_by            String    @db.Uuid
-  updated_at            DateTime? @db.Timestamptz(6)
-  updated_by            String?   @db.Uuid
-  principal             principal @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "har_created_by_fk")
-  tenant                tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "har_tenant_fk")
+  default_contract_role String                @default("extension")
+  default_safety_level  String                @default("replaceable")
+  origin                String                @default("system")
+  is_active             Boolean               @default(true)
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  created_by            String                @db.Uuid
+  updated_at            DateTime?             @db.Timestamptz(6)
+  updated_by            String?               @db.Uuid
+  principal             principal             @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "har_created_by_fk")
+  tenant                tenant?               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "har_tenant_fk")
+  outbox_routing_rule   outbox_routing_rule[]
 
   @@unique([tenant_id, action_key], map: "har_key_uq")
   @@schema("control")
@@ -1851,6 +1918,32 @@ model notification_template {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model outbox_routing_rule {
+  id                                                  String                @id(map: "orr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                           String?               @db.Uuid
+  event_type                                          String
+  topic                                               String
+  handler_id                                          String?               @db.Uuid
+  condition_expr                                      Json?
+  is_enabled                                          Boolean               @default(true)
+  sort_order                                          Int                   @default(0) @db.SmallInt
+  created_at                                          DateTime              @default(now()) @db.Timestamptz(6)
+  created_by                                          String                @db.Uuid
+  updated_at                                          DateTime?             @db.Timestamptz(6)
+  updated_by                                          String?               @db.Uuid
+  principal_outbox_routing_rule_created_byToprincipal principal             @relation("outbox_routing_rule_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "orr_created_by_fk")
+  hook_action_registry                                hook_action_registry? @relation(fields: [handler_id], references: [id], onUpdate: NoAction, map: "orr_handler_id_fk")
+  tenant                                              tenant?               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "orr_tenant_fk")
+  principal_outbox_routing_rule_updated_byToprincipal principal?            @relation("outbox_routing_rule_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "orr_updated_by_fk")
+
+  @@index([event_type, sort_order], map: "orr_event_type_idx", where: raw("(is_enabled = true)"))
+  @@index([tenant_id, event_type], map: "orr_tenant_event_idx", where: raw("(is_enabled = true)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model overlay {
   id                        String                      @id(map: "ov_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                 String                      @db.Uuid
@@ -2164,28 +2257,29 @@ model planning_driver_version {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model policy_definition {
-  id               String             @id(map: "pdef_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id        String?            @db.Uuid
-  module_id        String?            @db.Uuid
-  entity_type      String
-  name             String
-  description      String?
-  priority         Int                @default(100) @db.SmallInt
-  evaluation_mode  String             @default("first_match")
-  effective_from   DateTime           @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_until  DateTime?          @db.Date
-  version_no       Int                @default(1)
-  status           String             @default("active")
-  is_active        Boolean?           @default(dbgenerated("(status = 'active'::text)"))
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  created_by       String             @db.Uuid
-  updated_at       DateTime?          @db.Timestamptz(6)
-  updated_by       String?            @db.Uuid
-  principal        principal          @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "pdef_created_by_fk")
-  module           module?            @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "pdef_module_fk")
-  tenant           tenant?            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pdef_tenant_fk")
-  policy_rule      policy_rule[]
-  policy_test_case policy_test_case[]
+  id                  String                @id(map: "pdef_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id           String?               @db.Uuid
+  module_id           String?               @db.Uuid
+  entity_type         String
+  name                String
+  description         String?
+  priority            Int                   @default(100) @db.SmallInt
+  evaluation_mode     String                @default("first_match")
+  effective_from      DateTime              @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until     DateTime?             @db.Date
+  version_no          Int                   @default(1)
+  status              String                @default("active")
+  is_active           Boolean?              @default(dbgenerated("(status = 'active'::text)"))
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  created_by          String                @db.Uuid
+  updated_at          DateTime?             @db.Timestamptz(6)
+  updated_by          String?               @db.Uuid
+  budget_check_config budget_check_config[]
+  principal           principal             @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "pdef_created_by_fk")
+  module              module?               @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "pdef_module_fk")
+  tenant              tenant?               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pdef_tenant_fk")
+  policy_rule         policy_rule[]
+  policy_test_case    policy_test_case[]
 
   @@index([tenant_id, entity_type, effective_from, effective_until], map: "pdef_effective_idx")
   @@index([entity_type, priority], map: "pdef_global_entity_active_pidx", where: raw("((tenant_id IS NULL) AND (is_active = true))"))
@@ -2197,24 +2291,27 @@ model policy_definition {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model policy_rule {
-  id                String            @id(map: "prule_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  policy_id         String            @db.Uuid
-  priority          Int               @default(10) @db.SmallInt
-  conditions        Json?
-  action            String
-  score             Decimal?          @db.Decimal(5, 4)
-  confidence        Decimal?          @db.Decimal(5, 4)
-  explanation       String?
-  approvers         Json?
-  sla_hours         Int?              @db.SmallInt
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-  created_by        String            @db.Uuid
-  updated_at        DateTime?         @db.Timestamptz(6)
-  updated_by        String?           @db.Uuid
-  principal         principal         @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "prule_created_by_fk")
-  policy_definition policy_definition @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "prule_policy_fk")
+  id                     String               @id(map: "prule_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  policy_id              String               @db.Uuid
+  priority               Int                  @default(10) @db.SmallInt
+  conditions             Json?
+  action                 String
+  score                  Decimal?             @db.Decimal(5, 4)
+  confidence             Decimal?             @db.Decimal(5, 4)
+  explanation            String?
+  approvers              Json?
+  sla_hours              Int?                 @db.SmallInt
+  created_at             DateTime             @default(now()) @db.Timestamptz(6)
+  created_by             String               @db.Uuid
+  updated_at             DateTime?            @db.Timestamptz(6)
+  updated_by             String?              @db.Uuid
+  budget_check_config_id String?              @db.Uuid
+  budget_check_config    budget_check_config? @relation(fields: [budget_check_config_id], references: [id], onUpdate: NoAction, map: "prule_budget_check_fk")
+  principal              principal            @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "prule_created_by_fk")
+  policy_definition      policy_definition    @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "prule_policy_fk")
 
   @@unique([policy_id, priority], map: "prule_priority_uq")
+  @@index([budget_check_config_id], map: "prule_bcc_idx", where: raw("(budget_check_config_id IS NOT NULL)"))
   @@index([policy_id, priority], map: "prule_policy_priority_idx")
   @@schema("control")
 }
@@ -2452,17 +2549,19 @@ model tenant_blueprint_application {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model transaction_event_catalog {
-  id                                                        String     @id(map: "tec_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                                      String     @unique(map: "tec_code_uq")
+  id                                                        String                      @id(map: "tec_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                                      String                      @unique(map: "tec_code_uq")
   label                                                     String
   description                                               String?
-  is_active                                                 Boolean    @default(true)
-  created_at                                                DateTime   @default(now()) @db.Timestamptz(6)
-  created_by                                                String     @db.Uuid
-  updated_at                                                DateTime?  @db.Timestamptz(6)
-  updated_by                                                String?    @db.Uuid
-  principal_transaction_event_catalog_created_byToprincipal principal  @relation("transaction_event_catalog_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "tec_created_by_fk")
-  principal_transaction_event_catalog_updated_byToprincipal principal? @relation("transaction_event_catalog_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "tec_updated_by_fk")
+  is_active                                                 Boolean                     @default(true)
+  created_at                                                DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                                                String                      @db.Uuid
+  updated_at                                                DateTime?                   @db.Timestamptz(6)
+  updated_by                                                String?                     @db.Uuid
+  acct_profile_event                                        acct_profile_event[]
+  principal_transaction_event_catalog_created_byToprincipal principal                   @relation("transaction_event_catalog_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "tec_created_by_fk")
+  principal_transaction_event_catalog_updated_byToprincipal principal?                  @relation("transaction_event_catalog_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "tec_updated_by_fk")
+  transaction_flow_template                                 transaction_flow_template[]
 
   @@index([code], map: "tec_active_code_pidx", where: raw("(is_active = true)"))
   @@schema("control")
@@ -2473,30 +2572,63 @@ model transaction_event_catalog {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model transaction_flow_template {
-  id                String    @id(map: "tft_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String?   @db.Uuid
-  flow_code         String
-  direction         String
-  event_code        String
-  event_name        String
-  event_seq         Int       @db.SmallInt
-  is_mandatory      Boolean   @default(true)
-  creates_je        Boolean   @default(true)
-  reverses_prior    String?
-  commitment_action String    @default("NONE")
-  description       String?
-  metadata          Json      @default("{}")
-  status            String    @default("active")
-  is_active         Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime? @db.Timestamptz(6)
-  status_changed_by String?   @db.Uuid
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  created_by        String    @db.Uuid
-  updated_at        DateTime? @db.Timestamptz(6)
-  updated_by        String?   @db.Uuid
-  tenant            tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tft_tenant_fk")
+  id                        String                    @id(map: "tft_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String?                   @db.Uuid
+  flow_code                 String
+  direction                 String
+  event_code                String
+  event_name                String
+  event_seq                 Int                       @db.SmallInt
+  is_mandatory              Boolean                   @default(true)
+  creates_je                Boolean                   @default(true)
+  reverses_prior            String?
+  commitment_action         String                    @default("NONE")
+  description               String?
+  metadata                  Json                      @default("{}")
+  status                    String                    @default("active")
+  is_active                 Boolean?                  @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at         DateTime?                 @db.Timestamptz(6)
+  status_changed_by         String?                   @db.Uuid
+  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                String                    @db.Uuid
+  updated_at                DateTime?                 @db.Timestamptz(6)
+  updated_by                String?                   @db.Uuid
+  transaction_event_catalog transaction_event_catalog @relation(fields: [event_code], references: [code], onUpdate: NoAction, map: "tft_event_code_fk")
+  tenant                    tenant?                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tft_tenant_fk")
 
   @@index([flow_code, direction, event_seq], map: "tft_flow_active_pidx", where: raw("(is_active = true)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wht_threshold_config {
+  id                                                   String           @id(map: "wtc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                            String           @db.Uuid
+  jurisdiction_id                                      String           @db.Uuid
+  tax_type_id                                          String           @db.Uuid
+  section_code                                         String?
+  threshold_amount                                     Decimal          @db.Decimal(18, 4)
+  threshold_currency                                   String           @db.Char(3)
+  reset_period                                         String           @default("fiscal_year")
+  per_transaction                                      Boolean          @default(false)
+  is_active                                            Boolean          @default(true)
+  effective_from                                       DateTime         @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to                                         DateTime?        @db.Date
+  created_at                                           DateTime         @default(now()) @db.Timestamptz(6)
+  created_by                                           String           @db.Uuid
+  updated_at                                           DateTime?        @db.Timestamptz(6)
+  updated_by                                           String?          @db.Uuid
+  principal_wht_threshold_config_created_byToprincipal principal        @relation("wht_threshold_config_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "wtc_created_by_fk")
+  currency                                             currency         @relation(fields: [threshold_currency], references: [code], onUpdate: NoAction, map: "wtc_currency_fk")
+  tax_jurisdiction                                     tax_jurisdiction @relation(fields: [tenant_id, jurisdiction_id], references: [tenant_id, id], onUpdate: NoAction, map: "wtc_jurisdiction_fk")
+  tax_type                                             tax_type         @relation(fields: [tenant_id, tax_type_id], references: [tenant_id, id], onUpdate: NoAction, map: "wtc_tax_type_fk")
+  tenant                                               tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wtc_tenant_fk")
+  principal_wht_threshold_config_updated_byToprincipal principal?       @relation("wht_threshold_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "wtc_updated_by_fk")
+
+  @@unique([tenant_id, jurisdiction_id, tax_type_id, section_code], map: "wtc_natural_uq")
+  @@index([tenant_id, jurisdiction_id, tax_type_id], map: "wtc_jurisdiction_active_pidx", where: raw("(is_active = true)"))
   @@schema("control")
 }
 
@@ -5114,6 +5246,53 @@ model user_profile_update_request {
   @@index([request_scope], map: "ix_upupr_scope", type: Gin)
   @@index([tenant_id, status], map: "ix_upupr_tenant_status")
   @@index([workflow_request_id], map: "ix_upupr_workflow")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model wht_certificate {
+  id                                                   String            @id(map: "whtc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                            String            @db.Uuid
+  company_code_id                                      String            @db.Uuid
+  counterparty_id                                      String            @db.Uuid
+  tax_type_id                                          String            @db.Uuid
+  section_code                                         String?
+  certificate_no                                       String
+  certificate_series                                   String?
+  period_from                                          DateTime          @db.Date
+  period_to                                            DateTime          @db.Date
+  gross_amount                                         Decimal           @db.Decimal(18, 4)
+  wht_amount                                           Decimal           @db.Decimal(18, 4)
+  currency_code                                        String            @db.Char(3)
+  source_transaction_ids                               String[]          @default([]) @db.Uuid
+  status                                               String            @default("draft")
+  issued_at                                            DateTime?         @db.Timestamptz(6)
+  issued_by                                            String?           @db.Uuid
+  voided_at                                            DateTime?         @db.Timestamptz(6)
+  voided_by                                            String?           @db.Uuid
+  void_reason                                          String?
+  superseded_by_id                                     String?           @db.Uuid
+  created_at                                           DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                           String            @db.Uuid
+  updated_at                                           DateTime?         @db.Timestamptz(6)
+  updated_by                                           String?           @db.Uuid
+  company_code                                         company_code      @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "whtc_company_fk")
+  principal_wht_certificate_counterparty_idToprincipal principal         @relation("wht_certificate_counterparty_idToprincipal", fields: [counterparty_id], references: [id], onUpdate: NoAction, map: "whtc_counterparty_fk")
+  principal_wht_certificate_created_byToprincipal      principal         @relation("wht_certificate_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "whtc_created_by_fk")
+  currency                                             currency          @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "whtc_currency_fk")
+  principal_wht_certificate_issued_byToprincipal       principal?        @relation("wht_certificate_issued_byToprincipal", fields: [issued_by], references: [id], onUpdate: NoAction, map: "whtc_issued_by_fk")
+  wht_certificate                                      wht_certificate?  @relation("wht_certificateTowht_certificate", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "whtc_superseded_by_fk")
+  other_wht_certificate                                wht_certificate[] @relation("wht_certificateTowht_certificate")
+  tax_type                                             tax_type          @relation(fields: [tenant_id, tax_type_id], references: [tenant_id, id], onUpdate: NoAction, map: "whtc_tax_type_fk")
+  tenant                                               tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "whtc_tenant_fk")
+  principal_wht_certificate_updated_byToprincipal      principal?        @relation("wht_certificate_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "whtc_updated_by_fk")
+  principal_wht_certificate_voided_byToprincipal       principal?        @relation("wht_certificate_voided_byToprincipal", fields: [voided_by], references: [id], onUpdate: NoAction, map: "whtc_voided_by_fk")
+
+  @@unique([tenant_id, company_code_id, certificate_no], map: "whtc_tenant_cert_uq")
+  @@index([tenant_id, company_code_id, period_from, period_to], map: "whtc_active_period_pidx", where: raw("(status <> 'voided'::text)"))
+  @@index([tenant_id, company_code_id, counterparty_id], map: "whtc_company_party_idx")
   @@schema("document")
 }
 
@@ -9104,6 +9283,7 @@ model company_code {
   updated_at                                                                                         DateTime?                          @db.Timestamptz(6)
   updated_by                                                                                         String?                            @db.Uuid
   tax_credit_summary                                                                                 tax_credit_summary[]
+  wht_vendor_accumulator                                                                             wht_vendor_accumulator[]
   asset_class_book_policy                                                                            asset_class_book_policy[]
   book_posting_rule                                                                                  book_posting_rule[]
   dimension_policy                                                                                   dimension_policy[]
@@ -9127,6 +9307,7 @@ model company_code {
   purchase_requisition                                                                               purchase_requisition[]
   service_entry_sheet                                                                                service_entry_sheet[]
   stocktake                                                                                          stocktake[]
+  wht_certificate                                                                                    wht_certificate[]
   book_period_status                                                                                 book_period_status[]
   asset_revaluation_reserve                                                                          asset_revaluation_reserve[]
   consolidation_elimination_consolidation_elimination_tenant_id_company_code_idTocompany_code        consolidation_elimination[]        @relation("consolidation_elimination_tenant_id_company_code_idTocompany_code")
@@ -10657,6 +10838,7 @@ model ledger_book {
   tax_credit_summary                                                        tax_credit_summary[]
   book_posting_rule_book_posting_rule_tenant_id_source_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_source_book_idToledger_book")
   book_posting_rule_book_posting_rule_tenant_id_target_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_target_book_idToledger_book")
+  budget_check_config                                                       budget_check_config[]
   depreciation_run                                                          depreciation_run[]
   fx_revaluation_run                                                        fx_revaluation_run[]
   journal_entry                                                             journal_entry[]
@@ -11308,10 +11490,15 @@ model principal {
   updated_by                                                                           String?                         @db.Uuid
   auth_epoch                                                                           Int                             @default(0)
   tax_credit_summary                                                                   tax_credit_summary[]
+  wht_vendor_accumulator_wht_vendor_accumulator_counterparty_idToprincipal             wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_counterparty_idToprincipal")
+  wht_vendor_accumulator_wht_vendor_accumulator_created_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_created_byToprincipal")
+  wht_vendor_accumulator_wht_vendor_accumulator_updated_byToprincipal                  wht_vendor_accumulator[]        @relation("wht_vendor_accumulator_updated_byToprincipal")
   asset_class_book_policy                                                              asset_class_book_policy[]
   blueprint_registry_blueprint_registry_created_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_created_byToprincipal")
   blueprint_registry_blueprint_registry_updated_byToprincipal                          blueprint_registry[]            @relation("blueprint_registry_updated_byToprincipal")
   book_posting_rule                                                                    book_posting_rule[]
+  budget_check_config_budget_check_config_created_byToprincipal                        budget_check_config[]           @relation("budget_check_config_created_byToprincipal")
+  budget_check_config_budget_check_config_updated_byToprincipal                        budget_check_config[]           @relation("budget_check_config_updated_byToprincipal")
   entity                                                                               entity[]
   hook_action_registry                                                                 hook_action_registry[]
   lifecycle                                                                            lifecycle[]
@@ -11327,6 +11514,8 @@ model principal {
   notification_routing_rule_notification_routing_rule_updated_byToprincipal            notification_routing_rule[]     @relation("notification_routing_rule_updated_byToprincipal")
   notification_template_notification_template_created_byToprincipal                    notification_template[]         @relation("notification_template_created_byToprincipal")
   notification_template_notification_template_updated_byToprincipal                    notification_template[]         @relation("notification_template_updated_byToprincipal")
+  outbox_routing_rule_outbox_routing_rule_created_byToprincipal                        outbox_routing_rule[]           @relation("outbox_routing_rule_created_byToprincipal")
+  outbox_routing_rule_outbox_routing_rule_updated_byToprincipal                        outbox_routing_rule[]           @relation("outbox_routing_rule_updated_byToprincipal")
   policy_definition                                                                    policy_definition[]
   policy_rule                                                                          policy_rule[]
   rounding_rule                                                                        rounding_rule[]
@@ -11338,6 +11527,8 @@ model principal {
   tenant_blueprint_application_tenant_blueprint_application_updated_byToprincipal      tenant_blueprint_application[]  @relation("tenant_blueprint_application_updated_byToprincipal")
   transaction_event_catalog_transaction_event_catalog_created_byToprincipal            transaction_event_catalog[]     @relation("transaction_event_catalog_created_byToprincipal")
   transaction_event_catalog_transaction_event_catalog_updated_byToprincipal            transaction_event_catalog[]     @relation("transaction_event_catalog_updated_byToprincipal")
+  wht_threshold_config_wht_threshold_config_created_byToprincipal                      wht_threshold_config[]          @relation("wht_threshold_config_created_byToprincipal")
+  wht_threshold_config_wht_threshold_config_updated_byToprincipal                      wht_threshold_config[]          @relation("wht_threshold_config_updated_byToprincipal")
   workflow_definition                                                                  workflow_definition[]
   workflow_sla_policy                                                                  workflow_sla_policy[]
   workflow_template                                                                    workflow_template[]
@@ -11364,6 +11555,11 @@ model principal {
   user_profile_update_request_user_profile_update_request_requested_byToprincipal      user_profile_update_request[]   @relation("user_profile_update_request_requested_byToprincipal")
   user_profile_update_request_user_profile_update_request_status_changed_byToprincipal user_profile_update_request[]   @relation("user_profile_update_request_status_changed_byToprincipal")
   user_profile_update_request_user_profile_update_request_updated_byToprincipal        user_profile_update_request[]   @relation("user_profile_update_request_updated_byToprincipal")
+  wht_certificate_wht_certificate_counterparty_idToprincipal                           wht_certificate[]               @relation("wht_certificate_counterparty_idToprincipal")
+  wht_certificate_wht_certificate_created_byToprincipal                                wht_certificate[]               @relation("wht_certificate_created_byToprincipal")
+  wht_certificate_wht_certificate_issued_byToprincipal                                 wht_certificate[]               @relation("wht_certificate_issued_byToprincipal")
+  wht_certificate_wht_certificate_updated_byToprincipal                                wht_certificate[]               @relation("wht_certificate_updated_byToprincipal")
+  wht_certificate_wht_certificate_voided_byToprincipal                                 wht_certificate[]               @relation("wht_certificate_voided_byToprincipal")
   workflow_request_workflow_request_created_byToprincipal                              workflow_request[]              @relation("workflow_request_created_byToprincipal")
   workflow_request_workflow_request_decided_byToprincipal                              workflow_request[]              @relation("workflow_request_decided_byToprincipal")
   workflow_request_workflow_request_requested_byToprincipal                            workflow_request[]              @relation("workflow_request_requested_byToprincipal")
@@ -12267,41 +12463,43 @@ model supplier {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model tax_jurisdiction {
-  id                     String                @id(map: "tj_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id              String                @db.Uuid
+  id                     String                   @id(map: "tj_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
   code                   String
   name                   String
   description            String?
-  country_code           String                @db.Char(2)
+  country_code           String                   @db.Char(2)
   state_region_code      String?
   city_code              String?
   jurisdiction_type      String
-  parent_id              String?               @db.Uuid
-  level_no               Int                   @default(1) @db.SmallInt
+  parent_id              String?                  @db.Uuid
+  level_no               Int                      @default(1) @db.SmallInt
   authority_name         String?
-  registration_required  Boolean               @default(false)
+  registration_required  Boolean                  @default(false)
   filing_frequency       String?
-  currency_code          String?               @db.Char(3)
-  sort_order             Int                   @default(0) @db.SmallInt
-  metadata               Json                  @default("{}")
-  status                 String                @default("active")
-  is_active              Boolean?              @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at      DateTime?             @db.Timestamptz(6)
-  status_changed_by      String?               @db.Uuid
-  created_at             DateTime              @default(now()) @db.Timestamptz(6)
-  created_by             String                @db.Uuid
-  updated_at             DateTime?             @db.Timestamptz(6)
-  updated_by             String?               @db.Uuid
+  currency_code          String?                  @db.Char(3)
+  sort_order             Int                      @default(0) @db.SmallInt
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  is_active              Boolean?                 @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at      DateTime?                @db.Timestamptz(6)
+  status_changed_by      String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
   tax_credit_summary     tax_credit_summary[]
+  wht_vendor_accumulator wht_vendor_accumulator[]
   tax_rate_schedule      tax_rate_schedule[]
+  wht_threshold_config   wht_threshold_config[]
   tax_calculation        tax_calculation[]
   tax_credit_movement    tax_credit_movement[]
   company_code           company_code[]
-  principal              principal             @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tj_created_by_fk")
-  currency               currency?             @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "tj_currency_fk")
-  tax_jurisdiction       tax_jurisdiction?     @relation("tax_jurisdictionTotax_jurisdiction", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tj_parent_fk")
-  other_tax_jurisdiction tax_jurisdiction[]    @relation("tax_jurisdictionTotax_jurisdiction")
-  tenant                 tenant                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tj_tenant_fk")
+  principal              principal                @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tj_created_by_fk")
+  currency               currency?                @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "tj_currency_fk")
+  tax_jurisdiction       tax_jurisdiction?        @relation("tax_jurisdictionTotax_jurisdiction", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tj_parent_fk")
+  other_tax_jurisdiction tax_jurisdiction[]       @relation("tax_jurisdictionTotax_jurisdiction")
+  tenant                 tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tj_tenant_fk")
 
   @@unique([tenant_id, code], map: "tj_code_uq")
   @@unique([tenant_id, id], map: "tj_tenant_id_uq")
@@ -12313,32 +12511,35 @@ model tax_jurisdiction {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model tax_type {
-  id                    String                @id(map: "tt_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id             String                @db.Uuid
-  code                  String
-  name                  String
-  description           String?
-  category              String
-  is_recoverable        Boolean               @default(false)
-  is_deducted_at_source Boolean               @default(false)
-  is_included_in_price  Boolean               @default(false)
-  is_compound_eligible  Boolean               @default(false)
-  sort_order            Int                   @default(0) @db.SmallInt
-  metadata              Json                  @default("{}")
-  status                String                @default("active")
-  is_active             Boolean?              @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at     DateTime?             @db.Timestamptz(6)
-  status_changed_by     String?               @db.Uuid
-  created_at            DateTime              @default(now()) @db.Timestamptz(6)
-  created_by            String                @db.Uuid
-  updated_at            DateTime?             @db.Timestamptz(6)
-  updated_by            String?               @db.Uuid
-  tax_credit_summary    tax_credit_summary[]
-  tax_rate_schedule     tax_rate_schedule[]
-  tax_calculation       tax_calculation[]
-  tax_credit_movement   tax_credit_movement[]
-  principal             principal             @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tt_created_by_fk")
-  tenant                tenant                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tt_tenant_fk")
+  id                     String                   @id(map: "tt_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
+  code                   String
+  name                   String
+  description            String?
+  category               String
+  is_recoverable         Boolean                  @default(false)
+  is_deducted_at_source  Boolean                  @default(false)
+  is_included_in_price   Boolean                  @default(false)
+  is_compound_eligible   Boolean                  @default(false)
+  sort_order             Int                      @default(0) @db.SmallInt
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  is_active              Boolean?                 @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at      DateTime?                @db.Timestamptz(6)
+  status_changed_by      String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  tax_credit_summary     tax_credit_summary[]
+  wht_vendor_accumulator wht_vendor_accumulator[]
+  tax_rate_schedule      tax_rate_schedule[]
+  wht_threshold_config   wht_threshold_config[]
+  wht_certificate        wht_certificate[]
+  tax_calculation        tax_calculation[]
+  tax_credit_movement    tax_credit_movement[]
+  principal              principal                @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tt_created_by_fk")
+  tenant                 tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tt_tenant_fk")
 
   @@unique([tenant_id, code], map: "tt_code_uq")
   @@unique([tenant_id, id], map: "tt_tenant_id_uq")
@@ -12481,6 +12682,7 @@ model tenant {
   updated_at                        DateTime?                           @db.Timestamptz(6)
   updated_by                        String?                             @db.Uuid
   tax_credit_summary                tax_credit_summary[]
+  wht_vendor_accumulator            wht_vendor_accumulator[]
   acct_profile_book_rule            acct_profile_book_rule[]
   acct_profile_commitment_config    acct_profile_commitment_config[]
   acct_profile_config               acct_profile_config[]
@@ -12493,6 +12695,7 @@ model tenant {
   bank_format_rule                  bank_format_rule[]
   bank_interface_profile            bank_interface_profile[]
   book_posting_rule                 book_posting_rule[]
+  budget_check_config               budget_check_config[]
   classification_config             classification_config?
   classification_to_intent_rule     classification_to_intent_rule[]
   commodity_to_spend_category_rule  commodity_to_spend_category_rule[]
@@ -12514,6 +12717,7 @@ model tenant {
   mfa_config                        mfa_config[]
   notification_routing_rule         notification_routing_rule[]
   notification_template             notification_template[]
+  outbox_routing_rule               outbox_routing_rule[]
   overlay                           overlay[]
   overlay_change                    overlay_change[]
   payment_method_company_policy     payment_method_company_policy[]
@@ -12526,6 +12730,7 @@ model tenant {
   tax_rate_schedule                 tax_rate_schedule[]
   tenant_blueprint_application      tenant_blueprint_application[]
   transaction_flow_template         transaction_flow_template[]
+  wht_threshold_config              wht_threshold_config[]
   workflow_sla_policy               workflow_sla_policy[]
   workflow_template                 workflow_template[]
   accounting_distribution           accounting_distribution[]
@@ -12573,6 +12778,7 @@ model tenant {
   stocktake                         stocktake[]
   stocktake_line                    stocktake_line[]
   user_profile_update_request       user_profile_update_request[]
+  wht_certificate                   wht_certificate[]
   workflow_request                  workflow_request[]
   workflow_stage                    workflow_stage[]
   comment_flag                      comment_flag[]
@@ -13079,6 +13285,7 @@ model currency {
   bank_format_rule                                                bank_format_rule[]
   payment_method_company_policy                                   payment_method_company_policy[]
   payment_method_interface_binding                                payment_method_interface_binding[]
+  wht_threshold_config                                            wht_threshold_config[]
   asset_transaction                                               asset_transaction[]
   fx_revaluation_run                                              fx_revaluation_run[]
   journal_entry_journal_entry_base_currencyTocurrency             journal_entry[]                    @relation("journal_entry_base_currencyTocurrency")
@@ -13087,6 +13294,7 @@ model currency {
   journal_line_journal_line_transaction_currencyTocurrency        journal_line[]                     @relation("journal_line_transaction_currencyTocurrency")
   journal_line_reference                                          journal_line_reference[]
   stocktake_line                                                  stocktake_line[]
+  wht_certificate                                                 wht_certificate[]
   asset_revaluation_reserve                                       asset_revaluation_reserve[]
   consolidation_elimination                                       consolidation_elimination[]
   fx_revaluation_line                                             fx_revaluation_line[]

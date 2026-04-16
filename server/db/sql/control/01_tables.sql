@@ -298,6 +298,55 @@ COMMENT ON COLUMN control.notification_routing_rule.dedup_window_ms IS
 
 
 -- ============================================================================
+-- §3b control.outbox_routing_rule — business-event → outbox-topic dispatch map
+-- ============================================================================
+-- R5: makes outbox dispatch inspectable and tenant-overridable.
+-- One row per routing path: one event_type → one topic.
+-- Multiple rows with the same event_type fan-out to multiple topics.
+-- handler_key (optional) pins the route to a specific hook_action_registry entry.
+-- tenant_id NULL = platform-global rule; tenant row overrides platform rule for
+-- the same event_type + topic combination (evaluated by sort_order ASC).
+CREATE TABLE IF NOT EXISTS control.outbox_routing_rule (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid,                               -- NULL = platform-global
+
+    -- Routing key
+    event_type      text        NOT NULL,               -- e.g. 'payment.approved'
+    topic           text        NOT NULL,               -- outbox topic: iam/wf/audit/fin/custom
+
+    -- Optional: pin to a specific registered handler
+    handler_id      uuid,                               -- FK → hook_action_registry(id)
+
+    -- Optional: only route when condition matches entity payload
+    condition_expr  jsonb,
+
+    -- Control
+    is_enabled      boolean     NOT NULL DEFAULT true,
+    sort_order      smallint    NOT NULL DEFAULT 0,
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT orr_pkey             PRIMARY KEY (id),
+    CONSTRAINT orr_event_nonempty   CHECK (btrim(event_type) <> ''),
+    CONSTRAINT orr_topic_nonempty   CHECK (btrim(topic) <> ''),
+    CONSTRAINT orr_condition_chk    CHECK (condition_expr IS NULL
+                                        OR jsonb_typeof(condition_expr) = 'object')
+);
+
+COMMENT ON TABLE control.outbox_routing_rule IS
+    'R5: business-event → outbox-topic dispatch map. Makes routing inspectable '
+    'and tenant-overridable. One row per routing path; fan-out via multiple rows. '
+    'tenant_id=NULL = platform-global. Tenant rows override for matching event_type+topic. '
+    'handler_id references hook_action_registry(id) for emit_event handlers. '
+    'Evaluated sort_order ASC — first enabled match per event_type+topic wins.';
+
+
+-- ============================================================================
 -- §4  notification_template — versioned message templates per channel/locale
 -- ============================================================================
 -- Replaces control.notification_template.
@@ -1345,6 +1394,10 @@ CREATE TABLE IF NOT EXISTS control.policy_rule (
     approvers       jsonb,                              -- [{type, value}] override approvers
     sla_hours       smallint,                           -- override SLA for triggered workflow
 
+    -- Budget check config (populated when action = 'budget_check')
+    -- When set, engine evaluates dimensional budget check instead of JSONLogic conditions alone.
+    budget_check_config_id uuid,                        -- FK → control.budget_check_config
+
     -- Audit
     created_at      timestamptz NOT NULL DEFAULT now(),
     created_by      uuid        NOT NULL,
@@ -1353,7 +1406,7 @@ CREATE TABLE IF NOT EXISTS control.policy_rule (
 
     CONSTRAINT prule_pkey               PRIMARY KEY (id),
     CONSTRAINT prule_priority_pos       CHECK (priority > 0),
-    CONSTRAINT prule_action_chk         CHECK (action IN ('allow', 'deny', 'warn', 'require_workflow', 'escalate')),
+    CONSTRAINT prule_action_chk         CHECK (action IN ('allow', 'deny', 'warn', 'require_workflow', 'escalate', 'budget_check')),
     CONSTRAINT prule_score_chk          CHECK (score IS NULL OR score BETWEEN 0 AND 1),
     CONSTRAINT prule_confidence_chk     CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
     CONSTRAINT prule_sla_pos            CHECK (sla_hours IS NULL OR sla_hours > 0),
@@ -1374,6 +1427,63 @@ COMMENT ON COLUMN control.policy_rule.approvers IS
     'Approver override list for require_workflow action. '
     'Format: [{type: principal|role|team, value: uuid|code}]. '
     'Passed as overrideApprovers to WorkflowEngine.createRequest().';
+
+
+-- =============================================================================
+-- §7a control.budget_check_config — typed dimensional budget-check config
+-- =============================================================================
+-- R11: specialisation referenced by policy_rule (action=budget_check).
+-- Declares dimensions, thresholds, netting, and override approver chain.
+-- Keeps rule evaluation clean — dimensional semantics are typed here, not
+-- encoded as JSONLogic inside policy_rule.conditions.
+CREATE TABLE IF NOT EXISTS control.budget_check_config (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+
+    -- Config identity
+    name            text        NOT NULL,
+    description     text,
+
+    -- Dimension scope
+    book_id         uuid,           -- FK → master.ledger_book; NULL = all books
+    account_pattern text,           -- account code prefix/pattern, e.g. 'EXP.*'
+    period_scope    text        NOT NULL DEFAULT 'fiscal_year',
+    ou_scope        text        NOT NULL DEFAULT 'exact',
+
+    -- Commitment netting mode
+    commitment_netting text     NOT NULL DEFAULT 'actuals_plus_committed',
+
+    -- Thresholds (0–100 percent of budget consumed)
+    warn_at_pct     numeric(5,2) NOT NULL DEFAULT 80,
+    block_at_pct    numeric(5,2) NOT NULL DEFAULT 100,
+
+    -- Override approval: when budget is exceeded, route here instead of hard-block
+    override_policy_definition_id uuid,  -- FK → control.policy_definition ON DELETE SET NULL
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT bcc_pkey              PRIMARY KEY (id),
+    CONSTRAINT bcc_name_nonempty     CHECK (btrim(name) <> ''),
+    CONSTRAINT bcc_period_chk        CHECK (period_scope IN (
+        'current_period', 'fiscal_year', 'rolling_12m')),
+    CONSTRAINT bcc_ou_scope_chk      CHECK (ou_scope IN ('exact', 'subtree', 'full')),
+    CONSTRAINT bcc_netting_chk       CHECK (commitment_netting IN (
+        'actuals_only', 'actuals_plus_committed', 'actuals_plus_committed_plus_forecast')),
+    CONSTRAINT bcc_warn_range_chk    CHECK (warn_at_pct  BETWEEN 0 AND 100),
+    CONSTRAINT bcc_block_range_chk   CHECK (block_at_pct BETWEEN 0 AND 100),
+    CONSTRAINT bcc_threshold_order   CHECK (block_at_pct >= warn_at_pct)
+);
+
+COMMENT ON TABLE control.budget_check_config IS
+    'R11: typed dimensional budget-check configuration referenced by policy_rule '
+    '(action=''budget_check''). Declares dimension scope (book, account, period, OU), '
+    'netting mode (actuals vs committed vs forecast), warn/block thresholds, and an '
+    'override approval path. Keeps dimensional semantics out of policy_rule.conditions JSON.';
 
 
 -- =============================================================================
@@ -3914,6 +4024,54 @@ COMMENT ON TABLE control.tax_group_component IS
     'FK to tax_rate_schedule uses tenant-composite for cross-tenant isolation.';
 
 
+-- ── control.wht_threshold_config ─────────────────────────────────────────────
+-- R7-A: per-vendor WHT activation threshold rules.
+-- Jurisdiction-specific (e.g. IN-TDS section 194C, PH-EWT).
+-- Answers: "does WHT apply before a vendor crosses X in payments this period?"
+-- per_transaction=true → threshold applies per-payment (no accumulation needed).
+-- per_transaction=false → threshold applies to YTD total; wht_vendor_accumulator tracks it.
+CREATE TABLE IF NOT EXISTS control.wht_threshold_config (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+
+    -- Scope
+    jurisdiction_id     uuid        NOT NULL,           -- FK → master.tax_jurisdiction (tenant-composite)
+    tax_type_id         uuid        NOT NULL,           -- FK → master.tax_type (tenant-composite)
+    section_code        text,                           -- e.g. '194C', '194J', 'EWT-professional'
+
+    -- Threshold rule
+    threshold_amount    numeric(18,4) NOT NULL,
+    threshold_currency  character(3)  NOT NULL,
+    reset_period        text        NOT NULL DEFAULT 'fiscal_year',
+    per_transaction     boolean     NOT NULL DEFAULT false,
+
+    -- Lifecycle
+    is_active           boolean     NOT NULL DEFAULT true,
+    effective_from      date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to        date,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT wtc_pkey              PRIMARY KEY (id),
+    CONSTRAINT wtc_amount_pos        CHECK (threshold_amount > 0),
+    CONSTRAINT wtc_reset_chk         CHECK (reset_period IN (
+        'fiscal_year', 'calendar_year', 'contract')),
+    CONSTRAINT wtc_section_nonempty  CHECK (section_code IS NULL OR btrim(section_code) <> ''),
+    CONSTRAINT wtc_effective_order   CHECK (effective_to IS NULL OR effective_to > effective_from),
+    CONSTRAINT wtc_natural_uq        UNIQUE NULLS NOT DISTINCT (
+        tenant_id, jurisdiction_id, tax_type_id, section_code)
+);
+
+COMMENT ON TABLE control.wht_threshold_config IS
+    'R7-A: per-vendor WHT activation thresholds (India TDS, Philippines EWT, etc.). '
+    'per_transaction=false: WHT only activates after vendor YTD payments exceed '
+    'threshold_amount in reset_period — accumulation tracked in aggregate.wht_vendor_accumulator. '
+    'per_transaction=true: WHT applies per-payment regardless of prior payments.';
 
 
 

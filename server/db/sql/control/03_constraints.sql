@@ -1084,3 +1084,96 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- R5  control.outbox_routing_rule
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE control.outbox_routing_rule ADD CONSTRAINT orr_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.outbox_routing_rule ADD CONSTRAINT orr_handler_id_fk
+    FOREIGN KEY (handler_id) REFERENCES control.hook_action_registry (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.outbox_routing_rule ADD CONSTRAINT orr_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.outbox_routing_rule ADD CONSTRAINT orr_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- R11  control.budget_check_config + policy_rule.budget_check_config_id
+-- ============================================================================
+
+-- Live-DB migration: add budget_check_config_id column if not present
+DO $$ BEGIN
+    ALTER TABLE control.policy_rule ADD COLUMN budget_check_config_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- Extend action enum to include budget_check
+ALTER TABLE control.policy_rule DROP CONSTRAINT IF EXISTS prule_action_chk;
+ALTER TABLE control.policy_rule ADD CONSTRAINT prule_action_chk
+    CHECK (action IN ('allow', 'deny', 'warn', 'require_workflow', 'escalate', 'budget_check'));
+
+DO $$ BEGIN ALTER TABLE control.budget_check_config ADD CONSTRAINT bcc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.budget_check_config ADD CONSTRAINT bcc_book_fk
+    FOREIGN KEY (book_id) REFERENCES master.ledger_book (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.budget_check_config ADD CONSTRAINT bcc_override_policy_fk
+    FOREIGN KEY (override_policy_definition_id)
+    REFERENCES control.policy_definition (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.budget_check_config ADD CONSTRAINT bcc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.budget_check_config ADD CONSTRAINT bcc_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.policy_rule ADD CONSTRAINT prule_budget_check_fk
+    FOREIGN KEY (budget_check_config_id)
+    REFERENCES control.budget_check_config (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- R7-A  control.wht_threshold_config
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_jurisdiction_fk
+    FOREIGN KEY (tenant_id, jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_tax_type_fk
+    FOREIGN KEY (tenant_id, tax_type_id)
+    REFERENCES master.tax_type (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_currency_fk
+    FOREIGN KEY (threshold_currency) REFERENCES shared.currency (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.wht_threshold_config ADD CONSTRAINT wtc_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

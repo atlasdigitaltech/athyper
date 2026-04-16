@@ -545,3 +545,13 @@ CREATE INDEX IF NOT EXISTS sesl_ses_idx
     ON document.service_entry_sheet_line (tenant_id, service_entry_sheet_id);
 CREATE INDEX IF NOT EXISTS sesl_commitment_line_idx
     ON document.service_entry_sheet_line (tenant_id, commitment_line_id);
+
+-- ── document.wht_certificate ─────────────────────────────────────────────────
+-- R7-C: lookup by vendor + company + period
+CREATE INDEX IF NOT EXISTS whtc_company_party_idx
+    ON document.wht_certificate (tenant_id, company_code_id, counterparty_id);
+
+-- Active (non-voided) certs for a period
+CREATE INDEX IF NOT EXISTS whtc_active_period_pidx
+    ON document.wht_certificate (tenant_id, company_code_id, period_from, period_to)
+    WHERE status <> 'voided';

@@ -577,3 +577,10 @@ CREATE TRIGGER trg_sesl_company_guard
     ON document.service_entry_sheet_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_guard_ses_line_company();
+
+-- ── document.wht_certificate updated_at ─────────────────────────────────────
+-- R7-C
+DROP TRIGGER IF EXISTS trg_whtc_updated_at ON document.wht_certificate;
+CREATE TRIGGER trg_whtc_updated_at
+    BEFORE UPDATE ON document.wht_certificate
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

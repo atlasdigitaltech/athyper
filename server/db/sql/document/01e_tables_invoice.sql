@@ -674,3 +674,76 @@ CREATE UNIQUE INDEX IF NOT EXISTS pta_invoice_clause_uq
 
 COMMENT ON TABLE document.payment_term_application IS
     'Invoice × clause evaluation result. One row per invoice × clause (× line) evaluation.';
+
+
+-- ============================================================================
+-- document.wht_certificate — WHT certificate issuance lifecycle
+-- ============================================================================
+-- R7-C: certificate issued to a vendor documenting WHT deducted during a period.
+-- Required for IN-TDS (Form 16A) and PH-EWT (BIR Form 2307) and similar regimes.
+-- source_transaction_ids: array of payment / JE UUIDs contributing to this cert.
+-- Lifecycle: draft → issued → voided. Corrections create a new cert (void + reissue).
+CREATE TABLE IF NOT EXISTS document.wht_certificate (
+    -- Identity
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+
+    -- Issuer + recipient
+    company_code_id         uuid        NOT NULL,
+    counterparty_id         uuid        NOT NULL,   -- vendor / principal receiving cert
+
+    -- Tax classification
+    tax_type_id             uuid        NOT NULL,
+    section_code            text,                   -- e.g. '194C', 'EWT-professional'
+
+    -- Certificate identity
+    certificate_no          text        NOT NULL,   -- issuer-assigned sequential number
+    certificate_series      text,                   -- optional: series prefix per tax type
+
+    -- Period covered
+    period_from             date        NOT NULL,
+    period_to               date        NOT NULL,
+
+    -- Amounts
+    gross_amount            numeric(18,4) NOT NULL,
+    wht_amount              numeric(18,4) NOT NULL,
+    currency_code           character(3)  NOT NULL,
+
+    -- Source traceability
+    source_transaction_ids  uuid[]      NOT NULL DEFAULT '{}',
+
+    -- Lifecycle
+    status                  text        NOT NULL DEFAULT 'draft',
+    issued_at               timestamptz,
+    issued_by               uuid,
+    voided_at               timestamptz,
+    voided_by               uuid,
+    void_reason             text,
+    superseded_by_id        uuid,   -- FK → document.wht_certificate(id); set on reissue
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT whtc_pkey              PRIMARY KEY (id),
+    CONSTRAINT whtc_tenant_cert_uq    UNIQUE (tenant_id, company_code_id, certificate_no),
+    CONSTRAINT whtc_period_order      CHECK (period_to >= period_from),
+    CONSTRAINT whtc_gross_nonneg      CHECK (gross_amount >= 0),
+    CONSTRAINT whtc_wht_nonneg        CHECK (wht_amount >= 0),
+    CONSTRAINT whtc_wht_lte_gross     CHECK (wht_amount <= gross_amount),
+    CONSTRAINT whtc_status_chk        CHECK (status IN ('draft', 'issued', 'voided')),
+    CONSTRAINT whtc_issued_state      CHECK (
+        status <> 'issued' OR issued_at IS NOT NULL),
+    CONSTRAINT whtc_voided_state      CHECK (
+        status <> 'voided' OR (voided_at IS NOT NULL AND void_reason IS NOT NULL)),
+    CONSTRAINT whtc_cert_nonempty     CHECK (btrim(certificate_no) <> '')
+);
+
+COMMENT ON TABLE document.wht_certificate IS
+    'R7-C: WHT certificate lifecycle (India Form 16A, Philippines BIR 2307, etc.). '
+    'Issued by company to vendor documenting WHT deducted in period_from–period_to. '
+    'Corrections: void existing cert (status=voided, void_reason) then create new cert '
+    'with superseded_by_id pointing back to the voided cert. '
+    'source_transaction_ids: payment / JE UUIDs contributing WHT to this certificate.';

@@ -1416,3 +1416,48 @@ DO $$ BEGIN ALTER TABLE document.service_entry_sheet_line ADD CONSTRAINT sesl_bu
     FOREIGN KEY (tenant_id, business_intent_id)
     REFERENCES master.business_intent (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ── document.wht_certificate ─────────────────────────────────────────────────
+-- R7-C: FK constraints for WHT certificate table.
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_counterparty_fk
+    FOREIGN KEY (counterparty_id) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_tax_type_fk
+    FOREIGN KEY (tenant_id, tax_type_id)
+    REFERENCES master.tax_type (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_currency_fk
+    FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_issued_by_fk
+    FOREIGN KEY (issued_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_voided_by_fk
+    FOREIGN KEY (voided_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_superseded_by_fk
+    FOREIGN KEY (superseded_by_id) REFERENCES document.wht_certificate (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

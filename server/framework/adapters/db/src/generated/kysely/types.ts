@@ -1200,6 +1200,24 @@ export type budget_balance = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type budget_check_config = {
+    id: Generated<string>;
+    tenant_id: string;
+    name: string;
+    description: string | null;
+    book_id: string | null;
+    account_pattern: string | null;
+    period_scope: Generated<string>;
+    ou_scope: Generated<string>;
+    commitment_netting: Generated<string>;
+    warn_at_pct: Generated<string>;
+    block_at_pct: Generated<string>;
+    override_policy_definition_id: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type budget_profile = {
     id: Generated<string>;
     tenant_id: string;
@@ -5478,6 +5496,20 @@ export type outbox = {
     created_by: string;
     locked_until: Timestamp | null;
 };
+export type outbox_routing_rule = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    event_type: string;
+    topic: string;
+    handler_id: string | null;
+    condition_expr: unknown | null;
+    is_enabled: Generated<boolean>;
+    sort_order: Generated<number>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type overlay = {
     id: Generated<string>;
     tenant_id: string;
@@ -6257,6 +6289,7 @@ export type policy_rule = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    budget_check_config_id: string | null;
 };
 export type policy_rule_version = {
     id: Generated<string>;
@@ -7926,6 +7959,70 @@ export type whatsapp_consent = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type wht_certificate = {
+    id: Generated<string>;
+    tenant_id: string;
+    company_code_id: string;
+    counterparty_id: string;
+    tax_type_id: string;
+    section_code: string | null;
+    certificate_no: string;
+    certificate_series: string | null;
+    period_from: Timestamp;
+    period_to: Timestamp;
+    gross_amount: string;
+    wht_amount: string;
+    currency_code: string;
+    source_transaction_ids: Generated<string[]>;
+    status: Generated<string>;
+    issued_at: Timestamp | null;
+    issued_by: string | null;
+    voided_at: Timestamp | null;
+    voided_by: string | null;
+    void_reason: string | null;
+    superseded_by_id: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type wht_threshold_config = {
+    id: Generated<string>;
+    tenant_id: string;
+    jurisdiction_id: string;
+    tax_type_id: string;
+    section_code: string | null;
+    threshold_amount: string;
+    threshold_currency: string;
+    reset_period: Generated<string>;
+    per_transaction: Generated<boolean>;
+    is_active: Generated<boolean>;
+    effective_from: Generated<Timestamp>;
+    effective_to: Timestamp | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type wht_vendor_accumulator = {
+    id: Generated<string>;
+    tenant_id: string;
+    company_code_id: string;
+    counterparty_id: string;
+    jurisdiction_id: string;
+    tax_type_id: string;
+    section_code: string | null;
+    fiscal_year: number;
+    ytd_payment_amount: Generated<string>;
+    ytd_wht_amount: Generated<string>;
+    threshold_reached: Generated<boolean>;
+    threshold_reached_at: Timestamp | null;
+    version: Generated<number>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type work_item = {
     id: Generated<string>;
     tenant_id: string;
@@ -8141,6 +8238,7 @@ export type workspace_usage_metric = {
 };
 export type DB = {
     "aggregate.tax_credit_summary": tax_credit_summary;
+    "aggregate.wht_vendor_accumulator": wht_vendor_accumulator;
     "control.acct_profile_book_rule": acct_profile_book_rule;
     "control.acct_profile_commitment_config": acct_profile_commitment_config;
     "control.acct_profile_config": acct_profile_config;
@@ -8154,6 +8252,7 @@ export type DB = {
     "control.bank_interface_profile": bank_interface_profile;
     "control.blueprint_registry": blueprint_registry;
     "control.book_posting_rule": book_posting_rule;
+    "control.budget_check_config": budget_check_config;
     "control.classification_config": classification_config;
     "control.classification_to_intent_rule": classification_to_intent_rule;
     "control.commodity_to_spend_category_rule": commodity_to_spend_category_rule;
@@ -8195,6 +8294,7 @@ export type DB = {
     "control.notification_provider": notification_provider;
     "control.notification_routing_rule": notification_routing_rule;
     "control.notification_template": notification_template;
+    "control.outbox_routing_rule": outbox_routing_rule;
     "control.overlay": overlay;
     "control.overlay_change": overlay_change;
     "control.payment_method_company_policy": payment_method_company_policy;
@@ -8215,6 +8315,7 @@ export type DB = {
     "control.tenant_blueprint_application": tenant_blueprint_application;
     "control.transaction_event_catalog": transaction_event_catalog;
     "control.transaction_flow_template": transaction_flow_template;
+    "control.wht_threshold_config": wht_threshold_config;
     "control.workflow_definition": workflow_definition;
     "control.workflow_sla_policy": workflow_sla_policy;
     "control.workflow_template": workflow_template;
@@ -8270,6 +8371,7 @@ export type DB = {
     "document.stocktake": stocktake;
     "document.stocktake_line": stocktake_line;
     "document.user_profile_update_request": user_profile_update_request;
+    "document.wht_certificate": wht_certificate;
     "document.workflow_request": workflow_request;
     "document.workflow_stage": workflow_stage;
     "event.comment_flag": comment_flag;

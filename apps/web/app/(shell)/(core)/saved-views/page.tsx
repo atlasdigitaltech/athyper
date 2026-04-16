@@ -88,7 +88,7 @@ function ViewRow({
   isDeleting: boolean;
   isSettingDefault: boolean;
 }) {
-  const filterCount = view.config.filters ? Object.keys(view.config.filters).length : 0;
+  const filterCount = Object.keys(view.config.filters ?? {}).length;
   const columnCount = view.config.columns?.length ?? 0;
 
   return (

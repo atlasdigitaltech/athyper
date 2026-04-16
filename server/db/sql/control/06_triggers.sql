@@ -1351,6 +1351,36 @@ CREATE TRIGGER trg_er_validate_target_entity
 
 
 -- =============================================================================
+-- §R5  updated_at maintenance for outbox_routing_rule
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_orr_updated_at ON control.outbox_routing_rule;
+CREATE TRIGGER trg_orr_updated_at
+    BEFORE UPDATE ON control.outbox_routing_rule
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §R11  updated_at maintenance for budget_check_config
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_bcc_updated_at ON control.budget_check_config;
+CREATE TRIGGER trg_bcc_updated_at
+    BEFORE UPDATE ON control.budget_check_config
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §R7-A  updated_at maintenance for wht_threshold_config
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_wtc_updated_at ON control.wht_threshold_config;
+CREATE TRIGGER trg_wtc_updated_at
+    BEFORE UPDATE ON control.wht_threshold_config
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
 -- §TEC  updated_at maintenance for transaction_event_catalog
 -- =============================================================================
 -- R1: new catalog table — updated_at trigger follows schema convention.

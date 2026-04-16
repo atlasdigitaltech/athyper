@@ -217,3 +217,18 @@ CREATE POLICY tenant_insert ON document.depreciation_schedule FOR INSERT WITH CH
 CREATE POLICY tenant_update ON document.depreciation_schedule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON document.depreciation_schedule FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON document.depreciation_schedule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── document.wht_certificate ─────────────────────────────────────────────────
+-- R7-C: tenant-scoped. Read: own tenant. Write: own tenant (draft/issue/void).
+ALTER TABLE document.wht_certificate ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.wht_certificate FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON document.wht_certificate;
+DROP POLICY IF EXISTS tenant_insert ON document.wht_certificate;
+DROP POLICY IF EXISTS tenant_update ON document.wht_certificate;
+DROP POLICY IF EXISTS admin_write   ON document.wht_certificate;
+CREATE POLICY tenant_read   ON document.wht_certificate FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.wht_certificate FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.wht_certificate FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_write   ON document.wht_certificate FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
