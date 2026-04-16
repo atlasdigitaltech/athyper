@@ -3566,6 +3566,9 @@ export type entity_publish_state = {
     status_summary: Generated<unknown>;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    source_layer: Generated<string>;
+    source_ref: string | null;
+    applied_precedence: Generated<number>;
 };
 export type entity_relation = {
     id: Generated<string>;
@@ -5007,6 +5010,8 @@ export type lifecycle_transition_gate = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    resolves_via: Generated<string>;
+    policy_rule_id: string | null;
 };
 export type lifecycle_transition_hook = {
     id: Generated<string>;

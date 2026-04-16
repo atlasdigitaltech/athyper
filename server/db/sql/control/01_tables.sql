@@ -635,6 +635,15 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
     -- Precondition type D: numeric threshold rules
     threshold_rules      jsonb,
 
+    -- R2b: canonical resolution path discriminator.
+    -- 'workflow': gate blocks until workflow_definition produces an APPROVED terminal state.
+    --             Async — transition enqueued, not fired immediately.
+    -- 'policy':   gate evaluates policy_rule synchronously against the entity payload.
+    --             Fires immediately on ALLOW; blocks on DENY; escalates on WARN/require_workflow.
+    -- Both paths respect required_operations, conditions, and threshold_rules as additional guards.
+    resolves_via         text        NOT NULL DEFAULT 'workflow',
+    policy_rule_id       uuid,       -- FK → control.policy_rule; required when resolves_via='policy'
+
     -- Audit
     created_at      timestamptz NOT NULL DEFAULT now(),
     created_by      uuid        NOT NULL,
@@ -659,14 +668,30 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
         OR workflow_definition_id IS NOT NULL
         OR conditions IS NOT NULL
         OR threshold_rules IS NOT NULL
+        OR policy_rule_id IS NOT NULL
+    ),
+    -- R2b: resolution path integrity
+    CONSTRAINT ltg_resolves_via_chk  CHECK (resolves_via IN ('workflow', 'policy')),
+    -- workflow path: workflow_definition_id must be set
+    CONSTRAINT ltg_workflow_path_chk CHECK (
+        resolves_via <> 'workflow' OR workflow_definition_id IS NOT NULL
+    ),
+    -- policy path: policy_rule_id must be set
+    CONSTRAINT ltg_policy_path_chk   CHECK (
+        resolves_via <> 'policy' OR policy_rule_id IS NOT NULL
     )
 );
 
 COMMENT ON TABLE  control.lifecycle_transition_gate IS
     'Preconditions evaluated before a transition fires. '
     'One gate per transition (UNIQUE on transition_id) — all conditions combined in one row. '
+    'R2b: resolves_via is the canonical resolution-path discriminator: '
+    '  workflow (default) → gate blocks until workflow_definition reaches APPROVED terminal state (async). '
+    '  policy → gate evaluates policy_rule synchronously; ALLOW fires, DENY blocks, WARN escalates. '
+    'Both paths honour required_operations, conditions, and threshold_rules as additional guards. '
     'required_operations: [{code: ''review'', completed_by: ''any''}] '
-    'workflow_definition_id: FK → control.workflow_definition; async approval that must reach APPROVED terminal state before transition fires. '
+    'workflow_definition_id: FK → control.workflow_definition; required when resolves_via=workflow. '
+    'policy_rule_id: FK → control.policy_rule; required when resolves_via=policy. '
     'conditions: JSONLogic/CEL expression evaluated against entity payload. '
     'threshold_rules: [{field: ''amount'', op: ''>='', value: 10000}]. '
     'P2-FIX: updated_at/updated_by added — gate conditions are refined over time.';
@@ -1884,6 +1909,21 @@ CREATE TABLE IF NOT EXISTS control.entity_publish_state (
     -- Status summary (compliance score, readiness flags)
     status_summary              jsonb       NOT NULL DEFAULT '{}',
 
+    -- R4: blueprint/overlay precedence — explicit merge-order source pointers.
+    -- source_layer: which configuration layer last wrote the effective published state.
+    --   platform(0): shipped by Athyper platform seed; lowest precedence.
+    --   blueprint(1–99): applied by a blueprint pack; precedence = applied_precedence.
+    --   overlay(100): tenant overlay; always wins over any blueprint.
+    -- source_ref: stable identifier of the contributing layer:
+    --   platform  → NULL (implicit)
+    --   blueprint → control.blueprint_registry.code (e.g. 'coa_ifrs')
+    --   overlay   → overlay id or code
+    -- applied_precedence: the numeric stacking rank at the time the state was written.
+    --   Higher rank = later-applied = wins on conflict. Mirrors blueprint application order.
+    source_layer                text        NOT NULL DEFAULT 'platform',
+    source_ref                  text,
+    applied_precedence          smallint    NOT NULL DEFAULT 0,
+
     -- Audit
     updated_at                  timestamptz,
     updated_by                  uuid,
@@ -1893,13 +1933,20 @@ CREATE TABLE IF NOT EXISTS control.entity_publish_state (
         last_compiled_hash IS NULL OR length(last_compiled_hash) >= 64
     ),
     CONSTRAINT eps_provenance_chk       CHECK (jsonb_typeof(provenance) = 'object'),
-    CONSTRAINT eps_summary_chk          CHECK (jsonb_typeof(status_summary) = 'object')
+    CONSTRAINT eps_summary_chk          CHECK (jsonb_typeof(status_summary) = 'object'),
+    CONSTRAINT eps_source_layer_chk     CHECK (source_layer IN ('platform', 'blueprint', 'overlay')),
+    CONSTRAINT eps_source_ref_chk       CHECK (source_ref IS NULL OR btrim(source_ref) <> ''),
+    CONSTRAINT eps_precedence_chk       CHECK (applied_precedence >= 0)
 );
 
 COMMENT ON TABLE  control.entity_publish_state IS
     '1:1 companion to control.entity. Holds compile/publish tracking columns '
     'that were previously duplicated in entity (removed by this migration). '
     'Separated to avoid update contention during frequent compile cycles. '
+    'R4: source_layer/source_ref/applied_precedence expose the blueprint/overlay merge order: '
+    '  platform(0) < blueprint(1-99, by application order) < overlay(100). '
+    '  Higher applied_precedence wins on conflict. source_ref names the contributing pack/overlay. '
+    '  Admins can query this table to see "this entity came from blueprint X, overridden by overlay Y." '
     'Auto-created by trg_fn_ensure_entity_publish_state on entity INSERT.';
 
 

@@ -1277,3 +1277,96 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $adb3$;
 DO $adb4$ BEGIN ALTER TABLE control.ai_drift_baseline ADD CONSTRAINT adb_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $adb4$;
+
+
+-- ============================================================================
+-- R2b  control.lifecycle_transition_gate — resolves_via + policy_rule_id
+-- ============================================================================
+
+-- Add columns
+DO $ltg1$ BEGIN
+    ALTER TABLE control.lifecycle_transition_gate
+        ADD COLUMN resolves_via text NOT NULL DEFAULT 'workflow';
+EXCEPTION WHEN duplicate_column THEN NULL; END $ltg1$;
+
+DO $ltg2$ BEGIN
+    ALTER TABLE control.lifecycle_transition_gate
+        ADD COLUMN policy_rule_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $ltg2$;
+
+-- Add / refresh constraints (idempotent: drop then add)
+ALTER TABLE control.lifecycle_transition_gate
+    DROP CONSTRAINT IF EXISTS ltg_resolves_via_chk;
+ALTER TABLE control.lifecycle_transition_gate
+    ADD CONSTRAINT ltg_resolves_via_chk
+    CHECK (resolves_via IN ('workflow', 'policy'));
+
+ALTER TABLE control.lifecycle_transition_gate
+    DROP CONSTRAINT IF EXISTS ltg_workflow_path_chk;
+ALTER TABLE control.lifecycle_transition_gate
+    ADD CONSTRAINT ltg_workflow_path_chk
+    CHECK (resolves_via <> 'workflow' OR workflow_definition_id IS NOT NULL);
+
+ALTER TABLE control.lifecycle_transition_gate
+    DROP CONSTRAINT IF EXISTS ltg_policy_path_chk;
+ALTER TABLE control.lifecycle_transition_gate
+    ADD CONSTRAINT ltg_policy_path_chk
+    CHECK (resolves_via <> 'policy' OR policy_rule_id IS NOT NULL);
+
+-- Extend nonempty check to include policy_rule_id
+ALTER TABLE control.lifecycle_transition_gate
+    DROP CONSTRAINT IF EXISTS ltg_nonempty_chk;
+ALTER TABLE control.lifecycle_transition_gate
+    ADD CONSTRAINT ltg_nonempty_chk CHECK (
+        required_operations IS NOT NULL
+        OR workflow_definition_id IS NOT NULL
+        OR conditions IS NOT NULL
+        OR threshold_rules IS NOT NULL
+        OR policy_rule_id IS NOT NULL
+    );
+
+-- FK for policy_rule_id
+DO $ltg3$ BEGIN
+    ALTER TABLE control.lifecycle_transition_gate
+        ADD CONSTRAINT ltg_policy_rule_fk
+        FOREIGN KEY (policy_rule_id)
+        REFERENCES control.policy_rule (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $ltg3$;
+
+
+-- ============================================================================
+-- R4  control.entity_publish_state — source_layer + source_ref + applied_precedence
+-- ============================================================================
+
+DO $eps1$ BEGIN
+    ALTER TABLE control.entity_publish_state
+        ADD COLUMN source_layer text NOT NULL DEFAULT 'platform';
+EXCEPTION WHEN duplicate_column THEN NULL; END $eps1$;
+
+DO $eps2$ BEGIN
+    ALTER TABLE control.entity_publish_state
+        ADD COLUMN source_ref text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $eps2$;
+
+DO $eps3$ BEGIN
+    ALTER TABLE control.entity_publish_state
+        ADD COLUMN applied_precedence smallint NOT NULL DEFAULT 0;
+EXCEPTION WHEN duplicate_column THEN NULL; END $eps3$;
+
+ALTER TABLE control.entity_publish_state
+    DROP CONSTRAINT IF EXISTS eps_source_layer_chk;
+ALTER TABLE control.entity_publish_state
+    ADD CONSTRAINT eps_source_layer_chk
+    CHECK (source_layer IN ('platform', 'blueprint', 'overlay'));
+
+ALTER TABLE control.entity_publish_state
+    DROP CONSTRAINT IF EXISTS eps_source_ref_chk;
+ALTER TABLE control.entity_publish_state
+    ADD CONSTRAINT eps_source_ref_chk
+    CHECK (source_ref IS NULL OR btrim(source_ref) <> '');
+
+ALTER TABLE control.entity_publish_state
+    DROP CONSTRAINT IF EXISTS eps_precedence_chk;
+ALTER TABLE control.entity_publish_state
+    ADD CONSTRAINT eps_precedence_chk
+    CHECK (applied_precedence >= 0);

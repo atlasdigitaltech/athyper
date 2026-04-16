@@ -1284,8 +1284,13 @@ model entity_publish_state {
   status_summary           Json      @default("{}")
   updated_at               DateTime? @db.Timestamptz(6)
   updated_by               String?   @db.Uuid
+  source_layer             String    @default("platform")
+  source_ref               String?
+  applied_precedence       Int       @default(0) @db.SmallInt
   entity                   entity    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eps_entity_fk")
 
+  @@index([applied_precedence(sort: Desc)], map: "eps_precedence_idx", where: raw("(source_layer <> 'platform'::text)"))
+  @@index([source_layer, source_ref], map: "eps_source_layer_idx", where: raw("(source_layer <> 'platform'::text)"))
   @@schema("control")
 }
 
@@ -1755,10 +1760,14 @@ model lifecycle_transition_gate {
   created_by             String               @db.Uuid
   updated_at             DateTime?            @db.Timestamptz(6)
   updated_by             String?              @db.Uuid
+  resolves_via           String               @default("workflow")
+  policy_rule_id         String?              @db.Uuid
   principal              principal            @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "ltg_created_by_fk")
+  policy_rule            policy_rule?         @relation(fields: [policy_rule_id], references: [id], onUpdate: NoAction, map: "ltg_policy_rule_fk")
   lifecycle_transition   lifecycle_transition @relation(fields: [transition_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ltg_transition_fk")
   workflow_definition    workflow_definition? @relation(fields: [workflow_definition_id], references: [id], onUpdate: NoAction, map: "ltg_workflow_definition_fk")
 
+  @@index([policy_rule_id], map: "ltg_policy_rule_pidx", where: raw("((resolves_via = 'policy'::text) AND (policy_rule_id IS NOT NULL))"))
   @@schema("control")
 }
 
@@ -2388,24 +2397,25 @@ model policy_definition {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model policy_rule {
-  id                     String               @id(map: "prule_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  policy_id              String               @db.Uuid
-  priority               Int                  @default(10) @db.SmallInt
-  conditions             Json?
-  action                 String
-  score                  Decimal?             @db.Decimal(5, 4)
-  confidence             Decimal?             @db.Decimal(5, 4)
-  explanation            String?
-  approvers              Json?
-  sla_hours              Int?                 @db.SmallInt
-  created_at             DateTime             @default(now()) @db.Timestamptz(6)
-  created_by             String               @db.Uuid
-  updated_at             DateTime?            @db.Timestamptz(6)
-  updated_by             String?              @db.Uuid
-  budget_check_config_id String?              @db.Uuid
-  budget_check_config    budget_check_config? @relation(fields: [budget_check_config_id], references: [id], onUpdate: NoAction, map: "prule_budget_check_fk")
-  principal              principal            @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "prule_created_by_fk")
-  policy_definition      policy_definition    @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "prule_policy_fk")
+  id                        String                      @id(map: "prule_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  policy_id                 String                      @db.Uuid
+  priority                  Int                         @default(10) @db.SmallInt
+  conditions                Json?
+  action                    String
+  score                     Decimal?                    @db.Decimal(5, 4)
+  confidence                Decimal?                    @db.Decimal(5, 4)
+  explanation               String?
+  approvers                 Json?
+  sla_hours                 Int?                        @db.SmallInt
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                String                      @db.Uuid
+  updated_at                DateTime?                   @db.Timestamptz(6)
+  updated_by                String?                     @db.Uuid
+  budget_check_config_id    String?                     @db.Uuid
+  lifecycle_transition_gate lifecycle_transition_gate[]
+  budget_check_config       budget_check_config?        @relation(fields: [budget_check_config_id], references: [id], onUpdate: NoAction, map: "prule_budget_check_fk")
+  principal                 principal                   @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "prule_created_by_fk")
+  policy_definition         policy_definition           @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "prule_policy_fk")
 
   @@unique([policy_id, priority], map: "prule_priority_uq")
   @@index([budget_check_config_id], map: "prule_bcc_idx", where: raw("(budget_check_config_id IS NOT NULL)"))

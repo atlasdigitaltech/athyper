@@ -699,3 +699,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS adb_current_uq
 -- History: all baselines for a scope ordered by date descending
 CREATE INDEX IF NOT EXISTS adb_scope_history_idx
     ON control.ai_drift_baseline (tenant_id, action_code, model_id, baseline_date DESC);
+
+
+-- ── §R2b  lifecycle_transition_gate — policy-path lookup ─────────────────────
+-- Quickly find all policy-gated transitions (rare — most gates are workflow)
+CREATE INDEX IF NOT EXISTS ltg_policy_rule_pidx
+    ON control.lifecycle_transition_gate (policy_rule_id)
+    WHERE resolves_via = 'policy' AND policy_rule_id IS NOT NULL;
+
+
+-- ── §R4  entity_publish_state — source layer browsing ────────────────────────
+-- Admin query: "which entities came from blueprint X / overlay Y?"
+CREATE INDEX IF NOT EXISTS eps_source_layer_idx
+    ON control.entity_publish_state (source_layer, source_ref)
+    WHERE source_layer <> 'platform';
+
+-- Precedence ordering within a layer (for merge-order audit queries)
+CREATE INDEX IF NOT EXISTS eps_precedence_idx
+    ON control.entity_publish_state (applied_precedence DESC)
+    WHERE source_layer <> 'platform';
