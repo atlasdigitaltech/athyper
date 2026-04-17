@@ -12,13 +12,16 @@
     "./data": "./src/data/index.ts",
     "./hooks": "./src/hooks/index.ts",
     "./lib/scope": "./src/lib/scope.ts",
-    "./lib/reportRegistry": "./src/lib/reportRegistry.ts"
+    "./lib/reportRegistry": "./src/lib/reportRegistry.ts",
+    "./lib/invoice-header-mapper": "./src/lib/invoice-header-mapper.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
   "peerDependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/document-runtime": "workspace:*",
     "@athyper/theme": "workspace:*",
     "@athyper/ui": "workspace:*",
     "@tanstack/react-query": ">=5.0.0",
@@ -26,7 +29,9 @@
     "react": ">=19.0.0"
   },
   "devDependencies": {
+    "@athyper/api-contracts": "workspace:*",
     "@athyper/config": "workspace:*",
+    "@athyper/document-runtime": "workspace:*",
     "@athyper/theme": "workspace:*",
     "@athyper/ui": "workspace:*",
     "@tanstack/react-query": "^5.97.0",

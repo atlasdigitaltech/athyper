@@ -1,7 +1,9 @@
 // Compiled reader
 export {
   resolveListConfig, resolveDetailConfig, resolveFormConfig,
+  resolveDetailRenderer, resolvePresentationConfig,
   type ResolvedListConfig, type ResolvedDetailConfig, type ResolvedFormConfig,
+  type DetailRenderer,
 } from "./compiled-reader";
 
 // Lookup provider

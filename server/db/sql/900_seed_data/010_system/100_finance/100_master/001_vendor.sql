@@ -11,9 +11,15 @@ SET name = 'vendor'
 WHERE table_schema = 'master' AND table_name = 'supplier'
   AND tenant_id IS NULL AND name = 'supplier';
 
+-- ── 0b. Fix entity_code if it was auto-filled as 'supplier' by old trigger ──
+UPDATE control.entity
+SET entity_code = 'vendor'
+WHERE table_schema = 'master' AND table_name = 'supplier'
+  AND tenant_id IS NULL AND entity_code = 'supplier';
+
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
-    module_id, name, entity_short,
+    module_id, name, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
@@ -22,7 +28,7 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
-    'vendor', 'VND',
+    'vendor', 'VND', 'vendor',
     'MASTER', 'system', 'ent', 'table',
     'standard', 'business', 'controlled',
     'master', 'supplier',

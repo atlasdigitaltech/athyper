@@ -23,7 +23,6 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/domain-widgets": "workspace:*",
-    "@athyper/entity-runtime": "workspace:*",
     "@athyper/metadata-client": "workspace:*"
   },
   "peerDependencies": {

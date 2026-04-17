@@ -182,12 +182,17 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         }
       }
 
-      const entityRow = await db
+      // ── Tenant-aware entity lookup ─────────────────────────────────────────
+      // When tenantId is known:  prefer tenant-specific row over platform row
+      //   (ORDER BY tenant_id NULLS LAST → non-null tenant wins, NULL platform fallback)
+      // When tenantId is null:   platform entities only (tenant_id IS NULL)
+      let entityQuery = db
         .selectFrom("control.entity as e")
         .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
         .select([
           "e.id",
           "e.name",
+          sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
           "e.label_singular",
           "e.entity_class",
           "e.table_schema",
@@ -202,11 +207,19 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
           sql<number>`ev.version_no`.as("version_no"),
           sql<string | null>`ev.version_hash`.as("version_hash"),
         ])
-        .where("e.name", "=", entityCode)
-        .where("e.tenant_id", "is", null)
-        .where("ev.status", "=", "EFFECTIVE")
-        .limit(1)
-        .executeTakeFirst();
+        .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
+        .where("ev.status", "=", "EFFECTIVE");
+
+      if (tenantId) {
+        entityQuery = entityQuery
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .where((eb: any) => eb.or([eb("e.tenant_id", "=", tenantId), eb("e.tenant_id", "is", null)]))
+          .orderBy(sql`e.tenant_id NULLS LAST`); // tenant-specific row wins over platform
+      } else {
+        entityQuery = entityQuery.where("e.tenant_id", "is", null);
+      }
+
+      const entityRow = await entityQuery.limit(1).executeTakeFirst();
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -282,7 +295,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
 
       const payload = {
         entity_id: entityRow.id as string,
-        entity_code: entityRow.name as string,
+        entity_code: entityRow.entity_code as string,
         entity_name: (entityRow.label_singular ?? entityRow.name) as string,
         entity_class: entityRow.entity_class as string,
         table_schema: entityRow.table_schema as string,

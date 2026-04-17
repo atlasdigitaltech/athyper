@@ -140,6 +140,47 @@ export const CompiledEntitySchema = z.object({
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
     search_fields: z.array(z.string()).optional(),
+    /**
+     * Selects the detail-page rendering strategy.
+     *   "generic"    — generic field-grid + tabs (default for MASTER/REFERENCE/CONTROL)
+     *   "approvable" — ApprovableDocumentShell with rich financial header
+     *   "ledger"     — read-only ledger / log viewer
+     * Falls back to structural heuristics when omitted.
+     */
+    detail_renderer: z.enum(["generic", "approvable", "ledger"]).optional(),
+    /**
+     * Field-name hints consumed by buildApprovableHeaderFromRecord().
+     * Populated for every entity with detail_renderer = "approvable".
+     * All values are entity field *names* (not column_names).
+     */
+    document_header: z.object({
+      /** Primary document number field, e.g. "document_no" */
+      number_field: z.string(),
+      /** Status field, e.g. "status" */
+      status_field: z.string().optional(),
+      /** Human-readable type chip, e.g. "INVOICE" */
+      type_label: z.string().optional(),
+      /** Header money label, e.g. "INVOICE TOTAL" */
+      total_label: z.string().optional(),
+      /** Header date label, e.g. "INVOICE DATE" */
+      date_label: z.string().optional(),
+      /** Field holding the party display name, e.g. "supplier_name" */
+      party_name_field: z.string().optional(),
+      /** Field holding the party FK / id, e.g. "supplier_id" */
+      party_id_field: z.string().optional(),
+      /** Gross / total amount field, e.g. "gross_amount" */
+      amount_field: z.string().optional(),
+      /** Net / subtotal amount field, e.g. "net_amount" */
+      subtotal_field: z.string().optional(),
+      /** Tax amount field, e.g. "tax_amount" */
+      tax_field: z.string().optional(),
+      /** ISO currency code field, e.g. "currency_code" */
+      currency_field: z.string().optional(),
+      /** Document date field, e.g. "invoice_date" */
+      date_field: z.string().optional(),
+      /** Due / expiry date field, e.g. "due_date" */
+      due_date_field: z.string().optional(),
+    }).optional(),
   }),
 
   feature_flags: z.object({
@@ -152,6 +193,12 @@ export const CompiledEntitySchema = z.object({
     is_importable: z.boolean().optional(),
     is_exportable: z.boolean().optional(),
     is_bulk_editable: z.boolean().optional(),
+    /** Entity participates in an approval workflow (drives detail_renderer default). */
+    is_approvable: z.boolean().optional(),
+    /** Entity has child line items in a related table. */
+    has_line_items: z.boolean().optional(),
+    /** Payables | receivables | treasury | etc. — used for context-sensitive UI. */
+    document_category: z.string().optional(),
   }),
 
   governance_level: z.string(),

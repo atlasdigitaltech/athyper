@@ -8,7 +8,7 @@
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
-    module_id, name, entity_short,
+    module_id, name, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
@@ -17,7 +17,7 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
-    'purchase_invoice', 'INV',
+    'purchase_invoice', 'INV', 'purchase_invoice',
     'DOCUMENT', 'system', 'ent', 'table',
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_invoice',
@@ -94,3 +94,33 @@ WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.origin = 'system';
+
+-- ── 4. display_config — detail renderer + document_header field map ───────────
+-- Applied only when the column still holds the default empty object so that
+-- any explicit tenant override or later migration is not overwritten.
+UPDATE control.entity
+SET display_config = jsonb_build_object(
+    'detail_renderer', 'approvable',
+    'title_field',     'document_no',
+    'subtitle_field',  'supplier_id',
+    'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","gross_amount","currency_code"]'::jsonb,
+    'default_sort_field', 'invoice_date',
+    'default_sort_order', 'desc',
+    'document_header', jsonb_build_object(
+        'number_field',     'document_no',
+        'status_field',     'status',
+        'type_label',       'INVOICE',
+        'total_label',      'INVOICE TOTAL',
+        'date_label',       'INVOICE DATE',
+        'party_id_field',   'supplier_id',
+        'amount_field',     'gross_amount',
+        'subtotal_field',   'net_amount',
+        'tax_field',        'tax_amount',
+        'currency_field',   'currency_code',
+        'date_field',       'invoice_date',
+        'due_date_field',   'due_date'
+    )
+)
+WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND display_config = '{}'::jsonb;

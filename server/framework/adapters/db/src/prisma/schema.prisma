@@ -2598,7 +2598,6 @@ model tax_group {
   company_code_supplier_profile_company_code_supplier_profile_tenant_id_default_wht_tax_group_idTotax_group company_code_supplier_profile[] @relation("company_code_supplier_profile_tenant_id_default_wht_tax_group_idTotax_group")
   company_code_supplier_profile_company_code_supplier_profile_tenant_id_tax_group_idTotax_group             company_code_supplier_profile[] @relation("company_code_supplier_profile_tenant_id_tax_group_idTotax_group")
   item_category                                                                                             item_category[]
-  ou_spend_category_policy                                                                                  ou_spend_category_policy[]
   product                                                                                                   product[]
 
   @@unique([tenant_id, code], map: "tg_code_uq")
@@ -8578,7 +8577,6 @@ model asset_class {
   other_asset_class                                      asset_class[]              @relation("asset_classToasset_class")
   tenant                                                 tenant                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ac_tenant_fk")
   uom                                                    uom?                       @relation(fields: [default_uom_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_uom_fk")
-  ou_spend_category_policy                               ou_spend_category_policy[]
 
   @@unique([tenant_id, company_code_id, code], map: "asset_class_tenant_company_code_uq")
   @@unique([tenant_id, id], map: "asset_class_tenant_id_uq")
@@ -9219,8 +9217,6 @@ model business_intent {
   business_intent                   business_intent?                    @relation("business_intentTobusiness_intent", fields: [tenant_id, parent_id], references: [tenant_id, id], onUpdate: NoAction, map: "bi_parent_fk")
   other_business_intent             business_intent[]                   @relation("business_intentTobusiness_intent")
   tenant                            tenant                              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bi_tenant_fk")
-  ou_intent_policy                  ou_intent_policy[]
-  ou_spend_category_policy          ou_spend_category_policy[]
   spend_category                    spend_category[]
 
   @@unique([tenant_id, code], map: "bi_code_uq")
@@ -10452,7 +10448,6 @@ model dimension_type {
   dimension_set_item                                                            dimension_set_item[]
   tenant                                                                        tenant                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "dt_tenant_fk")
   dimension_value                                                               dimension_value[]
-  ou_dimension_default                                                          ou_dimension_default[]
 
   @@unique([tenant_id, code], map: "dt_code_uq")
   @@unique([tenant_id, id], map: "dt_tenant_id_uq")
@@ -10503,7 +10498,6 @@ model dimension_value {
   other_dimension_value                                                                      dimension_value[]                @relation("dimension_valueTodimension_value")
   tenant                                                                                     tenant                           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "dv_tenant_fk")
   dimension_type                                                                             dimension_type                   @relation(fields: [tenant_id, dimension_type_id], references: [tenant_id, id], onUpdate: NoAction, map: "dv_type_fk")
-  ou_dimension_default                                                                       ou_dimension_default[]
 
   @@unique([tenant_id, dimension_type_id, company_code_id, code], map: "dv_company_code_uq", where: raw("(company_code_id IS NOT NULL)"))
   @@unique([tenant_id, dimension_type_id, code], map: "dv_global_code_uq", where: raw("(company_code_id IS NULL)"))
@@ -10744,7 +10738,6 @@ model gl_account {
   gl_account                    gl_account?                     @relation("gl_accountTogl_account", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "gla_parent_fk")
   other_gl_account              gl_account[]                    @relation("gl_accountTogl_account")
   tenant                        tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gla_tenant_fk")
-  ou_spend_category_policy      ou_spend_category_policy[]
 
   @@unique([tenant_id, chart_of_account_id, code], map: "gl_account_chart_code_uq")
   @@unique([tenant_id, code], map: "gl_account_tenant_code_uq")
@@ -11229,142 +11222,6 @@ model notification {
   @@schema("master")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ou_access {
-  id              String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String   @db.Uuid
-  entity_type     String
-  entity_id       String   @db.Uuid
-  ou_id           String   @db.Uuid
-  inherit_subtree Boolean  @default(true)
-  granted_by      String?  @db.Uuid
-  metadata        Json     @default("{}")
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-  created_by      String   @db.Uuid
-  tenant          tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "moa_tenant_fk")
-
-  @@unique([tenant_id, entity_type, entity_id, ou_id], map: "ou_access_uq")
-  @@index([tenant_id, entity_type, entity_id], map: "moa_entity_idx")
-  @@index([tenant_id, ou_id], map: "moa_ou_idx")
-  @@schema("master")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model ou_dimension_default {
-  id                 String          @id(map: "odd_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id          String          @db.Uuid
-  ou_id              String          @db.Uuid
-  dimension_type_id  String          @db.Uuid
-  dimension_value_id String          @db.Uuid
-  is_mandatory       Boolean         @default(false)
-  allow_override     Boolean         @default(true)
-  effective_from     DateTime        @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_to       DateTime?       @db.Date
-  metadata           Json            @default("{}")
-  status             String          @default("active")
-  is_active          Boolean?        @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at  DateTime?       @db.Timestamptz(6)
-  status_changed_by  String?         @db.Uuid
-  created_at         DateTime        @default(now()) @db.Timestamptz(6)
-  created_by         String          @db.Uuid
-  updated_at         DateTime?       @db.Timestamptz(6)
-  updated_by         String?         @db.Uuid
-  tenant             tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "odd_tenant_fk")
-  dimension_type     dimension_type  @relation(fields: [tenant_id, dimension_type_id], references: [tenant_id, id], onUpdate: NoAction, map: "odd_type_fk")
-  dimension_value    dimension_value @relation(fields: [tenant_id, dimension_value_id], references: [tenant_id, id], onUpdate: NoAction, map: "odd_value_fk")
-
-  @@index([tenant_id, ou_id], map: "odd_ou_pidx", where: raw("(is_active = true)"))
-  @@index([tenant_id, ou_id, dimension_type_id], map: "odd_ou_type_active_pidx", where: raw("(is_active = true)"))
-  @@schema("master")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model ou_intent_policy {
-  id                            String          @id(map: "oim_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                     String          @db.Uuid
-  ou_id                         String          @db.Uuid
-  intent_id                     String          @db.Uuid
-  mapping_mode                  String          @default("ALLOW")
-  is_default                    Boolean         @default(false)
-  override_gl_account_id        String?         @db.Uuid
-  override_fp_id                String?         @db.Uuid
-  override_approval_template_id String?         @db.Uuid
-  override_compliance_checks    String[]
-  notes                         String?
-  metadata                      Json            @default("{}")
-  status                        String          @default("active")
-  is_active                     Boolean?        @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at             DateTime?       @db.Timestamptz(6)
-  status_changed_by             String?         @db.Uuid
-  created_at                    DateTime        @default(now()) @db.Timestamptz(6)
-  created_by                    String          @db.Uuid
-  updated_at                    DateTime?       @db.Timestamptz(6)
-  updated_by                    String?         @db.Uuid
-  business_intent               business_intent @relation(fields: [tenant_id, intent_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "oim_intent_fk")
-  tenant                        tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "oim_tenant_fk")
-
-  @@unique([tenant_id, ou_id], map: "oim_default_per_ou_uq", where: raw("((is_default = true) AND (is_active = true) AND (mapping_mode = 'ALLOW'::text))"))
-  @@unique([tenant_id, ou_id, intent_id], map: "oim_ou_intent_uq")
-  @@index([tenant_id, ou_id, intent_id], map: "oim_deny_pidx", where: raw("((mapping_mode = 'DENY'::text) AND (is_active = true))"))
-  @@index([tenant_id, intent_id], map: "oim_intent_pidx", where: raw("(is_active = true)"))
-  @@index([tenant_id, ou_id], map: "oim_ou_pidx", where: raw("(is_active = true)"))
-  @@schema("master")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model ou_spend_category_policy {
-  id                                  String           @id(map: "scou_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                           String           @db.Uuid
-  ou_id                               String           @db.Uuid
-  spend_category_id                   String           @db.Uuid
-  mapping_mode                        String           @default("ALLOW")
-  default_gl_account_id               String?          @db.Uuid
-  default_tax_group_id                String?          @db.Uuid
-  default_intent_id                   String?          @db.Uuid
-  asset_class_id                      String?          @db.Uuid
-  capex_screening_threshold           Decimal?         @db.Decimal(18, 4)
-  capex_screening_currency            String?          @db.Char(3)
-  is_asset_tagging_required           Boolean?
-  override_visibility                 String?
-  override_is_classification_required Boolean?
-  override_is_hs_required             Boolean?
-  override_is_regulated               Boolean?
-  is_default                          Boolean          @default(false)
-  priority                            Int              @default(0) @db.SmallInt
-  metadata                            Json             @default("{}")
-  status                              String           @default("active")
-  is_active                           Boolean?         @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                   DateTime?        @db.Timestamptz(6)
-  status_changed_by                   String?          @db.Uuid
-  created_at                          DateTime         @default(now()) @db.Timestamptz(6)
-  created_by                          String           @db.Uuid
-  updated_at                          DateTime?        @db.Timestamptz(6)
-  updated_by                          String?          @db.Uuid
-  asset_class                         asset_class?     @relation(fields: [tenant_id, asset_class_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scou_asset_class_fk")
-  currency                            currency?        @relation(fields: [capex_screening_currency], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "scou_capex_currency_fk")
-  principal                           principal        @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "scou_created_by_fk")
-  gl_account                          gl_account?      @relation(fields: [tenant_id, default_gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scou_gl_account_fk")
-  business_intent                     business_intent? @relation(fields: [default_intent_id], references: [id], onUpdate: NoAction, map: "scou_intent_fk")
-  spend_category                      spend_category   @relation(fields: [tenant_id, spend_category_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scou_spend_category_fk")
-  tax_group                           tax_group?       @relation(fields: [tenant_id, default_tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scou_tax_group_fk")
-  tenant                              tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "scou_tenant_fk")
-
-  @@unique([tenant_id, id], map: "scou_tenant_id_uq")
-  @@unique([tenant_id, ou_id, spend_category_id], map: "scou_tenant_ou_category_uq")
-  @@index([tenant_id, ou_id], map: "scou_active_pidx", where: raw("(is_active = true)"))
-  @@index([tenant_id, asset_class_id], map: "scou_asset_class_idx", where: raw("(asset_class_id IS NOT NULL)"))
-  @@index([tenant_id, spend_category_id], map: "scou_category_idx")
-  @@index([tenant_id, ou_id, spend_category_id], map: "scou_default_pidx", where: raw("(is_default = true)"))
-  @@index([tenant_id, ou_id], map: "scou_ou_idx")
-  @@index([tenant_id], map: "scou_tenant_idx")
-  @@schema("master")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -11907,7 +11764,6 @@ model principal {
   notification_notification_created_byToprincipal                                       notification[]                    @relation("notification_created_byToprincipal")
   notification_notification_recipient_idToprincipal                                     notification[]                    @relation("notification_recipient_idToprincipal")
   notification_notification_sender_idToprincipal                                        notification[]                    @relation("notification_sender_idToprincipal")
-  ou_spend_category_policy                                                              ou_spend_category_policy[]
   payment_term                                                                          payment_term[]
   payment_term_clause                                                                   payment_term_clause[]
   payment_term_discount_tier                                                            payment_term_discount_tier[]
@@ -12574,7 +12430,6 @@ model spend_category {
   purchase_requisition_line                                                      purchase_requisition_line[]
   service_entry_sheet_line                                                       service_entry_sheet_line[]
   item                                                                           item[]
-  ou_spend_category_policy                                                       ou_spend_category_policy[]
   product                                                                        product[]
   principal                                                                      principal                          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sc_created_by_fk")
   business_intent                                                                business_intent?                   @relation(fields: [default_intent_id], references: [id], onUpdate: NoAction, map: "sc_default_intent_fk")
@@ -13104,10 +12959,6 @@ model tenant {
   lifecycle_instance                lifecycle_instance[]
   multipart_upload                  multipart_upload[]
   notification                      notification[]
-  ou_access                         ou_access[]
-  ou_dimension_default              ou_dimension_default[]
-  ou_intent_policy                  ou_intent_policy[]
-  ou_spend_category_policy          ou_spend_category_policy[]
   owner_type                        owner_type[]
   payment_method                    payment_method[]
   payment_term                      payment_term[]
@@ -13517,7 +13368,6 @@ model currency {
   ledger_book                                                     ledger_book[]
   legal_entity_legal_entity_functional_currencyTocurrency         legal_entity[]                     @relation("legal_entity_functional_currencyTocurrency")
   legal_entity_legal_entity_reporting_currencyTocurrency          legal_entity[]                     @relation("legal_entity_reporting_currencyTocurrency")
-  ou_spend_category_policy                                        ou_spend_category_policy[]
   payment_term_clause                                             payment_term_clause[]
   payment_term_discount_tier                                      payment_term_discount_tier[]
   product                                                         product[]

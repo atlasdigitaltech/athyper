@@ -8,7 +8,7 @@
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
-    module_id, name, entity_short,
+    module_id, name, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
@@ -17,7 +17,7 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
-    'journal_entry', 'JE',
+    'journal_entry', 'JE', 'journal_entry',
     'DOCUMENT', 'system', 'ent', 'table',
     'full', 'tenant_critical', 'controlled',
     'document', 'journal_entry',

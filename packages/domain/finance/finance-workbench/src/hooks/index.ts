@@ -8,9 +8,13 @@ export { useGlDetail } from "./useGlDetail";
 export { usePeriodStatus } from "./usePeriodStatus";
 export { usePeriodCloseRuns, usePeriodCloseTasks, usePeriodCloseChecklist } from "./usePeriodClose";
 export {
-  useApInvoices, useApPayments, useApAging,
+  useApInvoices, useApInvoiceDetail, useApPayments, useApAging,
   useArAging, useArReceipts, useArInvoices, useArPaymentMethods, useCreateArReceipt,
+  useApPaymentMethods, useCreateApPayment,
+  type ApInvoice, type ApInvoiceDetail, type ApInvoiceLine, type ApInvoiceAllocation,
+  type ApPayment, type ApPaymentMethod,
   type ArInvoice, type ArPaymentMethod, type CreateArReceiptPayload, type CreateArReceiptResult,
+  type CreateApPaymentPayload, type CreateApPaymentResult,
 } from "./useApWorkbench";
 export { useBankAccounts, useBankStatement, useBankUnreconciled } from "./useBankReconciliation";
 export { useJournalList } from "./useJournalList";

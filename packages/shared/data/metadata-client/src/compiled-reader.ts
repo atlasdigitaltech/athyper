@@ -146,6 +146,31 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
   return { sections, requiredFields, validationRules };
 }
 
+// ── Detail renderer resolution ────────────────────────────────────────────────
+
+/**
+ * Which detail-page rendering strategy to use for this entity.
+ *
+ * Resolution order:
+ *   1. display_config.detail_renderer — explicit override in DB seed
+ *   2. feature_flags.is_approvable → "approvable"
+ *   3. entity_class ∈ {LEDGER, LOG, AGGREGATE} → "ledger"
+ *   4. fallback → "generic"
+ */
+export type DetailRenderer = "generic" | "approvable" | "ledger";
+
+export function resolveDetailRenderer(entity: CompiledEntity): DetailRenderer {
+  const explicit = entity.display_config.detail_renderer;
+  if (explicit) return explicit;
+
+  if (entity.feature_flags?.is_approvable) return "approvable";
+
+  const cls = entity.entity_class;
+  if (cls === "LEDGER" || cls === "LOG" || cls === "AGGREGATE") return "ledger";
+
+  return "generic";
+}
+
 // ── Semantic resolver detection ───────────────────────────────────────────────
 
 const STATUS_FIELD_NAMES = new Set([
