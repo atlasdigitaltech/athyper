@@ -17,11 +17,11 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@athyper/api-contracts": "workspace:*",
-    "@athyper/api-client": "workspace:*"
+    "@athyper/api-client": "workspace:*",
+    "@athyper/api-contracts": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }

@@ -28,7 +28,7 @@
     "@athyper/theme": "workspace:*",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }
 }

@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "typescript": "^6.0.2",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "typescript": "^6.0.3"
   }
 }

@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "next": "^16.2.3",
-    "typescript": "^6.0.2"
+    "next": "^16.2.4",
+    "typescript": "^6.0.3"
   }
 }

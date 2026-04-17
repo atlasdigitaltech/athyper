@@ -13,7 +13,7 @@
 
 services:
   db:
-    image: postgres:16.11-bookworm
+    image: postgres:16.13-bookworm
     profiles: ["mesh", "db"]
     mem_limit: "${DB_MEMORY_LIMIT}"
     environment:

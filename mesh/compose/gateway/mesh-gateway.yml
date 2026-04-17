@@ -10,7 +10,7 @@
 # =======================================================================
 services:
   gateway:
-    image: traefik:v3.6.7
+    image: traefik:v3.6.13
     profiles: ["mesh", "gateway", "apps"]
     mem_limit: "${GATEWAY_MEMORY_LIMIT}"
     command:

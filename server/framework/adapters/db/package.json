@@ -42,7 +42,7 @@
   "dependencies": {
     "@athyper/core": "workspace:*",
     "exceljs": "^4.4.0",
-    "kysely": "^0.28.15",
+    "kysely": "^0.28.16",
     "pg": "^8.13.0"
   },
   "devDependencies": {
@@ -52,6 +52,6 @@
     "rimraf": "^6.0.1",
     "tsup": "^8.3.0",
     "tsx": "^4.19.2",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }

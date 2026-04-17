@@ -11,7 +11,7 @@
 
 services:
   memorycache_exporter:
-    image: oliver006/redis_exporter:v1.80.1
+    image: oliver006/redis_exporter:v1.82.0
     profiles: ["mesh", "memorycache"]
     mem_limit: "${MEMORYCACHE_EXPORTER_MEMORY_LIMIT}"
     environment:
@@ -21,7 +21,7 @@ services:
       memorycache:
         condition: service_healthy
     # Healthcheck: redis_exporter is FROM scratch (no shell) — disable
-    # If healthcheck needed, switch to oliver006/redis_exporter:v1.80.1-alpine
+    # If healthcheck needed, switch to oliver006/redis_exporter:v1.82.0-alpine
     healthcheck:
       disable: true
     stop_grace_period: 10s

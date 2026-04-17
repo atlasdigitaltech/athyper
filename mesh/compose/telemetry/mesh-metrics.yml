@@ -11,7 +11,7 @@
 
 services:
   metrics:
-    image: prom/prometheus:v3.9.1
+    image: prom/prometheus:v3.11.2
     profiles: ["mesh", "telemetry"]
     mem_limit: "${METRICS_MEMORY_LIMIT}"
     volumes:

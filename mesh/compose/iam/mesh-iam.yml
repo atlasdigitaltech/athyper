@@ -11,7 +11,7 @@
 
 services:
   iam:
-    image: quay.io/keycloak/keycloak:26.5.1
+    image: quay.io/keycloak/keycloak:26.6.1
     profiles: ["mesh", "iam"]
     mem_limit: "${IAM_MEMORY_LIMIT}"
     command: ["start-dev", "--import-realm"]

@@ -19,11 +19,11 @@
     "validate:strict": "tsx src/validate.ts --strict"
   },
   "dependencies": {
-    "@formatjs/intl": "^4.1.5"
+    "@formatjs/intl": "^4.1.6"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "typescript": "^6.0.2",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "typescript": "^6.0.3"
   }
 }

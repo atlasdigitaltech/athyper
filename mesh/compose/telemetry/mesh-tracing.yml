@@ -11,7 +11,7 @@
 
 services:
   tracing:
-    image: grafana/tempo:2.9.0
+    image: grafana/tempo:2.10.4
     profiles: ["mesh", "telemetry"]
     mem_limit: "${TRACING_MEMORY_LIMIT}"
     command: ["-config.file=/etc/tempo.yml"]
