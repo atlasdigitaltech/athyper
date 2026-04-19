@@ -6,11 +6,11 @@ REM athyper Stack - DOWN - Windows Batch
 REM Location:
 REM   stack\scripts\stack-profile\down.bat
 REM Usage:
-REM   down.bat              -> uses STACK_PROFILE=core (default, mirrors up.bat)
-REM   down.bat core         -> explicit profile (stop only core-profile services)
+REM   down.bat              -> bring down ALL services (no --profile, same as down.sh)
+REM   down.bat all          -> bring down ALL services (explicit, same as no arg)
+REM   down.bat clean        -> bring down ALL services + remove volumes
+REM   down.bat core         -> stop only core-profile services
 REM   down.bat telemetry    -> stop only telemetry-profile services
-REM   down.bat all          -> stop ALL services (no --profile filter)
-REM   down.bat clean        -> stop ALL services + remove volumes
 REM ============================================================
 
 REM ----------------------------
@@ -70,21 +70,19 @@ if exist "%ENV_FILE%" (
   echo Will attempt to run compose down without env-file.
 )
 
-REM Default: no arg = resolve from STACK_PROFILE in .env, else core (mirrors up.bat).
-REM Explicit "all" or "clean" deactivates the profile filter.
-set "USE_PROFILE=1"
+REM Default: no arg = stop ALL services (no profile filter), matching down.sh behaviour.
+REM A specific profile name activates per-profile filtering.
+REM "all" and "clean" also stop everything; "clean" additionally removes volumes.
+set "USE_PROFILE=0"
 set "REMOVE_VOLUMES=0"
 set "ALL_COMPOSE_PROFILES=admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
 
 if "!ACTIVE_PROFILE!"=="" (
-  if not "!STACK_PROFILE!"=="" (
-    set "ACTIVE_PROFILE=!STACK_PROFILE!"
-  ) else (
-    set "ACTIVE_PROFILE=core"
-  )
+  set "ACTIVE_PROFILE=all"
 )
 if /I "!ACTIVE_PROFILE!"=="all"   set "USE_PROFILE=0"
 if /I "!ACTIVE_PROFILE!"=="clean" set "USE_PROFILE=0" & set "REMOVE_VOLUMES=1"
+if /I not "!ACTIVE_PROFILE!"=="all" if /I not "!ACTIVE_PROFILE!"=="clean" set "USE_PROFILE=1"
 
 REM ----------------------------
 REM Pick override compose based on ENVIRONMENT (or default)
@@ -208,5 +206,4 @@ if errorlevel 1 (
 echo Stack is DOWN (profile=!ACTIVE_PROFILE!, env=!ENVIRONMENT!)
 
 echo.
-pause
 endlocal

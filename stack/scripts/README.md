@@ -526,14 +526,12 @@ down.sh [profile | all | clean]
 down.bat [profile | all | clean]
 ```
 
-| Argument | `.sh` behaviour | `.bat` behaviour |
-|----------|----------------|-----------------|
-| _(none)_ | **Stops ALL services** (no profile filter) | Reads `STACK_PROFILE` from `.env` (or `core`) and stops that profile only |
-| profile name | Stops only services in that profile | Same |
-| `all` | Stops ALL services (no profile filter) | Same |
-| `clean` | Stops ALL services + removes all Docker volumes | Same |
-
-> **Important**: The no-argument behaviour differs between platforms. On Linux/macOS (`.sh`), omitting the argument stops everything. On Windows (`.bat`), it uses the profile persisted in `.env`. Always pass an explicit argument when the distinction matters.
+| Argument | Behaviour (identical on `.sh` and `.bat`) |
+|----------|-----------------------------------------|
+| _(none)_ | **Stops ALL services** — no profile filter (same as `all`) |
+| `all` | Stops ALL services — no profile filter |
+| `clean` | Stops ALL services + removes all Docker volumes |
+| profile name | Stops only services in that profile (e.g. `core`, `telemetry`) |
 
 ### stack-profile/logs
 
@@ -625,7 +623,11 @@ docker/restart.sh
 docker\restart.bat
 ```
 
-No parameters. Calls `stop` then `start` in sequence, waiting for Docker to fully exit before restarting.
+No parameters. Stops Docker, waits for it to fully exit, then starts it again.
+
+- **macOS**: stop via `osascript`; polls exit at 2s intervals (30×2s = 60s max); start via `open -a Docker`; polls ready at 3s intervals (40×3s = 120s max)
+- **Linux**: single `sudo systemctl restart docker` (no separate polling)
+- **Windows**: stop via `DockerCli.exe -Shutdown` (fallback: `taskkill`); polls exit at 2s intervals (30×2s = 60s max); start `Docker Desktop.exe`; polls ready at 3s intervals (40×3s = 120s max)
 
 ### app/api-up
 
@@ -705,14 +707,15 @@ seed-db.bat [flags...]
 | Flag | Description |
 |------|-------------|
 | _(none)_ | Full provision: DDL + system data + blueprint/tenant data + demo data |
-| `--status` | Show current provision status for all phases, no DB changes |
-| `--dry-run` | Print what would run without making any DB changes |
-| `--reset` | **Destructive**: drop and re-provision all schemas from scratch |
-| `--force` | Skip confirmation prompts on destructive steps |
-| `--no-demo` | Omit demo data (production-like seed) |
-| `--demo-only` | Run only the demo data phase (skip DDL, system, and tenant phases) |
-| `--no-relay` | Skip rewriting Docker-internal hostnames to localhost for local use |
-| `--phase N` | Run only seed phase N (1 = DDL, 2 = system/010, 3 = blueprint/tenant/demo) |
+| `--ddl-only` | Phase 1 only — DDL migrations; no seed data |
+| `--system-only` | Phase 2 only — system/lookup seed; DDL must already exist |
+| `--no-demo` | Phase 1+2 only — DDL + system data; skips blueprint/tenant/demo phases |
+| `--demo-only` | All phases with checksum tracking; safe to run on any DB state |
+| `--reset` | **Destructive**: drop all schemas + re-provision all phases from scratch |
+| `--drop-only` | **Destructive**: drop all schemas only (no re-seed) |
+| `--status` | Read-only report — shows OK / PENDING / CHANGED per file, no DB changes |
+| `--force` | Re-run all phases even if checksum unchanged |
+| `--phase=N` | Run only phase N (1 = DDL, 2 = system/010, 3 = blueprint/tenant/demo) |
 
 Seed phases:
 1. DDL — schema migrations
@@ -743,13 +746,16 @@ reset-iam.bat
 
 No parameters. **Destructive** — 10-second countdown before execution.
 
-Steps [0/5]–[5/5]:
-1. `[0/5]` Regenerates `realm-demosetup.json` via `update-realm-demosetup.cjs`
-2. `[1/5]` Stops the Keycloak container
-3. `[2/5]` Wipes the IAM database (DROP SCHEMA public CASCADE; CREATE SCHEMA public)
-4. `[3/5]` Starts Keycloak fresh — initializes schema, creates master realm + bootstrap admin, auto-imports realm files from `/opt/keycloak/data/import/`
-5. `[4/5]` Waits for Keycloak healthy status (polls up to ~105 seconds)
-6. `[5/5]` Runs `seed-iam-credentials` to set demo user passwords
+Steps `[0/5]`–`[5/5]`:
+
+| Step | Action |
+|------|--------|
+| `[0/5]` | Regenerates `realm-demosetup.json` via `update-realm-demosetup.cjs` |
+| `[1/5]` | Stops the Keycloak container |
+| `[2/5]` | Wipes the IAM database (`DROP SCHEMA public CASCADE; CREATE SCHEMA public`) |
+| `[3/5]` | Starts Keycloak fresh — initializes schema, creates master realm + bootstrap admin, auto-imports realm files from `/opt/keycloak/data/import/`; polls healthy status (up to ~105 seconds) |
+| `[4/5]` | Seeds demo user passwords via `seed-iam-credentials` (skipped if KC not yet healthy) |
+| `[5/5]` | Done — prints verify command and Keycloak Admin Console URL |
 
 Requires: running `db` and `dbpool-session` containers; `DOCKER_CONTAINER_IAM` set or `COMPOSE_PROJECT_NAME` in `.env`.
 
@@ -762,14 +768,17 @@ import-iam.bat
 
 No parameters. Imports `stack/config/iam/realm-demosetup.json` (and `realm-platform-control.json` if present) into Keycloak via `kc import --override true`.
 
-Steps [1/6]–[6/6]:
-1. `[1/6]` Copy realm file(s) to temp directory (Windows: MSYS path safety)
-2. `[2/6]` Verify database connection
-3. `[3/6]` Import athyper realm (5-second countdown to cancel)
-4. `[3b/6]` Import platform-control realm (if file exists)
-5. `[4/6]` Clean up temp directory
-6. `[5/6]` Restart Keycloak container; wait for healthy status
-7. `[6/6]` Run `provision-keycloak-users.mjs` to seed passwords
+Steps `.sh` [1/5]–[5/5] / `.bat` [1/6]–[6/6]:
+
+| `.sh` step | `.bat` step | Action |
+|-----------|------------|--------|
+| — | `[1/6]` | Copy realm file(s) to temp directory (`%TEMP%\keycloak-import-*`) — Windows CMD requires a host-side copy for docker volume mounts; `.sh` mounts the file directly |
+| `[1/5]` | `[2/6]` | Check database connection |
+| `[2/5]` | `[3/6]` | Import athyper realm (5-second countdown to cancel) |
+| `[2b/5]` | `[3b/6]` | Import platform-control realm (if `realm-platform-control.json` exists; `.bat` uses a separate temp dir) |
+| `[3/5]` | `[4/6]` | Clean up (`.sh`: import complete marker; `.bat`: remove temp directory) |
+| `[4/5]` | `[5/6]` | Restart Keycloak container; wait for healthy status |
+| `[5/5]` | `[6/6]` | Run `provision-keycloak-users.mjs` to seed passwords |
 
 Requires: running `dbpool-session` container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 
@@ -782,11 +791,17 @@ export-iam.bat
 
 No parameters. Exports both realms via a temporary `docker run` container connected to the IAM database.
 
-Steps [1/4]–[4/4]:
-1. Create temp export directory
-2. Export athyper realm → `stack/config/iam/realm-demosetup.json`
-3. Export platform-control realm → `stack/config/iam/realm-platform-control.json` (warning, not error, if not provisioned)
-4. Clean up temp directory
+Steps `.sh` [1/4]–[4/4] / `.bat` [1/5]–[5/5]:
+
+| Step | `.sh` | `.bat` |
+|------|-------|--------|
+| 1 | Create temp export dir (`stack/.tmp/`) | Create temp export dir (`%TEMP%`) |
+| 2 | Export athyper realm | Export athyper realm |
+| 3 | Export platform-control realm | Export platform-control realm |
+| 4 | Move exports → `stack/config/iam/`; cleanup | Move exports → `stack\config\iam\` |
+| 5 | _(merged into step 4)_ | Cleanup temp dir |
+
+Platform-control export produces a warning (not an error) if the realm is not yet provisioned.
 
 Requires: running IAM container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 
@@ -933,7 +948,7 @@ The `.bat` scripts are not affected by MSYS path mangling.
 | `setup/generate-certs` | _(none)_ — requires `mkcert` | Generate local TLS certs for all `*.athyper.local` SANs | No |
 | `setup/verify-port-hardening` | _(none)_ | Assert no service bypasses Traefik ingress (CI); exit 0=pass, 1=violation | No |
 | `stack-profile/up` | `[profile]` | Start Docker Compose stack (profile-aware, validates .env, auto-bootstraps .env) | No |
-| `stack-profile/down` | `[profile \| all \| clean]` — **.sh** no-arg = ALL; **.bat** no-arg = `STACK_PROFILE` | Stop Docker Compose stack | No |
+| `stack-profile/down` | `[profile \| all \| clean]` — no-arg = ALL services (both platforms) | Stop Docker Compose stack | No |
 | `stack-profile/down clean` | `clean` | Stop + delete all Docker volumes | **Yes** |
 | `stack-profile/restart` | `[--timeout N] [service-name...] \| all` | Restart all (or named) running services (all profiles active) | No |
 | `stack-profile/logs` | `[-f] [--tail N] [service-name]` | Stream container logs (all profiles active) | No |
@@ -949,9 +964,10 @@ The `.bat` scripts are not affected by MSYS path mangling.
 | `app/web-up` | _(none)_ | Start web frontend (local: pnpm dev; staging/prod: compose up) | No |
 | `app/web-down` | _(none)_ | Stop web frontend | No |
 | `app/web-restart` | _(none)_ | Restart web frontend | No |
-| `db/transaction/neon/seed-db` | `[--status\|--dry-run\|--reset\|--force\|--demo-only\|--no-demo\|--no-relay\|--phase N]` | Run database provisioner (DDL + seed data) | Additive |
+| `db/transaction/neon/seed-db` | `[--ddl-only\|--system-only\|--no-demo\|--demo-only\|--reset\|--drop-only\|--status\|--force\|--phase=N]` | Run database provisioner (DDL + seed data) | Additive |
 | `db/transaction/neon/seed-db --reset` | `--reset [--force]` | Drop and re-provision all schemas | **Yes** |
+| `db/transaction/neon/seed-db --drop-only` | `--drop-only` | Drop all schemas without re-seeding | **Yes** |
 | `db/session/iam/seed-iam-credentials` | _(none)_ | Set demo user passwords in Keycloak (idempotent) | No |
 | `db/session/iam/reset-iam` | _(none)_ — 10s countdown | Wipe IAM DB + reimport realm JSON + seed passwords [0/5]–[5/5] | **Yes** |
-| `db/session/iam/import-iam` | _(none)_ | Import realm JSON into existing Keycloak [1/6]–[6/6] | Overwrites realms |
-| `db/session/iam/export-iam` | _(none)_ | Export Keycloak realms to `stack/config/iam/` [1/4]–[4/4] | No |
+| `db/session/iam/import-iam` | _(none)_ | Import realm JSON into existing Keycloak (.sh: [1/5]–[5/5]; .bat: [1/6]–[6/6]) | Overwrites realms |
+| `db/session/iam/export-iam` | _(none)_ | Export Keycloak realms to `stack/config/iam/` (.sh: [1/4]–[4/4]; .bat: [1/5]–[5/5]) | No |

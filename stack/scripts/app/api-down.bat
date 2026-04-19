@@ -134,5 +134,4 @@ echo API service stopped (env=!ENVIRONMENT!)
 
 :end
 echo.
-pause
 endlocal

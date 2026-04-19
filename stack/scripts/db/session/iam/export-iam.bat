@@ -3,7 +3,23 @@ REM =======================================================================
 REM Keycloak IAM Export Script (Windows)
 REM Location:
 REM   stack\scripts\db\session\iam\export-iam.bat
-REM Exports athyper + platform-control realm configuration to stack\config\iam\
+REM
+REM Exports athyper + platform-control realms to stack\config\iam\ via a
+REM temporary `docker run` container connected to the IAM database.
+REM
+REM Steps:
+REM   [1/5] Create temp export directory (%TEMP%\keycloak-export-*)
+REM   [2/5] Export athyper realm
+REM   [3/5] Export platform-control realm
+REM   [4/5] Move exported JSON files to stack\config\iam\
+REM           -> realm-demosetup.json (athyper)
+REM           -> realm-platform-control.json (platform-control, if provisioned)
+REM   [5/5] Clean up temp directory
+REM
+REM Platform-control export produces a warning (not an error) if the realm
+REM is not yet provisioned in Keycloak.
+REM
+REM Requires: running IAM container; KEYCLOAK_IMAGE_TAG in stack\env\.env
 REM =======================================================================
 
 setlocal enabledelayedexpansion

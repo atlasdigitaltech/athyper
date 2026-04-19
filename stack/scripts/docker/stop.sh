@@ -4,8 +4,12 @@
 # Location: stack/scripts/docker/stop.sh
 #
 # Gracefully stops the Docker engine.
-#   macOS  -> quits Docker Desktop via osascript
-#   Linux  -> stops Docker Engine via systemctl
+#   macOS  -> quits Docker Desktop via:
+#             osascript -e 'quit app "Docker"'
+#   Linux  -> stops Docker Engine via:
+#             sudo systemctl stop docker
+#
+# No-op if Docker is not currently running.
 # ============================================================
 
 set -euo pipefail

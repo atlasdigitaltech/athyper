@@ -209,7 +209,9 @@ if errorlevel 1 (
 )
 
 echo.
-echo Restart complete (services=!SERVICES!, env=!ENVIRONMENT!)
+set "_SVC_LABEL=!SERVICES!"
+if "!_SVC_LABEL!"=="" set "_SVC_LABEL=all"
+echo Restart complete (services=!_SVC_LABEL!, env=!ENVIRONMENT!)
 
 REM Show status
 if exist "%ENV_FILE%" (
@@ -219,5 +221,4 @@ if exist "%ENV_FILE%" (
 )
 
 echo.
-pause
 endlocal

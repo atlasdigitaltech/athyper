@@ -3,8 +3,22 @@
 # Keycloak IAM Import Script
 # Location:
 #   stack/scripts/db/session/iam/import-iam.sh
-# Imports realm configuration from stack/config/iam/realm-demosetup.json
-# Works in both Git Bash (MSYS) and WSL on Windows
+#
+# Imports realm configuration from stack/config/iam/ into a running
+# Keycloak instance via `kc import --override true`.
+# Works in both Git Bash (MSYS) and WSL on Windows.
+#
+# Steps:
+#   [1/5] Check database connection (via db container)
+#   [2/5] Import athyper realm (5-second countdown to cancel)
+#         Mounts realm-demosetup.json directly into the docker run container
+#   [2b/5] Import platform-control realm (only if realm-platform-control.json
+#          exists in stack/config/iam/)
+#   [3/5] Import complete (marker step)
+#   [4/5] Restart Keycloak container; wait for healthy status
+#   [5/5] Run provision-keycloak-users.mjs to seed passwords + MFA
+#
+# Requires: running dbpool-session container; KEYCLOAK_IMAGE_TAG in stack/env/.env
 # =======================================================================
 
 set -euo pipefail

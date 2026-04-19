@@ -177,6 +177,8 @@ if exist "%COMPOSE_DIR%\admin\athyper-pgweb.yml"                      set "COMPO
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml""
 if exist "!OVERRIDE!" (
   set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
+) else (
+  echo WARNING: override file missing, skipping: !OVERRIDE!
 )
 
 REM ----------------------------
@@ -210,5 +212,4 @@ if exist "%ENV_FILE%" (
   docker compose --project-directory "%COMPOSE_DIR%" !COMPOSE_FILES! !LOGS_ARGS!
 )
 
-pause
 endlocal

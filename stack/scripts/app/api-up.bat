@@ -148,5 +148,4 @@ docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
 
 :end
 echo.
-pause
 endlocal

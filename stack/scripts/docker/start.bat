@@ -6,6 +6,11 @@ REM athyper - Docker Desktop START - Windows Batch
 REM Location: stack\scripts\docker\start.bat
 REM
 REM Starts Docker Desktop and waits for the daemon to be ready.
+REM   App path: C:\Program Files\Docker\Docker\Docker Desktop.exe
+REM   Polling:  `docker version` at 3-second intervals for up to
+REM             40 attempts (120 seconds max)
+REM
+REM Safe to run when Docker is already running — exits immediately.
 REM ============================================================
 
 REM Check if already running
@@ -53,5 +58,4 @@ docker version
 
 :end
 echo.
-pause
 endlocal

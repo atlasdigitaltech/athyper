@@ -54,11 +54,6 @@ mkcert \
   "neon.athyper.local" "gateway.athyper.local" \
   "api.athyper.local" "iam.athyper.local" "objectstorage.athyper.local"
 
-if [[ $? -ne 0 ]]; then
-  echo "ERROR: Certificate generation failed"
-  exit 1
-fi
-
 echo ""
 echo "Certificates generated successfully"
 echo "Location: $CERT_DIR"

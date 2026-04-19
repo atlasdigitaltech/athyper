@@ -7,6 +7,16 @@ REM Location: stack\scripts\docker\restart.bat
 REM
 REM Stops Docker Desktop, waits for it to exit, then starts it
 REM again and waits for the daemon to be ready.
+REM
+REM   stop:  DockerCli.exe -Shutdown; falls back to taskkill
+REM          if DockerCli.exe is not found at default path
+REM   wait:  polls `docker version` at 2s intervals,
+REM          up to 30 attempts (60 seconds max)
+REM   start: Docker Desktop.exe from default install path;
+REM          polls `docker version` at 3s intervals,
+REM          up to 40 attempts (120 seconds max)
+REM
+REM If Docker is not running when called, the stop step is skipped.
 REM ============================================================
 
 set "DOCKER_CLI=C:\Program Files\Docker\Docker\DockerCli.exe"
@@ -75,5 +85,4 @@ echo.
 docker version
 
 echo.
-pause
 endlocal

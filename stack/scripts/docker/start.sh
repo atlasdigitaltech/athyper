@@ -4,8 +4,12 @@
 # Location: stack/scripts/docker/start.sh
 #
 # Starts the Docker engine and waits for the daemon to be ready.
-#   macOS  -> starts Docker Desktop via `open -a Docker`
-#   Linux  -> starts Docker Engine via systemctl
+#   macOS  -> opens Docker Desktop via `open -a Docker`; polls
+#             `docker version` at 3-second intervals for up to
+#             40 attempts (120 seconds max)
+#   Linux  -> runs `sudo systemctl start docker` (no polling)
+#
+# Safe to run when Docker is already running — exits immediately.
 # ============================================================
 
 set -euo pipefail

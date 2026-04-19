@@ -245,6 +245,7 @@ if errorlevel 1 (
 )
 
 echo Stack is UP (profile=!ACTIVE_PROFILE!, env=!ENVIRONMENT!)
+echo NOTE: --scale gotenberg=N is not forwarded by this script. To run multiple gotenberg replicas, append it directly: docker compose ... up -d --scale gotenberg=N
 
 REM Show status (same profile rules)
 if "!USE_PROFILE!"=="1" (
@@ -254,5 +255,4 @@ if "!USE_PROFILE!"=="1" (
 )
 
 echo.
-pause
 endlocal

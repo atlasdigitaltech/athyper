@@ -9,9 +9,18 @@ REM   stop.bat iam                   -> stop by alias
 REM   stop.bat db redis              -> stop multiple at once
 REM   stop.bat --time 30 gateway     -> graceful stop timeout (seconds)
 REM
-REM Aliases:
-REM   iam  db  dbpool-session  dbpool-apps  gateway
-REM   redis  minio  mail  web  api  search
+REM Aliases (case-insensitive, also accepts raw container names):
+REM   iam            -> Keycloak          (athyper-stack-iam-1)
+REM   db             -> Postgres          (athyper-stack-db-1)
+REM   dbpool-session -> PgBouncer session (athyper-stack-dbpool-session-1)
+REM   dbpool-apps    -> PgBouncer apps    (athyper-stack-dbpool-apps-1)
+REM   gateway|traefik     -> Traefik ingress   (athyper-stack-gateway-1)
+REM   redis|cache|memorycache -> Redis cache   (athyper-stack-memorycache-1)
+REM   minio|storage  -> MinIO object store (athyper-stack-objectstorage-1)
+REM   mail|mailhog   -> Mailhog            (athyper-stack-mailhog-1)
+REM   web|frontend   -> Next.js frontend   (athyper-stack-athyper-neon-web-1)
+REM   api|backend    -> Backend API        (athyper-stack-athyper-api-1)
+REM   search|meilisearch -> Meilisearch    (athyper-stack-meilisearch-1)
 REM ============================================================
 
 REM Derive STACK_DIR (script is at stack\scripts\stack-service\)
@@ -81,7 +90,6 @@ goto :loop
 :done
 echo.
 echo Done.
-pause
 endlocal
 goto :eof
 

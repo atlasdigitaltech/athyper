@@ -17,6 +17,9 @@ REM     stack\scripts\db\session\iam\seed-iam-credentials.bat
 REM
 REM Idempotent: re-running overwrites existing passwords and removes the
 REM UPDATE_PASSWORD required action so the next login skips the forced reset.
+REM
+REM Requires: running Keycloak container; IAM_ADMIN + IAM_ADMIN_PASSWORD in
+REM   stack\env\.env (or as environment variables)
 REM =======================================================================
 
 setlocal enabledelayedexpansion

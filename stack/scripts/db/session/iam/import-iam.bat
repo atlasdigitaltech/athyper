@@ -3,8 +3,22 @@ REM =======================================================================
 REM Keycloak IAM Import Script (Windows)
 REM Location:
 REM   stack\scripts\db\session\iam\import-iam.bat
-REM Imports realm configuration from stack\config\iam\realm-demosetup.json
-REM and stack\config\iam\realm-platform-control.json
+REM
+REM Imports realm configuration from stack\config\iam\ into a running
+REM Keycloak instance via `kc import --override true`.
+REM
+REM Steps:
+REM   [1/6] Copy realm file to temp directory (%TEMP%\keycloak-import-*)
+REM         (Windows CMD: Docker volume mounts require a host-side copy)
+REM   [2/6] Check database connection (via db container)
+REM   [3/6] Import athyper realm (5-second countdown to cancel)
+REM   [3b/6] Import platform-control realm (only if realm-platform-control.json
+REM          exists in stack\config\iam\; uses a separate temp directory)
+REM   [4/6] Clean up temp directory
+REM   [5/6] Restart Keycloak container; wait for healthy status
+REM   [6/6] Run provision-keycloak-users.mjs to seed passwords + MFA
+REM
+REM Requires: running dbpool-session container; KEYCLOAK_IMAGE_TAG in stack\env\.env
 REM =======================================================================
 
 setlocal enabledelayedexpansion

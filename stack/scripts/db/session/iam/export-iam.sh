@@ -3,7 +3,22 @@
 # Keycloak IAM Export Script
 # Location:
 #   stack/scripts/db/session/iam/export-iam.sh
-# Exports athyper realm configuration to stack/config/iam/
+#
+# Exports athyper + platform-control realms to stack/config/iam/ via a
+# temporary `docker run` container connected to the IAM database.
+#
+# Steps:
+#   [1/4] Create temp export directory (stack/.tmp/ — avoids WSL2 /tmp)
+#   [2/4] Run Keycloak export for athyper realm, then platform-control realm
+#   [3/4] Move exported JSON files to stack/config/iam/
+#           -> realm-demosetup.json (athyper)
+#           -> realm-platform-control.json (platform-control, if provisioned)
+#   [4/4] Clean up temp directory
+#
+# Platform-control export produces a warning (not an error) if the realm
+# is not yet provisioned in Keycloak.
+#
+# Requires: running IAM container; KEYCLOAK_IMAGE_TAG in stack/env/.env
 # =======================================================================
 
 set -euo pipefail

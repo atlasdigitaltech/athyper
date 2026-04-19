@@ -5,8 +5,15 @@
 #
 # Stops the Docker engine, waits for it to exit, then starts
 # it again and waits for the daemon to be ready.
-#   macOS  -> Docker Desktop via open / osascript
-#   Linux  -> Docker Engine via systemctl restart
+#
+#   macOS  -> stop:  osascript -e 'quit app "Docker"'
+#             wait:  polls `docker version` at 2s intervals,
+#                    up to 30 attempts (60 seconds max)
+#             start: `open -a Docker`; polls at 3s intervals,
+#                    up to 40 attempts (120 seconds max)
+#   Linux  -> single `sudo systemctl restart docker` (no polling)
+#
+# If Docker is not running when called, the stop step is skipped.
 # ============================================================
 
 set -euo pipefail

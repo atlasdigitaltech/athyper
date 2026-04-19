@@ -79,5 +79,4 @@ echo   %ATHYPER_DATA%\telemetry\observability
 echo   %ATHYPER_DATA%\telemetry\tracing
 echo   %ATHYPER_DATA%\uptime-kuma
 echo.
-pause
 endlocal

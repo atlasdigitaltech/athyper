@@ -5,13 +5,15 @@ REM Location:
 REM   stack\scripts\db\session\iam\reset-iam.bat
 REM
 REM Performs a FULL reset of Keycloak IAM data:
-REM   1. Regenerates realm-demosetup.json via update-realm-demosetup.cjs
-REM   2. Stops the KC container
-REM   3. Drops and recreates the entire KC database schema (true clean slate)
-REM   4. Starts KC - it initializes master realm (admin user created from
-REM      KC_BOOTSTRAP_ADMIN_* env vars) and auto-imports all realm JSON files
-REM      mounted at /opt/keycloak/data/import/ (athyper + platform-control)
-REM   5. Waits for healthy status
+REM   [0/5] Regenerates realm-demosetup.json via update-realm-demosetup.cjs
+REM   [1/5] Stops the KC container
+REM   [2/5] Drops and recreates the entire KC database schema (true clean slate)
+REM   [3/5] Starts KC - it initializes master realm (admin user created from
+REM         KC_BOOTSTRAP_ADMIN_* env vars) and auto-imports all realm JSON files
+REM         mounted at /opt/keycloak/data/import/ (athyper + platform-control)
+REM   [4/5] Waits for healthy status; seeds demo user passwords via
+REM         seed-iam-credentials.bat (realm JSON does NOT contain plaintext creds)
+REM   [5/5] Done — prints verify command and admin console URL
 REM
 REM Use when: stale users/roles/orgs exist in KC that are not in the JSON,
 REM or when a full clean-slate reset is needed.

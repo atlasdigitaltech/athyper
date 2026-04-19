@@ -114,5 +114,4 @@ mkdir "%ATHYPER_DATA%\uptime-kuma"             >nul 2>&1
 
 echo.
 echo Done.
-pause
 endlocal

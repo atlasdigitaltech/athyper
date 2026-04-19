@@ -34,7 +34,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "WARNING: .env not found: $ENV_FILE"
   echo ""
 
-  read -p "Select env template [local | staging | production] (blank=local): " PROFILE
+  read -rp "Select env template [local | staging | production] (blank=local): " PROFILE
   PROFILE="${PROFILE:-local}"
 
   case "$PROFILE" in

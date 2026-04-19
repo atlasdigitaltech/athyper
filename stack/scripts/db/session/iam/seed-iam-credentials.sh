@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # =======================================================================
-# seed-iam-credentials.sh
-# Location: stack/scripts/db/session/iam/seed-iam-credentials.sh
+# Keycloak IAM Seed Credentials
+# Location:
+#   stack/scripts/db/session/iam/seed-iam-credentials.sh
 #
 # Seeds passwords for demo users in both KC realms (athyper, platform-control)
 # after a realm import. Passwords are NEVER committed to realm JSON — they
 # are set here via `kcadm.sh set-password` inside the running KC container.
 #
-# Resolution order for passwords:
+# Password resolution order:
 #   1. Shell env var (IAM_DEMO_USER_PASSWORD / IAM_PLATFORM_CONTROL_USER_PASSWORD)
-#   2. .env file (stack/env/.env)
+#   2. stack/env/.env file
 #   3. Safe defaults (Demo@1234 / admin) — local dev only
+#
+# Steps:
+#   [1/2] Seed all athyper realm users
+#   [2/2] Seed all platform-control realm users
 #
 # Invoked by reset-iam.sh. Can also be run standalone:
 #     stack/scripts/db/session/iam/seed-iam-credentials.sh
 #
 # Idempotent: re-running overwrites existing passwords and removes the
 # UPDATE_PASSWORD required action so the next login skips the forced reset.
+#
+# Requires: running Keycloak container; IAM_ADMIN + IAM_ADMIN_PASSWORD
 # =======================================================================
 
 set -euo pipefail
