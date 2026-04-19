@@ -602,7 +602,7 @@ docker\start.bat
 No parameters.
 - **macOS**: opens Docker Desktop via `open -a Docker`; polls `docker version` for up to 120 seconds
 - **Linux**: runs `systemctl start docker`
-- **Windows**: starts `Docker Desktop.exe` from the default install path; polls 120 seconds
+- **Windows**: starts `Docker Desktop.exe`; polls 120 seconds. Checks the system-wide install path first (`C:\Program Files\Docker\Docker\`), then falls back to the user-scoped path (`%LOCALAPPDATA%\Programs\Docker\Docker\`) if not found there
 
 ### docker/stop
 
@@ -614,7 +614,7 @@ docker\stop.bat
 No parameters.
 - **macOS**: `osascript -e 'quit app "Docker"'`
 - **Linux**: `systemctl stop docker`
-- **Windows**: `DockerCli.exe -Shutdown`; falls back to `taskkill /IM "Docker Desktop.exe" /T`
+- **Windows**: `DockerCli.exe -Shutdown`; falls back to `taskkill /IM "Docker Desktop.exe" /T`. Checks the system-wide install path first, then the user-scoped path (same two-location logic as `start.bat`)
 
 ### docker/restart
 
@@ -627,7 +627,7 @@ No parameters. Stops Docker, waits for it to fully exit, then starts it again.
 
 - **macOS**: stop via `osascript`; polls exit at 2s intervals (30×2s = 60s max); start via `open -a Docker`; polls ready at 3s intervals (40×3s = 120s max)
 - **Linux**: single `sudo systemctl restart docker` (no separate polling)
-- **Windows**: stop via `DockerCli.exe -Shutdown` (fallback: `taskkill`); polls exit at 2s intervals (30×2s = 60s max); start `Docker Desktop.exe`; polls ready at 3s intervals (40×3s = 120s max)
+- **Windows**: stop via `DockerCli.exe -Shutdown` (fallback: `taskkill`); polls exit at 2s intervals (30×2s = 60s max); start `Docker Desktop.exe`; polls ready at 3s intervals (40×3s = 120s max). Checks the system-wide install path first (`C:\Program Files\Docker\Docker\`), then the user-scoped path (`%LOCALAPPDATA%\Programs\Docker\Docker\`)
 
 ### app/api-up
 
@@ -777,7 +777,7 @@ Steps `.sh` [1/5]–[5/5] / `.bat` [1/6]–[6/6]:
 | `[2/5]` | `[3/6]` | Import athyper realm (5-second countdown to cancel) |
 | `[2b/5]` | `[3b/6]` | Import platform-control realm (if `realm-platform-control.json` exists; `.bat` uses a separate temp dir) |
 | `[3/5]` | `[4/6]` | Clean up (`.sh`: import complete marker; `.bat`: remove temp directory) |
-| `[4/5]` | `[5/6]` | Restart Keycloak container; wait for healthy status |
+| `[4/5]` | `[5/6]` | Restart Keycloak container; wait for healthy status (`.sh`: 30 attempts × 2s = 60s max; `.bat`: 60 attempts × 3s = 180s max — Docker Desktop on Windows restarts containers more slowly than the Linux/macOS daemon) |
 | `[5/5]` | `[6/6]` | Run `provision-keycloak-users.mjs` to seed passwords |
 
 Requires: running `dbpool-session` container; `KEYCLOAK_IMAGE_TAG` in `.env`.
@@ -920,7 +920,7 @@ Run `validate-env` first — a missing `ENVIRONMENT` or wrong `ATHYPER_CONFIG` /
 
 - **macOS**: `docker/start.sh` opens Docker Desktop and polls up to 120 seconds. If it times out, open Docker Desktop manually and check for disk-space or license prompts.
 - **Linux**: requires `sudo`; confirm `docker` group membership or run with appropriate privileges.
-- **Windows**: use `docker/start.bat` — it checks `docker version` and prompts you to start Docker Desktop manually if not running.
+- **Windows**: use `docker/start.bat` — it checks both the system-wide (`C:\Program Files\Docker\Docker\`) and user-scoped (`%LOCALAPPDATA%\Programs\Docker\Docker\`) install paths, then polls `docker version` for up to 120 seconds. If it times out, open Docker Desktop manually and check for disk-space or license prompts.
 
 ### Windows: bash script permission denied
 

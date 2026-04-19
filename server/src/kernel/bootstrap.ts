@@ -102,6 +102,9 @@ function parseRedisUrl(url: string) {
     username: u.username ? decodeURIComponent(u.username) : undefined,
     password: u.password ? decodeURIComponent(u.password) : undefined,
     db: parseInt(u.pathname.replace(/^\//, "") || "0", 10),
+    // TCP keepalive: send probe after 60 s idle — prevents Docker NAT from
+    // silently dropping connections at the ~300 s conntrack timeout.
+    keepAlive: 60_000,
   };
 }
 

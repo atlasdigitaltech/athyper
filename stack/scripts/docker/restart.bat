@@ -8,19 +8,27 @@ REM
 REM Stops Docker Desktop, waits for it to exit, then starts it
 REM again and waits for the daemon to be ready.
 REM
-REM   stop:  DockerCli.exe -Shutdown; falls back to taskkill
-REM          if DockerCli.exe is not found at default path
+REM   stop:  DockerCli.exe -Shutdown; checks system-wide path first,
+REM          then user-scoped path; falls back to taskkill if neither found
+REM             System: C:\Program Files\Docker\Docker\DockerCli.exe
+REM             User:   %LOCALAPPDATA%\Programs\Docker\Docker\DockerCli.exe
 REM   wait:  polls `docker version` at 2s intervals,
 REM          up to 30 attempts (60 seconds max)
-REM   start: Docker Desktop.exe from default install path;
-REM          polls `docker version` at 3s intervals,
+REM   start: Docker Desktop.exe; checks system-wide path first,
+REM          then user-scoped path; polls at 3s intervals,
 REM          up to 40 attempts (120 seconds max)
+REM             System: C:\Program Files\Docker\Docker\Docker Desktop.exe
+REM             User:   %LOCALAPPDATA%\Programs\Docker\Docker\Docker Desktop.exe
 REM
 REM If Docker is not running when called, the stop step is skipped.
 REM ============================================================
 
+REM System-wide install paths (default); fall back to user-scoped if not found
 set "DOCKER_CLI=C:\Program Files\Docker\Docker\DockerCli.exe"
+if not exist "!DOCKER_CLI!" set "DOCKER_CLI=%LOCALAPPDATA%\Programs\Docker\Docker\DockerCli.exe"
+
 set "DOCKER_APP=C:\Program Files\Docker\Docker\Docker Desktop.exe"
+if not exist "!DOCKER_APP!" set "DOCKER_APP=%LOCALAPPDATA%\Programs\Docker\Docker\Docker Desktop.exe"
 
 REM ----------------------------
 REM Stop (if running)
@@ -32,6 +40,7 @@ if not errorlevel 1 (
   if exist "!DOCKER_CLI!" (
     "!DOCKER_CLI!" -Shutdown
   ) else (
+    echo WARNING: DockerCli.exe not found at system or user install path — falling back to taskkill.
     taskkill /IM "Docker Desktop.exe" /T >nul 2>&1
   )
   echo Waiting for Docker to stop...
@@ -55,7 +64,9 @@ REM Start
 REM ----------------------------
 :start_docker
 if not exist "!DOCKER_APP!" (
-  echo ERROR: Docker Desktop not found at: "!DOCKER_APP!"
+  echo ERROR: Docker Desktop not found at system or user install path.
+  echo   System: C:\Program Files\Docker\Docker\Docker Desktop.exe
+  echo   User:   %LOCALAPPDATA%\Programs\Docker\Docker\Docker Desktop.exe
   pause
   exit /b 1
 )

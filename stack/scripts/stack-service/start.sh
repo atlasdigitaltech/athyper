@@ -7,18 +7,21 @@
 #   ./start.sh db redis gateway    -> start multiple at once
 #   ./start.sh athyper-stack-iam-1 -> raw container name passthrough
 #
-# Aliases:
-#   iam         Keycloak          (athyper-stack-iam-1)
-#   db          Postgres          (athyper-stack-db-1)
-#   dbpool-session PgBouncer session (athyper-stack-dbpool-session-1)
-#   dbpool-apps PgBouncer apps    (athyper-stack-dbpool-apps-1)
-#   gateway     Traefik ingress   (athyper-stack-gateway-1)
-#   redis       Redis cache       (athyper-stack-memorycache-1)
-#   minio       MinIO storage     (athyper-stack-objectstorage-1)
-#   mail        Mailhog           (athyper-stack-mailhog-1)
-#   web         Next.js frontend  (athyper-stack-athyper-neon-web-1)
-#   api         Backend API       (athyper-stack-athyper-api-1)
-#   search      Meilisearch       (athyper-stack-meilisearch-1)
+# Aliases (case-insensitive; also accepts raw container names):
+#   iam                        -> Keycloak          (athyper-stack-iam-1)
+#   db                         -> Postgres          (athyper-stack-db-1)
+#   dbpool-session             -> PgBouncer session (athyper-stack-dbpool-session-1)
+#   dbpool-apps                -> PgBouncer apps    (athyper-stack-dbpool-apps-1)
+#   gateway | traefik          -> Traefik ingress   (athyper-stack-gateway-1)
+#   redis | cache | memorycache -> Redis cache      (athyper-stack-memorycache-1)
+#   minio | storage            -> MinIO object store (athyper-stack-objectstorage-1)
+#   mail | mailhog             -> Mailhog           (athyper-stack-mailhog-1)
+#   web | frontend             -> Next.js frontend  (athyper-stack-athyper-neon-web-1)
+#   api | backend              -> Backend API       (athyper-stack-athyper-api-1)
+#   search | meilisearch       -> Meilisearch       (athyper-stack-meilisearch-1)
+#
+# Container name prefix is derived from COMPOSE_PROJECT_NAME in stack/env/.env
+# (defaults to athyper-stack). Override per-container via DOCKER_CONTAINER_* env vars.
 # ============================================================
 
 set -euo pipefail

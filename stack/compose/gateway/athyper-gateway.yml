@@ -47,6 +47,12 @@ services:
       # file-provider configs (dynamic/*.yml) can resolve hostnames at runtime.
       APPS_ATHYPER_WEB_HOST: "${APPS_ATHYPER_WEB_HOST}"
       APPS_ATHYPER_WEB_UPSTREAM_URL: "${APPS_ATHYPER_WEB_UPSTREAM_URL}"
+      APPS_ATHYPER_API_HOST: "${APPS_ATHYPER_API_HOST}"
+      APPS_ATHYPER_API_UPSTREAM_URL: "${APPS_ATHYPER_API_UPSTREAM_URL}"
+      # API_PORT is the container-internal port for athyper-api. Used by the
+      # forward-auth address template in workbench route files so the port is
+      # not hardcoded there. Must match API_PORT in the apps env file.
+      API_PORT: "${API_PORT}"
       GATEWAY_HOST: "${GATEWAY_HOST}"
       GATEWAY_DASHBOARD_HTPASSWD: "${GATEWAY_DASHBOARD_HTPASSWD}"
     extra_hosts:

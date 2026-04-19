@@ -7,6 +7,8 @@ REM Location: stack\scripts\docker\start.bat
 REM
 REM Starts Docker Desktop and waits for the daemon to be ready.
 REM   App path: C:\Program Files\Docker\Docker\Docker Desktop.exe
+REM             (falls back to %LOCALAPPDATA%\Programs\Docker\Docker\
+REM              for user-scoped installs)
 REM   Polling:  `docker version` at 3-second intervals for up to
 REM             40 attempts (120 seconds max)
 REM
@@ -22,10 +24,14 @@ if not errorlevel 1 (
   goto :end
 )
 
+REM System-wide install (default); falls back to user-scoped install if not found
 set "DOCKER_APP=C:\Program Files\Docker\Docker\Docker Desktop.exe"
+if not exist "!DOCKER_APP!" set "DOCKER_APP=%LOCALAPPDATA%\Programs\Docker\Docker\Docker Desktop.exe"
 
 if not exist "!DOCKER_APP!" (
-  echo ERROR: Docker Desktop not found at: "!DOCKER_APP!"
+  echo ERROR: Docker Desktop not found at either install location.
+  echo   System: C:\Program Files\Docker\Docker\Docker Desktop.exe
+  echo   User:   %LOCALAPPDATA%\Programs\Docker\Docker\Docker Desktop.exe
   echo Install Docker Desktop from https://www.docker.com/products/docker-desktop
   pause
   exit /b 1

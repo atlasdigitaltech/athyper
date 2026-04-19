@@ -6,11 +6,22 @@ REM athyper Stack - UP (profile-aware) - Windows Batch
 REM Location:
 REM   stack\scripts\stack-profile\up.bat
 REM Usage:
-REM   up.bat                -> uses STACK_PROFILE=core (default)
-REM   up.bat core           -> explicit profile
-REM   up.bat telemetry      -> start only telemetry profile (if defined)
-REM   up.bat apps           -> start apps profile (if defined)
-REM   up.bat all            -> start without --profile (bring everything)
+REM   up.bat                -> uses STACK_PROFILE from .env, else "core"
+REM   up.bat core           -> start only core-profile services
+REM   up.bat telemetry      -> start only telemetry-profile services
+REM   up.bat apps           -> start only apps-profile services
+REM   up.bat all            -> start ALL profiles (no --profile filter)
+REM
+REM If stack\env\.env is missing, prompts to choose a template and
+REM creates it before continuing.
+REM
+REM Environment validation (validate-env.bat) runs automatically before
+REM docker compose up. To bypass: set SKIP_ENV_VALIDATION=1 before running.
+REM
+REM Available profiles:
+REM   admin, analytics, apps, core, db, dev, emergency, gateway, iam,
+REM   memorycache, memorycache-jobs, monitoring, objectstorage, render,
+REM   search, security-infisical, telemetry
 REM ============================================================
 
 REM ----------------------------

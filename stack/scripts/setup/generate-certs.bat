@@ -8,7 +8,14 @@ REM   stack\scripts\setup\generate-certs.bat
 REM Usage:
 REM   generate-certs.bat
 REM
+REM Generates a wildcard TLS certificate for local dev using mkcert.
+REM SANs covered:
+REM   *.athyper.local, neon.athyper.local, gateway.athyper.local,
+REM   api.athyper.local, iam.athyper.local, objectstorage.athyper.local
+REM Output: stack\config\gateway\certs\athyper.tls.local.{crt,key}
+REM
 REM Requires: mkcert (winget install FiloSottile.mkcert)
+REM   https://github.com/FiloSottile/mkcert
 REM =====================================================
 
 echo.

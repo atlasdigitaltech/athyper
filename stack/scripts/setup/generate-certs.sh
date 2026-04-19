@@ -6,7 +6,16 @@
 # Usage:
 #   ./generate-certs.sh
 #
+# Generates a wildcard TLS certificate for local dev using mkcert.
+# SANs covered:
+#   *.athyper.local, neon.athyper.local, gateway.athyper.local,
+#   api.athyper.local, iam.athyper.local, objectstorage.athyper.local
+# Output: stack/config/gateway/certs/athyper.tls.local.{crt,key}
+#
 # Requires: mkcert (https://github.com/FiloSottile/mkcert)
+#   macOS:  brew install mkcert
+#   Linux:  https://github.com/FiloSottile/mkcert#linux
+#   Win:    winget install FiloSottile.mkcert (see generate-certs.bat)
 # =====================================================
 
 set -euo pipefail

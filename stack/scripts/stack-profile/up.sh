@@ -4,11 +4,22 @@
 # Location:
 #   stack/scripts/stack-profile/up.sh
 # Usage:
-#   ./up.sh                -> uses STACK_PROFILE=core (default)
-#   ./up.sh core           -> explicit profile
-#   ./up.sh telemetry      -> start only telemetry profile (if defined)
-#   ./up.sh apps           -> start apps profile (if defined)
-#   ./up.sh all            -> start without --profile (bring everything)
+#   ./up.sh                -> uses STACK_PROFILE from .env, else "core"
+#   ./up.sh core           -> start only core-profile services
+#   ./up.sh telemetry      -> start only telemetry-profile services
+#   ./up.sh apps           -> start only apps-profile services
+#   ./up.sh all            -> start ALL profiles (no --profile filter)
+#
+# If stack/env/.env is missing, prompts to choose a template and
+# creates it before continuing.
+#
+# Environment validation (validate-env.sh) runs automatically before
+# docker compose up. To bypass: SKIP_ENV_VALIDATION=1 ./up.sh
+#
+# Available profiles:
+#   admin, analytics, apps, core, db, dev, emergency, gateway, iam,
+#   memorycache, memorycache-jobs, monitoring, objectstorage, render,
+#   search, security-infisical, telemetry
 # ============================================================
 
 set -euo pipefail

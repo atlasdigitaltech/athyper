@@ -6,9 +6,23 @@
 #   ./stop.sh iam                  -> stop by alias
 #   ./stop.sh db redis             -> stop multiple at once
 #   ./stop.sh --time 30 gateway    -> graceful stop timeout (seconds)
+#   ./stop.sh -t 30 gateway        -> same as above
 #
-# Aliases: iam  db  dbpool-session  dbpool-apps  gateway
-#          redis  minio  mail  web  api  search
+# Aliases (case-insensitive; also accepts raw container names):
+#   iam                        -> Keycloak          (athyper-stack-iam-1)
+#   db                         -> Postgres          (athyper-stack-db-1)
+#   dbpool-session             -> PgBouncer session (athyper-stack-dbpool-session-1)
+#   dbpool-apps                -> PgBouncer apps    (athyper-stack-dbpool-apps-1)
+#   gateway | traefik          -> Traefik ingress   (athyper-stack-gateway-1)
+#   redis | cache | memorycache -> Redis cache      (athyper-stack-memorycache-1)
+#   minio | storage            -> MinIO object store (athyper-stack-objectstorage-1)
+#   mail | mailhog             -> Mailhog           (athyper-stack-mailhog-1)
+#   web | frontend             -> Next.js frontend  (athyper-stack-athyper-neon-web-1)
+#   api | backend              -> Backend API       (athyper-stack-athyper-api-1)
+#   search | meilisearch       -> Meilisearch       (athyper-stack-meilisearch-1)
+#
+# Container name prefix is derived from COMPOSE_PROJECT_NAME in stack/env/.env
+# (defaults to athyper-stack). Override per-container via DOCKER_CONTAINER_* env vars.
 # ============================================================
 
 set -euo pipefail

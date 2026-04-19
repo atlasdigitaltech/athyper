@@ -16,6 +16,8 @@ REM   [3b/6] Import platform-control realm (only if realm-platform-control.json
 REM          exists in stack\config\iam\; uses a separate temp directory)
 REM   [4/6] Clean up temp directory
 REM   [5/6] Restart Keycloak container; wait for healthy status
+REM         (60 attempts x 3 s = 180 s max — extended vs .sh's 60 s because
+REM          Docker Desktop on Windows restarts containers more slowly)
 REM   [6/6] Run provision-keycloak-users.mjs to seed passwords + MFA
 REM
 REM Requires: running dbpool-session container; KEYCLOAK_IMAGE_TAG in stack\env\.env
@@ -202,6 +204,9 @@ docker ps --format "{{.Names}}" | findstr /C:"%DOCKER_CONTAINER_IAM%" >nul 2>&1
 if not errorlevel 1 (
     docker restart %DOCKER_CONTAINER_IAM%
     echo Waiting for Keycloak to be ready ^(health check^)...
+    REM Windows: 60 attempts x 3 s = 180 s max (import-iam.sh uses 30 x 2 s = 60 s).
+    REM Docker Desktop on Windows takes longer to fully restart a container than
+    REM the Linux/macOS daemon, so the extended window prevents false timeouts.
     set "KC_READY=0"
     for /L %%i in (1,1,60) do (
         if "!KC_READY!"=="0" (

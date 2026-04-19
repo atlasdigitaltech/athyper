@@ -8,6 +8,14 @@
 #   ./setup-config.sh local        -> copies kernel.config.local.parameter.json
 #   ./setup-config.sh staging      -> copies kernel.config.staging.parameter.json
 #   ./setup-config.sh production   -> copies kernel.config.production.parameter.json
+#
+# Copies stack/config/apps/kernel.config.{env}.parameter.json to
+# stack/config/apps/kernel.config.parameter.json (the runtime-loaded
+# file). An existing target is backed up to .json.bak before overwrite.
+#
+# Exit codes:
+#   0 — success
+#   1 — invalid environment or template not found
 # ============================================================
 
 set -euo pipefail

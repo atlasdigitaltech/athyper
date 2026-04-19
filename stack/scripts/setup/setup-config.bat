@@ -10,6 +10,14 @@ REM   setup-config.bat              -> prompted for environment
 REM   setup-config.bat local        -> copies kernel.config.local.parameter.json
 REM   setup-config.bat staging      -> copies kernel.config.staging.parameter.json
 REM   setup-config.bat production   -> copies kernel.config.production.parameter.json
+REM
+REM Copies stack\config\apps\kernel.config.{env}.parameter.json to
+REM stack\config\apps\kernel.config.parameter.json (the runtime-loaded
+REM file). An existing target is backed up to .json.bak before overwrite.
+REM
+REM Exit codes:
+REM   0 -- success
+REM   1 -- invalid environment or template not found
 REM ============================================================
 
 REM ----------------------------

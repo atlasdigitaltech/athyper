@@ -65,7 +65,7 @@ http:
 
     workbench-forward-auth:
       forwardAuth:
-        address: "http://athyper-api:3000/api/auth/verify"
+        address: "http://athyper-api:{{ env "API_PORT" }}/api/auth/verify"
         trustForwardHeader: true
         authResponseHeaders:
           - "X-User-Id"

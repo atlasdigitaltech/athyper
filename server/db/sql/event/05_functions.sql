@@ -88,10 +88,11 @@ CREATE OR REPLACE FUNCTION event.fn_outbox_complete(
 LANGUAGE sql VOLATILE
 SET search_path = event, pg_catalog AS $$
     UPDATE event.outbox
-    SET status = 'completed',
+    SET status       = 'completed',
         processed_at = now(),
-        locked_at = NULL,
-        locked_by = NULL
+        locked_at    = NULL,
+        locked_by    = NULL,
+        locked_until = NULL
     WHERE id = p_event_id;
 $$;
 
@@ -118,10 +119,11 @@ BEGIN
 
     IF v_attempts >= v_max_attempts THEN
         UPDATE event.outbox
-        SET status    = 'dead_letter',
-            last_error = p_error,
-            locked_at  = NULL,
-            locked_by  = NULL
+        SET status       = 'dead_letter',
+            last_error   = p_error,
+            locked_at    = NULL,
+            locked_by    = NULL,
+            locked_until = NULL
         WHERE id = p_event_id;
     ELSE
         -- Exponential backoff: 2^attempts seconds (2s, 4s, 8s, 16s, 32s, ...)
@@ -130,7 +132,8 @@ BEGIN
             last_error   = p_error,
             available_at = now() + (power(2, v_attempts) || ' seconds')::interval,
             locked_at    = NULL,
-            locked_by    = NULL
+            locked_by    = NULL,
+            locked_until = NULL
         WHERE id = p_event_id;
     END IF;
 END;

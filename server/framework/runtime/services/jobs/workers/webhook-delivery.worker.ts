@@ -8,11 +8,13 @@
  * Two job types on the WEBHOOK_DELIVERY queue:
  *
  *   sweep-webhooks  (scheduled every 30 s)
- *     Scans event.outbox WHERE status = 'pending' and claims each row.
- *     For each pending event, finds all active webhook subscriptions whose
- *     topics array contains the event's topic (or '*' for all-topics).
- *     Enqueues one `deliver-webhook` job per (event, subscription) pair
- *     with a dedupe key to prevent double-delivery on retry.
+ *     Atomically claims a batch of pending outbox events via
+ *     UPDATE...RETURNING FOR UPDATE SKIP LOCKED (prevents concurrent
+ *     worker double-claim).  For each event, finds all active webhook
+ *     subscriptions matching its topic, enqueues one `deliver-webhook`
+ *     job per (event, subscription) pair, then marks the outbox event
+ *     'completed'.  The event lifecycle lives here; individual delivery
+ *     outcomes are tracked in event.notification_delivery.
  *
  *   deliver-webhook  (enqueued by sweep)
  *     Loads the outbox event payload + subscription target URL / secret.
@@ -25,11 +27,11 @@
  */
 
 import { Worker, Queue, type Job } from "bullmq";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Redis = any;
+import type { ConnectionOptions } from "bullmq";
 import { sql, type Kysely } from "kysely";
+import type { DB } from "@athyper/adapter-db";
 import {
-  QUEUE_NAME, JOB_NAME, SCHEDULER_ID,
+  QUEUE_NAME, JOB_NAME, SCHEDULER_ID, SYSTEM_ACTOR_ID,
   type DeliverWebhookJobData, type SweepJobData, type JobLogger,
 } from "../jobs.types.js";
 import { buildWebhookHeaders } from "../../integration/webhook-signing.js";
@@ -39,67 +41,75 @@ import { buildWebhookHeaders } from "../../integration/webhook-signing.js";
 const SWEEP_BATCH_SIZE   = 50;   // outbox rows per sweep
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_PAYLOAD_BYTES  = 1_024 * 1024; // 1 MiB hard cap per delivery
+const LOCK_DURATION_MS   = 10 * 60 * 1000; // 10-min sweep lock
+
+// ── Claimed event shape returned by the atomic claim SQL ──────────────────────
+
+interface ClaimedEvent {
+  id:        string;
+  tenant_id: string;
+  topic:     string;
+}
 
 // ── Sweep ─────────────────────────────────────────────────────────────────────
 
 async function sweepWebhooks(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: Kysely<any>,
+  db: Kysely<DB>,
   queue: Queue,
   logger: JobLogger,
 ): Promise<void> {
-  // Claim a batch of pending outbox events (claim-and-lock pattern)
-  const events = await db
-    .selectFrom("event.outbox as o" as never)
-    .select(["o.id" as never, "o.tenant_id" as never, "o.topic" as never])
-    .where("o.status" as never, "=", "pending" as never)
-    .where((eb: any) =>
-      eb.or([
-        eb("o.locked_until" as never, "is" as never, null as never),
-        eb("o.locked_until" as never, "<" as never, new Date() as never),
-      ])
+  const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
+
+  // Atomic claim: UPDATE...RETURNING with FOR UPDATE SKIP LOCKED prevents
+  // two concurrent sweeps from claiming the same event.
+  const { rows: events } = await sql<ClaimedEvent>`
+    UPDATE event.outbox
+    SET    status       = 'processing',
+           locked_at    = now(),
+           locked_by    = 'webhook-delivery-worker',
+           locked_until = ${lockedUntil.toISOString()}::timestamptz,
+           attempts     = attempts + 1
+    WHERE  id IN (
+      SELECT id FROM event.outbox
+      WHERE  status = 'pending'
+        AND  (locked_until IS NULL OR locked_until < now())
+      ORDER  BY created_at ASC
+      LIMIT  ${SWEEP_BATCH_SIZE}
+      FOR UPDATE SKIP LOCKED
     )
-    .orderBy("o.created_at" as never, "asc")
-    .limit(SWEEP_BATCH_SIZE)
-    .execute() as Record<string, unknown>[];
+    RETURNING id, tenant_id, topic
+  `.execute(db);
 
   if (events.length === 0) return;
 
   for (const event of events) {
-    const eventId  = event["id"]        as string;
-    const tenantId = event["tenant_id"] as string;
-    const topic    = event["topic"]     as string;
+    const { id: eventId, tenant_id: tenantId, topic } = event;
 
     // Find active subscriptions matching this topic
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subs = await (db as any)
-      .selectFrom("event.webhook_subscription as ws")
-      .select(["ws.id", "ws.max_retries"])
-      .where("ws.tenant_id", "=", tenantId)
-      .where("ws.is_active", "=", true)
-      .where((eb: any) =>
+    const subs = await db
+      .selectFrom("event.webhook_subscription as ws" as never)
+      .select(["ws.id" as never, "ws.max_retries" as never])
+      .where("ws.tenant_id" as never, "=", tenantId as never)
+      .where("ws.is_active" as never, "=", true as never)
+      .where(() =>
         // topics @> ARRAY[topic] OR topics @> ARRAY['*']
-        eb.or([
-          eb("ws.topics", "@>", JSON.stringify([topic])),
-          eb("ws.topics", "@>", JSON.stringify(["*"])),
-        ])
+        sql`ws.topics @> ARRAY[${topic}]::text[] OR ws.topics @> ARRAY['*']::text[]`
       )
-      .execute() as Record<string, unknown>[];
+      .execute() as Array<{ id: string; max_retries: number | null }>;
 
     for (const sub of subs) {
-      const subId    = sub["id"]          as string;
-      const maxRetry = Number(sub["max_retries"] ?? 3);
+      const maxRetry = Number(sub.max_retries ?? 3);
 
       await queue.add(
         JOB_NAME.DELIVER_WEBHOOK,
         {
           outboxEventId:         eventId,
-          webhookSubscriptionId: subId,
+          webhookSubscriptionId: sub.id,
           tenantId,
           attemptNo:             1,
         } satisfies DeliverWebhookJobData,
         {
-          jobId:    `wh-deliver:${eventId}:${subId}`,   // dedup key
+          jobId:    `wh-deliver:${eventId}:${sub.id}`,   // dedup key
           attempts: maxRetry,
           backoff:  { type: "exponential", delay: 2_000 },
           removeOnComplete: { count: 200 },
@@ -108,13 +118,17 @@ async function sweepWebhooks(
       );
     }
 
-    // Claim the event so it isn't re-swept until lock expires (10 min)
-    const lockedUntil = new Date(Date.now() + 10 * 60 * 1000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db.updateTable("event.outbox") as any)
-      .set({ locked_until: lockedUntil, status: "processing" })
-      .where("id", "=", eventId)
-      .execute();
+    // Mark event completed after all delivery jobs are enqueued.
+    // Individual delivery outcomes are tracked in notification_delivery.
+    await sql`
+      UPDATE event.outbox
+      SET    status       = 'completed',
+             processed_at = now(),
+             locked_at    = NULL,
+             locked_by    = NULL,
+             locked_until = NULL
+      WHERE  id = ${eventId}::uuid
+    `.execute(db);
   }
 
   logger.info("webhook_delivery_sweep_done", { swept: events.length });
@@ -123,8 +137,7 @@ async function sweepWebhooks(
 // ── Deliver ───────────────────────────────────────────────────────────────────
 
 async function deliverWebhook(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: Kysely<any>,
+  db: Kysely<DB>,
   data: DeliverWebhookJobData,
   logger: JobLogger,
 ): Promise<void> {
@@ -135,7 +148,7 @@ async function deliverWebhook(
     .selectFrom("event.outbox as o" as never)
     .select(["o.id" as never, "o.topic" as never, "o.payload" as never])
     .where("o.id" as never, "=", outboxEventId as never)
-    .executeTakeFirst() as Record<string, unknown> | undefined;
+    .executeTakeFirst() as { id: string; topic: string; payload: unknown } | undefined;
 
   if (!eventRow) {
     logger.warn("webhook_deliver_event_not_found", { outboxEventId });
@@ -146,31 +159,36 @@ async function deliverWebhook(
   const subRow = await db
     .selectFrom("event.webhook_subscription as ws" as never)
     .select([
-      "ws.id" as never,
-      "ws.target_url" as never,
+      "ws.id"             as never,
+      "ws.target_url"     as never,
       "ws.signing_secret" as never,
-      "ws.timeout_ms" as never,
-      "ws.is_active" as never,
+      "ws.timeout_ms"     as never,
+      "ws.is_active"      as never,
     ])
     .where("ws.id" as never, "=", webhookSubscriptionId as never)
     .where("ws.tenant_id" as never, "=", tenantId as never)
-    .executeTakeFirst() as Record<string, unknown> | undefined;
+    .executeTakeFirst() as {
+      id: string;
+      target_url: string;
+      signing_secret: string | null;
+      timeout_ms: number | null;
+      is_active: boolean;
+    } | undefined;
 
-  if (!subRow || !subRow["is_active"]) {
+  if (!subRow?.is_active) {
     logger.warn("webhook_deliver_sub_inactive", { webhookSubscriptionId });
     return; // Subscription deactivated after job was queued — skip silently
   }
 
-  const targetUrl    = subRow["target_url"]    as string;
-  const signingSecret = subRow["signing_secret"] as string | null;
-  const timeoutMs    = Number(subRow["timeout_ms"] ?? DEFAULT_TIMEOUT_MS);
-  const topic        = eventRow["topic"]        as string;
-  const deliveryId   = `${outboxEventId}:${webhookSubscriptionId}:${attemptNo}`;
+  const { target_url: targetUrl, signing_secret: signingSecret, timeout_ms } = subRow;
+  const timeoutMs  = Number(timeout_ms ?? DEFAULT_TIMEOUT_MS);
+  const topic      = eventRow.topic;
+  const deliveryId = `${outboxEventId}:${webhookSubscriptionId}:${attemptNo}`;
 
   // Build payload (cap at 1 MiB)
-  const rawPayload = typeof eventRow["payload"] === "string"
-    ? eventRow["payload"]
-    : JSON.stringify(eventRow["payload"] ?? {});
+  const rawPayload = typeof eventRow.payload === "string"
+    ? eventRow.payload
+    : JSON.stringify(eventRow.payload ?? {});
 
   if (Buffer.byteLength(rawPayload, "utf8") > MAX_PAYLOAD_BYTES) {
     logger.warn("webhook_deliver_payload_too_large", { outboxEventId, bytes: Buffer.byteLength(rawPayload, "utf8") });
@@ -180,7 +198,7 @@ async function deliverWebhook(
   const headers = buildWebhookHeaders({
     topic,
     deliveryId,
-    rawBody: rawPayload,
+    rawBody:       rawPayload,
     signingSecret,
   });
 
@@ -212,7 +230,7 @@ async function deliverWebhook(
   const durationMs = Date.now() - startMs;
   const succeeded  = httpStatus !== null && httpStatus >= 200 && httpStatus < 300;
 
-  // Record delivery
+  // Record delivery outcome
   await db
     .insertInto("event.notification_delivery" as never)
     .values({
@@ -226,34 +244,34 @@ async function deliverWebhook(
       error_message:  errorMessage,
       metadata:       JSON.stringify({ outboxEventId, topic, deliveryId }),
       created_at:     new Date(),
-      created_by:     "00000000-0000-7000-a000-000000000001",
+      created_by:     SYSTEM_ACTOR_ID,
     } as never)
     .execute()
     .catch((e: unknown) => logger.warn("webhook_deliver_log_error", { err: String(e) }));
 
   // Update subscription stats
   if (succeeded) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db.updateTable("event.webhook_subscription") as any)
+    await db
+      .updateTable("event.webhook_subscription" as never)
       .set({
         last_delivery_at:     new Date(),
         last_delivery_status: "success",
         failure_count:        0,
         updated_at:           new Date(),
-      })
-      .where("id", "=", webhookSubscriptionId)
+      } as never)
+      .where("id" as never, "=", webhookSubscriptionId as never)
       .execute()
       .catch(() => {});
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db.updateTable("event.webhook_subscription") as any)
+    await db
+      .updateTable("event.webhook_subscription" as never)
       .set({
         last_delivery_at:     new Date(),
         last_delivery_status: "failure",
         failure_count:        sql`failure_count + 1`,
         updated_at:           new Date(),
-      })
-      .where("id", "=", webhookSubscriptionId)
+      } as never)
+      .where("id" as never, "=", webhookSubscriptionId as never)
       .execute()
       .catch(() => {});
 
@@ -277,9 +295,8 @@ export interface WebhookDeliveryWorkerResult {
 }
 
 export function createWebhookDeliveryWorker(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: Kysely<any>,
-  redis: Redis,
+  db: Kysely<DB>,
+  redis: ConnectionOptions,
   logger: JobLogger,
 ): WebhookDeliveryWorkerResult {
   const queue = new Queue(QUEUE_NAME.WEBHOOK_DELIVERY, {
