@@ -99,7 +99,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/logout") ||
     pathname.startsWith("/auth/") ||
-    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/platform") ||
     pathname === "/health"
@@ -162,9 +162,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(mfaUrl);
   }
 
-  // ── Redirect root to /home ─────────────────────────────────────────────────
+  // ── Redirect root to /dashboard ───────────────────────────────────────────
   if (pathname === "/") {
-    return NextResponse.redirect(new URL("/home", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // ── Locale detection ───────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ export function middleware(request: NextRequest) {
     const acceptLang = request.headers.get("accept-language") ?? "";
     const preferred = acceptLang
       .split(",")
-      .map((part) => (part.split(";")[0] ?? part).trim().split("-")[0]?.toLowerCase() ?? "")
+      .map((part) => (part.split(";")[0] ?? "").trim().split("-")[0]?.toLowerCase() ?? "")
       .find((lang) => SUPPORTED_LOCALES.has(lang));
 
     const response = NextResponse.next({ request: { headers: requestHeaders } });

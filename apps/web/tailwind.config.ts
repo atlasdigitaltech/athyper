@@ -17,10 +17,12 @@ const config: Config = {
     "../../packages/shared/foundation/icons/src/**/*.{ts,tsx}",
     "../../packages/shared/runtime/entity-runtime/src/**/*.{ts,tsx}",
     "../../packages/shared/ui/domain-widgets/src/**/*.{ts,tsx}",
+    "../../packages/shared/ui/content-ui/src/**/*.{ts,tsx}",
     "../../packages/shared/shell/navigation/src/**/*.{ts,tsx}",
     "../../packages/shared/runtime/document-runtime/src/**/*.{ts,tsx}",
     "../../packages/shared/runtime/workflow-ui/src/**/*.{ts,tsx}",
     "../../packages/shared/runtime/collaboration-ui/src/**/*.{ts,tsx}",
+    "../../packages/domain/finance/finance-workbench/src/**/*.{ts,tsx}",
   ],
 
   theme: {
