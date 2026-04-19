@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS log.audit_log (
     CONSTRAINT audit_log_entity_chk CHECK (btrim(entity_type) <> '')
     -- actor_type: 09_triggers — control.trg_validate_lookup_columns('log.actor_type')
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.audit_log IS 'Generic entity mutation trail. actor_type in log.actor_type lookup. Partitioned monthly.';
+COMMENT ON TABLE  log.audit_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Generic entity mutation trail. actor_type in log.actor_type lookup. Partitioned monthly.';
 COMMENT ON COLUMN log.audit_log.old_values IS 'Column snapshot before operation. NULL for inserts.';
 COMMENT ON COLUMN log.audit_log.new_values IS 'Column snapshot after operation. NULL for deletes.';
 COMMENT ON COLUMN log.audit_log.correlation_id IS 'Links to event.outbox id for end-to-end trace.';
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS log.security_event_log (
     CONSTRAINT sel_risk_chk    CHECK (risk_score IS NULL OR risk_score BETWEEN 0 AND 100)
     -- event_category: 09_triggers — control.trg_validate_lookup_columns('log.security_event_category')
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.security_event_log IS 'Auth/session security events. log_type always system. event_category in log.security_event_category lookup. Partitioned monthly.';
+COMMENT ON TABLE  log.security_event_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Auth/session security events. log_type always system. event_category in log.security_event_category lookup. Partitioned monthly.';
 COMMENT ON COLUMN log.security_event_log.risk_score IS '0–100. >=80 triggers SIEM alert.';
 COMMENT ON COLUMN log.security_event_log.keycloak_event_id IS 'Original KC event id for cross-system trace.';
 CREATE TABLE IF NOT EXISTS log.security_event_log_default PARTITION OF log.security_event_log DEFAULT;
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS log.permission_decision_log (
         'allowed', 'not_in_plan', 'addon_required', 'override', 'skipped'
     ))
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.permission_decision_log IS 'Auth-engine allow/deny decisions. Exactly one of permission_id/feature_id per row. Partitioned monthly.';
+COMMENT ON TABLE  log.permission_decision_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Auth-engine allow/deny decisions. Exactly one of permission_id/feature_id per row. Partitioned monthly.';
 COMMENT ON COLUMN log.permission_decision_log.evaluation_ms IS 'Auth-engine latency for performance monitoring.';
 CREATE TABLE IF NOT EXISTS log.permission_decision_log_default PARTITION OF log.permission_decision_log DEFAULT;
 
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS log.field_access_log (
     CONSTRAINT fal_field_chk    CHECK (btrim(field_name) <> '')
     -- field_classification: 09_triggers — control.trg_validate_lookup_columns('log.field_classification')
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.field_access_log IS 'PII/sensitive field read audit. field_classification in log.field_classification lookup (extensible — tenants add custom classes). Partitioned monthly.';
+COMMENT ON TABLE  log.field_access_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. PII/sensitive field read audit. field_classification in log.field_classification lookup (extensible — tenants add custom classes). Partitioned monthly.';
 CREATE TABLE IF NOT EXISTS log.field_access_log_default PARTITION OF log.field_access_log DEFAULT;
 
 
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS log.password_history (
     CONSTRAINT ph_alg_chk   CHECK (hash_algorithm IN ('bcrypt', 'argon2id', 'scrypt', 'pbkdf2'))
     -- change_reason: 09_triggers — control.trg_validate_lookup_columns('log.password_change_reason')
 );
-COMMENT ON TABLE  log.password_history IS 'Password hash history. RLS: NO tenant read. Admin-only. change_reason in log.password_change_reason lookup.';
+COMMENT ON TABLE  log.password_history IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Password hash history. RLS: NO tenant read. Admin-only. change_reason in log.password_change_reason lookup. Not partitioned — per-user bounded volume.';
 COMMENT ON COLUMN log.password_history.hash_version IS 'Hash parameter version — allows rotation without invalidating existing rows.';
 
 
@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS log.attachment_access_log (
     CONSTRAINT aal_outcome_chk  CHECK (outcome IN ('success', 'denied', 'not_found', 'error', 'watermarked'))
     -- access_type: 09_triggers — control.trg_validate_lookup_columns('log.attachment_access_type')
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.attachment_access_log IS 'Attachment download/preview audit. access_type in log.attachment_access_type lookup (extensible). Partitioned monthly.';
+COMMENT ON TABLE  log.attachment_access_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Attachment download/preview audit. access_type in log.attachment_access_type lookup (extensible). Partitioned monthly.';
 COMMENT ON COLUMN log.attachment_access_log.attachment_name IS 'Denormalised at access time — survives rename/delete of source attachment.';
 CREATE TABLE IF NOT EXISTS log.attachment_access_log_default PARTITION OF log.attachment_access_log DEFAULT;
 
@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS log.share_audit_log (
     CONSTRAINT sal_target_chk   CHECK (num_nonnulls(target_principal_id, target_group_id) = 1),
     CONSTRAINT sal_entity_chk   CHECK (btrim(shared_entity_type) <> '')
 );
-COMMENT ON TABLE log.share_audit_log IS 'Share/delegation audit trail. Exactly one target (principal OR group). access_grant_id links to master.access_grant.';
+COMMENT ON TABLE log.share_audit_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Share/delegation audit trail. Exactly one target (principal OR group). access_grant_id links to master.access_grant.';
 
 
 -- ============================================================================
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS log.entity_lifecycle_log (
     CONSTRAINT ell_entity_chk   CHECK (btrim(entity_type) <> ''),
     CONSTRAINT ell_status_chk   CHECK (btrim(to_status) <> '')
 );
-COMMENT ON TABLE log.entity_lifecycle_log IS 'Entity state-machine transition audit. Distinct from audit_log (column mutations). Feeds state compliance reporting.';
+COMMENT ON TABLE log.entity_lifecycle_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Entity state-machine transition audit. Distinct from audit_log (column mutations). Feeds state compliance reporting.';
 
 
 -- ============================================================================
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS log.workflow_event_log (
     CONSTRAINT wel_hash_prev_fmt CHECK (hash_prev IS NULL OR hash_prev ~ '^[0-9a-f]{64}$'),
     CONSTRAINT wel_entity_chk   CHECK (btrim(entity_type) <> '')
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE  log.workflow_event_log IS 'Workflow step events and transitions. Absorbs log.workflow_transition (transition_name, from_status, to_status). Tamper-evidence via hash chain. Partitioned monthly.';
+COMMENT ON TABLE  log.workflow_event_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Workflow step events and transitions. Absorbs log.workflow_transition (transition_name, from_status, to_status). Tamper-evidence via hash chain. Partitioned monthly.';
 COMMENT ON COLUMN log.workflow_event_log.transition_name IS 'Populated for transition events (migrated from log.workflow_transition.transition_name).';
 CREATE TABLE IF NOT EXISTS log.workflow_event_log_default PARTITION OF log.workflow_event_log DEFAULT;
 
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS log.close_override_log (
     CONSTRAINT col_pkey         PRIMARY KEY (id),
     CONSTRAINT col_activity_chk CHECK (activity_type IN ('close_override', 'book_close_audit'))
 );
-COMMENT ON TABLE log.close_override_log IS 'Period-close override + book close audit. activity_type=book_close_audit rows carry from_status/to_status. Absorbs log.book_close_audit_log.';
+COMMENT ON TABLE log.close_override_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Period-close override + book close audit. activity_type=book_close_audit rows carry from_status/to_status. Absorbs log.book_close_audit_log.';
 
 
 -- ============================================================================
@@ -453,7 +453,7 @@ CREATE TABLE IF NOT EXISTS log.job_log (
     CONSTRAINT jl_duration_chk  CHECK (duration_ms IS NULL OR duration_ms >= 0),
     CONSTRAINT jl_attempt_chk   CHECK (attempt_no >= 1)
 );
-COMMENT ON TABLE log.job_log IS 'Job step + run completion history. Active jobs in event.outbox. On completion/failure: write summary here + mark outbox completed.';
+COMMENT ON TABLE log.job_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Job step + run completion history. Active jobs in event.outbox. On completion/failure: write summary here + mark outbox completed.';
 
 
 -- ============================================================================
@@ -484,7 +484,7 @@ CREATE TABLE IF NOT EXISTS log.policy_evaluation_log (
     CONSTRAINT pel_score_chk CHECK (score IS NULL OR score BETWEEN 0 AND 1),
     CONSTRAINT pel_conf_chk  CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1)
 );
-COMMENT ON TABLE log.policy_evaluation_log IS 'Policy engine scoring record. score and confidence are 0.0–1.0 fractions.';
+COMMENT ON TABLE log.policy_evaluation_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Policy engine scoring record. score and confidence are 0.0–1.0 fractions.';
 
 
 -- ============================================================================
@@ -505,7 +505,7 @@ CREATE TABLE IF NOT EXISTS log.hash_anchor (
     CONSTRAINT ha_hash_chk  CHECK (btrim(last_hash) <> ''),
     CONSTRAINT ha_count_chk CHECK (event_count >= 0)
 );
-COMMENT ON TABLE log.hash_anchor IS 'Daily tamper-evidence anchors. One row per (tenant, anchor_date). last_hash = SHA-256 of previous anchor + all events of the day.';
+COMMENT ON TABLE log.hash_anchor IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Daily tamper-evidence anchors. One row per (tenant, anchor_date). last_hash = SHA-256 of previous anchor + all events of the day.';
 
 
 -- ============================================================================
@@ -527,7 +527,7 @@ CREATE TABLE IF NOT EXISTS log.dimension_resolution_log (
     created_by              uuid        NOT NULL,
     CONSTRAINT drl_pkey PRIMARY KEY (id)
 );
-COMMENT ON TABLE log.dimension_resolution_log IS 'Dimension resolution trace. Records how each value was determined (direct, inherited, default, fallback).';
+COMMENT ON TABLE log.dimension_resolution_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Dimension resolution trace. Records how each value was determined (direct, inherited, default, fallback).';
 
 
 -- ============================================================================
@@ -572,7 +572,7 @@ CREATE TABLE IF NOT EXISTS log.activity_log (
     -- activity_type: 09_triggers — control.trg_validate_lookup_columns('log.activity_type')
 ) PARTITION BY RANGE (created_at);
 COMMENT ON TABLE  log.activity_log IS
-    'Consolidated domain activity log. Replaces 9 thin tables: kpi_activity, pack_activity, '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Consolidated domain activity log. Replaces 9 thin tables: kpi_activity, pack_activity, '
     'pack_release_activity, planning_activity, close_override_activity, approval_event, '
     'comment_read, comment_response, recent_activity. '
     'domain + activity_type controlled via control.lookup_domain (both extensible). '
@@ -621,7 +621,7 @@ CREATE TABLE IF NOT EXISTS log.close_activity_log (
     -- activity_type: 09_triggers — control.trg_validate_lookup_columns('log.close_activity_type')
 );
 COMMENT ON TABLE  log.close_activity_log IS
-    'Finance close activity log. Replaces 5 tables: close_automation_audit, '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Finance close activity log. Replaces 5 tables: close_automation_audit, '
     'close_task_duration_history, period_close_activity, release_decision_log, '
     'remediation_preview_log. activity_type in log.close_activity_type lookup. '
     'close_period_id FK added in Phase 4 once ledger.close_period exists.';
@@ -668,7 +668,7 @@ CREATE TABLE IF NOT EXISTS log.export_log (
     -- export_type: 09_triggers — control.trg_validate_lookup_columns('log.export_type')
 );
 COMMENT ON TABLE  log.export_log IS
-    'Consolidated export/download audit. Replaces: release_export_log, statement_export_log, '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Consolidated export/download audit. Replaces: release_export_log, statement_export_log, '
     'pack_download_log. export_type in log.export_type lookup (extensible). '
     'detail carries type-specific fields.';
 COMMENT ON COLUMN log.export_log.detail IS
@@ -697,7 +697,7 @@ CREATE TABLE IF NOT EXISTS log.comment_retention_log (
     CONSTRAINT crl_action_chk   CHECK (action IN ('retained', 'deleted', 'archived', 'flagged')),
     CONSTRAINT crl_type_chk     CHECK (btrim(comment_type) <> '')
 );
-COMMENT ON TABLE log.comment_retention_log IS 'Compliance comment retention audit. Driven by control.comment_retention_policy.';
+COMMENT ON TABLE log.comment_retention_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Compliance comment retention audit. Driven by control.comment_retention_policy.';
 
 
 -- ============================================================================
@@ -719,7 +719,7 @@ CREATE TABLE IF NOT EXISTS log.search_history (
     CONSTRAINT sh_query_chk     CHECK (btrim(query_text) <> ''),
     CONSTRAINT sh_result_chk    CHECK (result_count IS NULL OR result_count >= 0)
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE log.search_history IS 'Principal search activity. query_hash enables dedup of repeated identical queries. Partitioned monthly.';
+COMMENT ON TABLE log.search_history IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Principal search activity. query_hash enables dedup of repeated identical queries. Partitioned monthly.';
 CREATE TABLE IF NOT EXISTS log.search_history_default PARTITION OF log.search_history DEFAULT;
 
 
@@ -756,7 +756,7 @@ CREATE TABLE IF NOT EXISTS log.ai_inference_log (
     CONSTRAINT ail_inf_chk  CHECK (inference_type IN ('action', 'prediction')),
     CONSTRAINT ail_conf_chk CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1)
 );
-COMMENT ON TABLE log.ai_inference_log IS 'AI inference log. Replaces ai_action + ai_prediction. inference_type=action: action_type, reversal_window. inference_type=prediction: prediction_type, is_accepted.';
+COMMENT ON TABLE log.ai_inference_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. AI inference log. Replaces ai_action + ai_prediction. inference_type=action: action_type, reversal_window. inference_type=prediction: prediction_type, is_accepted.';
 
 
 -- ============================================================================
@@ -788,7 +788,7 @@ CREATE TABLE IF NOT EXISTS log.ai_monitoring_log (
     CONSTRAINT aml_mon_chk      CHECK (monitor_type IN ('drift', 'anomaly_baseline')),
     CONSTRAINT aml_metric_chk   CHECK (btrim(metric_name) <> '')
 );
-COMMENT ON TABLE log.ai_monitoring_log IS 'AI monitoring log. Replaces ai_drift_monitor + atlas_anomaly_baseline. detail carries type-specific statistical fields.';
+COMMENT ON TABLE log.ai_monitoring_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. AI monitoring log. Replaces ai_drift_monitor + atlas_anomaly_baseline. detail carries type-specific statistical fields.';
 
 
 -- ============================================================================
@@ -818,7 +818,7 @@ CREATE TABLE IF NOT EXISTS log.ai_feedback_log (
     CONSTRAINT afl_pkey     PRIMARY KEY (id)
     -- feedback_type: 09_triggers — control.trg_validate_lookup_columns('log.ai_feedback_type')
 );
-COMMENT ON TABLE log.ai_feedback_log IS 'AI feedback log. Replaces atlas_feedback + classification_feedback. feedback_type in log.ai_feedback_type lookup.';
+COMMENT ON TABLE log.ai_feedback_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. AI feedback log. Replaces atlas_feedback + classification_feedback. feedback_type in log.ai_feedback_type lookup.';
 
 
 -- ============================================================================
@@ -842,7 +842,7 @@ CREATE TABLE IF NOT EXISTS log.ai_calibration_log (
     created_by              uuid        NOT NULL,
     CONSTRAINT acl_pkey PRIMARY KEY (id)
 );
-COMMENT ON TABLE log.ai_calibration_log IS 'AI threshold calibration history. before/after values with trigger reason for governance and rollback.';
+COMMENT ON TABLE log.ai_calibration_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. AI threshold calibration history. before/after values with trigger reason for governance and rollback.';
 
 
 -- ============================================================================
@@ -869,7 +869,7 @@ CREATE TABLE IF NOT EXISTS log.ai_call_transcript (
     CONSTRAINT act_conf_chk CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
     CONSTRAINT act_dur_chk  CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
 ) PARTITION BY RANGE (created_at);
-COMMENT ON TABLE log.ai_call_transcript IS 'AI voice call transcripts. Reclassified from user-activity to AI domain. Partitioned monthly.';
+COMMENT ON TABLE log.ai_call_transcript IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. AI voice call transcripts. Reclassified from user-activity to AI domain. Partitioned monthly.';
 CREATE TABLE IF NOT EXISTS log.ai_call_transcript_default PARTITION OF log.ai_call_transcript DEFAULT;
 
 
@@ -920,7 +920,7 @@ CREATE TABLE IF NOT EXISTS log.kpi_execution_log (
         'manual', 'scheduler', 'period_close', 'event', 'pack_refresh'
     ))
 );
-COMMENT ON TABLE  log.kpi_execution_log IS 'KPI calculation results. Kept separate from activity_log — financial columns need direct SQL aggregation. is_current flags latest calculation for (kpi_id, company_code_id, fiscal_year, period).';
+COMMENT ON TABLE  log.kpi_execution_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. KPI calculation results. Kept separate from activity_log — financial columns need direct SQL aggregation. is_current flags latest calculation for (kpi_id, company_code_id, fiscal_year, period).';
 
 
 -- ============================================================================
@@ -944,7 +944,7 @@ CREATE TABLE IF NOT EXISTS log.workspace_usage_metric (
     CONSTRAINT wum_key_chk      CHECK (btrim(metric_key) <> ''),
     CONSTRAINT wum_period_chk   CHECK (period_end IS NULL OR period_end >= period_start)
 );
-COMMENT ON TABLE log.workspace_usage_metric IS 'Workspace usage telemetry. Feeds billing, quota enforcement, and capacity planning.';
+COMMENT ON TABLE log.workspace_usage_metric IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Workspace usage telemetry. Feeds billing, quota enforcement, and capacity planning.';
 
 
 -- ============================================================================
@@ -1008,10 +1008,9 @@ CREATE TABLE IF NOT EXISTS log.notification_delivery_attempt (
 );
 
 COMMENT ON TABLE  log.notification_delivery_attempt IS
-    'HTTP request/response trace per delivery attempt. Replaces log.delivery_log. '
-    'Append-only: DELETE blocked. UPDATE restricted to is_redacted, '
-    'redaction_version, purge_after only (credential scrubbing workflow). '
-    'Enforced by 09_triggers/008_log.sql.';
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. HTTP request/response trace per delivery attempt. Replaces log.delivery_log. '
+    'Append-only with scoped UPDATE carve-out for credential scrubbing: DELETE blocked; UPDATE restricted to is_redacted, '
+    'redaction_version, purge_after only. Enforced by 09_triggers/008_log.sql.';
 COMMENT ON COLUMN log.notification_delivery_attempt.is_redacted IS
     'Set true by credential-scrubbing worker after redacting sensitive headers/body.';
 COMMENT ON COLUMN log.notification_delivery_attempt.purge_after IS
@@ -1064,7 +1063,7 @@ CREATE TABLE IF NOT EXISTS log.render_dlq (
 );
 
 COMMENT ON TABLE log.render_dlq IS
-    'Dead-letter queue for permanently failed render attempts. '
+    'ARCHETYPE=E;SCOPE=T. Dead-letter queue for permanently failed render attempts. '
     'EXCEPTION CLASS: queue_operational — lives in log schema but is mutable '
     '(replay updates status). Has updated_at/updated_by unlike append-only log tables. '
     'Not partitioned — operational table with low row volume.';
@@ -1121,7 +1120,7 @@ CREATE TABLE IF NOT EXISTS log.cycle_audit_log_default
     PARTITION OF log.cycle_audit_log DEFAULT;
 
 COMMENT ON TABLE log.cycle_audit_log IS
-    'Unified immutable audit trail for the governance cycle model. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Unified immutable audit trail for the governance cycle model. '
     'Partitioned monthly by created_at. Append-only — no UPDATE/DELETE '
     'policies for tenant role. pg_partman manages monthly children.';
 COMMENT ON COLUMN log.cycle_audit_log.created_by IS
@@ -1200,7 +1199,7 @@ CREATE TABLE IF NOT EXISTS log.resolution_log (
 );
 
 COMMENT ON TABLE log.resolution_log IS
-    'Engine 4.13: unified resolution audit trail. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Engine 4.13: unified resolution audit trail. '
     '3 rows per transaction: CONTEXT (input snapshot), INTENT (Step 4), PROFILE (Step 4.5). '
     'Append-only: immutability trigger prevents UPDATE and DELETE. '
     'Partial indexes in 07_indexes for step-specific queries.';
@@ -1233,9 +1232,9 @@ CREATE TABLE IF NOT EXISTS log.audit_dlq (
 );
 
 COMMENT ON TABLE log.audit_dlq IS
-    'Dead-letter queue for failed audit-domain background jobs. '
+    'ARCHETYPE=C;SCOPE=T;SUBTYPE=APPEND_ONLY. Dead-letter queue for failed audit-domain background jobs. '
     'Phase 3.3 WorkerFramework. insertDlq() target: ''log.audit_dlq''. '
-    'retried_at/retried_job_id set by retryFromDlq().';
+    'retried_at/retried_job_id set once by retryFromDlq() (minor in-place UPDATE; rest of row immutable).';
 
 -- §DLQ-2  log.notification_dlq
 CREATE TABLE IF NOT EXISTS log.notification_dlq (
@@ -1256,28 +1255,15 @@ CREATE TABLE IF NOT EXISTS log.notification_dlq (
 );
 
 COMMENT ON TABLE log.notification_dlq IS
-    'Dead-letter queue for failed notification-domain background jobs. '
-    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.notification_dlq''.';
+    'ARCHETYPE=C;SCOPE=T;SUBTYPE=APPEND_ONLY. Dead-letter queue for failed notification-domain background jobs. '
+    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.notification_dlq''. '
+    'retried_at/retried_job_id set once by retryFromDlq() (minor in-place UPDATE; rest of row immutable).';
 
--- §DLQ-3  log.render_dlq
-CREATE TABLE IF NOT EXISTS log.render_dlq (
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid        NOT NULL,
-    queue_name          text        NOT NULL,
-    job_name            text        NOT NULL,
-    payload             jsonb       NOT NULL,
-    error_message       text        NOT NULL,
-    retry_count         smallint    NOT NULL DEFAULT 0,
-    last_attempted_at   timestamptz NOT NULL,
-    retried_at          timestamptz,
-    retried_job_id      text,
-    created_at          timestamptz NOT NULL DEFAULT now(),
-
-    CONSTRAINT render_dlq_pkey       PRIMARY KEY (id),
-    CONSTRAINT render_dlq_payload_chk CHECK (jsonb_typeof(payload) = 'object')
-);
-
-COMMENT ON TABLE log.render_dlq IS
-    'Dead-letter queue for failed render/PDF-domain background jobs. '
-    'Phase 3.3 WorkerFramework. insertDlq() target: ''log.render_dlq''. '
-    'PDF generation failures logged here after all BullMQ retries exhausted.';
+-- §DLQ-3  log.render_dlq is defined in §28 above (formal Sprint-37 schema:
+-- output_id / render_job_id / error_category / attempt_count / replayed_at).
+-- The earlier generic shape that lived here (queue_name/job_name/error_message)
+-- was a copy of audit_dlq + notification_dlq; it never actually ran because
+-- §28 wins under CREATE TABLE IF NOT EXISTS. Removed to eliminate the schema
+-- mismatch that caused insertDlq() writes to silently fail against the live
+-- table. The render worker now uses framework/runtime/services/jobs/render-dlq.ts
+-- which targets the §28 column set directly.

@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS snapshot.lifecycle_version (
 );
 
 COMMENT ON TABLE snapshot.lifecycle_version IS
-    'Immutable compiled snapshots of lifecycle definitions. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable compiled snapshots of lifecycle definitions. '
     'document.workflow_instance pins to lifecycle_version_id — '
     'in-flight workflows continue on the version active when they started. '
     'advance_workflow_state() reads definition jsonb (one row, no joins). '
@@ -110,9 +110,9 @@ CREATE TABLE IF NOT EXISTS snapshot.lifecycle_route (
 );
 
 COMMENT ON TABLE snapshot.lifecycle_route IS
-    'Pre-compiled full route graph for a lifecycle. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Pre-compiled full route graph for a lifecycle. '
     'Used by UI to render ''what happens next'' state visualisation. '
-    'Recompiled by fn_lifecycle_child_changed when definition changes. '
+    'Recompiled by fn_lifecycle_child_changed when definition changes (replace, not in-place UPDATE — no updated_* columns). '
     'UNIQUE(tenant_id, lifecycle_id) — one route map per lifecycle.';
 
 
@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS snapshot.status_route (
 );
 
 COMMENT ON TABLE snapshot.status_route IS
+    'ARCHETYPE=C;SCOPE=T. Mutable compiled cache — not a D-snapshot. Recompiled in-place. '
     'Simplified compiled status transition map for Pattern A/B entities. '
     'One row per (tenant, entity_name) — fastest possible lookup for status validation. '
     'Read by control.validate_status_transition() on every entity status UPDATE. '
@@ -197,7 +198,7 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled (
 );
 
 COMMENT ON TABLE snapshot.entity_compiled IS
-    'Pre-compiled entity version snapshot for fast API serving. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Pre-compiled entity version snapshot for fast API serving. '
     'Append-only — trg_fn_ec_immutable blocks UPDATE/DELETE. '
     'UNIQUE(entity_version_id) — one compiled snapshot per version. '
     'compliance_score: 0–100 linting quality score.';
@@ -236,7 +237,7 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled_overlay (
 );
 
 COMMENT ON TABLE snapshot.entity_compiled_overlay IS
-    'Compiled overlay delta for a specific entity version + overlay set. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled overlay delta for a specific entity version + overlay set. '
     'Append-only. Applied on top of snapshot.entity_compiled at serve time. '
     'overlay_set: jsonb array of overlay_ids included in this compilation.';
 
@@ -291,7 +292,7 @@ CREATE TABLE IF NOT EXISTS snapshot.template_version (
 );
 
 COMMENT ON TABLE snapshot.template_version IS
-    'Immutable point-in-time snapshot of template content per version. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable point-in-time snapshot of template content per version. '
     'UPDATE and DELETE blocked by trg_fn_template_version_immutable trigger. '
     'GiST temporal index supports ''which version was effective on date X?'' queries.';
 COMMENT ON COLUMN snapshot.template_version.checksum IS
@@ -343,7 +344,7 @@ CREATE TABLE IF NOT EXISTS snapshot.content_item_version (
 );
 
 COMMENT ON TABLE snapshot.content_item_version IS
-    'Immutable body snapshot per content item version. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable body snapshot per content item version. '
     'UPDATE and DELETE blocked by snapshot.trg_content_item_version_immutable trigger. '
     'Pattern mirrors snapshot.template_version. '
     'checksum prevents saving an identical body under a new version number.';

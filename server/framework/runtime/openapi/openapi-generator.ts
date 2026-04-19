@@ -23,7 +23,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 
-import express, { Router } from "express";
+import express, { Router, type Request, type Response, type NextFunction } from "express";
 
 // ── Shared schema fragments ───────────────────────────────────────────────────
 
@@ -520,22 +520,51 @@ export function buildOpenApiSpec(info?: { version?: string }): object {
 
 // ── Express router ─────────────────────────────────────────────────────────────
 
-export function createOpenApiRouter(options?: { version?: string }): Router {
+export interface OpenApiRouterOptions {
+  version?: string;
+  /**
+   * Bearer-verifier for gating /openapi.{json,yaml}. When `requireAuth` is
+   * true, callers must present a valid JWT. In local/staging we leave the
+   * spec open so openapi-client generators and CI tooling can pull it
+   * unauthenticated; in production it's an attack-surface map (endpoint
+   * paths, tenant header contract, schema field names) and gets gated.
+   */
+  authVerify?: (token: string) => Promise<unknown>;
+  requireAuth?: boolean;
+}
+
+export function createOpenApiRouter(options?: OpenApiRouterOptions): Router {
   const router = Router();
   const spec   = buildOpenApiSpec(options);
   const specJson = JSON.stringify(spec, null, 2);
 
-  // Serve the raw spec
-  router.get("/openapi.json", (_req, res) => {
+  const gate: (req: Request, res: Response, next: NextFunction) => void =
+    options?.requireAuth && options.authVerify
+      ? (req, res, next) => {
+          const header = req.headers.authorization;
+          if (!header || !header.startsWith("Bearer ")) {
+            res.status(401).json({ error: "UNAUTHORIZED", message: "Bearer token required" });
+            return;
+          }
+          void options.authVerify!(header.slice("Bearer ".length))
+            .then(() => next())
+            .catch(() => {
+              res.status(401).json({ error: "UNAUTHORIZED", message: "Invalid bearer token" });
+            });
+        }
+      : (_req, _res, next) => next();
+
+  // Serve the raw spec (Bearer-gated in production; open elsewhere)
+  router.get("/openapi.json", gate, (_req, res) => {
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (!options?.requireAuth) res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(specJson);
   });
 
   // Serve YAML alias
-  router.get("/openapi.yaml", (_req, res) => {
+  router.get("/openapi.yaml", gate, (_req, res) => {
     res.setHeader("Content-Type", "application/yaml");
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (!options?.requireAuth) res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(specJson); // Clients can parse JSON as YAML superset
   });
 

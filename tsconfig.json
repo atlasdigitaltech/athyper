@@ -1,5 +1,8 @@
 {
   "extends": "./packages/shared/foundation/config/tsconfig.base.json",
-  "compilerOptions": { "baseUrl": "." },
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
+  },
   "exclude": ["node_modules", "dist", ".next", "coverage", "server"]
 }

@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS master.content_item (
 );
 
 COMMENT ON TABLE  master.content_item IS
-    'Versioned content header. Body snapshots in snapshot.content_item_version. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Versioned content header. Body snapshots in snapshot.content_item_version. '
     'current_version_id → snapshot.content_item_version via DEFERRABLE FK (06_constraints). '
     'Lifecycle mirrors master.template: UPPERCASE status, no is_active. '
     'Multilingual: slug uniqueness includes locale_code. Multiple locales for one '
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS master.content_item_link (
 );
 
 COMMENT ON TABLE  master.content_item_link IS
-    'Directional cross-reference graph between content items. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Directional cross-reference graph between content items. '
     'relation_type is extensible via master.content_item_link_relation_type lookup.';
 COMMENT ON COLUMN master.content_item_link.relation_type IS
     'Link classification. Lookup: master.content_item_link_relation_type. '
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS master.content_item_access_grant (
 );
 
 COMMENT ON TABLE  master.content_item_access_grant IS
-    'Per-record access grants. Additive overrides on top of platform RBAC. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Per-record access grants. Additive overrides on top of platform RBAC. '
     'subject_type and access_level are sealed platform vocabulary (inline CHECK). '
     'subject_type=''public'' + subject_id IS NULL = open/world-readable.';
 COMMENT ON COLUMN master.content_item_access_grant.subject_type IS
@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS master.comment_feed_cursor (
 );
 
 COMMENT ON TABLE master.comment_feed_cursor IS
-    'Per-principal watermark for comment thread read tracking. '
+    'ARCHETYPE=C;SCOPE=T. Per-principal watermark for comment thread read tracking. '
     'One row per (tenant, principal, entity). Upserted on thread open. '
     'Enables O(1) unread-count queries without scanning activity_log.';
 

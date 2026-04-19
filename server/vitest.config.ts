@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       "src/**/__tests__/**/*.test.ts",
       "framework/runtime/src/**/__tests__/**/*.test.ts",
+      "framework/adapters/db/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

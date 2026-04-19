@@ -30,6 +30,10 @@ export const QUEUE_NAME = {
   IAM_KC_SYNC: "jobs-iam-kc-sync",
   /** Integration endpoint health probing: HEAD each active endpoint with health_check_url */
   ENDPOINT_HEALTH: "jobs-endpoint-health",
+  /** Apache Tika attachment text extraction — fetches blob, POSTs to Tika, writes extracted_text */
+  TIKA_EXTRACT:    "jobs-tika-extract",
+  /** PostgreSQL backup — pg_dump | gzip → object storage; schedule driven by control.cron_schedule */
+  BACKUP:          "jobs-backup",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
@@ -66,6 +70,12 @@ export const JOB_NAME = {
   KC_SYNC: "kc-sync",
   /** endpoint-health-sweep: probe all active endpoints with health_check_url */
   ENDPOINT_HEALTH_SWEEP: "endpoint-health-sweep",
+  /** tika extract: pull one attachment, POST to Tika, write extracted_text */
+  EXTRACT_TEXT: "extract-text",
+  /** outbox purge: delete completed event.outbox rows older than the retention window */
+  OUTBOX_PURGE: "outbox-purge",
+  /** pg-dump backup: run pg_dump, gzip, upload to object storage, prune old files */
+  DB_BACKUP: "pg-dump",
 } as const;
 
 /**
@@ -78,7 +88,7 @@ export function drainJobName(topic: string): string {
 
 // ─── Domain outbox topics ─────────────────────────────────────────────────────
 
-export const DRAIN_TOPICS = ["fin", "wf", "audit"] as const;
+export const DRAIN_TOPICS = ["fin", "wf", "audit", "search"] as const;
 export type DrainTopic = (typeof DRAIN_TOPICS)[number];
 
 // ─── Scheduler IDs (BullMQ upsertJobScheduler keys) ──────────────────────────
@@ -97,6 +107,8 @@ export const SCHEDULER_ID = {
   RENDER_DOCUMENT_SWEEP:       "sched:render-document-sweep",
   IAM_KC_SYNC:                 "sched:iam-kc-sync",
   ENDPOINT_HEALTH_SWEEP:       "sched:endpoint-health-sweep",
+  TIKA_EXTRACT_SWEEP:          "sched:tika-extract-sweep",
+  OUTBOX_PURGE:                "sched:outbox-purge",
 } as const;
 
 // ─── Job payload types ────────────────────────────────────────────────────────
@@ -123,6 +135,12 @@ export interface SendNotificationJobData {
 export interface DrainOutboxJobData {
   topic: DrainTopic;
 }
+
+/** Purge completed event.outbox rows older than retention — no payload */
+export type OutboxPurgeJobData = Record<string, never>;
+
+/** Domain outbox queue accepts both drain and purge jobs */
+export type DomainOutboxJobData = DrainOutboxJobData | OutboxPurgeJobData;
 
 /** SLA check sweep — no payload; worker queries all tenants */
 export type SlaCheckJobData = Record<string, never>;
@@ -185,12 +203,65 @@ export interface DeliverWebhookJobData {
 /** KC sync — no payload; worker fetches all realms from config */
 export type KcSyncJobData = Record<string, never>;
 
+/** Attachment text extraction — Tika POSTs the blob, worker writes extracted_text back */
+export interface ExtractTextJobData {
+  attachmentId: string;
+  tenantId:     string;
+}
+
+/** PostgreSQL backup: override the default env-based connection URL or target bucket */
+export interface DbBackupJobData {
+  databaseUrl?: string;
+  bucket?:      string;
+}
+
 // ─── Shared logger interface ──────────────────────────────────────────────────
 
 export interface JobLogger {
   info(event: string, fields?: Record<string, unknown>): void;
   warn(event: string, fields?: Record<string, unknown>): void;
   error(event: string, fields?: Record<string, unknown>): void;
+}
+
+/**
+ * Optional hooks invoked by createJobsService on worker completion/failure.
+ * Used by the runtime to wire monitoring (e.g. Healthchecks cron heartbeat)
+ * without coupling svc-jobs to a specific monitoring backend.
+ *
+ * Handlers must be synchronous and non-throwing — the service wraps them
+ * in try/catch and swallows errors, but keeping them cheap avoids blocking
+ * the BullMQ event loop.
+ */
+export interface JobHeartbeatHooks {
+  onCompleted?: (queue: string, jobName: string) => void;
+  onFailed?: (queue: string, jobName: string, err: unknown) => void;
+  /**
+   * Fires only when a job exhausts all retry attempts (terminal failure).
+   * Used to surface unrecoverable jobs to an error tracker (Sentry/GlitchTip)
+   * — distinct from onFailed, which fires on every retry attempt.
+   */
+  onTerminalFailure?: (
+    queue:    string,
+    jobName:  string,
+    err:      unknown,
+    meta: {
+      jobId?:        string;
+      attemptsMade?: number;
+      maxAttempts?:  number;
+      data?:         unknown;
+    },
+  ) => void;
+  /**
+   * Fires from the service's boot-time health checks when a queue is in
+   * an alertable state (e.g. pending jobs with no worker to consume them).
+   * Distinct from job-level failures — this is a configuration/operational
+   * anomaly detected at startup.
+   */
+  onQueueAlert?: (
+    queue:    string,
+    reason:   string,
+    details:  Record<string, unknown>,
+  ) => void;
 }
 
 // ─── Well-known constants ─────────────────────────────────────────────────────
@@ -214,4 +285,6 @@ export const DEFAULT_INTERVALS = {
   RENDER_DOCUMENT_SWEEP_MS:        30_000,       // 30 s   — render sweep matches domain outbox cadence
   IAM_KC_SYNC_MS:                  900_000,      // 15 min — KC reconciliation runs infrequently to reduce KC load
   ENDPOINT_HEALTH_SWEEP_MS:        300_000,      // 5 min  — endpoint health probe cadence per task spec
+  TIKA_EXTRACT_SWEEP_MS:           600_000,      // 10 min — catches rows missed by the inline enqueue (upload race, worker restarts, backfill)
+  OUTBOX_PURGE_SWEEP_MS:           3_600_000,    // 1 h    — housekeeping; deletes completed rows older than retention (function default 7d)
 } as const;

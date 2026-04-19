@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Apache Tika server config — athyper render pipeline
+  Environment: LOCAL
+
+  Per-environment variants:
+    Local (this file):  render/tika-config.xml
+    Staging:            render/environments/tika-config.staging.xml
+    Production:         render/environments/tika-config.production.xml
+
+  Consumed at container startup via the config flag pointing to this file.
+  Mount is defined in stack/compose/render/athyper-tika.yml.
+
+  Contract:
+    - Exclude ExecutableParser — binary-executable extraction is a
+      security landmine and we have no use case for it.
+    - taskTimeoutMillis is the HARD ceiling for a single parse. If a
+      single attachment can't be extracted in this window, abort the
+      request so the attachment-text-extract worker (svc-jobs) can
+      surface a failure instead of holding the pool open.
+    - OCR is enabled via the -full image (Tesseract is preinstalled).
+      We intentionally do NOT tune Tesseract here; image-file OCR is
+      opportunistic and defaults are fine for the common formats.
+-->
+<properties>
+  <parsers>
+    <parser class="org.apache.tika.parser.DefaultParser">
+      <!-- No executable extraction. Security, not performance. -->
+      <parser-exclude class="org.apache.tika.parser.executable.ExecutableParser"/>
+    </parser>
+  </parsers>
+
+  <service-loader
+      initializableProblemHandler="ignore"
+      loadErrorHandler="IGNORE"/>
+
+  <server>
+    <params>
+      <!-- Keep unsecure features off. Toggling on unlocks things like
+           arbitrary config switching via HTTP headers — avoid. -->
+      <enableUnsecureFeatures>false</enableUnsecureFeatures>
+
+      <!-- Single-request timeouts. Exceeded requests are aborted and
+           return 5xx so the caller (attachment-text-extract worker)
+           can DLQ or retry per its own policy. -->
+      <taskTimeoutMillis>300000</taskTimeoutMillis>
+      <taskPulseMillis>10000</taskPulseMillis>
+    </params>
+  </server>
+</properties>

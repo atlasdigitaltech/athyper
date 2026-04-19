@@ -56,6 +56,7 @@ vi.mock("../../../framework/runtime/services/integration/routes/index.js", () =>
 vi.mock("../../metrics.js", () => ({
   createCacheMetrics: vi.fn(() => ({})),
   metricsHandler: vi.fn(),
+  registerJobQueues: vi.fn(),
 }));
 
 vi.mock("../../audit.js", () => ({
@@ -81,6 +82,7 @@ vi.mock("express", () => {
   // In Express 5, express.json is a property on the default export function itself.
   const mockExpress = Object.assign(vi.fn(() => mockApp), {
     json: vi.fn(() => vi.fn()),
+    static: vi.fn(() => vi.fn()),
   });
   return {
     default: mockExpress,
@@ -173,5 +175,46 @@ describe("startApi (Phase 2B — HTTP-only)", () => {
     await startApi(deps);
 
     expect(deps.jobs.start).not.toHaveBeenCalled();
+  });
+
+  // B.3 — JWKS warm-up must not block boot. It is registered as a
+  // lifecycle.onReady() handler and fires after app.listen() resolves.
+  it("does NOT warm up JWKS before app.listen()", async () => {
+    const deps = makeStubDeps();
+
+    let warmupCalledAt: number | null = null;
+    let listenCalledAt: number | null = null;
+    (deps.auth.warmUp as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      warmupCalledAt = Date.now();
+      return Promise.resolve();
+    });
+    mockListen.mockImplementationOnce((_port: number, cb?: () => void) => {
+      listenCalledAt = Date.now();
+      cb?.();
+      return {} as never;
+    });
+
+    const { startApi } = await import("../api.js");
+    await startApi(deps);
+
+    expect(listenCalledAt).not.toBeNull();
+    // warmUp fires inside lifecycle.signalReady(), invoked from the listen
+    // callback — so either it runs at/after listen, or not yet at all.
+    if (warmupCalledAt !== null) {
+      expect(warmupCalledAt).toBeGreaterThanOrEqual(listenCalledAt!);
+    }
+  });
+
+  it("invokes auth.warmUp() exactly once via lifecycle.signalReady()", async () => {
+    const deps = makeStubDeps();
+
+    const { startApi } = await import("../api.js");
+    await startApi(deps);
+
+    // signalReady() is scheduled from the listen callback and awaits the
+    // onReady handler chain; microtask drain lets the warm-up resolve.
+    await new Promise((r) => setImmediate(r));
+
+    expect(deps.auth.warmUp).toHaveBeenCalledTimes(1);
   });
 });

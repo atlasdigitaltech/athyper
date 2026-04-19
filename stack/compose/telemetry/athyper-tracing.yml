@@ -1,0 +1,123 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.1.0
+# Compose     : athyper-tracing-config
+#
+# Description :
+#   Grafana Tempo 2.x — distributed tracing backend.
+#   Receives OTLP from server/src/foundation/monitoring/otel.ts on
+#   :4317 (gRPC) / :4318 (HTTP). Storage backend is env-driven:
+#   `local` for dev (filesystem bind-mount), `s3` for staging/prod
+#   (MinIO via the objectstorage service).
+#
+#   The tracing-bucket-init sidecar is a no-op when
+#   TEMPO_STORAGE_BACKEND=local and provisions the MinIO bucket
+#   otherwise. Tempo depends_on its successful completion so a
+#   mis-configured bucket can't silently discard spans.
+# =======================================================================
+
+services:
+  # One-shot sidecar: provisions the MinIO bucket when backend=s3, no-ops otherwise.
+  # Runs on every stack start; `mc mb --ignore-existing` is idempotent.
+  tracing-bucket-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    profiles: ["core", "telemetry"]
+    environment:
+      TEMPO_STORAGE_BACKEND: ${TEMPO_STORAGE_BACKEND}
+      TEMPO_S3_BUCKET: ${TEMPO_S3_BUCKET}
+      TEMPO_S3_ENDPOINT: ${TEMPO_S3_ENDPOINT}
+      TEMPO_S3_ACCESS_KEY: ${TEMPO_S3_ACCESS_KEY}
+      TEMPO_S3_SECRET_KEY: ${TEMPO_S3_SECRET_KEY}
+      TEMPO_S3_INSECURE: ${TEMPO_S3_INSECURE}
+      MC_CONFIG_DIR: /tmp/.mc
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ "$${TEMPO_STORAGE_BACKEND}" != "s3" ]; then
+          echo "[tracing-bucket-init] TEMPO_STORAGE_BACKEND=$${TEMPO_STORAGE_BACKEND} — skipping bucket bootstrap"
+          exit 0
+        fi
+        scheme="https"
+        if [ "$${TEMPO_S3_INSECURE}" = "true" ]; then scheme="http"; fi
+        echo "[tracing-bucket-init] provisioning bucket $${TEMPO_S3_BUCKET} at $${scheme}://$${TEMPO_S3_ENDPOINT}"
+        # Retry alias registration — object storage may still be booting.
+        # Six attempts over ~30s matches the objectstorage healthcheck window.
+        for i in 1 2 3 4 5 6; do
+          if mc alias set storage "$${scheme}://$${TEMPO_S3_ENDPOINT}" "$${TEMPO_S3_ACCESS_KEY}" "$${TEMPO_S3_SECRET_KEY}"; then
+            break
+          fi
+          echo "[tracing-bucket-init] object storage not reachable, retry $${i}/6 in 5s..."
+          sleep 5
+        done
+        mc alias ls storage >/dev/null
+        # Use mc ls to check bucket existence first. In non-local environments
+        # objectstorage-init (running as root) creates the bucket; the scoped
+        # athyper-tempo user only needs ListBucket for this check, not CreateBucket.
+        if mc ls "storage/$${TEMPO_S3_BUCKET}/" >/dev/null 2>&1; then
+          echo "[tracing-bucket-init] bucket already exists: $${TEMPO_S3_BUCKET}"
+        else
+          mc mb "storage/$${TEMPO_S3_BUCKET}"
+          echo "[tracing-bucket-init] bucket created: $${TEMPO_S3_BUCKET}"
+        fi
+        echo "[tracing-bucket-init] bucket ready: $${TEMPO_S3_BUCKET}"
+    networks: [edge]
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+
+  tracing:
+    image: grafana/tempo:2.10.4
+    profiles: ["core", "telemetry"]
+    deploy:
+      resources:
+        limits:
+          memory: "${TRACING_MEMORY_LIMIT}"
+    command: ["-config.file=/etc/tempo.yml", "-config.expand-env=true"]
+    environment:
+      TEMPO_STORAGE_BACKEND: ${TEMPO_STORAGE_BACKEND}
+      TEMPO_S3_BUCKET: ${TEMPO_S3_BUCKET}
+      TEMPO_S3_ENDPOINT: ${TEMPO_S3_ENDPOINT}
+      TEMPO_S3_ACCESS_KEY: ${TEMPO_S3_ACCESS_KEY}
+      TEMPO_S3_SECRET_KEY: ${TEMPO_S3_SECRET_KEY}
+      TEMPO_S3_INSECURE: ${TEMPO_S3_INSECURE}
+    depends_on:
+      # Block Tempo startup until the bucket sidecar exits 0. In local
+      # (backend=local) the sidecar no-ops; in s3 mode it guarantees the
+      # bucket exists before Tempo tries to write a block there.
+      tracing-bucket-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/tracing/config.yml:/etc/tempo.yml:ro
+      - ${ATHYPER_DATA}/telemetry/tracing:/var/tempo
+    networks: [edge, internal]
+    healthcheck:
+      test: ["NONE"]
+    # Shutdown: 20s — Tempo flushes in-memory trace data
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.docker.network=athyper-edge
+      - traefik.enable=true
+      - traefik.http.routers.tracing.entrypoints=websecure
+      - traefik.http.routers.tracing.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.tracing.rule=Host(`${TRACES_HOST}`)
+      - traefik.http.routers.tracing.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.tracing.tls=true
+      - traefik.http.services.tracing.loadbalancer.server.port=3200

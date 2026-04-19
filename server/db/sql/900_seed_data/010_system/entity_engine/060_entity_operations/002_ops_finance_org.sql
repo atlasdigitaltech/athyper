@@ -3,7 +3,7 @@
 -- Covers: legal_entity, company_code, business_unit, cost_center, profit_center,
 --         warehouse, chart_of_account, gl_account, project, project_item,
 --         dimension_set, fiscal_period
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -24,7 +24,7 @@ VALUES
     (NULL,'legal_entity','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 60,v_su),
     (NULL,'legal_entity','export',  'LIST',  'TOOLBAR', 'API',     'export',                      false,70,v_su),
     (NULL,'legal_entity','import',  'LIST',  'TOOLBAR', 'API',     'import',                      false,80,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- company_code  (Set C)
@@ -40,7 +40,7 @@ VALUES
     (NULL,'company_code','close',  'DETAIL','OVERFLOW','MODAL',   'close',                       true, 50,v_su),
     (NULL,'company_code','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 60,v_su),
     (NULL,'company_code','export', 'LIST',  'TOOLBAR', 'API',     'export',                      false,70,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- business_unit / cost_center / profit_center  (Set B)
@@ -69,7 +69,7 @@ VALUES
     (NULL,'profit_center','reopen', 'DETAIL','OVERFLOW','MODAL',   'reactivate',                   true, 40,v_su),
     (NULL,'profit_center','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                       true, 50,v_su),
     (NULL,'profit_center','export', 'LIST',  'TOOLBAR', 'API',     'export',                       false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- warehouse  (Set B)
@@ -84,7 +84,7 @@ VALUES
     (NULL,'warehouse','reopen', 'DETAIL','OVERFLOW','MODAL',   'reactivate',               true, 40,v_su),
     (NULL,'warehouse','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                   true, 50,v_su),
     (NULL,'warehouse','export', 'LIST',  'TOOLBAR', 'API',     'export',                   false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- chart_of_account  (Set C: + import, copy)
@@ -101,7 +101,7 @@ VALUES
     (NULL,'chart_of_account','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                          true, 60,v_su),
     (NULL,'chart_of_account','export', 'LIST',  'TOOLBAR', 'API',     'export',                          false,70,v_su),
     (NULL,'chart_of_account','import', 'LIST',  'TOOLBAR', 'API',     'import',                          false,80,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- gl_account  (Set C + block/unblock via cancel/reopen)
@@ -119,7 +119,7 @@ VALUES
     (NULL,'gl_account','export',  'LIST',  'TOOLBAR', 'API',     'export',                    false,70,v_su),
     (NULL,'gl_account','import',  'LIST',  'TOOLBAR', 'API',     'import',                    false,80,v_su),
     (NULL,'gl_account','bulk_update','LIST','TOOLBAR','API',     'bulk_update',               false,90,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- project  (Set F: + submit/approve/close/reopen)
@@ -138,7 +138,7 @@ VALUES
     (NULL,'project','cancel',  'DETAIL','OVERFLOW','MODAL',   'cancel',                 true, 80,v_su),
     (NULL,'project','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                 true, 90,v_su),
     (NULL,'project','export',  'LIST',  'TOOLBAR', 'API',     'export',                 false,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- fiscal_period  (lifecycle: close/reopen + submit/approve)
@@ -154,7 +154,7 @@ VALUES
     (NULL,'fiscal_period','close',   'DETAIL','TOOLBAR', 'MODAL',   'close',                         true, 50,v_su),
     (NULL,'fiscal_period','reopen',  'DETAIL','OVERFLOW','MODAL',   'reopen',                        true, 60,v_su),
     (NULL,'fiscal_period','export',  'LIST',  'TOOLBAR', 'API',     'export',                        false,70,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL entities under Finance Org (Set G)
@@ -175,7 +175,7 @@ VALUES
     (NULL,'project_item',              'create','LIST',  'PRIMARY', 'MODAL',   'create',                         false,10,v_su),
     (NULL,'project_item',              'update','DETAIL','PRIMARY', 'MODAL',   'edit',                           true, 20,v_su),
     (NULL,'project_item',              'delete','DETAIL','OVERFLOW','MODAL',   'delete',                         true, 30,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: Finance org entities seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

@@ -1,0 +1,54 @@
+# =======================================================================
+# Stack       : athyper Stack – Monitoring
+# Service     : Uptime Kuma — service availability dashboard + alerting
+#
+# Description :
+#   Monitors HTTP endpoints, Docker containers, TCP/DNS reachability.
+#   Designed to probe the event.endpoint.health_check_url set every INT
+#   provider already maintains, plus in-stack services (gotenberg, tika,
+#   meilisearch, keycloak, redis, postgres).
+#
+# Notes :
+#   - Stores state in an embedded SQLite DB mounted at /app/data.
+#   - Accessible via Traefik at ${UPTIME_HOST}.
+#   - Protected by DASHBOARD_AUTH_MW in staging/production (Kuma has its
+#     own login but the gateway gate adds defence-in-depth).
+# =======================================================================
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    profiles: ["monitoring"]
+    networks: [edge, internal]
+    volumes:
+      - ${ATHYPER_DATA}/uptime-kuma:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: "${UPTIME_MEMORY_LIMIT}"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node /app/extra/healthcheck.js || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 15s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.uptime-kuma.rule=Host(`${UPTIME_HOST}`)
+      - traefik.http.routers.uptime-kuma.entrypoints=websecure
+      - traefik.http.routers.uptime-kuma.tls=true
+      - traefik.http.routers.uptime-kuma.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
+      - traefik.http.routers.uptime-kuma.middlewares=${DASHBOARD_AUTH_MW}

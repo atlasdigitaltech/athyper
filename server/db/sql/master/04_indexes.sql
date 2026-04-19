@@ -352,6 +352,20 @@ CREATE INDEX IF NOT EXISTS att_preview_pending_pidx
       AND preview_key IS NULL
       AND is_preview_generation_failed = false
       AND is_active = true;
+-- Text-extraction backfill sweep (Tika worker picks up rows where status IS NULL)
+CREATE INDEX IF NOT EXISTS att_text_extraction_pending_pidx
+    ON master.attachment (tenant_id, created_at)
+    WHERE text_extraction_status IS NULL
+      AND is_active = true
+      AND status = 'active';
+-- FTS: full-text search on extracted attachment text
+CREATE INDEX IF NOT EXISTS att_extracted_text_fts_idx
+    ON master.attachment USING GIN (to_tsvector('english', extracted_text))
+    WHERE extracted_text IS NOT NULL;
+-- PII surface: tenant-wide dashboard of attachments flagged with sensitive data
+CREATE INDEX IF NOT EXISTS att_pii_detected_pidx
+    ON master.attachment (tenant_id, pii_scanned_at DESC)
+    WHERE pii_detected = true;
 
 -- —— §2  master.multipart_upload —————————————————————————————————————————
 -- In-flight uploads for a tenant (cleanup sweep + status dashboard)

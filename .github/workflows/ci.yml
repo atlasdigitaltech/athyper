@@ -83,8 +83,25 @@ jobs:
       - name: Dependency graph check
         run: pnpm run depcheck
 
+      # Workspace policy — prevents recurrence of the April 2026 audit findings.
+      # Enforces version drift for shared toolchain (typescript, @types/react,
+      # @types/react-dom, @tanstack/react-query), bounded peer ranges for
+      # @tanstack/react-query, and tsconfig normalization (moduleResolution
+      # casing, required extends, no per-package strictness downgrades).
+      # See scripts/policy/ and .syncpackrc.json.
+      - name: Workspace policy
+        run: pnpm run policy
+
+      # F8 Phase 2 — single-ingress port hardening. Fails if any service
+      # with traefik.* labels also publishes a backend port directly on
+      # the host (bypass path). Advisory while baseline is clean; promote
+      # to blocking by removing continue-on-error once confidence settles.
+      - name: Verify port hardening (F8 Phase 2)
+        continue-on-error: true
+        run: bash stack/scripts/setup/verify-port-hardening.sh
+
   # ─── Build ───────────────────────────────────────────────────────
-  # Builds all workspace packages excluding @neon/web (Next.js app)
+  # Builds all workspace packages excluding @athyper/web (Next.js app)
   # which requires runtime secrets not available in CI.
   # ─────────────────────────────────────────────────────────────────
   build:
@@ -119,13 +136,169 @@ jobs:
 
       - name: Build packages
         # Builds framework, shared packages, tooling — excludes Next.js app
-        # @neon/web requires runtime secrets (DB, Keycloak, Redis) for production build
-        run: pnpm turbo run build --filter=!@neon/web --filter=!@neon/auth --filter=!@neon/content
+        # @athyper/web requires runtime secrets (DB, Keycloak, Redis) for production build
+        run: pnpm turbo run build --filter=!@athyper/web --filter=!@athyper/auth --filter=!@athyper/content
         env:
           NODE_ENV: production
 
+  # ─── RLS Verify ──────────────────────────────────────────────────
+  # Spins up Postgres, runs migrations + system seed, then executes the RLS
+  # verification suite under a non-superuser role (athyperapp_test). This is
+  # what makes RLS policies operationally verified — running the suite as the
+  # superuser DATABASE_URL bypasses RLS and every test would trivially pass.
+  #
+  # continue-on-error: true for now — P1a lands the mechanism; the first
+  # failures this surfaces (missing grants, queries that assumed superuser
+  # privileges) get fixed in a follow-up PR (P1b) and then this job becomes
+  # blocking. See findings writeup for background.
+  # ─────────────────────────────────────────────────────────────────
+  rls-verify:
+    name: RLS + Tenant Stamp Verify
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: athyperadmin
+          POSTGRES_PASSWORD: athyperadmin
+          POSTGRES_DB: athyper_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U athyperadmin -d athyper_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_ADMIN_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_test
+      DATABASE_URL:       postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_test
+      DATABASE_URL_PGBOUNCER: postgresql://athyperadmin:athyperadmin@127.0.0.1:6432/athyper_test
+      RLS_APP_ROLE:       athyperapp_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+
+      - name: Run DDL migrations (phase 1)
+        run: pnpm --filter @athyper/db run db:setup:ddl
+
+      - name: Run system seed (phase 2)
+        run: pnpm --filter @athyper/db run db:setup:system
+
+      - name: Create athyperapp_test role (LOGIN, NOBYPASSRLS)
+        env:
+          PGPASSWORD: athyperadmin
+        run: |
+          psql "$DATABASE_ADMIN_URL" <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp_test') THEN
+              CREATE ROLE athyperapp_test LOGIN NOBYPASSRLS PASSWORD 'athyperapp_test';
+            END IF;
+          END $$;
+          -- Inherit all grants the runtime role (athyperapp) already has so the
+          -- verification suite runs with the same privilege surface the app uses.
+          GRANT athyperapp TO athyperapp_test;
+          SQL
+
+      - name: Verify RLS under non-superuser role
+        run: pnpm --filter @athyper/runtime-server run rls:verify
+
+      # F9 — SECURITY DEFINER hardening contract: every prosecdef=true
+      # function must be owned by athyperadmin, REVOKED from PUBLIC, GRANTed
+      # to athyperapp, and carry an explicit search_path. Runs against the
+      # same DB this job already migrated (DDL + system seed), so no extra
+      # setup is needed. Advisory while the baseline burns in (parent job
+      # already continue-on-error: true).
+      - name: Verify SECURITY DEFINER hardening (F9)
+        run: pnpm --filter @athyper/runtime-server run secdef:verify
+
+      # PgBouncer sidecar — the TenantStampDriver's implicit-transaction
+      # behavior is specifically tested against transaction-pool mode here,
+      # because that's the pool mode the athyper apps use in every environment.
+      - name: Start PgBouncer (transaction pool mode)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pgbouncer
+
+          # SCRAM-SHA-256 auth requires an md5/plain entry in userlist.txt;
+          # we use plain for simplicity (the admin password isn't a secret in CI).
+          sudo tee /etc/pgbouncer/userlist.txt > /dev/null <<'EOF'
+          "athyperadmin" "athyperadmin"
+          "athyperapp_test" "athyperapp_test"
+          EOF
+
+          sudo tee /etc/pgbouncer/pgbouncer.ini > /dev/null <<'EOF'
+          [databases]
+          athyper_test = host=127.0.0.1 port=5432 dbname=athyper_test
+
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 6432
+          auth_type = plain
+          auth_file = /etc/pgbouncer/userlist.txt
+          pool_mode = transaction
+          max_client_conn = 100
+          default_pool_size = 20
+          server_reset_query = DISCARD ALL
+          server_reset_query_always = 0
+          ignore_startup_parameters = extra_float_digits, options, application_name
+          log_connections = 0
+          log_disconnections = 0
+          EOF
+
+          sudo chmod 644 /etc/pgbouncer/userlist.txt /etc/pgbouncer/pgbouncer.ini
+          sudo pgbouncer -d /etc/pgbouncer/pgbouncer.ini
+
+          # Wait for PgBouncer to listen.
+          for i in {1..20}; do
+            if pg_isready -h 127.0.0.1 -p 6432 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PgBouncer did not become ready in time"
+          exit 1
+
+      - name: Verify tenant-stamp driver (through PgBouncer tx pool)
+        env:
+          # Point the stamp suite at PgBouncer so we catch tx-pool-specific
+          # surprises (connection handoff, DISCARD ALL interactions).
+          DATABASE_URL: ${{ env.DATABASE_URL_PGBOUNCER }}
+        run: pnpm --filter @athyper/runtime-server run tenant-stamp:verify -- --bench
+
   # ─── CI Status Gate ──────────────────────────────────────────────
-  # Single required check — PRs must pass this to be mergeable
+  # Single required check — PRs must pass this to be mergeable.
+  # rls-verify is intentionally NOT required yet (see job comment).
   # ─────────────────────────────────────────────────────────────────
   ci-success:
     name: CI Success

@@ -1,0 +1,127 @@
+# =======================================================================
+# Stack       : athyper Stack - Workbench Routes (Phase 1)
+# Environment : LOCAL (default: neon.athyper.local, via APPS_ATHYPER_WEB_HOST env var)
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+#
+# Workbench model:
+#   /user/*   - Standard user workbench (role-gated by Next.js middleware)
+#   /admin/*  - Admin workbench (IP-restricted + role-gated)
+#   /ops/*    - Operations workbench (IP-restricted + role-gated)
+#   /         - Default catch-all, routes to user context
+#
+# Per-environment variants:
+#   Local (this file):  stack/config/gateway/dynamic/athyper.workbench.yml
+#   Staging:            stack/config/gateway/environments/neon-workbench-routes.staging.yml
+#   Production:         stack/config/gateway/environments/neon-workbench-routes.prod.yml
+#
+# Traefik loads ALL .yml files from this directory. Only one workbench
+# file should exist here at a time. Staging/production variants live in
+# environments/ and are copied into dynamic/ during deployment.
+# =======================================================================
+
+http:
+  middlewares:
+    workbench-strip-user:
+      stripPrefix:
+        prefixes: ["/user"]
+
+    workbench-strip-admin:
+      stripPrefix:
+        prefixes: ["/admin"]
+
+    workbench-strip-ops:
+      stripPrefix:
+        prefixes: ["/ops"]
+
+    workbench-headers-user:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "user"
+
+    workbench-headers-admin:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "admin"
+
+    workbench-headers-ops:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "ops"
+
+    # Local: all private ranges - no VPN in dev
+    workbench-ip-restrict:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+
+    # Local: forward-auth disabled — Next.js middleware handles auth.
+    # Staging/production use Traefik-layer forward-auth (see environments/).
+    #
+    # DEV-PARITY NOTE: local skips the Traefik auth layer entirely.
+    # Bugs in forward-auth header propagation (X-User-Id, X-Tenant-Id)
+    # will NOT surface locally. To test, uncomment the block below and
+    # ensure athyper-api exposes GET /api/auth/verify.
+    #
+    # workbench-forward-auth:
+    #   forwardAuth:
+    #     address: "http://athyper-api:3000/api/auth/verify"
+    #     trustForwardHeader: true
+    #     authResponseHeaders:
+    #       - "X-User-Id"
+    #       - "X-User-Roles"
+    #       - "X-Tenant-Id"
+
+  routers:
+    neon-workbench-admin:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/admin`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 110
+      tls: {}
+      middlewares:
+        - workbench-ip-restrict
+        - workbench-strip-admin
+        - workbench-headers-admin
+
+    neon-workbench-ops:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 110
+      tls: {}
+      middlewares:
+        - workbench-ip-restrict
+        - workbench-strip-ops
+        - workbench-headers-ops
+
+    neon-workbench-user:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 100
+      tls: {}
+      middlewares:
+        - workbench-strip-user
+        - workbench-headers-user
+
+    neon-default:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 1
+      tls: {}
+      middlewares:
+        - workbench-headers-user
+
+  services:
+    athyper-neon-web:
+      loadBalancer:
+        servers:
+          # Upstream is env-driven so one template serves all environments.
+          # Local default (set in stack/env/.env.example): http://host.docker.internal:3000
+          # The gateway container has extra_hosts host.docker.internal:host-gateway so
+          # this resolves on Linux Docker 20.10+ as well as Docker Desktop.
+          - url: "{{ env "APPS_ATHYPER_WEB_UPSTREAM_URL" }}"

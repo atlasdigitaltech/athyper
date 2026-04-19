@@ -25,10 +25,12 @@ import { sql } from "kysely";
 import type { Kysely } from "kysely";
 import {
   QUEUE_NAME,
+  JOB_NAME,
   DRAIN_TOPICS,
   drainJobName,
   type DrainTopic,
   type DrainOutboxJobData,
+  type DomainOutboxJobData,
   type JobLogger,
 } from "../jobs.types.js";
 
@@ -136,11 +138,33 @@ async function drain(
   logger?.info("domain_outbox_batch_done", { topic, processed: claimed.rows.length });
 }
 
+// ─── Purge ────────────────────────────────────────────────────────────────────
+// Batch-deletes completed event.outbox rows older than the retention window via
+// event.fn_outbox_purge_completed(). The SQL function defaults (7 days, 1000
+// rows/batch) are intentionally used — retention policy lives with the schema,
+// not the worker. Loops until a batch deletes fewer than MAX_BATCH, bounded by
+// MAX_ITERATIONS to avoid monopolising the worker on a pathological backlog.
+
+const PURGE_MAX_ITERATIONS = 10;
+
+async function purge(db: DB, logger?: JobLogger): Promise<void> {
+  let totalDeleted = 0;
+  for (let i = 0; i < PURGE_MAX_ITERATIONS; i++) {
+    const result = await sql<{ fn_outbox_purge_completed: number }>`
+      SELECT event.fn_outbox_purge_completed() AS fn_outbox_purge_completed
+    `.execute(db);
+    const deleted = result.rows[0]?.fn_outbox_purge_completed ?? 0;
+    totalDeleted += deleted;
+    if (deleted === 0) break;
+  }
+  logger?.info("domain_outbox_purge_done", { totalDeleted });
+}
+
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export interface DomainOutboxWorkerDeps {
   db:            DB;
-  queue:         Queue<DrainOutboxJobData>;
+  queue:         Queue<DomainOutboxJobData>;
   connection:    ConnectionOptions;
   /**
    * Per-topic event handlers. Register a handler for 'fin', 'wf', or 'audit'.
@@ -154,10 +178,15 @@ export function createDomainOutboxWorker(deps: DomainOutboxWorkerDeps): Worker {
   const { db, connection, logger } = deps;
   const handlers = deps.topicHandlers ?? new Map<string, OutboxTopicHandler>();
 
-  return new Worker<DrainOutboxJobData>(
+  return new Worker<DomainOutboxJobData>(
     QUEUE_NAME.DOMAIN_OUTBOX,
-    async (job: Job<DrainOutboxJobData>) => {
-      const topic = job.data.topic;
+    async (job: Job<DomainOutboxJobData>) => {
+      if (job.name === JOB_NAME.OUTBOX_PURGE) {
+        await purge(db, logger);
+        return;
+      }
+
+      const topic = (job.data as DrainOutboxJobData).topic;
 
       if (!DRAIN_TOPICS.includes(topic)) {
         logger?.warn("domain_outbox_unknown_topic", { topic, jobId: job.id });

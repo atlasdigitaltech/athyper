@@ -3750,7 +3750,7 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    IF v_direction NOT IN ('OUTBOUND', 'BOTH') THEN
+    IF lower(v_direction) NOT IN ('outbound', 'both') THEN
         RAISE EXCEPTION
             'company_code_supplier_profile: payment_method_id (%) has direction "%" '
             '— must be OUTBOUND or BOTH for supplier disbursement methods',

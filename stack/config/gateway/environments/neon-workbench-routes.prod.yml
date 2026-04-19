@@ -1,0 +1,135 @@
+# =======================================================================
+# Stack       : athyper Stack - Workbench Routes (Phase 1)
+# Environment : PRODUCTION (default: neon.athyper.com, via APPS_ATHYPER_WEB_HOST env var)
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+#
+# Deploy: copy this file to stack/config/gateway/dynamic/athyper.workbench.yml
+#         on the production host, replacing the local variant.
+#
+# IMPORTANT: workbench-ip-restrict.sourceRange is EMPTY by default.
+#   This means admin/ and ops/ routes will reject ALL traffic until you
+#   add your corporate VPN CIDR blocks. This is intentional fail-closed
+#   behavior — never deploy to production without configuring real CIDRs.
+#
+# Prerequisites:
+#   - Traefik certificatesResolvers.letsencrypt must be configured
+#     in the static config (athyper-gateway.yml command args).
+#   - workbench-forward-auth requires athyper-api to expose GET /api/auth/verify.
+#   - The `athyper-neon-web` upstream below resolves to the containerised
+#     Next.js service defined in stack/compose/apps/athyper-apps.yml (profile
+#     `apps`, F8 Phase 3, landed 2026-04-18). Bring the stack up with the
+#     `apps` profile before the first gateway hit — otherwise Traefik returns
+#     502 because the upstream is absent.
+# =======================================================================
+
+http:
+  middlewares:
+    workbench-strip-user:
+      stripPrefix:
+        prefixes: ["/user"]
+
+    workbench-strip-admin:
+      stripPrefix:
+        prefixes: ["/admin"]
+
+    workbench-strip-ops:
+      stripPrefix:
+        prefixes: ["/ops"]
+
+    workbench-headers-user:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "user"
+
+    workbench-headers-admin:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "admin"
+
+    workbench-headers-ops:
+      headers:
+        customRequestHeaders:
+          X-Workbench-Context: "ops"
+
+    # !! DEPLOY-BLOCKER !! — replace before ANY production deployment.
+    # The default 203.0.113.0/24 is TEST-NET-3 (RFC 5737) and will block ALL
+    # real traffic to /admin and /ops routes. This is an intentional fail-safe.
+    #
+    # Replace with your corporate VPN CIDR(s):
+    #   Tailscale example: "100.64.0.0/10"
+    #   WireGuard example: "10.8.0.0/24"
+    workbench-ip-restrict:
+      ipAllowList:
+        sourceRange:
+          - "203.0.113.0/24"  # !! REPLACE — TEST-NET-3 (RFC 5737) fail-safe
+
+    workbench-forward-auth:
+      forwardAuth:
+        address: "http://athyper-api:3000/api/auth/verify"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Roles"
+          - "X-Tenant-Id"
+
+  routers:
+    neon-workbench-admin:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/admin`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 110
+      tls:
+        certResolver: letsencrypt
+        options: athyper-tls-default@file
+      middlewares:
+        - workbench-ip-restrict
+        - workbench-forward-auth
+        - workbench-strip-admin
+        - workbench-headers-admin
+
+    neon-workbench-ops:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 110
+      tls:
+        certResolver: letsencrypt
+        options: athyper-tls-default@file
+      middlewares:
+        - workbench-ip-restrict
+        - workbench-forward-auth
+        - workbench-strip-ops
+        - workbench-headers-ops
+
+    neon-workbench-user:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 100
+      tls:
+        certResolver: letsencrypt
+        options: athyper-tls-default@file
+      middlewares:
+        - workbench-forward-auth
+        - workbench-strip-user
+        - workbench-headers-user
+
+    neon-default:
+      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
+      entryPoints: [websecure]
+      service: athyper-neon-web
+      priority: 1
+      tls:
+        certResolver: letsencrypt
+        options: athyper-tls-default@file
+      middlewares:
+        - workbench-forward-auth
+        - workbench-headers-user
+
+  services:
+    athyper-neon-web:
+      loadBalancer:
+        servers:
+          # Env-driven — staging/prod should set APPS_ATHYPER_WEB_UPSTREAM_URL
+          # to http://athyper-neon-web:3000 (the in-network service name).
+          - url: "{{ env "APPS_ATHYPER_WEB_UPSTREAM_URL" }}"

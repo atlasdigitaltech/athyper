@@ -16,6 +16,7 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
+import type { Queue } from "bullmq";
 import busboy from "busboy";
 import {
   verifyBearer,
@@ -24,6 +25,7 @@ import {
   SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import { JOB_NAME, type ExtractTextJobData, type SweepJobData } from "@athyper/svc-jobs";
 import { resolveDocumentEntity } from "./entity-resolver.js";
 import {
   ContentAttachmentService,
@@ -60,6 +62,16 @@ export interface AttachmentsRouteDeps {
     /** Maximum allowed multipart upload in MiB. Default: 100. */
     maxUploadMb?: number;
   };
+  /**
+   * BullMQ queue for attachment text extraction (Tika). When present, an
+   * extract-text job is enqueued after each successful upload. Absent when
+   * TIKA_URL is unset — uploads still succeed; extraction simply never runs.
+   *
+   * Typed as ExtractTextJobData | SweepJobData to match the queue exported
+   * by svc-jobs (the sweep scheduler shares the same queue). This route only
+   * calls .add() with ExtractTextJobData, which is assignable to the union.
+   */
+  tikaQueue?: Queue<ExtractTextJobData | SweepJobData>;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
@@ -83,7 +95,34 @@ async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteDeps): void {
-  const { db, auth, objectStorage, logger } = deps;
+  const { db, auth, objectStorage, tikaQueue, logger } = deps;
+
+  /**
+   * Fire-and-forget enqueue of a Tika extraction job. Never throws — upload
+   * completion must not depend on Redis availability. Missing queue (no
+   * TIKA_URL configured) is a silent no-op.
+   */
+  function enqueueTikaExtract(attachmentId: string, tenantId: string): void {
+    if (!tikaQueue) return;
+    void tikaQueue
+      .add(
+        JOB_NAME.EXTRACT_TEXT,
+        { attachmentId, tenantId },
+        {
+          jobId:       `tika:${attachmentId}`,  // dedup: repeat uploads of same id collapse
+          attempts:    3,
+          backoff:     { type: "exponential", delay: 30_000 },
+          removeOnComplete: { age: 3600, count: 1000 },
+          removeOnFail:     { age: 86_400 },
+        },
+      )
+      .catch((err: unknown) => {
+        logger?.warn("tika_enqueue_failed", {
+          attachmentId, tenantId,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      });
+  }
 
   // ── Guard: no storage adapter → 503 on all attachment routes ───────────────
   if (!objectStorage) {
@@ -217,6 +256,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         linkKind: "related",
       });
 
+      enqueueTikaExtract(result.id, tenantId);
+
       res.status(201).json(toAttachmentResponse(result, docType, id));
     } catch (err) {
       logger?.error("attachments_upload_error", { err: String(err) });
@@ -313,6 +354,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
 
         uploadPromise
           .then((result) => {
+            enqueueTikaExtract(result.id, tenantId);
             res.status(201).json(toAttachmentResponse(result, docType, id));
           })
           .catch((err: unknown) => {
@@ -464,8 +506,111 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
     }
   };
 
+  // ── REINDEX attachment (force re-extraction of text + PII) ──────────────────
+  // Resets text_extraction_status → NULL (so the worker re-processes even if
+  // the row was previously extracted / skipped / failed) and enqueues a fresh
+  // job with a reindex-scoped jobId — bypasses the dedup key used by the
+  // normal upload path and the sweep.
+  const reindexHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { docType, id, attachmentId } = req.params as {
+        docType: string; id: string; attachmentId: string;
+      };
+
+      if (!isUuid(id) || !isUuid(attachmentId)) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Attachment not found" });
+        return;
+      }
+
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
+        return;
+      }
+
+      const entity = await resolveDocumentEntity(db, docType);
+      if (!entity) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
+        return;
+      }
+
+      if (!tikaQueue) {
+        res.status(503).json({
+          error:   "TIKA_UNAVAILABLE",
+          message: "Text extraction is not configured on this runtime",
+        });
+        return;
+      }
+
+      // Verify attachment exists, belongs to this tenant, AND is linked to
+      // the (entity_type, entity_id) pair the caller is authorised against.
+      const link = await db
+        .selectFrom("master.entity_document_link as edl")
+        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .select(["a.id" as never])
+        .where("edl.tenant_id" as never,  "=", tenantId as never)
+        .where("edl.entity_type" as never,"=", (entity.name as string) as never)
+        .where("edl.entity_id" as never,  "=", id as never)
+        .where("a.id" as never,           "=", attachmentId as never)
+        .where("a.status" as never,       "=", "active" as never)
+        .executeTakeFirst();
+
+      if (!link) {
+        res.status(404).json({ error: "ATTACHMENT_NOT_FOUND", message: "Attachment not found" });
+        return;
+      }
+
+      const sub         = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalId(db, sub, tenantId);
+
+      // Reset extraction + PII state so the worker doesn't short-circuit on
+      // the "already extracted" check.
+      await db
+        .updateTable("master.attachment" as never)
+        .set({
+          text_extraction_status: null,
+          text_extraction_error:  null,
+          text_extracted_at:      null,
+          extracted_text:         null,
+          extracted_text_chars:   null,
+          pii_detected:           false,
+          pii_types:              JSON.stringify([]),
+          pii_scanned_at:         null,
+          updated_at:             new Date(),
+          updated_by:             principalId,
+        } as never)
+        .where("id" as never,        "=", attachmentId as never)
+        .where("tenant_id" as never, "=", tenantId     as never)
+        .execute();
+
+      // Fresh jobId so BullMQ doesn't collapse this onto an existing / stale job.
+      await tikaQueue.add(
+        JOB_NAME.EXTRACT_TEXT,
+        { attachmentId, tenantId },
+        {
+          jobId:    `tika:${attachmentId}:reindex:${Date.now()}`,
+          attempts: 3,
+          backoff:  { type: "exponential", delay: 30_000 },
+          removeOnComplete: { age: 3600, count: 1000 },
+          removeOnFail:     { age: 86_400 },
+        },
+      );
+
+      res.status(202).json({ status: "enqueued", attachment_id: attachmentId });
+    } catch (err) {
+      logger?.error("attachments_reindex_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // Register routes — more specific paths first
   router.get(    "/documents/:docType/:id/attachments/:attachmentId/download", downloadHandler);
+  router.post(   "/documents/:docType/:id/attachments/:attachmentId/reindex",  reindexHandler);
   router.get(    "/documents/:docType/:id/attachments",                        listHandler);
   router.post(   "/documents/:docType/:id/attachments",                        uploadHandler);
   router.delete( "/documents/:docType/:id/attachments/:attachmentId",          deleteHandler);

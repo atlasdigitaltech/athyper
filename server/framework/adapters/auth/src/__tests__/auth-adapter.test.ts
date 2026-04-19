@@ -180,7 +180,7 @@ describe("AuthAdapter", () => {
     const health = adapter.getJwksHealth("partner");
 
     expect(Object.keys(health)).toEqual(["partner"]);
-    expect(health.partner.healthy).toBe(true); // no failures yet
+    expect(health.partner?.healthy).toBe(true); // no failures yet
   });
 
   // ── getVerifier ─────────────────────────────────────────────

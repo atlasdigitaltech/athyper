@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS document.stocktake (
 );
 
 COMMENT ON TABLE document.stocktake IS
-    'Physical inventory count header. Lifecycle: planned → in_progress → completed | cancelled. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''planned'',''in_progress'')). Physical inventory count header. Lifecycle: planned → in_progress → completed | cancelled. '
     'Lines remain editable while status is planned/in_progress; immutable thereafter (app-layer). '
     'Financial impact recorded as ADJUSTMENT rows in ledger.inventory_movement at completion. '
     'total_line_count / variance_line_count maintained by trg_stl_denorm_counts trigger.';
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS document.stocktake_line (
 );
 
 COMMENT ON TABLE document.stocktake_line IS
-    'Physical count lines for a stocktake document. Editable while parent status is '
+    'ARCHETYPE=C;SCOPE=T. Physical count lines for a stocktake document. Editable while parent status is '
     'planned/in_progress; immutable once parent reaches completed (enforced at app layer). '
     'variance_qty = GENERATED (counted - system). variance_value = GENERATED (variance × unit_cost). '
     'warehouse_id denormalised from parent header for direct indexed variance queries.';

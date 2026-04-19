@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS control.lookup_domain (
 );
 
 COMMENT ON TABLE control.lookup_domain IS
-  'Registry of named lookup domains. Each domain groups lookup values under a unique code. is_extensible=true allows tenant extensions.';
+  'ARCHETYPE=B;SCOPE=N. Registry of named lookup domains. Each domain groups lookup values under a unique code. is_extensible=true allows tenant extensions.';
 
 -- §2 lookup_value — code+label pairs belonging to a domain
 CREATE TABLE IF NOT EXISTS control.lookup_value (
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS control.lookup_value (
 );
 
 COMMENT ON TABLE control.lookup_value IS
-  'Lookup code+label pairs keyed by domain_code. Global rows: tenant_id IS NULL, is_system=true. Tenant extensions: tenant_id IS NOT NULL, is_system=false.';
+  'ARCHETYPE=B;SCOPE=G. Lookup code+label pairs keyed by domain_code. Global rows: tenant_id IS NULL, is_system=true. Tenant extensions: tenant_id IS NOT NULL, is_system=false.';
 
 
 -- §1 mfa_config — local mirror of Keycloak MFA enrollment state
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS control.mfa_config (
 );
 
 COMMENT ON TABLE  control.mfa_config IS
-  'Local mirror of Keycloak MFA enrollment. One row per (tenant, principal, method_type). Replaces OTP instance tables.';
+  'ARCHETYPE=C;SCOPE=T. Local mirror of Keycloak MFA enrollment. One row per (tenant, principal, method_type). Replaces OTP instance tables.';
 
 
 -- ============================================================================
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS control.notification_provider (
 );
 
 COMMENT ON TABLE  control.notification_provider IS
-    'Channel provider registry. One row per adapter per channel. '
+    'ARCHETYPE=C;SCOPE=N. Channel provider registry. One row per adapter per channel. '
     'health updated by health-check worker. '
     'channel vocabulary: control.lookup_domain notification.channel.';
 COMMENT ON COLUMN control.notification_provider.adapter_key IS
@@ -291,7 +291,7 @@ CREATE TABLE IF NOT EXISTS control.notification_routing_rule (
 );
 
 COMMENT ON TABLE  control.notification_routing_rule IS
-    'Event-driven notification routing rules. tenant_id=NULL = platform global rule. '
+    'ARCHETYPE=C;SCOPE=G. Event-driven notification routing rules. tenant_id=NULL = platform global rule. '
     'channels[] references notification.channel lookup codes. '
     'priority validated via notification.priority lookup. '
     'R9: workflow_phase discriminator — NULL = any phase; '
@@ -347,7 +347,7 @@ CREATE TABLE IF NOT EXISTS control.outbox_routing_rule (
 );
 
 COMMENT ON TABLE control.outbox_routing_rule IS
-    'R5: business-event → outbox-topic dispatch map. Makes routing inspectable '
+    'ARCHETYPE=C;SCOPE=G. R5: business-event → outbox-topic dispatch map. Makes routing inspectable '
     'and tenant-overridable. One row per routing path; fan-out via multiple rows. '
     'tenant_id=NULL = platform-global. Tenant rows override for matching event_type+topic. '
     'handler_id references hook_action_registry(id) for emit_event handlers. '
@@ -402,7 +402,7 @@ CREATE TABLE IF NOT EXISTS control.notification_template (
 );
 
 COMMENT ON TABLE  control.notification_template IS
-    'Versioned message templates per (template_key, channel, locale). '
+    'ARCHETYPE=B_LITE;SCOPE=G;PENDING_ACTIVE_SET. Versioned message templates per (template_key, channel, locale). '
     'tenant_id=NULL = platform default. Tenant rows override platform defaults. '
     'channel validated via notification.channel lookup.';
 COMMENT ON COLUMN control.notification_template.template_key IS
@@ -469,7 +469,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle (
 );
 
 COMMENT ON TABLE  control.lifecycle IS
-    'State machine definition. Root record for a named lifecycle. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). State machine definition. Root record for a named lifecycle. '
     'tenant_id=NULL = platform-global (visible to all tenants). '
     'version_no incremented on child table changes. '
     'definition_hash NULLed to signal stale compiled snapshots. '
@@ -533,7 +533,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_state (
 );
 
 COMMENT ON TABLE  control.lifecycle_state IS
-    'States (nodes) within a lifecycle. '
+    'ARCHETYPE=C;SCOPE=G. States (nodes) within a lifecycle. '
     'is_initial=true: trigger enforces exactly one per lifecycle. '
     'is_terminal=true: guard_terminal_immutability() blocks field edits on entities in this state. '
     'config: {ui_color, icon_key, sla_minutes, require_reason_on_entry: bool}.';
@@ -591,7 +591,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition (
 );
 
 COMMENT ON TABLE  control.lifecycle_transition IS
-    'Allowed state transitions (directed edges). '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Allowed state transitions (directed edges). '
     'No self-loops (from <> to). No duplicate edges per lifecycle. '
     'operation_code maps to shared.permission.code for permission-check at runtime. '
     'L18: trg_lt_cross_lifecycle_guard ensures from/to states belong to this lifecycle_id. '
@@ -683,7 +683,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_gate (
 );
 
 COMMENT ON TABLE  control.lifecycle_transition_gate IS
-    'Preconditions evaluated before a transition fires. '
+    'ARCHETYPE=C;SCOPE=G. Preconditions evaluated before a transition fires. '
     'One gate per transition (UNIQUE on transition_id) — all conditions combined in one row. '
     'R2b: resolves_via is the canonical resolution-path discriminator: '
     '  workflow (default) → gate blocks until workflow_definition reaches APPROVED terminal state (async). '
@@ -773,7 +773,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_transition_hook (
 );
 
 COMMENT ON TABLE  control.lifecycle_transition_hook IS
-    'Side effects executed before or after a transition commits. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Side effects executed before or after a transition commits. '
     'timing: before (can veto by raising exception) | after (cannot veto). '
     'safety_level: required (cannot suppress) | narrowable | replaceable. '
     'contract_role: contract (platform promise) | extension (optional). '
@@ -842,7 +842,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_hook_override (
 );
 
 COMMENT ON TABLE  control.lifecycle_hook_override IS
-    'Tenant customisation of lifecycle hooks. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Tenant customisation of lifecycle hooks. '
     'suppress: disable a replaceable hook entirely. '
     'replace: swap the hook action with a different one. '
     'add_before/add_after: inject behaviour around the original hook. '
@@ -920,7 +920,7 @@ CREATE TABLE IF NOT EXISTS control.hook_action_registry (
 );
 
 COMMENT ON TABLE  control.hook_action_registry IS
-    'Registry of all hook actions the lifecycle engine can execute. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Registry of all hook actions the lifecycle engine can execute. '
     'Platform seeds system actions (origin=''system'', tenant_id=NULL). '
     'Tenants register custom actions (origin=''tenant''). '
     'control.lifecycle_transition_hook.action references action_key here. '
@@ -972,7 +972,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_timer_policy (
 );
 
 COMMENT ON TABLE  control.lifecycle_timer_policy IS
-    'Named escalation timer rule sets. Attached to lifecycle states via '
+    'ARCHETYPE=C;SCOPE=G. Named escalation timer rule sets. Attached to lifecycle states via '
     'lifecycle_state.config.timer_policy_code. '
     'rules: array of {after_minutes, action, notify_roles, transition_to, '
     'message_template_key}. '
@@ -1049,7 +1049,7 @@ CREATE TABLE IF NOT EXISTS control.workflow_definition (
 );
 
 COMMENT ON TABLE  control.workflow_definition IS
-    'Policy: when is a workflow required for an entity? '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Policy: when is a workflow required for an entity? '
     'rules jsonb array: [{condition: jsonlogic, template_code, workflow_type}]. '
     'First match wins. NULL condition = always applies. '
     'Referenced by control.lifecycle_transition_gate.workflow_definition_id; when a gate has this FK set, the engine starts a workflow_definition-governed approval and blocks the transition until the request reaches an APPROVED terminal state. '
@@ -1119,7 +1119,7 @@ CREATE TABLE IF NOT EXISTS control.workflow_template (
 );
 
 COMMENT ON TABLE  control.workflow_template IS
-    'Workflow blueprint. tenant_id=NULL = platform-global template. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Workflow blueprint. tenant_id=NULL = platform-global template. '
     'Defines stages, assignee rules, and behaviour switches. '
     'compiled_json: denormalised stages + rules snapshot (version-pinned at workflow_request creation). '
     'compiled_hash: nulled by trg_fn_template_child_changed when stages/rules change. '
@@ -1188,7 +1188,7 @@ CREATE TABLE IF NOT EXISTS control.workflow_template_stage (
 );
 
 COMMENT ON TABLE  control.workflow_template_stage IS
-    'Stage definition within a workflow template. '
+    'ARCHETYPE=C;SCOPE=G. Stage definition within a workflow template. '
     'A01: UNIQUE(workflow_template_id, stage_no). '
     'mode: serial (one work_item at a time) | parallel (all assigned at once). '
     'quorum: {strategy: count|percent|unanimous, required: N}. '
@@ -1246,7 +1246,7 @@ CREATE TABLE IF NOT EXISTS control.workflow_template_rule (
 );
 
 COMMENT ON TABLE  control.workflow_template_rule IS
-    'Assignee resolution rules. Priority-ordered — first matching rule wins. '
+    'ARCHETYPE=C;SCOPE=G. Assignee resolution rules. Priority-ordered — first matching rule wins. '
     'stage_no=NULL means rule applies to all stages in the template. '
     'A02: UNIQUE(template_id, stage_no, priority) — no ordering ambiguity. '
     'assign_to types: principal (uuid), role (code), team (code), '
@@ -1304,7 +1304,7 @@ CREATE TABLE IF NOT EXISTS control.workflow_sla_policy (
 );
 
 COMMENT ON TABLE  control.workflow_sla_policy IS
-    'SLA timer and escalation chain for workflow stages. '
+    'ARCHETYPE=C;SCOPE=G. SLA timer and escalation chain for workflow stages. '
     'tenant_id=NULL = platform-global control. '
     'timers: [{after_minutes, action: reminder|escalate|auto_approve|auto_reject, '
     'notify_roles, message_template_key}]. '
@@ -1377,7 +1377,7 @@ CREATE TABLE IF NOT EXISTS control.policy_definition (
 );
 
 COMMENT ON TABLE control.policy_definition IS
-    'Policy & Rules Engine: top-level policy container. '
+    'ARCHETYPE=B_LITE;SCOPE=G. Policy & Rules Engine: top-level policy container. '
     'tenant_id=NULL = platform-global. '
     'evaluation_mode: first_match (stop at first hit) | accumulate (merge all) | all (collect all outcomes). '
     'version_no bumped on every update so consumers can detect stale cached copies.';
@@ -1448,7 +1448,7 @@ CREATE TABLE IF NOT EXISTS control.policy_rule (
 );
 
 COMMENT ON TABLE control.policy_rule IS
-    'Individual rule within a policy_definition. '
+    'ARCHETYPE=C;SCOPE=N. Individual rule within a policy_definition. '
     'conditions: JSONLogic expression evaluated against entity payload (null = always matches). '
     'action: allow | deny | warn | require_workflow | escalate. '
     'score/confidence are 0.0–1.0 fractions. '
@@ -1513,7 +1513,7 @@ CREATE TABLE IF NOT EXISTS control.budget_check_config (
 );
 
 COMMENT ON TABLE control.budget_check_config IS
-    'R11: typed dimensional budget-check configuration referenced by policy_rule '
+    'ARCHETYPE=C;SCOPE=T. R11: typed dimensional budget-check configuration referenced by policy_rule '
     '(action=''budget_check''). Declares dimension scope (book, account, period, OU), '
     'netting mode (actuals vs committed vs forecast), warn/block thresholds, and an '
     'override approval path. Keeps dimensional semantics out of policy_rule.conditions JSON.';
@@ -1671,7 +1671,7 @@ CREATE TABLE IF NOT EXISTS control.entity_class_profile (
 );
 
 COMMENT ON TABLE  control.entity_class_profile IS
-    'Platform-global governance rules per entity class. Immutable — seeded at install. '
+    'ARCHETYPE=F;SCOPE=N. Platform-global governance rules per entity class. Immutable — seeded at install. '
     'Absorbs entity_field_flag_standard (field_flag_rules), '
     'security_tier_profile (security_tiers), '
     'audit_policy (compliance_profile.audit_rules). '
@@ -1860,7 +1860,7 @@ CREATE TABLE IF NOT EXISTS control.entity (
 );
 
 COMMENT ON TABLE  control.entity IS
-    'Central registry of every table/view in the platform. '
+    'ARCHETYPE=B;SCOPE=G. Non-standard active-set: is_active GENERATED AS (status = ANY(ARRAY[''ACTIVE'',''DEPRECATED''])). Central registry of every table/view in the platform. '
     'ownership_model discriminator: system (platform), tenant (custom), package, overlay. '
     'Tenant tables: document.t_<tenant_short>_<entity_code> — enforced by CHECK. '
     'composite_indexes: replaces control.index_def (eliminated). '
@@ -1940,7 +1940,7 @@ CREATE TABLE IF NOT EXISTS control.entity_publish_state (
 );
 
 COMMENT ON TABLE  control.entity_publish_state IS
-    '1:1 companion to control.entity. Holds compile/publish tracking columns '
+    'ARCHETYPE=C;SCOPE=G. 1:1 companion to control.entity. Holds compile/publish tracking columns '
     'that were previously duplicated in entity (removed by this migration). '
     'Separated to avoid update contention during frequent compile cycles. '
     'R4: source_layer/source_ref/applied_precedence expose the blueprint/overlay merge order: '
@@ -2029,7 +2029,7 @@ CREATE TABLE IF NOT EXISTS control.entity_version (
 );
 
 COMMENT ON TABLE  control.entity_version IS
-    'Versioned entity definitions. Moved from snapshot.* to control.* — '
+    'ARCHETYPE=B_LITE;SCOPE=G;DEVIATION. DEVIATION: lifecycle column is is_effective GENERATED AS (status = ''EFFECTIVE''), not is_active. Versioned entity definitions. Moved from snapshot.* to control.* — '
     'versions are actively managed through DRAFT→EFFECTIVE lifecycle. '
     'entity_field rows (entity_version_id IS NOT NULL) belong to a specific version. '
     'entity_field rows (entity_version_id IS NULL) are canonical/standard fields. '
@@ -2222,7 +2222,7 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
 );
 
 COMMENT ON TABLE  control.entity_field IS
-    'All fields in the platform — canonical, versioned, and custom. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). All fields in the platform — canonical, versioned, and custom. '
     'entity_version_id IS NULL: canonical/standard fields (replaces entity_canonical_field). '
     'entity_version_id IS NOT NULL: version-specific fields. '
     'origin=business + column_name~cus_: custom tenant fields (replaces field_extension). '
@@ -2256,7 +2256,7 @@ CREATE TABLE IF NOT EXISTS control.field_group (
 );
 
 COMMENT ON TABLE  control.field_group IS
-    'Logical UI sections grouping canonical fields. '
+    'ARCHETYPE=F;SCOPE=N. Logical UI sections grouping canonical fields. '
     'Used by field_group_member to assign canonical fields to display sections. '
     'Renamed from control.entity_field_group.';
 
@@ -2285,7 +2285,7 @@ CREATE TABLE IF NOT EXISTS control.field_group_member (
 );
 
 COMMENT ON TABLE  control.field_group_member IS
-    'Assigns canonical entity_field rows (entity_version_id IS NULL) to field_group sections. '
+    'ARCHETYPE=C;SCOPE=N;DEVIATION. No audit columns (no created_by/updated_at). Assigns canonical entity_field rows (entity_version_id IS NULL) to field_group sections. '
     'entity_field_id replaces field_name text FK from backup — cleaner uuid reference. '
     'Moved from association.field_group_member to control.*.';
 
@@ -2343,7 +2343,7 @@ CREATE TABLE IF NOT EXISTS control.field_security_policy (
 );
 
 COMMENT ON TABLE  control.field_security_policy IS
-    'Field-level PII classification and masking policies. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Field-level PII classification and masking policies. '
     'mask_strategy: null (return NULL), partial (last 4 chars), '
     'hash (SHA-256), encrypt (AES-256), tokenise (replace with token). '
     'priority: lower fires first when multiple policies match.';
@@ -2394,7 +2394,7 @@ CREATE TABLE IF NOT EXISTS control.overlay (
 );
 
 COMMENT ON TABLE  control.overlay IS
-    'Tenant customisation sets applied on top of base entity versions. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). Tenant customisation sets applied on top of base entity versions. '
     'overlay_change rows define the individual operations. '
     'conflict_mode: fail (error on conflict), overwrite (last wins), merge (deep merge). '
     'Used by snapshot.entity_compiled_overlay for pre-compiled overlay deltas.';
@@ -2440,7 +2440,7 @@ CREATE TABLE IF NOT EXISTS control.overlay_change (
 );
 
 COMMENT ON TABLE  control.overlay_change IS
-    'Individual operations within an overlay, applied in change_order sequence. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Individual operations within an overlay, applied in change_order sequence. '
     'Moved from association.overlay_change to control.*. '
     'UNIQUE(overlay_id, change_order) — deterministic application order. '
     'kind: addField|removeField|modifyField|tweakPolicy|overrideValidation|'
@@ -2483,7 +2483,7 @@ CREATE TABLE IF NOT EXISTS control.entity_lifecycle (
 );
 
 COMMENT ON TABLE  control.entity_lifecycle IS
-    'Binds lifecycle state machines to entity types. '
+    'ARCHETYPE=C;SCOPE=G. Binds lifecycle state machines to entity types. '
     'conditions: JSONLogic expression — if NULL, always applies. '
     'Multiple lifecycles per entity resolved by priority (lower = higher). '
     'Moved from association.entity_lifecycle to control.*. '
@@ -2548,7 +2548,7 @@ CREATE TABLE IF NOT EXISTS control.entity_operation (
 );
 
 COMMENT ON TABLE  control.entity_operation IS
-    'Registers operations on entity types with UI placement config. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_enabled boolean NOT NULL DEFAULT true (not GENERATED). Registers operations on entity types with UI placement config. '
     'permission_code replaces operation_code — FK to shared.permission.code '
     '(control.operation eliminated; operations absorbed into shared.permission). '
     'Moved from association.entity_operation to control.*.';
@@ -2626,7 +2626,7 @@ CREATE TABLE IF NOT EXISTS control.entity_policy (
 );
 
 COMMENT ON TABLE  control.entity_policy IS
-    'Canonical row-scope surface for entity-level access, audit, and retention policy. '
+    'ARCHETYPE=C;SCOPE=T. Canonical row-scope surface for entity-level access, audit, and retention policy. '
     'R10: company_scope_mode (none/single/subtree/full) is the primary LE/OU row-scope axis. '
     'field_scope_eval_order defines composition order vs field_security_policy: '
     '  row_first (default) → row predicate filters first, then field masking on survivors; '
@@ -2680,7 +2680,7 @@ CREATE TABLE IF NOT EXISTS control.entity_relation (
 );
 
 COMMENT ON TABLE  control.entity_relation IS
-    'FK/join relationship declarations per entity version. '
+    'ARCHETYPE=C;SCOPE=G. FK/join relationship declarations per entity version. '
     'relation_kind: belongs_to (many-to-one), has_many (one-to-many), m2m (many-to-many). '
     'Renamed from association.relation + moved to control.*. '
     'P2-FIX: updated_at/updated_by added — relation config is editable.';
@@ -2768,7 +2768,7 @@ CREATE TABLE IF NOT EXISTS control.book_posting_rule (
 );
 
 COMMENT ON TABLE control.book_posting_rule IS
-    'Cross-book derivation rules. When a JE posts to source_book, these rules '
+    'ARCHETYPE=B;SCOPE=T. Cross-book derivation rules. When a JE posts to source_book, these rules '
     'auto-derive JEs for target_book. Strategies: same/map/profile for accounts, '
     'mirror/multiply/formula/suppress for amounts, simultaneous/deferred/on_close for timing.';
 
@@ -2803,7 +2803,7 @@ CREATE TABLE IF NOT EXISTS control.transaction_event_catalog (
 );
 
 COMMENT ON TABLE control.transaction_event_catalog IS
-    'R1: canonical registry of transaction lifecycle event codes. '
+    'ARCHETYPE=C;SCOPE=N;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). R1: canonical registry of transaction lifecycle event codes. '
     'Platform-global (no tenant_id). transaction_flow_template.event_code and '
     'acct_profile_event.event_code reference this table via FK (03_constraints.sql §TEC-REF). '
     'is_active=false deprecates a code without violating child-table FKs.';
@@ -2855,7 +2855,7 @@ CREATE TABLE IF NOT EXISTS control.transaction_flow_template (
 );
 
 COMMENT ON TABLE control.transaction_flow_template IS
-    'Engine 4.13: canonical lifecycle events per transaction flow. '
+    'ARCHETYPE=B;SCOPE=G. Engine 4.13: canonical lifecycle events per transaction flow. '
     'System-seeded (tenant_id IS NULL), tenant-overridable (tenant_id = UUID). '
     '15 flows, 38 event codes. Uniqueness enforced by tft_flow_event_uq partial index.';
 
@@ -2933,7 +2933,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_config (
 );
 
 COMMENT ON TABLE control.acct_profile_config IS
-    'Engine 4.13: core profile configuration; 1:1 extension of master.accounting_profile. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: status has values draft/active/superseded/inactive but is_active GENERATED AS (status = ''active'') — only ''active'' activates. Engine 4.13: core profile configuration; 1:1 extension of master.accounting_profile. '
     'Versioned + effective-dated. status: draft → active → superseded | inactive. '
     'UNIQUE (tenant_id, id) required: children use composite FK for row-level tenant scoping.';
 COMMENT ON COLUMN control.acct_profile_config.default_tax_group_id IS
@@ -2989,7 +2989,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_commitment_config (
 );
 
 COMMENT ON TABLE control.acct_profile_commitment_config IS
-    'Engine 4.13: commitment behaviour for profiles that create encumbrances. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: commitment behaviour for profiles that create encumbrances. '
     'Optional 1:1 child of acct_profile_config. Includes advance/retention percentages.';
 
 
@@ -3035,7 +3035,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_revenue_config (
 );
 
 COMMENT ON TABLE control.acct_profile_revenue_config IS
-    'Engine 4.13: revenue recognition config for OUTBOUND profiles. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: revenue recognition config for OUTBOUND profiles. '
     'Includes COGS pairing via paired_profile_id → master.accounting_profile. '
     'fires_paired_on_event gates COGS entry generation.';
 
@@ -3090,7 +3090,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_settlement_config (
 );
 
 COMMENT ON TABLE control.acct_profile_settlement_config IS
-    'Engine 4.13: settlement + dynamic discounting for profiles with special payment terms. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: settlement + dynamic discounting for profiles with special payment terms. '
     'Only exists for non-standard settlement. Includes SCF financing config.';
 
 
@@ -3144,7 +3144,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_event (
 );
 
 COMMENT ON TABLE control.acct_profile_event IS
-    'Engine 4.13: profile × lifecycle event bridge. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: profile × lifecycle event bridge. '
     'fires_paired_profile=true triggers COGS entry generation via acct_profile_revenue_config. '
     'UNIQUE (tenant_id, id) required: acct_profile_entry_template uses composite FK.';
 
@@ -3210,7 +3210,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_entry_template (
 );
 
 COMMENT ON TABLE control.acct_profile_entry_template IS
-    'Engine 4.13: Dr/Cr line templates per event. 21 amount_source values. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: Dr/Cr line templates per event. 21 amount_source values. '
     'is_balancing_line=true: line aggregates split AP/AR accounting lines. '
     'account_source: FIXED | FROM_INTENT | FROM_CATEGORY | POSTING_ROLE. '
     'POSTING_ROLE requires account_lookup_key (carries posting_role_code).';
@@ -3251,7 +3251,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_book_rule (
 );
 
 COMMENT ON TABLE control.acct_profile_book_rule IS
-    'Engine 4.13: per-book posting behaviour. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: per-book posting behaviour. '
     'MIRROR = same entries as primary; EXCLUDE = skip book entirely; '
     'REMAP = substitute accounts via account_mapping JSONB.';
 
@@ -3299,7 +3299,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_dimension_rule (
 );
 
 COMMENT ON TABLE control.acct_profile_dimension_rule IS
-    'Engine 4.13: dimension derivation rules per profile. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: dimension derivation rules per profile. '
     'Controls how dimensions are stamped on JE lines. '
     'Priority determines evaluation order when multiple rules apply.';
 
@@ -3361,7 +3361,7 @@ CREATE TABLE IF NOT EXISTS control.classification_to_intent_rule (
 );
 
 COMMENT ON TABLE control.classification_to_intent_rule IS
-    'Engine 4.13: classification → intent resolution. All 16 condition types runtime-implemented. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: classification → intent resolution. All 16 condition types runtime-implemented. '
     'Does NOT modify existing category_intent_rule. Effective-dated for auditability.';
 
 
@@ -3426,7 +3426,7 @@ CREATE TABLE IF NOT EXISTS control.intent_to_accounting_profile_rule (
 );
 
 COMMENT ON TABLE control.intent_to_accounting_profile_rule IS
-    'Engine 4.13: multi-predicate profile matching. NULL predicate = wildcard. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: multi-predicate profile matching. NULL predicate = wildcard. '
     'First match by ascending priority wins. Effective-dated. '
     'resolved_profile_config_id → control.acct_profile_config (composite FK in 06_constraints).';
 
@@ -3479,7 +3479,7 @@ CREATE TABLE IF NOT EXISTS control.intent_profile_override (
 );
 
 COMMENT ON TABLE control.intent_profile_override IS
-    'Engine 4.13: standing regulatory overrides (IFRS/ASC references). '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: standing regulatory overrides (IFRS/ASC references). '
     'Governance-gated: status=active only after approved_by is set. '
     'Takes precedence over intent_to_accounting_profile_rule at runtime.';
 
@@ -3576,7 +3576,7 @@ CREATE TABLE IF NOT EXISTS control.dimension_policy (
 );
 
 COMMENT ON TABLE control.dimension_policy IS
-    'Dimension validation / governance rules. '
+    'ARCHETYPE=B;SCOPE=T. Dimension validation / governance rules. '
     'Purpose: "Department is REQUIRED on Expense accounts." '
     'Evaluated at posting time to enforce dimension completeness. '
     'Does NOT derive values — derivation lives in acct_profile_dimension_rule. '
@@ -3603,7 +3603,7 @@ CREATE TABLE IF NOT EXISTS control.dimension_policy_allowed_value (
 );
 
 COMMENT ON TABLE control.dimension_policy_allowed_value IS
-    'Allowed dimension values for a policy. Replaces uuid[] column on dimension_policy. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Allowed dimension values for a policy. Replaces uuid[] column on dimension_policy. '
     'Indexable and FK-validated. Cascade deletes when parent policy is removed.';
 
 
@@ -3660,7 +3660,7 @@ CREATE TABLE IF NOT EXISTS control.document_sequence_config (
 );
 
 COMMENT ON TABLE control.document_sequence_config IS
-    'Document numbering configuration. Cold table — rarely modified. '
+    'ARCHETYPE=B;SCOPE=T. Document numbering configuration. Cold table — rarely modified. '
     'One config per (company, doc_type). Format: prefix + separator + year + padded_seq. '
     'Actual counter state lives in document_sequence_counter (hot table).';
 
@@ -3694,7 +3694,7 @@ CREATE TABLE IF NOT EXISTS control.document_sequence_counter (
 );
 
 COMMENT ON TABLE control.document_sequence_counter IS
-    'Mutable counter state for document numbering. Hot table — updated every txn. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Hot counter table: no created_at/created_by; natural composite PK. Mutable counter state for document numbering. Hot table — updated every txn. '
     'Runtime state in control schema for locality (co-located with document_sequence_config). '
     'Not an audit table — no created_by/created_at; updated_by nullable (batch increments). '
     'Natural composite PK (tenant, config, year, period) for efficient upsert. '
@@ -3763,7 +3763,7 @@ CREATE TABLE IF NOT EXISTS control.classification_config (
 );
 
 COMMENT ON TABLE control.classification_config IS
-    'Per-tenant AI classification preferences. Singleton (PK = tenant_id). '
+    'ARCHETYPE=C;SCOPE=T. Per-tenant AI classification preferences. Singleton (PK = tenant_id). '
     'Phase 2: add company_code_id for company-specific overrides; '
     'precedence: company row → tenant row → platform defaults. '
     'crosswalk_strategy: EXACT_ONLY | BEST_MATCH | AI_ASSISTED.';
@@ -3829,7 +3829,7 @@ CREATE TABLE IF NOT EXISTS control.commodity_to_spend_category_rule (
 );
 
 COMMENT ON TABLE control.commodity_to_spend_category_rule IS
-    'Code → spend_category reverse-routing. match_mode governs strategy: '
+    'ARCHETYPE=B;SCOPE=T. Code → spend_category reverse-routing. match_mode governs strategy: '
     'EXACT, RANGE (default), PREFIX, CROSSWALK. '
     'Deterministic: UNIQUE(tenant, domain, code_from, priority) WHERE active '
     'prevents same-priority collisions. Tie-break: highest priority → exact over '
@@ -3895,7 +3895,7 @@ CREATE TABLE IF NOT EXISTS control.rounding_rule (
     CONSTRAINT rr_min_unit_chk      CHECK (minimum_unit IS NULL OR minimum_unit > 0)
 );
 COMMENT ON TABLE control.rounding_rule IS
-    'Rounding configuration per tenant. precision_digits NULL = runtime reads '
+    'ARCHETYPE=B;SCOPE=T. Rounding configuration per tenant. precision_digits NULL = runtime reads '
     'shared.currency.minor_units. Explicit value overrides currency default. '
     'minimum_unit for coinage gaps (CHF 0.05). '
     'gl_variance_approval_required: regulated environments (IFRS statutory audit) may require '
@@ -4010,7 +4010,7 @@ CREATE TABLE IF NOT EXISTS control.tax_rate_schedule (
             'REGISTERED','UNREGISTERED','EXEMPT','FOREIGN','TREATY'))
 );
 COMMENT ON TABLE control.tax_rate_schedule IS
-    'Unified tax rate table. tax_code eliminated — identity is structured: '
+    'ARCHETYPE=B;SCOPE=T. Unified tax rate table. tax_code eliminated — identity is structured: '
     '(jurisdiction + tax_type + direction + component + scopes + priority + effective dates). '
     'trs_tenant_id_uq enables tenant-composite FK from tax_group_component and tax_calculation. '
     'Temporal EXCLUDE prevents overlapping active rules with same scope + priority.';
@@ -4071,7 +4071,7 @@ CREATE TABLE IF NOT EXISTS control.tax_group (
     CONSTRAINT tg_code_chk          CHECK (btrim(code) <> '')
 );
 COMMENT ON TABLE control.tax_group IS
-    'Named collection of tax rate schedules applied as a unit to documents. '
+    'ARCHETYPE=B;SCOPE=T. Named collection of tax rate schedules applied as a unit to documents. '
     'is_compound=true: components apply sequentially (each base = previous subtotal).';
 
 
@@ -4110,7 +4110,7 @@ CREATE TABLE IF NOT EXISTS control.tax_group_component (
     CONSTRAINT tgc_override_chk     CHECK (rate_override IS NULL OR rate_override >= 0)
 );
 COMMENT ON TABLE control.tax_group_component IS
-    'Bridge: tax_group → tax_rate_schedule. calculation_seq orders evaluation. '
+    'ARCHETYPE=B_LITE;SCOPE=T. Bridge: tax_group → tax_rate_schedule. calculation_seq orders evaluation. '
     'rate_override allows group-level rate substitution without touching the global schedule. '
     'FK to tax_rate_schedule uses tenant-composite for cross-tenant isolation.';
 
@@ -4159,7 +4159,7 @@ CREATE TABLE IF NOT EXISTS control.wht_threshold_config (
 );
 
 COMMENT ON TABLE control.wht_threshold_config IS
-    'R7-A: per-vendor WHT activation thresholds (India TDS, Philippines EWT, etc.). '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status column). R7-A: per-vendor WHT activation thresholds (India TDS, Philippines EWT, etc.). '
     'per_transaction=false: WHT only activates after vendor YTD payments exceed '
     'threshold_amount in reset_period — accumulation tracked in aggregate.wht_vendor_accumulator. '
     'per_transaction=true: WHT applies per-payment regardless of prior payments.';
@@ -4270,7 +4270,7 @@ CREATE TABLE IF NOT EXISTS control.forecast_line (
 );
 
 COMMENT ON TABLE control.forecast_line IS
-    'Individual forecast line within a scenario. One line = one account + dimension '
+    'ARCHETYPE=B;SCOPE=T. Individual forecast line within a scenario. One line = one account + dimension '
     'combination for a period range. period_amounts JSONB for per-period breakdown. '
     'variance_amount = GENERATED (total - prior_year). '
     'Driver-linked lines (is_driver_calculated) are recalculated when assumptions change. '
@@ -4358,7 +4358,7 @@ CREATE TABLE IF NOT EXISTS control.planning_driver (
 );
 
 COMMENT ON TABLE control.planning_driver IS
-    'Named business metric feeding planning model calculations: headcount, cost/unit, '
+    'ARCHETYPE=B;SCOPE=T. Named business metric feeding planning model calculations: headcount, cost/unit, '
     'inflation, occupancy, etc. Input drivers are user-entered; derived drivers are '
     'formula-calculated (see control.planning_driver_formula). '
     'depends_on_drivers[] tracks topological ordering for recalculation. '
@@ -4429,7 +4429,7 @@ CREATE TABLE IF NOT EXISTS control.planning_driver_formula (
 );
 
 COMMENT ON TABLE control.planning_driver_formula IS
-    'Calculation formula for derived planning drivers. '
+    'ARCHETYPE=B;SCOPE=T. Calculation formula for derived planning drivers. '
     'EXPRESSION = arithmetic string referencing driver codes. '
     'LOOKUP_TABLE = interpolation via formula_json. '
     'CONDITIONAL = expression with condition guard. '
@@ -4507,7 +4507,7 @@ CREATE TABLE IF NOT EXISTS control.planning_driver_assumption (
 );
 
 COMMENT ON TABLE control.planning_driver_assumption IS
-    'Concrete value assumptions for input planning drivers. E.g. headcount = 150, '
+    'ARCHETYPE=B;SCOPE=T. Concrete value assumptions for input planning drivers. E.g. headcount = 150, '
     'inflation = 3.5%. scenario_id links to document.forecast_scenario for what-if '
     'modelling (NULL = global/default). Dimensional scope narrows applicability.';
 
@@ -4553,7 +4553,7 @@ CREATE TABLE IF NOT EXISTS control.planning_driver_version (
 );
 
 COMMENT ON TABLE control.planning_driver_version IS
-    'IMMUTABLE (insert-only) point-in-time snapshot of driver assumptions. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. IMMUTABLE (insert-only) point-in-time snapshot of driver assumptions. '
     'Used for audit trail, comparison, and rollback during planning cycles. '
     'log.trg_prevent_mutation() should be applied to enforce immutability.';
 
@@ -4636,7 +4636,7 @@ CREATE TABLE IF NOT EXISTS control.bank_format_rule (
 );
 
 COMMENT ON TABLE control.bank_format_rule IS
-    'Country + payment rail validation policy for bank account identifiers. '
+    'ARCHETYPE=B;SCOPE=G. Country + payment rail validation policy for bank account identifiers. '
     'Platform default (tenant_id IS NULL) + tenant override. '
     'Determines required fields, patterns, and validation for each country/rail combo.';
 
@@ -4716,7 +4716,7 @@ CREATE TABLE IF NOT EXISTS control.payment_method_company_policy (
 );
 
 COMMENT ON TABLE control.payment_method_company_policy IS
-    'Runtime eligibility and defaulting per company + method + direction. '
+    'ARCHETYPE=B;SCOPE=T. Runtime eligibility and defaulting per company + method + direction. '
     'Answers: is this method allowed? For which currency/amount range? '
     'Which house bank? File or manual? Cutoff time?';
 
@@ -4777,7 +4777,7 @@ CREATE TABLE IF NOT EXISTS control.bank_interface_profile (
 );
 
 COMMENT ON TABLE control.bank_interface_profile IS
-    'Describes HOW a payment message is produced: file format, API provider, '
+    'ARCHETYPE=B;SCOPE=T. Describes HOW a payment message is produced: file format, API provider, '
     'message version, capabilities. config jsonb holds provider credentials — '
     'application layer must encrypt sensitive values at rest.';
 
@@ -4855,7 +4855,7 @@ CREATE TABLE IF NOT EXISTS control.payment_method_interface_binding (
 );
 
 COMMENT ON TABLE control.payment_method_interface_binding IS
-    'Bridges payment method to bank_interface_profile. Routes the same method '
+    'ARCHETYPE=B;SCOPE=T. Bridges payment method to bank_interface_profile. Routes the same method '
     'to different interfaces by company, bank, currency, direction, '
     'counterparty country, and payment network. Priority-based resolution.';
 
@@ -4915,7 +4915,7 @@ CREATE TABLE IF NOT EXISTS control.payment_settlement_rule (
 );
 
 COMMENT ON TABLE control.payment_settlement_rule IS
-    'Posting-role-based settlement accounting for payment execution. '
+    'ARCHETYPE=B;SCOPE=T. Posting-role-based settlement accounting for payment execution. '
     'Outputs role codes, NOT GL accounts — the existing accounting engine '
     '(resolve_posting_role_account) handles role → GL resolution per company/book.';
 
@@ -5048,7 +5048,7 @@ CREATE TABLE IF NOT EXISTS control.asset_class_book_policy (
 );
 
 COMMENT ON TABLE control.asset_class_book_policy IS
-    'Effective-dated depreciation + posting-role policy per (asset_class, book). '
+    'ARCHETYPE=B;SCOPE=T. Effective-dated depreciation + posting-role policy per (asset_class, book). '
     'book_code = actual ledger_book.code, validated by trigger. '
     'UNIQUE on (..., effective_from) enables true versioning. '
     'Resolved via control.resolve_asset_class_book_policy() at asset_book creation.';
@@ -5104,7 +5104,7 @@ CREATE TABLE IF NOT EXISTS control.feature_flag (
 );
 
 COMMENT ON TABLE  control.feature_flag IS
-    'Platform feature flag registry. Redis cache-first (60s TTL), DB fallback. '
+    'ARCHETYPE=C;SCOPE=N;DEVIATION. No tenant_id; manual is_enabled boolean (no status/is_active GENERATED). Platform feature flag registry. Redis cache-first (60s TTL), DB fallback. '
     'flag_type discriminator: release_gate (temporary on/off for phased releases), '
     'capability_toggle (permanent feature switch with no planned expiry), '
     'experiment (A/B test or percentage rollout). '
@@ -5188,7 +5188,7 @@ CREATE TABLE IF NOT EXISTS control.metadata_change_request (
 );
 
 COMMENT ON TABLE  control.metadata_change_request IS
-    'Metadata Studio change request log. Tracks field/entity definition changes '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Metadata Studio change request log. Tracks field/entity definition changes '
     'that require approval before becoming effective. '
     'Lifecycle: submitted → pending_review → approved → applied | rejected. '
     'workflow_request_id populated in Phase 3.4 when WorkflowEngine is wired.';
@@ -5266,7 +5266,7 @@ CREATE TABLE IF NOT EXISTS control.forecast_budget_bridge (
 );
 
 COMMENT ON TABLE control.forecast_budget_bridge IS
-    'H3 P2-hygiene: planning → budget baseline link. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. H3 P2-hygiene: planning → budget baseline link. '
     'Connects a planning_driver_version snapshot to a named annual/quarterly/monthly budget. '
     'Lifecycle: draft → locked → approved; superseded_by_id chains history on revision. '
     'GL period-close gate reads status=approved before allowing entries.';
@@ -5331,7 +5331,7 @@ CREATE TABLE IF NOT EXISTS control.metadata_change_application_log (
 );
 
 COMMENT ON TABLE control.metadata_change_application_log IS
-    'H4 P2-hygiene: append-only audit of EntityCompilerService.invalidate() runs. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. H4 P2-hygiene: append-only audit of EntityCompilerService.invalidate() runs. '
     'One row per application event triggered by an approved metadata_change_request. '
     'duration_ms + entities_recompiled enable performance monitoring of compiler runs. '
     'error_detail captures structured compiler errors for partial/failed outcomes. '
@@ -5417,7 +5417,7 @@ CREATE INDEX IF NOT EXISTS cron_schedule_tenant_idx
     WHERE tenant_id IS NOT NULL;
 
 COMMENT ON TABLE  control.cron_schedule IS
-    'Runtime-configurable BullMQ scheduled jobs. '
+    'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_enabled boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Runtime-configurable BullMQ scheduled jobs. '
     'NULL tenant_id = platform-global. Code-based cron-registry.ts entries win on conflict. '
     'Scheduler polls every 60 s for runtime changes without restart.';
 COMMENT ON COLUMN control.cron_schedule.payload_template IS
@@ -5475,7 +5475,7 @@ CREATE TABLE IF NOT EXISTS control.connector_type (
 );
 
 COMMENT ON TABLE  control.connector_type IS
-    'Integration connector type catalog. config_schema (JSON Schema) drives UI form generation '
+    'ARCHETYPE=B_LITE;SCOPE=N;PENDING_ACTIVE_SET. Integration connector type catalog. config_schema (JSON Schema) drives UI form generation '
     'automatically — no frontend changes needed to add a new connector type. '
     'is_system = true entries are platform-seeded and cannot be deleted by tenants.';
 
@@ -5519,7 +5519,7 @@ CREATE TABLE IF NOT EXISTS control.policy_rule_version (
 );
 
 COMMENT ON TABLE control.policy_rule_version IS
-    'Append-only audit trail for policy rule changes. A new row is inserted '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Append-only audit trail for policy rule changes. A new row is inserted '
     'BEFORE each UPDATE to control.policy_rule via trg_version_policy_rule. '
     'rule_snapshot captures the full row state that was REPLACED by the update '
     '(i.e. the previous version). effective_until is set on the previous version '
@@ -5580,7 +5580,7 @@ CREATE TABLE IF NOT EXISTS control.policy_test_case (
 );
 
 COMMENT ON TABLE control.policy_test_case IS
-    'Persisted simulation test cases for a policy definition. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Persisted simulation test cases for a policy definition. '
     'Used by the simulation harness (POST /api/policy/definitions/:id/test) '
     'to run batch assertions and surface pass/fail results. '
     'last_run_* columns are updated on each execution, enabling a "last run" status badge in the UI.';
@@ -5635,7 +5635,7 @@ CREATE INDEX IF NOT EXISTS cq_tenant_active_idx
 ALTER TABLE control.content_quota ENABLE ROW LEVEL SECURITY;
 
 COMMENT ON TABLE control.content_quota IS
-    'Per-tenant per-kind content item and storage quotas. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Per-tenant per-kind content item and storage quotas. '
     'max_items / max_storage_bytes = NULL means unlimited. '
     'Use kind = ''*'' for a catch-all default for the tenant.';
 
@@ -5680,7 +5680,7 @@ CREATE TABLE IF NOT EXISTS control.blueprint_registry (
 );
 
 COMMENT ON TABLE  control.blueprint_registry IS
-    'Catalogue of available blueprint packs selectable during tenant provisioning. '
+    'ARCHETYPE=B_LITE;SCOPE=N;PENDING_ACTIVE_SET. Catalogue of available blueprint packs selectable during tenant provisioning. '
     'Platform-global (no tenant_id). '
     'system-seeded rows have created_by = ''00000000-0000-0000-0000-000000000000''. '
     'R6: migrated from seed file into main DDL bundle.';
@@ -5726,7 +5726,7 @@ CREATE TABLE IF NOT EXISTS control.tenant_blueprint_application (
 );
 
 COMMENT ON TABLE  control.tenant_blueprint_application IS
-    'Audit log of blueprint packs applied per tenant. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Audit log of blueprint packs applied per tenant. '
     'applied_by: principal who triggered provisioning (NULL for automated runs). '
     'created_by: audit trail — use system sentinel for automated inserts. '
     'applied_version: snapshot of blueprint version at time of application; '
@@ -5796,7 +5796,7 @@ CREATE TABLE IF NOT EXISTS control.ai_action_policy (
 );
 
 COMMENT ON TABLE control.ai_action_policy IS
-    'R8: Atlas AI autonomy ceiling per tenant × action_code × doc_class. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). R8: Atlas AI autonomy ceiling per tenant × action_code × doc_class. '
     'autonomy_level is the hard ceiling — runtime never exceeds it regardless of confidence. '
     'Layered lookup: (tenant, action, doc_class) → (tenant, action, NULL) → platform default. '
     'disabled=feature off; suggest=L1 surface only; assist=L2 pre-fill+confirm; auto=L3 act. '
@@ -5858,7 +5858,7 @@ CREATE TABLE IF NOT EXISTS control.ai_confidence_threshold (
 );
 
 COMMENT ON TABLE control.ai_confidence_threshold IS
-    'R8: tiered confidence thresholds governing Atlas AI autonomy levels. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). R8: tiered confidence thresholds governing Atlas AI autonomy levels. '
     'Three gate values (suggest ≤ assist ≤ auto) map to L1/L2/L3 autonomy. '
     'drift_alert_below: trigger drift alert when rolling-window avg confidence '
     'drops below this threshold. Layered lookup: (tenant, action, doc_class, model) '
@@ -5928,7 +5928,7 @@ CREATE TABLE IF NOT EXISTS control.ai_drift_baseline (
 );
 
 COMMENT ON TABLE control.ai_drift_baseline IS
-    'R8: statistical reference distributions for Atlas AI drift monitoring. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_current boolean NOT NULL DEFAULT false (no status/is_active GENERATED). R8: statistical reference distributions for Atlas AI drift monitoring. '
     'One row per (tenant, action_code, doc_class, model_id, baseline_date). '
     'is_current=true marks the active reference for live drift comparison. '
     'superseded_by_id forms a history chain when baselines are refreshed. '

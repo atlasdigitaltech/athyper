@@ -27,6 +27,7 @@ import {
   resolvePrincipalIdOrNull,
   resolvePrincipalIdWithJit,
   resolveFieldMap,
+  emitOutboxEvent,
 } from "@athyper/svc-shared";
 import { applyFieldSecurityMask } from "../../policy/field-security.middleware.js";
 
@@ -397,6 +398,27 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
       const row = await db.insertInto(fullTable).values(mappedData as never).returningAll().executeTakeFirst();
 
+      // Emit search-topic outbox event — best-effort; must not fail the
+      // request. The generic search outbox handler routes this through
+      // control.entity → Meilisearch.
+      if (row) {
+        try {
+          await emitOutboxEvent(db, {
+            tenantId,
+            topic:      "search",
+            eventType:  `${entityCode}.created`,
+            entityType: entityCode,
+            entityId:   String((row as { id: string }).id),
+            actorId:    principalId,
+          });
+        } catch (emitErr) {
+          logger?.warn("records_emit_search_failed", {
+            entity: entityCode,
+            err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+          });
+        }
+      }
+
       res.status(201).json(row);
     } catch (err) {
       logger?.error("records_create_error", { err: String(err) });
@@ -457,6 +479,22 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       if (!row) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
+      }
+
+      try {
+        await emitOutboxEvent(db, {
+          tenantId,
+          topic:      "search",
+          eventType:  `${entityCode}.updated`,
+          entityType: entityCode,
+          entityId:   id,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
+      } catch (emitErr) {
+        logger?.warn("records_emit_search_failed", {
+          entity: entityCode,
+          err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+        });
       }
 
       res.json(row);
@@ -536,6 +574,22 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
+      try {
+        await emitOutboxEvent(db, {
+          tenantId,
+          topic:      "search",
+          eventType:  `${entityCode}.updated`,
+          entityType: entityCode,
+          entityId:   id,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
+      } catch (emitErr) {
+        logger?.warn("records_emit_search_failed", {
+          entity: entityCode,
+          err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+        });
+      }
+
       res.json(row);
     } catch (err) {
       logger?.error("records_patch_error", { err: String(err) });
@@ -571,6 +625,26 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .where("id", "=", id)
         .where("tenant_id", "=", tenantId)
         .execute();
+
+      // Emit delete event so the search outbox handler removes the doc.
+      // Delete events are recognised by the `.deleted` suffix on event_type.
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      try {
+        await emitOutboxEvent(db, {
+          tenantId,
+          topic:      "search",
+          eventType:  `${entityCode}.deleted`,
+          entityType: entityCode,
+          entityId:   id,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
+      } catch (emitErr) {
+        logger?.warn("records_emit_search_failed", {
+          entity: entityCode,
+          err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+        });
+      }
 
       res.status(204).end();
     } catch (err) {

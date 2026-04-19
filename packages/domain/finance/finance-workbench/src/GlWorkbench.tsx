@@ -33,7 +33,7 @@ const TAB_DEFS = [
 
 export function GlWorkbench() {
   const [tab, setTab] = useState("entities");
-  const [chart, setChart] = useState<ChartOfAccount>(CHARTS[0]);
+  const [chart, setChart] = useState<ChartOfAccount>(CHARTS[0]!);
 
   const handleOpenChart = (c: ChartOfAccount) => {
     setChart(c);
@@ -96,7 +96,14 @@ export function GlWorkbench() {
 
         <TabsContent value="trial" className="flex-1 mt-0 min-h-0 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 py-3">
-            <TrialBalanceView />
+            <TrialBalanceView
+              scope={{
+                scopeType: "company",
+                scopeId: chart.code,
+                fiscalYear: new Date().getFullYear(),
+                period: null,
+              }}
+            />
           </div>
         </TabsContent>
       </Tabs>

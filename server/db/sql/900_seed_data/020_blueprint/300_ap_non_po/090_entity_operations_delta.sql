@@ -3,7 +3,7 @@
 -- Purpose: Add Non-PO-specific operations not in base seed
 -- Depends on: control.entity_operation (base pack), purchase_invoice +
 --             payment_entry entities already registered
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 -- ============================================================================
 -- Base pack already seeds these operations:
 --   purchase_invoice: create, update, submit, approve, deny, post, cancel,
@@ -108,4 +108,4 @@ VALUES
      'DETAIL', 'OVERFLOW', 'MODAL', 'unallocate',
      true, 160, '00000000-0000-0000-0000-000000000000')
 
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;

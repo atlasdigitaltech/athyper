@@ -14,7 +14,9 @@
 
 import type { Router } from "express";
 import type { Kysely } from "kysely";
+import type { Queue } from "bullmq";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ExtractTextJobData, SweepJobData } from "@athyper/svc-jobs";
 import { createDocumentsRoute } from "./documents.route.js";
 
 export interface DocumentsRoutesDeps {
@@ -28,6 +30,8 @@ export interface DocumentsRoutesDeps {
     bucket:      string;
     maxUploadMb?: number;
   };
+  /** BullMQ queue for Tika text extraction; forwarded to attachment upload. */
+  tikaQueue?: Queue<ExtractTextJobData | SweepJobData>;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;

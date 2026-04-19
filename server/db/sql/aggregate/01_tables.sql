@@ -63,10 +63,11 @@ CREATE TABLE IF NOT EXISTS aggregate.tax_credit_summary (
     CONSTRAINT tcs_period_chk       CHECK (period_number BETWEEN 1 AND 16)
 );
 COMMENT ON TABLE aggregate.tax_credit_summary IS
-    'Period-level tax position snapshot in aggregate schema. '
+    'ARCHETYPE=B;SCOPE=T;PENDING_ACTIVE_SET. Period-level tax position snapshot in aggregate schema. '
     'Materialized from ledger.tax_credit_movement — rebuildable at any time. '
     'last_rebuilt_at tracks freshness. carry_forward_in captures prior-period balance. '
-    'Filing lifecycle: draft → posted → filed → closed.';
+    'Filing lifecycle: draft → posted → filed → closed. '
+    'Finance owner to confirm active-set (likely status IN (''draft'',''posted'')) before is_active generated column is added.';
 
 
 -- ============================================================================
@@ -118,6 +119,7 @@ CREATE TABLE IF NOT EXISTS aggregate.wht_vendor_accumulator (
 );
 
 COMMENT ON TABLE aggregate.wht_vendor_accumulator IS
+    'ARCHETYPE=C;SCOPE=T. Pure accumulator — no status/lifecycle. '
     'R7-B: per-vendor per-fiscal-year WHT accumulator. '
     'Tracks YTD payments and WHT deducted to determine when threshold-based WHT activates '
     '(control.wht_threshold_config). Updated atomically on payment posting. '

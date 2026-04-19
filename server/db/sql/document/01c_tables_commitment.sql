@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS document.commitment (
 );
 
 COMMENT ON TABLE document.commitment IS
-    'Commitment header: PO, contract, lease, subscription, standing order. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''active'',''partially_fulfilled'')). Commitment header: PO, contract, lease, subscription, standing order. '
     'outstanding_amount = GENERATED (total - fulfilled - released). '
     'Draws budget from master.budget_allocation (budget_allocation_id). '
     'budget_check_result: PASSED | WARNED | OVERRIDE | BLOCKED | EXEMPT. '
@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS document.commitment_procurement (
 );
 
 COMMENT ON TABLE document.commitment_procurement IS
-    'Procurement-commercial extension of document.commitment. 1:1 child. '
+    'ARCHETYPE=C;SCOPE=T. Procurement-commercial extension of document.commitment. 1:1 child. '
     'Running totals are derived caches, not source of truth. '
     'Source: ledger.commitment_fulfillment (receipts), document.purchase_invoice (invoices), '
     'document.payment_entry (payments).';
@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS document.commitment_line (
 );
 
 COMMENT ON TABLE document.commitment_line IS
-    'PO / contract line items. Mutable operational detail – document schema, not ledger. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. PO / contract line items. Mutable operational detail – document schema, not ledger. '
     'received_quantity, invoiced_quantity, released_quantity are derived caches. '
     'Source of truth: ledger.commitment_fulfillment (receipts), '
     'document.commitment_release_allocation (blanket/framework releases).';
@@ -438,7 +438,7 @@ CREATE TABLE IF NOT EXISTS document.commitment_release_allocation (
 );
 
 COMMENT ON TABLE document.commitment_release_allocation IS
-    'Tracks qty/amount drawn from parent BLANKET_PO or FRAMEWORK_AGREEMENT line '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Tracks qty/amount drawn from parent BLANKET_PO or FRAMEWORK_AGREEMENT line '
     'by each release PO line. Source of truth for release exhaustion checks.';
 
 
@@ -479,6 +479,10 @@ CREATE TABLE IF NOT EXISTS document.commitment_party_snapshot (
     CONSTRAINT cps_type_chk             CHECK (snapshot_type IN ('SUPPLIER','BUYER'))
 );
 
+COMMENT ON TABLE document.commitment_party_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable supplier/buyer party snapshot captured at commitment approval. '
+    'One row per (commitment_id, snapshot_type). Append-only — delete and re-capture to update.';
+
 
 -- ============================================================================
 -- §5.2  document.commitment_address_snapshot
@@ -510,6 +514,10 @@ CREATE TABLE IF NOT EXISTS document.commitment_address_snapshot (
     CONSTRAINT cas_commitment_type_uq   UNIQUE (commitment_id, address_type),
     CONSTRAINT cas_type_chk             CHECK (address_type IN ('DELIVERY','BILLING','SHIP_FROM'))
 );
+
+COMMENT ON TABLE document.commitment_address_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable delivery/billing/ship-from address snapshot at commitment approval. '
+    'One row per (commitment_id, address_type). Append-only.';
 
 
 -- ============================================================================
@@ -608,7 +616,7 @@ CREATE TABLE IF NOT EXISTS document.obligation_horizon (
 );
 
 COMMENT ON TABLE document.obligation_horizon IS
-    'Engine 4.13: multi-year demand signal. '
+    'ARCHETYPE=B;SCOPE=T. Engine 4.13: multi-year demand signal. '
     'obligation_tier: PLANNED → FORECAST → RESERVED → COMMITTED → CONSUMED. '
     'Created on contract signing; advanced by budget lifecycle events. '
     'Child of document.commitment. variance_to_original = GENERATED (amount - original_amount).';
@@ -708,7 +716,7 @@ CREATE TABLE IF NOT EXISTS document.forecast_scenario (
 );
 
 COMMENT ON TABLE document.forecast_scenario IS
-    'What-if forecast scenario envelope. Contains control.forecast_line items. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''in_review'',''approved'',''published'')). What-if forecast scenario envelope. Contains control.forecast_line items. '
     'scenario_type: EXPECTED, BEST_CASE, WORST_CASE, etc. for side-by-side comparison. '
     'Versioned per (tenant, company, code). Links to master.planning_model for driver-based forecasts. '
     'Status lifecycle: draft → in_review → approved → published → superseded | archived.';

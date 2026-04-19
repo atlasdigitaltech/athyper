@@ -1,0 +1,90 @@
+# =======================================================================
+# Line-ending normalisation — athyper mono-repo
+#
+# Ensures .sh scripts are always LF (required by Linux containers / CI)
+# and .bat scripts are always CRLF (required by cmd.exe).
+# Everything else uses Git's auto-detection with LF in the repo.
+# =======================================================================
+
+# Default: normalise to LF in the repo, native on checkout
+* text=auto eol=lf
+
+# Shell scripts — MUST be LF (Linux containers, CI runners)
+*.sh text eol=lf
+
+# Batch scripts — MUST be CRLF (Windows cmd.exe)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Compose / config YAML — LF (consumed inside Linux containers)
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# JSON / TOML / INI config — LF
+*.json text eol=lf
+*.toml text eol=lf
+*.ini  text eol=lf
+
+# Dockerfiles — LF
+Dockerfile* text eol=lf
+
+# Markdown / docs — LF (consistent diffs)
+*.md text eol=lf
+
+# TypeScript / JavaScript — LF
+*.ts  text eol=lf
+*.tsx text eol=lf
+*.js  text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# CSS / HTML
+*.css  text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+
+# Env templates — LF (parsed by dotenv on Linux too)
+*.env*  text eol=lf
+
+# SQL — LF
+*.sql text eol=lf
+
+# Python — LF (runs inside Linux containers / CI)
+*.py  text eol=lf
+
+# XML / SVG / CSV / source maps — text, LF
+*.xml text eol=lf
+*.svg text eol=lf
+*.csv text eol=lf
+*.map text eol=lf
+
+# Lock files — LF (must not be modified by line-ending conversion)
+pnpm-lock.yaml text eol=lf
+
+# Binaries — no conversion
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.bmp  binary
+*.webp binary
+*.avif binary
+*.ico  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.7z    binary
+*.jar   binary
+*.wasm  binary
+*.mp3   binary
+*.mp4   binary
+*.mov   binary
+*.webm  binary
+*.wav   binary

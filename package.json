@@ -1,9 +1,9 @@
 {
   "name": "athyper",
   "private": true,
-  "packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "dev": "turbo dev",
@@ -18,20 +18,28 @@
     "brand:sync:keycloak": "tsx scripts/brand/sync-keycloak.ts",
     "brand:verify": "tsx scripts/brand/verify-brand-sync.ts",
     "brand:refresh": "pnpm brand:build && pnpm brand:sync:keycloak",
-    "brand:check": "pnpm brand:build && pnpm brand:verify"
+    "brand:check": "pnpm brand:build && pnpm brand:verify",
+    "policy:versions": "syncpack list-mismatches",
+    "policy:versions:fix": "syncpack fix-mismatches",
+    "policy:peers": "tsx scripts/policy/verify-peer-ranges.ts",
+    "policy:tsconfig": "tsx scripts/policy/verify-tsconfig.ts",
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/engines",
+      "@sentry/cli",
       "esbuild",
       "msgpackr-extract",
       "prisma",
+      "protobufjs",
       "sharp"
     ]
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "syncpack": "^14.3.0",
     "tsx": "^4.19.0",
     "turbo": "^2.9.6",
     "typescript": "^6.0.3"

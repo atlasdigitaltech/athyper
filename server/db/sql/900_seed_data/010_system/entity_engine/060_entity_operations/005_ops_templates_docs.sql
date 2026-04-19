@@ -3,7 +3,7 @@
 -- Covers: document_template, document_template_clause, workflow_definition,
 --         workflow_template, workflow_template_stage, workflow_template_rule,
 --         trigger_rule, print_profile
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -26,7 +26,7 @@ VALUES
     (NULL,'document_template','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                           true, 80,v_su),
     (NULL,'document_template','export',  'LIST',  'TOOLBAR', 'API',     'export',                           false,90,v_su),
     (NULL,'document_template','import',  'LIST',  'TOOLBAR', 'API',     'import',                           false,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- workflow_definition  (Set F: template-like workflow)
@@ -44,7 +44,7 @@ VALUES
     (NULL,'workflow_definition','copy',    'DETAIL','OVERFLOW','API',     'copy',                               true, 70,v_su),
     (NULL,'workflow_definition','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                             true, 80,v_su),
     (NULL,'workflow_definition','export',  'LIST',  'TOOLBAR', 'API',     'export',                             false,90,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- workflow_template  (Set F)
@@ -62,7 +62,7 @@ VALUES
     (NULL,'workflow_template','copy',    'DETAIL','OVERFLOW','API',     'copy',                             true, 70,v_su),
     (NULL,'workflow_template','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                           true, 80,v_su),
     (NULL,'workflow_template','export',  'LIST',  'TOOLBAR', 'API',     'export',                           false,90,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- trigger_rule  (Set B)
@@ -77,7 +77,7 @@ VALUES
     (NULL,'trigger_rule','reopen', 'DETAIL','OVERFLOW','MODAL',   'reactivate',                  true, 40,v_su),
     (NULL,'trigger_rule','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 50,v_su),
     (NULL,'trigger_rule','export', 'LIST',  'TOOLBAR', 'API',     'export',                      false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- print_profile  (Set A)
@@ -91,7 +91,7 @@ VALUES
     (NULL,'print_profile','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                   true, 30,v_su),
     (NULL,'print_profile','delete','DETAIL','OVERFLOW','MODAL',   'delete',                       true, 40,v_su),
     (NULL,'print_profile','export','LIST',  'TOOLBAR', 'API',     'export',                       false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL / RELATION: document_template_clause, workflow_template_stage,
@@ -110,7 +110,7 @@ VALUES
     (NULL,'workflow_template_rule',  'create','LIST',  'PRIMARY', 'MODAL','create',false,10,v_su),
     (NULL,'workflow_template_rule',  'update','DETAIL','PRIMARY', 'MODAL','edit',  true, 20,v_su),
     (NULL,'workflow_template_rule',  'delete','DETAIL','OVERFLOW','MODAL','delete',true, 30,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: Templates/Docs/Workflow seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

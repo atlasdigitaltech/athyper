@@ -2,8 +2,9 @@
   "extends": "@athyper/config/tsconfig",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
   },
   "include": ["src"]
 }

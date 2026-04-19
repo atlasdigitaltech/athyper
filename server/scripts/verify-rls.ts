@@ -11,23 +11,30 @@
  *   # or via package.json script:
  *   pnpm --filter @athyper/server rls:verify
  *
+ *   # CI mode — verify SELECTs as a non-superuser role with RLS enforced:
+ *   DATABASE_URL=postgres://athyperadmin:... RLS_APP_ROLE=athyperapp_test \
+ *     pnpm --filter @athyper/server rls:verify
+ *
  * What it tests:
  *   For each table under test, the script:
- *   1. Inserts one row for TENANT_A and one for TENANT_B using a privileged
- *      role (bypasses RLS — represents an admin / migration user).
- *   2. Opens a restricted DB session that SET LOCAL app.tenant_id = TENANT_A.
- *   3. Reads the table in that session and asserts that ONLY TENANT_A rows
- *      are visible (TENANT_B rows are hidden by RLS).
- *   4. Repeats symmetrically for TENANT_B.
- *   5. Rolls back all test data after each table test.
+ *   1. Inserts one row for TENANT_A and one for TENANT_B using the connection
+ *      string's role (must be superuser or BYPASSRLS for the inserts).
+ *   2. If RLS_APP_ROLE is set, SET ROLE to that role so the following SELECTs
+ *      run under a non-superuser identity where RLS is enforced.
+ *   3. Sets app.current_tenant_id = TENANT_A for the current transaction.
+ *   4. Reads the table and asserts that ONLY TENANT_A rows are visible
+ *      (TENANT_B rows are hidden by RLS).
+ *   5. Repeats symmetrically for TENANT_B.
+ *   6. Rolls back all test data after each table test.
  *
  * Exit code:
  *   0 — all checks passed
  *   1 — one or more checks failed or an error occurred
  *
- * Note: This script requires superuser or a role with BYPASSRLS to insert
- * test rows. The verification SELECTs are performed as the app role
- * (typically the connection string's user with RLS enforced).
+ * Note: Without RLS_APP_ROLE, this runs against whatever user DATABASE_URL
+ * authenticates as. If that user is a superuser, RLS is bypassed and the
+ * test will incorrectly report PASS for tables that are not actually
+ * protected. CI must set RLS_APP_ROLE=athyperapp_test to get a real signal.
  */
 
 import postgres from "postgres";
@@ -37,6 +44,17 @@ import postgres from "postgres";
 const DATABASE_URL = process.env["DATABASE_URL"];
 if (!DATABASE_URL) {
   console.error("ERROR: DATABASE_URL environment variable is required");
+  process.exit(1);
+}
+
+// Optional role to SET ROLE into before running verification SELECTs.
+// When set, the DATABASE_URL role must be a member of this role (or a superuser).
+// The role itself must have LOGIN and NOBYPASSRLS so policies are enforced.
+const RLS_APP_ROLE = process.env["RLS_APP_ROLE"]?.trim() || null;
+
+// Guard rail: identifiers can't be parameterized, so allow only safe chars.
+if (RLS_APP_ROLE !== null && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(RLS_APP_ROLE)) {
+  console.error(`ERROR: RLS_APP_ROLE "${RLS_APP_ROLE}" is not a valid SQL identifier`);
   process.exit(1);
 }
 
@@ -177,8 +195,15 @@ async function verifyTable(
 
       if (!idA || !idB) throw new Error("INSERT did not return an id");
 
+      // Drop admin/BYPASSRLS privilege before running the RLS checks — otherwise
+      // a superuser connection silently passes every test. RLS_APP_ROLE is
+      // validated as an identifier above, so interpolation here is safe.
+      if (RLS_APP_ROLE !== null) {
+        await trx.unsafe(`SET LOCAL ROLE ${RLS_APP_ROLE}`);
+      }
+
       // ── Check 1: TENANT_A session sees only TENANT_A row ───────────────────
-      await trx`SET LOCAL app.tenant_id = ${TENANT_A}`;
+      await trx`SELECT set_config('app.current_tenant_id', ${TENANT_A}, true)`;
       const seenByA = await trx`
         SELECT ${trx.unsafe(idColumn)} FROM ${trx.unsafe(table)}
         WHERE tenant_id = ${TENANT_A} OR tenant_id = ${TENANT_B}
@@ -197,7 +222,7 @@ async function verifyTable(
       }
 
       // ── Check 2: TENANT_B session sees only TENANT_B row ───────────────────
-      await trx`SET LOCAL app.tenant_id = ${TENANT_B}`;
+      await trx`SELECT set_config('app.current_tenant_id', ${TENANT_B}, true)`;
       const seenByB = await trx`
         SELECT ${trx.unsafe(idColumn)} FROM ${trx.unsafe(table)}
         WHERE tenant_id = ${TENANT_A} OR tenant_id = ${TENANT_B}
@@ -245,8 +270,19 @@ async function run() {
 
   console.log("\n\x1b[1mAthyper RLS Verification Suite\x1b[0m");
   console.log(`${"─".repeat(65)}`);
-  console.log(`  Tenant A: ${TENANT_A}`);
-  console.log(`  Tenant B: ${TENANT_B}`);
+  console.log(`  Tenant A:   ${TENANT_A}`);
+  console.log(`  Tenant B:   ${TENANT_B}`);
+  console.log(
+    `  RLS role:   ${RLS_APP_ROLE ?? "\x1b[33m<none — using DATABASE_URL role>\x1b[0m"}`
+  );
+  if (RLS_APP_ROLE === null) {
+    console.log(
+      `  \x1b[33m⚠  Without RLS_APP_ROLE, a superuser DATABASE_URL will bypass RLS\x1b[0m`
+    );
+    console.log(
+      `  \x1b[33m   and all tests will report PASS even when policies are not enforced.\x1b[0m`
+    );
+  }
   console.log(`${"─".repeat(65)}\n`);
 
   const results: CheckResult[] = [];

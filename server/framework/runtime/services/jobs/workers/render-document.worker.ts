@@ -1,40 +1,40 @@
 /**
- * Render Document Worker — Sprint 37
+ * Render Document Worker
  *
  * Queue: jobs-render-document
  *
  * Two job names:
  *
  *   JOB_NAME.SWEEP — runs every RENDER_SWEEP_MS (default 30 s).
- *     Finds document.render_output WHERE status='QUEUED' (up to SWEEP_BATCH rows).
- *     Enqueues one RENDER job per output row.
- *     Idempotent — the RENDER job id is `render:{outputId}` so duplicate sweeps
- *     do not create duplicate jobs.
+ *     Finds document.render_output WHERE status='QUEUED' (up to SWEEP_BATCH).
+ *     Enqueues one RENDER job per output row. Idempotent — RENDER job id
+ *     is `render:{outputId}` so duplicate sweeps do not double-enqueue.
  *
  *   JOB_NAME.RENDER — processes one render_output row:
- *     1. Claim: update render_output → RENDERING, render_job → PROCESSING.
- *     2. Fetch snapshot.template_version via output.template_version_id.
- *     3. Substitute {{variable}} placeholders from output.manifest_json.
- *     4. Attempt PDF generation via @sparticuz/chromium-min + puppeteer-core
- *        (dynamic import — graceful HTML fallback if packages are absent).
- *     5. Compute SHA-256 checksum of result bytes.
- *     6. Upload to object storage: renders/{tenantId}/{outputId}.{ext}.
- *     7. Update render_output: status=RENDERED, storage_key, size_bytes, checksum.
- *     8. Update render_job:   status=COMPLETED, completed_at, duration_ms.
+ *     1. Claim: render_output → RENDERING, render_job → PROCESSING.
+ *     2. Fetch snapshot.template_version, substitute {{vars}} from manifest_json.
+ *     3. POST to Gotenberg /forms/chromium/convert/html with manifest-derived
+ *        paper/margin/header/footer overrides (master.print_profile defaults
+ *        should already be merged into manifest_json by the producer — this
+ *        worker treats manifest_json as authoritative).
+ *     4. Upload PDF to object storage at renders/{tenantId}/{outputId}.pdf.
+ *     5. Mark render_output RENDERED, render_job COMPLETED.
  *
- * On permanent failure (attempts exhausted or unrecoverable error):
- *     • render_output → FAILED
- *     • render_job    → FAILED  with error_detail
- *     • insertDlq()  → log.render_dlq
+ * Failure mapping (stack/compose/render/README.md — binding contract):
+ *   transient → status reset to QUEUED, throw to let BullMQ retry
+ *   timeout   → first attempt: same as transient; subsequent: DLQ + FAILED
+ *   permanent → DLQ + FAILED immediately (no retry)
+ *   crash     → DLQ + FAILED + event.outbox(ops_alert) immediately
  *
- * Concurrency: SWEEP = 1 (singleton), RENDER = 3 (Puppeteer is CPU-bound).
+ *   Errors that are not GotenbergError are treated as `crash`.
  *
- * PDF generation dependencies (optional):
- *   npm install @sparticuz/chromium-min puppeteer-core
- * If absent the worker falls back to storing the substituted HTML. The
- * render_output.storage_key will end in .html and output_format is set to
- * 'html'. All downstream infrastructure (presigned URLs, revoke, archive) works
- * identically for both formats.
+ * Concurrency: SWEEP = singleton via job id; RENDER = 3.
+ *
+ * Configuration error semantics:
+ *   • No SyncPdfRenderer injected and GOTENBERG_BASE_URL unset → DLQ
+ *     'permanent' with code MISSING_RENDERER. The render_output is FAILED
+ *     and an ops_alert event is emitted once.
+ *   • No object storage adapter → DLQ 'permanent' with code MISSING_STORAGE.
  */
 
 import { Worker, Queue, type Job } from "bullmq";
@@ -50,7 +50,33 @@ import {
   type SweepJobData,
   type JobLogger,
 } from "../jobs.types.js";
-import { insertDlq, DLQ_TABLE } from "../dlq.middleware.js";
+import {
+  insertRenderDlq,
+  type RenderDlqCategory,
+} from "../render-dlq.js";
+import type {
+  PdfRenderOptions,
+  SyncPdfRenderer,
+} from "../sync-pdf-renderer.js";
+
+// Duck-typed view of GotenbergError. The src/foundation/render/SyncPdfRenderer
+// implementation throws GotenbergError instances whose .category field is one
+// of the four enum values; we read it structurally so this package never
+// imports concrete classes from the foundation/render tree (layering rule —
+// svc-jobs is a leaf package built independently).
+interface GotenbergErrorLike {
+  category: RenderDlqCategory;
+  message:  string;
+  responseBody?: string | null;
+}
+const VALID_CATEGORIES: ReadonlySet<RenderDlqCategory> = new Set([
+  "transient", "timeout", "permanent", "crash",
+]);
+function isGotenbergError(err: unknown): err is GotenbergErrorLike {
+  if (err == null || typeof err !== "object") return false;
+  const cat = (err as { category?: unknown }).category;
+  return typeof cat === "string" && VALID_CATEGORIES.has(cat as RenderDlqCategory);
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -64,74 +90,131 @@ export interface RenderObjectStorage {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SWEEP_BATCH     = 20;
-const RENDER_TIMEOUT  = 30_000;   // 30 s per PDF — hard timeout for Puppeteer
-const PRESIGN_TTL_SEC = 3_600;    // 1 h for download URL
+const SWEEP_BATCH = 20;
+// Maximum BullMQ attempts per render. Mirrored at sweep enqueue time. The
+// worker also treats job.attemptsMade to decide when timeout should give up.
+const MAX_ATTEMPTS = 3;
 
-// ─── Template variable substitution ─────────────────────────────────────────
+// ─── Template variable substitution ───────────────────────────────────────────
 
-/**
- * Replace all {{variableName}} placeholders in the HTML template with values
- * from a flat key-value object. Unresolved placeholders are left as-is.
- */
 function substituteVars(
-  html:      string,
-  vars:      Record<string, unknown>,
+  html: string,
+  vars: Record<string, unknown>,
 ): string {
   return html.replace(/\{\{(\w[\w.]*)\}\}/g, (_match, key: string) => {
     const val = key.split(".").reduce(
-      (obj: unknown, k) => (obj != null && typeof obj === "object" ? (obj as Record<string, unknown>)[k] : undefined),
+      (obj: unknown, k) =>
+        obj != null && typeof obj === "object"
+          ? (obj as Record<string, unknown>)[k]
+          : undefined,
       vars as unknown,
     );
     return val != null ? String(val) : `{{${key}}}`;
   });
 }
 
-// ─── PDF generation (Puppeteer — optional) ────────────────────────────────────
+// ─── Manifest → PdfRenderOptions ─────────────────────────────────────────────
 
-/**
- * Attempt to render HTML → PDF buffer using @sparticuz/chromium-min + puppeteer-core.
- * Returns null if either package is not installed or Puppeteer fails to launch.
- * The caller falls back to storing the HTML string directly.
- */
-async function tryPuppeteerPdf(html: string): Promise<Buffer | null> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const chromiumMod = await import("@sparticuz/chromium-min" as any) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const puppeteerMod = await import("puppeteer-core" as any) as any;
+const PAPER_FORMATS: ReadonlySet<PdfRenderOptions["format"]> = new Set([
+  "A4",
+  "A3",
+  "Letter",
+  "Legal",
+]);
 
-    const chromium  = chromiumMod.default ?? chromiumMod;
-    const puppeteer = puppeteerMod.default ?? puppeteerMod;
+function mapManifestToOptions(
+  manifest: Record<string, unknown> | null,
+): PdfRenderOptions {
+  const m = manifest ?? {};
+  const opts: PdfRenderOptions = {};
 
-    const browser = await puppeteer.launch({
-      args:           chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless:       chromium.headless ?? true,
-      defaultViewport: { width: 1280, height: 1800 },
-    });
-
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "load", timeout: RENDER_TIMEOUT });
-      const pdfBuffer = await page.pdf({
-        format:          "A4",
-        printBackground: true,
-        margin:          { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" },
-      });
-      return Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer as Uint8Array);
-    } finally {
-      await browser.close();
-    }
-  } catch {
-    return null;
+  const fmt = typeof m["paper_size"] === "string" ? (m["paper_size"] as string) : undefined;
+  if (fmt && PAPER_FORMATS.has(fmt as PdfRenderOptions["format"])) {
+    opts.format = fmt as PdfRenderOptions["format"];
   }
+
+  if (typeof m["orientation"] === "string") {
+    opts.landscape = (m["orientation"] as string).toLowerCase() === "landscape";
+  }
+
+  if (typeof m["scale"] === "number") {
+    opts.scale = m["scale"] as number;
+  }
+
+  if (typeof m["print_background"] === "boolean") {
+    opts.printBackground = m["print_background"] as boolean;
+  }
+
+  const margin = m["margin"];
+  if (margin && typeof margin === "object") {
+    const mm = margin as Record<string, unknown>;
+    opts.margin = {
+      top:    typeof mm["top"]    === "string" ? mm["top"]    as string : undefined,
+      bottom: typeof mm["bottom"] === "string" ? mm["bottom"] as string : undefined,
+      left:   typeof mm["left"]   === "string" ? mm["left"]   as string : undefined,
+      right:  typeof mm["right"]  === "string" ? mm["right"]  as string : undefined,
+    };
+  }
+
+  const header = typeof m["header_template"] === "string" ? (m["header_template"] as string) : undefined;
+  const footer = typeof m["footer_template"] === "string" ? (m["footer_template"] as string) : undefined;
+  if (header || footer) {
+    opts.displayHeaderFooter = true;
+    if (header) opts.headerTemplate = header;
+    if (footer) opts.footerTemplate = footer;
+  }
+
+  return opts;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function sha256Hex(buf: Buffer): string {
   return createHash("sha256").update(buf).digest("hex");
+}
+
+function classifyError(err: unknown): { category: RenderDlqCategory; code: string; detail: string } {
+  if (isGotenbergError(err)) {
+    return {
+      category: err.category,
+      code:     `GOTENBERG_${err.category.toUpperCase()}`,
+      detail:   err.responseBody ? `${err.message}\n${err.responseBody}` : err.message,
+    };
+  }
+  return {
+    category: "crash",
+    code:     "RENDER_INTERNAL_ERROR",
+    detail:   err instanceof Error ? (err.stack ?? err.message) : String(err),
+  };
+}
+
+async function emitOpsAlert(
+  db:       AnyDb,
+  tenantId: string,
+  outputId: string,
+  category: RenderDlqCategory,
+  code:     string,
+  detail:   string,
+): Promise<void> {
+  await sql`
+    INSERT INTO event.outbox
+      (tenant_id, topic,        event_type,
+       entity_type, entity_id,
+       payload,    created_by)
+    VALUES
+      (${tenantId}::uuid,
+       'ops_alert',
+       'render.failed',
+       'render_output',
+       ${outputId}::uuid,
+       ${JSON.stringify({
+         outputId,
+         category,
+         code,
+         detail: detail.slice(0, 1024),
+       })}::jsonb,
+       ${SYSTEM_ACTOR_ID}::uuid)
+  `.execute(db).catch(() => undefined);
 }
 
 // ─── Sweep ────────────────────────────────────────────────────────────────────
@@ -147,7 +230,7 @@ async function sweep(
     JOIN   document.render_job    rj
            ON  rj.output_id  = ro.id
            AND rj.tenant_id  = ro.tenant_id
-           AND rj.status     = 'PENDING'
+           AND rj.status     IN ('PENDING', 'RETRYING')
     WHERE  ro.status = 'QUEUED'
     ORDER  BY ro.created_at ASC
     LIMIT  ${SWEEP_BATCH}
@@ -162,7 +245,7 @@ async function sweep(
       data: { outputId: r.id, tenantId: r.tenant_id, jobId: r.job_id } satisfies RenderDocumentJobData,
       opts: {
         jobId:            `render:${r.id}`,
-        attempts:         3,
+        attempts:         MAX_ATTEMPTS,
         backoff:          { type: "exponential", delay: 10_000 },
         removeOnComplete: { count: 200 },
         removeOnFail:     { count: 100 },
@@ -194,16 +277,77 @@ interface TemplateVersionRow {
   locale:      string | null;
 }
 
-async function render(
-  db:             AnyDb,
-  data:           RenderDocumentJobData,
-  objectStorage?: RenderObjectStorage,
-  logger?:        JobLogger,
+interface RenderDeps {
+  db:            AnyDb;
+  data:          RenderDocumentJobData;
+  attemptsMade:  number;
+  gotenberg:     SyncPdfRenderer | null;
+  objectStorage: RenderObjectStorage | undefined;
+  logger?:       JobLogger;
+}
+
+async function markFinalFailure(
+  db:           AnyDb,
+  tenantId:     string,
+  outputId:     string,
+  jobId:        string,
+  errorCode:    string,
+  errorDetail:  string,
 ): Promise<void> {
+  await sql`
+    UPDATE document.render_output
+    SET    status       = 'FAILED',
+           error_code   = ${errorCode},
+           error_message = ${errorDetail.slice(0, 4096)},
+           updated_at   = now(),
+           updated_by   = ${SYSTEM_ACTOR_ID}::uuid
+    WHERE  id = ${outputId}::uuid AND tenant_id = ${tenantId}::uuid
+  `.execute(db).catch(() => undefined);
+
+  await sql`
+    UPDATE document.render_job
+    SET    status       = 'FAILED',
+           error_code   = ${errorCode},
+           error_detail = ${errorDetail.slice(0, 1024)},
+           completed_at = now(),
+           updated_at   = now()
+    WHERE  id = ${jobId}::uuid AND tenant_id = ${tenantId}::uuid
+  `.execute(db).catch(() => undefined);
+}
+
+async function markRetryable(
+  db:           AnyDb,
+  tenantId:     string,
+  outputId:     string,
+  jobId:        string,
+  errorCode:    string,
+  errorDetail:  string,
+): Promise<void> {
+  // Reset render_output → QUEUED so the retried BullMQ job's claim succeeds.
+  await sql`
+    UPDATE document.render_output
+    SET    status     = 'QUEUED',
+           updated_at = now(),
+           updated_by = ${SYSTEM_ACTOR_ID}::uuid
+    WHERE  id = ${outputId}::uuid AND tenant_id = ${tenantId}::uuid
+  `.execute(db).catch(() => undefined);
+
+  await sql`
+    UPDATE document.render_job
+    SET    status       = 'RETRYING',
+           error_code   = ${errorCode},
+           error_detail = ${errorDetail.slice(0, 1024)},
+           updated_at   = now()
+    WHERE  id = ${jobId}::uuid AND tenant_id = ${tenantId}::uuid
+  `.execute(db).catch(() => undefined);
+}
+
+async function render(deps: RenderDeps): Promise<void> {
+  const { db, data, attemptsMade, gotenberg, objectStorage, logger } = deps;
   const startedAt = Date.now();
   const { outputId, tenantId, jobId } = data;
 
-  // ── 1. Claim render_output ────────────────────────────────────────────────
+  // ── 1. Claim render_output ─────────────────────────────────────────────────
   const claimResult = await sql<RenderOutputRow>`
     UPDATE document.render_output
     SET    status = 'RENDERING', updated_at = now(), updated_by = ${SYSTEM_ACTOR_ID}::uuid
@@ -216,22 +360,54 @@ async function render(
 
   const output = claimResult.rows[0];
   if (!output) {
-    logger?.warn("render_skip_already_claimed", { outputId, tenantId });
+    logger?.warn("render_skip_already_claimed", { outputId, tenantId, attemptsMade });
     return;
   }
 
-  // ── 2. Claim render_job ───────────────────────────────────────────────────
+  // ── 2. Claim render_job ────────────────────────────────────────────────────
   await sql`
     UPDATE document.render_job
     SET    status     = 'PROCESSING',
-           started_at = now(),
+           attempts   = attempts + 1,
+           started_at = COALESCE(started_at, now()),
            updated_at = now()
     WHERE  id        = ${jobId}::uuid
       AND  tenant_id = ${tenantId}::uuid
   `.execute(db);
 
+  // ── Configuration guards (permanent failure, alert ops) ────────────────────
+  if (!gotenberg) {
+    const detail = "GOTENBERG_BASE_URL is unset; no Gotenberg client available";
+    logger?.error("render_no_gotenberg", { outputId, tenantId });
+    await insertRenderDlq(db, {
+      tenantId, outputId, renderJobId: jobId,
+      errorCode: "MISSING_RENDERER", errorDetail: detail,
+      errorCategory: "permanent",
+      attemptCount: attemptsMade + 1,
+      payload: { jobData: data },
+    });
+    await markFinalFailure(db, tenantId, outputId, jobId, "MISSING_RENDERER", detail);
+    await emitOpsAlert(db, tenantId, outputId, "permanent", "MISSING_RENDERER", detail);
+    return;
+  }
+
+  if (!objectStorage) {
+    const detail = "Object storage adapter not configured; cannot persist rendered PDF";
+    logger?.error("render_no_storage", { outputId, tenantId });
+    await insertRenderDlq(db, {
+      tenantId, outputId, renderJobId: jobId,
+      errorCode: "MISSING_STORAGE", errorDetail: detail,
+      errorCategory: "permanent",
+      attemptCount: attemptsMade + 1,
+      payload: { jobData: data },
+    });
+    await markFinalFailure(db, tenantId, outputId, jobId, "MISSING_STORAGE", detail);
+    await emitOpsAlert(db, tenantId, outputId, "permanent", "MISSING_STORAGE", detail);
+    return;
+  }
+
   try {
-    // ── 3. Fetch template version ───────────────────────────────────────────
+    // ── 3. Fetch template version ────────────────────────────────────────────
     let htmlTemplate = "";
 
     if (output.template_version_id) {
@@ -247,7 +423,6 @@ async function render(
         if (tv.body_html) {
           htmlTemplate = tv.body_html;
         } else if (tv.body_json) {
-          // body_json for structured templates — wrap in basic HTML
           const content = typeof tv.body_json === "string" ? tv.body_json : JSON.stringify(tv.body_json, null, 2);
           htmlTemplate = `<!DOCTYPE html><html><body><pre>${content}</pre></body></html>`;
         }
@@ -255,7 +430,6 @@ async function render(
     }
 
     if (!htmlTemplate) {
-      // Fallback: minimal HTML envelope when no template is configured
       htmlTemplate = `<!DOCTYPE html><html><body>
         <h1>Document</h1>
         <p>Entity: ${output.entity_name ?? "—"} / ${output.entity_id ?? "—"}</p>
@@ -263,7 +437,7 @@ async function render(
       </body></html>`;
     }
 
-    // ── 4. Substitute variables ─────────────────────────────────────────────
+    // ── 4. Substitute variables ──────────────────────────────────────────────
     const vars: Record<string, unknown> = {
       ...(output.manifest_json ?? {}),
       entity_name: output.entity_name ?? "",
@@ -273,50 +447,23 @@ async function render(
     };
 
     const renderedHtml = substituteVars(htmlTemplate, vars);
-    const htmlBuffer   = Buffer.from(renderedHtml, "utf-8");
 
-    // ── 5. Generate PDF (or fall back to HTML) ──────────────────────────────
-    let outputBuffer: Buffer;
-    let outputFormat: string;
-    let contentType:  string;
+    // ── 5. Render PDF via Gotenberg ──────────────────────────────────────────
+    const pdfOptions = mapManifestToOptions(output.manifest_json);
+    const pdfBuffer  = await gotenberg.renderSync(renderedHtml, pdfOptions);
 
-    if (objectStorage) {
-      const pdfBuffer = await tryPuppeteerPdf(renderedHtml);
-      if (pdfBuffer) {
-        outputBuffer = pdfBuffer;
-        outputFormat = "pdf";
-        contentType  = "application/pdf";
-      } else {
-        // Puppeteer not available — store HTML
-        outputBuffer = htmlBuffer;
-        outputFormat = "html";
-        contentType  = "text/html; charset=utf-8";
-        logger?.warn("render_puppeteer_unavailable", { outputId, fallback: "html" });
-      }
-    } else {
-      // No storage configured — still compute hash, no upload
-      outputBuffer = htmlBuffer;
-      outputFormat = "html";
-      contentType  = "text/html; charset=utf-8";
-    }
+    // ── 6. Compute checksum + upload ─────────────────────────────────────────
+    const checksum  = sha256Hex(pdfBuffer);
+    const sizeBytes = pdfBuffer.length;
+    const storageKey = `renders/${tenantId}/${outputId}.pdf`;
+    await objectStorage.put(storageKey, pdfBuffer, { contentType: "application/pdf" });
 
-    // ── 6. Compute checksum ─────────────────────────────────────────────────
-    const checksum   = sha256Hex(outputBuffer);
-    const sizeBytes  = outputBuffer.length;
-
-    // ── 7. Upload to object storage ─────────────────────────────────────────
-    let storageKey: string | null = null;
-
-    if (objectStorage) {
-      storageKey = `renders/${tenantId}/${outputId}.${outputFormat}`;
-      await objectStorage.put(storageKey, outputBuffer, { contentType });
-    }
-
-    // ── 8. Mark render_output RENDERED ─────────────────────────────────────
+    // ── 7. Mark RENDERED + COMPLETED ────────────────────────────────────────
     await sql`
       UPDATE document.render_output
       SET    status       = 'RENDERED',
              storage_key  = ${storageKey},
+             mime_type    = 'application/pdf',
              size_bytes   = ${sizeBytes},
              checksum     = ${checksum},
              rendered_at  = now(),
@@ -326,7 +473,6 @@ async function render(
         AND  tenant_id = ${tenantId}::uuid
     `.execute(db);
 
-    // ── 9. Mark render_job COMPLETED ────────────────────────────────────────
     const durationMs = Date.now() - startedAt;
     await sql`
       UPDATE document.render_job
@@ -339,43 +485,57 @@ async function render(
     `.execute(db);
 
     logger?.info("render_complete", {
-      outputId, tenantId, outputFormat, sizeBytes, durationMs,
-      stored: storageKey != null,
+      outputId, tenantId, sizeBytes, durationMs, attemptsMade,
     });
 
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    logger?.error("render_failed", { outputId, tenantId, err: errMsg });
+    const { category, code, detail } = classifyError(err);
+    const attemptCount = attemptsMade + 1;
 
-    // Mark both rows FAILED
-    await sql`
-      UPDATE document.render_output
-      SET    status = 'FAILED', updated_at = now(), updated_by = ${SYSTEM_ACTOR_ID}::uuid
-      WHERE  id = ${outputId}::uuid AND tenant_id = ${tenantId}::uuid
-    `.execute(db).catch(() => undefined);
-
-    await sql`
-      UPDATE document.render_job
-      SET    status       = 'FAILED',
-             error_code   = 'RENDER_ERROR',
-             error_detail = ${errMsg.slice(0, 1024)},
-             completed_at = now(),
-             updated_at   = now()
-      WHERE  id = ${jobId}::uuid AND tenant_id = ${tenantId}::uuid
-    `.execute(db).catch(() => undefined);
-
-    // Push to DLQ — best effort
-    await insertDlq(db, DLQ_TABLE.RENDER, {
-      tenantId,
-      queueName:       QUEUE_NAME.RENDER_DOCUMENT,
-      jobName:         JOB_NAME.RENDER,
-      payload:         data,
-      errorMessage:    errMsg,
-      retryCount:      0,
-      lastAttemptedAt: new Date().toISOString(),
+    logger?.error("render_failed", {
+      outputId, tenantId, attemptCount, category, code,
+      err: err instanceof Error ? err.message : String(err),
     });
 
-    throw err; // let BullMQ retry up to max_attempts
+    // Decide retry vs. terminal based on category + attempts.
+    // BullMQ wraps worker throws and retries until job.opts.attempts is hit.
+    const remainingAttempts = MAX_ATTEMPTS - attemptCount;
+
+    let terminal = false;
+    switch (category) {
+      case "transient":
+        terminal = remainingAttempts <= 0;
+        break;
+      case "timeout":
+        // One retry only (regardless of MAX_ATTEMPTS). Conversions that
+        // took 504 once are likely to do so again — fail fast on the second.
+        terminal = attemptCount >= 2;
+        break;
+      case "permanent":
+      case "crash":
+        terminal = true;
+        break;
+    }
+
+    if (terminal) {
+      await insertRenderDlq(db, {
+        tenantId, outputId, renderJobId: jobId,
+        errorCode: code, errorDetail: detail,
+        errorCategory: category,
+        attemptCount,
+        payload: { jobData: data },
+      });
+      await markFinalFailure(db, tenantId, outputId, jobId, code, detail);
+      if (category === "crash") {
+        await emitOpsAlert(db, tenantId, outputId, category, code, detail);
+      }
+      // Do NOT rethrow — BullMQ would otherwise schedule another retry.
+      return;
+    }
+
+    // Retryable: reset state for next attempt and rethrow so BullMQ retries.
+    await markRetryable(db, tenantId, outputId, jobId, code, detail);
+    throw err;
   }
 }
 
@@ -385,6 +545,10 @@ export interface RenderDocumentWorkerDeps {
   db:              AnyDb;
   queue:           Queue<RenderDocumentJobData | SweepJobData>;
   connection:      ConnectionOptions;
+  /** Gotenberg HTTP client. When null, every render fails with a permanent
+   *  MISSING_RENDERER DLQ entry — the worker stays running so configuration
+   *  errors surface immediately rather than silently swallowing jobs. */
+  gotenberg?:      SyncPdfRenderer | null;
   objectStorage?:  RenderObjectStorage;
   logger?:         JobLogger;
 }
@@ -392,20 +556,32 @@ export interface RenderDocumentWorkerDeps {
 export function createRenderDocumentWorker(
   deps: RenderDocumentWorkerDeps,
 ): Worker<RenderDocumentJobData | SweepJobData> {
-  const { db, queue, connection, objectStorage, logger } = deps;
+  const { db, queue, connection, gotenberg = null, objectStorage, logger } = deps;
 
   return new Worker<RenderDocumentJobData | SweepJobData>(
     QUEUE_NAME.RENDER_DOCUMENT,
     async (job: Job) => {
-      if      (job.name === JOB_NAME.SWEEP)  await sweep(db, queue, logger);
-      else if (job.name === JOB_NAME.RENDER)  await render(db, job.data as RenderDocumentJobData, objectStorage, logger);
-      else logger?.warn("render_unknown_job", { name: job.name });
+      if (job.name === JOB_NAME.SWEEP) {
+        await sweep(db, queue, logger);
+      } else if (job.name === JOB_NAME.RENDER) {
+        await render({
+          db,
+          data:         job.data as RenderDocumentJobData,
+          attemptsMade: job.attemptsMade,
+          gotenberg,
+          objectStorage,
+          logger,
+        });
+      } else {
+        logger?.warn("render_unknown_job", { name: job.name });
+      }
     },
     {
       connection,
-      // Concurrency: SWEEP effectively runs as singleton (jobId `sweep:render`
-      // prevents queuing more than one at a time); RENDER is CPU-bound via
-      // Puppeteer so cap at 3 to avoid OOM under load.
+      // SWEEP runs as singleton via its job id; RENDER is bounded by
+      // Gotenberg's per-replica throughput. Three concurrent HTTP posts
+      // is comfortable for one Gotenberg instance and cheap on memory
+      // since rendering happens out-of-process.
       concurrency: 3,
     },
   );

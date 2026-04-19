@@ -33,7 +33,7 @@ for REALM in "${REALMS[@]}"; do
 
   docker run --rm \
     --name "${CONTAINER_NAME}" \
-    --network athyper-mesh-internal \
+    --network athyper-internal \
     -v "$(pwd)/${EXPORT_DIR}:/opt/keycloak/data/export" \
     -e KC_DB=postgres \
     -e KC_DB_URL="${IAM_DB_URL:-jdbc:postgresql://dbpool-auth:5432/athyperauth_dev1}" \
@@ -54,5 +54,5 @@ ls -lh "${EXPORT_DIR}"
 echo -e "\n${GREEN}✓ Export successful!${NC}"
 echo -e "${YELLOW}Note: Export files are in JSON format${NC}"
 echo -e "${YELLOW}To update version-controlled realm configs:${NC}"
-echo -e "  cp exports/athyper-realm.json ../../mesh/config/iam/realm-demosetup.json"
-echo -e "  cp exports/platform-control-realm.json ../../mesh/config/iam/realm-platform-control.json"
+echo -e "  cp exports/athyper-realm.json ../../stack/config/iam/realm-demosetup.json"
+echo -e "  cp exports/platform-control-realm.json ../../stack/config/iam/realm-platform-control.json"

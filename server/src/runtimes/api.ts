@@ -18,6 +18,7 @@ import { Router } from "express";
 import { registerIamRoutes } from "@athyper/svc-iam";
 import { registerMetadataRoutes } from "@athyper/svc-metadata";
 import { registerRecordsRoutes } from "@athyper/svc-records";
+import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
@@ -31,6 +32,7 @@ import {
 } from "@athyper/svc-platform";
 import { registerJobsRoutes } from "@athyper/svc-jobs";
 import { registerJobsAdminRoutes } from "../../framework/runtime/services/jobs/routes/jobs.admin.route.js";
+import { registerJobsBoardRoutes } from "../../framework/runtime/services/jobs/routes/jobs.board.route.js";
 
 import { registerWorkflowRoutes } from "../../framework/runtime/services/workflow/routes/index.js";
 import { registerPolicyRoutes } from "../../framework/runtime/services/policy/routes/index.js";
@@ -45,6 +47,7 @@ import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metric
 import { makeAuditEvent } from "../audit.js";
 import { runWithContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
+import { livenessHandler } from "./liveness.js";
 
 // ─── Health types ─────────────────────────────────────────────────────────────
 
@@ -68,9 +71,10 @@ type HealthCheck = () => Promise<HealthContribution>;
  *   2. Register health checks (db, redis, jwks, objectStorage).
  *   3. Build Express app + middleware.
  *   4. Register all service routes.
- *   5. Warm up JWKS.
- *   6. Install signal handlers (SIGTERM, SIGINT).
- *   7. Begin listening.
+ *   5. Install signal handlers (SIGTERM, SIGINT).
+ *   6. Begin listening.
+ *   7. lifecycle.signalReady() fires JWKS warm-up as an onReady() handler.
+ *      /readyz returns 503 (jwks_warming) until warm-up settles.
  */
 export async function startApi(deps: ServerDeps): Promise<void> {
   const startedAt = Date.now();
@@ -167,7 +171,16 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     }
   });
 
+  // B.3 — /readyz gates on JWKS warm-up completion. Warm-up itself runs
+  // inside a lifecycle.onReady() handler registered further down; until that
+  // handler resolves, the contributor reports "unhealthy" so /readyz returns
+  // 503 and upstream load balancers hold traffic.
+  let jwksWarmupCompleted = false;
+
   healthChecks.set("jwks", async () => {
+    if (!jwksWarmupCompleted) {
+      return { status: "unhealthy", message: "jwks_warming" };
+    }
     if (breakers?.auth.getState() === "OPEN") {
       return { status: "degraded", message: "circuit OPEN — auth unreachable" };
     }
@@ -216,9 +229,22 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     runWithContext({ requestId }, next);
   });
 
-  // ─── Health probe ──────────────────────────────────────────────────────────
+  // ─── Health probes ─────────────────────────────────────────────────────────
+  //
+  // F4: Three distinct probe endpoints:
+  //   /livez  — process alive, event loop responsive, no dependency checks.
+  //             Target for Docker Compose healthcheck (avoid restart on dep flap).
+  //   /readyz — full aggregate health (all dependencies). Target for load
+  //             balancer health and orchestrator readiness gates.
+  //   /health, /healthz — aliases for /readyz (backward-compatible).
 
-  const healthHandler = (_req: Request, res: Response): void => {
+  // Liveness: just confirms the event loop is ticking. Always 200.
+  // Handler is isolated in runtimes/liveness.ts so it structurally cannot
+  // close over db/redis/auth — see that file for the F4 rationale.
+  app.get("/livez", livenessHandler);
+
+  // Readiness: full aggregate health — all dependency checks.
+  const readinessHandler = (_req: Request, res: Response): void => {
     void (async () => {
       try {
         // Merge adapter checks + live service checks (registered after startup)
@@ -256,8 +282,9 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     })();
   };
 
-  app.get("/healthz", healthHandler);
-  app.get("/health", healthHandler);
+  app.get("/readyz", readinessHandler);
+  app.get("/healthz", readinessHandler);
+  app.get("/health", readinessHandler);
 
   // ─── API routes ────────────────────────────────────────────────────────────
 
@@ -326,6 +353,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     objectStorage: objectStorageRef.current ?? undefined,
   });
 
+  // Track B2 — cross-entity search. `search` is null when Meilisearch is
+  // not configured; the route returns 503 in that case.
+  registerSearchRoutes(apiRouter, {
+    db:     db.kysely,
+    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    search: deps.searchService,
+    logger,
+  });
+
   registerDocumentsRoutes(apiRouter, {
     db: db.kysely,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
@@ -336,6 +372,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
           maxUploadMb: config.objectStorage!.maxUploadMb,
         }
       : undefined,
+    tikaQueue: jobs.queues.tikaExtract,
     logger,
   });
 
@@ -410,6 +447,17 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
   });
 
+  // Embedded BullBoard UI at /api/jobs/admin/board — gated by
+  // JOBS.BOARD.VIEW (read) and JOBS.QUEUE.MANAGE (mutate). The standalone
+  // `deadly0/bull-board:3` container is retained as an internal-only
+  // break-glass fallback under compose profile `emergency`.
+  registerJobsBoardRoutes(apiRouter, {
+    queues: jobs.queues,
+    db:     _db,
+    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
   registerAuditRoutes(apiRouter, {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
@@ -461,9 +509,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   app.use("/api", apiRouter);
 
   // ─── OpenAPI / Swagger UI ──────────────────────────────────────────────────
-  // Serves /openapi.json, /openapi.yaml, and /docs (Swagger UI).
-  // Unauthenticated — documentation is not sensitive and CI tooling needs it.
-  app.use("/", createOpenApiRouter());
+  // Serves /openapi.json, /openapi.yaml, and /docs (Swagger UI — dev only).
+  // In production the spec is Bearer-gated: it's a map of every endpoint,
+  // tenant-header contract, and schema field — useful for reconnaissance.
+  // Local/staging stay open so openapi-client generators + CI can pull it.
+  app.use("/", createOpenApiRouter({
+    requireAuth: process.env["NODE_ENV"] === "production",
+    authVerify:  (token: string) => auth.verifyToken(token),
+  }));
 
   // ─── Prometheus metrics ────────────────────────────────────────────────────
   // /metrics is on the same port as the API but only reachable on the internal
@@ -498,12 +551,19 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     }),
   );
 
-  // Warm up JWKS — avoids blocking the first real request on a cold JWKS fetch.
-  await auth
-    .warmUp()
-    .catch((err) =>
-      logger.warn("jwks_warmup_failed", { err: String(err) }),
-    );
+  // B.3 — JWKS warm-up is a readiness dependency, not a boot gate.
+  // Register it as an onReady() handler so boot is non-blocking; /readyz
+  // reports "jwks_warming" (unhealthy) until this promise settles.
+  lifecycle.onReady(async () => {
+    try {
+      await auth.warmUp();
+      logger.info("jwks_warmup_completed");
+    } catch (err) {
+      logger.warn("jwks_warmup_failed", { err: String(err) });
+    } finally {
+      jwksWarmupCompleted = true;
+    }
+  });
 
   // ─── Signal handlers ───────────────────────────────────────────────────────
   // Use once() so repeated signals don't re-enter shutdown.

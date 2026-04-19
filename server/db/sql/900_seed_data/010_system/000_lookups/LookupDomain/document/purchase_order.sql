@@ -15,6 +15,7 @@ FROM (VALUES
     ('sent_to_vendor',     'Sent to Vendor',     'document.purchase_order_status', 'PO transmitted to vendor, awaiting acknowledgement', 40),
     ('partially_received', 'Partially Received', 'document.purchase_order_status', 'Some line items received against this PO',          50),
     ('fully_received',     'Fully Received',     'document.purchase_order_status', 'All line items received',                           60),
+    ('on_hold',            'On Hold',            'document.purchase_order_status', 'PO suspended - processing blocked, reversible to prior state', 65),
     ('closed',             'Closed',             'document.purchase_order_status', 'PO closed, no further receipts expected',           70),
     ('rejected',           'Rejected',           'document.purchase_order_status', 'Rejected during approval',                         80),
     ('cancelled',          'Cancelled',          'document.purchase_order_status', 'PO cancelled before or after approval',             90)

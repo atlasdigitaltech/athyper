@@ -17,5 +17,5 @@
   "access": "restricted",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@neon/web", "@neon/auth", "@neon/content"]
+  "ignore": ["@athyper/web", "@athyper/auth", "@athyper/content"]
 }

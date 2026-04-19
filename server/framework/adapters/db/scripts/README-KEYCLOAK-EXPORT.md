@@ -22,11 +22,11 @@ framework/adapters/db/scripts/
 ├── postgres-export.sh      # PostgreSQL database dump
 └── keycloak-import.sh      # Universal import script
 
-mesh/scripts/
+stack/scripts/
 ├── initdb-iam.sh           # Primary IAM seed (JSON realm import)
 └── initdb-iam.bat          # Windows equivalent
 
-mesh/config/iam/
+stack/config/iam/
 ├── realm-demosetup.json          # athyper realm (clients, users, orgs, roles)
 └── realm-platform-control.json   # Platform administration realm
 ```
@@ -150,8 +150,8 @@ export IAM_DB_USERNAME=athyperauth
 The recommended way to seed the IAM database for fresh installations:
 
 ```bash
-# From mesh/scripts/
-cd mesh/scripts
+# From stack/scripts/
+cd stack/scripts
 
 # Linux/macOS
 ./initdb-iam.sh
@@ -182,7 +182,7 @@ chmod +x keycloak-import.sh
 ```bash
 # Via Keycloak CLI
 docker run --rm \
-  --network athyper-mesh-internal \
+  --network athyper-internal \
   -v $(pwd)/exports:/opt/keycloak/data/import \
   -e KC_DB=postgres \
   -e KC_DB_URL=jdbc:postgresql://dbpool-auth:5432/athyperauth_dev1 \
@@ -218,10 +218,10 @@ cd framework/adapters/db/scripts
 ./keycloak-export.sh
 
 # Update the version-controlled realm config
-cp exports/athyper-realm.json ../../mesh/config/iam/realm-demosetup.json
+cp exports/athyper-realm.json ../../stack/config/iam/realm-demosetup.json
 
 # Commit
-git add mesh/config/iam/realm-demosetup.json
+git add stack/config/iam/realm-demosetup.json
 git commit -m "Update Keycloak realm: added new client for API v2"
 ```
 
@@ -230,10 +230,10 @@ git commit -m "Update Keycloak realm: added new client for API v2"
 Development → Staging → Production
 
 1. Export from dev:     ./keycloak-export.sh
-2. Update realm JSON:   cp exports/... mesh/config/iam/realm-demosetup.json
+2. Update realm JSON:   cp exports/... stack/config/iam/realm-demosetup.json
 3. Review changes:      git diff
-4. Test import:         cd mesh/scripts && ./initdb-iam.sh (in staging)
-5. Production deploy:   cd mesh/scripts && ./initdb-iam.sh (after approval)
+4. Test import:         cd stack/scripts && ./initdb-iam.sh (in staging)
+5. Production deploy:   cd stack/scripts && ./initdb-iam.sh (after approval)
 ```
 
 ### 4. **Security Considerations**
@@ -276,15 +276,15 @@ DELETE FROM realm_attribute WHERE name LIKE '%smtp%';
 
 ```bash
 # Always test in a non-production environment first
-docker compose -f mesh/compose/compose.yml \
+docker compose -f stack/compose/compose.yml \
   --profile test up -d
 
 # Import and verify
-cd mesh/scripts && ./initdb-iam.sh
+cd stack/scripts && ./initdb-iam.sh
 docker compose logs -f iam
 
 # Check for errors
-docker exec athyper-mesh-dbpool-auth-1 \
+docker exec athyper-stack-dbpool-auth-1 \
   psql -U athyperauth -d athyperauth_dev1 \
   -c "SELECT id, name, enabled FROM realm;"
 ```
@@ -306,14 +306,14 @@ chmod +x framework/adapters/db/scripts/*.sh
 docker compose ps dbpool-auth
 
 # Check database connection
-docker exec -it athyper-mesh-dbpool-auth-1 \
+docker exec -it athyper-stack-dbpool-auth-1 \
   psql -U athyperauth -d athyperauth_dev1 -c '\dt'
 ```
 
 #### JSON export fails with "realm not found"
 ```bash
 # List available realms
-docker exec -it athyper-mesh-iam-1 \
+docker exec -it athyper-stack-iam-1 \
   /opt/keycloak/bin/kcadm.sh get realms \
   --no-config --server http://localhost:8080 \
   --realm master --user ${KEYCLOAK_ADMIN} --password ${KEYCLOAK_ADMIN_PASSWORD}
@@ -343,7 +343,7 @@ TRUNCATE TABLE realm CASCADE;
 docker compose restart iam
 
 # Clear Keycloak cache
-docker exec -it athyper-mesh-iam-1 \
+docker exec -it athyper-stack-iam-1 \
   /opt/keycloak/bin/kcadm.sh cache clear \
   --no-config --server http://localhost:8080
 ```
@@ -362,15 +362,15 @@ cd framework/adapters/db/scripts && ./postgres-export.sh
 cd framework/adapters/db/scripts && ./keycloak-export.sh
 
 # Import realm JSON (primary method)
-cd mesh/scripts && ./initdb-iam.sh
+cd stack/scripts && ./initdb-iam.sh
 
 # Check database size
-docker exec athyper-mesh-dbpool-auth-1 \
+docker exec athyper-stack-dbpool-auth-1 \
   psql -U athyperauth -d athyperauth_dev1 \
   -c "SELECT pg_size_pretty(pg_database_size('athyperauth_dev1'));"
 
 # Count users in realm
-docker exec athyper-mesh-dbpool-auth-1 \
+docker exec athyper-stack-dbpool-auth-1 \
   psql -U athyperauth -d athyperauth_dev1 \
   -c "SELECT COUNT(*) FROM user_entity WHERE realm_id = (SELECT id FROM realm WHERE name = 'athyper');"
 ```
@@ -379,7 +379,7 @@ docker exec athyper-mesh-dbpool-auth-1 \
 
 ## Environment Variables
 
-Set these in `mesh/env/.env` or export before running scripts:
+Set these in `stack/env/.env` or export before running scripts:
 
 ```bash
 # Database

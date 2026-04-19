@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS document.asset_transaction (
 );
 
 COMMENT ON TABLE document.asset_transaction IS
-    'Asset lifecycle events. Links to asset_book_id (authoritative) and retains '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''posted'')). Asset lifecycle events. Links to asset_book_id (authoritative) and retains '
     'book_type as denormalized convenience. Consistency enforced by trigger.';
 
 
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS document.depreciation_run (
 );
 
 COMMENT ON TABLE document.depreciation_run IS
-    'Batch depreciation run header. Idempotency enforced via conditional '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''planned'',''running'')). Batch depreciation run header. Idempotency enforced via conditional '
     'unique index on (tenant_id, company_code_id, idempotency_key).';
 
 
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS document.depreciation_run_line (
 );
 
 COMMENT ON TABLE document.depreciation_run_line IS
-    'Per-asset line detail within a depreciation run. Reconcilable to run header total. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Per-asset line detail within a depreciation run. Reconcilable to run header total. '
     'Asset/book mismatch prevented by composite FK (tenant_id, asset_book_id, asset_id). '
     'Immutable after creation — log.trg_prevent_mutation blocks UPDATE/DELETE.';
 
@@ -279,5 +279,5 @@ CREATE TABLE IF NOT EXISTS document.depreciation_schedule (
 );
 
 COMMENT ON TABLE document.depreciation_schedule IS
-    'Planned month-by-month depreciation projection per asset_book. '
+    'ARCHETYPE=C;SCOPE=T. Planned month-by-month depreciation projection per asset_book. '
     'Supports versioning and plan-vs-actual via generated variance_amount.';

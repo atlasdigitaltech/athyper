@@ -21,6 +21,7 @@ import type {
   ApprovableDueMeta,
 } from "@athyper/document-runtime/header";
 import type { ApprovalContext } from "@athyper/api-contracts/workflow";
+import type { StatusDimension, ActionBundleItem } from "@athyper/api-contracts/documents";
 import type { ApInvoiceDetail } from "../hooks/useApWorkbench";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 
@@ -51,6 +52,13 @@ export interface ApInvoiceHeaderExtras {
    * Pass an empty Map (default) to skip names.
    */
   principalNames?: Map<string, string>;
+
+  /** Multi-dimensional status badges for the header identity bar. */
+  statusDimensions?: StatusDimension[];
+  /** State-adaptive action bundle (replaces simple primary/secondary/destructive). */
+  actionBundle?: ActionBundleItem[];
+  /** Blocked reasons that disable the primary CTA. */
+  blockedReasons?: string[];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -234,6 +242,9 @@ export function mapApInvoiceToHeader(
     version,
     approvalContext,
     principalNames = new Map(),
+    statusDimensions,
+    actionBundle,
+    blockedReasons,
   } = extras;
 
   // Compute subtotal: prefer explicit extra, fall back to summing line net_amounts
@@ -319,6 +330,9 @@ export function mapApInvoiceToHeader(
     costCenter,
     submittedBy: submittedByName,
     approvalFlow,
+    statusDimensions,
+    actionBundle,
+    blockedReasons,
     context,
 
     // Actions are document-state-dependent; leave undefined here so the

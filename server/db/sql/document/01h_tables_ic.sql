@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS document.intercompany_agreement (
 );
 
 COMMENT ON TABLE document.intercompany_agreement IS
-    'IC transfer pricing agreement between two company codes. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''active'')). IC transfer pricing agreement between two company codes. '
     'OECD methods: CUP, COST_PLUS, RESALE_MINUS, TNMM, PROFIT_SPLIT, COMPARABLE_PROFIT. '
     'Conflict resolution via priority + conflict_strategy. '
     'Version chain via supersedes_id. Status: draft → active → suspended|superseded|expired|cancelled.';
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS document.intercompany_transaction (
 );
 
 COMMENT ON TABLE document.intercompany_transaction IS
-    'IC billing event between two company codes. Dual-currency (transaction + base). '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''created'',''posted'',''netted'')). IC billing event between two company codes. Dual-currency (transaction + base). '
     'pricing_variance GENERATED (transfer_price - arm_length_price). '
     'Mirror transactions auto-created on counterparty side (is_mirror = true). '
     'Status: draft → created → posted → netted → settled | disputed | reversed.';
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS document.netting_batch (
 );
 
 COMMENT ON TABLE document.netting_batch IS
-    'Bilateral IC netting batch header. gross_amount GENERATED (a_to_b + b_to_a). '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''calculated'',''approved'')). Bilateral IC netting batch header. gross_amount GENERATED (a_to_b + b_to_a). '
     'net_amount = |a_to_b - b_to_a|; net_direction indicates payer. '
     'Status: draft → calculated → approved → settled | cancelled.';
 
@@ -415,7 +415,7 @@ CREATE TABLE IF NOT EXISTS document.ic_elimination (
 );
 
 COMMENT ON TABLE document.ic_elimination IS
-    'IC elimination operational document. Produces a JE (source_doc_type = ic_elimination). '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''calculated'',''approved'',''posted'')). IC elimination operational document. Produces a JE (source_doc_type = ic_elimination). '
     'AI-assisted: decision_score (0-1) drives approval_route (AUTO/STANDARD/ENHANCED/MANUAL). '
     'Children: ledger.ic_elimination_line. '
     'Status: calculated → approved → posted → reversed | rejected | cancelled.';

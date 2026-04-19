@@ -18,13 +18,13 @@ INSERT INTO control.entity (
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
     'purchase_order', 'PO', 'purchase_order',
-    'DOCUMENT', 'system', 'ent', 'table',
+    'DOCUMENT', 'system', 'ent', 'view',
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_order',
     'Purchase Order', 'Purchase Orders', 'shopping-cart', 'orange',
     true,
     '{"prefix":"PO","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"purchasing","allow_on_behalf_of":false,"has_line_items":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"document_category":"purchasing","allow_on_behalf_of":false,"has_line_items":true,"auto_number":true,"write_facade":"PurchaseOrderFacade","backing_source":"commitment+commitment_procurement"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -84,3 +84,16 @@ WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_order'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.origin = 'system';
+
+-- ── Converge backing_type + write_facade for existing rows (idempotent) ───────
+-- Required after document.purchase_order became a VIEW over
+-- commitment + commitment_procurement. Write operations route through
+-- PurchaseOrderFacade. 'view' is pre-seeded in entity.backing_type lookup.
+UPDATE control.entity
+SET backing_type = 'view',
+    feature_flags = feature_flags
+                    || '{"write_facade":"PurchaseOrderFacade","backing_source":"commitment+commitment_procurement"}'::jsonb
+WHERE table_schema = 'document'
+  AND table_name = 'purchase_order'
+  AND tenant_id IS NULL
+  AND (backing_type <> 'view' OR NOT (feature_flags ? 'write_facade'));

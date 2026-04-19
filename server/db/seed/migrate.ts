@@ -20,14 +20,18 @@
 //                900_seed_data/040_prod_tenant/**
 //
 // Usage:
-//   tsx db/seed/migrate.ts --phase=1          # DDL only
-//   tsx db/seed/migrate.ts --phase=2          # System seed only
-//   tsx db/seed/migrate.ts --phase=3          # Blueprint + Tenant seed only
-//   tsx db/seed/migrate.ts --all              # Run all three phases sequentially
-//   tsx db/seed/migrate.ts --status           # Show status of all SQL files
-//   tsx db/seed/migrate.ts --reset            # Drop all schemas and reset tracking
-//   tsx db/seed/migrate.ts --force            # Re-run even if checksum unchanged
-//   tsx db/seed/migrate.ts --phase=1 --force  # Force-re-run DDL only
+//   tsx db/seed/migrate.ts                   # Run all three phases (default)
+//   tsx db/seed/migrate.ts --all             # Same as default
+//   tsx db/seed/migrate.ts --ddl-only        # Phase 1 only (DDL)
+//   tsx db/seed/migrate.ts --system-only     # Phase 2 only (010_system seed; DDL must exist)
+//   tsx db/seed/migrate.ts --no-demo         # Phases 1+2 (DDL + system, no demo/tenant data)
+//   tsx db/seed/migrate.ts --demo-only       # Phases 1+2+3 (all; checksum tracking skips done files)
+//   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all phases
+//   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
+//   tsx db/seed/migrate.ts --status          # Show status of all SQL files
+//   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
+//   tsx db/seed/migrate.ts --phase=1         # Low-level: explicit phase number(s)
+//   tsx db/seed/migrate.ts --phase=1 --phase=2  # Multiple phases
 //
 // Environment variables:
 //   DATABASE_ADMIN_URL  — Direct Postgres connection string (required)
@@ -111,7 +115,7 @@ function collectSqlFiles(dir: string): string[] {
       const fullPath = join(current, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith(".sql")) {
+      } else if (entry.isFile() && entry.name.endsWith(".sql") && !entry.name.startsWith("verify")) {
         results.push(fullPath);
       }
     }
@@ -222,8 +226,8 @@ export function discoverSqlFiles(): SqlFile[] {
   // Phase 120 — 99_security/*         REVOKE / search_path hardening — always last
   //
   // Within each phase, files sort by (schema_order, relPath).
-  // Schema order matches runner.sh SCHEMAS array:
-  //   shared → control → master → document → ledger → log → event → governance → snapshot → aggregate
+  // Schema order (master before control because control has FKs into master):
+  //   shared → master → control → document → ledger → log → event → governance → snapshot → aggregate
 
   const SCHEMAS: string[] = [
     "shared", "master", "control", "document",
@@ -274,17 +278,26 @@ export function discoverSqlFiles(): SqlFile[] {
     return a.relPath.localeCompare(b.relPath);
   });
 
-  // Seed files sort alphabetically with one exception:
-  // Within 010_system/, entity_engine/ must run before 100_finance/ because
-  // 010_system/entity_engine/020_entities/ registers entities with entity_code,
-  // and 010_system/100_finance/ seed files depend on those registrations via
-  // WHERE NOT EXISTS guards. Alphabetically "e" > "1" so entity_engine would
-  // sort after 100_finance — we remap it to sort as "009_entity_engine" instead.
+  // Seed files sort alphabetically with two exceptions within 010_system/:
+  //
+  // 1. 000_public/000_bootstrap.sql must run FIRST — it creates the system
+  //    tenant and system principal (all-zeros UUID) which later seeds reference
+  //    as created_by. Alphabetically "000_public" (p=112) sorts after
+  //    "000_lookups" (l=108), so we remap it to "000_000_public" (0=48 < l).
+  //
+  // 2. entity_engine/ must run before 100_finance/ because entity_engine/
+  //    020_entities/ registers entity_code values that 100_finance/ seeds
+  //    depend on. Alphabetically "e" > "1" so we remap to "009_entity_engine".
   function seedSortKey(relPath: string): string {
-    return relPath.replace(
-      "900_seed_data/010_system/entity_engine/",
-      "900_seed_data/010_system/009_entity_engine/",
-    );
+    return relPath
+      .replace(
+        "900_seed_data/010_system/000_public/",
+        "900_seed_data/010_system/000_000_public/",
+      )
+      .replace(
+        "900_seed_data/010_system/entity_engine/",
+        "900_seed_data/010_system/009_entity_engine/",
+      );
   }
   seedFiles.sort((a, b) =>
     seedSortKey(a.relPath).localeCompare(seedSortKey(b.relPath)),
@@ -374,45 +387,13 @@ async function runPhases(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
 
-    // Seed-phase setup: applied only when phases 2 or 3 are included.
     const seedPhases: Phase[] = [2, 3];
     const hasSeedPhase = phases.some((p) => seedPhases.includes(p));
-    if (hasSeedPhase) {
-      // 1. Disable entity-binding validation triggers.
-      //    Some seed files reference entity codes (e.g. 'bank_branch') that are
-      //    stale or not yet registered when the seed file runs. These triggers
-      //    enforce entity_code existence in control.entity — valid at runtime but
-      //    too strict during trusted initial seeding.
-      await client.query(`
-        ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
-        ALTER TABLE control.entity_operation  DISABLE TRIGGER trg_eo_validate_entity_binding;
-        ALTER TABLE control.entity_relation   DISABLE TRIGGER trg_er_validate_target_entity;
-      `);
-
-      // 2. Install a temporary BEFORE INSERT trigger on control.entity that
-      //    derives entity_code from name when the caller omits it.
-      //    Several 100_finance seed files pre-date the entity_code NOT NULL column
-      //    and do not include it in their INSERT column lists. Deriving from name
-      //    is safe because name values in these files already satisfy the
-      //    entity_code_fmt_chk regex ('^[a-z][a-z0-9_]*$').
-      //    The trigger and its function are dropped after seeding completes.
-      await client.query(`
-        CREATE OR REPLACE FUNCTION control.trg_fn_seed_entity_code_default()
-        RETURNS trigger LANGUAGE plpgsql AS $$
-        BEGIN
-            IF NEW.entity_code IS NULL THEN
-                NEW.entity_code := NEW.name;
-            END IF;
-            RETURN NEW;
-        END;
-        $$;
-
-        DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
-        CREATE TRIGGER trg_seed_entity_code_default
-            BEFORE INSERT ON control.entity
-            FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default();
-      `);
-    }
+    // seedSetupApplied tracks whether the seed-phase ALTER TABLE / trigger
+    // installs have run. They must happen AFTER phase 1 DDL creates the
+    // control schema, so we apply them lazily just before the first
+    // phase-2/3 file executes rather than eagerly at startup.
+    let seedSetupApplied = false;
 
     const executed = await getExecuted(client);
     const results: ExecutionResult[] = [];
@@ -426,6 +407,46 @@ async function runPhases(
     });
 
     for (const file of files) {
+      // Apply seed-phase setup once, immediately before the first seed file,
+      // so the control schema is guaranteed to exist (phase 1 ran first).
+      if (hasSeedPhase && !seedSetupApplied && file.phase >= 2) {
+        // 1. Disable entity-binding validation triggers.
+        //    Some seed files reference entity codes (e.g. 'bank_branch') that are
+        //    stale or not yet registered when the seed file runs. These triggers
+        //    enforce entity_code existence in control.entity — valid at runtime but
+        //    too strict during trusted initial seeding.
+        await client.query(`
+          ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
+          ALTER TABLE control.entity_operation  DISABLE TRIGGER trg_eo_validate_entity_binding;
+          ALTER TABLE control.entity_relation   DISABLE TRIGGER trg_er_validate_target_entity;
+        `);
+
+        // 2. Install a temporary BEFORE INSERT trigger on control.entity that
+        //    derives entity_code from name when the caller omits it.
+        //    Several 100_finance seed files pre-date the entity_code NOT NULL column
+        //    and do not include it in their INSERT column lists. Deriving from name
+        //    is safe because name values in these files already satisfy the
+        //    entity_code_fmt_chk regex ('^[a-z][a-z0-9_]*$').
+        //    The trigger and its function are dropped after seeding completes.
+        await client.query(`
+          CREATE OR REPLACE FUNCTION control.trg_fn_seed_entity_code_default()
+          RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN
+              IF NEW.entity_code IS NULL THEN
+                  NEW.entity_code := NEW.name;
+              END IF;
+              RETURN NEW;
+          END;
+          $$;
+
+          DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
+          CREATE TRIGGER trg_seed_entity_code_default
+              BEFORE INSERT ON control.entity
+              FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default();
+        `);
+        seedSetupApplied = true;
+      }
+
       const sql = readFileSync(file.absPath, "utf-8");
       const hash = checksum(sql);
       const prev = executed.get(file.key);
@@ -470,8 +491,8 @@ async function runPhases(
       totalMs: results.reduce((sum, r) => sum + r.durationMs, 0),
     });
 
-    // Tear down seed-phase setup.
-    if (hasSeedPhase) {
+    // Tear down seed-phase setup (only if it was actually applied).
+    if (seedSetupApplied) {
       await client.query(`
         ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
         ALTER TABLE control.entity_operation  ENABLE TRIGGER trg_eo_validate_entity_binding;
@@ -541,13 +562,7 @@ async function runStatus(connectionString: string): Promise<void> {
     let ok = 0;
 
     console.log("\n  Database Migration Status\n");
-    console.log(
-      "  %-16s  %-60s  %-8s  %s",
-      "Phase",
-      "File",
-      "Status",
-      "Checksum",
-    );
+    console.log(`  ${"Phase".padEnd(16)}  ${"File".padEnd(60)}  ${"Status".padEnd(8)}  Checksum`);
     console.log("  " + "-".repeat(100));
 
     let lastPhase = 0;
@@ -575,11 +590,7 @@ async function runStatus(connectionString: string): Promise<void> {
       const displayKey =
         file.key.length > 58 ? "…" + file.key.slice(-57) : file.key;
       console.log(
-        "  %-16s  %-60s  %-8s  %s",
-        phaseLabel,
-        displayKey,
-        status,
-        hash,
+        `  ${phaseLabel.padEnd(16)}  ${displayKey.padEnd(60)}  ${status.padEnd(8)}  ${hash}`,
       );
     }
 
@@ -612,15 +623,29 @@ async function main(): Promise<void> {
     );
   }
 
-  const phaseArg = args.find((a) => a.startsWith("--phase="));
-  const runAll = args.includes("--all");
   const force = args.includes("--force");
   const reset = args.includes("--reset");
+  const dropOnly = args.includes("--drop-only");
   const status = args.includes("--status");
+
+  // High-level convenience flags (all idempotent via checksum tracking)
+  const ddlOnly    = args.includes("--ddl-only");     // Phase 1 only
+  const systemOnly = args.includes("--system-only");  // Phase 2 only (DDL must exist)
+  const noDemo     = args.includes("--no-demo");      // Phases 1+2
+  const demoOnly   = args.includes("--demo-only");    // Phases 1+2+3 (ensures prerequisites)
+  const runAll     = args.includes("--all");
+
+  // Low-level --phase=N flag(s) — all occurrences are collected
+  const phaseArgs  = args.filter((a) => a.startsWith("--phase="));
 
   try {
     if (status) {
       await runStatus(connectionString);
+      return;
+    }
+
+    if (dropOnly) {
+      await runReset(connectionString);
       return;
     }
 
@@ -631,18 +656,26 @@ async function main(): Promise<void> {
 
     let phases: Phase[];
 
-    if (runAll) {
+    if (ddlOnly) {
+      phases = [1];
+    } else if (systemOnly) {
+      phases = [2];
+    } else if (noDemo) {
+      phases = [1, 2];
+    } else if (demoOnly || runAll) {
+      // demoOnly runs ALL phases — checksum tracking skips already-executed files,
+      // so prerequisites (phase 1 DDL, phase 2 system seed) are always guaranteed.
       phases = [1, 2, 3];
-    } else if (phaseArg) {
-      const n = parseInt(phaseArg.split("=")[1] ?? "", 10);
-      if (n !== 1 && n !== 2 && n !== 3) {
+    } else if (phaseArgs.length > 0) {
+      const parsed = phaseArgs.map((a) => parseInt(a.split("=")[1] ?? "", 10));
+      if (parsed.some((n) => n !== 1 && n !== 2 && n !== 3)) {
         logError({
           msg: "migrate_error",
           error: "--phase must be 1, 2, or 3",
         });
         process.exit(1);
       }
-      phases = [n as Phase];
+      phases = [...new Set(parsed)].sort() as Phase[];
     } else {
       // Default: run all phases
       phases = [1, 2, 3];

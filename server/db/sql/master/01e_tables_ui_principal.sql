@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS master.principal_ui_profile (
 );
 
 COMMENT ON TABLE master.principal_ui_profile IS
-    '1:1 principal-level UI defaults. Mirrors master.tenant_profile at user level. '
+    'ARCHETYPE=C;SCOPE=T. 1:1 principal-level UI defaults. Mirrors master.tenant_profile at user level. '
     'All columns nullable — NULL = inherit from tenant_profile → platform default. '
     'Resolution: platform → tenant_profile → principal_ui_profile → preference → artifact. '
     'Does NOT store ephemeral session state (last tab, scroll, recents).';
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS master.principal_ui_preference (
 );
 
 COMMENT ON TABLE master.principal_ui_preference IS
-    'Narrow extension table for low-frequency, module-specific principal settings. '
+    'ARCHETYPE=C;SCOPE=T. Narrow extension table for low-frequency, module-specific principal settings. '
     'Controlled key-value overlay — preference_code registered in ui.preference_code domain. '
     'Natural key (tenant_id, principal_id, preference_code, surface_code) UNIQUE NULLS NOT DISTINCT. '
     'Must NOT store saved-view payloads, dashboard layouts, recents, or search history. '
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS master.saved_view (
 );
 
 COMMENT ON TABLE master.saved_view IS
-    'Named grid/list/query presets. Durable artifact in master. '
+    'ARCHETYPE=B;SCOPE=T. Named grid/list/query presets. Durable artifact in master. '
     'Scope: personal (owner only), shared (all tenant users), system (platform-seeded). '
     'state_json holds filter/sort/column state; state_hash enables dedup. '
     'version supports optimistic concurrency. '
@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS master.dashboard (
 );
 
 COMMENT ON TABLE master.dashboard IS
-    'Dashboard header/container. Similar to saved_view but for named landing pages. '
+    'ARCHETYPE=B;SCOPE=T. Dashboard header/container. Similar to saved_view but for named landing pages. '
     'Widgets belong to dashboards (via dashboard_widget), not directly to principals. '
     'Scope: personal, shared, system. is_home = landing dashboard when no explicit default. '
     'Lifecycle: active → archived. deleted_at only set when status = archived.';
@@ -455,7 +455,7 @@ CREATE TABLE IF NOT EXISTS master.dashboard_widget (
 );
 
 COMMENT ON TABLE master.dashboard_widget IS
-    'Dashboard widget instances. Child of master.dashboard. '
+    'ARCHETYPE=C;SCOPE=T. Dashboard widget instances. Child of master.dashboard. '
     'Layout normalized: x_pos, y_pos, width_units, height_units for CSS Grid / react-grid-layout. '
     'Natural key = (dashboard_id, widget_code, breakpoint_code) NULLS NOT DISTINCT — '
     'same widget_code appears once per breakpoint for responsive layout. '
@@ -678,7 +678,7 @@ CREATE TABLE IF NOT EXISTS master.principal_notification_preference (
 );
 
 COMMENT ON TABLE master.principal_notification_preference IS
-    'Per-user notification opt-in/out by event_code + channel. '
+    'ARCHETYPE=B;SCOPE=T. Per-user notification opt-in/out by event_code + channel. '
     'NULL is_enabled = inherit routing rule default. '
     'NULL frequency_code = immediate delivery (no digest batching). '
     'high/urgent priorities are never downshifted to digest. '

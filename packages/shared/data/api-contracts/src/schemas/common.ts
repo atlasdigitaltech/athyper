@@ -110,6 +110,15 @@ export const FilterGroupSchema = z.object({
   conditions: z.array(FilterConditionSchema),
 });
 
+// ── Semantic Intent ─────────────────────────────────────────────
+// Shared enum matching SemanticIntent from @athyper/theme/semantic-colors.
+// Used by StatusLane, ProcessHealthTile, StatusDimension, SatelliteCard, etc.
+
+export const SemanticIntentSchema = z.enum([
+  "neutral", "info", "success", "warning", "error", "primary", "accent", "muted",
+]);
+export type SemanticIntent = z.infer<typeof SemanticIntentSchema>;
+
 // ── Type Exports ────────────────────────────────────────────────
 
 export type Uuid = z.infer<typeof UuidSchema>;

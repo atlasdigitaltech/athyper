@@ -19,9 +19,13 @@ import { cn } from "@athyper/theme/utils";
 import {
   type ProcessChain,
   type DocumentException,
+  type ProcessHealthTile,
+  type ValidationNotice,
 } from "@athyper/api-contracts/documents";
 import { ProcessChainRibbon } from "../chain";
 import { ExceptionStack } from "../exceptions";
+import { ProcessHealthStrip } from "../health";
+import { ValidationBanner } from "../validation";
 import {
   ApprovableDocumentHeader,
   type ApprovableDocumentHeaderTab,
@@ -55,6 +59,13 @@ export interface ApprovableDocumentShellProps {
   // ── Optional chrome ────────────────────────────────────────────
   chain?: ProcessChain | null;
   exceptions?: DocumentException[];
+
+  // ── Orchestrator slots (v1.2 spec) ────────────────────────────
+  healthTiles?: ProcessHealthTile[];
+  onHealthTileClick?: (tile: ProcessHealthTile) => void;
+  validationNotices?: ValidationNotice[];
+  onValidationAction?: (hint: string) => void;
+
   children: ReactNode;
   className?: string;
 }
@@ -70,6 +81,10 @@ export function ApprovableDocumentShell({
   onTabChange,
   chain,
   exceptions,
+  healthTiles,
+  onHealthTileClick,
+  validationNotices,
+  onValidationAction,
   children,
   className,
 }: ApprovableDocumentShellProps) {
@@ -108,12 +123,28 @@ export function ApprovableDocumentShell({
         onTabChange={onTabChange}
       />
 
-      {/* 3. Exception Stack */}
+      {/* 3. Process Health Strip */}
+      {healthTiles && healthTiles.length > 0 && (
+        <ProcessHealthStrip
+          tiles={healthTiles}
+          onTileClick={onHealthTileClick}
+        />
+      )}
+
+      {/* 4. Validation Banner */}
+      {validationNotices && validationNotices.length > 0 && (
+        <ValidationBanner
+          notices={validationNotices}
+          onActionHint={onValidationAction}
+        />
+      )}
+
+      {/* 5. Exception Stack */}
       {exceptions && exceptions.length > 0 && (
         <ExceptionStack exceptions={exceptions} />
       )}
 
-      {/* 4. Tab content */}
+      {/* 6. Tab content */}
       {children}
     </div>
   );

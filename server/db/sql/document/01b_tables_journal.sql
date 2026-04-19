@@ -117,7 +117,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS je_idempotency_uq
     WHERE book_idempotency_key IS NOT NULL;
 
 COMMENT ON TABLE document.journal_entry IS
-    'Journal entry header. Status lifecycle: draft → created → posted → reversed. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''created'',''posted'')). Journal entry header. Status lifecycle: draft → created → posted → reversed. '
     'Amounts cached from lines (trigger-synced). Immutable after posted. '
     'document_date = business event date, posting_date = GL period assignment.';
 
@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS document.journal_line (
 );
 
 COMMENT ON TABLE document.journal_line IS
-    'Journal entry debit/credit lines. Dual-currency: transaction + base amounts. '
+    'ARCHETYPE=C;SCOPE=T. Journal entry debit/credit lines. Dual-currency: transaction + base amounts. '
     'Strict polarity: exactly one side > 0. Denormalized header fields for query perf.';
 
 
@@ -285,7 +285,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS jlr_line_ref_uq
     );
 
 COMMENT ON TABLE document.journal_line_reference IS
-    'Allocation/application tracking. 1:N child of journal_line. Handles payment '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Allocation/application tracking. 1:N child of journal_line. Handles payment '
     'allocation, credit note application, netting, advance clearing, PO matching, '
     'and asset capitalization.';
 
@@ -360,7 +360,7 @@ CREATE TABLE IF NOT EXISTS document.fx_revaluation_run (
 );
 
 COMMENT ON TABLE document.fx_revaluation_run IS
-    'Period-end FX revaluation run header. net_amount GENERATED. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''calculated'',''posted'')). Period-end FX revaluation run header. net_amount GENERATED. '
     'Lines stored in ledger.fx_revaluation_line (immutable). '
     'Auto-reversal creates a reversal JE on auto_reverse_date (first day of next period).';
 
@@ -477,7 +477,7 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
 );
 
 COMMENT ON TABLE document.accounting_distribution IS
-    'Split-charge distribution. account_source drives control.resolve_entry_account() at posting time. '
+    'ARCHETYPE=C;SCOPE=T. Split-charge distribution. account_source drives control.resolve_entry_account() at posting time. '
     'Default: FROM_CATEGORY (spend_category → intent → GL). '
     'POSTING_ROLE for system rows (GRIR_CLEARING, PRICE_VARIANCE, ADVANCE_PREPAID, AP_TRADE, AP_RETENTION). '
     'PAYMENT_ENTRY excluded – payments allocate AP liabilities, not P&L charges.';

@@ -5,7 +5,7 @@
 --         holiday_calendar, holiday_calendar_day, payment_term, payment_term_clause,
 --         payment_term_discount_tier, product, item, item_category, spend_category,
 --         commodity_classification, company_code_spend_policy
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -29,7 +29,7 @@ VALUES
     (NULL,'budget_profile','copy',    'DETAIL','OVERFLOW','API',     'copy',                          true, 90,v_su),
     (NULL,'budget_profile','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                        true,100,v_su),
     (NULL,'budget_profile','export',  'LIST',  'TOOLBAR', 'API',     'export',                        false,110,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- budget_allocation  (Set B + bulk_update)
@@ -45,7 +45,7 @@ VALUES
     (NULL,'budget_allocation','export',     'LIST',  'TOOLBAR', 'API',     'export',                           false,50,v_su),
     (NULL,'budget_allocation','import',     'LIST',  'TOOLBAR', 'API',     'import',                           false,60,v_su),
     (NULL,'budget_allocation','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',                      false,70,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- planning_model  (Set B)
@@ -60,7 +60,7 @@ VALUES
     (NULL,'planning_model','copy',   'DETAIL','OVERFLOW','API',     'copy',                          true, 40,v_su),
     (NULL,'planning_model','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                        true, 50,v_su),
     (NULL,'planning_model','export', 'LIST',  'TOOLBAR', 'API',     'export',                        false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- bank_party  (Set B)
@@ -75,7 +75,7 @@ VALUES
     (NULL,'bank_party','reopen', 'DETAIL','OVERFLOW','MODAL',   'reactivate',                true, 40,v_su),
     (NULL,'bank_party','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                    true, 50,v_su),
     (NULL,'bank_party','export', 'LIST',  'TOOLBAR', 'API',     'export',                    false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- bank_account  (Set C + activate/deactivate)
@@ -91,7 +91,7 @@ VALUES
     (NULL,'bank_account','close',  'DETAIL','OVERFLOW','MODAL',   'close',                       true, 50,v_su),
     (NULL,'bank_account','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 60,v_su),
     (NULL,'bank_account','export', 'LIST',  'TOOLBAR', 'API',     'export',                      false,70,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- bank_branch / payment_method  (Set A)
@@ -109,7 +109,7 @@ VALUES
     (NULL,'payment_method','cancel','DETAIL','OVERFLOW','MODAL',  'deactivate',                   true, 30,v_su),
     (NULL,'payment_method','delete','DETAIL','OVERFLOW','MODAL',  'delete',                       true, 40,v_su),
     (NULL,'payment_method','export','LIST',  'TOOLBAR','API',     'export',                       false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- payment_term  (Set B + import)
@@ -126,7 +126,7 @@ VALUES
     (NULL,'payment_term','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 60,v_su),
     (NULL,'payment_term','export', 'LIST',  'TOOLBAR', 'API',     'export',                      false,70,v_su),
     (NULL,'payment_term','import', 'LIST',  'TOOLBAR', 'API',     'import',                      false,80,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- holiday_calendar  (Set B)
@@ -141,7 +141,7 @@ VALUES
     (NULL,'holiday_calendar','copy',   'DETAIL','OVERFLOW','API',     'copy',                            true, 40,v_su),
     (NULL,'holiday_calendar','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                          true, 50,v_su),
     (NULL,'holiday_calendar','export', 'LIST',  'TOOLBAR', 'API',     'export',                          false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- product / item  (Set C: + archived lifecycle)
@@ -171,7 +171,7 @@ VALUES
     (NULL,'item','export',     'LIST',  'TOOLBAR', 'API',     'export',              false,80,v_su),
     (NULL,'item','import',     'LIST',  'TOOLBAR', 'API',     'import',              false,90,v_su),
     (NULL,'item','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',         false,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- item_category / spend_category  (Set B)
@@ -191,7 +191,7 @@ VALUES
     (NULL,'spend_category','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                    true, 30,v_su),
     (NULL,'spend_category','delete','DETAIL','OVERFLOW','MODAL',   'delete',                        true, 40,v_su),
     (NULL,'spend_category','export','LIST',  'TOOLBAR', 'API',     'export',                        false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL / RELATION: bank_account_mandate, payment_term_clause,
@@ -216,7 +216,7 @@ VALUES
     (NULL,'commodity_classification',   'create','LIST',  'PRIMARY', 'MODAL','create',false,10,v_su),
     (NULL,'commodity_classification',   'delete','DETAIL','OVERFLOW','MODAL','delete',true, 20,v_su),
     (NULL,'company_code_spend_policy',  'update','DETAIL','PRIMARY', 'MODAL','edit',  true, 10,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: Budget/Banking/Products seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

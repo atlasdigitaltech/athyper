@@ -6,7 +6,7 @@
 --         content_item, content_item_link, content_item_access_grant,
 --         notification_default, tenant_notification_profile
 -- Also seeds: dimension_set (75–80 group, missed in 006)
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -25,7 +25,7 @@ VALUES
     (NULL,'saved_view','delete',     'DETAIL','OVERFLOW','MODAL',   'delete',                    true, 40,v_su),
     (NULL,'saved_view','share_read', 'DETAIL','OVERFLOW','MODAL',   'share',                     true, 50,v_su),
     (NULL,'saved_view','export',     'LIST',  'TOOLBAR', 'API',     'export',                    false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- dashboard  (Set B + share)
@@ -41,7 +41,7 @@ VALUES
     (NULL,'dashboard','share_read', 'DETAIL','OVERFLOW','MODAL',   'share',                    true, 50,v_su),
     (NULL,'dashboard','copy',       'DETAIL','OVERFLOW','API',     'copy',                     true, 60,v_su),
     (NULL,'dashboard','export',     'LIST',  'TOOLBAR', 'API',     'export',                   false,70,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- content_item  (Set F + share + add_attachment)
@@ -62,7 +62,7 @@ VALUES
     (NULL,'content_item','share_read',     'DETAIL','OVERFLOW','MODAL',   'share',                       true,100,v_su),
     (NULL,'content_item','add_attachment', 'DETAIL','OVERFLOW','MODAL',   'attach',                      true,110,v_su),
     (NULL,'content_item','export',         'LIST',  'TOOLBAR', 'API',     'export',                      false,120,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL: principal_ui_profile, principal_ui_preference,
@@ -86,7 +86,7 @@ VALUES
     (NULL,'dashboard_widget',               'create','LIST',  'PRIMARY', 'MODAL','add_widget',false,10,v_su),
     (NULL,'dashboard_widget',               'update','DETAIL','PRIMARY', 'MODAL','edit',  true, 20,v_su),
     (NULL,'dashboard_widget',               'delete','DETAIL','OVERFLOW','MODAL','delete',true, 30,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- dimension_set  (missed in 006 — Set B)
@@ -100,7 +100,7 @@ VALUES
     (NULL,'dimension_set','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                   true, 30,v_su),
     (NULL,'dimension_set','delete','DETAIL','OVERFLOW','MODAL',   'delete',                       true, 40,v_su),
     (NULL,'dimension_set','export','LIST',  'TOOLBAR', 'API',     'export',                       false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- gl_account_hierarchy  (Set A)
@@ -113,7 +113,7 @@ VALUES
     (NULL,'gl_account_hierarchy','update','DETAIL','PRIMARY', 'NAVIGATE','/app/gl_account_hierarchy/{id}/edit', true, 20,v_su),
     (NULL,'gl_account_hierarchy','delete','DETAIL','OVERFLOW','MODAL',   'delete',                              true, 30,v_su),
     (NULL,'gl_account_hierarchy','export','LIST',  'TOOLBAR', 'API',     'export',                              false,40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: UI/CMS + remaining entities seeded';
 RAISE NOTICE 'entity_operation: TOTAL system-global operations = %',

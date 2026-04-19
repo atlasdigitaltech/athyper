@@ -1,0 +1,12 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-override-prod-config
+#
+# Description :
+#
+# =======================================================================
+
+services: {}

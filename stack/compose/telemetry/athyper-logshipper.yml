@@ -1,0 +1,53 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-logshipper-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  logshipper:
+    image: grafana/alloy:v1.15.1
+    profiles: ["core", "telemetry"]
+    deploy:
+      resources:
+        limits:
+          memory: "${LOGSHIPPER_MEMORY_LIMIT}"
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=127.0.0.1:12345",
+        "/etc/alloy/config.alloy",
+      ]
+    environment:
+      ATHYPER_ENV: "${ENVIRONMENT}"
+    volumes:
+      # Docker socket — required for Alloy log discovery.
+      # Works on Linux and Docker Desktop (WSL2 backend); not native Windows containers.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ATHYPER_CONFIG}/telemetry/logging/alloy.alloy:/etc/alloy/config.alloy:ro
+    networks: [internal]
+    depends_on:
+      logging:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:12345/-/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s    # Alloy agent needs Docker socket discovery
+    # Shutdown: 20s — drain log buffer to Loki
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

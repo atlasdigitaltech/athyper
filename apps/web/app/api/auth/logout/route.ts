@@ -30,7 +30,7 @@ import type { V4Session } from "@/lib/auth/types";
 export async function POST() {
   const sid = await getSessionId();
   const baseUrl =
-    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
   const publicBaseUrl =
     process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
 

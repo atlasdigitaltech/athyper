@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
 );
 
 COMMENT ON TABLE document.purchase_invoice IS
-    'Approvable AP invoice. Four sources: PO_BASED, CONTRACT_BASED, NON_PO, ONE_TIME_VENDOR. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'',''partially_paid'',''on_hold'')). Approvable AP invoice. Four sources: PO_BASED, CONTRACT_BASED, NON_PO, ONE_TIME_VENDOR. '
     'Vendor identity frozen in invoice_party_snapshot + invoice_address_snapshot + invoice_bank_snapshot. '
     'Tax determined by existing engine; tax_amount is a display cache. '
     'Retention creates AP Retention Payable (liability), not a receivable asset.';
@@ -268,6 +268,10 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice_line (
     CONSTRAINT pil_discount_chk     CHECK (discount_pct IS NULL OR discount_pct BETWEEN 0 AND 100)
 );
 
+COMMENT ON TABLE document.purchase_invoice_line IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. AP invoice line items. '
+    'net_amount GENERATED. match_status tracks per-line three-way matching progress.';
+
 
 -- ============================================================================
 -- §5.3  document.invoice_party_snapshot  (identity only; address is separate)
@@ -305,6 +309,10 @@ CREATE TABLE IF NOT EXISTS document.invoice_party_snapshot (
     CONSTRAINT ips_invoice_uq   UNIQUE (purchase_invoice_id)
 );
 
+COMMENT ON TABLE document.invoice_party_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable vendor identity frozen at invoice time. '
+    'One row per invoice (1:1 UNIQUE). Append-only.';
+
 
 -- ============================================================================
 -- §5.4  document.invoice_address_snapshot
@@ -338,6 +346,10 @@ CREATE TABLE IF NOT EXISTS document.invoice_address_snapshot (
         'SUPPLIER','REMIT_TO','BILLING','DELIVERY'))
 );
 
+COMMENT ON TABLE document.invoice_address_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable address snapshot frozen at invoice time. '
+    'One row per (invoice_id, address_type). Append-only.';
+
 
 -- ============================================================================
 -- §5.5  document.invoice_bank_snapshot
@@ -370,6 +382,10 @@ CREATE TABLE IF NOT EXISTS document.invoice_bank_snapshot (
     CONSTRAINT ibs_invoice_uq   UNIQUE (purchase_invoice_id),
     CONSTRAINT ibs_account_chk  CHECK (account_number IS NOT NULL OR iban IS NOT NULL)
 );
+
+COMMENT ON TABLE document.invoice_bank_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable vendor bank details frozen at invoice time. '
+    'One row per invoice (1:1 UNIQUE). Append-only.';
 
 
 -- ============================================================================
@@ -409,7 +425,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_tax_snapshot (
 );
 
 COMMENT ON TABLE document.invoice_tax_snapshot IS
-    'Frozen tax determination at invoice time. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Frozen tax determination at invoice time. '
     'Create only where legal/regulatory requirements mandate it. '
     'Otherwise posted tax facts in ledger.tax_calculation are authoritative.';
 
@@ -467,6 +483,10 @@ CREATE TABLE IF NOT EXISTS document.invoice_match_case (
         'pending','in_progress','completed','exception','resolved','cancelled')),
     CONSTRAINT imc_exception_nonneg CHECK (exception_count >= 0)
 );
+
+COMMENT ON TABLE document.invoice_match_case IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Three-way match result envelope per invoice. '
+    'One row per invoice (1:1 UNIQUE). Exceptions tracked in document.match_exception.';
 
 
 -- ============================================================================
@@ -534,7 +554,7 @@ CREATE TABLE IF NOT EXISTS document.match_exception (
 );
 
 COMMENT ON TABLE document.match_exception IS
-    'Per-line match variances requiring resolution. Clean matches are tracked on '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Per-line match variances requiring resolution. Clean matches are tracked on '
     'purchase_invoice_line.match_status + matched_quantity only.';
 
 
@@ -673,7 +693,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS pta_invoice_clause_uq
     );
 
 COMMENT ON TABLE document.payment_term_application IS
-    'Invoice × clause evaluation result. One row per invoice × clause (× line) evaluation.';
+    'ARCHETYPE=C;SCOPE=T. Invoice × clause evaluation result. One row per invoice × clause (× line) evaluation.';
 
 
 -- ============================================================================
@@ -742,7 +762,7 @@ CREATE TABLE IF NOT EXISTS document.wht_certificate (
 );
 
 COMMENT ON TABLE document.wht_certificate IS
-    'R7-C: WHT certificate lifecycle (India Form 16A, Philippines BIR 2307, etc.). '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. R7-C: WHT certificate lifecycle (India Form 16A, Philippines BIR 2307, etc.). '
     'Issued by company to vendor documenting WHT deducted in period_from–period_to. '
     'Corrections: void existing cert (status=voided, void_reason) then create new cert '
     'with superseded_by_id pointing back to the voided cert. '

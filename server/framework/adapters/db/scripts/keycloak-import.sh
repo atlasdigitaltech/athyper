@@ -21,7 +21,7 @@ usage() {
   echo -e "  $0 full-dump <dump.sql>  - Import full PostgreSQL dump"
   echo -e "  $0 seed <file.sql>       - Import raw SQL seed file"
   echo -e ""
-  echo -e "${YELLOW}For fresh installations, use: mesh/scripts/initdb-iam.sh${NC}"
+  echo -e "${YELLOW}For fresh installations, use: stack/scripts/initdb-iam.sh${NC}"
   exit 1
 }
 
@@ -33,7 +33,7 @@ import_seed() {
 
   if [ -z "${SEED_FILE}" ] || [ ! -f "${SEED_FILE}" ]; then
     echo -e "${RED}Error: SQL seed file required. Provide path as argument.${NC}"
-    echo -e "${YELLOW}For fresh installations, use: mesh/scripts/initdb-iam.sh${NC}"
+    echo -e "${YELLOW}For fresh installations, use: stack/scripts/initdb-iam.sh${NC}"
     exit 1
   fi
 
@@ -43,7 +43,7 @@ import_seed() {
   sleep 5
 
   # Execute via dbpool-auth container
-  docker exec -i athyper-mesh-dbpool-auth-1 \
+  docker exec -i athyper-stack-dbpool-auth-1 \
     psql -U athyperauth -d athyperauth_dev1 < "${SEED_FILE}"
 
   echo -e "${GREEN}✓ Seed import completed${NC}"
@@ -70,7 +70,7 @@ import_json() {
 
   # Run temporary Keycloak container with import
   docker run --rm \
-    --network athyper-mesh-internal \
+    --network athyper-internal \
     -v "$(pwd)/${IMPORT_DIR}:/opt/keycloak/data/import" \
     -e KC_DB=postgres \
     -e KC_DB_URL="${IAM_DB_URL:-jdbc:postgresql://dbpool-auth:5432/athyperauth_dev1}" \
@@ -101,7 +101,7 @@ import_full_dump() {
   sleep 10
 
   # Import full dump
-  docker exec -i athyper-mesh-dbpool-auth-1 \
+  docker exec -i athyper-stack-dbpool-auth-1 \
     psql -U athyperauth -d athyperauth_dev1 < "${DUMP_FILE}"
 
   echo -e "${GREEN}✓ Full dump import completed${NC}"

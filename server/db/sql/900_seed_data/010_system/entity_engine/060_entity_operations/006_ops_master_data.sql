@@ -6,7 +6,7 @@
 --         notification, notification_default, attachment, comment, conversation,
 --         reaction, draft, flag_submission, activity_event, comment_flag,
 --         comment_draft, comment_feed_cursor
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -34,7 +34,7 @@ VALUES
     (NULL,'dimension_value','export',     'LIST',  'TOOLBAR', 'API',     'export',                         false,60,v_su),
     (NULL,'dimension_value','import',     'LIST',  'TOOLBAR', 'API',     'import',                         false,70,v_su),
     (NULL,'dimension_value','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',                    false,80,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- tax_jurisdiction / tax_type  (Set B + import)
@@ -57,7 +57,7 @@ VALUES
     (NULL,'tax_type','reopen','DETAIL','OVERFLOW','MODAL',   'reactivate',              true, 40,v_su),
     (NULL,'tax_type','delete','DETAIL','OVERFLOW','MODAL',   'delete',                  true, 50,v_su),
     (NULL,'tax_type','export','LIST',  'TOOLBAR', 'API',     'export',                  false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- fx_rate  (Set A + import + bulk_update)
@@ -72,7 +72,7 @@ VALUES
     (NULL,'fx_rate','export',     'LIST',  'TOOLBAR', 'API',     'export',                 false,40,v_su),
     (NULL,'fx_rate','import',     'LIST',  'TOOLBAR', 'API',     'import',                 false,50,v_su),
     (NULL,'fx_rate','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',            false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- notification  (Set H: read + export)
@@ -84,7 +84,7 @@ VALUES
     (NULL,'notification','read',   'LIST',  'TOOLBAR','NAVIGATE','/app/notification/{id}',false,10,v_su),
     (NULL,'notification','delete', 'DETAIL','OVERFLOW','MODAL',  'delete',                 true, 20,v_su),
     (NULL,'notification','export', 'LIST',  'TOOLBAR', 'API',    'export',                 false,30,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- attachment  (Set A + add_attachment)
@@ -98,7 +98,7 @@ VALUES
     (NULL,'attachment','update',          'DETAIL','PRIMARY', 'MODAL','edit',                true, 20,v_su),
     (NULL,'attachment','delete',          'DETAIL','OVERFLOW','MODAL','delete',              true, 30,v_su),
     (NULL,'attachment','export',          'LIST',  'TOOLBAR', 'API',  'export',              false,40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- comment  (add_comment, flag, delete own)
@@ -112,7 +112,7 @@ VALUES
     (NULL,'comment','update',              'DETAIL','PRIMARY', 'MODAL','edit_comment',        true, 20,v_su),
     (NULL,'comment','delete',              'DETAIL','OVERFLOW','MODAL','delete_comment',      true, 30,v_su),
     (NULL,'comment','del_others_comment',  'DETAIL','OVERFLOW','MODAL','delete_comment',      true, 35,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- conversation  (Set A)
@@ -125,7 +125,7 @@ VALUES
     (NULL,'conversation','update','DETAIL','PRIMARY', 'MODAL','edit',    true, 20,v_su),
     (NULL,'conversation','close', 'DETAIL','OVERFLOW','MODAL','close',   true, 30,v_su),
     (NULL,'conversation','delete','DETAIL','OVERFLOW','MODAL','delete',  true, 40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL / RELATION dimension maps  (Set G)
@@ -143,7 +143,7 @@ VALUES
     (NULL,'project_dimension_map',        'create','LIST',  'PRIMARY', 'MODAL','create',false,10,v_su),
     (NULL,'project_dimension_map',        'delete','DETAIL','OVERFLOW','MODAL','delete',true, 20,v_su),
     (NULL,'company_code_dimension_default','update','DETAIL','PRIMARY','MODAL','edit',  true, 10,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: Dimensions/Tax/NTF/CMS/ACT seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

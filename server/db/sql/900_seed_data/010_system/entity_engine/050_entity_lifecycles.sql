@@ -1,7 +1,7 @@
 -- 050_entity_lifecycles.sql
 -- Binds lifecycle state machines to master.* entity names.
 -- All bindings are system-global (tenant_id IS NULL).
--- Idempotent: ON CONFLICT NULLS NOT DISTINCT (tenant_id, entity_name, lifecycle_id) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING
 -- Run AFTER: 010_lifecycles/*.sql + 020_entities/*.sql
 
 DO $$
@@ -60,14 +60,14 @@ BEGIN
     -- ── IAM: Tenant ──────────────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'tenant', v_lc_tenant, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── IAM: Principal identity ───────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'principal',                   v_lc_principal, 100, v_su),
         (NULL, 'principal_profile',           v_lc_principal, 100, v_su),
         (NULL, 'principal_identity_binding',  v_lc_principal, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── IAM: Groups, teams & grants ──────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -78,38 +78,38 @@ BEGIN
         (NULL, 'delegation_grant',         v_lc_delegation,      100, v_su),
         (NULL, 'group_feature_grant',      v_lc_active_inactive, 100, v_su),
         (NULL, 'principal_feature_grant',  v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── IAM: Reference/lookup masters ────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'label',      v_lc_active_inactive, 100, v_su),
         (NULL, 'owner_type', v_lc_active_inactive, 100, v_su),
         (NULL, 'address',    v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── IAM: Tenant configuration ─────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'tenant_module_subscription',   v_lc_active_inactive, 100, v_su),
         (NULL, 'tenant_feature_entitlement',   v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── IAM: Self-service requests ────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'user_profile_update_request', v_lc_master_doc, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── NTF: Notifications ───────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'notification',         v_lc_active_inactive_archived, 100, v_su),
         (NULL, 'notification_default', v_lc_active_inactive,          100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── ACT/CMS: Collaborative objects ───────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'attachment',   v_lc_attachment,   100, v_su),
         (NULL, 'comment',      v_lc_comment,      100, v_su),
         (NULL, 'conversation', v_lc_conversation, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── DOC: Document & template masters ─────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -118,7 +118,7 @@ BEGIN
         (NULL, 'brand_profile', v_lc_active_inactive, 100, v_su),
         (NULL, 'letterhead',    v_lc_active_inactive, 100, v_su),
         (NULL, 'print_profile', v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Org structure ────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -128,52 +128,52 @@ BEGIN
         (NULL, 'profit_center', v_lc_org_master,      100, v_su),
         (NULL, 'site',          v_lc_org_master,      100, v_su),
         (NULL, 'warehouse',     v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Chart of Accounts / GL ──────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'chart_of_account', v_lc_active_inactive, 100, v_su),
         (NULL, 'gl_account',       v_lc_gl_account,      100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Project & Period ─────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'project',       v_lc_project,      100, v_su),
         (NULL, 'fiscal_period', v_lc_fiscal_period, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Business Partners ────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'customer', v_lc_bp_master, 100, v_su),
         (NULL, 'vendor',   v_lc_bp_master, 100, v_su),
         (NULL, 'employee', v_lc_employee,  100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Assets ───────────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'asset_class', v_lc_active_inactive, 100, v_su),
         (NULL, 'asset',       v_lc_asset,           100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Dimensions ───────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'dimension_type',  v_lc_active_inactive, 100, v_su),
         (NULL, 'dimension_value', v_lc_active_inactive, 100, v_su),
         (NULL, 'dimension_set',   v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Tax & FX ────────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'tax_jurisdiction', v_lc_active_inactive, 100, v_su),
         (NULL, 'tax_type',         v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Budget ───────────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
         (NULL, 'budget_profile',    v_lc_budget_profile,    100, v_su),
         (NULL, 'budget_allocation', v_lc_budget_allocation, 100, v_su),
         (NULL, 'planning_model',    v_lc_active_inactive,   100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Banking & Payments ───────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -183,7 +183,7 @@ BEGIN
         (NULL, 'payment_method',  v_lc_active_inactive, 100, v_su),
         (NULL, 'payment_term',    v_lc_active_inactive, 100, v_su),
         (NULL, 'holiday_calendar', v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── REL: Products & Items ─────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -191,7 +191,7 @@ BEGIN
         (NULL, 'item',          v_lc_active_inactive_archived, 100, v_su),
         (NULL, 'item_category', v_lc_active_inactive,          100, v_su),
         (NULL, 'spend_category', v_lc_active_inactive,         100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── UI / CMS ─────────────────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
@@ -199,7 +199,7 @@ BEGIN
         (NULL, 'dashboard',                v_lc_active_inactive, 100, v_su),
         (NULL, 'content_item',             v_lc_content,         100, v_su),
         (NULL, 'content_item_access_grant', v_lc_active_inactive, 100, v_su)
-    ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     RAISE NOTICE 'control.entity_lifecycle: % system-global bindings seeded',
         (SELECT count(*) FROM control.entity_lifecycle WHERE tenant_id IS NULL);

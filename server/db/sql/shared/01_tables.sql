@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS shared.country (
 );
 
 COMMENT ON TABLE shared.country IS
-  'ISO 3166-1 country register. PK: uuidv7 id. Natural key: alpha-2 code. '
+  'ARCHETYPE=A;SCOPE=N. ISO 3166-1 country register. PK: uuidv7 id. Natural key: alpha-2 code. '
   'Extended with phone dialing, postal validation, and address rendering metadata.';
 
 COMMENT ON COLUMN shared.country.calling_code IS
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS shared.currency (
 );
 
 COMMENT ON TABLE shared.currency IS
-  'ISO 4217 currency register. PK: uuidv7 id. Natural key: alpha-3 code. minor_units = decimal precision.';
+  'ARCHETYPE=A;SCOPE=N. ISO 4217 currency register. PK: uuidv7 id. Natural key: alpha-3 code. minor_units = decimal precision.';
 
 -- §3 language
 CREATE TABLE IF NOT EXISTS shared.language (
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS shared.language (
 );
 
 COMMENT ON TABLE shared.language IS
-  'ISO 639 language register. PK: uuidv7 id. Natural key: lowercase 2-or-3-char code.';
+  'ARCHETYPE=A;SCOPE=N. ISO 639 language register. PK: uuidv7 id. Natural key: lowercase 2-or-3-char code.';
 
 -- §4 locale
 CREATE TABLE IF NOT EXISTS shared.locale (
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS shared.locale (
 );
 
 COMMENT ON TABLE shared.locale IS
-  'BCP 47 locale register. PK: uuidv7 id. Natural key: normalised locale tag (e.g. en-US). Subtags cross-validated by trigger.';
+  'ARCHETYPE=A;SCOPE=N. BCP 47 locale register. PK: uuidv7 id. Natural key: normalised locale tag (e.g. en-US). Subtags cross-validated by trigger.';
 
 -- §5 timezone
 CREATE TABLE IF NOT EXISTS shared.timezone (
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS shared.timezone (
 );
 
 COMMENT ON TABLE shared.timezone IS
-  'IANA timezone register. PK: uuidv7 id. Natural key: IANA tzid as code. Alias entries self-ref via canonical_code.';
+  'ARCHETYPE=A;SCOPE=N. IANA timezone register. PK: uuidv7 id. Natural key: IANA tzid as code. Alias entries self-ref via canonical_code.';
 
 -- §6 uom
 CREATE TABLE IF NOT EXISTS shared.uom (
@@ -295,7 +295,7 @@ CREATE TABLE IF NOT EXISTS shared.uom (
 );
 
 COMMENT ON TABLE shared.uom IS
-  'UN/ECE Rec 20 unit-of-measure register. PK: uuidv7 id. Natural key: 1-4 char code. quantity_type CHECK → control.fn_valid_lookup.';
+  'ARCHETYPE=A;SCOPE=N. UN/ECE Rec 20 unit-of-measure register. PK: uuidv7 id. Natural key: 1-4 char code. quantity_type CHECK → control.fn_valid_lookup.';
 
 -- §7 state_region
 CREATE TABLE IF NOT EXISTS shared.state_region (
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS shared.state_region (
 );
 
 COMMENT ON TABLE shared.state_region IS
-  'ISO 3166-2 subdivision register. PK: uuidv7 id. Natural key: (country_code, code). Code prefix validated by trigger.';
+  'ARCHETYPE=A;SCOPE=N. ISO 3166-2 subdivision register. PK: uuidv7 id. Natural key: (country_code, code). Code prefix validated by trigger.';
 
 -- §8 commodity_code
 CREATE TABLE IF NOT EXISTS shared.commodity_code (
@@ -376,7 +376,7 @@ CREATE TABLE IF NOT EXISTS shared.commodity_code (
 );
 
 COMMENT ON TABLE shared.commodity_code IS
-  'Hierarchical commodity classification (UNSPSC, HS, etc.). PK: uuidv7 id. Natural key: (domain_code, code). Cycle detection via triggers.';
+  'ARCHETYPE=A;SCOPE=N. Hierarchical commodity classification (UNSPSC, HS, etc.). PK: uuidv7 id. Natural key: (domain_code, code). Cycle detection via triggers.';
 
 -- §9 industry_code
 CREATE TABLE IF NOT EXISTS shared.industry_code (
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS shared.industry_code (
 );
 
 COMMENT ON TABLE shared.industry_code IS
-  'Hierarchical industry classification (ISIC, NAICS, etc.). PK: uuidv7 id. Natural key: (domain_code, code).';
+  'ARCHETYPE=A;SCOPE=N. Hierarchical industry classification (ISIC, NAICS, etc.). PK: uuidv7 id. Natural key: (domain_code, code).';
 
 -- §10 workspace
 CREATE TABLE IF NOT EXISTS shared.workspace (
@@ -456,7 +456,7 @@ CREATE TABLE IF NOT EXISTS shared.workspace (
 );
 
 COMMENT ON TABLE shared.workspace IS
-  'Global workspace containers for product modules. No tenant_id.';
+  'ARCHETYPE=A;SCOPE=N. Global workspace containers for product modules. No tenant_id.';
 
 -- §11 module
 CREATE TABLE IF NOT EXISTS shared.module (
@@ -494,7 +494,7 @@ CREATE TABLE IF NOT EXISTS shared.module (
 );
 
 COMMENT ON TABLE shared.module IS
-  'Product module definitions scoped to a workspace. FK workspace_id → shared.workspace.';
+  'ARCHETYPE=A;SCOPE=N. Product module definitions scoped to a workspace. FK workspace_id → shared.workspace.';
 COMMENT ON COLUMN shared.module.config IS
   'Runtime configuration specific to this module (e.g. feature flags, limits). Schema validated by application layer.';
 COMMENT ON COLUMN shared.module.metadata IS
@@ -536,7 +536,7 @@ CREATE TABLE IF NOT EXISTS shared.persona (
 );
 
 COMMENT ON TABLE shared.persona IS
-  'Permission role templates. System personas (is_system = true) have immutable structural fields.';
+  'ARCHETYPE=A;SCOPE=N. Permission role templates. System personas (is_system = true) have immutable structural fields.';
 
 
 -- ============================================================================
@@ -579,7 +579,7 @@ CREATE TABLE IF NOT EXISTS shared.enterprise_feature (
 );
 
 COMMENT ON TABLE shared.enterprise_feature IS
-  'Feature registry for Special Ops toggles. Each feature has a view_key and edit_key '
+  'ARCHETYPE=A;SCOPE=N. Feature registry for Special Ops toggles. Each feature has a view_key and edit_key '
   'used for permission checks. Plan-gated via shared.plan_feature_access.';
 
 
@@ -620,7 +620,7 @@ CREATE TABLE IF NOT EXISTS shared.subscription_plan (
 );
 
 COMMENT ON TABLE shared.subscription_plan IS
-  'Subscription plan tiers. max_users NULL = unlimited. Controls module/permission/feature availability.';
+  'ARCHETYPE=A;SCOPE=N. Subscription plan tiers. max_users NULL = unlimited. Controls module/permission/feature availability.';
 
 
 -- ============================================================================
@@ -658,7 +658,7 @@ CREATE TABLE IF NOT EXISTS shared.permission_category (
 );
 
 COMMENT ON TABLE shared.permission_category IS
-  'Grouping for atomic permissions: entity, workflow, finance, utility, bulk, delegation, collaboration, special.';
+  'ARCHETYPE=A;SCOPE=N. Grouping for atomic permissions: entity, workflow, finance, utility, bulk, delegation, collaboration, special.';
 
 
 -- ============================================================================
@@ -702,7 +702,7 @@ CREATE TABLE IF NOT EXISTS shared.permission (
 );
 
 COMMENT ON TABLE shared.permission IS
-  'Atomic permission definitions. scope_type governs evaluation granularity. '
+  'ARCHETYPE=A;SCOPE=N. Atomic permission definitions. scope_type governs evaluation granularity. '
   'is_plan_restricted gates behind subscription_plan. FK category_id deferred to 06_constraints.';
 
 
@@ -729,7 +729,7 @@ CREATE TABLE IF NOT EXISTS shared.persona_permission (
 );
 
 COMMENT ON TABLE shared.persona_permission IS
-  'Binary grant matrix: persona × permission. is_granted = true means the persona '
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Binary grant matrix: persona × permission. is_granted = true means the persona '
   'has the permission by default. No scope column — scope lives on master.auth_group_role.';
 
 
@@ -764,7 +764,7 @@ CREATE TABLE IF NOT EXISTS shared.plan_module_access (
 );
 
 COMMENT ON TABLE shared.plan_module_access IS
-  'Module availability per subscription plan. is_included XOR is_addon (pma_mutex). '
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Module availability per subscription plan. is_included XOR is_addon (pma_mutex). '
   'FK plan_id → subscription_plan, module_id → module deferred to 06_constraints.';
 
 
@@ -795,7 +795,7 @@ CREATE TABLE IF NOT EXISTS shared.plan_permission_access (
 );
 
 COMMENT ON TABLE shared.plan_permission_access IS
-  'Plan-gated permission overrides. Checked by check_permission() for is_plan_restricted permissions.';
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Plan-gated permission overrides. Checked by check_permission() for is_plan_restricted permissions.';
 
 
 -- ============================================================================
@@ -825,7 +825,7 @@ CREATE TABLE IF NOT EXISTS shared.plan_feature_access (
 );
 
 COMMENT ON TABLE shared.plan_feature_access IS
-  'Feature availability per subscription plan. FK plan_id → subscription_plan, '
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Feature availability per subscription plan. FK plan_id → subscription_plan, '
   'feature_id → enterprise_feature deferred to 06_constraints.';
 
 
@@ -889,7 +889,7 @@ CREATE TABLE IF NOT EXISTS shared.commodity_crosswalk (
 );
 
 COMMENT ON TABLE shared.commodity_crosswalk IS
-    'Cross-domain commodity code mapping (e.g. UNSPSC → HS). '
+    'ARCHETYPE=A;SCOPE=N. Cross-domain commodity code mapping (e.g. UNSPSC → HS). '
     'source/target FKs to shared.commodity_code via (domain_code, code) composite key. '
     'confidence 0–100. provenance tracks origin of the mapping.';
 
@@ -953,7 +953,7 @@ CREATE TABLE IF NOT EXISTS shared.industry_crosswalk (
 );
 
 COMMENT ON TABLE shared.industry_crosswalk IS
-    'Cross-domain industry code mapping (e.g. NACE → SIC, GICS → NAICS). '
+    'ARCHETYPE=A;SCOPE=N. Cross-domain industry code mapping (e.g. NACE → SIC, GICS → NAICS). '
     'source/target FKs to shared.industry_code via (domain_code, code) composite key. '
     'confidence 0–100. provenance tracks origin of the mapping.';
 
@@ -1003,6 +1003,6 @@ CREATE TABLE IF NOT EXISTS shared.role (
 );
 
 COMMENT ON TABLE shared.role IS
-  'Platform RBAC role = Persona × Module or Persona × Workspace. '
+  'ARCHETYPE=A;SCOPE=N. Platform RBAC role = Persona × Module or Persona × Workspace. '
   'Shared across all tenants — no tenant_id. '
   'Scope lives on master.auth_group_role exclusively.';

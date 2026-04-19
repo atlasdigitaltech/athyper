@@ -135,4 +135,16 @@ export const queryKeys = {
     unreadCount: (entityType: string, entityId: string) =>
       ["collab", "unread", entityType, entityId] as const,
   },
+
+  // ── Cross-entity search (Meilisearch) ──────────────────────
+  search: {
+    all: ["search"] as const,
+    global: (params: {
+      q:            string;
+      entity_type?: string;
+      page?:        number;
+      page_size?:   number;
+      sort?:        "relevance" | "updated_desc" | "title_asc";
+    }) => ["search", "global", params] as const,
+  },
 } as const;

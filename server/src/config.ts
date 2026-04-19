@@ -4,7 +4,7 @@
 // Reads from process.env (after dotenv) and fails fast at startup
 // with a clear error message if any required value is missing or invalid.
 //
-// Env var naming supports both Docker mesh (IAM_*, DB_*) and local dev
+// Env var naming supports both Docker stack (IAM_*, DB_*) and local dev
 // (KEYCLOAK_*, DATABASE_URL) conventions — same as before, now validated.
 
 import { z } from "zod";
@@ -32,6 +32,18 @@ const ServerConfigSchema = z.object({
     .default("info"),
   shutdownTimeoutMs: z.coerce.number().int().positive().default(15_000),
 
+  /**
+   * Master key for AES-256-GCM field encryption (audit PII, integration
+   * credentials). Must be ≥32 characters — shorter keys cannot yield the
+   * 256-bit KEK that CredentialEncryptionService derives via PBKDF2.
+   * Required in staging/production; optional in local dev (encryption is
+   * disabled when absent).
+   */
+  credentialMasterKey: z
+    .string()
+    .min(32, "CREDENTIAL_MASTER_KEY must be at least 32 characters")
+    .optional(),
+
   db: z.object({
     url: z.string().min(1, "DATABASE_URL is required"),
     poolMax: z.coerce.number().int().positive().default(5),
@@ -39,6 +51,14 @@ const ServerConfigSchema = z.object({
 
   redis: z.object({
     url: z.string().min(1, "REDIS_URL is required"),
+    /**
+     * Optional dedicated Redis URL for BullMQ (queues, workers, schedulers).
+     * When unset, BullMQ reuses `url` but with its own connection options
+     * (maxRetriesPerRequest: null). Set this to point BullMQ at a different
+     * Redis server or db index (e.g. redis://host:6379/1) so a READONLY error
+     * or reconnect storm on the cache client cannot cascade to job coordination.
+     */
+    bullmqUrl: z.string().optional(),
     /** Hard timeout for the initial TCP connection (ioredis: connectTimeout). */
     connectTimeout:       z.coerce.number().int().min(100).default(5_000),
     /** Max retries per request before failing fast (ioredis: maxRetriesPerRequest). */
@@ -163,10 +183,63 @@ const ServerConfigSchema = z.object({
       /** Scan timeout in ms. Default: 10 000. */
       timeoutMs: z.coerce.number().int().positive().default(10_000),
       /**
-       * fail-open  (default): unreachable clamd allows the upload through (is_virus_scanned=false).
-       * fail-closed: unreachable clamd blocks the upload with 503.
+       * fail-closed (default): unreachable clamd blocks the upload with 503.
+       * fail-open: unreachable clamd allows the upload through (is_virus_scanned=false).
+       *   Only permitted when env="local" — the startup preflight rejects fail-open
+       *   in staging/production so an outage cannot silently bypass virus scanning.
        */
-      onUnavailable: z.enum(["fail-open", "fail-closed"]).default("fail-open"),
+      onUnavailable: z.enum(["fail-open", "fail-closed"]).default("fail-closed"),
+    })
+    .optional(),
+
+  /**
+   * GlitchTip / Sentry-compatible error tracking.
+   * Optional — when GLITCHTIP_DSN is unset, the Sentry SDK is a no-op.
+   * DSN is generated from the GlitchTip admin UI per project.
+   */
+  sentry: z
+    .object({
+      dsn:               z.string().min(1),
+      tracesSampleRate:  z.coerce.number().min(0).max(1).default(0),
+    })
+    .optional(),
+
+  /**
+   * Healthchecks cron-heartbeat pings.
+   * Optional — when HEALTHCHECKS_BASE_URL is unset, hooks are no-ops.
+   * Base URL format: https://healthchecks.athyper.local/ping
+   */
+  healthchecks: z
+    .object({
+      baseUrl: z.string().url(),
+    })
+    .optional(),
+
+  /**
+   * Gotenberg HTML/Office → PDF converter. Preferred over the legacy
+   * RENDERER_BASE_URL when both are set.
+   */
+  gotenberg: z
+    .object({
+      baseUrl:   z.string().url(),
+      timeoutMs: z.coerce.number().int().positive().default(120_000),
+    })
+    .optional(),
+
+  /**
+   * Meilisearch cross-entity search (Track B2).
+   * Optional — when unset, /api/search returns 503 and the indexing worker
+   * (Slice B) is inert.
+   *
+   * The master key authenticates admin operations only: index creation,
+   * document upserts/deletes, and provisioning the scoped search-only key
+   * used to sign tenant tokens. The scoped key is derived from the master
+   * key at boot (see SearchService.warmUp → ensureTenantTokenSignerKey).
+   */
+  meilisearch: z
+    .object({
+      url:       z.string().url(),
+      masterKey: z.string().min(1),
     })
     .optional(),
 
@@ -213,6 +286,18 @@ const ServerConfigSchema = z.object({
       roles: { productAdmin: "PRODUCT_ADMIN", tenantManager: "TENANT_MANAGER", supportAdmin: "SUPPORT_ADMIN", readOnlySupport: "READ_ONLY_SUPPORT" },
       rolePermissions: { PRODUCT_ADMIN: ["tenant:list","tenant:switch","tenant:manage","platform:configure"], TENANT_MANAGER: ["tenant:list","tenant:switch","tenant:manage"], SUPPORT_ADMIN: ["tenant:list","tenant:switch"], READ_ONLY_SUPPORT: ["tenant:list"] },
     }),
+}).superRefine((data, ctx) => {
+  // CREDENTIAL_MASTER_KEY is required in staging/production. The .min(32)
+  // check above runs only when the field is present; this catches the
+  // "missing in non-local" case centrally instead of relying on bootstrap.
+  if (data.env !== "local" && !data.credentialMasterKey) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["credentialMasterKey"],
+      message:
+        "CREDENTIAL_MASTER_KEY is required in staging/production (≥32 characters)",
+    });
+  }
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;
@@ -225,13 +310,13 @@ export type ServerConfig = z.infer<typeof ServerConfigSchema>;
  * or malformed — intended to be called once at startup before adapter creation.
  */
 export function loadConfig(): ServerConfig {
-  // IAM issuer URL — support Docker mesh (IAM_ISSUER_URL) and local dev
+  // IAM issuer URL — support Docker stack (IAM_ISSUER_URL) and local dev
   // (KEYCLOAK_BASE_URL + KEYCLOAK_REALM) naming conventions
   const issuerUrl =
     process.env.IAM_ISSUER_URL ??
     (() => {
       const base =
-        process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+        process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
       const realm = process.env.KEYCLOAK_REALM ?? "athyper";
       return `${base}/realms/${realm}`;
     })();
@@ -249,6 +334,7 @@ export function loadConfig(): ServerConfig {
     port: process.env.PORT,
     logLevel: process.env.LOG_LEVEL,
     shutdownTimeoutMs: process.env.SHUTDOWN_TIMEOUT_MS,
+    credentialMasterKey: process.env.CREDENTIAL_MASTER_KEY,
 
     db: {
       url: process.env.DATABASE_URL,
@@ -256,6 +342,7 @@ export function loadConfig(): ServerConfig {
     },
     redis: {
       url:                  process.env.REDIS_URL,
+      bullmqUrl:            process.env.REDIS_BULLMQ_URL,
       connectTimeout:       process.env.REDIS_CONNECT_TIMEOUT_MS,
       maxRetriesPerRequest: process.env.REDIS_MAX_RETRIES,
       errorLogCooldownMs:   process.env.REDIS_ERROR_LOG_COOLDOWN_MS,
@@ -273,9 +360,11 @@ export function loadConfig(): ServerConfig {
     },
     objectStorage: process.env.S3_ENDPOINT
       ? {
-          endpoint:            process.env.S3_ENDPOINT,
-          accessKey:           process.env.S3_ACCESS_KEY,
-          secretKey:           process.env.S3_SECRET_KEY,
+          endpoint: process.env.S3_ENDPOINT,
+          // APP_S3_ACCESS_KEY is the scoped athyper-app MinIO user (I-11).
+          // Falls back to S3_ACCESS_KEY (root) in local dev where both are equal.
+          accessKey: process.env.APP_S3_ACCESS_KEY ?? process.env.S3_ACCESS_KEY,
+          secretKey: process.env.APP_S3_SECRET_KEY ?? process.env.S3_SECRET_KEY,
           region:              process.env.S3_REGION,
           bucket:              process.env.S3_BUCKET,
           useSSL:              process.env.S3_USE_SSL,
@@ -325,6 +414,33 @@ export function loadConfig(): ServerConfig {
         }
       : undefined,
 
+    sentry: process.env.GLITCHTIP_DSN
+      ? {
+          dsn:              process.env.GLITCHTIP_DSN,
+          tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE,
+        }
+      : undefined,
+
+    healthchecks: process.env.HEALTHCHECKS_BASE_URL
+      ? {
+          baseUrl: process.env.HEALTHCHECKS_BASE_URL,
+        }
+      : undefined,
+
+    gotenberg: process.env.GOTENBERG_BASE_URL
+      ? {
+          baseUrl:   process.env.GOTENBERG_BASE_URL,
+          timeoutMs: process.env.GOTENBERG_TIMEOUT_MS,
+        }
+      : undefined,
+
+    meilisearch: process.env.MEILISEARCH_URL && process.env.MEILISEARCH_MASTER_KEY
+      ? {
+          url:       process.env.MEILISEARCH_URL,
+          masterKey: process.env.MEILISEARCH_MASTER_KEY,
+        }
+      : undefined,
+
     platformControl: {
       enabled: process.env.PLATFORM_CONTROL_ENABLED,
       realmKey: process.env.PLATFORM_CONTROL_REALM_KEY,
@@ -337,6 +453,39 @@ export function loadConfig(): ServerConfig {
       .map((i) => `  ${i.path.join(".")}: ${i.message}`)
       .join("\n");
     throw new Error(`Server config invalid — check env vars:\n${issues}`);
+  }
+
+  // ─── Safety preflight: block dangerous dev-only settings in non-local envs ──
+  if (result.data.env !== "local") {
+    const violations: string[] = [];
+
+    if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+      violations.push(
+        "NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS certificate verification — remove from non-local env"
+      );
+    }
+
+    if (
+      process.env.AUTH_DEBUG_EXPOSE_TOKENS === "true" ||
+      process.env.AUTH_DEBUG_EXPOSE_TOKENS === "1"
+    ) {
+      violations.push(
+        "AUTH_DEBUG_EXPOSE_TOKENS=true exposes auth tokens in logs — remove from non-local env"
+      );
+    }
+
+    if (result.data.clamd?.onUnavailable === "fail-open") {
+      violations.push(
+        "CLAMD_ON_UNAVAILABLE=fail-open lets attachment uploads bypass virus scanning when clamd is down — set CLAMD_ON_UNAVAILABLE=fail-closed in non-local env"
+      );
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        `FATAL: Unsafe configuration detected for env="${result.data.env}":\n` +
+          violations.map((v) => `  • ${v}`).join("\n")
+      );
+    }
   }
 
   return result.data;

@@ -43,7 +43,7 @@ CREATE INDEX IF NOT EXISTS doc_attachment_entity_idx
     ON document.doc_attachment (tenant_id, entity_type, entity_id);
  
 COMMENT ON TABLE document.doc_attachment IS
-    'Inline document file attachments. Base64 content in data_base64. '
+    'ARCHETYPE=C;SCOPE=T. Inline document file attachments. Base64 content in data_base64. '
     'entity_type = document entity name slug; entity_id = document PK.';
  
 COMMENT ON COLUMN document.doc_attachment.data_base64 IS

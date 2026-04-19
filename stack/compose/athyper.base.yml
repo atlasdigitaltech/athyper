@@ -1,0 +1,26 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-base-config
+#
+# Description :
+#   Shared base for the athyper Stack.
+#   Defines name and common networks only.
+#
+# Notes :
+#   - No services should be defined here.
+#   - Safe to reuse across all environments.
+#   - Changes to this file affect the entire stack.
+#
+# =======================================================================
+
+name: athyper-stack
+
+networks:
+  edge:
+    name: athyper-edge
+  internal:
+    name: athyper-internal
+    internal: true

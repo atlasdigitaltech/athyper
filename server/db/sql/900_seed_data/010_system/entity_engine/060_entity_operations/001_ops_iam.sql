@@ -2,7 +2,7 @@
 -- Entity operation registrations for IAM entities (1–26)
 -- Covers: tenant, principal, auth_group, team, label, owner_type, address,
 --         access_grant, delegation_grant, principal_persona
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 -- Run AFTER: 010_system/entity_engine/020_entities/001_master_identity.sql
 
 DO $$
@@ -21,7 +21,7 @@ VALUES
     (NULL,'tenant','cancel',  'DETAIL','OVERFLOW','MODAL',   'deactivate',             true, 30,v_su),
     (NULL,'tenant','close',   'DETAIL','OVERFLOW','MODAL',   'close',                  true, 40,v_su),
     (NULL,'tenant','export',  'LIST',  'TOOLBAR', 'API',     'export',                 false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- principal  (Set D: + import, bulk ops, share)
@@ -40,7 +40,7 @@ VALUES
     (NULL,'principal','import',      'LIST',  'TOOLBAR', 'API',     'import',                   false,80,v_su),
     (NULL,'principal','bulk_update', 'LIST',  'TOOLBAR', 'API',     'bulk_update',              false,90,v_su),
     (NULL,'principal','delegate',    'DETAIL','OVERFLOW','MODAL',   'delegate',                 true,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- auth_group  (Set C: create/update/delete/export/import/activate/deactivate)
@@ -55,7 +55,7 @@ VALUES
     (NULL,'auth_group','reopen',  'DETAIL','OVERFLOW','MODAL',   'reactivate',                true, 40,v_su),
     (NULL,'auth_group','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                    true, 50,v_su),
     (NULL,'auth_group','export',  'LIST',  'TOOLBAR', 'API',     'export',                    false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- team  (Set C)
@@ -69,7 +69,7 @@ VALUES
     (NULL,'team','cancel',  'DETAIL','OVERFLOW','MODAL',   'deactivate',          true, 30,v_su),
     (NULL,'team','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',              true, 40,v_su),
     (NULL,'team','export',  'LIST',  'TOOLBAR', 'API',     'export',              false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- principal_persona  (Set A: create/update/delete/export)
@@ -82,7 +82,7 @@ VALUES
     (NULL,'principal_persona','update','DETAIL','PRIMARY', 'NAVIGATE','/app/principal_persona/{id}/edit', true, 20,v_su),
     (NULL,'principal_persona','delete','DETAIL','OVERFLOW','MODAL',   'delete',                           true, 30,v_su),
     (NULL,'principal_persona','export','LIST',  'TOOLBAR', 'API',     'export',                           false,40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- access_grant  (Set A + delegate)
@@ -96,7 +96,7 @@ VALUES
     (NULL,'access_grant','cancel',  'DETAIL','OVERFLOW','MODAL',   'revoke',                      true, 30,v_su),
     (NULL,'access_grant','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                      true, 40,v_su),
     (NULL,'access_grant','export',  'LIST',  'TOOLBAR', 'API',     'export',                      false,50,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- delegation_grant  (Set A + revoke)
@@ -109,7 +109,7 @@ VALUES
     (NULL,'delegation_grant','cancel',  'DETAIL','PRIMARY', 'MODAL',   'revoke',                          true, 20,v_su),
     (NULL,'delegation_grant','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',                          true, 30,v_su),
     (NULL,'delegation_grant','export',  'LIST',  'TOOLBAR', 'API',     'export',                          false,40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- label  (Set B: create/update/delete/export/activate/deactivate)
@@ -124,7 +124,7 @@ VALUES
     (NULL,'label','reopen', 'DETAIL','OVERFLOW','MODAL',   'reactivate',           true, 40,v_su),
     (NULL,'label','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',               true, 50,v_su),
     (NULL,'label','export', 'LIST',  'TOOLBAR', 'API',     'export',               false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- owner_type  (Set A)
@@ -137,7 +137,7 @@ VALUES
     (NULL,'owner_type','update','DETAIL','PRIMARY', 'NAVIGATE','/app/owner_type/{id}/edit', true, 20,v_su),
     (NULL,'owner_type','delete','DETAIL','OVERFLOW','MODAL',   'delete',                    true, 30,v_su),
     (NULL,'owner_type','export','LIST',  'TOOLBAR', 'API',     'export',                    false,40,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- address  (Set A + import)
@@ -152,7 +152,7 @@ VALUES
     (NULL,'address','delete', 'DETAIL','OVERFLOW','MODAL',   'delete',                 true, 40,v_su),
     (NULL,'address','export', 'LIST',  'TOOLBAR', 'API',     'export',                 false,50,v_su),
     (NULL,'address','import', 'LIST',  'TOOLBAR', 'API',     'import',                 false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL entities (Set G: update only — managed via parent entity UI)
@@ -181,7 +181,7 @@ VALUES
     (NULL,'tenant_module_subscription', 'update','DETAIL','PRIMARY','MODAL','edit',true,10,v_su),
     (NULL,'tenant_feature_entitlement', 'update','DETAIL','PRIMARY','MODAL','edit',true,10,v_su),
     (NULL,'tenant_feature_entitlement', 'delete','DETAIL','OVERFLOW','MODAL','delete',true,20,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: IAM entities seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

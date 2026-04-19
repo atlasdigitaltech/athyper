@@ -7,7 +7,7 @@ Multi-tenant enterprise platform — monorepo containing the API server, Next.js
 | Resource | Path |
 |----------|------|
 | Developer onboarding guide | [docs/developer-onboarding.md](docs/developer-onboarding.md) |
-| Infrastructure (MESH) | [mesh/README.md](mesh/README.md) |
+| Infrastructure (Stack) | [stack/README.md](stack/README.md) |
 | Runbooks | [docs/runbooks/README.md](docs/runbooks/README.md) |
 | DB migration notes | [server/MIGRATION.md](server/MIGRATION.md) |
 
@@ -30,12 +30,12 @@ pnpm install
 cp server/.env.example server/.env
 # → edit server/.env: set KEYCLOAK_CLIENT_SECRET (ask team)
 
-# 3. First-time mesh setup
-bash mesh/scripts/setup/create-data-dirs.sh
-bash mesh/scripts/setup/setup-env.sh local
+# 3. First-time stack setup
+bash stack/scripts/setup/data-dirs-create.sh
+bash stack/scripts/setup/setup-env.sh local
 
 # 4. Start infrastructure (Postgres, Redis, Keycloak, MinIO, …)
-bash mesh/scripts/stack/up.sh
+bash stack/scripts/stack/up.sh
 
 # 5. Run migrations + seed data
 cd server && tsx db/seed/migrate.ts --all && cd ..
@@ -54,7 +54,7 @@ See [docs/developer-onboarding.md](docs/developer-onboarding.md) for the full wa
 apps/web/        Next.js 16 frontend
 packages/        Shared TypeScript packages (data, ui, runtime, shell, domain)
 server/          Express API + BullMQ workers + DB migrations
-mesh/            Docker Compose infrastructure stack
+stack/           Docker Compose infrastructure stack
 perf/k6/         Load test scripts
 tooling/         Shared tsconfig bases
 ```

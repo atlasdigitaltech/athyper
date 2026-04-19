@@ -344,7 +344,7 @@ async function main() {
 
   // 2. Process each table
   for (let i = 0; i < tables.length; i++) {
-    const tableName = tables[i].table_name;
+    const tableName = tables[i]!.table_name;
     const fullName = `"${SCHEMA}"."${tableName}"`;
     const tabName = sheetName(tableName, sheetNames);
 
@@ -368,7 +368,7 @@ async function main() {
         `SELECT count(*)::text as count FROM ${fullName}`,
       );
       data = []; // no data needed
-      (data as any).__count = parseInt(result.rows[0].count, 10);
+      (data as any).__count = parseInt(result.rows[0]!.count, 10);
     }
 
     const rowCount =
@@ -463,7 +463,7 @@ async function main() {
         for (let ci = 4; ci < colInfo.length; ci++) {
           ws.getColumn(ci + 1).width = Math.max(
             15,
-            colInfo[ci].column_name.length + 4,
+            colInfo[ci]!.column_name.length + 4,
           );
         }
 

@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_orch_run_correlation
     WHERE correlation_id IS NOT NULL;
 
 COMMENT ON TABLE event.orchestration_run IS
-    'One row per DAG execution — managed by DagOrchestrationService';
+    'ARCHETYPE=E;SCOPE=T. One row per DAG execution — managed by DagOrchestrationService';
 
 -- ============================================================================
 -- §2  orchestration_node — one row per step within a run
@@ -119,4 +119,4 @@ CREATE INDEX IF NOT EXISTS idx_orch_node_active
     WHERE status IN ('pending', 'running');
 
 COMMENT ON TABLE event.orchestration_node IS
-    'One row per step within a DAG run — managed by DagOrchestrationService';
+    'ARCHETYPE=E;SCOPE=T. One row per step within a DAG run — managed by DagOrchestrationService';

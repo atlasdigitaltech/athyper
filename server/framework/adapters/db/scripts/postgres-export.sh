@@ -28,7 +28,7 @@ mkdir -p "${EXPORT_DIR}"
 
 # Method 1: Full database dump (all schemas and tables)
 echo -e "${GREEN}[1/3] Creating full database dump...${NC}"
-docker exec -i athyper-mesh-dbpool-auth-1 \
+docker exec -i athyper-stack-dbpool-auth-1 \
   pg_dump -U "${DB_USER}" \
   --format=plain \
   --no-owner \
@@ -44,7 +44,7 @@ echo -e "Size: $(du -h "${DUMP_FILE}" | cut -f1)\n"
 echo -e "${GREEN}[2/2] Creating data-only export for critical tables...${NC}"
 DATA_ONLY_FILE="${EXPORT_DIR}/keycloak-data-only-${TIMESTAMP}.sql"
 
-docker exec -i athyper-mesh-dbpool-auth-1 \
+docker exec -i athyper-stack-dbpool-auth-1 \
   pg_dump -U "${DB_USER}" \
   --data-only \
   --no-owner \
@@ -60,4 +60,4 @@ echo -e "\n${GREEN}✓ Export completed successfully!${NC}"
 echo -e "\n${YELLOW}Generated files:${NC}"
 echo -e "  1. Full dump:    ${DUMP_FILE}"
 echo -e "  2. Data only:    ${DATA_ONLY_FILE}"
-echo -e "\n${YELLOW}Note: For IAM seeding, use JSON realm import (mesh/scripts/initdb-iam.sh)${NC}"
+echo -e "\n${YELLOW}Note: For IAM seeding, use JSON realm import (stack/scripts/initdb-iam.sh)${NC}"

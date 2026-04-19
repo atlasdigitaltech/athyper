@@ -16,7 +16,9 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
+import type { Queue } from "bullmq";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ExtractTextJobData, SweepJobData } from "@athyper/svc-jobs";
 import { registerAttachmentRoutes } from "./attachments.route.js";
 import { resolveDocumentEntity } from "./entity-resolver.js";
 import {
@@ -25,7 +27,9 @@ import {
   resolveTenantId,
   SYSTEM_PRINCIPAL_UUID,
   resolvePrincipalIdWithJit,
+  resolvePrincipalIdOrNull,
   resolveFieldMap,
+  emitOutboxEvent,
 } from "@athyper/svc-shared";
 
 export interface DocumentsRouteDeps {
@@ -38,6 +42,8 @@ export interface DocumentsRouteDeps {
     adapter: ObjectStorageAdapter;
     bucket:  string;
   };
+  /** BullMQ queue for Tika text extraction; forwarded to attachment routes. */
+  tikaQueue?: Queue<ExtractTextJobData | SweepJobData>;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
@@ -457,6 +463,27 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const fullTable = `${entity.table_schema as string}.${entity.table_name as string}` as `${string}.${string}`;
       const row = await db.insertInto(fullTable).values(mappedData as never).returningAll().executeTakeFirst();
 
+      // Emit search-topic outbox event — best-effort; must not fail the request.
+      // The generic search outbox handler routes this to Meilisearch via
+      // control.entity lookup → defaultRowToSearchDocument → optional override.
+      if (row) {
+        try {
+          await emitOutboxEvent(db, {
+            tenantId,
+            topic:      "search",
+            eventType:  `${entity.name as string}.created`,
+            entityType: entity.name as string,
+            entityId:   String((row as { id: string }).id),
+            actorId:    principalId,
+          });
+        } catch (emitErr) {
+          logger?.warn("documents_emit_search_failed", {
+            entity: entity.name as string,
+            err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+          });
+        }
+      }
+
       res.status(201).json(row);
     } catch (err) {
       logger?.error("documents_create_error", { err: String(err) });
@@ -510,6 +537,31 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       if (!row) {
         res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
         return;
+      }
+
+      // Resolve principal for emission audit — transition handler doesn't
+      // record updated_by on the row today, but the outbox event still
+      // captures who triggered the change.
+      const transSub = typeof claims.sub === "string" ? claims.sub : "";
+      const transPrincipalId = transSub
+        ? await resolvePrincipalIdOrNull(db, transSub, tenantId)
+        : null;
+
+      try {
+        await emitOutboxEvent(db, {
+          tenantId,
+          topic:      "search",
+          eventType:  `${entity.name as string}.updated`,
+          entityType: entity.name as string,
+          entityId:   id,
+          actorId:    transPrincipalId ?? SYSTEM_PRINCIPAL_UUID,
+          payload:    { to_status: body.to_status },
+        });
+      } catch (emitErr) {
+        logger?.warn("documents_emit_search_failed", {
+          entity: entity.name as string,
+          err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+        });
       }
 
       res.status(200).json({ ok: true, status: (row as Record<string, unknown>).status });

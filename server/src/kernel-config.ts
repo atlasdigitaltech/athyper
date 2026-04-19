@@ -3,8 +3,8 @@
 // Kernel configuration loader for the athyper runtime.
 //
 // Reads the JSON parameter file mounted by Docker Compose at
-// ${MESH_CONFIG}/${ATHYPER_KERNEL_CONFIG_PATH} and validates it with Zod.
-// The schema mirrors mesh/config/apps/kernel.config.schema.json.
+// ${ATHYPER_CONFIG}/${ATHYPER_KERNEL_CONFIG_PATH} and validates it with Zod.
+// The schema mirrors stack/config/apps/kernel.config.schema.json.
 //
 // This layer provides what env vars alone cannot:
 //   - Multi-realm IAM configuration (issuerUrl, clientId per realm)
@@ -12,7 +12,7 @@
 //   - allowedAzp validation lists
 //
 // OPTIONAL: when ATHYPER_KERNEL_CONFIG_PATH is not set (running the server
-// directly outside Docker mesh), loadKernelConfig() returns null and the
+// directly outside Docker stack), loadKernelConfig() returns null and the
 // server falls back to single-realm env-var-only IAM config.
 //
 // LOCKED fields (db.url, redis.url, s3.*, telemetry.otlpEndpoint) are
@@ -168,8 +168,8 @@ export function loadKernelConfig(): ResolvedKernelConfig | null {
   const configPath = process.env.ATHYPER_KERNEL_CONFIG_PATH;
   if (!configPath) return null;
 
-  const meshConfig = process.env.MESH_CONFIG ?? "/config";
-  const fullPath = join(meshConfig, configPath);
+  const athyperConfig = process.env.ATHYPER_CONFIG ?? "/config";
+  const fullPath = join(athyperConfig, configPath);
 
   let raw: unknown;
   try {

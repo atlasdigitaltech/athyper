@@ -53,6 +53,7 @@ import {
   timeAgo,
   type RecentItem,
 } from "@/lib/recent-items";
+import { useGlobalSearch, type SearchHit } from "@/hooks/useGlobalSearch";
 
 // ── Module icons registry (module-code → icon) ────────────────────────────────
 
@@ -189,10 +190,34 @@ export interface CommandPaletteProps {
   modules: RuntimeModule[];
 }
 
+// ── Entity-type → detail URL builder ──────────────────────────────────────────
+// Placeholder mapping — defaults to /records/:entity/:id which works for the
+// generic records CRUD. Domain-specific overrides can be added here as they
+// surface (e.g. finance pages have their own routes for invoices + JEs).
+function hitHref(hit: SearchHit): string {
+  switch (hit.entity_type) {
+    case "invoice":
+    case "purchase_invoice":
+      return `/runtime/app/purchase-invoice/${hit.entity_id}`;
+    case "journal_entry":
+      return `/finance/journals/${hit.entity_id}`;
+    default:
+      return `/records/${hit.entity_type.replace(/_/g, "-")}/${hit.entity_id}`;
+  }
+}
+
 export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<PaletteTab>("search");
   const [query, setQuery] = useState("");
+
+  // Live cross-entity search. Disabled automatically when query < 2 chars
+  // or when the palette is closed (no round-trip while idle).
+  const searchResults = useGlobalSearch(open ? query : "", {
+    pageSize: 10,
+    staleTimeMs: 15_000,
+  });
+  const searchHits: SearchHit[] = searchResults.data?.hits ?? [];
 
   function handleTabChange(tab: PaletteTab) {
     setActiveTab(tab);
@@ -319,6 +344,40 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
                     </CommandPaletteBase.Group>
                   );
                 })}
+            </>
+          )}
+
+          {/* Cross-entity records — Meilisearch hits. Rendered only while the
+              user has typed ≥ 2 chars; the hook short-circuits otherwise. */}
+          {searchHits.length > 0 && (
+            <>
+              <CommandPaletteBase.Separator />
+              <CommandPaletteBase.Group heading="Records">
+                {searchHits.map((hit) => {
+                  const href = hitHref(hit);
+                  return (
+                    <CommandPaletteBase.Item
+                      key={hit.id}
+                      value={`${hit.title} ${hit.entity_type}`}
+                      keywords={[hit.entity_type, hit.entity_id]}
+                      onSelect={() =>
+                        navigate(href, {
+                          href,
+                          label: hit.title,
+                          recordFamily: "document",
+                        })
+                      }
+                    >
+                      <Search className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 truncate">
+                        {hit.title}
+                        {hit.summary ? <span className="ml-2 text-muted-foreground">— {hit.summary}</span> : null}
+                      </span>
+                      <CommandPaletteBase.Badge>{hit.entity_type}</CommandPaletteBase.Badge>
+                    </CommandPaletteBase.Item>
+                  );
+                })}
+              </CommandPaletteBase.Group>
             </>
           )}
         </>

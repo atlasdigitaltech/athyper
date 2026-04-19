@@ -1,10 +1,12 @@
 // server/src/runtimes/probe.ts
 //
-// Minimal HTTP readiness probe for non-API runtimes (worker, scheduler).
+// Minimal HTTP liveness probe for non-API runtimes (worker, scheduler).
 //
-// Exposes a single GET endpoint on config.port so Docker Compose health checks
-// can confirm the process is running and past its startup phase. This is not
-// a full health check (no DB/Redis probes) — it only signals liveness.
+// F4: Exposes /livez on config.port so Docker Compose health checks can
+// confirm the process is running and the event loop is responsive. This is
+// NOT a readiness check — it has no DB/Redis probes. Worker and scheduler
+// runtimes do not need full readiness gates because they are not
+// load-balancer targets.
 //
 // Usage:
 //   const probe = startProbeServer({ port: config.port, mode: "worker" });
@@ -19,11 +21,11 @@ export interface ProbeServerOptions {
 
 /**
  * Starts a minimal HTTP server on the given port.
- * All requests receive: 200 { status: "ready", mode, ts }
+ * All requests receive: 200 { status: "alive", mode, ts }
  */
 export function startProbeServer({ port, mode }: ProbeServerOptions): Server {
   const server = createServer((_req, res) => {
-    const body = JSON.stringify({ status: "ready", mode, ts: Date.now() });
+    const body = JSON.stringify({ status: "alive", mode, ts: Date.now() });
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(body);
   });

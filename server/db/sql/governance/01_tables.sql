@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS governance.comment_moderation (
 );
 
 COMMENT ON TABLE  governance.comment_moderation IS
-    'Aggregated moderation state per comment. One row per (tenant, context_type, comment_id). '
+    'ARCHETYPE=C;SCOPE=T. Aggregated moderation state per comment. One row per (tenant, context_type, comment_id). '
     'UPSERT pattern — updated by trigger on event.comment_flag changes. '
     'Kept separate from event.comment_flag for O(1) render-time moderation checks. '
     'context_type in master.comment_type lookup.';
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS governance.book_period_status (
 );
 
 COMMENT ON TABLE governance.book_period_status IS
-    'Per-book period gate. Same period can be open in STAT but closed in TAX. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''open'', ''soft_close'')). Per-book period gate. Same period can be open in STAT but closed in TAX. '
     'Posting requires BOTH fiscal_period.status AND book_period_status.status '
     'to allow posting.';
 
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_type (
 );
 
 COMMENT ON TABLE governance.cycle_type IS
-    'Governance cycle type definitions. Root entity for the cycle model. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Governance cycle type definitions. Root entity for the cycle model. '
     'Each type defines phases, task categories, templates, and policies.';
 
 
@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_phase (
 );
 
 COMMENT ON TABLE governance.cycle_phase IS
-    'Ordered phases within a cycle type. sort_order determines sequence. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Ordered phases within a cycle type. sort_order determines sequence. '
     'Gates can be enforced per phase with min_readiness_pct thresholds.';
 
 
@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_task_category (
 );
 
 COMMENT ON TABLE governance.cycle_task_category IS
-    'Registered task categories per cycle type (e.g. SUBLEDGER, TAX, CASH). '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Registered task categories per cycle type (e.g. SUBLEDGER, TAX, CASH). '
     'FK-enforced on cycle_task_template.category_id. '
     'P2-FIX: updated_at/updated_by added — category metadata (name, sort, color) is mutable.';
 
@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_task_template (
 );
 
 COMMENT ON TABLE governance.cycle_task_template IS
-    'Reusable task definitions within a cycle type. Templates are materialized '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Reusable task definitions within a cycle type. Templates are materialized '
     'into cycle_task instances when a cycle_run is opened.';
 
 
@@ -352,7 +352,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_task_dependency (
 );
 
 COMMENT ON TABLE governance.cycle_task_dependency IS
-    'Intra-cycle directed acyclic graph (DAG) between task templates. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Intra-cycle directed acyclic graph (DAG) between task templates. '
     'Cycle detection enforced by trg_check_dep_cycle trigger.';
 
 
@@ -415,7 +415,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_run (
 );
 
 COMMENT ON TABLE governance.cycle_run IS
-    'Runtime cycle instance. One run per (entity, type, fiscal_year, period, run_number). '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Runtime cycle instance. One run per (entity, type, fiscal_year, period, run_number). '
     'domain_data validated against cycle_type.run_data_schema by trigger.';
 COMMENT ON COLUMN governance.cycle_run.domain_data IS
     'Extensible JSONB payload validated against cycle_type.run_data_schema by '
@@ -482,7 +482,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_task (
 );
 
 COMMENT ON TABLE governance.cycle_task IS
-    'Materialized task instance within a cycle run. Created from templates by '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Materialized task instance within a cycle run. Created from templates by '
     'governance.materialize_cycle_tasks(). domain_data validated by trigger.';
 COMMENT ON COLUMN governance.cycle_task.domain_data IS
     'Extensible JSONB payload validated against cycle_task_template.task_data_schema. '
@@ -587,7 +587,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_deviation (
 );
 
 COMMENT ON TABLE governance.cycle_deviation IS
-    'Unified exception/override/waiver within a cycle run. Supports approval '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Unified exception/override/waiver within a cycle run. Supports approval '
     'workflow via document.workflow_request, carryforward lineage, and '
     'scope-specific integrity constraints.';
 COMMENT ON COLUMN governance.cycle_deviation.evidence_payload IS
@@ -650,7 +650,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_certification (
 );
 
 COMMENT ON TABLE governance.cycle_certification IS
-    'Formal sign-off and attestation within a cycle run. Supports versioning, '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Formal sign-off and attestation within a cycle run. Supports versioning, '
     'supersession, content hashing, and external approval workflow.';
 
 
@@ -691,7 +691,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_cross_dependency (
 );
 
 COMMENT ON TABLE governance.cycle_cross_dependency IS
-    'Phase-to-phase dependencies across different cycle types. Used by '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Phase-to-phase dependencies across different cycle types. Used by '
     'governance.check_cross_cycle_gate() to block successor phase entry. '
     'P2-FIX: updated_at/updated_by added — is_active and description are mutable.';
 
@@ -733,7 +733,7 @@ CREATE TABLE IF NOT EXISTS governance.cycle_carryforward_rule (
 );
 
 COMMENT ON TABLE governance.cycle_carryforward_rule IS
-    'Carryforward policy per cycle type and deviation type. Controls whether '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Carryforward policy per cycle type and deviation type. Controls whether '
     'open deviations are force-closed, auto-carried, or expired at cycle boundary. '
     'P2-FIX: updated_at/updated_by added — rule config (action, thresholds) is mutable.';
 
@@ -795,7 +795,7 @@ CREATE TABLE IF NOT EXISTS governance.report_pack (
 );
 
 COMMENT ON TABLE governance.report_pack IS
-    'Generated report bundle for a governance cycle run. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Generated report bundle for a governance cycle run. '
     'storage_key = S3/MinIO object key populated after generation. '
     'Download via GET /governance/report-packs/:id/download → presigned URL. '
     'Phase 4.4: HTML stub. Upgrades to PDF after Phase 5.1 renderer ships.';
@@ -918,7 +918,7 @@ CREATE TABLE IF NOT EXISTS governance.legal_hold (
 );
 
 COMMENT ON TABLE governance.legal_hold IS
-    'Legal hold registry. Active holds block the partition archive worker from '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Legal hold registry. Active holds block the partition archive worker from '
     'detaching / archiving log partitions whose time range overlaps the hold scope. '
     'status: active (blocking) → released (manually lifted) | expired (effective_to passed).';
 
@@ -984,7 +984,7 @@ CREATE TABLE IF NOT EXISTS governance.legal_hold_manifest (
 );
 
 COMMENT ON TABLE governance.legal_hold_manifest IS
-    'Inventory of log partitions blocked by a legal hold. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_released boolean NOT NULL DEFAULT false (no status/is_active GENERATED). Inventory of log partitions blocked by a legal hold. '
     'One row per (hold, partition). Populated by the archive worker or on-demand '
     'via POST /api/governance/legal-holds/:id/manifest/refresh. '
     'is_released is set true when the hold is lifted and the partition is free to archive. '

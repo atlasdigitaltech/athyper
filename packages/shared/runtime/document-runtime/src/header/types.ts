@@ -8,6 +8,7 @@
  */
 
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
+import type { StatusDimension, ActionBundleItem } from "@athyper/api-contracts/documents";
 
 // ── Primitives ──────────────────────────────────────────────────────────────
 
@@ -133,6 +134,22 @@ export interface ApprovableDocumentHeaderDTO {
     historyEvents?: number;
     comments?: number;
   };
+
+  /**
+   * Multi-dimensional status badges (lifecycle, accounting, settlement, matching).
+   * When present, renders StatusBadgeStrip in the header identity bar.
+   */
+  statusDimensions?: StatusDimension[];
+
+  /**
+   * State-adaptive action bundle. When present, replaces the simple
+   * primaryAction/secondaryActions/destructiveAction model with grouped
+   * actions (primary/working/output/overflow).
+   */
+  actionBundle?: ActionBundleItem[];
+
+  /** Blocked reasons that disable the primary CTA. */
+  blockedReasons?: string[];
 
   /** High-priority CTA, e.g. "Approve", "Pay" */
   primaryAction?: ApprovableAction;

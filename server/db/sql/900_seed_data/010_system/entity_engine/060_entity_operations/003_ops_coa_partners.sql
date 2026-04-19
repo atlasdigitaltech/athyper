@@ -3,7 +3,7 @@
 -- Covers: customer, supplier, employee, company_code_customer_profile,
 --         company_code_supplier_profile, asset_class, asset, asset_book,
 --         asset_component, asset_assignment_history
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -22,26 +22,23 @@ VALUES
     (NULL,'customer','import',      'LIST',  'TOOLBAR', 'API',  'import',      false,55,v_su),
     (NULL,'customer','bulk_update', 'LIST',  'TOOLBAR', 'API',  'bulk_update', false,65,v_su),
     (NULL,'customer','copy',        'DETAIL','OVERFLOW','API',  'copy',        true, 35,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- supplier  (same additions — 001_fin_operations uses 'vendor'; this covers supplier)
+-- vendor  (delta ops — base ops seeded by 001_fin_operations.sql)
+-- NOTE: 001_fin_operations.sql seeds vendor with create/update/cancel/close/export.
+--       This file adds the extended ops: reopen, copy, delete, import, bulk_update.
 -- ══════════════════════════════════════════════════════════════════════════════
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL,'supplier','create',     'LIST',  'PRIMARY', 'NAVIGATE','/app/supplier/new',       false,10,v_su),
-    (NULL,'supplier','update',     'DETAIL','PRIMARY', 'NAVIGATE','/app/supplier/{id}/edit', true, 20,v_su),
-    (NULL,'supplier','cancel',     'DETAIL','OVERFLOW','MODAL',   'deactivate',              true, 30,v_su),
-    (NULL,'supplier','reopen',     'DETAIL','OVERFLOW','MODAL',   'reactivate',              true, 40,v_su),
-    (NULL,'supplier','close',      'DETAIL','OVERFLOW','MODAL',   'close',                   true, 50,v_su),
-    (NULL,'supplier','copy',       'DETAIL','OVERFLOW','API',     'copy',                    true, 60,v_su),
-    (NULL,'supplier','delete',     'DETAIL','OVERFLOW','MODAL',   'delete',                  true, 70,v_su),
-    (NULL,'supplier','export',     'LIST',  'TOOLBAR', 'API',     'export',                  false,80,v_su),
-    (NULL,'supplier','import',     'LIST',  'TOOLBAR', 'API',     'import',                  false,90,v_su),
-    (NULL,'supplier','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',             false,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+    (NULL,'vendor','reopen',      'DETAIL','OVERFLOW','MODAL','reactivate',  true, 45,v_su),
+    (NULL,'vendor','copy',        'DETAIL','OVERFLOW','API',  'copy',        true, 55,v_su),
+    (NULL,'vendor','delete',      'DETAIL','OVERFLOW','MODAL','delete',      true, 65,v_su),
+    (NULL,'vendor','import',      'LIST',  'TOOLBAR', 'API',  'import',      false,75,v_su),
+    (NULL,'vendor','bulk_update', 'LIST',  'TOOLBAR', 'API',  'bulk_update', false,85,v_su)
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- employee  (Set C + delegate)
@@ -60,7 +57,7 @@ VALUES
     (NULL,'employee','import',     'LIST',  'TOOLBAR', 'API',     'import',                  false,80,v_su),
     (NULL,'employee','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',             false,90,v_su),
     (NULL,'employee','delegate',   'DETAIL','OVERFLOW','MODAL',   'delegate',                true,100,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL: company_code_customer_profile, company_code_supplier_profile (Set G)
@@ -71,7 +68,7 @@ INSERT INTO control.entity_operation
 VALUES
     (NULL,'company_code_customer_profile','update','DETAIL','PRIMARY','MODAL','edit',true,10,v_su),
     (NULL,'company_code_supplier_profile','update','DETAIL','PRIMARY','MODAL','edit',true,10,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- asset_class  (Set B)
@@ -86,7 +83,7 @@ VALUES
     (NULL,'asset_class','reopen','DETAIL','OVERFLOW','MODAL',   'reactivate',                 true, 40,v_su),
     (NULL,'asset_class','delete','DETAIL','OVERFLOW','MODAL',   'delete',                     true, 50,v_su),
     (NULL,'asset_class','export','LIST',  'TOOLBAR', 'API',     'export',                     false,60,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- asset  (Set C + dispose workflow)
@@ -104,7 +101,7 @@ VALUES
     (NULL,'asset','delete',  'DETAIL','OVERFLOW','MODAL',   'delete',               true, 70,v_su),
     (NULL,'asset','export',  'LIST',  'TOOLBAR', 'API',     'export',               false,80,v_su),
     (NULL,'asset','import',  'LIST',  'TOOLBAR', 'API',     'import',               false,90,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CONTROL / RELATION: asset_book, asset_component, asset_assignment_history
@@ -121,7 +118,7 @@ VALUES
     (NULL,'asset_component',          'delete','DETAIL','OVERFLOW','MODAL','delete', true, 30,v_su),
     (NULL,'asset_assignment_history', 'create','LIST',  'PRIMARY', 'MODAL','assign', false,10,v_su),
     (NULL,'asset_assignment_history', 'export','LIST',  'TOOLBAR', 'API',  'export', false,20,v_su)
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 RAISE NOTICE 'entity_operation: Partners + Assets seeded (% total so far)',
     (SELECT count(*) FROM control.entity_operation WHERE tenant_id IS NULL);

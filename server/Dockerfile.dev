@@ -7,6 +7,9 @@
 
 FROM node:22-alpine AS base
 
+# pg_dump is required by the backup worker (jobs-backup queue).
+RUN apk add --no-cache postgresql-client
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -33,6 +36,7 @@ COPY server/framework/runtime/services/metadata/package.json ./server/framework/
 COPY server/framework/runtime/services/platform/package.json ./server/framework/runtime/services/platform/
 COPY server/framework/runtime/services/records/package.json ./server/framework/runtime/services/records/
 COPY server/framework/runtime/services/shared/package.json ./server/framework/runtime/services/shared/
+COPY server/framework/runtime/services/search/package.json ./server/framework/runtime/services/search/
 
 # Copy @athyper/core and @athyper/config package manifests (used by adapter-telemetry)
 COPY packages/shared/foundation/core/package.json ./packages/shared/foundation/core/
@@ -50,7 +54,7 @@ COPY packages/shared/foundation/config/ ./packages/shared/foundation/config/
 # ─── Build workspace library packages ────────────────────────────────────────
 # Adapters and services export from dist/index.js — must be compiled before the
 # server starts. Builds in dependency order (pnpm respects workspace graph).
-RUN pnpm --filter "@athyper/adapter-*" --filter "@athyper/svc-shared" --filter "@athyper/svc-jobs" run build
+RUN pnpm --filter "@athyper/adapter-*" --filter "@athyper/svc-*" run build
 
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 WORKDIR /app/server

@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const INPUT  = path.join(__dirname, '../../mesh/config/iam/realm-demosetup.json');
+const INPUT  = path.join(__dirname, '../../stack/config/iam/realm-demosetup.json');
 const OUTPUT = INPUT; // overwrite in place
 
 // ── 1. Load ────────────────────────────────────────────────────────────────
@@ -164,9 +164,13 @@ realm.users = [
     enabled: true,
     totp: false,
     createdTimestamp: 1743861600000,
-    credentials: [{ type: 'password', value: 'Demo@1234', temporary: false }],
+    // Passwords are NOT seeded here — committed JSON must never contain plaintext credentials.
+    // Credentials are set post-import by stack/scripts/db/seed-iam-credentials.sh (kcadm.sh set-password)
+    // from IAM_DEMO_USER_PASSWORD. UPDATE_PASSWORD guards any accidentally-imported JSON from
+    // leaving an unauthenticated account usable.
+    credentials: [],
     disableableCredentialTypes: [],
-    requiredActions: [],
+    requiredActions: ['UPDATE_PASSWORD'],
     realmRoles: ['default-roles-athyper'],
     clientRoles: {},
     groups: wbs.map(wb => `/${WORKBENCH_GROUPS.find(g => g.name.endsWith(wb)).name}`),

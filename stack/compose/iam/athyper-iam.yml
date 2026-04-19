@@ -1,0 +1,76 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-iam-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  iam:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG}
+    profiles: ["core", "iam"]
+    deploy:
+      resources:
+        limits:
+          memory: "${IAM_MEMORY_LIMIT}"
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${IAM_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${IAM_ADMIN_PASSWORD}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${IAM_HOST}
+      KC_DB: postgres
+      KC_DB_URL: ${IAM_DB_URL}
+      KC_DB_USERNAME: ${IAM_DB_USERNAME}
+      KC_DB_PASSWORD: ${IAM_DB_PASSWORD}
+      KC_DB_POOL_INITIAL_SIZE: 5
+      KC_DB_POOL_MIN_SIZE: 5
+      KC_DB_POOL_MAX_SIZE: 20
+      KC_SMTP_HOST: ${KC_SMTP_HOST:-mailhog}
+      KC_SMTP_PORT: ${KC_SMTP_PORT:-1025}
+      KC_SMTP_FROM: ${KC_SMTP_FROM:-noreply@athyper.local}
+      KC_SMTP_FROM_DISPLAY_NAME: ${KC_SMTP_FROM_DISPLAY_NAME:-Athyper}
+      KC_SMTP_AUTH: ${KC_SMTP_AUTH:-false}
+      KC_SMTP_SSL: ${KC_SMTP_SSL:-false}
+      KC_SMTP_STARTTLS: ${KC_SMTP_STARTTLS:-false}
+    volumes:
+      - ${ATHYPER_CONFIG}/iam/themes/neon:/opt/keycloak/themes/neon:ro
+      - ${ATHYPER_CONFIG}/iam/realm-demosetup.json:/opt/keycloak/data/import/realm-demosetup.json:ro
+      - ${ATHYPER_CONFIG}/iam/realm-platform-control.json:/opt/keycloak/data/import/realm-platform-control.json:ro
+    networks: [edge, internal]
+    depends_on:
+      gateway:
+        condition: service_healthy
+      dbpool-session:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET / HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && timeout 3 cat <&3 | grep -qE '^HTTP/1\\.[01] (200|302)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s    # JVM startup + Hibernate schema validation + realm imports
+    # Shutdown: 10s — stateless HTTP; no in-flight transactions to drain
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.iam.entrypoints=websecure
+      - traefik.http.routers.iam.priority=10
+      - traefik.http.routers.iam.rule=Host(`${IAM_HOST}`)
+      - traefik.http.routers.iam.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.iam.tls=true
+      - traefik.http.services.iam.loadbalancer.server.port=8080

@@ -24,7 +24,7 @@
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
 import type { ObjectStorageAdapter } from "../../../framework/adapters/objectstorage/src/types.js";
-import type { PdfRendererClient, PdfRenderOptions } from "./pdf-renderer-client.js";
+import type { PdfRenderOptions, SyncPdfRenderer } from "./pdf-renderer-client.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,13 +55,13 @@ const SYSTEM_ACTOR = "00000000-0000-7000-a000-000000000001";
 export class RenderService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly db:       Kysely<any>;
-  private readonly renderer: PdfRendererClient | null;
+  private readonly renderer: SyncPdfRenderer | null;
   private readonly storage:  ObjectStorageAdapter | null;
 
   constructor(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db:       Kysely<any>,
-    renderer: PdfRendererClient | null,
+    renderer: SyncPdfRenderer | null,
     storage:  ObjectStorageAdapter | null,
   ) {
     this.db       = db;
@@ -284,7 +284,7 @@ export class RenderService {
 export function createRenderService(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db:       Kysely<any>,
-  renderer: PdfRendererClient | null,
+  renderer: SyncPdfRenderer | null,
   storage:  ObjectStorageAdapter | null,
 ): RenderService {
   return new RenderService(db, renderer, storage);

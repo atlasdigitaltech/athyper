@@ -7,9 +7,15 @@
  *
  * Usage in app.ts:
  *
- *   const jobs = createJobsService({ db: dbAdapter.kysely, redisUrl, logger });
+ *   const jobs = createJobsService({ db: dbAdapter.kysely, connection, logger });
  *   await jobs.start();
  *   lifecycle.onShutdown(() => jobs.stop());
+ *
+ * `connection` is a BullMQ ConnectionOptions built by bootstrap with
+ * `maxRetriesPerRequest: null` (required for BullMQ Workers). Passed as a
+ * plain object so BullMQ spawns a fresh ioredis connection per Queue / Worker
+ * — this keeps job coordination isolated from the shared cache client
+ * (auth JWKS, feature flags, OAuth2, IAM session cache).
  *
  * The `queues` map is exposed so the admin API can call .getJobCounts(),
  * .pause(), .resume(), and .getFailedJobs() on each queue.
@@ -30,11 +36,14 @@ import {
   type FireTimerJobData,
   type SendNotificationJobData,
   type DrainOutboxJobData,
+  type DomainOutboxJobData,
+  type OutboxPurgeJobData,
   type SlaCheckJobData,
   type DigestFlushJobData,
   type ProviderHealthJobData,
   type KcSyncJobData,
   type JobLogger,
+  type JobHeartbeatHooks,
 } from "./jobs.types.js";
 import { createLifecycleTimerWorker } from "./workers/lifecycle-timer.worker.js";
 import { createNotificationWorker, type NotificationChannelHandler } from "./workers/notification.worker.js";
@@ -43,9 +52,12 @@ import { createSlaCheckWorker } from "./workers/sla-check.worker.js";
 import { createImportWorker, type ImportObjectStorage } from "./workers/import.worker.js";
 import { createCmsPreviewWorker } from "./workers/cms-preview.worker.js";
 import { createRenderDocumentWorker, type RenderObjectStorage } from "./workers/render-document.worker.js";
+import type { SyncPdfRenderer } from "./sync-pdf-renderer.js";
 import { createKcSyncWorker, type KcAdminConfig } from "./workers/kc-sync.worker.js";
 import { createEndpointHealthWorker } from "./workers/endpoint-health.worker.js";
-import type { PreviewContentJobData, RenderDocumentJobData } from "./jobs.types.js";
+import { createTikaExtractWorker, type TikaObjectStorage } from "./workers/tika-extract.worker.js";
+import { createBackupWorker, type BackupObjectStorage } from "./workers/backup.worker.js";
+import type { PreviewContentJobData, RenderDocumentJobData, ExtractTextJobData, DbBackupJobData } from "./jobs.types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
@@ -75,13 +87,22 @@ export interface JobsServiceOptions {
   kcSyncMs?: number;
   /** Milliseconds between endpoint health sweeps (default: 300 000) */
   endpointHealthSweepMs?: number;
+  /** Milliseconds between Tika extraction backfill sweeps (default: 600 000) */
+  tikaExtractSweepMs?: number;
+  /** Milliseconds between event.outbox purge runs (default: 3 600 000) */
+  outboxPurgeSweepMs?: number;
 }
 
 export interface JobsServiceDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: DB;
-  /** Full Redis URL: redis://:password@host:port/db */
-  redisUrl: string;
+  /**
+   * BullMQ ConnectionOptions. Built by bootstrap with `maxRetriesPerRequest: null`
+   * (required for BullMQ Workers). Intentionally a plain ConnectionOptions (not
+   * a shared ioredis instance) so BullMQ spawns fresh connections per Queue /
+   * Worker — this keeps job coordination isolated from the cache client.
+   */
+  connection: ConnectionOptions;
   logger?: JobLogger;
   options?: JobsServiceOptions;
   /**
@@ -96,23 +117,32 @@ export interface JobsServiceDeps {
   topicHandlers?: Map<string, OutboxTopicHandler>;
   /** Object storage adapter for import file downloads. Optional — import worker inactive if absent. */
   objectStorage?: ImportObjectStorage;
-  /** Object storage adapter for rendered document uploads (put + presignedUrl). Optional — render worker falls back to HTML-only if absent. */
+  /** Object storage adapter for rendered document uploads (put + presignedUrl). Optional — render worker writes a permanent DLQ entry per job if absent. */
   renderStorage?: RenderObjectStorage;
+  /** Gotenberg HTTP client for HTML→PDF conversion. Optional — render worker writes a permanent DLQ entry per job if absent (config error surface). */
+  gotenberg?: SyncPdfRenderer | null;
   /** Keycloak Admin API config for user reconciliation. Optional — KC sync worker inactive if absent. */
   kcAdmin?: KcAdminConfig;
-}
-
-// ─── Redis URL parser ─────────────────────────────────────────────────────────
-
-function parseRedisUrl(url: string): ConnectionOptions {
-  const u = new URL(url);
-  return {
-    host:     u.hostname,
-    port:     parseInt(u.port || "6379", 10),
-    username: u.username ? decodeURIComponent(u.username) : undefined,
-    password: u.password ? decodeURIComponent(u.password) : undefined,
-    db:       parseInt(u.pathname.replace(/^\//, "") || "0", 10),
-  };
+  /**
+   * Apache Tika base URL (e.g. http://tika:9998). When unset, the tika-extract
+   * worker is NOT created and jobs enqueued to jobs-tika-extract will pile up
+   * until either Tika is configured or the entries are manually drained.
+   */
+  tikaUrl?: string;
+  /**
+   * Object storage adapter for the tika-extract worker. Separate from
+   * `objectStorage` (which is typed narrowly for the import worker) so callers
+   * can reuse the same underlying adapter without coupling the two shapes.
+   */
+  attachmentStorage?: TikaObjectStorage;
+  /**
+   * Optional per-job hooks. The runtime wires these to push heartbeat/failure
+   * signals to an external monitor (Healthchecks) without svc-jobs owning
+   * any HTTP client. No-op when not provided.
+   */
+  hooks?: JobHeartbeatHooks;
+  /** Object storage adapter for pg_dump backup uploads. Optional — backup worker inactive if absent. */
+  backupStorage?: BackupObjectStorage;
 }
 
 // ─── Queue name → queues key resolution ──────────────────────────────────────
@@ -129,6 +159,8 @@ const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
   [QUEUE_NAME.RENDER_DOCUMENT]:   "renderDocument",
   [QUEUE_NAME.IAM_KC_SYNC]:       "iamKcSync",
   [QUEUE_NAME.ENDPOINT_HEALTH]:   "endpointHealth",
+  [QUEUE_NAME.TIKA_EXTRACT]:      "tikaExtract",
+  [QUEUE_NAME.BACKUP]:            "backup",
 };
 
 // ─── Exported queue map type ──────────────────────────────────────────────────
@@ -136,13 +168,15 @@ const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
 export interface JobsQueues {
   lifecycleTimers: Queue<FireTimerJobData | SweepJobData>;
   notifications:   Queue<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>;
-  domainOutbox:    Queue<DrainOutboxJobData>;
+  domainOutbox:    Queue<DomainOutboxJobData>;
   slaCheck:        Queue<SlaCheckJobData>;
   import:          Queue;
   cmsPreview:      Queue<PreviewContentJobData>;
   renderDocument:  Queue<RenderDocumentJobData | SweepJobData>;
   iamKcSync:       Queue<KcSyncJobData>;
   endpointHealth:  Queue<SweepJobData>;
+  tikaExtract:     Queue<ExtractTextJobData | SweepJobData>;
+  backup:          Queue<DbBackupJobData>;
 }
 
 // ─── Service factory ──────────────────────────────────────────────────────────
@@ -157,13 +191,18 @@ export interface JobsService {
 export function createJobsService(deps: JobsServiceDeps): JobsService {
   const {
     db,
-    redisUrl,
+    connection,
     logger,
     channelHandlers,
     topicHandlers,
     objectStorage,
     renderStorage,
+    gotenberg,
     kcAdmin,
+    tikaUrl,
+    attachmentStorage,
+    hooks,
+    backupStorage,
     options = {},
   } = deps;
 
@@ -179,12 +218,14 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     renderDocumentSweepMs        = DEFAULT_INTERVALS.RENDER_DOCUMENT_SWEEP_MS,
     kcSyncMs                     = DEFAULT_INTERVALS.IAM_KC_SYNC_MS,
     endpointHealthSweepMs        = DEFAULT_INTERVALS.ENDPOINT_HEALTH_SWEEP_MS,
+    tikaExtractSweepMs           = DEFAULT_INTERVALS.TIKA_EXTRACT_SWEEP_MS,
+    outboxPurgeSweepMs           = DEFAULT_INTERVALS.OUTBOX_PURGE_SWEEP_MS,
   } = options;
 
   // BullMQ recommends separate IORedis connections per Queue/Worker.
   // Passing ConnectionOptions (not an existing IORedis instance) causes BullMQ
   // to create a fresh connection per object — safe and correct.
-  const conn = parseRedisUrl(redisUrl);
+  const conn = connection;
 
   // ── Queues (producers) ───────────────────────────────────────────────────
 
@@ -198,6 +239,8 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     renderDocument:  new Queue(QUEUE_NAME.RENDER_DOCUMENT,   { connection: conn }),
     iamKcSync:       new Queue(QUEUE_NAME.IAM_KC_SYNC,       { connection: conn }),
     endpointHealth:  new Queue(QUEUE_NAME.ENDPOINT_HEALTH,   { connection: conn }),
+    tikaExtract:     new Queue(QUEUE_NAME.TIKA_EXTRACT,      { connection: conn }),
+    backup:          new Queue(QUEUE_NAME.BACKUP,             { connection: conn }),
   };
 
   // ── Workers (consumers) ──────────────────────────────────────────────────
@@ -234,11 +277,25 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       db,
       queue:         queues.renderDocument,
       connection:    conn,
+      gotenberg,
       objectStorage: renderStorage,
       logger,
     }),
     ...(kcAdmin ? [createKcSyncWorker({ db, kcAdmin, connection: conn, logger })] : []),
     createEndpointHealthWorker({ db, connection: conn, logger }),
+    ...(tikaUrl && attachmentStorage
+      ? [createTikaExtractWorker({
+          db,
+          connection:    conn,
+          objectStorage: attachmentStorage,
+          tikaUrl,
+          queue:         queues.tikaExtract,
+          logger,
+        })]
+      : []),
+    ...(backupStorage
+      ? [createBackupWorker({ connection: conn, backupStorage, logger })]
+      : []),
   ];
 
   // ── Error handlers on workers ────────────────────────────────────────────
@@ -251,14 +308,39 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       });
     });
     w.on("failed", (job, err) => {
+      const attemptsMade = job?.attemptsMade ?? 0;
+      const maxAttempts  = job?.opts?.attempts ?? 1;
+      const isTerminal   = Boolean(job) && attemptsMade >= maxAttempts;
+
       logger?.error("jobs_job_failed", {
         queue:    w.name,
         jobId:    job?.id,
         jobName:  job?.name,
-        attempts: job?.attemptsMade,
+        attempts: attemptsMade,
+        maxAttempts,
+        isTerminal,
         err:      err instanceof Error ? err.message : String(err),
       });
+      if (hooks?.onFailed && job?.name) {
+        try { hooks.onFailed(w.name, job.name, err); } catch { /* swallow */ }
+      }
+      if (isTerminal && hooks?.onTerminalFailure && job?.name) {
+        try {
+          hooks.onTerminalFailure(w.name, job.name, err, {
+            jobId:        job.id,
+            attemptsMade,
+            maxAttempts,
+            data:         job.data,
+          });
+        } catch { /* swallow */ }
+      }
     });
+    if (hooks?.onCompleted) {
+      w.on("completed", (job) => {
+        if (!job?.name) return;
+        try { hooks.onCompleted!(w.name, job.name); } catch { /* swallow */ }
+      });
+    }
   }
 
   let running = false;
@@ -285,6 +367,13 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         SCHEDULER_ID.NOTIFICATION_SWEEP,
         { every: notificationSweepMs },
         { name: JOB_NAME.SWEEP, data: {} as Record<string, never> },
+      );
+
+      // ── Outbox purge (housekeeping — deletes completed rows past retention)
+      await queues.domainOutbox.upsertJobScheduler(
+        SCHEDULER_ID.OUTBOX_PURGE,
+        { every: outboxPurgeSweepMs },
+        { name: JOB_NAME.OUTBOX_PURGE, data: {} as OutboxPurgeJobData },
       );
 
       // ── Domain outbox drain (one scheduler per topic) ────────────────────
@@ -352,10 +441,72 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         { name: JOB_NAME.ENDPOINT_HEALTH_SWEEP, data: {} as Record<string, never> },
       );
 
+      // ── Tika extraction backfill sweep (only when worker is active) ──────
+      // Picks up rows where text_extraction_status IS NULL — covers uploads
+      // that missed the inline enqueue (S3 ack → Redis add race, restarts)
+      // plus any pre-existing rows from before the column was added.
+      if (tikaUrl && attachmentStorage) {
+        await queues.tikaExtract.upsertJobScheduler(
+          SCHEDULER_ID.TIKA_EXTRACT_SWEEP,
+          { every: tikaExtractSweepMs },
+          { name: JOB_NAME.SWEEP, data: {} as Record<string, never> },
+        );
+      } else {
+        // B.9 guard: the tika-extract queue exists but has no consumer. If
+        // prior runs (or out-of-band producers) left pending jobs in Redis,
+        // they will accrete silently until TIKA_URL is set. Surface the
+        // backlog as a warning + ops alert rather than failing the boot —
+        // Tika is optional (PDF ingest degrades, but the service still runs).
+        try {
+          const counts = await queues.tikaExtract.getJobCounts(
+            "wait", "delayed", "active", "paused",
+          );
+          const pending =
+            (counts.wait    ?? 0) +
+            (counts.delayed ?? 0) +
+            (counts.active  ?? 0) +
+            (counts.paused  ?? 0);
+          if (pending > 0) {
+            logger?.warn("tika_queue_pending_no_consumer", {
+              queue:                QUEUE_NAME.TIKA_EXTRACT,
+              pending,
+              counts,
+              tikaUrlSet:           Boolean(tikaUrl),
+              attachmentStorageSet: Boolean(attachmentStorage),
+              hint:                 "Set TIKA_URL and ensure object storage is configured, or drain the queue via the jobs admin API.",
+            });
+            if (hooks?.onQueueAlert) {
+              try {
+                hooks.onQueueAlert(
+                  QUEUE_NAME.TIKA_EXTRACT,
+                  "pending_jobs_no_consumer",
+                  {
+                    pending,
+                    counts,
+                    tikaUrlSet:           Boolean(tikaUrl),
+                    attachmentStorageSet: Boolean(attachmentStorage),
+                  },
+                );
+              } catch { /* swallow */ }
+            }
+          } else {
+            logger?.info("tika_queue_idle_worker_inactive", {
+              tikaUrlSet:           Boolean(tikaUrl),
+              attachmentStorageSet: Boolean(attachmentStorage),
+            });
+          }
+        } catch (err) {
+          logger?.error("tika_queue_health_check_failed", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
       // ── Code-based CronRegistry entries ──────────────────────────────────
       // Modules call cronRegistry.register() before start(); we apply them here.
       // upsertJobScheduler is idempotent — safe to call from every instance.
-      for (const entry of cronRegistry.list()) {
+      const codeEntries = cronRegistry.list();
+      for (const entry of codeEntries) {
         const queueKey = QUEUE_NAME_TO_KEY[entry.queue];
         if (!queueKey) {
           logger?.error("jobs_cron_registry_unknown_queue", { queue: entry.queue, name: entry.name });
@@ -372,11 +523,24 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         logger?.info("jobs_cron_registry_wired", { schedulerId: entry.schedulerId, queue: entry.queue });
       }
 
+      // Code wins on conflict (see control.cron_schedule DDL comment). Two
+      // collision shapes are detected before the DB loop registers anything:
+      //   1) Identifier collision: DB row `code` matches a code entry `name`
+      //   2) Semantic collision:  DB row (target_queue, handler_type) matches
+      //                           a code entry (queue, jobName)
+      const reservedCodes = new Set<string>(codeEntries.map((e) => e.name));
+      const reservedHandlers = new Map<string, typeof codeEntries[number]>();
+      for (const e of codeEntries) {
+        reservedHandlers.set(`${e.queue}\u0000${e.jobName}`, e);
+      }
+
       // ── DB-driven cron schedules (control.cron_schedule) ─────────────────
       // Rows with is_enabled=true whose effective window covers now() are
       // loaded and registered as BullMQ repeatable jobs. Runtime admins can
       // add/edit rows in the UI without restarting the process (the scheduler
       // calls this path again via periodic reload — see recoverDbSchedules).
+      let dbLoaded = 0;
+      let dbSkipped = 0;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const dbSchedules = await (db as any)
@@ -399,9 +563,31 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
           const queueKey = QUEUE_NAME_TO_KEY[cs.target_queue];
           if (!queueKey) {
             logger?.error("jobs_db_schedule_unknown_queue", { code: cs.code, queue: cs.target_queue });
+            dbSkipped += 1;
             continue;
           }
-          // Code-registry entries take precedence — skip if same scheduler ID exists
+          if (reservedCodes.has(cs.code)) {
+            logger?.warn("jobs_db_schedule_conflict", {
+              reason:      "code_matches_code_registry_name",
+              code:        cs.code,
+              queue:       cs.target_queue,
+              handlerType: cs.handler_type,
+            });
+            dbSkipped += 1;
+            continue;
+          }
+          const shadowing = reservedHandlers.get(`${cs.target_queue}\u0000${cs.handler_type}`);
+          if (shadowing) {
+            logger?.warn("jobs_db_schedule_conflict", {
+              reason:      "queue_handler_matches_code_registry",
+              code:        cs.code,
+              queue:       cs.target_queue,
+              handlerType: cs.handler_type,
+              shadowedBy:  shadowing.schedulerId,
+            });
+            dbSkipped += 1;
+            continue;
+          }
           const dbSchedulerId = `sched:db:${cs.code}`;
           await queues[queueKey].upsertJobScheduler(
             dbSchedulerId,
@@ -409,7 +595,13 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
             { name: cs.handler_type, data: cs.payload_template ?? {} } as never,
           );
           logger?.info("jobs_db_schedule_wired", { schedulerId: dbSchedulerId, queue: cs.target_queue, code: cs.code });
+          dbLoaded += 1;
         }
+        logger?.info("jobs_db_schedules_loaded", {
+          loaded:      dbLoaded,
+          skipped:     dbSkipped,
+          codeEntries: codeEntries.length,
+        });
       } catch (err) {
         // DB unavailable at start — not fatal; schedules will be absent until next reload
         logger?.error("jobs_db_schedules_load_failed", { err: String(err) });
@@ -430,6 +622,8 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         kcSyncMs,
         kcSyncEnabled:               kcAdmin != null,
         endpointHealthSweepMs,
+        tikaExtractEnabled:          Boolean(tikaUrl && attachmentStorage),
+        tikaExtractSweepMs,
       });
     },
 

@@ -20,6 +20,8 @@ import type {
   ApprovableFlowStep,
   HeaderMode,
 } from "./types";
+import { StatusBadgeStrip } from "../status/StatusBadgeStrip";
+import { DocumentActionBar } from "../actions/DocumentActionBar";
 
 // ── Tab type (public) ────────────────────────────────────────────────────────
 
@@ -223,10 +225,15 @@ export function ApprovableDocumentHeader({
     submittedBy,
     costCenter,
     approvalFlow,
+    statusDimensions,
+    actionBundle,
+    blockedReasons,
     primaryAction,
     secondaryActions,
     destructiveAction,
   } = data;
+
+  const useActionBundle = actionBundle != null && actionBundle.length > 0;
 
   const isExpanded = mode !== "collapsed";
 
@@ -274,47 +281,66 @@ export function ApprovableDocumentHeader({
           <Badge variant={statusVariant} className="shrink-0">
             {identity.statusLabel}
           </Badge>
+
+          {/* Multi-dimensional status badges (when provided) */}
+          {statusDimensions && statusDimensions.length > 0 && (
+            <StatusBadgeStrip dimensions={statusDimensions} />
+          )}
         </div>
 
         {/* Right: mode toggle + actions */}
         <div className="flex shrink-0 items-center gap-2">
           <ModeToggle mode={mode} onChange={handleModeChange} />
 
-          {(primaryAction || (secondaryActions && secondaryActions.length > 0) || destructiveAction) && (
-            <Separator orientation="vertical" className="h-5" />
-          )}
+          {/* State-adaptive action bundle (when provided) */}
+          {useActionBundle ? (
+            <>
+              <Separator orientation="vertical" className="h-5" />
+              <DocumentActionBar
+                actions={actionBundle!}
+                blockedReasons={blockedReasons}
+                onAction={(code) => onAction?.(code)}
+              />
+            </>
+          ) : (
+            <>
+              {(primaryAction || (secondaryActions && secondaryActions.length > 0) || destructiveAction) && (
+                <Separator orientation="vertical" className="h-5" />
+              )}
 
-          {primaryAction && (
-            <Button
-              size="sm"
-              onClick={() => onAction?.(primaryAction.action)}
-              className="text-xs"
-            >
-              {primaryAction.label}
-            </Button>
-          )}
+              {primaryAction && (
+                <Button
+                  size="sm"
+                  onClick={() => onAction?.(primaryAction.action)}
+                  className="text-xs"
+                >
+                  {primaryAction.label}
+                </Button>
+              )}
 
-          {secondaryActions?.map((a) => (
-            <Button
-              key={a.action}
-              variant="ghost"
-              size="sm"
-              onClick={() => onAction?.(a.action)}
-              className="text-xs"
-            >
-              {a.label}
-            </Button>
-          ))}
+              {secondaryActions?.map((a) => (
+                <Button
+                  key={a.action}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAction?.(a.action)}
+                  className="text-xs"
+                >
+                  {a.label}
+                </Button>
+              ))}
 
-          {destructiveAction && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onAction?.(destructiveAction.action)}
-              className="text-xs text-destructive hover:text-destructive"
-            >
-              {destructiveAction.label}
-            </Button>
+              {destructiveAction && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAction?.(destructiveAction.action)}
+                  className="text-xs text-destructive hover:text-destructive"
+                >
+                  {destructiveAction.label}
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

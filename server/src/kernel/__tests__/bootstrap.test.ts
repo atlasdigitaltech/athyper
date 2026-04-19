@@ -170,15 +170,19 @@ describe("bootstrap", () => {
     expect(mockDbClose).toHaveBeenCalledOnce();
   });
 
-  it("calls redis.disconnect() on lifecycle.shutdown()", async () => {
+  it("calls redis.disconnect() on lifecycle.shutdown() for both cache and BullMQ clients", async () => {
+    // bootstrap constructs TWO ioredis clients:
+    //   - `redis`         : cache client (JWKS / feature flags / OAuth2 / IAM session)
+    //   - `webhookRedis`  : BullMQ-tuned client (maxRetriesPerRequest: null)
+    // Both register disconnect() via lifecycle.onShutdown — enforces F1 isolation.
     const deps = await bootstrap(baseConfig, null);
     await deps.lifecycle.shutdown("test");
-    expect(mockRedisDisconnect).toHaveBeenCalledOnce();
+    expect(mockRedisDisconnect).toHaveBeenCalledTimes(2);
   });
 
-  it("redis.disconnect() runs before db.close() on shutdown (LIFO order)", async () => {
-    // redis is registered after db, so in LIFO order redis shuts down first.
-    // This preserves the invariant: consumers stop before connections.
+  it("redis clients disconnect before db.close() on shutdown (LIFO order)", async () => {
+    // Both redis clients are registered after db, so in LIFO order they shut
+    // down first. This preserves the invariant: consumers stop before connections.
     const callOrder: string[] = [];
     mockDbClose.mockImplementation(() => { callOrder.push("db.close"); return Promise.resolve(); });
     mockRedisDisconnect.mockImplementation(() => { callOrder.push("redis.disconnect"); });
@@ -186,7 +190,7 @@ describe("bootstrap", () => {
     const deps = await bootstrap(baseConfig, null);
     await deps.lifecycle.shutdown("test");
 
-    expect(callOrder).toEqual(["redis.disconnect", "db.close"]);
+    expect(callOrder).toEqual(["redis.disconnect", "redis.disconnect", "db.close"]);
   });
 
   it("objectStorageRef.current is set when objectStorage is configured", async () => {

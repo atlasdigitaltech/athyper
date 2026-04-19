@@ -7,9 +7,9 @@
  * never embed logo markup by hand.
  *
  * Targets:
- *   mesh/config/iam/themes/neon/login/resources/img/
- *   mesh/config/iam/themes/neon/login/_neon-brand-logo.ftl
- *   mesh/config/iam/themes/neon/login/_neon-brand-mobile.ftl
+ *   stack/config/iam/themes/neon/login/resources/img/
+ *   stack/config/iam/themes/neon/login/_neon-brand-logo.ftl
+ *   stack/config/iam/themes/neon/login/_neon-brand-mobile.ftl
  *
  * Run: pnpm brand:sync:keycloak
  */
@@ -23,7 +23,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 
 const brandDist = path.join(repoRoot, "packages/shared/foundation/brand/dist/neon");
 const brandSrc = path.join(repoRoot, "packages/shared/foundation/brand/src/products/neon");
-const kcLogin = path.join(repoRoot, "mesh/config/iam/themes/neon/login");
+const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 
 async function ensureDir(p: string) {

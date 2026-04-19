@@ -23,6 +23,7 @@ export {
   buildApprovableHeaderFromRecord,
 } from "./header";
 export { StatusLanes, type StatusLanesProps } from "./status";
+export { StatusBadgeStrip, type StatusBadgeStripProps } from "./status";
 export { ExceptionStack, type ExceptionStackProps } from "./exceptions";
 export { OverviewGrid, type OverviewGridProps, type OverviewCard } from "./overview";
 export {
@@ -36,3 +37,11 @@ export { useHeaderModePreference } from "./header";
 // ── Items sub-module — generic document line items grid ───────────────────────
 // PostingTrace + JournalGrid: @athyper/finance-workbench/views
 export { ItemsGrid, type ItemsGridProps, type ItemsGridColumn } from "./items";
+
+// ── Orchestrator components (Spec v1.2) ──────────────────────────────────────
+export { ProcessHealthStrip, type ProcessHealthStripProps } from "./health";
+export { SatelliteCardGroup, type SatelliteCardGroupProps, SatelliteDetailSheet, type SatelliteDetailSheetProps } from "./satellites";
+export { AmountSummaryCard, type AmountSummaryCardProps } from "./amounts";
+export { ValidationBanner, type ValidationBannerProps } from "./validation";
+export { DocumentActionBar, type DocumentActionBarProps } from "./actions";
+export { buildOrchestratorFromRecord, type OrchestratorData } from "./orchestrator";

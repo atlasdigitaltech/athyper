@@ -74,7 +74,7 @@ export async function GET(req: Request) {
         const cookieStore = await cookies();
         const isPlatformSession = cookieStore.get("neon_realm")?.value === "platform";
         const { realm, clientId, sessionNamespace } = resolveRealmConfig(isPlatformSession);
-        const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+        const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
 
         const tokens = await refreshTokens({ baseUrl, realm, clientId, refreshToken: session.refreshToken });
 

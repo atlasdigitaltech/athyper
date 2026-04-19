@@ -75,7 +75,7 @@ CREATE INDEX IF NOT EXISTS import_request_tenant_entity_idx
     ON document.import_request (tenant_id, entity_name, created_at DESC);
 
 COMMENT ON TABLE  document.import_request IS
-    'Bulk import submission. id = uploadToken returned to client. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Bulk import submission. id = uploadToken returned to client. '
     'File stored in object storage at file_ref. '
     'Status: uploaded → processing → completed | failed | cancelled.';
 
@@ -140,6 +140,6 @@ CREATE INDEX IF NOT EXISTS import_chunk_status_idx
     WHERE status IN ('pending', 'processing');
 
 COMMENT ON TABLE  document.import_request_chunk IS
-    'Independently retryable batch of rows within an import request. '
+    'ARCHETYPE=E;SCOPE=T. Independently retryable batch of rows within an import request. '
     'Each chunk becomes one BullMQ job on the jobs-import queue. '
     'errors_json: [{row_number, field, error_code, message}] per failed row.';

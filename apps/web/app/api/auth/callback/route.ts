@@ -162,9 +162,16 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  // Use the canonical public base URL for all redirects so that binding the
-  // dev server to 0.0.0.0 (all interfaces) never leaks into redirect targets.
-  const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+  // Derive the public base URL from request headers — the same logic as login/route.ts.
+  // Keycloak redirects the browser back here, so the Host header reflects the origin
+  // the user actually used (neon.athyper.local, localhost:3000, etc.).
+  // PUBLIC_BASE_URL overrides this for containerised deployments.
+  const publicBaseUrl = (() => {
+    if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
+    const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+    const host = req.headers.get("host") ?? url.host;
+    return `${proto}://${host}`;
+  })();
 
   if (error) {
     const desc =
@@ -179,8 +186,7 @@ export async function GET(req: Request) {
   }
 
   const baseUrl =
-    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
-  const redirectUri = `${publicBaseUrl}/api/auth/callback`;
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
   const env = process.env.ENVIRONMENT ?? "local";
 
   const clientIp = req.headers.get("x-forwarded-for") ?? "unknown";
@@ -208,6 +214,7 @@ export async function GET(req: Request) {
       isPlatformLogin: boolean;
       realm: string;
       provider: string | null;
+      redirectUri?: string;
     };
     await redis.del(stateKey); // One-time use — delete immediately to prevent replay
 
@@ -218,6 +225,12 @@ export async function GET(req: Request) {
     const { realm, clientId, sessionNamespace } = resolveRealmConfig(isPlatformLogin);
 
     // ─── Step 2: Exchange code for tokens ───────────────────────────────────
+    // redirectUri must exactly match what was sent in the authorization request.
+    // We stored it in PKCE state during /api/auth/login; fall back to publicBaseUrl
+    // for sessions initiated before this change was deployed.
+    const redirectUri =
+      pkceState.redirectUri ?? `${publicBaseUrl}/api/auth/callback`;
+
     const tokens = await exchangeCodeForTokens({
       baseUrl,
       realm,

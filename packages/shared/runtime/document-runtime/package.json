@@ -14,7 +14,13 @@
     "./overview": "./src/overview/index.ts",
     "./items": "./src/items/index.ts",
     "./shell": "./src/shell/index.ts",
-    "./accounting": "./src/accounting/index.ts"
+    "./accounting": "./src/accounting/index.ts",
+    "./health": "./src/health/index.ts",
+    "./satellites": "./src/satellites/index.ts",
+    "./amounts": "./src/amounts/index.ts",
+    "./validation": "./src/validation/index.ts",
+    "./actions": "./src/actions/index.ts",
+    "./orchestrator": "./src/orchestrator/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -31,6 +37,7 @@
     "@athyper/ui": "workspace:*",
     "@athyper/workflow-ui": "workspace:*",
     "lucide-react": ">=1.0.0",
+    "next": ">=15.0.0",
     "react": ">=19.0.0"
   },
   "devDependencies": {
@@ -40,6 +47,7 @@
     "@athyper/ui": "workspace:*",
     "@athyper/workflow-ui": "workspace:*",
     "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
     "react": "^19.2.5",
     "typescript": "^6.0.3"
   }

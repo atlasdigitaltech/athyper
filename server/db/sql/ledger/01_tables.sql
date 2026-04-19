@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS ledger.gl_balance (
 );
 
 COMMENT ON TABLE ledger.gl_balance IS
+    'ARCHETYPE=C;SCOPE=T. Mutable UPSERT balance store — no status/lifecycle. '
     'Period-level GL balance store. UPSERT target for PostingService. '
     'closing = GENERATED (opening + period) — accounting identity enforced at schema level. '
     'Concurrent-safe via ON CONFLICT DO UPDATE SET period_debit += EXCLUDED.period_debit. '
@@ -127,7 +128,7 @@ CREATE TABLE IF NOT EXISTS ledger.asset_revaluation_reserve (
 );
 
 COMMENT ON TABLE ledger.asset_revaluation_reserve IS
-    'APPEND-ONLY ledger entries tracking revaluation surplus and impairment '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. APPEND-ONLY ledger entries tracking revaluation surplus and impairment '
     'reserves per asset per book. Immutability enforced by log.trg_prevent_mutation(). '
     'No draft semantics — rows are inserted as posted fact.';
 
@@ -203,7 +204,7 @@ CREATE TABLE IF NOT EXISTS ledger.tax_calculation (
     CONSTRAINT tc_base_nonneg       CHECK (base_amount >= 0)
 );
 COMMENT ON TABLE ledger.tax_calculation IS
-    'Per-line tax results. Fully append-only — no UPDATE, no DELETE. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Per-line tax results. Fully append-only — no UPDATE, no DELETE. '
     'No status column: rows born immutable at posting time. '
     'Reversals: new row with negative amounts + reverses_calculation_id FK to original. '
     'FK to tax_rate_schedule uses tenant-composite (tenant_id, tax_rate_schedule_id).';
@@ -250,7 +251,7 @@ CREATE TABLE IF NOT EXISTS ledger.tax_credit_movement (
         movement_type NOT IN ('REVERSAL','AMENDMENT') OR source_movement_id IS NOT NULL)
 );
 COMMENT ON TABLE ledger.tax_credit_movement IS
-    'Append-only movement entries. Each posting, reversal, amendment, '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Append-only movement entries. Each posting, reversal, amendment, '
     'carry-forward is a separate immutable row. '
     'aggregate.tax_credit_summary materializes the period snapshot from movements.';
 
@@ -303,7 +304,7 @@ CREATE TABLE IF NOT EXISTS ledger.fx_revaluation_line (
     CONSTRAINT fxrl_rate_positive       CHECK (original_rate > 0 AND closing_rate > 0)
 );
 COMMENT ON TABLE ledger.fx_revaluation_line IS
-    'Immutable revaluation line per open item/balance. Created during the run; '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Immutable revaluation line per open item/balance. Created during the run; '
     'never modified. source_entity_type/id enables full audit trail and replay. '
     'Corrections: create a new run — auto-reversal handles the prior run.';
 
@@ -374,6 +375,7 @@ CREATE TABLE IF NOT EXISTS ledger.consolidation_elimination (
     CONSTRAINT ce_decision_chk      CHECK (decision_score IS NULL OR decision_score BETWEEN 0 AND 1)
 );
 COMMENT ON TABLE ledger.consolidation_elimination IS
+    'ARCHETYPE=B_LITE;SCOPE=T. Has status but no is_active/sca/scb (operational status only). '
     'IC elimination entries. source/dest as UUID FKs to company_code (authoritative). '
     'ic_elimination_id links to document.ic_elimination for engine-driven eliminations. '
     'functional_currency_code/exchange_rate/functional_amount support multi-currency reporting. '
@@ -462,6 +464,7 @@ CREATE TABLE IF NOT EXISTS ledger.commitment_schedule (
 );
 
 COMMENT ON TABLE ledger.commitment_schedule IS
+    'ARCHETYPE=B;SCOPE=T. Full lifecycle quartet present — status/is_active/sca/scb. '
     'Payment plan / milestone schedule for a commitment. Each row = one scheduled '
     'installment or milestone. remaining_amount = GENERATED (scheduled - fulfilled). '
     'is_retention marks retention-clause rows for deferred release. '
@@ -529,7 +532,7 @@ CREATE TABLE IF NOT EXISTS ledger.commitment_fulfillment (
 );
 
 COMMENT ON TABLE ledger.commitment_fulfillment IS
-    'APPEND-ONLY fulfillment events against a commitment. Each row = goods receipt, '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. APPEND-ONLY fulfillment events against a commitment. Each row = goods receipt, '
     'service acceptance, payment, or milestone completion. '
     'Reversals: new row with is_reversal = true + reverses_id → original row. '
     'No UPDATE, no DELETE — enforced by log.trg_prevent_mutation().';
@@ -601,7 +604,7 @@ CREATE TABLE IF NOT EXISTS ledger.budget_transaction (
 );
 
 COMMENT ON TABLE ledger.budget_transaction IS
-    'IMMUTABLE (append-only) movement ledger for all budget lifecycle events. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. IMMUTABLE (append-only) movement ledger for all budget lifecycle events. '
     'txn_type: RESERVE → COMMIT → CONSUME → RELEASE; TRANSFER_IN/OUT; ADJUSTMENT; CARRY_FORWARD; LAPSE. '
     'direction: DEBIT = reduces available balance; CREDIT = restores available balance. '
     'previous_state / resulting_state capture allocation amounts before and after. '
@@ -667,6 +670,8 @@ CREATE TABLE IF NOT EXISTS ledger.budget_transfer (
 );
 
 COMMENT ON TABLE ledger.budget_transfer IS
+    'ARCHETYPE=B;SCOPE=T;PENDING_ACTIVE_SET. Has status + sca/scb but missing is_active generated column. '
+    'Finance owner to confirm active-set before is_active is added (likely status IN (''pending'',''approved'')). '
     'Formalised inter-allocation budget transfer. Approved transfers create paired '
     'ledger.budget_transaction rows: TRANSFER_OUT from source + TRANSFER_IN to dest. '
     'Status lifecycle: pending → approved → completed | rejected | reversed.';
@@ -731,6 +736,7 @@ CREATE TABLE IF NOT EXISTS ledger.budget_balance (
 );
 
 COMMENT ON TABLE ledger.budget_balance IS
+    'ARCHETYPE=C;SCOPE=T. Mutable UPSERT balance store — no status/lifecycle. '
     'Period-level budget balance store. UPSERT target for budget lifecycle service. '
     'closing_amount = GENERATED (opening - reserved - consumed + released + adjusted). '
     'period_number 0 = annual / YTD summary row. '
@@ -814,6 +820,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_po_model_period_dim ON ledger.planning_outp
 );
 
 COMMENT ON TABLE ledger.planning_output IS
+    'ARCHETYPE=C;SCOPE=T. Mutable UPSERT output store — no status/lifecycle. '
     'UPSERT target for planning calculation engine. One row per '
     '(model, year, period, account, dimension combination). '
     'variance_amount = GENERATED (planned - prior_year). '
@@ -877,6 +884,7 @@ CREATE TABLE IF NOT EXISTS ledger.inventory_balance (
 );
 
 COMMENT ON TABLE ledger.inventory_balance IS
+    'ARCHETYPE=B;SCOPE=T. Has status + is_active but missing status_changed_at/by — verifier will flag until columns added. '
     'Real-time on-hand quantity and value per item/warehouse/lot/serial position. '
     'Mutable — updated by movement PostingService. Optimistic-locked via version column. '
     'Negative quantity_on_hand permitted when warehouse.is_negative_stock_allowed = true; '
@@ -969,7 +977,7 @@ CREATE TABLE IF NOT EXISTS ledger.inventory_movement (
 );
 
 COMMENT ON TABLE ledger.inventory_movement IS
-    'Single source of truth for all inventory quantity changes. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Single source of truth for all inventory quantity changes. '
     'Effectively immutable: core business columns sealed at INSERT. '
     'Posting fields (reference_je_id, posted_at, posted_by) enriched once '
     'within the same posting transaction. Corrections via REVERSAL rows only. '
@@ -1031,6 +1039,7 @@ CREATE TABLE IF NOT EXISTS ledger.inventory_valuation_layer (
 );
 
 COMMENT ON TABLE ledger.inventory_valuation_layer IS
+    'ARCHETYPE=C;SCOPE=T. Mutable cost-layer store — no status/lifecycle (is_consumed is a boolean drawdown flag, not a state). '
     'Cost layers for FIFO/weighted-average/standard-cost/specific-identification costing. '
     'One row per stock receipt. remaining_qty decrements as issue movements consume the layer. '
     'FIFO scan uses partial index on (is_consumed = false) ordered by layer_date ASC. '
@@ -1084,7 +1093,7 @@ CREATE TABLE IF NOT EXISTS ledger.ic_elimination_line (
 );
 
 COMMENT ON TABLE ledger.ic_elimination_line IS
-    'Immutable debit/credit child lines of document.ic_elimination. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Immutable debit/credit child lines of document.ic_elimination. '
     'Strict polarity: exactly one side > 0 (mirrors journal_line). '
     'Append-only: no updated_at/updated_by. Corrections via header reversal.';
 

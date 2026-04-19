@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS document.workflow_request (
 );
 
 COMMENT ON TABLE  document.workflow_request IS
-    'Live workflow process envelope. One row per running approval/review/watcher. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Live workflow process envelope. One row per running approval/review/watcher. '
     'entity_id=TEXT (polymorphic — A08). '
     'entity_snapshot: version-pinned entity state at submission time. '
     'template_snapshot: version-pinned compiled_json from workflow_template. '
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS document.workflow_stage (
 );
 
 COMMENT ON TABLE  document.workflow_stage IS
-    'Runtime stage instance. One row per template_stage per workflow_request. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Runtime stage instance. One row per template_stage per workflow_request. '
     'Created upfront — work_items created only when stage status → active. '
     'mode + quorum captured at creation (version-pinned — A06). '
     'template_stage_id links back to control.workflow_template_stage (A12). '
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS document.user_profile_update_request (
 );
 
 COMMENT ON TABLE document.user_profile_update_request IS
-    'Self-service profile update request. entity_class=DOCUMENT. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''submitted'',''awaiting_approval'',''revision_requested'')). Self-service profile update request. entity_class=DOCUMENT. '
     'allow_on_behalf_of=false — self-service only (principal_id = created_by). '
     'Requestor submits changes to own profile fields, locale/contact, '
     'IAM group membership, or OU assignment. Routed to supervisor for approval. '
@@ -339,7 +339,7 @@ CREATE TABLE IF NOT EXISTS document.render_output (
 );
 
 COMMENT ON TABLE  document.render_output IS
-    'Render request + result. Status lifecycle: QUEUED→RENDERING→RENDERED→DELIVERED. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Render request + result. Status lifecycle: QUEUED→RENDERING→RENDERED→DELIVERED. '
     'Idempotency index prevents same render being queued twice concurrently. '
     'manifest_json validated by document.trg_validate_manifest_json() trigger.';
 COMMENT ON COLUMN document.render_output.entity_id IS
@@ -397,7 +397,7 @@ CREATE TABLE IF NOT EXISTS document.render_job (
 );
 
 COMMENT ON TABLE document.render_job IS
-    'Render execution record. Mutable status (PENDING→RETRYING→COMPLETED) — '
+    'ARCHETYPE=C;SCOPE=T. Render execution record. Mutable status (PENDING→RETRYING→COMPLETED) — '
     'not append-only, belongs in document schema not log. '
     'One render_output may have multiple render_job rows (retries). '
     'created_by: session principal who enqueued the job.';

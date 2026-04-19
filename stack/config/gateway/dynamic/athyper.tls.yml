@@ -1,0 +1,35 @@
+http:
+  middlewares:
+    athyper-dashboard-auth:
+      basicAuth:
+        # Reads GATEWAY_DASHBOARD_HTPASSWD from container environment.
+        # Format: "user:bcrypt_hash" — generate with:
+        #   htpasswd -nbB admin <password>
+        # Each environment MUST set its own hash in its .env file.
+        # The env var is passed into the gateway container via athyper-gateway.yml.
+        users:
+          - "{{ env "GATEWAY_DASHBOARD_HTPASSWD" }}"
+
+tls:
+  options:
+    # Default TLS options for all routes. Referenced by routers via
+    # ${GATEWAY_TLS_OPTIONS}=athyper-tls-default@file. Per-environment
+    # overrides live in stack/config/gateway/environments/:
+    #   - local   → VersionTLS12 (this file)
+    #   - staging → VersionTLS12
+    #   - production → VersionTLS13 + restricted curves
+    # Name intentionally avoids a version suffix — the actual minVersion
+    # differs per env, and a tls12-suffixed name misleads operators
+    # reading a prod config that enforces TLS 1.3.
+    athyper-tls-default:
+      minVersion: VersionTLS12
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/athyper.tls.local.crt
+        keyFile: /certs/athyper.tls.local.key
+
+  certificates:
+    - certFile: /certs/athyper.tls.local.crt
+      keyFile: /certs/athyper.tls.local.key

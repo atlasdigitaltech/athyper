@@ -70,6 +70,6 @@ INSERT INTO control.entity_lifecycle
     (entity_name, lifecycle_id, tenant_id, conditions, priority, created_by)
 VALUES
     ('payment_entry', v_lc_id, NULL, NULL, 100, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, lifecycle_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
 END $$;

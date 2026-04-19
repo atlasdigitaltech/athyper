@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Apache Tika server config — athyper render pipeline
+  Environment: STAGING
+
+  Staging mirrors production policy — same parser exclusions, same
+  timeout ceilings. Diverge only for load-test experiments. See
+  ../README.md for the contract.
+-->
+<properties>
+  <parsers>
+    <parser class="org.apache.tika.parser.DefaultParser">
+      <parser-exclude class="org.apache.tika.parser.executable.ExecutableParser"/>
+    </parser>
+  </parsers>
+
+  <service-loader
+      initializableProblemHandler="ignore"
+      loadErrorHandler="IGNORE"/>
+
+  <server>
+    <params>
+      <enableUnsecureFeatures>false</enableUnsecureFeatures>
+
+      <!-- 5 min / 10 min — parity with production for realistic timing. -->
+      <taskTimeoutMillis>300000</taskTimeoutMillis>
+      <taskPulseMillis>10000</taskPulseMillis>
+      <longRunningTaskTimeoutMillis>600000</longRunningTaskTimeoutMillis>
+    </params>
+  </server>
+</properties>

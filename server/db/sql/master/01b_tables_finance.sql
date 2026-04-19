@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS master.legal_entity (
 );
 
 COMMENT ON TABLE master.legal_entity IS
-  'Statutory / registered body. Group structure with consolidation hierarchy. '
+  'ARCHETYPE=B;SCOPE=T. Statutory / registered body. Group structure with consolidation hierarchy. '
   'Addresses via master.address_link (owner_type=''legal_entity'').';
 
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS master.company_code (
 );
 
 COMMENT ON TABLE master.company_code IS
-  'Accounting / posting / balancing unit within a legal entity. '
+  'ARCHETYPE=B;SCOPE=T. Accounting / posting / balancing unit within a legal entity. '
   'Addresses via master.address_link (owner_type=''company_code''). '
   'Contacts via master.contact_link (owner_type=''company_code'').';
 
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS master.cost_center (
 );
 
 COMMENT ON TABLE master.cost_center IS
-  'Responsibility center for cost tracking. Hierarchical tree scoped to a company_code.';
+  'ARCHETYPE=B;SCOPE=T. Responsibility center for cost tracking. Hierarchical tree scoped to a company_code.';
 
 
 -- §F4  master.profit_center — responsibility center for P&L
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS master.profit_center (
 );
 
 COMMENT ON TABLE master.profit_center IS
-  'Responsibility center for P&L. Hierarchical tree scoped to a company_code.';
+  'ARCHETYPE=B;SCOPE=T. Responsibility center for P&L. Hierarchical tree scoped to a company_code.';
 
 
 -- §F5  master.site — physical location
@@ -297,7 +297,7 @@ CREATE TABLE IF NOT EXISTS master.site (
 );
 
 COMMENT ON TABLE master.site IS
-  'Physical location (plant, office, store, branch, yard, depot). '
+  'ARCHETYPE=B;SCOPE=T. Physical location (plant, office, store, branch, yard, depot). '
   'Address data via master.address_link, not inline columns. '
   'country_code is operational context for tax/timezone, not postal.';
 
@@ -341,7 +341,7 @@ CREATE TABLE IF NOT EXISTS master.warehouse (
 );
 
 COMMENT ON TABLE master.warehouse IS
-  'Inventory storage location within a site. Address inherited from parent site.';
+  'ARCHETYPE=B;SCOPE=T. Inventory storage location within a site. Address inherited from parent site.';
 
 
 -- §F7  master.chart_of_account — shared accounting structure header
@@ -383,7 +383,7 @@ CREATE TABLE IF NOT EXISTS master.chart_of_account (
 );
 
 COMMENT ON TABLE master.chart_of_account IS
-  'Shared accounting structure header. Contains GL accounts as hierarchical children.';
+  'ARCHETYPE=B;SCOPE=T. Shared accounting structure header. Contains GL accounts as hierarchical children.';
 
 
 -- §F8  master.gl_account — natural account (hierarchical tree under chart)
@@ -438,7 +438,7 @@ CREATE TABLE IF NOT EXISTS master.gl_account (
 );
 
 COMMENT ON TABLE master.gl_account IS
-  'Natural account within a chart_of_account. Hierarchical tree with account_class grouping. '
+  'ARCHETYPE=B;SCOPE=T. Natural account within a chart_of_account. Hierarchical tree with account_class grouping. '
   'Trigger enforces parent-child account_class consistency.';
 
 
@@ -481,7 +481,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_chart_assignment (
 );
 
 COMMENT ON TABLE master.company_code_chart_assignment IS
-  'Bridge table linking company_code to chart_of_account with assignment type (operating/local/group).';
+  'ARCHETYPE=B;SCOPE=T. Bridge table linking company_code to chart_of_account with assignment type (operating/local/group).';
 
 
 -- §F10  master.company_code_gl_account — bridge: company ↔ account controls
@@ -533,7 +533,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_gl_account (
 );
 
 COMMENT ON TABLE master.company_code_gl_account IS
-  'Per-company posting controls for GL accounts. Controls posting permissions, '
+  'ARCHETYPE=B;SCOPE=T. Per-company posting controls for GL accounts. Controls posting permissions, '
   'dimension requirements, and default assignments.';
 
 
@@ -614,7 +614,7 @@ CREATE TABLE IF NOT EXISTS master.project (
 );
 
 COMMENT ON TABLE master.project IS
-  'Project header with hierarchical structure. Scoped to company_code.';
+  'ARCHETYPE=B;SCOPE=T. Project header with hierarchical structure. Scoped to company_code.';
 
 
 -- §F12  master.project_item — WBS: phase / task / milestone
@@ -696,7 +696,7 @@ CREATE TABLE IF NOT EXISTS master.project_item (
 );
 
 COMMENT ON TABLE master.project_item IS
-  'WBS element (phase / task / milestone) within a project. '
+  'ARCHETYPE=B;SCOPE=T. WBS element (phase / task / milestone) within a project. '
   'Trigger enforces company_code_id consistency with parent project.';
 
 
@@ -736,7 +736,7 @@ CREATE TABLE IF NOT EXISTS master.dimension_set (
 );
 
 COMMENT ON TABLE master.dimension_set IS
-    'Content-addressed dimension combination cache. Keyed by SHA-256 hash '
+    'ARCHETYPE=B;SCOPE=T. Content-addressed dimension combination cache. Keyed by SHA-256 hash '
     'of sorted (type_id:value_id) pairs. Immutable after creation. '
     'One row per unique combination — deduplication via hash lookup.';
 
@@ -804,8 +804,9 @@ CREATE TABLE IF NOT EXISTS master.fiscal_period (
 );
 
 COMMENT ON TABLE master.fiscal_period IS
-    'Fiscal period gate per company_code. Period 0 = opening balance, 1-12 = normal, '
-    '13-16 = adjustment. Status lifecycle: future -> open -> soft_close -> hard_close.';
+    'ARCHETYPE=B;SCOPE=T. Fiscal period gate per company_code. Period 0 = opening balance, 1-12 = normal, '
+    '13-16 = adjustment. Status lifecycle: future -> open -> soft_close -> hard_close. '
+    'Non-standard active-set: is_active GENERATED AS (status IN (''open'', ''soft_close'')).';
 
 
 -- §F15  master.ledger_book — book definition (tenant-level)
@@ -859,7 +860,7 @@ CREATE TABLE IF NOT EXISTS master.ledger_book (
 );
 
 COMMENT ON TABLE master.ledger_book IS
-    'Ledger book definition. Tenant-level (not company-scoped). '
+    'ARCHETYPE=B;SCOPE=T. Ledger book definition. Tenant-level (not company-scoped). '
     'Assigned to company_codes via master.company_code_book_assignment.';
 
 
@@ -911,7 +912,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_book_assignment (
 );
 
 COMMENT ON TABLE master.company_code_book_assignment IS
-    'Bridge: which books each company_code uses. Controls which ledger books '
+    'ARCHETYPE=B;SCOPE=T. Bridge: which books each company_code uses. Controls which ledger books '
     'receive journal entries for a given company. Temporal with effective dates.';
 
 
@@ -977,7 +978,7 @@ CREATE TABLE IF NOT EXISTS master.customer (
 );
 
 COMMENT ON TABLE master.customer IS
-    'AR counterparty — pure tenant-level party master (WHO). B2B/B2C/government. '
+    'ARCHETYPE=B;SCOPE=T. AR counterparty — pure tenant-level party master (WHO). B2B/B2C/government. '
     'Company-specific terms (payment, credit, currency) live in company_code_customer_profile. '
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.customer.legal_name IS
@@ -1056,7 +1057,7 @@ CREATE TABLE IF NOT EXISTS master.supplier (
 );
 
 COMMENT ON TABLE master.supplier IS
-    'AP counterparty — pure tenant-level party master (WHO). Vendor/contractor/manufacturer. '
+    'ARCHETYPE=B;SCOPE=T. AP counterparty — pure tenant-level party master (WHO). Vendor/contractor/manufacturer. '
     'Company-specific terms + banking live in company_code_supplier_profile. '
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.supplier.legal_name IS
@@ -1140,7 +1141,7 @@ CREATE TABLE IF NOT EXISTS master.employee (
 ALTER TABLE master.employee ADD COLUMN IF NOT EXISTS company_code_id uuid;
 
 COMMENT ON TABLE master.employee IS
-    'Internal workforce. principal_id links to login identity (1:1 optional). '
+    'ARCHETYPE=B;SCOPE=T. Internal workforce. principal_id links to login identity (1:1 optional). '
     'Party for expense claims, payroll, advances. manager_id = self-ref hierarchy.';
 
 
@@ -1185,7 +1186,7 @@ CREATE TABLE IF NOT EXISTS master.item_category (
 );
 
 COMMENT ON TABLE master.item_category IS
-    'Hierarchical product taxonomy. Self-referential tree via parent_id. '
+    'ARCHETYPE=B;SCOPE=T. Hierarchical product taxonomy. Self-referential tree via parent_id. '
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.item_category.default_tax_group_id IS
     'FK → control.tax_group (tenant-composite). Category-level fallback tax group.';
@@ -1239,7 +1240,7 @@ CREATE TABLE IF NOT EXISTS master.product (
 );
 
 COMMENT ON TABLE master.product IS
-    'Tenant-level catalog item. Sellable/purchasable. SKU optional (partial unique). '
+    'ARCHETYPE=B;SCOPE=T. Tenant-level catalog item. Sellable/purchasable. SKU optional (partial unique). '
     'category_id → item_category, spend_category_id → spend_category. '
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.product.default_tax_group_id IS
@@ -1315,7 +1316,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS im_company_product_uq
     WHERE product_id IS NOT NULL;
 
 COMMENT ON TABLE master.item IS
-    'Company-level inventory configuration. Dual-path entry: '
+    'ARCHETYPE=B;SCOPE=T. Company-level inventory configuration. Dual-path entry: '
     'Path A (product-centric): product_id set, category inherited from product. '
     'Path B (item-centric): category_id set, no product (MRO, utilities, facilities). '
     'Both paths may coexist (product with explicit category override). '
@@ -1380,7 +1381,7 @@ CREATE TABLE IF NOT EXISTS master.spend_category (
 );
 
 COMMENT ON TABLE master.spend_category IS
-    'Procurement spend taxonomy — pure definition only. '
+    'ARCHETYPE=B;SCOPE=T. Procurement spend taxonomy — pure definition only. '
     'Hierarchical via parent_id; root_category_id is trigger-maintained '
     'denormalization pointing to the tree root. '
     'Classifications via commodity_classification bridge. '
@@ -1453,7 +1454,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_spend_policy (
 );
 
 COMMENT ON TABLE master.company_code_spend_policy IS
-    'Company-code-scoped operational defaults and overrides for spend categories. '
+    'ARCHETYPE=B;SCOPE=T. Company-code-scoped operational defaults and overrides for spend categories. '
     'Resolution: company code → tenant → spend_category base governance. '
     'NULL columns inherit from parent level. DENY mapping_mode overrides parent ALLOW.';
 
@@ -1513,7 +1514,7 @@ CREATE TABLE IF NOT EXISTS master.commodity_classification (
 );
 
 COMMENT ON TABLE master.commodity_classification IS
-    'Unified M:N bridge mapping any tenant entity to any system classification code '
+    'ARCHETYPE=B;SCOPE=T. Unified M:N bridge mapping any tenant entity to any system classification code '
     'in any domain (UNSPSC, HS, NAICS, ISIC, GICS, SITC). Polymorphic owner_type + '
     'owner_id → entity, polymorphic classification_type → commodity_code or industry_code. '
     'EXCLUDE constraint ensures at most one primary per (entity, type, domain).';
@@ -1590,7 +1591,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_customer_profile (
 );
 
 COMMENT ON TABLE master.company_code_customer_profile IS
-    'Company-specific AR settings per customer. One customer can have different payment terms, '
+    'ARCHETYPE=B;SCOPE=T. Company-specific AR settings per customer. One customer can have different payment terms, '
     'credit limits, and currencies per company_code. SAP KNB1 equivalent.';
 COMMENT ON COLUMN master.company_code_customer_profile.ar_gl_account_id IS
     'DEPRECATED (Phase 2). Use default_accounting_profile_id -> master.accounting_profile. '
@@ -1692,7 +1693,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_supplier_profile (
 );
 
 COMMENT ON TABLE master.company_code_supplier_profile IS
-    'Company-specific AP settings + banking per supplier. One supplier can have different '
+    'ARCHETYPE=B;SCOPE=T. Company-specific AP settings + banking per supplier. One supplier can have different '
     'payment terms, methods, and bank accounts per company_code. SAP LFB1 equivalent.';
 COMMENT ON COLUMN master.company_code_supplier_profile.payment_method IS
     'DEPRECATED (Phase 2). Use payment_method_id FK -> master.payment_method. '

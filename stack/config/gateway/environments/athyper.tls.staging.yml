@@ -1,0 +1,36 @@
+# =======================================================================
+# Stack       : athyper Stack – TLS Configuration
+# Environment : STAGING
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+#
+# Deploy: copy this file to stack/config/gateway/dynamic/athyper.tls.yml
+#         on the staging host, replacing the local variant.
+#
+# Differences from local:
+#   - Certificates sourced from staging-specific paths
+#   - TLS 1.2 minimum (same as local, broader tool compatibility)
+# =======================================================================
+
+http:
+  middlewares:
+    athyper-dashboard-auth:
+      basicAuth:
+        users:
+          - "{{ env "GATEWAY_DASHBOARD_HTPASSWD" }}"
+
+tls:
+  options:
+    # Default TLS options — referenced by routers via athyper-tls-default@file.
+    # Staging enforces TLS 1.2 minimum (broader tool compatibility than prod).
+    athyper-tls-default:
+      minVersion: VersionTLS12
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/athyper.tls.crt
+        keyFile: /certs/athyper.tls.key
+
+  certificates:
+    - certFile: /certs/athyper.tls.crt
+      keyFile: /certs/athyper.tls.key

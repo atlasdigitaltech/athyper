@@ -4,7 +4,7 @@
 -- Depends on: 100_master/001_vendor.sql, 003_customer.sql
 --             200_document/001_invoice.sql, 004_purchase_order.sql, 007_journal_entry.sql,
 --             200_document/010_payment_entry.sql
--- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
+-- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Vendor operations
@@ -12,9 +12,9 @@
 -- Master lifecycle actions map to: cancel (deactivate/block), close (archive)
 -- ══════════════════════════════════════════════════════════════════════════════
 
--- Idempotency: migrate any rows previously inserted under 'supplier'
-UPDATE control.entity_operation SET entity_name = 'vendor'
-WHERE entity_name = 'supplier' AND tenant_id IS NULL;
+-- Remove any legacy rows inserted under the old 'supplier' entity name.
+-- The entity_engine ops file now seeds vendor directly; supplier rows are obsolete.
+DELETE FROM control.entity_operation WHERE entity_name = 'supplier' AND tenant_id IS NULL;
 
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
@@ -25,7 +25,7 @@ VALUES
     (NULL, 'vendor', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',               true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'vendor', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                  true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'vendor', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                   false, 50, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Customer operations
@@ -39,7 +39,7 @@ VALUES
     (NULL, 'customer', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',                 true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'customer', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                    true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'customer', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                     false, 50, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Purchase Invoice operations
@@ -58,7 +58,7 @@ VALUES
     (NULL, 'purchase_invoice', 'reverse',  'DETAIL', 'OVERFLOW', 'MODAL',    'reverse',                              true,  80, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_invoice', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                                 true,  90, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_invoice', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                               false, 100, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Purchase Order operations
@@ -76,7 +76,7 @@ VALUES
     (NULL, 'purchase_order', 'cancel',   'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                             true,  70, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_order', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                               true,  80, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_order', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                             false, 90, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Journal Entry operations
@@ -94,7 +94,7 @@ VALUES
     (NULL, 'journal_entry', 'reverse',  'DETAIL', 'OVERFLOW', 'MODAL',    'reverse',                           true,  70, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                              true,  80, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                            false, 90, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Payment Entry operations
@@ -114,4 +114,4 @@ VALUES
     (NULL, 'payment_entry', 'cancel',    'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                             true,  90,  '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'copy',      'DETAIL', 'OVERFLOW', 'API',      'copy',                               true,  100, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'export',    'LIST',   'TOOLBAR',  'API',      'export',                             false, 110, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;

@@ -18,7 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const brandSrc = path.join(repoRoot, "packages/shared/foundation/brand/src/products/neon");
-const kcLogin = path.join(repoRoot, "mesh/config/iam/themes/neon/login");
+const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 
 async function sha256(file: string): Promise<string> {

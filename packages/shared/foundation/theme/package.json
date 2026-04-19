@@ -20,7 +20,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "validate-presets": "tsx src/preset-validator.ts --check-shipped"
+    "validate-presets": "tsx src/preset-validator.cli.ts --check-shipped"
   },
   "dependencies": {
     "clsx": "^2.1.0",
@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
+    "@types/node": "^25.6.0",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3"

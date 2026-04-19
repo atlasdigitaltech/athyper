@@ -82,7 +82,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS hc_scope_active_uq
     WHERE status = 'active';
 
 COMMENT ON TABLE master.holiday_calendar IS
-    'Tenant business calendar. Dimensional scope: tenant-wide, per-country, per-company, per-site. '
+    'ARCHETYPE=B;SCOPE=T. Tenant business calendar. Dimensional scope: tenant-wide, per-country, per-company, per-site. '
     'weekend_pattern avoids 52 HOLIDAY rows for weekends. CUSTOM requires weekend_days array.';
 
 
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS master.holiday_calendar_day (
 );
 
 COMMENT ON TABLE master.holiday_calendar_day IS
-    'Individual holiday/override dates. HOLIDAY=non-working, WORKING_OVERRIDE=normally off but working, BLACKOUT=special closure.';
+    'ARCHETYPE=C;SCOPE=T. Individual holiday/override dates. HOLIDAY=non-working, WORKING_OVERRIDE=normally off but working, BLACKOUT=special closure.';
 
 
 -- ============================================================================
@@ -189,7 +189,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS pt_current_version_uq
     WHERE is_current_version = true;
 
 COMMENT ON TABLE master.payment_term IS
-    'Payment term master: executable net-days rule + container for clause children. '
+    'ARCHETYPE=B;SCOPE=T. Payment term master: executable net-days rule + container for clause children. '
     'Versioned per (tenant, code, version). Supersedes chain for audit trail.';
 
 
@@ -296,8 +296,9 @@ CREATE TABLE IF NOT EXISTS master.payment_term_clause (
 );
 
 COMMENT ON TABLE master.payment_term_clause IS
-    'Unified deduction/release clause. clause_type: ADVANCE, ADVANCE_RECOVERY, RETENTION, RETENTION_RELEASE. '
-    'FIX-3: bounds enforce min/max_pct for PERCENT, min/max_amount for FIXED_AMOUNT.';
+    'ARCHETYPE=C;SCOPE=T. Unified deduction/release clause. clause_type: ADVANCE, ADVANCE_RECOVERY, RETENTION, RETENTION_RELEASE. '
+    'FIX-3: bounds enforce min/max_pct for PERCENT, min/max_amount for FIXED_AMOUNT. '
+    'is_active is a manual boolean (not GENERATED) — no status column on this table.';
 
 
 CREATE TABLE IF NOT EXISTS master.payment_term_discount_tier (
@@ -334,7 +335,7 @@ CREATE TABLE IF NOT EXISTS master.payment_term_discount_tier (
 );
 
 COMMENT ON TABLE master.payment_term_discount_tier IS
-    'Early-payment discount tiers. Settlement-time only — not an invoice deduction.';
+    'ARCHETYPE=C;SCOPE=T. Early-payment discount tiers. Settlement-time only — not an invoice deduction.';
 
 
 -- ============================================================================

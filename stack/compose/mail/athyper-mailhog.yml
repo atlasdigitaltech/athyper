@@ -1,0 +1,44 @@
+# =======================================================================
+# Stack       : athyper Stack – IAM
+# Service     : Mailhog — local SMTP capture for development
+#
+# Description :
+#   Catches all outbound email from Keycloak during local development.
+#   SMTP listens on port 1025 (reachable from Keycloak as "mailhog:1025").
+#   Web UI is port-forwarded to localhost:8025 for easy inbox inspection.
+#
+#   NOT for staging or production — dev only.
+# =======================================================================
+
+services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    profiles: ["core", "dev"]
+    networks: [edge, internal]
+    environment:
+      MH_HOSTNAME: mailhog.athyper.local
+      MH_STORAGE: memory
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8025/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.mailhog.rule=Host(`${MAILHOG_HOST:-mailhog.athyper.local}`)
+      - traefik.http.routers.mailhog.entrypoints=websecure
+      - traefik.http.routers.mailhog.tls=true
+      - traefik.http.routers.mailhog.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.mailhog.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.services.mailhog.loadbalancer.server.port=8025

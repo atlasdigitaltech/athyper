@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS master.asset_class (
 );
 
 COMMENT ON TABLE master.asset_class IS
-    'Hierarchical asset classification — identity, hierarchy, and governance only. '
+    'ARCHETYPE=B;SCOPE=T. Hierarchical asset classification — identity, hierarchy, and governance only. '
     'GL mappings and depreciation parameters live in control.asset_class_book_policy. '
     'code is bare (PLANT, not ATHQ-AC-PLANT) — company scope via UQ constraint.';
 
@@ -192,10 +192,11 @@ CREATE TABLE IF NOT EXISTS master.asset (
 );
 
 COMMENT ON TABLE master.asset IS
-    'Core fixed asset register. One row per physical/intangible asset. '
+    'ARCHETYPE=B;SCOPE=T. Core fixed asset register. One row per physical/intangible asset. '
     'Multi-tenant, multi-entity. Component relationships modeled solely '
     'in master.asset_component (no parent_asset_id on this table). '
-    'All FKs to external tables (OU, cost center, supplier) are tenant-scoped composites.';
+    'All FKs to external tables (OU, cost center, supplier) are tenant-scoped composites. '
+    'Non-standard active-set: is_active GENERATED AS (status IN (''draft'', ''active'', ''suspended'')).';
 
 
 -- =============================================================================
@@ -302,11 +303,12 @@ CREATE TABLE IF NOT EXISTS master.asset_book (
 );
 
 COMMENT ON TABLE master.asset_book IS
-    'Per-book depreciation profile. One row per (asset, book_type). '
+    'ARCHETYPE=B;SCOPE=T. Per-book depreciation profile. One row per (asset, book_type). '
     'carrying_amount is the authoritative generated column: '
     'cost_basis + cumulative_revaluation - cumulative_impairment - accumulated_depreciation. '
     'depreciated_cost is the narrower (cost_basis - accumulated_depreciation). '
-    'Over-depreciation guard prevents accumulated_depreciation from exceeding depreciable base.';
+    'Over-depreciation guard prevents accumulated_depreciation from exceeding depreciable base. '
+    'Non-standard active-set: is_active GENERATED AS (status IN (''draft'', ''active'', ''suspended'')).';
 
 
 -- =============================================================================
@@ -374,7 +376,7 @@ CREATE TABLE IF NOT EXISTS master.asset_component (
 );
 
 COMMENT ON TABLE master.asset_component IS
-    'IAS 16 component decomposition. SOLE authority for parent-child asset '
+    'ARCHETYPE=B;SCOPE=T. IAS 16 component decomposition. SOLE authority for parent-child asset '
     'relationships — master.asset carries no parent_asset_id to avoid drift.';
 
 
@@ -433,8 +435,9 @@ CREATE TABLE IF NOT EXISTS master.asset_assignment_history (
 );
 
 COMMENT ON TABLE master.asset_assignment_history IS
-    'Full timeline of asset assignment changes: custodian, location, cost center, '
-    'operating unit. Effective-dated with from/to values for audit trail.';
+    'ARCHETYPE=C;SCOPE=T. Full timeline of asset assignment changes: custodian, location, cost center, '
+    'operating unit. Effective-dated with from/to values for audit trail. '
+    'No status lifecycle — mutable history/timeline table.';
 
 
 -- =============================================================================
@@ -525,7 +528,7 @@ CREATE TABLE IF NOT EXISTS master.dimension_type (
 );
 
 COMMENT ON TABLE master.dimension_type IS
-    'Dimension catalog. Tenant-global — no company scoping. '
+    'ARCHETYPE=B;SCOPE=T. Dimension catalog. Tenant-global — no company scoping. '
     'SYSTEM types map to dedicated master tables (cost_center, profit_center, project). '
     'STANDARD/CUSTOM types carry values in master.dimension_value. '
     'Hierarchy flags control tree structure capability. '
@@ -609,7 +612,7 @@ CREATE TABLE IF NOT EXISTS master.dimension_value (
 );
 
 COMMENT ON TABLE master.dimension_value IS
-    'Typed dimension values. One value per type per code (per company if scoped). '
+    'ARCHETYPE=B;SCOPE=T. Typed dimension values. One value per type per code (per company if scoped). '
     'NULL company_code_id = tenant-global. non-NULL = company-specific. '
     'Dual uniqueness enforced via partial indexes in 07_indexes (global vs company-scoped). '
     'Hierarchy via parent_id + level_no + path_key. '
@@ -648,7 +651,7 @@ CREATE TABLE IF NOT EXISTS master.dimension_set_item (
 );
 
 COMMENT ON TABLE master.dimension_set_item IS
-    'Component pairs of a dimension set. IMMUTABLE after creation — '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Component pairs of a dimension set. IMMUTABLE after creation — '
     'UPDATE and DELETE blocked by triggers. One value per type per set. '
     'Validate at usage time that values are compatible with the transaction '
     'company_code_id (global values or same company).';
@@ -754,7 +757,7 @@ CREATE TABLE IF NOT EXISTS master.business_intent (
 );
 
 COMMENT ON TABLE master.business_intent IS
-    'Business intent ontology. Tenant-scoped hierarchical tree. '
+    'ARCHETYPE=B;SCOPE=T. Business intent ontology. Tenant-scoped hierarchical tree. '
     'domain must be consistent within a subtree — enforced by trg_bi_parent_guard. '
     'default_accounting_profile_id intentionally absent: Engine 4.13 owns '
     'profile resolution via intent_to_accounting_profile_rule + intent_profile_override. '
@@ -818,7 +821,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_intent_policy (
 );
 
 COMMENT ON TABLE master.company_code_intent_policy IS
-    'Company Code × Intent availability. mapping_mode ALLOW | DENY. '
+    'ARCHETYPE=B;SCOPE=T. Company Code × Intent availability. mapping_mode ALLOW | DENY. '
     'STANDARD intents visible to all company codes unless a DENY row exists. '
     'RESTRICTED intents require an explicit ALLOW row. '
     'Dimension overrides intentionally absent — use master.company_code_dimension_default.';
@@ -890,7 +893,7 @@ ALTER TABLE master.company_code_dimension_default
     ) WHERE (is_active = true);
 
 COMMENT ON TABLE master.company_code_dimension_default IS
-    'Company code dimension defaults. Temporal: EXCLUDE prevents overlapping active defaults '
+    'ARCHETYPE=B;SCOPE=T. Company code dimension defaults. Temporal: EXCLUDE prevents overlapping active defaults '
     'for the same (company_code, dimension_type). Multiple rows allowed for history + future. '
     'Full company_code_id match validated at runtime by '
     'master.validate_dimension_company_scope() during posting.';
@@ -952,7 +955,7 @@ CREATE TABLE IF NOT EXISTS master.tax_jurisdiction (
         'MONTHLY','QUARTERLY','ANNUAL','BIMONTHLY','SEMI_ANNUAL'))
 );
 COMMENT ON TABLE master.tax_jurisdiction IS
-    'Tax authority hierarchy: COUNTRY→STATE→CITY. Multinational support. '
+    'ARCHETYPE=B;SCOPE=T. Tax authority hierarchy: COUNTRY→STATE→CITY. Multinational support. '
     'Treaty jurisdictions for WHT. parent_id enables multi-level inheritance. '
     'Referenced by company_code.tax_jurisdiction_id.';
 
@@ -999,7 +1002,7 @@ CREATE TABLE IF NOT EXISTS master.tax_type (
     CONSTRAINT tt_deducted_chk      CHECK (NOT is_deducted_at_source OR category = 'WITHHOLDING')
 );
 COMMENT ON TABLE master.tax_type IS
-    'Tax type catalog: INDIRECT (recoverable VAT/GST), WITHHOLDING (deducted at source), '
+    'ARCHETYPE=B;SCOPE=T. Tax type catalog: INDIRECT (recoverable VAT/GST), WITHHOLDING (deducted at source), '
     'CUSTOMS_DUTY (import/export), SURCHARGE (cess, levies).';
 
 
@@ -1049,7 +1052,7 @@ CREATE TABLE IF NOT EXISTS master.fx_rate (
     CONSTRAINT fxr_status_chk           CHECK (status IN ('active','superseded'))
 );
 COMMENT ON TABLE master.fx_rate IS
-    'Exchange rate store. inverse_rate GENERATED. Triangulation via master.get_fx_rate(). '
+    'ARCHETYPE=B;SCOPE=T. Exchange rate store. inverse_rate GENERATED. Triangulation via master.get_fx_rate(). '
     'Rate types: SPOT (intraday), PERIOD_AVG/END (closing), BUDGET, CONTRACTED, HISTORICAL.';
 
 
@@ -1168,7 +1171,7 @@ CREATE TABLE IF NOT EXISTS master.budget_profile (
 );
 
 COMMENT ON TABLE master.budget_profile IS
-    'Approved budget envelope: operating budgets, capital programmes, grants, project funds. '
+    'ARCHETYPE=B;SCOPE=T. Approved budget envelope: operating budgets, capital programmes, grants, project funds. '
     'Top-level authority from which master.budget_allocation rows are carved per fund center. '
     'available_amount = GENERATED (total - reserved - consumed). '
     'reserved_amount/consumed_amount are aggregated upward from budget_allocation via trigger/service. '
@@ -1281,7 +1284,7 @@ CREATE TABLE IF NOT EXISTS master.budget_allocation (
 );
 
 COMMENT ON TABLE master.budget_allocation IS
-    'Fund center authority: carves a slice of master.budget_profile to a specific '
+    'ARCHETYPE=B;SCOPE=T. Fund center authority: carves a slice of master.budget_profile to a specific '
     'cost center / project combination. This is the row that ledger.budget_balance, '
     'ledger.budget_transaction, and document.commitment draw against. '
     'available_amount = GENERATED (allocated - reserved - consumed + released). '
@@ -1378,10 +1381,11 @@ CREATE TABLE IF NOT EXISTS master.planning_model (
 );
 
 COMMENT ON TABLE master.planning_model IS
-    'Planning model definition: driver-based, top-down, bottom-up, or zero-based. '
+    'ARCHETYPE=B;SCOPE=T. Planning model definition: driver-based, top-down, bottom-up, or zero-based. '
     'Versioned per (tenant, code). is_current flags the active version. '
     'Aggregates drivers (control.planning_driver) → outputs (ledger.planning_output). '
-    'Status lifecycle: draft → active → in_review → approved → locked → archived.';
+    'Status lifecycle: draft → active → in_review → approved → locked → archived. '
+    'Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''active'',''in_review'')).';
 
 
 -- ============================================================================
@@ -1445,7 +1449,7 @@ CREATE TABLE IF NOT EXISTS master.bank_party (
 );
 
 COMMENT ON TABLE master.bank_party IS
-    'Bank institution / branch registry. Reusable anchor for bank routing '
+    'ARCHETYPE=B;SCOPE=T. Bank institution / branch registry. Reusable anchor for bank routing '
     'identity. Tenant-scoped, NOT company-scoped — one bank can serve multiple '
     'company codes. Address via address_link (owner_type=''bank_party''). '
     'SAP BNKA equivalent.';
@@ -1542,7 +1546,7 @@ CREATE TABLE IF NOT EXISTS master.bank_account (
 );
 
 COMMENT ON TABLE master.bank_account IS
-    'Unified bank account record — NO owner. Like master.address. '
+    'ARCHETYPE=B;SCOPE=T. Unified bank account record — NO owner. Like master.address. '
     'One row per physical bank account. Ownership expressed by '
     'master.bank_account_link rows. Verification lives here (once per '
     'account, not duplicated per owner). Bank identity via bank_party_id '
@@ -1643,10 +1647,11 @@ CREATE TABLE IF NOT EXISTS master.bank_account_link (
 );
 
 COMMENT ON TABLE master.bank_account_link IS
-    'Polymorphic M:N bridge: owner → bank_account with business purpose and '
+    'ARCHETYPE=C;SCOPE=T. Polymorphic M:N bridge: owner → bank_account with business purpose and '
     'temporal validity. Same pattern as master.address_link. '
     'One bank_account record can be shared by multiple owners without '
-    'duplication. purpose conceptually correlates with address_link.purpose.';
+    'duplication. purpose conceptually correlates with address_link.purpose. '
+    'No status lifecycle — temporal bridge; validity expressed via effective_from/effective_until.';
 
 COMMENT ON COLUMN master.bank_account_link.owner_type IS
     'Polymorphic discriminator. FK to master.owner_type.code. '
@@ -1730,7 +1735,7 @@ CREATE TABLE IF NOT EXISTS master.bank_account_house_config (
 );
 
 COMMENT ON TABLE master.bank_account_house_config IS
-    '1:1 extension of bank_account_link for house-bank operational config. '
+    'ARCHETYPE=B;SCOPE=T. 1:1 extension of bank_account_link for house-bank operational config. '
     'Same pattern as contact_email extends contact_link. Only exists for '
     'links where owner_type = ''company_code''. Holds GL linkage, usage type, '
     'disbursement/collection flags, reconciliation mode — fields that are '
@@ -1805,7 +1810,7 @@ CREATE TABLE IF NOT EXISTS master.payment_method (
 );
 
 COMMENT ON TABLE master.payment_method IS
-    'User-facing payment method catalog. Stable reference data describing '
+    'ARCHETYPE=B;SCOPE=T. User-facing payment method catalog. Stable reference data describing '
     'logical payment instruments with capability flags. Each row answers: '
     '"what can this method do?" Not "is it allowed here?" (that is company policy) '
     'or "how is it executed?" (that is bank_interface_profile).';
@@ -1934,7 +1939,7 @@ CREATE TABLE IF NOT EXISTS master.print_profile (
 );
 
 COMMENT ON TABLE  master.print_profile IS
-    'Named render output preset. Bundles paper, DPI, colour, compression, and '
+    'ARCHETYPE=B;SCOPE=T. Named render output preset. Bundles paper, DPI, colour, compression, and '
     'post-render action settings for reference in render_output.manifest_json. '
     'Exactly one active default per tenant enforced by '
     'master_print_profile_default_uq partial index + fn_enforce_single_default(). '

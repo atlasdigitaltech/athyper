@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS master.tenant (
 );
 
 COMMENT ON TABLE master.tenant IS
-  'Multi-tenant root entity. PK: uuidv7 id. '
+  'ARCHETYPE=B;SCOPE=N. Multi-tenant root entity. PK: uuidv7 id. '
   'Natural key: (realm_key, code) — code is unique per realm only. '
   'Different realms may share the same code.';
 
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS master.principal (
 ALTER TABLE master.principal ADD COLUMN IF NOT EXISTS auth_epoch integer NOT NULL DEFAULT 0;
 
 COMMENT ON TABLE  master.principal IS
-  'Universal actor: users, service accounts, bots. Core identity only — see principal_profile for display data, contact_link for addresses.';
+  'ARCHETYPE=B;SCOPE=T. Universal actor: users, service accounts, bots. Core identity only — see principal_profile for display data, contact_link for addresses.';
 COMMENT ON COLUMN master.principal.auth_epoch IS
   'Trigger-maintained security cache epoch. Incremented by trg_principal_bump_auth_epoch '
   'and related triggers on security-critical mutations. Session service checks this on '
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS master.principal_profile (
 );
 
 COMMENT ON TABLE  master.principal_profile IS
-  '1:1 with principal. Display profile, Keycloak binding, IdP snapshot (audit only). '
+  'ARCHETYPE=C;SCOPE=T. 1:1 with principal. Display profile, Keycloak binding, IdP snapshot (audit only). '
   'Working-context defaults (company, cost center, etc.) pre-populate document headers.';
 COMMENT ON COLUMN master.principal_profile.default_company_code_id IS
     'Working-context default company code. Pre-populates document headers. '
@@ -281,9 +281,10 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
 );
 
 COMMENT ON TABLE master.principal_identity_binding IS
-    'IdP/Keycloak shadow table. One row per (principal, provider). '
+    'ARCHETYPE=C;SCOPE=T. IdP/Keycloak shadow table. One row per (principal, provider). '
     'Separated from principal_profile: "who is this person in the product" '
-    'vs "how is this actor represented in IAM". Multi-IdP ready.';
+    'vs "how is this actor represented in IAM". Multi-IdP ready. '
+    'sync_status is protocol/IAM health — not a business lifecycle status.';
 COMMENT ON COLUMN master.principal_identity_binding.provider_code IS
     'Identity provider code. Sealed enum (inline CHECK). Adding a new IdP '
     'requires code changes in the sync adapter — not business-extensible.';
@@ -340,7 +341,7 @@ CREATE TABLE IF NOT EXISTS master.contact_link (
 );
 
 COMMENT ON TABLE  master.contact_link IS
-  'Polymorphic canonical address store. One row per owner+channel+purpose. Detail in contact_email/contact_phone.';
+  'ARCHETYPE=B;SCOPE=T. Polymorphic canonical address store. One row per owner+channel+purpose. Detail in contact_email/contact_phone.';
 
 -- §5 contact_email — 1:1 extension of contact_link for channel_type=email
 CREATE TABLE IF NOT EXISTS master.contact_email (
@@ -383,7 +384,7 @@ CREATE TABLE IF NOT EXISTS master.contact_email (
 );
 
 COMMENT ON TABLE  master.contact_email IS
-  '1:1 extension of contact_link for channel_type=email. Deliverability metadata and parsed components.';
+  'ARCHETYPE=C;SCOPE=T. 1:1 extension of contact_link for channel_type=email. Deliverability metadata and parsed components.';
 
 -- §6 contact_phone — 1:1 extension of contact_link for phone/sms/whatsapp
 CREATE TABLE IF NOT EXISTS master.contact_phone (
@@ -420,7 +421,7 @@ CREATE TABLE IF NOT EXISTS master.contact_phone (
 );
 
 COMMENT ON TABLE  master.contact_phone IS
-  '1:1 extension of contact_link for phone/sms/whatsapp. E.164 decomposition and carrier metadata.';
+  'ARCHETYPE=C;SCOPE=T. 1:1 extension of contact_link for phone/sms/whatsapp. E.164 decomposition and carrier metadata.';
 
 -- §7 label — localisation labels keyed by (entity, code, locale_code)
 CREATE TABLE IF NOT EXISTS master.label (
@@ -457,11 +458,12 @@ CREATE TABLE IF NOT EXISTS master.label (
 );
 
 COMMENT ON TABLE master.label IS
-  'Localisation labels keyed by (entity, code, locale_code). '
+  'ARCHETYPE=B_LITE;SCOPE=G. Localisation labels keyed by (entity, code, locale_code). '
   'Replaces hardcoded name/description columns across reference tables. '
   'locale_code references shared.locale(code). '
   'Entity/code pair validity enforced by master.trg_label_validate() '
-  'via master.label_entity_type.';
+  'via master.label_entity_type. '
+  'tenant_id IS NULL = global/platform label; IS NOT NULL = tenant override.';
 
 COMMENT ON COLUMN master.label.entity      IS 'Logical entity identifier; must have a row in master.label_entity_type.';
 COMMENT ON COLUMN master.label.code        IS 'PK value of the source row in the registered source table.';
@@ -496,7 +498,8 @@ CREATE TABLE IF NOT EXISTS master.label_entity_type (
 );
 
 COMMENT ON TABLE master.label_entity_type IS
-  'Registry mapping entity identifiers to their source table and label columns. '
+  'ARCHETYPE=F;SCOPE=N. Registry mapping entity identifiers to their source table and label columns. '
+  'PK is entity (text code). No tenant_id — system-wide routing contract. '
   'Enables generic label synchronisation without hard-coding table paths.';
 
 
@@ -593,7 +596,7 @@ CREATE TABLE IF NOT EXISTS master.owner_type (
 );
 
 COMMENT ON TABLE master.owner_type IS
-  'Polymorphic routing contract. One row per entity type that can own addresses '
+  'ARCHETYPE=B;SCOPE=G. Polymorphic routing contract. One row per entity type that can own addresses '
   'and contact links. Encodes the schema/table backing each owner_type code, '
   'plus advisory allowed_*_purposes arrays used by UI to filter dropdowns. '
   'PK is surrogate uuid (id). Uniqueness of code is per-namespace: '
@@ -685,7 +688,7 @@ CREATE TABLE IF NOT EXISTS master.address (
 );
 
 COMMENT ON TABLE master.address IS
-  'Normalised postal address record. Owns no owner — ownership is expressed by '
+  'ARCHETYPE=B;SCOPE=T. Normalised postal address record. Owns no owner — ownership is expressed by '
   'master.address_link rows. One address can be shared across multiple owners '
   'without duplication. address_type = what the place physically is. '
   'Business purpose (billing, shipping…) lives on address_link, not here.';
@@ -779,10 +782,11 @@ CREATE TABLE IF NOT EXISTS master.address_link (
 );
 
 COMMENT ON TABLE master.address_link IS
-  'Polymorphic M:N bridge: owner → address with business purpose and temporal validity. '
+  'ARCHETYPE=C;SCOPE=T. Polymorphic M:N bridge: owner → address with business purpose and temporal validity. '
   'One address row can be shared by multiple owners without duplication. '
   'purpose is conceptually correlated with contact_link.purpose — joining on '
-  'owner_type + owner_id + purpose pairs a delivery address with the relevant contact.';
+  'owner_type + owner_id + purpose pairs a delivery address with the relevant contact. '
+  'No status lifecycle — temporal bridge; validity expressed via effective_from/effective_until.';
 
 COMMENT ON COLUMN master.address_link.owner_type IS
   'Polymorphic discriminator. FK to master.owner_type.code.';
@@ -835,7 +839,7 @@ CREATE TABLE IF NOT EXISTS master.tenant_module_subscription (
 );
 
 COMMENT ON TABLE master.tenant_module_subscription IS
-  'Tenant activated modules. Controls which product modules a tenant has access to.';
+  'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Tenant activated modules. Controls which product modules a tenant has access to.';
 
 
 -- ============================================================================
@@ -867,7 +871,8 @@ CREATE TABLE IF NOT EXISTS master.tenant_feature_entitlement (
 );
 
 COMMENT ON TABLE master.tenant_feature_entitlement IS
-  'Tenant activated enterprise features. Checked alongside plan_feature_access for feature gate.';
+  'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Tenant activated enterprise features. Checked alongside plan_feature_access for feature gate. '
+  'Missing updated_at/by — add alongside is_active GENERATED.';
 
 
 -- ============================================================================
@@ -899,7 +904,7 @@ CREATE TABLE IF NOT EXISTS master.tenant_permission_override (
 );
 
 COMMENT ON TABLE master.tenant_permission_override IS
-  'Tenant-level permission overrides. Allows granting plan-restricted permissions '
+  'ARCHETYPE=C;SCOPE=T. Tenant-level permission overrides. Allows granting plan-restricted permissions '
   'without upgrading the subscription plan. Checked by check_permission().';
 
 
@@ -937,7 +942,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_access (
 );
 
 COMMENT ON TABLE master.company_code_access IS
-  'Polymorphic company-code ACL for master data entities (supplier, customer, etc.). '
+  'ARCHETYPE=C;SCOPE=T. Polymorphic company-code ACL for master data entities (supplier, customer, etc.). '
   'inherit_subtree=true means access extends to child company codes.';
 
 
@@ -988,7 +993,7 @@ CREATE TABLE IF NOT EXISTS master.auth_group (
 );
 
 COMMENT ON TABLE master.auth_group IS
-  'RBAC group entity. Groups aggregate roles via auth_group_role. '
+  'ARCHETYPE=B;SCOPE=T. RBAC group entity. Groups aggregate roles via auth_group_role. '
   'Principals are members via auth_group_member. '
   'is_system = true means standard group, immutable by tenant.';
 
@@ -1070,7 +1075,7 @@ CREATE TABLE IF NOT EXISTS master.auth_group_role (
 );
 
 COMMENT ON TABLE master.auth_group_role IS
-    'Links roles to groups with two orthogonal scope dimensions: '
+    'ARCHETYPE=B_LITE;SCOPE=T. Links roles to groups with two orthogonal scope dimensions: '
     'visibility_scope (all/own/team) controls row-level data filtering. '
     'assignment_scope_type + assignment_scope_ref_id controls the organizational '
     'boundary (tenant/company_code/legal_entity) in which the role applies. '
@@ -1116,7 +1121,7 @@ CREATE TABLE IF NOT EXISTS master.auth_group_member (
 );
 
 COMMENT ON TABLE master.auth_group_member IS
-  'Links principals to groups. A principal inherits all roles (and their scopes) '
+  'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Links principals to groups. A principal inherits all roles (and their scopes) '
   'from every group they belong to.';
 
 
@@ -1147,7 +1152,7 @@ CREATE TABLE IF NOT EXISTS master.principal_persona (
 );
 
 COMMENT ON TABLE master.principal_persona IS
-  'Assigns exactly one persona per principal per tenant. '
+  'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Assigns exactly one persona per principal per tenant. '
   'Persona determines base permission set via shared.persona_permission.';
 
 
@@ -1194,7 +1199,7 @@ CREATE TABLE IF NOT EXISTS master.team (
 );
 
 COMMENT ON TABLE master.team IS
-  'Data scope resolver for scope=team permission evaluation. '
+  'ARCHETYPE=B;SCOPE=T. Data scope resolver for scope=team permission evaluation. '
   'team_type: functional (permanent), project (time-bound), virtual (cross-functional).';
 
 
@@ -1229,7 +1234,7 @@ CREATE TABLE IF NOT EXISTS master.team_member (
 -- Patch 002 Fix 2: updated to reflect patch 001 change — DEFERRABLE UNIQUE removed,
 -- replaced by partial index team_member_active_uidx (WHERE left_at IS NULL).
 COMMENT ON TABLE master.team_member IS
-    'Team membership. left_at preserved for history. '
+    'ARCHETYPE=C;SCOPE=T. Team membership. left_at preserved for history. '
     'Active members: left_at IS NULL. '
     'Uniqueness enforced by partial index team_member_active_uidx '
     '(WHERE left_at IS NULL) — allows re-joining after leaving.';
@@ -1314,7 +1319,7 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
 );
 
 COMMENT ON TABLE master.access_grant IS
-    'Runtime allow/deny overrides. Deny always beats allow (SoD enforcement). '
+    'ARCHETYPE=B;SCOPE=T. Runtime allow/deny overrides. Deny always beats allow (SoD enforcement). '
     'visibility_scope: optional row-level filter for allow grants. '
     'assignment_scope_type: optional org boundary. NULL = unscoped (applies regardless of CC). '
     'legal_entity scope on access_grant always means full descendant subtree '
@@ -1351,7 +1356,7 @@ CREATE TABLE IF NOT EXISTS master.group_feature_grant (
 );
 
 COMMENT ON TABLE master.group_feature_grant IS
-  'Enterprise feature access grants to groups. access_type: view or edit.';
+  'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Enterprise feature access grants to groups. access_type: view or edit.';
 
 
 -- ============================================================================
@@ -1382,7 +1387,7 @@ CREATE TABLE IF NOT EXISTS master.principal_feature_grant (
 );
 
 COMMENT ON TABLE master.principal_feature_grant IS
-  'Enterprise feature access grants to individual principals. access_type: view or edit.';
+  'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Enterprise feature access grants to individual principals. access_type: view or edit.';
 
 
 -- ============================================================================
@@ -1451,7 +1456,7 @@ CREATE TABLE IF NOT EXISTS master.notification (
 -- Patch 002 Fix 5: corrected dedup guarantee — index includes created_at (partition key
 -- required by PG partitioned tables). Cross-partition dedup is application responsibility.
 COMMENT ON TABLE  master.notification IS
-    'Per-recipient inbox entry. Intended grain: one row per (message_id, recipient_id, channel). '
+    'ARCHETYPE=C;SCOPE=T. Per-recipient inbox entry. Intended grain: one row per (message_id, recipient_id, channel). '
     'DB enforces within each partition via notif_msg_recipient_channel_uidx '
     '(includes created_at as required by PG partitioned-table rules). '
     'Cross-partition dedup is an application responsibility (INSERT ... ON CONFLICT DO NOTHING). '
@@ -1540,7 +1545,7 @@ CREATE TABLE IF NOT EXISTS master.tenant_profile (
 );
 
 COMMENT ON TABLE  master.tenant_profile IS
-    '1:1 extension of master.tenant. Per-tenant locale and fiscal defaults. '
+    'ARCHETYPE=C;SCOPE=T. 1:1 extension of master.tenant. Per-tenant locale and fiscal defaults. '
     'All columns nullable — NULL means "use platform default". '
     'country_code / currency_code / locale_code / timezone_code '
     'FK-validated against shared.* reference tables.';
@@ -1644,10 +1649,10 @@ CREATE TABLE IF NOT EXISTS master.delegation_grant (
 );
 
 COMMENT ON TABLE  master.delegation_grant IS
-    'Active authority delegation. delegator_id authorises delegate_id to act '
+    'ARCHETYPE=C;SCOPE=T. Active authority delegation. delegator_id authorises delegate_id to act '
     'on their behalf within scope_type + scope_ref. '
     'expires_at is mandatory — open-ended delegation is not permitted. '
-    'Revocation: set is_revoked=true + revoked_at + revoked_by. '
+    'Revocation: set is_revoked=true + revoked_at + revoked_by (is_revoked flag, not standard status). '
     'scope_type validated via master.delegation_scope lookup (extensible). '
     'permissions[] references shared.permission.code values. '
     'request_id links to event.delegation_request that created this grant.';
@@ -1806,9 +1811,10 @@ CREATE TABLE IF NOT EXISTS master.attachment (
 );
 
 COMMENT ON TABLE  master.attachment IS
-    'File / blob metadata and S3 storage coordinates. Content-addressable via sha256. '
+    'ARCHETYPE=B;SCOPE=T. File / blob metadata and S3 storage coordinates. Content-addressable via sha256. '
     'Ownership via entity_document_link (not inline owner columns). '
-    'ACL via master.attachment_acl. kind validated via master.attachment_kind lookup.';
+    'ACL via master.attachment_acl. kind validated via master.attachment_kind lookup. '
+    'DEVIATION: is_active is a manual boolean (NOT GENERATED) — convert alongside status column stabilisation.';
 COMMENT ON COLUMN master.attachment.sha256 IS
     'SHA-256 hex digest for content-addressable dedup. '
     'reference_count incremented when a duplicate is detected.';
@@ -1818,6 +1824,48 @@ COMMENT ON COLUMN master.attachment.storage_key IS
 COMMENT ON COLUMN master.attachment.kind IS
     'Functional classification. Lookup: master.attachment_kind. '
     'e.g. attachment, letterhead, template_asset, avatar, evidence.';
+
+-- ── Text extraction (Tika worker — Track B2.2) ──────────────────────────────
+-- Plain text extracted by apache/tika from binary attachments (PDF / Office /
+-- OCR on images). Populated async by the attachment-text-extract worker.
+-- NULL until the worker has run. text_extraction_status lets the worker skip
+-- already-processed rows (idempotency) and surface terminal errors.
+ALTER TABLE master.attachment
+    ADD COLUMN IF NOT EXISTS extracted_text          text,
+    ADD COLUMN IF NOT EXISTS extracted_text_chars    integer,
+    ADD COLUMN IF NOT EXISTS text_extracted_at       timestamptz,
+    ADD COLUMN IF NOT EXISTS text_extraction_status  text,
+    ADD COLUMN IF NOT EXISTS text_extraction_error   text;
+
+DO $$ BEGIN
+    ALTER TABLE master.attachment
+        ADD CONSTRAINT attachment_text_extraction_status_chk CHECK (
+            text_extraction_status IS NULL OR text_extraction_status IN (
+                'pending', 'extracted', 'skipped', 'failed'
+            )
+        );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON COLUMN master.attachment.extracted_text IS
+    'Plain text extracted by apache/tika. NULL until attachment-text-extract worker runs. '
+    'Truncated at the worker-level cap to bound row size.';
+COMMENT ON COLUMN master.attachment.text_extraction_status IS
+    'Extraction state: pending (enqueued, not yet run), extracted (success), '
+    'skipped (unsupported mime or size cap), failed (terminal error after retries).';
+
+-- ── PII classification (runs inline in the tika-extract worker) ─────────────
+-- pii_detected is true when at least one PII pattern was matched in
+-- extracted_text. pii_types carries the list of matched categories
+-- (e.g. ["email","ssn"]); the actual offending substrings are never stored
+-- — only the category labels — to keep downstream exposure minimal.
+ALTER TABLE master.attachment
+    ADD COLUMN IF NOT EXISTS pii_detected    boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS pii_types       jsonb   NOT NULL DEFAULT '[]'::jsonb,
+    ADD COLUMN IF NOT EXISTS pii_scanned_at  timestamptz;
+
+COMMENT ON COLUMN master.attachment.pii_types IS
+    'JSONB array of matched PII category labels only — never the raw match. '
+    'Populated alongside extracted_text by the tika-extract worker.';
 
 
 -- ============================================================================
@@ -1874,7 +1922,7 @@ CREATE TABLE IF NOT EXISTS master.multipart_upload (
 );
 
 COMMENT ON TABLE  master.multipart_upload IS
-    'S3 multipart upload tracker. One row per in-flight upload. '
+    'ARCHETYPE=E;SCOPE=T. S3 multipart upload tracker. One row per in-flight upload. '
     'part_etags is jsonb array of {part_number: N, etag: "..."} objects. '
     'On completion: attachment row is created, attachment_id is set, status=completed. '
     'Cleanup job removes expired aborted/failed rows.';
@@ -1919,7 +1967,7 @@ CREATE TABLE IF NOT EXISTS master.attachment_acl (
 );
 
 COMMENT ON TABLE  master.attachment_acl IS
-    'Per-attachment access control grants. Exactly one of principal_id / role_id. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Per-attachment access control grants. Exactly one of principal_id / role_id. '
     'Supplements master.access_grant (entity-level) for file-level ACL needs. '
     'permission: read (metadata), download (content), delete, share.';
 
@@ -1983,7 +2031,7 @@ CREATE TABLE IF NOT EXISTS master.comment (
 );
 
 COMMENT ON TABLE  master.comment IS
-    'Threaded comments on any entity. Renamed from entity_comment. '
+    'ARCHETYPE=C;SCOPE=T. Threaded comments on any entity. Renamed from entity_comment. '
     'Absorbs attachment_comment via context_type=''attachment''. '
     'context_type validated via master.comment_type lookup (extensible). '
     'Soft-delete: filter deleted_at IS NULL in all production queries. '
@@ -2040,7 +2088,7 @@ CREATE TABLE IF NOT EXISTS master.comment_draft (
 );
 
 COMMENT ON TABLE  master.comment_draft IS
-    'Auto-saved pre-submit comment drafts. One row per '
+    'ARCHETYPE=C;SCOPE=T. Auto-saved pre-submit comment drafts. One row per '
     '(principal, entity, parent_comment_id). Deleted on submit or discard. '
     'Not a comment — never referenced by other tables. '
     'context_type validated via master.comment_type lookup.';
@@ -2071,7 +2119,7 @@ CREATE TABLE IF NOT EXISTS master.comment_mention (
 );
 
 COMMENT ON TABLE  master.comment_mention IS
-    '@-mention extraction table. One row per (comment, mentioned principal). '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. @-mention extraction table. One row per (comment, mentioned principal). '
     'Populated by trigger on master.comment INSERT/UPDATE. '
     'Enables O(1) "who was mentioned in this comment" queries. '
     'context_type mirrors master.comment.context_type.';
@@ -2105,7 +2153,7 @@ CREATE TABLE IF NOT EXISTS master.comment_reaction (
 );
 
 COMMENT ON TABLE  master.comment_reaction IS
-    'Emoji reactions on comments. One row per (principal, comment, reaction_type). '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Emoji reactions on comments. One row per (principal, comment, reaction_type). '
     'Unique constraint prevents duplicate reactions. '
     'reaction_type in master.reaction_type lookup (extensible — tenants add custom emoji). '
     'context_type mirrors master.comment.context_type.';
@@ -2155,7 +2203,7 @@ CREATE TABLE IF NOT EXISTS master.conversation (
 );
 
 COMMENT ON TABLE  master.conversation IS
-    'Messaging conversation envelope. type validated via master.conversation_type lookup. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Messaging conversation envelope. type validated via master.conversation_type lookup. '
     'entity_type + entity_id optionally anchor a conversation to a business entity. '
     'Participants tracked in master.conversation_participant.';
 
@@ -2200,7 +2248,7 @@ CREATE TABLE IF NOT EXISTS master.conversation_participant (
 );
 
 COMMENT ON TABLE  master.conversation_participant IS
-    'Conversation membership roster with read cursor. '
+    'ARCHETYPE=C;SCOPE=T. Conversation membership roster with read cursor. '
     'One row per (conversation, principal). '
     'last_read_message_id + last_read_at enable unread message counts. '
     'left_at IS NULL = currently active member.';
@@ -2241,7 +2289,7 @@ CREATE TABLE IF NOT EXISTS master.lifecycle_instance (
 );
 
 COMMENT ON TABLE  master.lifecycle_instance IS
-    'Current state of a specific entity within a lifecycle. '
+    'ARCHETYPE=C;SCOPE=T. Current state of a specific entity within a lifecycle. '
     'One row per (entity_name, entity_id, lifecycle_id). '
     'Updated atomically with log.entity_lifecycle_log on every state transition. '
     'Lightweight alternative to document.workflow_instance for simple entities. '
@@ -2299,7 +2347,7 @@ CREATE TABLE IF NOT EXISTS master.document (
 );
 
 COMMENT ON TABLE master.document IS
-    'Document envelope registry. Lightweight master entity — code + tags. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Document envelope registry. Lightweight master entity — code + tags. '
     'No financial data. Referenced by document.* tables and master.entity_document_link.';
 
 
@@ -2355,8 +2403,9 @@ CREATE TABLE IF NOT EXISTS master.brand_profile (
 );
 
 COMMENT ON TABLE  master.brand_profile IS
-    'Tenant colour palette, typography, and locale settings. '
-    'fn_enforce_single_default() ensures at most one active default per tenant.';
+    'ARCHETYPE=B;SCOPE=T. Tenant colour palette, typography, and locale settings. '
+    'fn_enforce_single_default() ensures at most one active default per tenant. '
+    'DEVIATION: is_active is a manual boolean (NOT GENERATED) — convert alongside status column stabilisation.';
 COMMENT ON COLUMN master.brand_profile.palette IS
     'Design-token colour map: primary, secondary, accent, surface, on-surface, etc.';
 COMMENT ON COLUMN master.brand_profile.typography IS
@@ -2419,9 +2468,10 @@ CREATE TABLE IF NOT EXISTS master.letterhead (
 );
 
 COMMENT ON TABLE  master.letterhead IS
-    'Reusable page header/footer/watermark definitions for PDF rendering. '
+    'ARCHETYPE=B;SCOPE=T. Reusable page header/footer/watermark definitions for PDF rendering. '
     'NULL company_code_id = applies to all company codes in tenant. '
-    'page_margins validated by document.trg_validate_page_margins() trigger.';
+    'page_margins validated by document.trg_validate_page_margins() trigger. '
+    'DEVIATION: is_active is a manual boolean (NOT GENERATED) — convert alongside status column stabilisation.';
 COMMENT ON COLUMN master.letterhead.company_code_id IS
     'Scope restriction. NULL = tenant-wide default. '
     'References master.company_code.';
@@ -2483,7 +2533,7 @@ CREATE TABLE IF NOT EXISTS master.template (
 );
 
 COMMENT ON TABLE  master.template IS
-    'Template registry. Tracks engine, lifecycle status, and current live version. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Template registry. Tracks engine, lifecycle status, and current live version. '
     'current_version_id → snapshot.template_version via DEFERRABLE FK (06_constraints).';
 COMMENT ON COLUMN master.template.current_version_id IS
     'Points to the currently active template version. '
@@ -2538,7 +2588,7 @@ CREATE TABLE IF NOT EXISTS master.attachment_comment (
 );
 
 COMMENT ON TABLE  master.attachment_comment IS
-    'Threaded comments on attachments. '
+    'ARCHETYPE=C;SCOPE=T. Threaded comments on attachments. '
     'Satellite of master.attachment — follows master.comment family pattern. '
     'fn_comment_parent_same_attachment() enforces thread integrity.';
 COMMENT ON COLUMN master.attachment_comment.mentions IS
@@ -2578,8 +2628,9 @@ CREATE TABLE IF NOT EXISTS master.template_binding (
 );
 
 COMMENT ON TABLE  master.template_binding IS
-    'Maps (entity_name, operation, variant) to a template with priority-based resolution. '
-    'resolve_template_binding() returns highest-priority active binding.';
+    'ARCHETYPE=C;SCOPE=T. Maps (entity_name, operation, variant) to a template with priority-based resolution. '
+    'resolve_template_binding() returns highest-priority active binding. '
+    'is_active is a manual boolean — no status column, no update tracking.';
 COMMENT ON COLUMN master.template_binding.priority IS
     'Higher value = wins resolution when multiple active bindings match the same key. '
     'Partial unique index prevents duplicate (template, entity, op, variant) per active binding.';
@@ -2623,7 +2674,7 @@ CREATE TABLE IF NOT EXISTS master.entity_document_link (
 );
 
 COMMENT ON TABLE  master.entity_document_link IS
-    'Polymorphic many-to-many: any entity type → attachment. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Polymorphic many-to-many: any entity type → attachment. '
     'Canonical sole model for entity-to-document associations. '
     'Pattern: master.address_link. entity_id is text for polymorphic PK support.';
 COMMENT ON COLUMN master.entity_document_link.entity_type IS
@@ -2680,8 +2731,9 @@ CREATE TABLE IF NOT EXISTS master.trusted_device (
 );
 
 COMMENT ON TABLE  master.trusted_device IS
-  'Step-up MFA suppression tokens. One row per trusted browser session. '
-  'App-owned — not a Keycloak credential. Cookie holds raw token; only SHA-256 hash stored.';
+  'ARCHETYPE=C;SCOPE=T. Step-up MFA suppression tokens. One row per trusted browser session. '
+  'App-owned — not a Keycloak credential. Cookie holds raw token; only SHA-256 hash stored. '
+  'is_revoked flag (not standard status) controls active/inactive state.';
 COMMENT ON COLUMN master.trusted_device.device_token_hash IS
   'SHA-256 hex digest of the opaque random 32-byte cookie value. Never store the raw token.';
 COMMENT ON COLUMN master.trusted_device.device_name IS

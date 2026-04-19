@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition (
 );
 
 COMMENT ON TABLE document.purchase_requisition IS
-    'Internal purchase request. Approvable document. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''partially_converted'')). Internal purchase request. Approvable document. '
     'Pre-encumbrance at approval reserves budget before PO. '
     'Status: draft → pending_approval → approved → partially_converted → fully_converted.';
 
@@ -214,6 +214,10 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition_line (
     CONSTRAINT prl_converted_chk    CHECK (converted_quantity >= 0 AND converted_quantity <= quantity)
 );
 
+COMMENT ON TABLE document.purchase_requisition_line IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Purchase requisition line items. '
+    'estimated_amount + remaining_quantity GENERATED. status tracks per-line conversion progress.';
+
 
 -- ============================================================================
 -- §6  document.purchase_order_confirmation  (supplier artifact – not approvable)
@@ -267,7 +271,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation (
 );
 
 COMMENT ON TABLE document.purchase_order_confirmation IS
-    'Supplier acknowledgement of a PO. Not approvable. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Supplier acknowledgement of a PO. Not approvable. '
     'Vendor change proposals route approval through a commitment amendment, not this table.';
 
 
@@ -316,6 +320,10 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation_line (
     CONSTRAINT pocl_line_status_chk CHECK (line_status IN (
         'confirmed','changed','rejected','partial'))
 );
+
+COMMENT ON TABLE document.purchase_order_confirmation_line IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Per-line supplier confirmation values and variances. '
+    'Append-only — new confirmation supersedes prior via parent confirmation_id.';
 
 
 -- ============================================================================
@@ -385,6 +393,10 @@ CREATE TABLE IF NOT EXISTS document.delivery_note (
         'fully_receipted','returned','cancelled'))
 );
 
+COMMENT ON TABLE document.delivery_note IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Logistics delivery note from supplier. '
+    'Not approvable. Drives goods_receipt creation on arrival.';
+
 
 -- ============================================================================
 -- §7  document.delivery_note_line
@@ -446,6 +458,10 @@ CREATE TABLE IF NOT EXISTS document.delivery_note_line (
     CONSTRAINT dnl_status_chk       CHECK (status IN (
         'open','partially_receipted','receipted','returned','cancelled'))
 );
+
+COMMENT ON TABLE document.delivery_note_line IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Delivery note line items. '
+    'accepted_quantity GENERATED (received - damaged - rejected). Tracks lot/batch/serial.';
 
 
 -- ============================================================================
@@ -529,7 +545,7 @@ CREATE TABLE IF NOT EXISTS document.goods_receipt (
 );
 
 COMMENT ON TABLE document.goods_receipt IS
-    'Approvable GR. On posting: ledger.inventory_movement (RECEIPT), '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'')). Approvable GR. On posting: ledger.inventory_movement (RECEIPT), '
     'ledger.inventory_valuation_layer, GR/IR accrual JE, ledger.commitment_fulfillment. '
     'Updates commitment_line.received_quantity cache via trigger.';
 
@@ -616,6 +632,10 @@ CREATE TABLE IF NOT EXISTS document.goods_receipt_line (
         'open','posted','reversed','cancelled'))
 );
 
+COMMENT ON TABLE document.goods_receipt_line IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. GR line items. '
+    'net_amount GENERATED (accepted_quantity × unit_price). Populated with inventory_movement_id + fulfillment_id at posting.';
+
 
 -- ============================================================================
 -- §8.2  document.service_entry_sheet  (approvable – two-step)
@@ -701,7 +721,7 @@ CREATE TABLE IF NOT EXISTS document.service_entry_sheet (
 );
 
 COMMENT ON TABLE document.service_entry_sheet IS
-    'Approvable SES. Two-step: acceptance by requestor (pending_acceptance→accepted), '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_acceptance'',''accepted'',''pending_approval'',''approved'',''posted'')). Approvable SES. Two-step: acceptance by requestor (pending_acceptance→accepted), '
     'then finance approval (pending_approval→approved). '
     'On posting: accrual JE (Dr Expense, Cr GR/IR Clearing) + ledger.commitment_fulfillment.';
 
@@ -775,3 +795,7 @@ CREATE TABLE IF NOT EXISTS document.service_entry_sheet_line (
     CONSTRAINT sesl_status_chk      CHECK (status IN (
         'open','posted','reversed','cancelled'))
 );
+
+COMMENT ON TABLE document.service_entry_sheet_line IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. SES line items. '
+    'net_amount GENERATED (quantity × unit_price). Populated with fulfillment_id at posting.';

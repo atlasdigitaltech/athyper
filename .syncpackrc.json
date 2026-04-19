@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/syncpack@14/dist/schema.json",
+  "versionGroups": [
+    {
+      "label": "typescript — single workspace version",
+      "dependencies": ["typescript"],
+      "pinVersion": "^6.0.3"
+    },
+    {
+      "label": "@types/react — single workspace version",
+      "dependencies": ["@types/react"],
+      "pinVersion": "^19.2.14"
+    },
+    {
+      "label": "@types/react-dom — single workspace version",
+      "dependencies": ["@types/react-dom"],
+      "pinVersion": "^19.2.3"
+    },
+    {
+      "label": "@tanstack/react-query — single workspace version for non-peer usage",
+      "dependencies": ["@tanstack/react-query"],
+      "dependencyTypes": ["dev", "prod"],
+      "pinVersion": "^5.99.0"
+    }
+  ],
+  "semverGroups": [
+    {
+      "label": "Internal @athyper/* deps must use workspace: protocol",
+      "dependencies": ["@athyper/**"],
+      "range": "workspace:"
+    }
+  ]
+}

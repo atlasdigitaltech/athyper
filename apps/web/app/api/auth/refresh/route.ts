@@ -37,7 +37,7 @@ export async function POST() {
   }
 
   const baseUrl =
-    process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
+    process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
   const env = process.env.ENVIRONMENT ?? "local";
 
   const cookieStore = await cookies();

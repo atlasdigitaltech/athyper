@@ -15,10 +15,12 @@
  *        "stream: <THREAT> FOUND" — threat detected, THREAT is the signature name
  *
  * Fail-open vs fail-closed:
- *   onUnavailable: "fail-open"  (default) — connection errors log a warning and
- *     treat the file as clean so uploads are not blocked by infrastructure outage.
- *   onUnavailable: "fail-closed" — re-throws the connection error, causing the
- *     upload handler to return 503. Use in high-security environments.
+ *   onUnavailable: "fail-closed" (default) — re-throws the connection error, causing
+ *     the upload handler to return 503. Prevents silent bypass of virus scanning when
+ *     clamd is unreachable.
+ *   onUnavailable: "fail-open" — connection errors log a warning and treat the file
+ *     as clean. Only for local development; the server config preflight rejects this
+ *     setting in staging/production.
  */
 
 import * as net from "node:net";
@@ -41,8 +43,8 @@ export interface ClamavScannerOptions {
   timeoutMs?:    number;
   /**
    * Behaviour when clamd is unreachable or returns an unexpected error:
-   *   "fail-open"   (default) — returns { clean: true, skipped: true }
-   *   "fail-closed" — re-throws, causing the caller to return 503
+   *   "fail-closed" (default) — re-throws, causing the caller to return 503
+   *   "fail-open"               — returns { clean: true, skipped: true }
    */
   onUnavailable?: "fail-open" | "fail-closed";
 }
@@ -65,7 +67,7 @@ export class ClamavScanner {
     this.host          = opts.host;
     this.port          = opts.port;
     this.timeoutMs     = opts.timeoutMs ?? 10_000;
-    this.onUnavailable = opts.onUnavailable ?? "fail-open";
+    this.onUnavailable = opts.onUnavailable ?? "fail-closed";
   }
 
   /**

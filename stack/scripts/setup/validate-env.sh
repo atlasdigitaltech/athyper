@@ -1,0 +1,439 @@
+#!/usr/bin/env bash
+# ============================================================
+# athyper Stack - VALIDATE ENVIRONMENT - Linux/macOS
+# Location:
+#   stack/scripts/setup/validate-env.sh
+# Usage:
+#   ./validate-env.sh              (auto-detects .env)
+#   ./validate-env.sh /path/.env   (explicit env file)
+#
+# Validates that all required environment variables are set and
+# consistent before docker compose up. Called automatically by
+# stack/scripts/stack-profile/up.sh. Can also be run standalone.
+#
+# Exit codes:
+#   0 — all checks pass
+#   1 — fatal: missing required vars (stack will not start)
+#   2 — warnings only (non-blocking, informational)
+# ============================================================
+
+set -euo pipefail
+
+# ----------------------------
+# Resolve paths
+# ----------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ENV_DIR="$STACK_DIR/env"
+ENV_FILE="${1:-$ENV_DIR/.env}"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "FATAL: env file not found: $ENV_FILE"
+  echo "Run setup-env.sh first or copy an .env.example template."
+  exit 1
+fi
+
+# ----------------------------
+# Parse .env into an associative array
+# ----------------------------
+declare -A ENV_MAP
+
+while IFS='=' read -r key value; do
+  [[ "$key" =~ ^[[:space:]]*# ]] && continue
+  [[ -z "$key" ]] && continue
+  key=$(echo "$key" | xargs)
+  value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
+  ENV_MAP["$key"]="$value"
+done < "$ENV_FILE"
+
+ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-}"
+
+# ----------------------------
+# Helper: check a var is set and not a placeholder
+# ----------------------------
+ERRORS=0
+WARNINGS=0
+
+require_var() {
+  local var="$1"
+  local val="${ENV_MAP[$var]:-}"
+  if [[ -z "$val" ]]; then
+    echo "  FAIL  $var is not set"
+    ERRORS=$((ERRORS + 1))
+    return
+  fi
+  # Catch un-substituted placeholders like ${VAR}
+  if [[ "$val" =~ ^\$\{.+\}$ ]]; then
+    echo "  FAIL  $var = $val (placeholder not resolved — inject from secrets manager)"
+    ERRORS=$((ERRORS + 1))
+    return
+  fi
+}
+
+warn_var() {
+  local var="$1"
+  local msg="$2"
+  local val="${ENV_MAP[$var]:-}"
+  if [[ -z "$val" ]]; then
+    echo "  WARN  $var: $msg"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+}
+
+warn_placeholder() {
+  local var="$1"
+  local val="${ENV_MAP[$var]:-}"
+  if [[ "$val" =~ ^\$\{.+\}$ ]]; then
+    echo "  WARN  $var = $val (placeholder not resolved)"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+}
+
+echo ""
+echo "=========================================="
+echo "  athyper Stack — Environment Validation"
+echo "  File: $ENV_FILE"
+echo "  Environment: ${ENVIRONMENT:-<not set>}"
+echo "=========================================="
+echo ""
+
+# ----------------------------
+# 1. Core identity
+# ----------------------------
+echo "[1/6] Core identity..."
+require_var ENVIRONMENT
+require_var COMPOSE_PROJECT_NAME
+
+# ----------------------------
+# 2. Required vars (all environments)
+# ----------------------------
+echo "[2/6] Required variables..."
+require_var DATABASE_URL
+require_var REDIS_URL
+require_var PUBLIC_BASE_URL
+require_var PUBLIC_WEB_URL
+require_var APPS_ATHYPER_WEB_HOST
+require_var APPS_ATHYPER_API_HOST
+require_var APPS_ATHYPER_WEB_UPSTREAM_URL
+require_var GATEWAY_HOST
+require_var IAM_HOST
+require_var IAM_ISSUER_URL
+require_var ATHYPER_KERNEL_CONFIG_PATH
+
+# ----------------------------
+# 3. Non-local only: secrets that MUST be injected
+# ----------------------------
+if [[ "$ENVIRONMENT" != "local" ]]; then
+  echo "[3/6] Non-local secrets (must not be placeholders)..."
+  require_var CREDENTIAL_MASTER_KEY
+  require_var DB_ADMIN_PASSWORD
+  # DB_HOST is substituted into pgbouncer-{apps,auth}.ini at container start.
+  # If unset, the compose default ('db') leaks the dev service name into prod.
+  require_var DB_HOST
+  require_var DBPOOL_APPS_PASSWORD
+  require_var DBPOOL_AUTH_PASSWORD
+  require_var IAM_ADMIN_PASSWORD
+  require_var IAM_CLIENT_SECRET
+  require_var MEMORYCACHE_PASSWORD
+  require_var REDIS_EXPORTER_PASSWORD
+  require_var REDIS_GLITCHTIP_PASSWORD
+  require_var REDIS_INFISICAL_PASSWORD
+  require_var REDIS_ADMIN_PASSWORD
+  require_var S3_ACCESS_KEY
+  require_var S3_SECRET_KEY
+  require_var RENDERER_INTERNAL_TOKEN
+  require_var GATEWAY_DASHBOARD_HTPASSWD
+  # Track B3.1 — Infisical bootstrap secrets (required even when the
+  # security-infisical profile is inactive, so ops cannot accidentally
+  # deploy Infisical with placeholder keys later).
+  require_var INFISICAL_ENCRYPTION_KEY
+  require_var INFISICAL_AUTH_SECRET
+  # Telemetry admin (Grafana) — canonical names, no vendor aliases.
+  # Without these, Grafana boots with an empty admin password and ops
+  # cannot reach the Loki/Tempo/Prom dashboards mid-incident.
+  require_var TELEMETRY_ADMIN_USER
+  require_var TELEMETRY_ADMIN_PASSWORD
+else
+  echo "[3/6] Skipping non-local secrets check (ENVIRONMENT=local)"
+fi
+
+# ----------------------------
+# 4. Hostname parity: kernel config vs .env
+# ----------------------------
+echo "[4/6] Kernel config hostname parity..."
+
+KERNEL_CONFIG_PATH="${ENV_MAP[ATHYPER_KERNEL_CONFIG_PATH]:-}"
+KERNEL_FILE="$STACK_DIR/config/$KERNEL_CONFIG_PATH"
+
+if [[ -f "$KERNEL_FILE" ]]; then
+  # Extract publicBaseUrl from JSON (simple grep, no jq dependency)
+  KC_BASE_URL=$(grep -oP '"publicBaseUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
+  KC_WEB_URL=$(grep -oP '"publicWebUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
+  KC_ISSUER_URL=$(grep -oP '"issuerUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
+
+  ENV_BASE_URL="${ENV_MAP[PUBLIC_BASE_URL]:-}"
+  ENV_WEB_URL="${ENV_MAP[PUBLIC_WEB_URL]:-}"
+  ENV_ISSUER_URL="${ENV_MAP[IAM_ISSUER_URL]:-}"
+
+  if [[ -n "$KC_BASE_URL" && -n "$ENV_BASE_URL" && "$KC_BASE_URL" != "$ENV_BASE_URL" ]]; then
+    echo "  WARN  publicBaseUrl mismatch: kernel=$KC_BASE_URL vs .env PUBLIC_BASE_URL=$ENV_BASE_URL"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+  if [[ -n "$KC_WEB_URL" && -n "$ENV_WEB_URL" && "$KC_WEB_URL" != "$ENV_WEB_URL" ]]; then
+    echo "  WARN  publicWebUrl mismatch: kernel=$KC_WEB_URL vs .env PUBLIC_WEB_URL=$ENV_WEB_URL"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+  if [[ -n "$KC_ISSUER_URL" && -n "$ENV_ISSUER_URL" && "$KC_ISSUER_URL" != "$ENV_ISSUER_URL" ]]; then
+    echo "  WARN  issuerUrl mismatch: kernel=$KC_ISSUER_URL vs .env IAM_ISSUER_URL=$ENV_ISSUER_URL"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+
+  if [[ $WARNINGS -eq 0 ]] || [[ -z "$KC_BASE_URL" ]]; then
+    echo "  OK"
+  fi
+else
+  echo "  WARN  Kernel config not found: $KERNEL_FILE"
+  WARNINGS=$((WARNINGS + 1))
+fi
+
+# ----------------------------
+# 5. Security warnings
+# ----------------------------
+echo "[5/6] Security checks..."
+
+if [[ "$ENVIRONMENT" != "local" ]]; then
+  # CREDENTIAL_MASTER_KEY length check
+  CMK="${ENV_MAP[CREDENTIAL_MASTER_KEY]:-}"
+  if [[ -n "$CMK" && ${#CMK} -lt 32 ]]; then
+    echo "  FAIL  CREDENTIAL_MASTER_KEY is too short (${#CMK} chars, need >= 32)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # CREDENTIAL_MASTER_KEY format — should look like base64
+  if [[ -n "$CMK" ]] && ! echo "$CMK" | grep -qP '^[A-Za-z0-9+/=]{32,}$'; then
+    echo "  WARN  CREDENTIAL_MASTER_KEY doesn't look like base64 — generate with: openssl rand -base64 48"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+
+  # NODE_TLS_REJECT_UNAUTHORIZED must be 1 in non-local environments
+  NODE_TLS="${ENV_MAP[NODE_TLS_REJECT_UNAUTHORIZED]:-}"
+  if [[ "$NODE_TLS" != "1" ]]; then
+    echo "  FAIL  NODE_TLS_REJECT_UNAUTHORIZED=$NODE_TLS (must be 1 in $ENVIRONMENT)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # NODE_ENV must be production in non-local environments
+  NODE_ENV_VAL="${ENV_MAP[NODE_ENV]:-}"
+  if [[ "$NODE_ENV_VAL" != "production" ]]; then
+    echo "  FAIL  NODE_ENV=$NODE_ENV_VAL (must be 'production' in $ENVIRONMENT)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # AUTH_DEBUG_EXPOSE_TOKENS must not be true in non-local environments
+  AUTH_DEBUG="${ENV_MAP[AUTH_DEBUG_EXPOSE_TOKENS]:-}"
+  if [[ "$AUTH_DEBUG" == "true" ]]; then
+    echo "  FAIL  AUTH_DEBUG_EXPOSE_TOKENS=true in $ENVIRONMENT"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # Detect dev passwords in non-local environments
+  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET; do
+    val="${ENV_MAP[$var]:-}"
+    if [[ "$val" == "athyperadmin" ]]; then
+      echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT environment (dev password leaked to non-local)"
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+
+  # P2.4 — Traefik workbench upstream must NOT point at host.docker.internal in
+  # non-local environments. That hostname only resolves on the dev operator's
+  # host; in staging/production the upstream is an in-network Docker service.
+  UPSTREAM="${ENV_MAP[APPS_ATHYPER_WEB_UPSTREAM_URL]:-}"
+  if [[ "$UPSTREAM" == *"host.docker.internal"* ]]; then
+    echo "  FAIL  APPS_ATHYPER_WEB_UPSTREAM_URL=$UPSTREAM in $ENVIRONMENT (host.docker.internal is dev-only)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # P2.4 — RFC 5737 TEST-NET CIDRs are the deploy-blocker fail-safe in the
+  # committed workbench templates. If they survive into the deployed dynamic
+  # file for a non-local environment, /admin and /ops would reject all traffic.
+  # Refuse to start the stack until the allowlist is replaced with real CIDRs.
+  WB_FILE="$STACK_DIR/config/gateway/dynamic/athyper.workbench.yml"
+  if [[ -f "$WB_FILE" ]]; then
+    if grep -qE '"(192\.0\.2|198\.51\.100|203\.0\.113)\.0/24"' "$WB_FILE"; then
+      echo "  FAIL  $WB_FILE contains RFC 5737 TEST-NET CIDR in $ENVIRONMENT"
+      echo "        Deploy the env-specific template from"
+      echo "        stack/config/gateway/environments/ and replace the allowlist"
+      echo "        with real VPN CIDR(s) before bringing the stack up."
+      ERRORS=$((ERRORS + 1))
+    fi
+  fi
+
+  # P2.10 — Tempo storage backend. Non-local environments must use s3
+  # (MinIO) for durable, lifecycle-managed trace storage. The filesystem
+  # backend is single-host and loses unflushed traces on container
+  # eviction; acceptable for local dev only.
+  TEMPO_BACKEND="${ENV_MAP[TEMPO_STORAGE_BACKEND]:-}"
+  if [[ "$TEMPO_BACKEND" != "s3" ]]; then
+    echo "  FAIL  TEMPO_STORAGE_BACKEND=$TEMPO_BACKEND in $ENVIRONMENT (must be 's3' outside local)"
+    ERRORS=$((ERRORS + 1))
+  else
+    require_var TEMPO_S3_BUCKET
+    require_var TEMPO_S3_ENDPOINT
+    require_var TEMPO_S3_ACCESS_KEY
+    require_var TEMPO_S3_SECRET_KEY
+  fi
+
+  # I-21 — Infisical encryption key: format + default rejection.
+  # require_var INFISICAL_ENCRYPTION_KEY (presence) is already checked above.
+  IEK="${ENV_MAP[INFISICAL_ENCRYPTION_KEY]:-}"
+  if [[ -n "$IEK" ]]; then
+    if [[ "$IEK" == "6c1fe4e49cb45b9115d42b127bc5db17" ]]; then
+      echo "  FAIL  INFISICAL_ENCRYPTION_KEY = local default in $ENVIRONMENT"
+      echo "        Rotate: openssl rand -hex 16"
+      ERRORS=$((ERRORS + 1))
+    elif ! echo "$IEK" | grep -qE '^[0-9a-fA-F]{32}$'; then
+      echo "  FAIL  INFISICAL_ENCRYPTION_KEY is not a 32-char hex string"
+      echo "        Generate: openssl rand -hex 16"
+      ERRORS=$((ERRORS + 1))
+    fi
+  fi
+
+  # I-21 — Infisical auth secret default rejection.
+  IAS="${ENV_MAP[INFISICAL_AUTH_SECRET]:-}"
+  if [[ "$IAS" == *"change-me"* || "$IAS" == "athyperadmin"* ]]; then
+    echo "  FAIL  INFISICAL_AUTH_SECRET = local default in $ENVIRONMENT"
+    echo "        Rotate: openssl rand -base64 32"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # I-18 — Healthchecks secret key default rejection.
+  HCK="${ENV_MAP[HEALTHCHECKS_SECRET_KEY]:-}"
+  if [[ "$HCK" == *"change-me"* || "$HCK" == "athyperadmin"* ]]; then
+    echo "  FAIL  HEALTHCHECKS_SECRET_KEY = local default in $ENVIRONMENT (rotate to a random string)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # Meilisearch master key default rejection.
+  MMK="${ENV_MAP[MEILI_MASTER_KEY]:-}"
+  if [[ "$MMK" == *"change-me"* || "$MMK" == "athyperadmin"* ]]; then
+    echo "  FAIL  MEILI_MASTER_KEY = local default in $ENVIRONMENT (rotate to a random string)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # I-03 — Traefik dashboard default htpasswd hash rejection.
+  # The committed example contains the bcrypt hash of the dev password 'athyperadmin'.
+  GDHP="${ENV_MAP[GATEWAY_DASHBOARD_HTPASSWD]:-}"
+  if echo "$GDHP" | grep -q 'NVCnGffZfFqIT\.gM5/QipOXF'; then
+    echo "  FAIL  GATEWAY_DASHBOARD_HTPASSWD = local default in $ENVIRONMENT"
+    echo "        Rotate: htpasswd -nbB <user> <newpassword>"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # I-20 — ClamAV: freshclam daemon must NOT be disabled outside local dev.
+  # Disabling it means ClamAV runs with the signatures baked into the image —
+  # new malware will not be detected until the image is rebuilt.
+  FRESHCLAM_ND="${ENV_MAP[FRESHCLAM_NO_DAEMON]:-false}"
+  if [[ "$FRESHCLAM_ND" == "true" ]]; then
+    echo "  FAIL  FRESHCLAM_NO_DAEMON=true in $ENVIRONMENT (stale virus definitions — unset or set to 'false')"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # I-07 — Automated backup: bucket must be configured so the pg_dump backup
+  # worker (jobs-backup queue) has a destination to upload snapshots.
+  if [[ -z "${ENV_MAP[BACKUP_S3_BUCKET]:-}" ]]; then
+    echo "  FAIL  BACKUP_S3_BUCKET is not set in $ENVIRONMENT"
+    echo "        Required for the daily pg_dump backup (control.cron_schedule: platform-backup-daily)."
+    echo "        Create a dedicated bucket in your object store and set this variable."
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  # I-11 — MinIO scoped service accounts: APP_S3_* and BACKUP_S3_* must be
+  # set and must not be the local dev defaults. objectstorage-init provisions
+  # these users in MinIO on first stack start using the root credentials.
+  require_var APP_S3_ACCESS_KEY
+  require_var APP_S3_SECRET_KEY
+  require_var BACKUP_S3_ACCESS_KEY
+  require_var BACKUP_S3_SECRET_KEY
+
+  for var in APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY; do
+    val="${ENV_MAP[$var]:-}"
+    if [[ "$val" == "athyperadmin" ]]; then
+      echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT (dev credential leaked to non-local; inject from secrets manager)"
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+
+  # Track B4 — analytics profile (Metabase) governance gate.
+  # The analytics profile cannot come up in staging/production unless
+  # METABASE_GOVERNANCE_APPROVED=approved is set explicitly. That flag
+  # is the contract that the four bullets in
+  # stack/compose/analytics/README.md ("Before you enable this profile")
+  # have been answered: read replica wired, account provisioning
+  # decided, schema/PII exposure scoped, audit posture confirmed.
+  STACK_PROFILE_VAL="${ENV_MAP[STACK_PROFILE]:-core}"
+  if [[ ",$STACK_PROFILE_VAL," == *",analytics,"* ]]; then
+    GOV="${ENV_MAP[METABASE_GOVERNANCE_APPROVED]:-}"
+    if [[ "$GOV" != "approved" ]]; then
+      echo "  FAIL  STACK_PROFILE=$STACK_PROFILE_VAL includes 'analytics' but METABASE_GOVERNANCE_APPROVED='$GOV'"
+      echo "        Read stack/compose/analytics/README.md, complete the four"
+      echo "        governance bullets, then set METABASE_GOVERNANCE_APPROVED=approved."
+      ERRORS=$((ERRORS + 1))
+    fi
+    # H2 is unsupported beyond the dormant hedge / local exploration.
+    MBDB="${ENV_MAP[MB_DB_TYPE]:-h2}"
+    if [[ "$MBDB" != "postgres" ]]; then
+      echo "  FAIL  MB_DB_TYPE=$MBDB in $ENVIRONMENT (analytics profile requires postgres app DB; H2 is local-only)"
+      ERRORS=$((ERRORS + 1))
+    fi
+    require_var MB_DB_CONNECTION_URI
+  fi
+else
+  echo "  OK (local — skipping production security checks)"
+fi
+
+# ----------------------------
+# 6. Optional recommendations
+# ----------------------------
+echo "[6/6] Recommendations..."
+# GATEWAY_DASHBOARD_HTPASSWD: warn if absent in local, fail (above) if default in non-local.
+if [[ "$ENVIRONMENT" == "local" ]]; then
+  warn_var GATEWAY_DASHBOARD_HTPASSWD "Traefik dashboard auth not configured — set to htpasswd string"
+fi
+
+if [[ "$ENVIRONMENT" == "local" ]]; then
+  warn_var CREDENTIAL_MASTER_KEY "credential encryption disabled (optional in local dev)"
+fi
+
+# Certificate expiry check (all environments)
+CERT_FILE="$STACK_DIR/config/gateway/certs/athyper.tls.local.crt"
+if [[ -f "$CERT_FILE" ]] && command -v openssl &>/dev/null; then
+  if ! openssl x509 -checkend 2592000 -noout -in "$CERT_FILE" 2>/dev/null; then
+    echo "  WARN  TLS certificate expires within 30 days — regenerate with generate-certs.sh"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+fi
+
+# ----------------------------
+# Summary
+# ----------------------------
+echo ""
+echo "=========================================="
+if [[ $ERRORS -gt 0 ]]; then
+  echo "  RESULT: FAILED — $ERRORS error(s), $WARNINGS warning(s)"
+  echo "  Fix the errors above before starting the stack."
+  echo "=========================================="
+  echo ""
+  exit 1
+elif [[ $WARNINGS -gt 0 ]]; then
+  echo "  RESULT: PASSED with $WARNINGS warning(s)"
+  echo "  Stack will start, but review the warnings above."
+  echo "=========================================="
+  echo ""
+  exit 0
+else
+  echo "  RESULT: PASSED — all checks OK"
+  echo "=========================================="
+  echo ""
+  exit 0
+fi

@@ -1,10 +1,26 @@
 import { fileURLToPath } from "url";
 import path from "path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow neon.athyper.local (Traefik gateway) to access Next.js dev resources
+  // (HMR WebSocket, API routes). Without this, Next.js 16.x blocks cross-origin
+  // requests from origins other than localhost in development.
+  allowedDevOrigins: ["neon.athyper.local"],
+
+  // F8 Phase 3 — standalone build for containerised staging/prod deploys.
+  // Emits .next/standalone/ with a minimal server.js + only the node_modules
+  // actually imported at runtime. Image size target: < 200 MB. Local `pnpm dev`
+  // and `pnpm build` outside the container are unaffected.
+  //
+  // outputFileTracingRoot points at the monorepo root so Next traces
+  // workspace-package imports (all the `@athyper/*` transpilePackages below)
+  // into the standalone bundle — without it, standalone misses those deps.
+  output: "standalone",
+  outputFileTracingRoot: path.resolve(__dirname, "../.."),
   serverExternalPackages: ["redis"],
   turbopack: {
     root: path.resolve(__dirname, "../.."),
@@ -77,4 +93,19 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Source-map upload fires during `next build` when SENTRY_AUTH_TOKEN is set.
+// Without the token the wrapper is a no-op — safe for local dev and CI jobs
+// that build the app without observability secrets.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sentryUrl: process.env.SENTRY_URL,
+
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  hideSourceMaps: true,
+  reactComponentAnnotation: { enabled: false },
+  tunnelRoute: undefined,
+});

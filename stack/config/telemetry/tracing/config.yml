@@ -1,0 +1,80 @@
+# Tempo OTLP ingest (gRPC 4317 / HTTP 4318). The Node runtime ships traces
+# direct via @opentelemetry/sdk-node → OTLPTraceExporter (see
+# server/src/foundation/monitoring/otel.ts), gated on OTEL_EXPORTER_OTLP_ENDPOINT.
+# Alloy stays log-only for now; if per-pipeline sampling or tail-based filtering
+# is needed later, add an otelcol.receiver.otlp block to alloy.alloy and point
+# runtimes at the logshipper instead.
+#
+# Storage backend is parameterised via env expansion — the compose command
+# passes `-config.expand-env=true`, so ${VAR} references below are
+# substituted from the container environment at start. Local dev defaults
+# to backend=local (filesystem, bind-mounted to ${ATHYPER_DATA}/telemetry/tracing);
+# staging/production set TEMPO_STORAGE_BACKEND=s3 against the stack's MinIO
+# (objectstorage service). Both `local` and `s3` sub-blocks are always
+# parsed; only the one selected by `backend:` is activated.
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
+  ring:
+    kvstore:
+      store: memberlist
+
+ingester:
+  lifecycler:
+    ring:
+      kvstore:
+        store: memberlist
+
+memberlist:
+  cluster_label: athyper-stack
+  abort_if_cluster_join_fails: false
+  join_members:
+    - tracing
+
+querier:
+  frontend_worker:
+    frontend_address: 127.0.0.1:9095
+
+storage:
+  trace:
+    backend: ${TEMPO_STORAGE_BACKEND}
+    wal:
+      # WAL always stays on local disk — small, hot, recycled on compaction.
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/traces
+    s3:
+      bucket: ${TEMPO_S3_BUCKET}
+      endpoint: ${TEMPO_S3_ENDPOINT}
+      access_key: ${TEMPO_S3_ACCESS_KEY}
+      secret_key: ${TEMPO_S3_SECRET_KEY}
+      insecure: ${TEMPO_S3_INSECURE}
+      # MinIO requires path-style addressing (bucket in URL, not subdomain).
+      forcepathstyle: true
+
+compactor:
+  compaction:
+    # Deletion cadence: the compactor scans blocks each cycle and drops
+    # those past block_retention — on s3 this removes objects from MinIO,
+    # on local it removes files from the bind mount. Tempo 2.x does not
+    # expose a separate `deletion_enabled` toggle; setting retention IS
+    # what enables deletion.
+    block_retention: 336h          # 14 days — flushed trace blocks
+    compacted_block_retention: 1h  # grace window after compaction merges blocks
+  ring:
+    kvstore:
+      store: memberlist
+
+metrics_generator:
+  storage:
+    path: /var/tempo/metrics-generator

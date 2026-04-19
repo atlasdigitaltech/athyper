@@ -4,8 +4,10 @@
  * Data sources:
  *   useApInvoiceDetail  — AP-specific data: lines, tax, supplier, amounts
  *   ActivityTimeline    — from the relay activity endpoint
+ *   Mock orchestrator   — v1.2 spec orchestrator data (satellites, health, actions)
  *
- * Layout: ApprovableDocumentShell (header + tabs) → tab-panel content.
+ * Layout: ApprovableDocumentShell (header + health strip + validation + tabs)
+ *   → tab-panel content with Overview as default first tab.
  * Mode preference is persisted per "invoice" doc type via persistMode.
  */
 "use client";
@@ -14,11 +16,22 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useApInvoiceDetail, type ApInvoiceLine } from "@athyper/finance-workbench/hooks";
 import { mapApInvoiceToHeader } from "@athyper/finance-workbench/lib/invoice-header-mapper";
+import {
+  mockStatusDimensions,
+  mockHealthTiles,
+  mockSatelliteGroups,
+  mockAmountBreakdown,
+  mockValidationNotices,
+  mockActionBundle,
+} from "@athyper/finance-workbench/lib/invoice-orchestrator-mock";
 import { ApprovableDocumentShell } from "@athyper/document-runtime";
+import { SatelliteCardGroup, SatelliteDetailSheet } from "@athyper/document-runtime/satellites";
+import { AmountSummaryCard } from "@athyper/document-runtime/amounts";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import { ActivityTimeline } from "@athyper/collaboration-ui/activity";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
+import type { SatelliteCard } from "@athyper/api-contracts/documents";
 
 const ENTITY_CODE = "purchase-invoice";
 
@@ -38,6 +51,31 @@ const fmtDate = (iso: string) =>
   });
 
 // ── Tab panels ────────────────────────────────────────────────────────────────
+
+function OverviewPanel({
+  invoice,
+}: {
+  invoice: NonNullable<ReturnType<typeof useApInvoiceDetail>["data"]>;
+}) {
+  const [selectedCard, setSelectedCard] = useState<SatelliteCard | null>(null);
+  const breakdownLines = mockAmountBreakdown(invoice);
+  const satelliteGroups = mockSatelliteGroups(invoice);
+
+  return (
+    <div className="space-y-6">
+      <AmountSummaryCard lines={breakdownLines} />
+      <SatelliteCardGroup
+        groups={satelliteGroups}
+        onCardClick={(card) => setSelectedCard(card)}
+      />
+      <SatelliteDetailSheet
+        card={selectedCard}
+        open={selectedCard != null}
+        onClose={() => setSelectedCard(null)}
+      />
+    </div>
+  );
+}
 
 function DetailsPanel({
   invoice,
@@ -200,7 +238,7 @@ function ActivityPanel({ invoiceId }: { invoiceId: string }) {
 // ── Main page component ───────────────────────────────────────────────────────
 
 export function PurchaseInvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("overview");
   const { data: invoice, isLoading } = useApInvoiceDetail(invoiceId);
 
   if (isLoading || !invoice) {
@@ -213,16 +251,24 @@ export function PurchaseInvoiceDetailPage({ invoiceId }: { invoiceId: string }) 
     );
   }
 
+  // ── Orchestrator data (mock for now, real API later) ──────────────────────
+  const statusDimensions = mockStatusDimensions(invoice.status);
+  const actionBundle = mockActionBundle(invoice.status);
+  const healthTiles = mockHealthTiles(invoice.status);
+  const validationNotices = mockValidationNotices(invoice.status);
+
   const headerData = mapApInvoiceToHeader(invoice, {
-    // Subtotal = gross – tax (best available approximation without dedicated net_amount field)
     subtotalAmount: invoice.payableAmount - invoice.tax_amount,
+    statusDimensions,
+    actionBundle,
   });
 
   const tabs = [
-    { id: "details",    label: "Details" },
-    { id: "lines",      label: "Line Items", count: invoice.lines.length },
-    { id: "activity",   label: "Activity" },
-    { id: "attachments",label: "Attachments" },
+    { id: "overview",    label: "Overview" },
+    { id: "details",     label: "Details" },
+    { id: "lines",       label: "Line Items", count: invoice.lines.length },
+    { id: "activity",    label: "Activity" },
+    { id: "attachments", label: "Attachments" },
   ];
 
   return (
@@ -233,6 +279,8 @@ export function PurchaseInvoiceDetailPage({ invoiceId }: { invoiceId: string }) 
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        healthTiles={healthTiles}
+        validationNotices={validationNotices}
         onAction={(action) => {
           if (action === "export") {
             window.location.href = `/app/${ENTITY_CODE}/${invoiceId}/export`;
@@ -242,6 +290,7 @@ export function PurchaseInvoiceDetailPage({ invoiceId }: { invoiceId: string }) 
           }
         }}
       >
+        {activeTab === "overview" && <OverviewPanel invoice={invoice} />}
         {activeTab === "details" && <DetailsPanel invoice={invoice} />}
         {activeTab === "lines" && (
           <LinesPanel lines={invoice.lines} currency={invoice.currencyCode} />

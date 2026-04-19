@@ -10,7 +10,7 @@
  *   jobs:sla-check         — escalate breached cycle tasks + work items
  *
  * Usage:
- *   const jobs = createJobsService({ db, redisUrl, logger });
+ *   const jobs = createJobsService({ db, connection, logger });
  *   await jobs.start();
  *   lifecycle.onShutdown(() => jobs.stop());
  *
@@ -50,6 +50,12 @@ export type {
   SendNotificationJobData,
   DrainOutboxJobData,
   SlaCheckJobData,
+  SweepJobData,
   ImportChunkJobData,
+  ExtractTextJobData,
   JobLogger,
+  JobHeartbeatHooks,
 } from "./jobs.types.js";
+
+export type { TikaObjectStorage } from "./workers/tika-extract.worker.js";
+export type { BackupObjectStorage } from "./workers/backup.worker.js";

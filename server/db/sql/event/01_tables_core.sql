@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS event.outbox (
 );
 
 COMMENT ON TABLE event.outbox IS
-  'Unified transactional outbox. All event-driven consumers share this table, '
+  'ARCHETYPE=E;SCOPE=T. Unified transactional outbox. All event-driven consumers share this table, '
   'filtered by topic. Topics: iam (KC sync), wf (webhooks), audit (drain), fin (domain events). '
   'Workers claim batches via FOR UPDATE SKIP LOCKED on available_at.';
 
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS event.notification_message (
 );
 
 COMMENT ON TABLE  event.notification_message IS
-    'Notification dispatch envelope. One row per routing_rule evaluation. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Notification dispatch envelope. One row per routing_rule evaluation. '
     'status lifecycle: pending → planning → delivering → completed/partial/failed. '
     'Counters (recipient_count, delivered_count, failed_count) maintained by '
     'delivery worker. priority via notification.priority lookup.';
@@ -254,7 +254,7 @@ CREATE TABLE IF NOT EXISTS event.notification_delivery (
 ) PARTITION BY RANGE (created_at);
 
 COMMENT ON TABLE  event.notification_delivery IS
-    'Per-channel delivery record. One row per (message, recipient, channel) attempt. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Per-channel delivery record. One row per (message, recipient, channel) attempt. '
     'Mutable — delivery worker updates status, attempt_count, timestamps. '
     'Absorbs: log.message_delivery (read_at added), log.sms_log (→ channel_detail), '
     'log.webhook_event completed rows. Partitioned monthly.';
@@ -320,7 +320,7 @@ CREATE TABLE IF NOT EXISTS event.digest_staging (
 );
 
 COMMENT ON TABLE  event.digest_staging IS
-    'Pending digest items. Work queue consumed by the digest assembly worker. '
+    'ARCHETYPE=E;SCOPE=T. Pending digest items. Work queue consumed by the digest assembly worker. '
     'Rows marked delivered_at (or deleted) when batched into a digest message. '
     'channel, priority, frequency all lookup-validated. NOT a log — mutable work table.';
 COMMENT ON COLUMN event.digest_staging.frequency IS
@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS event.endpoint (
 );
 
 COMMENT ON TABLE  event.endpoint IS
-    'Outbound integration endpoint registry. One row per named target '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Outbound integration endpoint registry. One row per named target '
     '(webhook, external API, partner endpoint). config holds adapter-specific '
     'settings; config.auth MUST be encrypted at rest. '
     'Consolidated from int schema into event schema.';
@@ -456,7 +456,7 @@ CREATE TABLE IF NOT EXISTS event.webhook_subscription (
 );
 
 COMMENT ON TABLE  event.webhook_subscription IS
-    'Per-tenant webhook subscription registry. Each row is a target URL '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Per-tenant webhook subscription registry. Each row is a target URL '
     'that receives event.outbox payloads for the subscribed topics. '
     'event.notification_delivery.subscription_id references this table. '
     'Consolidated from int schema into event schema.';
@@ -515,7 +515,7 @@ CREATE TABLE IF NOT EXISTS event.comment_flag (
 );
 
 COMMENT ON TABLE  event.comment_flag IS
-    'User-submitted comment abuse report. Actionable event — demands moderation response. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. User-submitted comment abuse report. Actionable event — demands moderation response. '
     'status lifecycle: pending — reviewed / dismissed / actioned. '
     'When actioned: governance.comment_moderation is_hidden is set true. '
     'context_type in master.comment_type. flag_reason in master.flag_reason (extensible).';
@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS event.lifecycle_timer_schedule (
 );
 
 COMMENT ON TABLE  event.lifecycle_timer_schedule IS
-    'Active timer work queue. One row per entity awaiting a scheduled lifecycle action. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Active timer work queue. One row per entity awaiting a scheduled lifecycle action. '
     'Created when entity enters a state that has a timer_policy_code in config. '
     'Cancelled when entity leaves the state before fire_at. '
     'Timer worker polls WHERE status=''scheduled'' AND fire_at <= now(). '
@@ -682,7 +682,7 @@ CREATE TABLE IF NOT EXISTS event.work_item (
 );
 
 COMMENT ON TABLE  event.work_item IS
-    'Individual human task — the primitive a person acts on. '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Individual human task — the primitive a person acts on. '
     'task_type (lookup: work_item.task_type): approval | review | watcher. '
     'A07: designated_id = original assignment (immutable). '
     '      assignee_id  = current holder (changes on reassignment). '
@@ -762,7 +762,7 @@ CREATE TABLE IF NOT EXISTS event.push_subscription (
 );
 
 COMMENT ON TABLE event.push_subscription IS
-    'Web/mobile push device registry. One row per (principal, platform, device). '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status/is_active GENERATED). Web/mobile push device registry. One row per (principal, platform, device). '
     'Web Push requires VAPID keys (p256dh_key + auth_key). '
     'FCM (android) and APNs (ios) use device_token. '
     'Expired or inactive subscriptions pruned by a periodic cron.';
@@ -838,7 +838,7 @@ CREATE TABLE IF NOT EXISTS event.whatsapp_consent (
 );
 
 COMMENT ON TABLE event.whatsapp_consent IS
-    'WhatsApp Business API opt-in registry. Tracks per-principal consent status for '
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. WhatsApp Business API opt-in registry. Tracks per-principal consent status for '
     'outbound WhatsApp messages. consent_status lifecycle: pending → opted_in → revoked. '
     'Outbound messages blocked unless consent_status = ''opted_in''. '
     'Phone numbers stored in E.164 format.';

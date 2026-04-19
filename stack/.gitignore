@@ -1,0 +1,14 @@
+# Active environment files (contain secrets — .env.example files are safe)
+env/.env
+env/*.env
+!env/*.env.example
+
+# Private keys and certificates (defense-in-depth, root .gitignore also excludes)
+config/**/certs/*.key
+config/**/certs/*.pem
+config/**/certs/*.pfx
+config/**/certs/*.p12
+
+# Generated / runtime
+temp/
+data/

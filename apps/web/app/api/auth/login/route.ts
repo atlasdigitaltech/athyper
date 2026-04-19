@@ -37,8 +37,20 @@ export async function GET(req: Request) {
   const realmParam = url.searchParams.get("realm");
   const provider = url.searchParams.get("provider") ?? null;
 
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.mesh.athyper.local";
-  const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
+
+  // Derive the public base URL from the request so the OAuth callback returns
+  // to the same origin the user initiated login from (localhost, neon.athyper.local, etc.).
+  // Traefik does SSL termination and forwards the original scheme via X-Forwarded-Proto,
+  // so we trust that header to reconstruct the correct HTTPS origin.
+  // PUBLIC_BASE_URL overrides this for containerised deployments where the Host header
+  // reflects an internal service name rather than the public hostname.
+  const publicBaseUrl = (() => {
+    if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
+    const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+    const host = req.headers.get("host") ?? url.host;
+    return `${proto}://${host}`;
+  })();
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
 
   const isPlatformLogin =
@@ -66,7 +78,7 @@ export async function GET(req: Request) {
 
   await redis.set(
     `pkce_state:${state}`,
-    JSON.stringify({ codeVerifier, returnUrl, isPlatformLogin, realm, provider }),
+    JSON.stringify({ codeVerifier, returnUrl, isPlatformLogin, realm, provider, redirectUri }),
     { EX: 1800 }, // 30 min — accommodates email-based flows (magic link, password reset)
   );
 

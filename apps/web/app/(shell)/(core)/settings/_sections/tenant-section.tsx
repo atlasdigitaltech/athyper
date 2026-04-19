@@ -61,7 +61,7 @@ export function TenantSection({ active }: { active: boolean }) {
     <div className="w-full">
       <Banner variant="warn">
         Tenant settings are <strong>view-only</strong> in this panel. Full configuration is managed
-        through <strong>Mesh Tenant Studio</strong>.
+        through <strong>Tenant Studio</strong>.
       </Banner>
 
       {/* ── Tenant ── */}
@@ -69,9 +69,9 @@ export function TenantSection({ active }: { active: boolean }) {
         title="Tenant"
         icon={Building2}
         managedBy={{
-          manager:  "Platform / Mesh Tenant Studio",
+          manager:  "Platform / Tenant Studio",
           source:   "master.tenant",
-          editPath: "Changes via Mesh Tenant Studio only",
+          editPath: "Changes via Tenant Studio only",
         }}
       >
         <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
@@ -205,7 +205,7 @@ export function TenantSection({ active }: { active: boolean }) {
 
       <div className="mt-2 flex justify-center">
         <Button variant="outline" className="gap-2 text-sm">
-          <ExternalLink className="h-4 w-4" /> Open Mesh Tenant Studio
+          <ExternalLink className="h-4 w-4" /> Open Tenant Studio
         </Button>
       </div>
     </div>

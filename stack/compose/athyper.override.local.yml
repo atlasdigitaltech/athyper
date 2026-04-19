@@ -1,0 +1,52 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local
+# Version     : 1.0.0
+# Compose     : athyper-override-local-config
+#
+# Description :
+#   Local development environment overrides for athyper Stack.
+#   Add local-specific service configurations here (e.g., debug settings,
+#   development volumes, hot-reload mounts).
+#
+# =======================================================================
+
+services:
+  # Grafana: relax dashboard provisioning for local iteration.
+  # Shadows the prod-safe default with an editable/deletable variant so
+  # developers can reshape panels in the UI. Re-provisions from JSON on
+  # restart — nothing persists that isn't committed under
+  # config/telemetry/provisioning/dashboards/json/.
+  telemetry:
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.local.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+
+  iam:
+    depends_on:
+      mailhog:
+        condition: service_healthy
+  db:
+    ports:
+      - "5432:5432"
+    networks:
+      internal: null
+      edge: null
+  dbpool-apps:
+    ports:
+      - "6432:6432"
+    networks:
+      internal: null
+      edge: null
+  dbpool-session:
+    ports:
+      - "6433:6433"
+    networks:
+      internal: null
+      edge: null
+  memorycache:
+    ports:
+      - "6379:6379"
+    networks:
+      internal: null
+      edge: null

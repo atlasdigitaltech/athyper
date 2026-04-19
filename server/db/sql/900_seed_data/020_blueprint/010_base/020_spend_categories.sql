@@ -322,16 +322,7 @@ BEGIN
                                             'container', true
                                         )),
         updated_at = now(),
-        updated_by = v_su
-    WHERE (master.spend_category.name, master.spend_category.description,
-           master.spend_category.procurement_type, master.spend_category.visibility,
-           master.spend_category.is_classification_required, master.spend_category.is_hs_required,
-           master.spend_category.is_regulated, master.spend_category.sort_order)
-       IS DISTINCT FROM
-          (EXCLUDED.name, EXCLUDED.description,
-           EXCLUDED.procurement_type, EXCLUDED.visibility,
-           EXCLUDED.is_classification_required, EXCLUDED.is_hs_required,
-           EXCLUDED.is_regulated, EXCLUDED.sort_order);
+        updated_by = v_su;
 
     -- ── STAGE D: UPSERT leaves (parent_code IS NOT NULL) ────────────────
     INSERT INTO master.spend_category (
@@ -383,18 +374,7 @@ BEGIN
                                             'seeded_at', now()::text
                                         )),
         updated_at = now(),
-        updated_by = v_su
-    WHERE (master.spend_category.name, master.spend_category.description,
-           master.spend_category.parent_id, master.spend_category.root_category_id,
-           master.spend_category.procurement_type, master.spend_category.visibility,
-           master.spend_category.is_classification_required, master.spend_category.is_hs_required,
-           master.spend_category.is_regulated, master.spend_category.sort_order)
-       IS DISTINCT FROM
-          (EXCLUDED.name, EXCLUDED.description,
-           EXCLUDED.parent_id, EXCLUDED.root_category_id,
-           EXCLUDED.procurement_type, EXCLUDED.visibility,
-           EXCLUDED.is_classification_required, EXCLUDED.is_hs_required,
-           EXCLUDED.is_regulated, EXCLUDED.sort_order);
+        updated_by = v_su;
 
     -- ── STAGE E: Assertions ──────────────────────────────────────────────
     IF (SELECT count(*) FROM master.spend_category WHERE tenant_id = v_tid

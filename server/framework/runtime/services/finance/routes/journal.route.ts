@@ -26,6 +26,8 @@ import {
   resolvePrincipalIdOrNull,
   isUuid,
   extractOrgHeaders,
+  emitOutboxEvent,
+  SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
 import { randomUUID } from "node:crypto";
 import { WorkflowEngine } from "../../workflow/engine.js";
@@ -671,6 +673,18 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
             } as never)
             .execute();
         }
+
+        // Emit search topic inside the same transaction — atomic with the
+        // JE+lines write. The dedicated /finance/journals endpoint bypasses
+        // the generic documents.route.ts, so emission has to happen here too.
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic:      "search",
+          eventType:  "journal_entry.created",
+          entityType: "journal_entry",
+          entityId:   jeId,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
       });
 
       logger?.info?.("finance_journals_created", { jeId, jeNumber, tenantId });
@@ -867,6 +881,27 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           .where("id",        "=", jeId)
           .where("tenant_id", "=", tenantId)
           .execute();
+
+        // Emit two search events inside the trx — atomic with the writes.
+        // The reversal JE is new; the original JE status changed to "reversed".
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic:      "search",
+          eventType:  "journal_entry.created",
+          entityType: "journal_entry",
+          entityId:   revJeId,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+          payload:    { reversal_of: jeId },
+        });
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic:      "search",
+          eventType:  "journal_entry.updated",
+          entityType: "journal_entry",
+          entityId:   jeId,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+          payload:    { status: "reversed", reversed_by: revJeId },
+        });
       });
 
       logger?.info?.("finance_journal_reversed", {
@@ -919,6 +954,9 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         res.status(404).json({ error: "TENANT_NOT_FOUND" });
         return;
       }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
 
       const jeRow = await db
         .selectFrom("document.journal_entry as je")
@@ -1047,6 +1085,15 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
               .execute();
           }
         }
+
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic:      "search",
+          eventType:  "journal_entry.updated",
+          entityType: "journal_entry",
+          entityId:   jeId,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
       });
 
       logger?.info?.("finance_journal_updated", { jeId, jeNumber: jeRow["jeNumber"], tenantId });

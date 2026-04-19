@@ -3,8 +3,10 @@ import { Kysely } from "kysely";
 
 import { createPostgresDialect } from "./dialect.js";
 import { closePool, createPool, healthCheck, type PoolConfig } from "./pool.js";
+import { TenantStampDialect } from "./tenant-stamp-driver.js";
 
 import type { DB } from "../generated/kysely/types.js";
+import type { TenantIdProvider } from "./tx.js";
 import type pg from "pg";
 
 export type DbClientConfig = {
@@ -18,6 +20,18 @@ export type DbClientConfig = {
    * @default 10
    */
   poolMax?: number;
+
+  /**
+   * Optional tenant-id provider. When set, queries on this client are routed
+   * through the TenantStampDriver, which wraps tenant-scoped queries in an
+   * implicit `BEGIN; SET LOCAL app.current_tenant_id = $1; <query>; COMMIT`.
+   * Leave unset for tools that connect as a migration/admin role where RLS
+   * bypass is desired (seed scripts, CLI utilities).
+   *
+   * The runtime bootstrap passes `() => tryGetContext()?.tenantId` so the
+   * stamp is derived from the authenticated session, not service arguments.
+   */
+  tenantIdProvider?: TenantIdProvider;
 };
 
 export interface DbPoolStats {
@@ -46,8 +60,18 @@ export class DbClient {
 
     this.pool = createPool(poolConfig);
 
-    // Create Kysely instance
-    const dialect = createPostgresDialect(this.pool);
+    // Create Kysely instance. When a tenantIdProvider is supplied, wrap the
+    // base Postgres dialect with the TenantStampDialect so every query runs
+    // with `app.current_tenant_id` stamped on its session GUC (required for
+    // RLS policies that read `shared.current_tenant_id_soft()`).
+    const baseDialect = createPostgresDialect(this.pool);
+    const dialect =
+      config.tenantIdProvider !== undefined
+        ? new TenantStampDialect({
+            base: baseDialect,
+            tenantIdProvider: config.tenantIdProvider,
+          })
+        : baseDialect;
     this.kysely = new Kysely<DB>({
       dialect,
     });

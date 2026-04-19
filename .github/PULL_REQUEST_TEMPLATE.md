@@ -31,7 +31,7 @@ Closes #<!-- issue number -->
 
 - [ ] athyper core
 - [ ] neon integration
-- [ ] mesh integration
+- [ ] stack integration
 - [ ] atlas integration
 - [ ] docs
 - [ ] CI/CD

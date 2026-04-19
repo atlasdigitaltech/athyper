@@ -5,7 +5,7 @@ import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-heade
 /**
  * GET /api/admin/health
  *
- * Probes platform service health: Redis, Athyper IAM, API Mesh.
+ * Probes platform service health: Redis, Athyper IAM, API Gateway.
  * Proxies to the runtime backend's health endpoint.
  * Shape: { services: [{ name, status, latency_ms, error? }] }
  */

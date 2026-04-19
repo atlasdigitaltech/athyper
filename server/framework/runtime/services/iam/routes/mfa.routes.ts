@@ -65,7 +65,7 @@ export interface MfaRoutesDeps {
    * When omitted, POST /iam/mfa/webauthn/start and POST /iam/mfa/sync return 501.
    */
   kc?: {
-    /** KC base URL without trailing slash, e.g. "https://iam.mesh.athyper.local" */
+    /** KC base URL without trailing slash, e.g. "https://iam.athyper.local" */
     baseUrl: string;
     /** KC realm name, e.g. "athyper" */
     realm: string;

@@ -58,4 +58,4 @@ CREATE INDEX IF NOT EXISTS idx_connector_instance_health
     WHERE health_status IN ('degraded', 'down');
 
 COMMENT ON TABLE event.connector_instance IS
-    'Per-tenant configured connections to external systems — instances of control.connector_type templates';
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Has both status column and manual is_active boolean; is_active not GENERATED from status. Per-tenant configured connections to external systems — instances of control.connector_type templates';

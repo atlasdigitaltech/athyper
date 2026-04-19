@@ -1,0 +1,93 @@
+# =======================================================================
+# Stack       : athyper Stack – Analytics (DEFERRED — hedge stage only)
+# Service     : Metabase — self-service SQL workbench for finance/ops
+#
+# Description :
+#   Metabase complements the in-app insights-analytics module by giving
+#   finance/ops power users an ad-hoc SQL surface (CFO drill-downs,
+#   reconciliation spot-checks, close troubleshooting). It is **not** a
+#   replacement for insights-analytics, and not the analyst-grade tool
+#   (Superset would be) — see analytics/README.md.
+#
+#   This file is **pre-staged**. The `analytics` profile is OFF by
+#   default and is NOT included in core / render / monitoring / admin /
+#   search profile sets. Enabling it requires:
+#     1. A Postgres read replica reachable from the stack network — the
+#        primary must NOT be the data source.
+#     2. Governance sign-off (see analytics/README.md → "Before you
+#        enable this profile"). validate-env.sh enforces this in
+#        staging/production via METABASE_GOVERNANCE_APPROVED=approved.
+#     3. An actual user request — pre-staging is not a deploy.
+#
+# Notes :
+#   - App DB defaults to embedded H2 on a volume. H2 is acceptable ONLY
+#     for the dormant hedge / local exploration. Before any non-local
+#     deployment, switch to a dedicated Postgres app DB (see README →
+#     "Upgrading from H2").
+#   - The stack does NOT pre-wire a data source. Admins configure
+#     Metabase to point at the read replica via the in-app UI on first
+#     login, after governance review.
+#   - Traefik labels are present so the UI is reachable when the profile
+#     is enabled, but the route is gated by DASHBOARD_AUTH_MW.
+# =======================================================================
+
+services:
+  metabase:
+    image: metabase/metabase:v0.51.10
+    profiles: ["analytics"]
+    networks: [edge, internal]
+    environment:
+      # --- App DB (where Metabase stores dashboards/users/permissions)
+      # Hedge stage: embedded H2 file on the mounted volume.
+      # Production: MB_DB_TYPE=postgres + MB_DB_CONNECTION_URI=
+      #   postgresql://…@dbpool-session:6433/athyper_analytics
+      MB_DB_TYPE: ${MB_DB_TYPE:-h2}
+      MB_DB_FILE: /metabase-data/metabase.db
+      MB_DB_CONNECTION_URI: ${MB_DB_CONNECTION_URI:-}
+      # --- JVM tuning ---
+      JAVA_TIMEZONE: ${TZ:-UTC}
+      JAVA_OPTS: ${MB_JAVA_OPTS:--Xmx768m -XX:+UseG1GC}
+      # --- App config ---
+      MB_SITE_URL: https://${METABASE_HOST}
+      MB_JETTY_HOST: 0.0.0.0
+      MB_JETTY_PORT: 3000
+      # Disable Metabase's anonymous usage telemetry by default.
+      MB_ANON_TRACKING_ENABLED: "false"
+      # Disable the first-launch setup token email (admin sets via UI).
+      MB_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ${ATHYPER_DATA}/metabase:/metabase-data
+    deploy:
+      resources:
+        limits:
+          memory: "${METABASE_MEMORY_LIMIT}"
+    depends_on:
+      gateway:
+        condition: service_healthy
+      dbpool-session:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # Shutdown: 30s — Metabase needs time to flush analytics-event queue
+    # and close the H2/Postgres app-DB connection cleanly.
+    stop_grace_period: 30s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.metabase.rule=Host(`${METABASE_HOST}`)
+      - traefik.http.routers.metabase.entrypoints=websecure
+      - traefik.http.routers.metabase.tls=true
+      - traefik.http.routers.metabase.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.metabase.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.services.metabase.loadbalancer.server.port=3000

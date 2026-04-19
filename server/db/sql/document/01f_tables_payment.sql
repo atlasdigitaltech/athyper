@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
 );
 
 COMMENT ON TABLE document.payment_entry IS
-    'Approvable AP payment. Accounting driven by control.payment_settlement_rule posting roles. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'',''transmitted'',''printed'')). Approvable AP payment. Accounting driven by control.payment_settlement_rule posting roles. '
     'Settlement posting: Dr AP Trade Payable → Cr Bank + optional Cr Discount Income + Dr/Cr FX.';
 
 
@@ -206,6 +206,10 @@ CREATE TABLE IF NOT EXISTS document.payment_entry_allocation (
         AND retention_amount >= 0)
 );
 
+COMMENT ON TABLE document.payment_entry_allocation IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Invoice/commitment allocation lines for a payment. '
+    'net_payment_amount GENERATED. Append-only — void and re-allocate to correct.';
+
 
 -- ============================================================================
 -- §11.2  document.payment_remittance_output
@@ -257,6 +261,10 @@ CREATE TABLE IF NOT EXISTS document.payment_remittance_output (
     CONSTRAINT pro_status_chk       CHECK (status IN (
         'draft','generated','sent','delivered','failed','cancelled'))
 );
+
+COMMENT ON TABLE document.payment_remittance_output IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Remittance advice output record per payment. '
+    'Links to document.render_output for PDF generation. Delivery status tracked separately.';
 
 
 -- ============================================================================
@@ -326,4 +334,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS ptdr_single_reversal_uq
     WHERE is_reversal = true;
 
 COMMENT ON TABLE document.payment_term_discount_result IS
-    'Settlement-time discount realization. Reversals use is_reversal + reverses_id (append-only).';
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Settlement-time discount realization. Reversals use is_reversal + reverses_id (append-only).';

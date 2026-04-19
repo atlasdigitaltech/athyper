@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - "packages/shared/foundation/brand/**"
-      - "mesh/config/iam/themes/neon/login/_neon-brand-*.ftl"
-      - "mesh/config/iam/themes/neon/login/resources/img/neon-*.svg"
+      - "stack/config/iam/themes/neon/login/_neon-brand-*.ftl"
+      - "stack/config/iam/themes/neon/login/resources/img/neon-*.svg"
       - "scripts/brand/**"
       - ".github/workflows/brand-sync.yml"
   push:

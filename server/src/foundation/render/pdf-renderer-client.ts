@@ -60,9 +60,19 @@ export interface RendererHealth {
   browserPool: { active: number; idle: number; waiting: number } | null;
 }
 
+/**
+ * Structural interface used by RenderService — the only two calls the
+ * service makes. Implemented by PdfRendererClient and GotenbergClient so
+ * either can be injected.
+ */
+export interface SyncPdfRenderer {
+  renderSync(html: string, options?: PdfRenderOptions): Promise<Buffer>;
+  isAvailable(): Promise<boolean>;
+}
+
 // ── PdfRendererClient ─────────────────────────────────────────────────────────
 
-export class PdfRendererClient {
+export class PdfRendererClient implements SyncPdfRenderer {
   private readonly baseUrl:      string;
   private readonly internalToken: string;
   private readonly timeoutMs:    number;

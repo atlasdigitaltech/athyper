@@ -197,6 +197,14 @@ export const CompiledEntitySchema = z.object({
     is_approvable: z.boolean().optional(),
     /** Entity has child line items in a related table. */
     has_line_items: z.boolean().optional(),
+    /** Entity has ledger postings (journal entries). */
+    has_accounting_entries: z.boolean().optional(),
+    /** Entity has a payment schedule / settlement tracking. */
+    has_payment_schedule: z.boolean().optional(),
+    /** Entity has budget impact / availability check. */
+    has_budget_impact: z.boolean().optional(),
+    /** Entity has related upstream/downstream documents. */
+    has_related_documents: z.boolean().optional(),
     /** Payables | receivables | treasury | etc. — used for context-sensitive UI. */
     document_category: z.string().optional(),
   }),

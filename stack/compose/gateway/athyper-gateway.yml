@@ -1,0 +1,94 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-gateway-config
+#
+# Description :
+#
+# =======================================================================
+services:
+  gateway:
+    image: traefik:v3.6.13
+    profiles: ["core", "gateway", "apps"]
+    deploy:
+      resources:
+        limits:
+          memory: "${GATEWAY_MEMORY_LIMIT}"
+    command:
+      - --accesslog=${GATEWAY_ACCESSLOG:-false}
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.http.encodeQuerySemicolons=true
+      - --entrypoints.websecure.http.tls=true
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.format=json
+      - --log.level=${GATEWAY_LOG_LEVEL:-INFO}
+      - --ping=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=athyper-edge
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.insecureSkipVerify=false
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Passed into container so Traefik Go templates ({{ env "VAR" }}) in
+      # file-provider configs (dynamic/*.yml) can resolve hostnames at runtime.
+      APPS_ATHYPER_WEB_HOST: "${APPS_ATHYPER_WEB_HOST}"
+      APPS_ATHYPER_WEB_UPSTREAM_URL: "${APPS_ATHYPER_WEB_UPSTREAM_URL}"
+      GATEWAY_HOST: "${GATEWAY_HOST}"
+      GATEWAY_DASHBOARD_HTPASSWD: "${GATEWAY_DASHBOARD_HTPASSWD}"
+    extra_hosts:
+      # Required for local dev where APPS_ATHYPER_WEB_UPSTREAM_URL points at
+      # host.docker.internal (Next.js runs on the host, not in a container).
+      # - Docker Desktop (Win/Mac): auto-provides the mapping; this line is a no-op.
+      # - Docker 20.10+ on Linux:   host-gateway resolves to the docker bridge host IP.
+      # Staging/production override APPS_ATHYPER_WEB_UPSTREAM_URL to the
+      # in-network service name (athyper-neon-web), so this entry is unused there.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Docker socket — required for Traefik service discovery.
+      # Works on Linux and Docker Desktop (WSL2 backend translates the path).
+      # Not compatible with native Windows containers (not a target platform).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ATHYPER_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
+      - ${ATHYPER_CONFIG}/gateway/certs:/certs:ro
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    # Shutdown: 10s — Traefik drains active connections before exit
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.middlewares.gateway-redirect.redirectregex.regex=^https://([^/]+)/?$
+      - traefik.http.middlewares.gateway-redirect.redirectregex.replacement=https://$${1}/dashboard/
+      - traefik.http.routers.gateway.entrypoints=websecure
+      - traefik.http.routers.gateway.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.gateway.rule=Host(`${GATEWAY_HOST}`)
+      - traefik.http.routers.gateway.service=api@internal
+      - traefik.http.routers.gateway.tls=true
+      - traefik.http.routers.gateway.tls.options=${GATEWAY_TLS_OPTIONS}
