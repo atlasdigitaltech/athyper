@@ -20,6 +20,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { NeonLogoPrimary } from "@athyper/brand";
 import { AthyperLogo } from "@athyper/icons/custom/AthyperLogo";
 import { Button } from "@athyper/ui/primitives";
 import {
@@ -209,20 +210,23 @@ function SelectPageInner() {
   return (
     <div className="flex h-dvh">
       {/* ── Left panel — branding (lg+) ─────────────────────────────────── */}
-      <div className="hidden bg-primary lg:flex lg:w-1/3 lg:flex-col lg:items-center lg:justify-center lg:p-12">
-        <div className="space-y-6 text-center">
-          <AthyperLogo className="mx-auto text-primary-foreground" width={56} height={56} />
-          <div className="space-y-2">
-            <h1 className="text-5xl font-light text-primary-foreground">
-              {session?.displayName ?? "Welcome"}
-            </h1>
-            <p className="text-xl text-primary-foreground/80">Choose your workspace</p>
+      <div className="hidden lg:flex lg:w-3/5 lg:h-dvh flex-col bg-primary border-r border-border text-primary-foreground">
+        <div className="flex justify-center pt-10 pb-2">
+          <NeonLogoPrimary className="w-[480px]" />
+        </div>
+        <div className="flex flex-1 flex-col justify-center px-16 pb-10">
+          <div className="space-y-4">
+            <p className="text-xs font-semibold tracking-widest uppercase opacity-50">Your workspace</p>
+            <h3 className="text-[2.2rem] font-bold leading-[1.15]">
+              {session?.displayName ?? "Welcome back"}
+            </h3>
+            <p className="text-base leading-relaxed opacity-60">Choose your entity and workbench to continue.</p>
           </div>
         </div>
       </div>
 
       {/* ── Right panel — selector ──────────────────────────────────────── */}
-      <div className="flex w-full flex-col items-center justify-center overflow-y-auto bg-background px-6 py-12 lg:w-2/3">
+      <div className="flex w-full flex-col items-center justify-center overflow-y-auto bg-background px-6 py-12 lg:w-2/5">
         <div className="w-full max-w-lg space-y-6">
 
           {/* Mobile logo */}

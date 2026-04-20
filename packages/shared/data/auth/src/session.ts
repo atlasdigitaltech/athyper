@@ -10,7 +10,7 @@
  */
 import { type Session } from "./types";
 
-const SESSION_COOKIE_NAME = "athyper_sid";
+const SESSION_COOKIE_NAME = "neon_sid";
 
 function isValidSession(value: unknown): value is Session {
   if (!value || typeof value !== "object") return false;

@@ -584,7 +584,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -609,7 +613,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -634,7 +642,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -659,7 +671,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -684,7 +700,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -709,7 +729,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -734,7 +758,13 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:admin"
       ],
@@ -759,7 +789,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -784,7 +818,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -809,7 +847,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -834,7 +876,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -859,7 +905,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user"
       ],
@@ -884,7 +934,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:partner"
       ],
@@ -909,7 +963,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:partner"
       ],
@@ -934,7 +992,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:partner"
       ],
@@ -959,7 +1021,11 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:partner"
       ],
@@ -984,7 +1050,12 @@
       "realmRoles": [
         "default-roles-athyper"
       ],
-      "clientRoles": {},
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER",
+          "WB_PARTNER"
+        ]
+      },
       "groups": [
         "/grp:workbench:user",
         "/grp:workbench:partner"

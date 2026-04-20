@@ -203,6 +203,6 @@ export const config = {
      *   session/CSRF checks; Docker healthcheck hits localhost:3000/livez
      *   which does not carry the gateway host header)
      */
-    "/((?!_next/static|_next/image|favicon.ico|livez).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|livez).*)",
   ],
 };
