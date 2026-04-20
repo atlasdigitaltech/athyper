@@ -42,7 +42,13 @@ WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND  e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
--- ── 3. control.entity_field (13 fields) ──────────────────────────────────────
+-- ── 3. control.entity_field (26 fields) ──────────────────────────────────────
+-- Group A: Identity / Classification (10-30)
+-- Group B: Counterparty & Dates     (40-60)
+-- Group C: Currency & Amounts       (70-115)
+-- Group D: References & Terms       (120-145)
+-- Group E: Matching & Hold          (150-165)
+-- Group F: Dimensions & Fiscal      (200-230)
 INSERT INTO control.entity_field (
     entity_version_id, name, column_name, label, data_type,
     cardinality, origin, enum_domain_code, is_required, is_filterable,
@@ -56,18 +62,38 @@ SELECT ev.id,
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 CROSS JOIN (VALUES
-    ('document_no',       'invoice_number',         'Invoice No.',     'text',    'one',         NULL::text,                              true,  true,  '{"max_length":50}'::jsonb,    10),
-    ('invoice_type',      'invoice_type',           'Invoice Type',    'enum',    'one',         'document.purchase_invoice_type'::text,  true,  true,  NULL::jsonb,                   20),
-    ('status',            'status',                 'Status',          'lifecycle_state', 'one',  NULL::text,                              true, true,  NULL::jsonb,                   30),
-    ('supplier_id',       'supplier_id',            'Vendor',          'reference', 'one',       NULL::text,                              true,  true,  '{"ref_entity":"vendor"}'::jsonb, 40),
-    ('invoice_date',      'document_date',          'Invoice Date',    'date',    'one',         NULL::text,                              true,  true,  NULL::jsonb,                   50),
-    ('due_date',          'due_date',               'Due Date',        'date',    'zero_or_one', NULL::text,                              false, true,  NULL::jsonb,                   60),
-    ('currency_code',     'currency_code',          'Currency',        'text',    'one',         NULL::text,                              true,  true,  '{"max_length":3}'::jsonb,     70),
-    ('gross_amount',      'total_amount',           'Gross Amount',    'decimal', 'one',         NULL::text,                              true,  false, '{"min":0}'::jsonb,            80),
-    ('tax_amount',        'tax_amount',             'Tax Amount',      'decimal', 'zero_or_one', NULL::text,                              false, false, '{"min":0}'::jsonb,            90),
-    ('net_amount',        'subtotal_amount',        'Net Amount',      'decimal', 'one',         NULL::text,                              true,  false, '{"min":0}'::jsonb,           100),
-    ('vendor_invoice_ref','supplier_invoice_number','Vendor Ref',      'text',    'zero_or_one', NULL::text,                              false, false, '{"max_length":100}'::jsonb,  120),
-    ('description',       'description',            'Description',     'text',    'zero_or_one', NULL::text,                              false, false, '{"max_length":500}'::jsonb,  130)
+    -- ── A: Identity & Classification ──────────────────────────────────────────
+    ('document_no',              'invoice_number',          'Invoice No.',        'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":50}'::jsonb,             10),
+    ('invoice_type',             'invoice_type',            'Invoice Type',       'enum',           'one',         'document.purchase_invoice_type'::text,       true,  true,  NULL::jsonb,                            20),
+    ('status',                   'status',                  'Status',             'lifecycle_state','one',         NULL::text,                                   true,  true,  NULL::jsonb,                            30),
+    -- ── B: Counterparty & Dates ───────────────────────────────────────────────
+    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"vendor"}'::jsonb,       40),
+    ('supplier_invoice_date',    'supplier_invoice_date',   'Vendor Invoice Date','date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
+    ('invoice_date',             'document_date',           'Invoice Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            50),
+    ('posting_date',             'posting_date',            'Posting Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            55),
+    ('due_date',                 'due_date',                'Due Date',           'date',           'zero_or_one', NULL::text,                                   false, true,  NULL::jsonb,                            60),
+    -- ── C: Currency & Amounts ─────────────────────────────────────────────────
+    ('currency_code',            'currency_code',           'Currency',           'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":3}'::jsonb,              70),
+    ('gross_amount',             'total_amount',            'Gross Amount',       'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                     80),
+    ('tax_amount',               'tax_amount',              'Tax Amount',         'decimal',        'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                     90),
+    ('withholding_tax_amount',   'withholding_tax_amount',  'WHT Amount',         'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                     95),
+    ('net_amount',               'subtotal_amount',         'Net Amount',         'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                    100),
+    ('paid_amount',              'paid_amount',             'Paid Amount',        'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                    102),
+    ('outstanding_amount',       'outstanding_amount',      'Outstanding',        'decimal',        'one',         NULL::text,                                   false, true,  '{"min":0}'::jsonb,                    104),
+    -- ── D: Source, References & Terms ────────────────────────────────────────
+    ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
+    ('vendor_invoice_ref',       'supplier_invoice_number', 'Vendor Ref',         'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
+    ('description',              'description',             'Description',        'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":500}'::jsonb,            130),
+    ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_terms"}'::jsonb,140),
+    -- ── E: Matching & Hold ────────────────────────────────────────────────────
+    ('match_type',               'match_type',              'Match Type',         'enum',           'one',         'document.invoice_match_type'::text,          true,  true,  NULL::jsonb,                           150),
+    ('match_status',             'match_status',            'Match Status',       'enum',           'one',         'document.invoice_match_status'::text,        false, true,  NULL::jsonb,                           155),
+    ('hold_reason',              'hold_reason',             'Hold Reason',        'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":500}'::jsonb,            160),
+    -- ── F: Dimensions & Fiscal ───────────────────────────────────────────────
+    ('cost_center_id',           'cost_center_id',          'Cost Centre',        'reference',      'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"cost_center"}'::jsonb,  200),
+    ('project_id',               'project_id',              'Project',            'reference',      'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"project"}'::jsonb,      210),
+    ('fiscal_year',              'fiscal_year',             'Fiscal Year',        'integer',        'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            220),
+    ('period_number',            'period_number',           'Period',             'integer',        'one',         NULL::text,                                   true,  true,  '{"min":1,"max":16}'::jsonb,             225)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
 WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'

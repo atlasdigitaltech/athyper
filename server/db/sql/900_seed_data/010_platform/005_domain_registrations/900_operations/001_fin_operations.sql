@@ -41,6 +41,26 @@ VALUES
     (NULL, 'customer', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                     false, 50, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
+-- ── Fix handler_targets for already-seeded NAVIGATE operations ────────────────
+-- The original seed used /document/{entity_name}/... paths which don't exist.
+-- Runtime routes live at /app/{entity-code}/... (underscore → hyphen).
+UPDATE control.entity_operation
+SET handler_target = CASE
+    WHEN entity_name = 'purchase_invoice' AND permission_code = 'create' THEN '/app/purchase-invoice/new'
+    WHEN entity_name = 'purchase_invoice' AND permission_code = 'update' THEN '/app/purchase-invoice/{id}/edit'
+    WHEN entity_name = 'purchase_order'   AND permission_code = 'create' THEN '/app/purchase-order/new'
+    WHEN entity_name = 'purchase_order'   AND permission_code = 'update' THEN '/app/purchase-order/{id}/edit'
+    WHEN entity_name = 'journal_entry'    AND permission_code = 'create' THEN '/app/journal-entry/new'
+    WHEN entity_name = 'journal_entry'    AND permission_code = 'update' THEN '/app/journal-entry/{id}/edit'
+    WHEN entity_name = 'payment_entry'    AND permission_code = 'create' THEN '/app/payment-entry/new'
+    WHEN entity_name = 'payment_entry'    AND permission_code = 'update' THEN '/app/payment-entry/{id}/edit'
+END
+WHERE tenant_id IS NULL
+  AND entity_name IN ('purchase_invoice','purchase_order','journal_entry','payment_entry')
+  AND permission_code IN ('create','update')
+  AND handler_type = 'NAVIGATE'
+  AND handler_target LIKE '/document/%';
+
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Purchase Invoice operations
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -48,8 +68,8 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'purchase_invoice', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/document/purchase_invoice/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/document/purchase_invoice/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/app/purchase-invoice/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/purchase-invoice/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_invoice', 'submit',   'DETAIL', 'PRIMARY',  'MODAL',    'submit',                               true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_invoice', 'approve',  'DETAIL', 'PRIMARY',  'MODAL',    'approve',                              true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_invoice', 'deny',     'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                                 true,  50, '00000000-0000-0000-0000-000000000000'),
@@ -67,8 +87,8 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'purchase_order', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/document/purchase_order/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_order', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/document/purchase_order/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_order', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/app/purchase-order/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_order', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/purchase-order/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_order', 'submit',   'DETAIL', 'PRIMARY',  'MODAL',    'submit',                             true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_order', 'approve',  'DETAIL', 'PRIMARY',  'MODAL',    'approve',                            true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'purchase_order', 'deny',     'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                               true,  50, '00000000-0000-0000-0000-000000000000'),
@@ -85,8 +105,8 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'journal_entry', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/document/journal_entry/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'journal_entry', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/document/journal_entry/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'journal_entry', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/app/journal-entry/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'journal_entry', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/journal-entry/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'submit',   'DETAIL', 'PRIMARY',  'MODAL',    'submit',                            true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'approve',  'DETAIL', 'PRIMARY',  'MODAL',    'approve',                           true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'deny',     'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                              true,  50, '00000000-0000-0000-0000-000000000000'),
@@ -103,8 +123,8 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'payment_entry', 'create',    'LIST',   'PRIMARY',  'NAVIGATE', '/document/payment_entry/new',        false, 10,  '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'payment_entry', 'update',    'DETAIL', 'PRIMARY',  'NAVIGATE', '/document/payment_entry/{id}/edit',  true,  20,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'create',    'LIST',   'PRIMARY',  'NAVIGATE', '/app/payment-entry/new',        false, 10,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'payment_entry', 'update',    'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/payment-entry/{id}/edit',  true,  20,  '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'submit',    'DETAIL', 'PRIMARY',  'MODAL',    'submit',                             true,  30,  '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'approve',   'DETAIL', 'PRIMARY',  'MODAL',    'approve',                            true,  40,  '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'deny',      'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                               true,  50,  '00000000-0000-0000-0000-000000000000'),
@@ -114,4 +134,21 @@ VALUES
     (NULL, 'payment_entry', 'cancel',    'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                             true,  90,  '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'copy',      'DETAIL', 'OVERFLOW', 'API',      'copy',                               true,  100, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'payment_entry', 'export',    'LIST',   'TOOLBAR',  'API',      'export',                             false, 110, '00000000-0000-0000-0000-000000000000')
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- Purchase Invoice Line operations
+-- create  → add a new line (only available when invoice is draft)
+-- update  → edit an existing line (only available when invoice is draft/amend)
+-- delete_draft → remove a line (only available when invoice is draft)
+-- view_distribution → navigate to the accounting distributions for this line
+-- ══════════════════════════════════════════════════════════════════════════════
+INSERT INTO control.entity_operation
+    (tenant_id, entity_name, permission_code, surface, placement,
+     handler_type, handler_target, is_record_required, sort_order, created_by)
+VALUES
+    (NULL, 'purchase_invoice_line', 'create',       'LIST',   'PRIMARY',  'MODAL',    'add_line',                           false, 10,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'update',       'DETAIL', 'PRIMARY',  'MODAL',    'edit_line',                          true,  20,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'delete_draft', 'DETAIL', 'OVERFLOW', 'MODAL',    'delete_line',                        true,  30,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'view_je',      'DETAIL', 'OVERFLOW', 'NAVIGATE', '/document/accounting_distribution?source_line_id={id}', true, 40, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;

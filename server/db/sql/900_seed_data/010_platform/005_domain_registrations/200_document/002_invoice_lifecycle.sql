@@ -1,5 +1,5 @@
 -- 100_finance/200_document/002_invoice_lifecycle.sql
--- Purpose: control.lifecycle + 9 states + transitions + entity_lifecycle binding
+-- Purpose: control.lifecycle + 10 states + transitions + entity_lifecycle binding
 --          for Purchase Invoice (document.purchase_invoice)
 -- Depends on: 001_invoice.sql
 -- Idempotent: ON CONFLICT DO NOTHING throughout
@@ -27,6 +27,7 @@ VALUES
     (v_lc_id, NULL, 'approved',         'Approved',          false, false, 30, '{"ui_color":"#0F6CBD","icon_key":"check-circle"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'posted',           'Posted',            false, false, 40, '{"ui_color":"#217346","icon_key":"check-double"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'partially_paid',   'Partially Paid',    false, false, 50, '{"ui_color":"#E8A020","icon_key":"banknote"}'::jsonb,                                         '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, 'on_hold',          'On Hold',           false, false, 55, '{"ui_color":"#B45309","icon_key":"pause-circle"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'fully_paid',       'Fully Paid',        false, true,  60, '{"ui_color":"#217346","icon_key":"circle-check"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'rejected',         'Rejected',          false, true,  70, '{"ui_color":"#C00000","icon_key":"x-circle"}'::jsonb,                                         '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'cancelled',        'Cancelled',         false, true,  80, '{"ui_color":"#666666","icon_key":"ban"}'::jsonb,                                              '00000000-0000-0000-0000-000000000000'),
@@ -51,7 +52,14 @@ VALUES
     (v_lc_id, NULL, (v_s->>'posted')::uuid,           (v_s->>'partially_paid')::uuid,   'pay',      true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, (v_s->>'posted')::uuid,           (v_s->>'reversed')::uuid,         'reverse',  true, '{"require_comment":true}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, (v_s->>'partially_paid')::uuid,   (v_s->>'fully_paid')::uuid,       'pay',      true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000'),
-    (v_lc_id, NULL, (v_s->>'rejected')::uuid,         (v_s->>'draft')::uuid,            'amend',    true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000')
+    (v_lc_id, NULL, (v_s->>'rejected')::uuid,         (v_s->>'draft')::uuid,            'amend',       true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000'),
+    -- on_hold: approved/posted/partially_paid can be held; release_hold returns to prior state
+    (v_lc_id, NULL, (v_s->>'approved')::uuid,         (v_s->>'on_hold')::uuid,          'hold',        true, '{"require_comment":true}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, (v_s->>'posted')::uuid,            (v_s->>'on_hold')::uuid,          'hold',        true, '{"require_comment":true}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, (v_s->>'partially_paid')::uuid,    (v_s->>'on_hold')::uuid,          'hold',        true, '{"require_comment":true}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, (v_s->>'on_hold')::uuid,           (v_s->>'approved')::uuid,         'release_hold',true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, (v_s->>'on_hold')::uuid,           (v_s->>'posted')::uuid,           'release_hold',true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000'),
+    (v_lc_id, NULL, (v_s->>'on_hold')::uuid,           (v_s->>'partially_paid')::uuid,   'release_hold',true, '{"require_comment":false}'::jsonb, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (lifecycle_id, from_state_id, to_state_id) DO NOTHING;
 
 -- ── 4. control.entity_lifecycle binding ──────────────────────────────────────

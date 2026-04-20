@@ -63,6 +63,9 @@ services:
           echo "[tracing-bucket-init] bucket created: $${TEMPO_S3_BUCKET}"
         fi
         echo "[tracing-bucket-init] bucket ready: $${TEMPO_S3_BUCKET}"
+    depends_on:
+      objectstorage:
+        condition: service_healthy
     networks: [edge]
     restart: "no"
     security_opt:

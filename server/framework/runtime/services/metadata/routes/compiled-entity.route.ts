@@ -343,6 +343,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         default_sort_order: (dbDisplayConfig["default_sort_order"] ?? undefined) as "asc" | "desc" | undefined,
         list_columns: (dbDisplayConfig["list_columns"] ?? undefined) as string[] | undefined,
         search_fields: (dbDisplayConfig["search_fields"] ?? undefined) as string[] | undefined,
+        detail_renderer: (dbDisplayConfig["detail_renderer"] ?? undefined) as "generic" | "approvable" | "ledger" | undefined,
+        document_header: (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
       };
 
       // ── Build feature_flags ───────────────────────────────────────────────
@@ -352,7 +354,10 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // ── Compiled hash ─────────────────────────────────────────────────────
       const versionHash = entityRow.version_hash
         ?? simpleHash(`${String(entityRow.id)}-v${entityRow.version_no}`);
-      const compiledHash = simpleHash(`${versionHash}-${fields.length}`);
+      // Include display_config in hash so changes to document_header or
+      // detail_renderer bust the Redis descriptor cache automatically.
+      const displayConfigHash = simpleHash(JSON.stringify(dbDisplayConfig));
+      const compiledHash = simpleHash(`${versionHash}-${fields.length}-${displayConfigHash}`);
 
       const payload = {
         entity_id: entityRow.id as string,

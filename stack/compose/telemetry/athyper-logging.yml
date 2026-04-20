@@ -54,6 +54,9 @@ services:
         mc alias ls storage >/dev/null
         mc mb --ignore-existing "storage/$${LOKI_S3_BUCKET}"
         echo "[logging-bucket-init] bucket ready: $${LOKI_S3_BUCKET}"
+    depends_on:
+      objectstorage:
+        condition: service_healthy
     networks: [edge]
     restart: "no"
     security_opt:

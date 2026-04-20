@@ -84,6 +84,12 @@ WHERE NOT EXISTS (
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
 
+-- Fix any already-seeded uppercase codes → lowercase (idempotent)
+UPDATE control.lookup_value SET code = 'po_based'        WHERE domain_code = 'document.purchase_invoice_source' AND code = 'PO_BASED'        AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'contract_based'  WHERE domain_code = 'document.purchase_invoice_source' AND code = 'CONTRACT_BASED'  AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'non_po'          WHERE domain_code = 'document.purchase_invoice_source' AND code = 'NON_PO'          AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'one_time_vendor' WHERE domain_code = 'document.purchase_invoice_source' AND code = 'ONE_TIME_VENDOR' AND tenant_id IS NULL;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Purchase invoice type
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -107,6 +113,17 @@ WHERE NOT EXISTS (
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
 
+-- Fix any already-seeded uppercase codes → lowercase (idempotent)
+UPDATE control.lookup_value SET code = 'standard'          WHERE domain_code = 'document.purchase_invoice_type' AND code = 'STANDARD'          AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'credit_note'       WHERE domain_code = 'document.purchase_invoice_type' AND code = 'CREDIT_NOTE'       AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'debit_note'        WHERE domain_code = 'document.purchase_invoice_type' AND code = 'DEBIT_NOTE'        AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'advance'           WHERE domain_code = 'document.purchase_invoice_type' AND code = 'ADVANCE'           AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'retention_release' WHERE domain_code = 'document.purchase_invoice_type' AND code = 'RETENTION_RELEASE' AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'proforma'          WHERE domain_code = 'document.purchase_invoice_type' AND code = 'PROFORMA'          AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'self_billed'       WHERE domain_code = 'document.purchase_invoice_type' AND code = 'SELF_BILLED'       AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'down_payment'      WHERE domain_code = 'document.purchase_invoice_type' AND code = 'DOWN_PAYMENT'      AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'final'             WHERE domain_code = 'document.purchase_invoice_type' AND code = 'FINAL'             AND tenant_id IS NULL;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Invoice match type
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -124,6 +141,12 @@ WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
+
+-- Fix any already-seeded uppercase codes → lowercase (idempotent)
+UPDATE control.lookup_value SET code = 'three_way'         WHERE domain_code = 'document.invoice_match_type' AND code = 'THREE_WAY'         AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'two_way'           WHERE domain_code = 'document.invoice_match_type' AND code = 'TWO_WAY'           AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'no_match'          WHERE domain_code = 'document.invoice_match_type' AND code = 'NO_MATCH'          AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'evaluated_receipt' WHERE domain_code = 'document.invoice_match_type' AND code = 'EVALUATED_RECEIPT' AND tenant_id IS NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Match exception type
@@ -182,6 +205,43 @@ FROM (VALUES
     ('fixed',          'Fixed Account',     'document.acct_dist_account_source', 'Explicit GL account ID or code on the distribution row',      20),
     ('from_intent',    'From Intent',       'document.acct_dist_account_source', 'Resolved via business_intent.default_gl_account_id',          30),
     ('from_category',  'From Category',     'document.acct_dist_account_source', 'Resolved via spend_category → intent → GL (default path)',    40)
+) AS v(code, name, domain_code, description, sort_order)
+WHERE NOT EXISTS (
+    SELECT 1 FROM control.lookup_value x
+    WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Invoice line procurement type
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO control.lookup_value
+    (code, name, domain_code, description, sort_order, is_system, status, created_by)
+SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
+       true, 'active', '00000000-0000-0000-0000-000000000000'
+FROM (VALUES
+    ('goods',    'Goods',    'document.procurement_type', 'Physical goods delivered',                        10),
+    ('services', 'Services', 'document.procurement_type', 'Services rendered or contracted',                 20),
+    ('mixed',    'Mixed',    'document.procurement_type', 'Combined goods and services on a single line',    30),
+    ('freight',  'Freight',  'document.procurement_type', 'Shipping and freight charges',                    40),
+    ('misc',     'Misc',     'document.procurement_type', 'Miscellaneous charges not fitting other types',   50)
+) AS v(code, name, domain_code, description, sort_order)
+WHERE NOT EXISTS (
+    SELECT 1 FROM control.lookup_value x
+    WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
+);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Invoice / line match status (three-way match progress)
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO control.lookup_value
+    (code, name, domain_code, description, sort_order, is_system, status, created_by)
+SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
+       true, 'active', '00000000-0000-0000-0000-000000000000'
+FROM (VALUES
+    ('unmatched',          'Unmatched',          'document.invoice_match_status', 'No matching GR or SES linked yet',                   10),
+    ('partially_matched',  'Partially Matched',  'document.invoice_match_status', 'Some lines or quantity matched; remainder pending',  20),
+    ('fully_matched',      'Fully Matched',      'document.invoice_match_status', 'All lines matched within tolerance',                 30),
+    ('match_exception',    'Match Exception',    'document.invoice_match_status', 'Variance outside tolerance; requires resolution',    40)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

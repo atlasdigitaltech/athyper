@@ -49,6 +49,8 @@ interface EntityTableInfo {
   table_schema:       string;
   table_name:         string;
   natural_key_fields: string[];
+  entity_class:       string;
+  feature_flags:      Record<string, unknown>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,7 +59,7 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   const name = entityCode.replace(/-/g, "_");
   const row = await db
     .selectFrom("control.entity as e")
-    .select(["e.table_schema", "e.table_name", "e.natural_key_fields"])
+    .select(["e.table_schema", "e.table_name", "e.natural_key_fields", "e.entity_class", "e.feature_flags"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .executeTakeFirst();
@@ -65,9 +67,9 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   return {
     table_schema:       String(row.table_schema),
     table_name:         String(row.table_name),
-    natural_key_fields: Array.isArray(row.natural_key_fields)
-      ? (row.natural_key_fields as string[])
-      : [],
+    natural_key_fields: Array.isArray(row.natural_key_fields) ? (row.natural_key_fields as string[]) : [],
+    entity_class:       String(row.entity_class ?? ""),
+    feature_flags:      (row.feature_flags && typeof row.feature_flags === "object") ? (row.feature_flags as Record<string, unknown>) : {},
   };
 }
 
@@ -441,7 +443,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName);
-        if (columnName) {
+        // Skip undefined/null values so DB column defaults can apply
+        if (columnName && value !== undefined && value !== null) {
           mappedData[columnName] = value;
         }
       }
@@ -461,6 +464,44 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
         : SYSTEM_PRINCIPAL_UUID;
       mappedData.created_by = principalId;
+
+      // Auto-populate DOCUMENT-entity system fields that the generic form doesn't expose
+      if (table.entity_class === "DOCUMENT") {
+        if (!mappedData["company_code_id"]) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cc = await (db as any)
+            .selectFrom("master.company_code")
+            .select(["id", "functional_currency"])
+            .where("tenant_id", "=", tenantId)
+            .where("status", "=", "active")
+            .orderBy("created_at", "asc")
+            .executeTakeFirst() as { id: string; functional_currency: string } | undefined;
+          if (cc) {
+            mappedData["company_code_id"] = cc.id;
+            if (!mappedData["base_currency_code"]) {
+              mappedData["base_currency_code"] = cc.functional_currency;
+            }
+          }
+        } else if (!mappedData["base_currency_code"]) {
+          // company_code_id was provided, resolve functional_currency from it
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cc = await (db as any)
+            .selectFrom("master.company_code")
+            .select(["functional_currency"])
+            .where("id", "=", mappedData["company_code_id"])
+            .executeTakeFirst() as { functional_currency: string } | undefined;
+          if (cc) mappedData["base_currency_code"] = cc.functional_currency;
+        }
+        // Fallback: use currency_code as base_currency_code if still missing
+        if (!mappedData["base_currency_code"] && mappedData["currency_code"]) {
+          mappedData["base_currency_code"] = mappedData["currency_code"];
+        }
+        // supplier_invoice_number is NOT NULL; default to '' when not provided
+        // (entity_field vendor_invoice_ref is optional so the form may omit it)
+        if (mappedData["supplier_invoice_number"] === undefined) {
+          mappedData["supplier_invoice_number"] = "";
+        }
+      }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
       const row = await db.insertInto(fullTable).values(mappedData as never).returningAll().executeTakeFirst();
@@ -807,9 +848,51 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     };
   }
 
+  // ── GET /:entity/:id/lines — query convention-based {table_name}_line table ──
+  const linesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id = req.params["id"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
+      const fkCol      = `${table.table_name}_id`;
+
+      let rows: Record<string, unknown>[] = [];
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = db.selectFrom(linesTable).selectAll().where(fkCol as never, "=", id as never);
+        if (tenantId !== null) q = q.where("tenant_id" as never, "=", tenantId as never);
+        q = q.orderBy("line_no" as never, "asc");
+        rows = await q.execute() as Record<string, unknown>[];
+      } catch {
+        // Lines table may not exist for this entity — return empty gracefully
+        rows = [];
+      }
+
+      res.json({ data: rows });
+    } catch (err) {
+      logger?.error("records_lines_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   router.get("/records/:entity", listHandler);
   router.get("/records/:entity/_debug", debugHandler);
   // Sub-resource routes must be registered before /:id to avoid shadowing
+  router.get("/records/:entity/:id/lines",              linesHandler);
   router.get("/records/:entity/:id/workflow",           subResourceStub("workflow"));
   router.get("/records/:entity/:id/attachments",        subResourceStub("attachments"));
   router.get("/records/:entity/:id/distributions",      subResourceStub("distributions"));

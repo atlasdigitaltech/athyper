@@ -62,7 +62,7 @@ function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: st
     queryKey: ["record-lines", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
         { signal },
       );
       if (!res.ok) return { data: [] };
