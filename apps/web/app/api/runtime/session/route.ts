@@ -7,6 +7,7 @@ import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-heade
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import { refreshTokens } from "@/lib/auth/keycloak";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
+import { sessKey } from "@/lib/auth/redis-keys";
 import { cookies } from "next/headers";
 import type { V4Session } from "@/lib/auth/types";
 
@@ -84,7 +85,7 @@ export async function GET(req: Request) {
           const sid = cookieStore.get("neon_sid")?.value;
           if (sid) {
             const ns = sessionNamespace;
-            const raw = await redis.get(`sess:${ns}:${sid}`);
+            const raw = await redis.get(sessKey(ns, sid));
             if (raw) {
               const stored = JSON.parse(raw) as V4Session;
               const nowSec = Math.floor(Date.now() / 1000);
@@ -99,12 +100,14 @@ export async function GET(req: Request) {
                 idToken: tokens.id_token ?? stored.idToken,
                 lastSeenAt: nowSec,
               };
-              const ttl = await redis.ttl(`sess:${ns}:${sid}`);
-              await redis.set(`sess:${ns}:${sid}`, JSON.stringify(updated), { EX: ttl > 0 ? ttl : 28800 });
+              const ttl = await redis.ttl(sessKey(ns, sid));
+              await redis.set(sessKey(ns, sid), JSON.stringify(updated), { EX: ttl > 0 ? ttl : 28800 });
             }
           }
-        } catch {
-          // Redis write failure is non-fatal — the refreshed token is used for this request only
+        } catch (redisErr) {
+          // Non-fatal — refreshed token is still used for this request; next request
+          // will re-read the old token from Redis and may trigger another refresh.
+          console.warn("[api/runtime/session] Redis update failed after token refresh:", redisErr instanceof Error ? redisErr.message : String(redisErr));
         }
 
         // Retry with the refreshed access token

@@ -27,11 +27,11 @@ export async function POST(req: Request) {
     );
     if (!res.ok) {
       console.error("[api/collab/mark-all-read POST] upstream", res.status);
-      return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
     }
     return NextResponse.json(await res.json());
   } catch (e) {
     console.error("[api/collab/mark-all-read POST]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }

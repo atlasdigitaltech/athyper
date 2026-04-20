@@ -14,7 +14,7 @@
  *   bg-accent / bg-muted / bg-secondary / bg-card
  */
 
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Activity, Bell, Building2, FileText, LogOut, MessageSquare,
@@ -84,9 +84,9 @@ const SECTION_TITLE: Record<SectionId, string> = {
 
 const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
 
-// ─── SettingsPage ─────────────────────────────────────────────────────────────
+// ─── SettingsContent ──────────────────────────────────────────────────────────
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const raw = (searchParams.get("section") ?? "profile") as SectionId;
 
@@ -225,5 +225,15 @@ export default function SettingsPage() {
         </div>
       )}
     </PageFrame>
+  );
+}
+
+// ─── SettingsPage ─────────────────────────────────────────────────────────────
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="h-full animate-pulse bg-muted/20" />}>
+      <SettingsContent />
+    </Suspense>
   );
 }

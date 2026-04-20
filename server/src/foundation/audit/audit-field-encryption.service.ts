@@ -200,6 +200,7 @@ export async function reEncryptHotPartition(
       .select(["al.id", "al.entity_type", "al.old_values", "al.new_values"] as never[])
       .where("al.tenant_id" as never, "=", tenantId as never)
       .where("al.created_at" as never, ">=", startOfMonth.toISOString() as never)
+      .orderBy("al.id" as never, "asc" as never)
       .limit(batchSize)
       .offset(offset)
       .execute() as Array<{

@@ -7,5 +7,6 @@ export {
   WORKSPACE_LABELS,
   WORKSPACE_SORT_ORDER,
   CORE_GROUPS,
+  PARTNER_GROUPS,
 } from "./module-workspace-map";
 export { MODULE_PAGES, getModulePrimaryHref, type ModulePage } from "./module-pages";

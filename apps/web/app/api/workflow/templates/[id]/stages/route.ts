@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const url    = `${RUNTIME_API_URL}/api/workflow/templates/${id}/stages`;
+  const url    = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/stages`;
 
   try {
     const res  = await fetch(url, { headers: buildRuntimeHeaders(session), cache: "no-store" });
@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const body   = await request.json();
-    const url    = `${RUNTIME_API_URL}/api/workflow/templates/${id}/stages`;
+    const url    = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/stages`;
 
     const res = await fetch(url, {
       method:  "POST",

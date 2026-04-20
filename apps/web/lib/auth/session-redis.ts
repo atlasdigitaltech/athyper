@@ -49,7 +49,10 @@ function createConnection(): Promise<AnyRedisClient> {
         reconnectStrategy,
       },
     });
-    client.on("error", () => {});
+    client.on("error", (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[session-redis] Redis error:", msg);
+    });
 
     // Belt-and-suspenders timeout in case connectTimeout isn't honoured
     // (observed on Windows Docker: ECONNRESET can take 30s+ per attempt)

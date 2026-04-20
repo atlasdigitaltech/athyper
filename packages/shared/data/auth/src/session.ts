@@ -10,7 +10,20 @@
  */
 import { type Session } from "./types";
 
-const SESSION_COOKIE_NAME = "neon_sid";
+const SESSION_COOKIE_NAME = "athyper_sid";
+
+function isValidSession(value: unknown): value is Session {
+  if (!value || typeof value !== "object") return false;
+  const s = value as Record<string, unknown>;
+  return (
+    typeof s.access_token === "string" &&
+    typeof s.refresh_token === "string" &&
+    typeof s.expires_at === "number" &&
+    s.user !== null && typeof s.user === "object" &&
+    s.tenant !== null && typeof s.tenant === "object" &&
+    s.persona !== null && typeof s.persona === "object"
+  );
+}
 
 /**
  * Get the current session from request cookies.
@@ -32,14 +45,17 @@ export async function getSession(): Promise<Session | null> {
   }
 
   try {
-    const session: Session = JSON.parse(sessionCookie.value);
+    const parsed: unknown = JSON.parse(sessionCookie.value);
 
-    // Check expiry
-    if (session.expires_at < Date.now() / 1000) {
+    if (!isValidSession(parsed)) {
       return null;
     }
 
-    return session;
+    if (parsed.expires_at < Date.now() / 1000) {
+      return null;
+    }
+
+    return parsed;
   } catch {
     return null;
   }

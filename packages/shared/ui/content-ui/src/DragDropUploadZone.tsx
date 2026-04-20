@@ -23,7 +23,7 @@ import {
   type ChangeEvent,
 } from "react";
 import { UploadCloud, X, AlertCircle, FileText } from "lucide-react";
-import { cn } from "@athyper/theme";
+import { cn } from "@athyper/theme/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

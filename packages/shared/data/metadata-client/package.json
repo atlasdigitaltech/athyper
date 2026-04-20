@@ -14,7 +14,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@athyper/api-client": "workspace:*",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

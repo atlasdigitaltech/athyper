@@ -23,13 +23,21 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
     if (!res.ok) {
-      // Backend not available — return empty timeline so UI shows "No activity".
-      return NextResponse.json({ ok: true, data: [] });
+      if (res.status === 404 || res.status === 410) {
+        return NextResponse.json({ ok: true, data: [] });
+      }
+      console.error("[api/collab/timeline GET] upstream", res.status, { userId: session.userId });
+      return NextResponse.json({ error: "Timeline service unavailable" }, { status: 502 });
     }
-    return NextResponse.json(await res.json());
+    const data: unknown = await res.json().catch(() => null);
+    if (!data) {
+      console.error("[api/collab/timeline GET] invalid JSON from upstream", { userId: session.userId });
+      return NextResponse.json({ error: "Timeline service unavailable" }, { status: 502 });
+    }
+    return NextResponse.json(data);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[api/collab/timeline GET]", msg);
-    return NextResponse.json({ ok: true, data: [] });
+    console.error("[api/collab/timeline GET]", msg, { userId: session.userId });
+    return NextResponse.json({ error: "Timeline service unavailable" }, { status: 502 });
   }
 }

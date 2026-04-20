@@ -12,26 +12,26 @@
 //   shared.uuidv7() bootstrap dependency.
 //
 // Phase 2 – System Seed: Platform-wide reference and control data
-//   Directory: 900_seed_data/010_system/**
+//   Directory: 900_seed_data/010_platform/**
 //
-// Phase 3 – Blueprint + Tenant + Prod Tenant Seed
-//   Directories: 900_seed_data/020_blueprint/**
-//                900_seed_data/030_tenant/**
-//                900_seed_data/040_prod_tenant/**
+// Phase 3 – Blueprint + Tenant Seed
+//   Directories: 900_seed_data/020_universal/**   (TIER 1 foundation + TIER 2a COA)
+//                900_seed_data/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
+//                900_seed_data/040_tenants/**     (per-client onboarding)
 //
 // Usage:
-//   tsx db/seed/migrate.ts                   # Run all three phases (default)
+//   tsx db/seed/migrate.ts                   # Run all three stages (default)
 //   tsx db/seed/migrate.ts --all             # Same as default
-//   tsx db/seed/migrate.ts --ddl-only        # Phase 1 only (DDL)
-//   tsx db/seed/migrate.ts --system-only     # Phase 2 only (010_system seed; DDL must exist)
-//   tsx db/seed/migrate.ts --no-demo         # Phases 1+2 (DDL + system, no demo/tenant data)
-//   tsx db/seed/migrate.ts --demo-only       # Phases 1+2+3 (all; checksum tracking skips done files)
-//   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all phases
+//   tsx db/seed/migrate.ts --ddl-only        # Stage 1 only (DDL)
+//   tsx db/seed/migrate.ts --system-only     # Stage 2 only (010_platform seed; DDL must exist)
+//   tsx db/seed/migrate.ts --no-demo         # Stages 1+2 (DDL + system, no demo/tenant data)
+//   tsx db/seed/migrate.ts --demo-only       # Stages 1+2+3 (all; checksum tracking skips done files)
+//   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all stages
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
 //   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
-//   tsx db/seed/migrate.ts --phase=1         # Low-level: explicit phase number(s)
-//   tsx db/seed/migrate.ts --phase=1 --phase=2  # Multiple phases
+//   tsx db/seed/migrate.ts --stage=1         # Low-level: explicit stage number(s)
+//   tsx db/seed/migrate.ts --stage=1 --stage=2  # Multiple stages
 //
 // Environment variables:
 //   DATABASE_ADMIN_URL  — Direct Postgres connection string (required)
@@ -58,10 +58,10 @@ const SQL_DIR = join(__dirname, "../sql");
 const SEED_DATA_DIR = "900_seed_data";
 
 /** Subdirectory prefixes within 900_seed_data/ */
-const SYSTEM_PREFIX = "010_system";
-const BLUEPRINT_PREFIX = "020_blueprint";
-const TENANT_PREFIX = "030_tenant";
-const PROD_TENANT_PREFIX = "040_prod_tenant";
+const SYSTEM_PREFIX = "010_platform";
+const BLUEPRINT_UNIVERSAL_PREFIX = "020_universal";
+const BLUEPRINT_INDUSTRY_PREFIX = "030_industry";
+const TENANT_PREFIX = "040_tenants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,7 +114,7 @@ function collectSqlFiles(dir: string): string[] {
     for (const entry of entries) {
       const fullPath = join(current, entry.name);
       if (entry.isDirectory()) {
-        walk(fullPath);
+        if (!entry.name.startsWith("_")) walk(fullPath);
       } else if (entry.isFile() && entry.name.endsWith(".sql") && !entry.name.startsWith("verify")) {
         results.push(fullPath);
       }
@@ -181,15 +181,12 @@ export function discoverSqlFiles(): SqlFile[] {
       if (subDirName.startsWith(SYSTEM_PREFIX)) {
         phase = 2;
         phaseLabel = "System Seed";
-      } else if (subDirName.startsWith(BLUEPRINT_PREFIX)) {
+      } else if (subDirName.startsWith(BLUEPRINT_UNIVERSAL_PREFIX) || subDirName.startsWith(BLUEPRINT_INDUSTRY_PREFIX)) {
         phase = 3;
         phaseLabel = "Blueprint Seed";
       } else if (subDirName.startsWith(TENANT_PREFIX)) {
         phase = 3;
         phaseLabel = "Tenant Seed";
-      } else if (subDirName.startsWith(PROD_TENANT_PREFIX)) {
-        phase = 3;
-        phaseLabel = "Prod Tenant Seed";
       } else {
         continue;
       }
@@ -278,30 +275,10 @@ export function discoverSqlFiles(): SqlFile[] {
     return a.relPath.localeCompare(b.relPath);
   });
 
-  // Seed files sort alphabetically with two exceptions within 010_system/:
-  //
-  // 1. 000_public/000_bootstrap.sql must run FIRST — it creates the system
-  //    tenant and system principal (all-zeros UUID) which later seeds reference
-  //    as created_by. Alphabetically "000_public" (p=112) sorts after
-  //    "000_lookups" (l=108), so we remap it to "000_000_public" (0=48 < l).
-  //
-  // 2. entity_engine/ must run before 100_finance/ because entity_engine/
-  //    020_entities/ registers entity_code values that 100_finance/ seeds
-  //    depend on. Alphabetically "e" > "1" so we remap to "009_entity_engine".
-  function seedSortKey(relPath: string): string {
-    return relPath
-      .replace(
-        "900_seed_data/010_system/000_public/",
-        "900_seed_data/010_system/000_000_public/",
-      )
-      .replace(
-        "900_seed_data/010_system/entity_engine/",
-        "900_seed_data/010_system/009_entity_engine/",
-      );
-  }
-  seedFiles.sort((a, b) =>
-    seedSortKey(a.relPath).localeCompare(seedSortKey(b.relPath)),
-  );
+  // Seed files sort alphabetically by relPath. The numeric prefixes in each
+  // subfolder name (000_bootstrap, 001_global_reference, 004_entity_engine, …)
+  // provide the correct execution order without special-casing.
+  seedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
 
   return [...ddlFiles, ...seedFiles];
 }
@@ -365,7 +342,7 @@ async function markExecuted(
 async function runPhases(
   connectionString: string,
   phases: Phase[],
-  opts: { force: boolean },
+  opts: { force: boolean; tenantId?: string },
 ): Promise<void> {
   const files = discoverSqlFiles().filter((f) => phases.includes(f.phase));
 
@@ -382,10 +359,23 @@ async function runPhases(
 
     // Set system tenant context so triggers that call shared.current_tenant_id()
     // do not raise during seed execution. The system tenant UUID is the well-known
-    // zero UUID established in 900_seed_data/010_system/000_public/000_bootstrap.sql.
+    // zero UUID established in 900_seed_data/010_platform/000_bootstrap/000_bootstrap.sql.
     await client.query(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
+
+    // Set seed tenant for Phase 3 blueprint/tenant provisioning.
+    // SQL files under 020_universal/ and 030_industry/ call
+    // current_setting('app.seed_tenant_id', true)::uuid to scope their inserts.
+    // When --tenant-id / SEED_TENANT_ID is supplied, set the session variable
+    // once here so every Phase 3 file in this connection inherits it.
+    if (opts.tenantId) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opts.tenantId)) {
+        throw new Error(`--tenant-id / SEED_TENANT_ID is not a valid UUID: ${opts.tenantId}`);
+      }
+      await client.query(`SET app.seed_tenant_id = '${opts.tenantId}'`);
+      log({ msg: "migrate_seed_tenant_set", tenantId: opts.tenantId });
+    }
 
     const seedPhases: Phase[] = [2, 3];
     const hasSeedPhase = phases.some((p) => seedPhases.includes(p));
@@ -394,6 +384,11 @@ async function runPhases(
     // control schema, so we apply them lazily just before the first
     // phase-2/3 file executes rather than eagerly at startup.
     let seedSetupApplied = false;
+    // seedTenantResolved tracks whether we have attempted to auto-resolve the
+    // seed tenant UUID. Done lazily before the first Phase 3 file so that
+    // Phase 2 (which creates the Athyper tenant) has already run. This way
+    // a --all run from a clean DB works without needing --tenant-id.
+    let seedTenantResolved = !!opts.tenantId;
 
     const executed = await getExecuted(client);
     const results: ExecutionResult[] = [];
@@ -404,9 +399,29 @@ async function runPhases(
       totalFiles: files.length,
       alreadyExecuted: executed.size,
       force: opts.force,
+      seedTenantId: opts.tenantId ?? "(not set — will auto-resolve from master.tenant before Phase 3)",
     });
 
     for (const file of files) {
+      // Auto-resolve seed tenant UUID once, immediately before the first Phase 3
+      // file, so Phase 2 (which bootstraps the Athyper tenant) has already run.
+      // Skipped when --tenant-id / SEED_TENANT_ID was explicitly provided.
+      if (file.phase === 3 && !seedTenantResolved) {
+        seedTenantResolved = true;
+        try {
+          const row = await client.query<{ id: string }>(
+            `SELECT id::text FROM master.tenant WHERE code = 'athyper' LIMIT 1`,
+          );
+          if (row.rows.length > 0) {
+            const resolvedId = row.rows[0].id;
+            await client.query(`SET app.seed_tenant_id = '${resolvedId}'`);
+            log({ msg: "migrate_seed_tenant_resolved", tenantId: resolvedId });
+          }
+        } catch {
+          // master.tenant not accessible yet — SQL files will raise their own error
+        }
+      }
+
       // Apply seed-phase setup once, immediately before the first seed file,
       // so the control schema is guaranteed to exist (phase 1 ran first).
       if (hasSeedPhase && !seedSetupApplied && file.phase >= 2) {
@@ -629,14 +644,21 @@ async function main(): Promise<void> {
   const status = args.includes("--status");
 
   // High-level convenience flags (all idempotent via checksum tracking)
-  const ddlOnly    = args.includes("--ddl-only");     // Phase 1 only
-  const systemOnly = args.includes("--system-only");  // Phase 2 only (DDL must exist)
-  const noDemo     = args.includes("--no-demo");      // Phases 1+2
-  const demoOnly   = args.includes("--demo-only");    // Phases 1+2+3 (ensures prerequisites)
+  const ddlOnly    = args.includes("--ddl-only");     // Stage 1 only
+  const systemOnly = args.includes("--system-only");  // Stage 2 only (DDL must exist)
+  const noDemo     = args.includes("--no-demo");      // Stages 1+2
+  const demoOnly   = args.includes("--demo-only");    // Stages 1+2+3 (ensures prerequisites)
   const runAll     = args.includes("--all");
 
-  // Low-level --phase=N flag(s) — all occurrences are collected
-  const phaseArgs  = args.filter((a) => a.startsWith("--phase="));
+  // Low-level --stage=N flag(s) — all occurrences are collected
+  const stageArgs  = args.filter((a) => a.startsWith("--stage="));
+
+  // Tenant UUID for Stage 3 blueprint/tenant provisioning.
+  // CLI flag takes precedence over environment variable.
+  const tenantIdArg = args.find((a) => a.startsWith("--tenant-id="));
+  const tenantId    = tenantIdArg
+    ? tenantIdArg.split("=").slice(1).join("=")   // preserve any = in UUID (shouldn't happen, but safe)
+    : process.env.SEED_TENANT_ID;
 
   try {
     if (status) {
@@ -651,7 +673,7 @@ async function main(): Promise<void> {
 
     if (reset) {
       await runReset(connectionString);
-      // After reset, always fall through to re-run all phases from scratch
+      // After reset, always fall through to re-run all stages from scratch
     }
 
     let phases: Phase[];
@@ -663,25 +685,25 @@ async function main(): Promise<void> {
     } else if (noDemo) {
       phases = [1, 2];
     } else if (demoOnly || runAll) {
-      // demoOnly runs ALL phases — checksum tracking skips already-executed files,
-      // so prerequisites (phase 1 DDL, phase 2 system seed) are always guaranteed.
+      // demoOnly runs ALL stages — checksum tracking skips already-executed files,
+      // so prerequisites (stage 1 DDL, stage 2 system seed) are always guaranteed.
       phases = [1, 2, 3];
-    } else if (phaseArgs.length > 0) {
-      const parsed = phaseArgs.map((a) => parseInt(a.split("=")[1] ?? "", 10));
+    } else if (stageArgs.length > 0) {
+      const parsed = stageArgs.map((a) => parseInt(a.split("=")[1] ?? "", 10));
       if (parsed.some((n) => n !== 1 && n !== 2 && n !== 3)) {
         logError({
           msg: "migrate_error",
-          error: "--phase must be 1, 2, or 3",
+          error: "--stage must be 1, 2, or 3",
         });
         process.exit(1);
       }
       phases = [...new Set(parsed)].sort() as Phase[];
     } else {
-      // Default: run all phases
+      // Default: run all stages
       phases = [1, 2, 3];
     }
 
-    await runPhases(connectionString, phases, { force });
+    await runPhases(connectionString, phases, { force, tenantId });
   } catch (err) {
     logError({ msg: "migrate_fatal", error: String(err) });
     process.exit(1);

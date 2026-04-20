@@ -262,11 +262,11 @@ export function mapApInvoiceToHeader(
   const partySubtitle = subtitleParts.join(" · ") || undefined;
 
   // PO reference items
+  const poCount = purchaseOrders?.length ?? 0;
   const references =
     purchaseOrders?.map((po) => ({
       label: "PO Reference",
-      value:
-        purchaseOrders.length > 1 ? `Multi-Parent (${purchaseOrders.length})` : po.number,
+      value: poCount > 1 ? `Multi-Parent (${poCount})` : po.number,
       url: po.id ? `/purchase-orders/${po.id}` : undefined,
     })) ?? [];
 

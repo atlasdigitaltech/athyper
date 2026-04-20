@@ -31,7 +31,7 @@ import { type ReactNode, useEffect } from "react";
 
 import * as Dialog from "@radix-ui/react-dialog";
 
-import { cn } from "@athyper/theme";
+import { cn } from "@athyper/theme/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

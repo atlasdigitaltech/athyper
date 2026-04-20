@@ -9,7 +9,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   try {
     const { id } = await params;
-    const url    = `${RUNTIME_API_URL}/api/workflow/templates/${id}/compile`;
+    const url    = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/compile`;
 
     const res = await fetch(url, {
       method:  "POST",

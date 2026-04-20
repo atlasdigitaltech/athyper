@@ -48,3 +48,11 @@ export function forwardSearchParams(url: string, allowed: readonly string[]): st
   }
   return params.toString();
 }
+
+/**
+ * Strip characters that could break HTTP header boundaries or inject new headers.
+ * Only CR, LF, and NUL are dangerous here — everything else is valid filename content.
+ */
+export function sanitizeContentDisposition(disposition: string): string {
+  return disposition.replace(/[\r\n\0]/g, "");
+}

@@ -28,7 +28,7 @@ export async function POST(
   }
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/workflow/requests/${id}/action`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/workflow/requests/${encodeURIComponent(id)}/action`, {
       method: "POST",
       headers: {
         ...buildRuntimeHeaders(session),

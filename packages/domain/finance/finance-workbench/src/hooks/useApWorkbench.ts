@@ -405,6 +405,7 @@ export function useCreateArReceipt(scope: FinanceScope) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["finance", "ar", "receipts"] });
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ar", "invoices"] });
     },
   });
 }

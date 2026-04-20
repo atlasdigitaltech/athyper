@@ -21,7 +21,7 @@ export async function POST(
   try {
     const body = await request.json();
     const res = await fetch(
-      `${RUNTIME_API_URL}/api/finance/period-close/runs/${runId}/sign-off`,
+      `${RUNTIME_API_URL}/api/finance/period-close/runs/${encodeURIComponent(runId)}/sign-off`,
       {
         method: "POST",
         headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },

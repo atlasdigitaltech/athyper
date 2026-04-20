@@ -8,6 +8,20 @@
  * NOT from schema.table names. This ensures URLs survive table renames.
  *
  * Unknown entity codes fail HERE — before any partial rendering.
+ *
+ * ── ROUTING INVARIANT (RUNTIME_ROUTING_SPEC §2) ───────────────────────────────
+ * Route and render decisions MUST use:
+ *   entity_class → resolveRuntimeFamily()        (list-page family: master/document/ledger)
+ *   display_config.detail_renderer → resolveDetailRenderer()  (detail renderer)
+ *
+ * NEVER use entity.kind as a routing discriminant.
+ *   • entity.kind is a meta-category on the control.entity row itself
+ *     ('ent' | 'view' | …), not a domain shape or rendering hint.
+ *   • CompiledEntity intentionally omits the kind field so the type system
+ *     enforces this at the BFF and client layers.
+ *   • Server-side raw DB queries that need to branch on entity shape must use
+ *     entity_class, not kind.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 import {
   type CompiledEntity,

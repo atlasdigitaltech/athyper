@@ -130,12 +130,6 @@ CREATE TRIGGER trg_address_link_updated_at BEFORE UPDATE ON master.address_link 
 -- Uses control.trg_validate_lookup_columns(domain_code, column_name).
 -- ============================================================================
 
--- tenant.status
-DROP TRIGGER IF EXISTS trg_tenant_status_lookup ON master.tenant;
-CREATE TRIGGER trg_tenant_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.tenant
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_status', 'status');
-
 -- tenant.subscription
 DROP TRIGGER IF EXISTS trg_tenant_subscription_lookup ON master.tenant;
 CREATE TRIGGER trg_tenant_subscription_lookup
@@ -147,12 +141,6 @@ DROP TRIGGER IF EXISTS trg_principal_type_lookup ON master.principal;
 CREATE TRIGGER trg_principal_type_lookup
     BEFORE INSERT OR UPDATE OF principal_type ON master.principal
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_type', 'principal_type');
-
--- principal.status
-DROP TRIGGER IF EXISTS trg_principal_status_lookup ON master.principal;
-CREATE TRIGGER trg_principal_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.principal
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_status', 'status');
 
 -- contact_link.channel_type
 DROP TRIGGER IF EXISTS trg_contact_link_channel_type_lookup ON master.contact_link;
@@ -864,12 +852,6 @@ DROP TRIGGER IF EXISTS trg_legal_entity_status_changed ON master.legal_entity;
 CREATE TRIGGER trg_legal_entity_status_changed BEFORE UPDATE ON master.legal_entity
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
--- lookup validation: status
-DROP TRIGGER IF EXISTS trg_legal_entity_status_lookup ON master.legal_entity;
-CREATE TRIGGER trg_legal_entity_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.legal_entity
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.legal_entity_status', 'status');
-
 -- lookup validation: entity_type
 DROP TRIGGER IF EXISTS trg_legal_entity_type_lookup ON master.legal_entity;
 CREATE TRIGGER trg_legal_entity_type_lookup
@@ -897,11 +879,6 @@ CREATE TRIGGER trg_company_code_updated_at BEFORE UPDATE ON master.company_code
 DROP TRIGGER IF EXISTS trg_company_code_status_changed ON master.company_code;
 CREATE TRIGGER trg_company_code_status_changed BEFORE UPDATE ON master.company_code
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_company_code_status_lookup ON master.company_code;
-CREATE TRIGGER trg_company_code_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.company_code
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.company_code_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_company_code_fy_variant_lookup ON master.company_code;
 CREATE TRIGGER trg_company_code_fy_variant_lookup
@@ -935,11 +912,6 @@ DROP TRIGGER IF EXISTS trg_cc_cross_refs ON master.cost_center;
 CREATE TRIGGER trg_cc_cross_refs BEFORE INSERT OR UPDATE ON master.cost_center
     FOR EACH ROW EXECUTE FUNCTION master.trg_cc_cross_refs_same_company();
 
-DROP TRIGGER IF EXISTS trg_cc_status_lookup ON master.cost_center;
-CREATE TRIGGER trg_cc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.cost_center
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.cost_center_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_cc_category_lookup ON master.cost_center;
 CREATE TRIGGER trg_cc_category_lookup
     BEFORE INSERT OR UPDATE OF cost_center_category ON master.cost_center
@@ -967,11 +939,6 @@ CREATE TRIGGER trg_pc_parent_co BEFORE INSERT OR UPDATE ON master.profit_center
 DROP TRIGGER IF EXISTS trg_pc_level ON master.profit_center;
 CREATE TRIGGER trg_pc_level BEFORE INSERT OR UPDATE ON master.profit_center
     FOR EACH ROW EXECUTE FUNCTION master.trg_auto_set_level();
-
-DROP TRIGGER IF EXISTS trg_pc_status_lookup ON master.profit_center;
-CREATE TRIGGER trg_pc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.profit_center
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.profit_center_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_pc_type_lookup ON master.profit_center;
 CREATE TRIGGER trg_pc_type_lookup
@@ -1001,11 +968,6 @@ DROP TRIGGER IF EXISTS trg_site_level ON master.site;
 CREATE TRIGGER trg_site_level BEFORE INSERT OR UPDATE ON master.site
     FOR EACH ROW EXECUTE FUNCTION master.trg_auto_set_level();
 
-DROP TRIGGER IF EXISTS trg_site_status_lookup ON master.site;
-CREATE TRIGGER trg_site_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.site
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.site_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_site_type_lookup ON master.site;
 CREATE TRIGGER trg_site_type_lookup
     BEFORE INSERT OR UPDATE OF site_type ON master.site
@@ -1021,11 +983,6 @@ DROP TRIGGER IF EXISTS trg_wh_status_changed ON master.warehouse;
 CREATE TRIGGER trg_wh_status_changed BEFORE UPDATE ON master.warehouse
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_wh_status_lookup ON master.warehouse;
-CREATE TRIGGER trg_wh_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.warehouse
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.warehouse_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_wh_type_lookup ON master.warehouse;
 CREATE TRIGGER trg_wh_type_lookup
     BEFORE INSERT OR UPDATE OF warehouse_type ON master.warehouse
@@ -1040,11 +997,6 @@ CREATE TRIGGER trg_coa_updated_at BEFORE UPDATE ON master.chart_of_account
 DROP TRIGGER IF EXISTS trg_coa_status_changed ON master.chart_of_account;
 CREATE TRIGGER trg_coa_status_changed BEFORE UPDATE ON master.chart_of_account
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_coa_status_lookup ON master.chart_of_account;
-CREATE TRIGGER trg_coa_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.chart_of_account
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.chart_of_account_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_coa_framework_lookup ON master.chart_of_account;
 CREATE TRIGGER trg_coa_framework_lookup
@@ -1064,11 +1016,6 @@ CREATE TRIGGER trg_gla_status_changed BEFORE UPDATE ON master.gl_account
 DROP TRIGGER IF EXISTS trg_gla_parent_class ON master.gl_account;
 CREATE TRIGGER trg_gla_parent_class BEFORE INSERT OR UPDATE ON master.gl_account
     FOR EACH ROW EXECUTE FUNCTION master.trg_gl_account_parent_class_check();
-
-DROP TRIGGER IF EXISTS trg_gla_status_lookup ON master.gl_account;
-CREATE TRIGGER trg_gla_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.gl_account
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.gl_account_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_gla_class_lookup ON master.gl_account;
 CREATE TRIGGER trg_gla_class_lookup
@@ -1142,11 +1089,6 @@ DROP TRIGGER IF EXISTS trg_proj_level ON master.project;
 CREATE TRIGGER trg_proj_level BEFORE INSERT OR UPDATE ON master.project
     FOR EACH ROW EXECUTE FUNCTION master.trg_auto_set_level();
 
-DROP TRIGGER IF EXISTS trg_proj_status_lookup ON master.project;
-CREATE TRIGGER trg_proj_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.project
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.project_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_proj_type_lookup ON master.project;
 CREATE TRIGGER trg_proj_type_lookup
     BEFORE INSERT OR UPDATE OF project_type ON master.project
@@ -1174,11 +1116,6 @@ CREATE TRIGGER trg_pi_level BEFORE INSERT OR UPDATE ON master.project_item
 DROP TRIGGER IF EXISTS trg_pi_company ON master.project_item;
 CREATE TRIGGER trg_pi_company BEFORE INSERT OR UPDATE ON master.project_item
     FOR EACH ROW EXECUTE FUNCTION master.trg_project_item_company_integrity();
-
-DROP TRIGGER IF EXISTS trg_pi_status_lookup ON master.project_item;
-CREATE TRIGGER trg_pi_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.project_item
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.project_item_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_pi_type_lookup ON master.project_item;
 CREATE TRIGGER trg_pi_type_lookup
@@ -1211,11 +1148,6 @@ DROP TRIGGER IF EXISTS trg_fp_status_changed ON master.fiscal_period;
 CREATE TRIGGER trg_fp_status_changed BEFORE UPDATE ON master.fiscal_period
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_fp_status_lookup ON master.fiscal_period;
-CREATE TRIGGER trg_fp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.fiscal_period
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.fiscal_period_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_fp_type_lookup ON master.fiscal_period;
 CREATE TRIGGER trg_fp_type_lookup
     BEFORE INSERT OR UPDATE OF period_type ON master.fiscal_period
@@ -1233,11 +1165,6 @@ CREATE TRIGGER trg_lb_updated_at BEFORE UPDATE ON master.ledger_book
 DROP TRIGGER IF EXISTS trg_lb_status_changed ON master.ledger_book;
 CREATE TRIGGER trg_lb_status_changed BEFORE UPDATE ON master.ledger_book
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_lb_status_lookup ON master.ledger_book;
-CREATE TRIGGER trg_lb_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.ledger_book
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.ledger_book_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_lb_category_lookup ON master.ledger_book;
 CREATE TRIGGER trg_lb_category_lookup
@@ -1267,11 +1194,6 @@ DROP TRIGGER IF EXISTS trg_ba_status_changed ON master.company_code_book_assignm
 CREATE TRIGGER trg_ba_status_changed BEFORE UPDATE ON master.company_code_book_assignment
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_ba_status_lookup ON master.company_code_book_assignment;
-CREATE TRIGGER trg_ba_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.company_code_book_assignment
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.company_code_book_assignment_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_ba_conflict_lookup ON master.company_code_book_assignment;
 CREATE TRIGGER trg_ba_conflict_lookup
     BEFORE INSERT OR UPDATE OF conflict_strategy ON master.company_code_book_assignment
@@ -1294,11 +1216,6 @@ DROP TRIGGER IF EXISTS trg_cust_status_changed ON master.customer;
 CREATE TRIGGER trg_cust_status_changed BEFORE UPDATE ON master.customer
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_cust_status_lookup ON master.customer;
-CREATE TRIGGER trg_cust_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.customer
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.customer_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_cust_type_lookup ON master.customer;
 CREATE TRIGGER trg_cust_type_lookup
     BEFORE INSERT OR UPDATE OF customer_type ON master.customer
@@ -1318,11 +1235,6 @@ CREATE TRIGGER trg_supp_updated_at BEFORE UPDATE ON master.supplier
 DROP TRIGGER IF EXISTS trg_supp_status_changed ON master.supplier;
 CREATE TRIGGER trg_supp_status_changed BEFORE UPDATE ON master.supplier
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_supp_status_lookup ON master.supplier;
-CREATE TRIGGER trg_supp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.supplier
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.supplier_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_supp_type_lookup ON master.supplier;
 CREATE TRIGGER trg_supp_type_lookup
@@ -1344,11 +1256,6 @@ DROP TRIGGER IF EXISTS trg_emp_status_changed ON master.employee;
 CREATE TRIGGER trg_emp_status_changed BEFORE UPDATE ON master.employee
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_emp_status_lookup ON master.employee;
-CREATE TRIGGER trg_emp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.employee
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.employee_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_emp_type_lookup ON master.employee;
 CREATE TRIGGER trg_emp_type_lookup
     BEFORE INSERT OR UPDATE OF employment_type ON master.employee
@@ -1367,11 +1274,6 @@ DROP TRIGGER IF EXISTS trg_pcat_status_changed ON master.item_category;
 CREATE TRIGGER trg_pcat_status_changed BEFORE UPDATE ON master.item_category
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_pcat_status_lookup ON master.item_category;
-CREATE TRIGGER trg_pcat_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.item_category
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.item_category_status', 'status');
-
 
 -- =============================================================================
 -- §P5  master.product
@@ -1384,11 +1286,6 @@ CREATE TRIGGER trg_prod_updated_at BEFORE UPDATE ON master.product
 DROP TRIGGER IF EXISTS trg_prod_status_changed ON master.product;
 CREATE TRIGGER trg_prod_status_changed BEFORE UPDATE ON master.product
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_prod_status_lookup ON master.product;
-CREATE TRIGGER trg_prod_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.product
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.product_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_prod_type_lookup ON master.product;
 CREATE TRIGGER trg_prod_type_lookup
@@ -1408,11 +1305,6 @@ DROP TRIGGER IF EXISTS trg_im_status_changed ON master.item;
 CREATE TRIGGER trg_im_status_changed BEFORE UPDATE ON master.item
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_im_status_lookup ON master.item;
-CREATE TRIGGER trg_im_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.item
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.item_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_im_valuation_lookup ON master.item;
 CREATE TRIGGER trg_im_valuation_lookup
     BEFORE INSERT OR UPDATE OF valuation_method ON master.item
@@ -1430,11 +1322,6 @@ CREATE TRIGGER trg_sc_updated_at BEFORE UPDATE ON master.spend_category
 DROP TRIGGER IF EXISTS trg_sc_status_changed ON master.spend_category;
 CREATE TRIGGER trg_sc_status_changed BEFORE UPDATE ON master.spend_category
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_sc_status_lookup ON master.spend_category;
-CREATE TRIGGER trg_sc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.spend_category_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_sc_procurement_type_lookup ON master.spend_category;
 CREATE TRIGGER trg_sc_procurement_type_lookup
@@ -1466,11 +1353,6 @@ DROP TRIGGER IF EXISTS trg_scou_status_changed ON master.company_code_spend_poli
 CREATE TRIGGER trg_scou_status_changed BEFORE UPDATE ON master.company_code_spend_policy
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_scou_status_lookup ON master.company_code_spend_policy;
-CREATE TRIGGER trg_scou_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.company_code_spend_policy
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.company_code_spend_policy_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_scou_visibility_lookup ON master.company_code_spend_policy;
 CREATE TRIGGER trg_scou_visibility_lookup
     BEFORE INSERT OR UPDATE OF override_visibility ON master.company_code_spend_policy
@@ -1490,11 +1372,6 @@ CREATE TRIGGER trg_cc_updated_at BEFORE UPDATE ON master.commodity_classificatio
 DROP TRIGGER IF EXISTS trg_cc_status_changed ON master.commodity_classification;
 CREATE TRIGGER trg_cc_status_changed BEFORE UPDATE ON master.commodity_classification
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_cc_status_lookup ON master.commodity_classification;
-CREATE TRIGGER trg_cc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.commodity_classification
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.cc_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_cc_owner_type_lookup ON master.commodity_classification;
 CREATE TRIGGER trg_cc_owner_type_lookup
@@ -1552,11 +1429,6 @@ DROP TRIGGER IF EXISTS trg_ccp_status_changed ON master.company_code_customer_pr
 CREATE TRIGGER trg_ccp_status_changed BEFORE UPDATE ON master.company_code_customer_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_ccp_status_lookup ON master.company_code_customer_profile;
-CREATE TRIGGER trg_ccp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.company_code_customer_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.customer_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_ccp_payment_terms_lookup ON master.company_code_customer_profile;
 CREATE TRIGGER trg_ccp_payment_terms_lookup
     BEFORE INSERT OR UPDATE OF payment_terms ON master.company_code_customer_profile
@@ -1579,11 +1451,6 @@ CREATE TRIGGER trg_scp_updated_at BEFORE UPDATE ON master.company_code_supplier_
 DROP TRIGGER IF EXISTS trg_scp_status_changed ON master.company_code_supplier_profile;
 CREATE TRIGGER trg_scp_status_changed BEFORE UPDATE ON master.company_code_supplier_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_scp_status_lookup ON master.company_code_supplier_profile;
-CREATE TRIGGER trg_scp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.company_code_supplier_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.supplier_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_scp_payment_terms_lookup ON master.company_code_supplier_profile;
 CREATE TRIGGER trg_scp_payment_terms_lookup
@@ -1615,11 +1482,6 @@ DROP TRIGGER IF EXISTS trg_ac_status_changed ON master.asset_class;
 CREATE TRIGGER trg_ac_status_changed BEFORE UPDATE ON master.asset_class
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_ac_status_lookup ON master.asset_class;
-CREATE TRIGGER trg_ac_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.asset_class
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.asset_class_status', 'status');
-
 -- v3: asset_nature lookup
 DROP TRIGGER IF EXISTS trg_ac_nature_lookup ON master.asset_class;
 CREATE TRIGGER trg_ac_nature_lookup
@@ -1645,11 +1507,6 @@ DROP TRIGGER IF EXISTS trg_asset_status_changed ON master.asset;
 CREATE TRIGGER trg_asset_status_changed BEFORE UPDATE ON master.asset
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_asset_status_lookup ON master.asset;
-CREATE TRIGGER trg_asset_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.asset
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.asset_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_asset_retirement_type_lookup ON master.asset;
 CREATE TRIGGER trg_asset_retirement_type_lookup
     BEFORE INSERT OR UPDATE OF retirement_type ON master.asset
@@ -1672,11 +1529,6 @@ DROP TRIGGER IF EXISTS trg_ab_book_type_immutable ON master.asset_book;
 CREATE TRIGGER trg_ab_book_type_immutable
     BEFORE UPDATE OF book_type ON master.asset_book
     FOR EACH ROW EXECUTE FUNCTION master.trg_asset_book_type_immutable();
-
-DROP TRIGGER IF EXISTS trg_ab_status_lookup ON master.asset_book;
-CREATE TRIGGER trg_ab_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.asset_book
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.asset_book_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_ab_book_type_lookup ON master.asset_book;
 CREATE TRIGGER trg_ab_book_type_lookup
@@ -1711,11 +1563,6 @@ DROP TRIGGER IF EXISTS trg_acomp_status_changed ON master.asset_component;
 CREATE TRIGGER trg_acomp_status_changed BEFORE UPDATE ON master.asset_component
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_acomp_status_lookup ON master.asset_component;
-CREATE TRIGGER trg_acomp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.asset_component
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.asset_component_status', 'status');
-
 
 -- =============================================================================
 -- §AM5  master.asset_assignment_history
@@ -1747,12 +1594,6 @@ CREATE TRIGGER trg_dt_status_changed
     BEFORE UPDATE ON master.dimension_type
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
--- Lookup validation: dimension_type.status via domain master.dimension_type_status
-DROP TRIGGER IF EXISTS trg_dt_status_lookup ON master.dimension_type;
-CREATE TRIGGER trg_dt_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.dimension_type
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.dimension_type_status', 'status');
-
 -- Lookup validation: dimension_type.category via domain master.dimension_type_category
 DROP TRIGGER IF EXISTS trg_dt_category_lookup ON master.dimension_type;
 CREATE TRIGGER trg_dt_category_lookup
@@ -1781,12 +1622,6 @@ DROP TRIGGER IF EXISTS trg_dv_status_changed ON master.dimension_value;
 CREATE TRIGGER trg_dv_status_changed
     BEFORE UPDATE ON master.dimension_value
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
--- Lookup validation: dimension_value.status via domain master.dimension_value_status
-DROP TRIGGER IF EXISTS trg_dv_status_lookup ON master.dimension_value;
-CREATE TRIGGER trg_dv_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.dimension_value
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.dimension_value_status', 'status');
 
 -- Parent-child validation: same tenant, same type, compatible company scope
 DROP TRIGGER IF EXISTS trg_dv_parent_guard ON master.dimension_value;
@@ -1901,12 +1736,6 @@ DROP TRIGGER IF EXISTS trg_bank_party_status_changed ON master.bank_party;
 CREATE TRIGGER trg_bank_party_status_changed BEFORE UPDATE ON master.bank_party
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_bank_party_status_lookup ON master.bank_party;
-CREATE TRIGGER trg_bank_party_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.bank_party
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.bank_party_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_bank_party_institution_type_lookup ON master.bank_party;
 CREATE TRIGGER trg_bank_party_institution_type_lookup
     BEFORE INSERT OR UPDATE OF institution_type ON master.bank_party
@@ -1929,12 +1758,6 @@ CREATE TRIGGER trg_bank_account_updated_at BEFORE UPDATE ON master.bank_account
 DROP TRIGGER IF EXISTS trg_bank_account_status_changed ON master.bank_account;
 CREATE TRIGGER trg_bank_account_status_changed BEFORE UPDATE ON master.bank_account
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_bank_account_status_lookup ON master.bank_account;
-CREATE TRIGGER trg_bank_account_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.bank_account
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.bank_account_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_bank_account_id_type_lookup ON master.bank_account;
 CREATE TRIGGER trg_bank_account_id_type_lookup
@@ -1999,12 +1822,6 @@ DROP TRIGGER IF EXISTS trg_bahc_status_changed ON master.bank_account_house_conf
 CREATE TRIGGER trg_bahc_status_changed BEFORE UPDATE ON master.bank_account_house_config
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_bahc_status_lookup ON master.bank_account_house_config;
-CREATE TRIGGER trg_bahc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.bank_account_house_config
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.bank_account_house_config_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_bahc_usage_type_lookup ON master.bank_account_house_config;
 CREATE TRIGGER trg_bahc_usage_type_lookup
     BEFORE INSERT OR UPDATE OF usage_type ON master.bank_account_house_config
@@ -2050,12 +1867,6 @@ CREATE TRIGGER trg_pm_updated_at BEFORE UPDATE ON master.payment_method
 DROP TRIGGER IF EXISTS trg_pm_status_changed ON master.payment_method;
 CREATE TRIGGER trg_pm_status_changed BEFORE UPDATE ON master.payment_method
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_pm_status_lookup ON master.payment_method;
-CREATE TRIGGER trg_pm_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.payment_method
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.payment_method_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_pm_direction_lookup ON master.payment_method;
 CREATE TRIGGER trg_pm_direction_lookup
@@ -2810,18 +2621,6 @@ CREATE TRIGGER trg_hc_validate_weekend_days
 -- ============================================================================
 -- PART I — Lookup validation triggers
 -- ============================================================================
-
--- holiday_calendar.status
-DROP TRIGGER IF EXISTS trg_hc_status_lookup ON master.holiday_calendar;
-CREATE TRIGGER trg_hc_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.holiday_calendar
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.holiday_calendar_status', 'status');
-
--- payment_term.status
-DROP TRIGGER IF EXISTS trg_pt_status_lookup ON master.payment_term;
-CREATE TRIGGER trg_pt_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON master.payment_term
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.payment_term_status', 'status');
 
 -- payment_term.term_category
 DROP TRIGGER IF EXISTS trg_pt_category_lookup ON master.payment_term;

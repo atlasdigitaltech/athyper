@@ -34,5 +34,5 @@ export const userSessionsPattern = (namespace: string): string =>
 /** All KC realm keys used as session namespaces. Used for cross-namespace operations. */
 export const SESSION_NAMESPACES = [
   process.env.KEYCLOAK_REALM ?? "athyper",
-  process.env.PLATFORM_KEYCLOAK_REALM ?? "platform-control",
+  "platform", // platform sessions always use "platform" namespace (see realm-config.ts)
 ] as const;

@@ -5674,7 +5674,11 @@ CREATE TABLE IF NOT EXISTS control.blueprint_registry (
     CONSTRAINT br_code_uq       UNIQUE (code),
     CONSTRAINT br_code_chk      CHECK (btrim(code) <> ''),
     CONSTRAINT br_category_chk  CHECK (category IN (
-        'base', 'industry_pack', 'coa_framework', 'default_rules'
+        'base',           -- TIER 1: universal prerequisite (010_base)
+        'foundation',     -- TIER 1: always-apply data (tax/payments/assets/bank)
+        'coa_framework',  -- TIER 2a: select exactly one accounting framework
+        'industry_pack',  -- TIER 2b: select one or more industry taxonomies
+        'module_pack'     -- TIER 3: optional subscription-gated module packs
     )),
     CONSTRAINT br_status_chk    CHECK (status IN ('active', 'deprecated'))
 );
@@ -5688,12 +5692,16 @@ COMMENT ON COLUMN control.blueprint_registry.code IS
     'Stable identifier used as FK target and in dependency arrays. '
     'E.g. ''base'', ''pack_utilities'', ''coa_ifrs''.';
 COMMENT ON COLUMN control.blueprint_registry.category IS
-    'base=universal prereq; industry_pack=vertical-specific; '
-    'coa_framework=accounting framework; default_rules=system defaults.';
+    'Tier model: '
+    'base=universal prerequisite (always first); '
+    'foundation=always-apply data (tax/payments/assets/bank); '
+    'coa_framework=select exactly one accounting framework; '
+    'industry_pack=select one or more vertical taxonomies; '
+    'module_pack=optional subscription-gated feature packs.';
 COMMENT ON COLUMN control.blueprint_registry.dependencies IS
     'Ordered list of blueprint codes that must be applied before this one.';
 COMMENT ON COLUMN control.blueprint_registry.seed_files IS
-    'Ordered relative file paths under 020_blueprint/ for the runner to execute.';
+    'Ordered relative file paths under 900_seed_data/ for the runner to execute.';
 
 
 -- =============================================================================

@@ -10,7 +10,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
-import { type CompiledEntity, type LookupDomainBundle, type EntityOperation } from "@athyper/api-contracts/metadata";
+import { type CompiledEntity, type LookupDomainBundle, type EntityOperation, type StatusRoute, type EntityCapability } from "@athyper/api-contracts/metadata";
 import { type MasterRecord } from "@athyper/api-contracts/records";
 import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent } from "@athyper/api-contracts/workflow";
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
@@ -92,6 +92,22 @@ export function useLookupDomain(domainCode: string) {
   });
 }
 
+export function useStatusRoute(entityName: string) {
+  return useQuery<StatusRoute>({
+    queryKey: queryKeys.statusRoute.byEntity(entityName),
+    queryFn: () => meta().getStatusRoute(entityName),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useEntityCapabilities(entityName: string) {
+  return useQuery<EntityCapability[]>({
+    queryKey: queryKeys.capabilities.byEntity(entityName),
+    queryFn: () => meta().getEntityCapabilities(entityName),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // ── Records Hooks ───────────────────────────────────────────────
 
 import type { EntityListParams } from "@athyper/api-client";
@@ -146,6 +162,17 @@ export function useUpdateEntity(entityCode: string, id: string) {
     mutationFn: (data: Record<string, unknown>) => records().update(entityCode, id, { data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
+    },
+  });
+}
+
+export function useDeleteEntity(entityCode: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => records().remove(entityCode, id),
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
     },
   });
@@ -236,7 +263,7 @@ export function useSubmitWorkflowAction() {
 
 export function useWorkflowActivity(requestId: string, enabled = true) {
   return useQuery<{ items: WorkflowEvent[] }>({
-    queryKey: ["workflow-activity", requestId],
+    queryKey: queryKeys.workflowActivity.byRequest(requestId),
     queryFn: () => workflow().getActivity(requestId),
     staleTime: 30 * 1000,
     enabled: enabled && !!requestId,

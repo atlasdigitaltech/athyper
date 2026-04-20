@@ -11,7 +11,7 @@ export async function GET(
 
   try {
     const { runId } = await params;
-    const res = await fetch(`${RUNTIME_API_URL}/api/finance/period-close/runs/${runId}/tasks`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/period-close/runs/${encodeURIComponent(runId)}/tasks`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });

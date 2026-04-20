@@ -13,7 +13,8 @@
     "./field-renderers": "./src/field-renderers/index.ts",
     "./actions": "./src/actions/index.ts",
     "./bulk": "./src/bulk/index.ts",
-    "./import": "./src/import/index.ts"
+    "./import": "./src/import/index.ts",
+    "./panels": "./src/panels/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -26,7 +27,8 @@
     "@athyper/document-runtime": "workspace:*",
     "@athyper/domain-widgets": "workspace:*",
     "@athyper/metadata-client": "workspace:*",
-    "@athyper/query": "workspace:*"
+    "@athyper/query": "workspace:*",
+    "@athyper/workflow-ui": "workspace:*"
   },
   "peerDependencies": {
     "@athyper/icons": "workspace:*",

@@ -25,7 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Params }) {
   }
 
   try {
-    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${commentId}`, {
+    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}`, {
       method: "PATCH",
       headers: {
         ...buildRuntimeHeaders(session),
@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: Params }) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("[api/collab/comments/[commentId] PATCH]", msg);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }
 
@@ -55,7 +55,7 @@ export async function DELETE(_req: Request, { params }: { params: Params }) {
   const { commentId } = await params;
 
   try {
-    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${commentId}`, {
+    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}`, {
       method: "DELETE",
       headers: buildRuntimeHeaders(session),
     });
@@ -67,6 +67,6 @@ export async function DELETE(_req: Request, { params }: { params: Params }) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("[api/collab/comments/[commentId] DELETE]", msg);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }

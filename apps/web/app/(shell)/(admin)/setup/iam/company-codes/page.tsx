@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCsrfToken } from "@/lib/bff-fetch";
 import {
   Building2, Plus, RefreshCw, Trash2, Search, Users, User, Shield,
 } from "lucide-react";
@@ -142,7 +143,7 @@ function GrantDialog({
       if (!selectedId || !companyCodeId) throw new Error("Missing required fields");
       const res = await fetch("/api/iam/admin/company-code-access", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({
           entity_type: entityType,
           entity_id: selectedId,
@@ -296,7 +297,10 @@ function RevokeDialog({
   const revoke = useMutation({
     mutationFn: async () => {
       if (!grant) return;
-      const res = await fetch(`/api/iam/admin/company-code-access/${grant.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/iam/admin/company-code-access/${grant.id}`, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": getCsrfToken() },
+      });
       if (!res.ok && res.status !== 204) throw new Error("Failed to revoke");
     },
     onSuccess: () => {

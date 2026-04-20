@@ -7,9 +7,11 @@ import {
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import { sanitizeReturnUrl } from "@/lib/auth/validate-return-url";
+import { pkceStateKey } from "@/lib/auth/redis-keys";
+import { resolvePublicBaseUrl } from "@/lib/auth/resolve-public-base-url";
 
 /**
- * GET /api/auth/login?returnUrl=/some/path&provider=github
+ * GET /api/auth/login?returnUrl=/some/path&filter=user&provider=github
  *
  * Initiates the PKCE Authorization Code flow by redirecting the browser
  * to the Keycloak authorization endpoint.
@@ -17,17 +19,20 @@ import { sanitizeReturnUrl } from "@/lib/auth/validate-return-url";
  * v4 changes vs F1:
  *   - `workbench` param removed — org/workbench selection happens post-login
  *     at /auth/select using the KC organization claim.
+ *   - `filter` param added — "user" | "partner", forwarded to /auth/select
+ *     so only the relevant workbench tiles are shown after login.
  *   - `kc_idp_hint` still supported via `provider` param for social login.
  *   - `realm=platform` still supported for platform-control realm login.
  *
  * Flow:
  *   1. Generate PKCE challenge (codeVerifier + SHA-256 codeChallenge)
  *   2. Generate random state (CSRF for the auth flow itself)
- *   3. Store { codeVerifier, returnUrl, realm, provider } in Redis with 1800s TTL
+ *   3. Store { codeVerifier, returnUrl, filter, realm, provider } in Redis with 1800s TTL
  *   4. Redirect browser to Keycloak with prompt=login (force re-auth)
  *
  * Query parameters:
  *   returnUrl  — URL to redirect to after /auth/select (default "/")
+ *   filter     — "user" | "partner" — workbench filter passed through to /auth/select
  *   realm      — "platform" to use the platform-control realm
  *   provider   — IdP alias for kc_idp_hint (e.g. "github")
  */
@@ -37,20 +42,12 @@ export async function GET(req: Request) {
   const realmParam = url.searchParams.get("realm");
   const provider = url.searchParams.get("provider") ?? null;
 
-  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
+  const rawFilter = url.searchParams.get("filter");
+  const filter: "user" | "partner" | null =
+    rawFilter === "user" || rawFilter === "partner" ? rawFilter : null;
 
-  // Derive the public base URL from the request so the OAuth callback returns
-  // to the same origin the user initiated login from (localhost, neon.athyper.local, etc.).
-  // Traefik does SSL termination and forwards the original scheme via X-Forwarded-Proto,
-  // so we trust that header to reconstruct the correct HTTPS origin.
-  // PUBLIC_BASE_URL overrides this for containerised deployments where the Host header
-  // reflects an internal service name rather than the public hostname.
-  const publicBaseUrl = (() => {
-    if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-    const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-    const host = req.headers.get("host") ?? url.host;
-    return `${proto}://${host}`;
-  })();
+  const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
+  const publicBaseUrl = resolvePublicBaseUrl(req);
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
 
   const isPlatformLogin =
@@ -77,8 +74,8 @@ export async function GET(req: Request) {
   }
 
   await redis.set(
-    `pkce_state:${state}`,
-    JSON.stringify({ codeVerifier, returnUrl, isPlatformLogin, realm, provider, redirectUri }),
+    pkceStateKey(state),
+    JSON.stringify({ codeVerifier, returnUrl, filter, isPlatformLogin, realm, provider, redirectUri }),
     { EX: 1800 }, // 30 min — accommodates email-based flows (magic link, password reset)
   );
 

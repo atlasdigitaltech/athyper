@@ -17,11 +17,6 @@ DROP TRIGGER IF EXISTS trg_bps_status_changed ON governance.book_period_status;
 CREATE TRIGGER trg_bps_status_changed BEFORE UPDATE ON governance.book_period_status
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_bps_status_lookup ON governance.book_period_status;
-CREATE TRIGGER trg_bps_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON governance.book_period_status
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('governance.book_period_status_status', 'status');
-
 
 -- =============================================================================
 -- GOVERNANCE CYCLE MODEL — triggers

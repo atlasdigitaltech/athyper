@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
-import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
+import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from "@/lib/server/runtime-headers";
 
 /**
  * GET /api/policy/definitions/[id]/export
@@ -19,7 +19,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${id}/export`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${encodeURIComponent(id)}/export`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });
@@ -33,7 +33,7 @@ export async function GET(
     const disposition = res.headers.get("Content-Disposition");
 
     const headers: Record<string, string> = { "Content-Type": contentType };
-    if (disposition) headers["Content-Disposition"] = disposition;
+    if (disposition) headers["Content-Disposition"] = sanitizeContentDisposition(disposition);
 
     return new NextResponse(body, { status: 200, headers });
   } catch {

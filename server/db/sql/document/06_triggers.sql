@@ -66,7 +66,6 @@ CREATE TRIGGER trg_render_job_updated_at
 --   trg_je_p*                      ← period gate (before status triggers)
 --   trg_je_source_doc_type_lookup  ← lookup validation
 --   trg_je_status_changed          ← sets status_changed_at/by
---   trg_je_status_lookup           ← lookup validation
 --   trg_je_status_transition_guard ← validates transitions + caches totals
 --   trg_je_sync_base_currency      ← denormalize
 --   trg_je_sync_fiscal_period      ← denormalize
@@ -89,11 +88,6 @@ CREATE TRIGGER trg_je_updated_at BEFORE UPDATE ON document.journal_entry
 DROP TRIGGER IF EXISTS trg_je_status_changed ON document.journal_entry;
 CREATE TRIGGER trg_je_status_changed BEFORE UPDATE ON document.journal_entry
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_je_status_lookup ON document.journal_entry;
-CREATE TRIGGER trg_je_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON document.journal_entry
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.journal_entry_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_je_source_doc_type_lookup ON document.journal_entry;
 CREATE TRIGGER trg_je_source_doc_type_lookup
@@ -403,11 +397,6 @@ CREATE TRIGGER trg_atx_txn_type_lookup
     BEFORE INSERT OR UPDATE OF txn_type ON document.asset_transaction
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.asset_txn_type', 'txn_type');
 
-DROP TRIGGER IF EXISTS trg_atx_status_lookup ON document.asset_transaction;
-CREATE TRIGGER trg_atx_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON document.asset_transaction
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.asset_transaction_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_atx_book_type_lookup ON document.asset_transaction;
 CREATE TRIGGER trg_atx_book_type_lookup
     BEFORE INSERT OR UPDATE OF book_type ON document.asset_transaction
@@ -426,11 +415,6 @@ DROP TRIGGER IF EXISTS trg_dr_status_changed ON document.depreciation_run;
 CREATE TRIGGER trg_dr_status_changed BEFORE UPDATE ON document.depreciation_run
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_dr_status_lookup ON document.depreciation_run;
-CREATE TRIGGER trg_dr_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON document.depreciation_run
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.depreciation_run_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_dr_book_type_lookup ON document.depreciation_run;
 CREATE TRIGGER trg_dr_book_type_lookup
     BEFORE INSERT OR UPDATE OF book_type ON document.depreciation_run
@@ -445,11 +429,6 @@ DROP TRIGGER IF EXISTS trg_drl_prevent_mutation ON document.depreciation_run_lin
 CREATE TRIGGER trg_drl_prevent_mutation
     BEFORE UPDATE OR DELETE ON document.depreciation_run_line
     FOR EACH ROW EXECUTE FUNCTION log.trg_prevent_mutation();
-
-DROP TRIGGER IF EXISTS trg_drl_line_status_lookup ON document.depreciation_run_line;
-CREATE TRIGGER trg_drl_line_status_lookup
-    BEFORE INSERT OR UPDATE OF line_status ON document.depreciation_run_line
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.depreciation_run_line_status', 'line_status');
 
 
 -- =============================================================================

@@ -18,7 +18,7 @@ export async function GET(
   const { ruleId } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${ruleId}/versions`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${encodeURIComponent(ruleId)}/versions`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });

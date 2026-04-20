@@ -30,7 +30,7 @@ export async function POST(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${jeId}/reverse`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${encodeURIComponent(jeId)}/reverse`, {
       method: "POST",
       headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -4,32 +4,29 @@
  * Renders a master record detail view with:
  *   - Header card (title, subtitle, status badge, key fields)
  *   - Tabbed sections from field_groups
- *   - Comments tab (when feature_flags.has_comments)
- *   - Activity tab (when feature_flags.has_activity_log)
+ *   - Comments tab (when resolveTabs() includes "comments")
+ *   - Events/activity tab (when resolveTabs() includes "events")
  *   - Related panels (address_link, contact_link)
  *   - Action bar from entity_operation
  *
  * For entities with detail_renderer = "approvable" the page delegates to
- * ApprovableDocumentShell with a generically-built header DTO.
+ * ApprovableDetailPage, which uses ApprovableDocumentShell with all
+ * DetailTab slots resolved via resolveTabs().
  */
 "use client";
 
 import { useState } from "react";
 import { useCompiledEntity, useEntityDetail, useEntityOperations } from "@athyper/query";
 import { useQuery } from "@tanstack/react-query";
-import { resolveDetailConfig, resolveDetailRenderer } from "@athyper/metadata-client/compiled-reader";
+import { resolveDetailConfig, resolveRendererFamily, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import { Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger, TabsContent, Skeleton, Badge } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import { CommentList } from "@athyper/collaboration-ui/comments";
 import { ActivityTimeline } from "@athyper/collaboration-ui/activity";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
-import { ApprovableDocumentShell } from "@athyper/document-runtime/shell";
-import { buildApprovableHeaderFromRecord } from "@athyper/document-runtime/header";
-import { buildOrchestratorFromRecord } from "@athyper/document-runtime/orchestrator";
-import { SatelliteCardGroup } from "@athyper/document-runtime/satellites";
-import { AmountSummaryCard } from "@athyper/document-runtime/amounts";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { ActionBar } from "../actions/ActionBar";
+import { ApprovableDetailPage } from "./ApprovableDetailPage";
 
 // ── Activity tab (fetches data via relay) ─────────────────────────────────────
 
@@ -53,160 +50,6 @@ function ActivityTab({ entityCode, recordId }: { entityCode: string; recordId: s
   }
 
   return <ActivityTimeline entries={data?.data ?? []} />;
-}
-
-// ── Approvable renderer ───────────────────────────────────────────────────────
-
-/**
- * Generic approvable document view.
- *
- * Used when entity.display_config.detail_renderer === "approvable" and there
- * is no dedicated route for the entity (e.g. purchase-invoice has its own rich
- * route; other approvable documents fall through to this generic view).
- *
- * Orchestrator data (status dimensions, action bundle, health tiles, amount
- * breakdown) is derived generically from CompiledEntity + record + operations
- * via buildOrchestratorFromRecord(). No entity-specific code needed.
- *
- * Tabs: Overview (amount + field sections) → field_group tabs → Comments → Activity.
- */
-function ApprovableEntityDetailView({
-  entity,
-  record,
-  operations,
-}: {
-  entity: NonNullable<ReturnType<typeof useCompiledEntity>["data"]>;
-  record: NonNullable<ReturnType<typeof useEntityDetail>["data"]>;
-  operations: ReturnType<typeof useEntityOperations>["data"];
-}) {
-  const data = record.data as Record<string, unknown>;
-  const flags = entity.feature_flags ?? {};
-  const detailConfig = resolveDetailConfig(entity);
-
-  // ── Generic orchestrator data ─────────────────────────────────────────────
-  const orchestrator = buildOrchestratorFromRecord(
-    entity,
-    data,
-    operations ?? [],
-  );
-
-  // ── Header DTO with orchestrator fields injected ──────────────────────────
-  const headerData = buildApprovableHeaderFromRecord(entity, data);
-  headerData.statusDimensions = orchestrator.statusDimensions;
-  headerData.actionBundle = orchestrator.actionBundle;
-  headerData.blockedReasons = orchestrator.blockedReasons;
-
-  // ── Tabs: Overview + field_groups + Comments + Activity ────────────────────
-  const sectionTabs = detailConfig.sections.map((s) => ({
-    id: s.group.group_key,
-    label: s.group.label,
-  }));
-  const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;
-  const tabs = [
-    ...(hasAmountBreakdown || sectionTabs.length > 0
-      ? [{ id: "__overview", label: "Overview" }]
-      : []),
-    ...sectionTabs,
-    ...(flags.has_comments ? [{ id: "__comments", label: "Comments" }] : []),
-    ...(flags.has_activity_log ? [{ id: "__activity", label: "Activity" }] : []),
-  ];
-
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
-
-  const title = detailConfig.titleField
-    ? String(data[detailConfig.titleField.name] ?? entity.entity_code)
-    : entity.entity_code;
-
-  return (
-    <PageFrame title={title}>
-      <ApprovableDocumentShell
-        data={headerData}
-        persistMode
-        healthTiles={orchestrator.healthTiles}
-        validationNotices={orchestrator.validationNotices}
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onAction={(action) => {
-          if (action === "copy") void navigator.clipboard?.writeText(title);
-        }}
-      >
-        {/* Overview tab — amount breakdown + first field group */}
-        {activeTab === "__overview" && (
-          <div className="space-y-6">
-            {hasAmountBreakdown && (
-              <AmountSummaryCard lines={orchestrator.amountBreakdown} />
-            )}
-            {/* Inline the first field group as overview fields */}
-            {detailConfig.sections[0] && (
-              <Card>
-                <CardContent className="pt-5">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {detailConfig.sections[0].fields.map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      return (
-                        <div key={field.name}>
-                          <dt className="text-xs font-medium text-muted-foreground">
-                            {field.label ?? field.name}
-                          </dt>
-                          <dd className="mt-1">
-                            <Renderer value={data[field.name]} field={field} mode="view" />
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* Field-group section tabs */}
-        {detailConfig.sections.map((section) =>
-          activeTab === section.group.group_key ? (
-            <Card key={section.group.group_key}>
-              <CardContent className="pt-5">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {section.fields.map((field) => {
-                    const Renderer = resolveFieldRenderer(field);
-                    return (
-                      <div key={field.name}>
-                        <dt className="text-xs font-medium text-muted-foreground">
-                          {field.label ?? field.name}
-                        </dt>
-                        <dd className="mt-1">
-                          <Renderer value={data[field.name]} field={field} mode="view" />
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null,
-        )}
-
-        {/* Comments */}
-        {activeTab === "__comments" && (
-          <Card>
-            <CardContent className="pt-5">
-              <CommentList entityType={entity.entity_code} entityId={record.id} />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Activity */}
-        {activeTab === "__activity" && (
-          <Card>
-            <CardContent className="pt-5">
-              <ActivityTab entityCode={entity.entity_code} recordId={record.id} />
-            </CardContent>
-          </Card>
-        )}
-      </ApprovableDocumentShell>
-    </PageFrame>
-  );
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -247,14 +90,15 @@ export function EntityDetailPage({ entityCode, recordId }: EntityDetailPageProps
   }
 
   // ── Renderer dispatch ─────────────────────────────────────────────────────
-  const renderer = resolveDetailRenderer(entity);
+  const renderer = resolveRendererFamily(entity);
 
   if (renderer === "approvable") {
     return (
-      <ApprovableEntityDetailView
+      <ApprovableDetailPage
         entity={entity}
         record={record}
         operations={operations}
+        recordId={recordId}
       />
     );
   }
@@ -262,11 +106,10 @@ export function EntityDetailPage({ entityCode, recordId }: EntityDetailPageProps
   // ── Generic renderer ──────────────────────────────────────────────────────
   const detailConfig = resolveDetailConfig(entity);
   const data = record.data as Record<string, unknown>;
-  const flags = entity.feature_flags ?? {};
-  const hasComments = Boolean(flags.has_comments);
-  const hasActivity = Boolean(flags.has_activity_log);
+  const resolvedTabs = resolveTabs(entity, null, []);
+  const hasComments = resolvedTabs.includes("comments");
+  const hasActivity = resolvedTabs.includes("events");
 
-  // Resolve title from descriptor
   const title = detailConfig.titleField
     ? String(data[detailConfig.titleField.name] ?? entityCode)
     : entityCode;

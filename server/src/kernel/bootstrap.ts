@@ -550,7 +550,7 @@ export async function bootstrap(
     logger,
   });
   lifecycle.onShutdown(() => webhookRedis.disconnect());
-  const webhookDelivery = createWebhookDeliveryWorker(_db, webhookRedis, logger);
+  const webhookDelivery = createWebhookDeliveryWorker(_db as never, webhookRedis, logger);
 
   // ─── Feature flag service ────────────────────────────────────────────────────
   // Phase 1.6: Redis cache-first, DB fallback. <1ms p99 cache hit.

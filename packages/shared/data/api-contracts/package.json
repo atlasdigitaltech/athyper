@@ -15,12 +15,14 @@
     "./ledger": "./src/schemas/ledger.ts",
     "./platform": "./src/schemas/platform.ts",
     "./entity-list": "./src/schemas/entity-list.ts",
-    "./query-keys": "./src/query-keys.ts"
+    "./query-keys": "./src/query-keys.ts",
+    "./enums": "./src/enums.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "contracts:check": "tsx src/check-drift.ts"
+    "contracts:check": "tsx src/check-drift.ts",
+    "contracts:update": "tsx src/check-drift.ts --update"
   },
   "dependencies": {
     "zod": "^4.3.6"

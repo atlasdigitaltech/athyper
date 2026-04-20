@@ -19,6 +19,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@athyper/ui/primitives";
 import { NeonLogoPrimary } from "@athyper/brand";
+import { AthyperLogo } from "@athyper/icons/custom/AthyperLogo";
 
 // ─── Workspace marketing slides ───────────────────────────────────────────────
 
@@ -92,12 +93,10 @@ function LoginPageInner() {
     if (workbench === "platform") {
       url.searchParams.set("realm", "platform");
     } else {
-      const selectTarget = new URL("/auth/select", window.location.origin);
       if (returnUrl && returnUrl !== "/") {
-        selectTarget.searchParams.set("returnUrl", returnUrl);
+        url.searchParams.set("returnUrl", returnUrl);
       }
-      selectTarget.searchParams.set("filter", workbench);
-      url.searchParams.set("returnUrl", selectTarget.pathname + selectTarget.search);
+      url.searchParams.set("filter", workbench);
     }
     return url.toString();
   }
@@ -180,7 +179,7 @@ function LoginPageInner() {
             {/* Error banner */}
             {errorParam && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {decodeURIComponent(errorParam)}
+                {errorParam}
               </div>
             )}
 
@@ -263,7 +262,13 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="flex h-dvh items-center justify-center bg-background">
+          <AthyperLogo className="animate-pulse text-primary" width={40} height={40} />
+        </div>
+      }
+    >
       <LoginPageInner />
     </Suspense>
   );

@@ -18,7 +18,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${ruleId}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${encodeURIComponent(ruleId)}`, {
       method: "PUT",
       headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -41,7 +41,7 @@ export async function DELETE(
   const { ruleId } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${ruleId}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/rules/${encodeURIComponent(ruleId)}`, {
       method: "DELETE",
       headers: buildRuntimeHeaders(session),
       cache: "no-store",

@@ -14,6 +14,10 @@ import {
   type CompiledEntity,
   type EntityField,
   type FieldGroup,
+  type DetailTab,
+  type EntityClassProfile,
+  type OverlayTabChange,
+  CANONICAL_TAB_ORDER,
 } from "@athyper/api-contracts/metadata";
 import {
   type EntityListPresentationConfig,
@@ -146,20 +150,32 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
   return { sections, requiredFields, validationRules };
 }
 
-// ── Detail renderer resolution ────────────────────────────────────────────────
+// ── Renderer family resolution (RUNTIME_ROUTING_SPEC §2) ─────────────────────
 
 /**
- * Which detail-page rendering strategy to use for this entity.
+ * Selects the detail-page renderer shell for the shared /app/[entity]/[id] route.
+ *
+ * This is NOT a route resolver — all families share the same URL contract.
+ * The family determines which React shell component is dispatched inside
+ * EntityDetailPage (RUNTIME_ROUTING_SPEC §8).
+ *
+ * Families:
+ *   "generic"    — EntityDetailPage: field-grid + tabs
+ *   "approvable" — ApprovableDetailPage: DocumentHeader + ProcessHealthStrip + ActionBar + tabs
+ *   "ledger"     — LedgerDetailPage: posting-centric read-only view
  *
  * Resolution order:
- *   1. display_config.detail_renderer — explicit override in DB seed
- *   2. feature_flags.is_approvable → "approvable"
+ *   1. display_config.detail_renderer — explicit DB override
+ *   2. feature_flags.is_approvable = true → "approvable"
  *   3. entity_class ∈ {LEDGER, LOG, AGGREGATE} → "ledger"
  *   4. fallback → "generic"
  */
-export type DetailRenderer = "generic" | "approvable" | "ledger";
+export type RendererFamily = "generic" | "approvable" | "ledger";
 
-export function resolveDetailRenderer(entity: CompiledEntity): DetailRenderer {
+/** @deprecated Use resolveRendererFamily. Kept for one-release backward compat. */
+export type DetailRenderer = RendererFamily;
+
+export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
   const explicit = entity.display_config.detail_renderer;
   if (explicit) return explicit;
 
@@ -170,6 +186,9 @@ export function resolveDetailRenderer(entity: CompiledEntity): DetailRenderer {
 
   return "generic";
 }
+
+/** @deprecated Use resolveRendererFamily. */
+export const resolveDetailRenderer = resolveRendererFamily;
 
 // ── Semantic resolver detection ───────────────────────────────────────────────
 
@@ -265,4 +284,103 @@ export function resolvePresentationConfig(entity: CompiledEntity): EntityListPre
       ? { key: display_config.default_sort_field, dir: display_config.default_sort_order ?? "asc" }
       : undefined,
   };
+}
+
+// ── Tab resolver (RUNTIME_ROUTING_SPEC §3.1) ──────────────────────────────────
+
+function pushIfMissing(tabs: DetailTab[], tab: DetailTab): void {
+  if (!tabs.includes(tab)) tabs.push(tab);
+}
+
+function removeIfPresent(tabs: DetailTab[], tab: DetailTab): void {
+  const idx = tabs.indexOf(tab);
+  if (idx !== -1) tabs.splice(idx, 1);
+}
+
+/**
+ * Resolve the ordered set of detail-page tabs for an entity.
+ *
+ * Three-layer resolution (RUNTIME_ROUTING_SPEC §3.1):
+ *   Layer 1: entity_class_profile.default_tabs — class-level structural tabs
+ *   Layer 2: entity.feature_flags — per-entity capability flags
+ *   Layer 3: overlayTabs — tenant-level additions / removals
+ *
+ * @param meta          Compiled entity descriptor
+ * @param classProfile  Optional class profile; pass null to skip Layer 1
+ * @param overlayTabs   Tenant overlay changes; pass [] when not available
+ */
+export function resolveTabs(
+  meta: CompiledEntity,
+  classProfile: EntityClassProfile | null,
+  overlayTabs: OverlayTabChange[],
+): DetailTab[] {
+  const tabs: DetailTab[] = ["overview"];
+  const flags = meta.feature_flags ?? {};
+
+  // ── Layer 1: class-driven structural defaults ─────────────────────────────
+  if (classProfile?.default_tabs?.includes("lines"))         pushIfMissing(tabs, "lines");
+  if (classProfile?.default_tabs?.includes("distributions")) pushIfMissing(tabs, "distributions");
+
+  // ── Layer 2: feature-flag overrides ──────────────────────────────────────
+  // Approval workflow inline tab (compact summary)
+  if (flags.is_approvable)
+    tabs.push("workflow");
+
+  // Attachments — on by default unless explicitly disabled
+  if (flags.has_attachments !== false)
+    tabs.push("attachments");
+
+  // Version chain — canonical: version_control; legacy alias: has_versioning
+  if (flags.version_control ?? flags.has_versioning)
+    tabs.push("versions");
+
+  // Comments — canonical: comments_enabled; legacy alias: has_comments
+  if (flags.comments_enabled ?? flags.has_comments)
+    tabs.push("comments");
+
+  // Full approval history panel — coexists with workflow (compact) tab
+  if (flags.is_approvable)
+    tabs.push("approvals");
+
+  // Domain event log — canonical: event_history; legacy alias: has_activity_log
+  if (flags.event_history ?? flags.has_activity_log)
+    tabs.push("events");
+
+  // Per-record validation
+  if (flags.quality_checks)  tabs.push("quality");
+  // Record-scoped reports
+  if (flags.record_reports)  tabs.push("reports");
+  // Work items assigned to this record
+  if (flags.has_tasks)       tabs.push("tasks");
+  // Notification subscribers
+  if (flags.has_watchers)    tabs.push("watchers");
+  // Policy / business-rule bindings
+  if (flags.has_rules)       tabs.push("rules");
+  // Webhook / external-sync events
+  if (flags.has_integrations) tabs.push("integrations");
+
+  // Line items — canonical: has_lines; legacy alias: has_line_items
+  if (flags.has_lines ?? flags.has_line_items)
+    pushIfMissing(tabs, "lines");
+
+  // Accounting distributions — canonical: has_accounting_distribution; legacy alias: has_accounting_entries
+  if (flags.has_accounting_distribution ?? flags.has_accounting_entries)
+    pushIfMissing(tabs, "distributions");
+
+  // ── Layer 3: tenant overlay additions / removals ──────────────────────────
+  for (const ot of overlayTabs) {
+    if (ot.operation === "add")    pushIfMissing(tabs, ot.tab);
+    if (ot.operation === "remove") removeIfPresent(tabs, ot.tab);
+  }
+
+  // ── Sort to canonical order (RUNTIME_ROUTING_SPEC §3.2) ───────────────────
+  tabs.sort((a, b) => {
+    const ai = CANONICAL_TAB_ORDER.indexOf(a);
+    const bi = CANONICAL_TAB_ORDER.indexOf(b);
+    const aIdx = ai === -1 ? CANONICAL_TAB_ORDER.length : ai;
+    const bIdx = bi === -1 ? CANONICAL_TAB_ORDER.length : bi;
+    return aIdx - bIdx;
+  });
+
+  return tabs;
 }

@@ -15,7 +15,9 @@ export async function POST(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const scope = searchParams.get("scope") ?? "app";
+  const scopeRaw = searchParams.get("scope") ?? "app";
+  const ALLOWED_SCOPES = ["app", "rbac"] as const;
+  const scope = (ALLOWED_SCOPES as readonly string[]).includes(scopeRaw) ? scopeRaw : "app";
 
   try {
     const res = await fetch(

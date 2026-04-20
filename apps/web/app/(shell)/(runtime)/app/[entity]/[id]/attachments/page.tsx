@@ -24,6 +24,7 @@ import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
 import { DragDropUploadZone } from "@athyper/content-ui";
 import { bffFetch, getCsrfToken } from "@/lib/bff-fetch";
 import { formatTitle } from "@/lib/format";
+import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,13 @@ function AttachmentRow({
           {attachment.content_type.split("/")[1]?.toUpperCase() ?? attachment.content_type}
         </Badge>
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-          <a href={attachment.download_url} download={attachment.filename} target="_blank" rel="noreferrer">
+          <a
+            href={attachment.download_url}
+            download={attachment.filename}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Download ${attachment.filename}`}
+          >
             <Download className="h-3.5 w-3.5" />
           </a>
         </Button>
@@ -124,6 +131,7 @@ function AttachmentRow({
           onClick={onDelete}
           loading={isDeleting}
           disabled={isDeleting}
+          aria-label={`Delete ${attachment.filename}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -179,6 +187,11 @@ export default function AppEntityAttachmentsPage() {
     },
     [entity, id, queryClient],
   );
+
+  // Guard — all hooks above; safe to return early from here
+  const { guardLoading, denied } = useSubrouteGuard(entity, "hasAttachments");
+  if (guardLoading) return <GuardSkeleton />;
+  if (denied) return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
 
   return (
     <PageFrame

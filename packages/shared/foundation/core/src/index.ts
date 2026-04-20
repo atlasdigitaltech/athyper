@@ -39,3 +39,12 @@ export function createLogEnvelope(
     ts: Date.now(),
   };
 }
+
+/** No-op logger for use in tests and local development. */
+export function createNoopLogger(): InfraLogger {
+  return {
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+}

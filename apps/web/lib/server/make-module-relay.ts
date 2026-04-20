@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
-import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
+import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from "@/lib/server/runtime-headers";
 
 /**
  * Creates a catch-all relay handler for a specific module prefix.
@@ -40,7 +40,10 @@ export function makeModuleRelay(modulePrefix: string) {
       const upstream = await fetch(upstreamUrl, init);
       if (upstream.status === 204) return new NextResponse(null, { status: 204 });
       const ct = upstream.headers.get("Content-Type") ?? "application/json";
-      return new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers: { "Content-Type": ct } });
+      const disposition = upstream.headers.get("Content-Disposition");
+      const resHeaders: Record<string, string> = { "Content-Type": ct };
+      if (disposition) resHeaders["Content-Disposition"] = sanitizeContentDisposition(disposition);
+      return new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers: resHeaders });
     } catch (err) {
       console.error(`[relay:${modulePrefix}] upstream error`, err);
       return NextResponse.json({ error: "Bad Gateway" }, { status: 502 });

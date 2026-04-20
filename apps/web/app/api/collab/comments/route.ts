@@ -36,16 +36,24 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
     if (!res.ok) {
-      // Backend not available or route not found — return empty data so the UI
-      // shows "No comments" instead of an error.
-      return NextResponse.json({ ok: true, data: [], hasMore: false });
+      // 404/410 means the entity was deleted or never had comments — show empty list.
+      // Any other non-2xx is a real error; surface it so the UI can show a banner.
+      if (res.status === 404 || res.status === 410) {
+        return NextResponse.json({ ok: true, data: [], hasMore: false });
+      }
+      console.error("[api/collab/comments GET] upstream", res.status, { userId: session.userId });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
     }
-    const data: unknown = await res.json();
+    const data: unknown = await res.json().catch(() => null);
+    if (!data) {
+      console.error("[api/collab/comments GET] invalid JSON from upstream", { userId: session.userId });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
+    }
     return NextResponse.json(data);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[api/collab/comments GET]", msg);
-    return NextResponse.json({ ok: true, data: [], hasMore: false });
+    console.error("[api/collab/comments GET]", msg, { userId: session.userId });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }
 
@@ -73,14 +81,14 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
     if (!res.ok) {
-      console.error("[api/collab/comments POST] upstream returned", res.status);
-      return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+      console.error("[api/collab/comments POST] upstream returned", res.status, { userId: session.userId });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
     }
     const data: unknown = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error("[api/collab/comments POST]", msg);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    console.error("[api/collab/comments POST]", msg, { userId: session.userId });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }

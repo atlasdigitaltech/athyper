@@ -56,6 +56,7 @@ export interface BankStatementItem {
   isVoided: boolean;
   status: string;
   runningBalance: number;
+  clearedDate: string | null;
 }
 
 export interface BankStatementData {
@@ -92,6 +93,7 @@ export interface BankUnreconciledItem {
   paymentReference: string | null;
   status: string;
   isPosted: boolean;
+  clearedDate: string | null;
 }
 
 export interface BankUnreconciledData {

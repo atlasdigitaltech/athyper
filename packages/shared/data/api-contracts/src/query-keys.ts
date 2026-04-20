@@ -77,6 +77,9 @@ export const queryKeys = {
   approvalContext: {
     byRequest: (requestId: string) => ["approval-context", requestId] as const,
   },
+  workflowActivity: {
+    byRequest: (requestId: string) => ["workflow-activity", requestId] as const,
+  },
 
   // ── Dashboard ─────────────────────────────────────────────
   dashboard: {

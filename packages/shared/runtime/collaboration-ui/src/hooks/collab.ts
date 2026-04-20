@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
+import { getCsrfToken } from "../utils/csrf";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,12 +50,6 @@ export interface UseCommentsOptions {
 }
 
 // ── Internal fetch helpers ────────────────────────────────────────────────────
-
-function getCsrfToken(): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
-  return match ? decodeURIComponent(match[1]!) : "";
-}
 
 async function collabGet<T>(url: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, {

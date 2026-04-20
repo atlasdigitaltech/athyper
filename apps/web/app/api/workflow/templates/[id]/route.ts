@@ -21,7 +21,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { id }   = await params;
   const headers  = buildRuntimeHeaders(session);
   const jsonHdrs = { ...headers, "Content-Type": "application/json" };
-  const base     = `${RUNTIME_API_URL}/api/workflow/templates/${id}`;
+  const base     = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}`;
 
   const payload = await request.json() as Record<string, unknown>;
   const stages  = (payload["stages"] as unknown[] | undefined) ?? [];

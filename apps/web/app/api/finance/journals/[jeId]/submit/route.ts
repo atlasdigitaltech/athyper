@@ -29,7 +29,7 @@ export async function POST(
   const { jeId } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${jeId}/submit`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${encodeURIComponent(jeId)}/submit`, {
       method: "POST",
       headers: buildRuntimeHeaders(session),
       cache: "no-store",

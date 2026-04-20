@@ -31,6 +31,6 @@ export async function POST(req: Request) {
     return NextResponse.json(body, { status: res.status });
   } catch (e) {
     console.error("[api/finance/reports/export]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 502 });
   }
 }

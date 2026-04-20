@@ -12,7 +12,7 @@
 const LAST_CONTEXT_KEY = "neon:lastContext";
 
 export interface LastContext {
-  org: string;      // org alias, e.g. "athyper:ATHQ"
+  org: string;      // org alias, e.g. "athyper--ATHQ"
   workbench: string; // role, e.g. "user" | "partner" | "admin"
 }
 

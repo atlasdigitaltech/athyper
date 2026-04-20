@@ -16,6 +16,7 @@
  */
 import { z } from "zod";
 import { UuidSchema } from "./common";
+import type { EntityClass } from "../enums";
 
 // ═══════════════════════════════════════════════════════════════
 // ENTITY CLASS — determines rendering runtime
@@ -27,7 +28,7 @@ export const EntityClassSchema = z.enum([
   "LEDGER", "LOG", "AGGREGATE",
   "DIMENSION", "RELATION",
 ]);
-export type EntityClass = z.infer<typeof EntityClassSchema>;
+export type { EntityClass };
 
 /** Entity class → route prefix mapping for navigation/runtime-router. */
 export const ENTITY_CLASS_TO_RUNTIME: Record<EntityClass, "/master/" | "/document/" | "/ledger/"> = {
@@ -184,21 +185,15 @@ export const CompiledEntitySchema = z.object({
   }),
 
   feature_flags: z.object({
+    // ── Core capabilities ────────────────────────────────────────
     has_attachments: z.boolean().optional(),
-    has_comments: z.boolean().optional(),
-    has_activity_log: z.boolean().optional(),
     has_workflow: z.boolean().optional(),
     has_lifecycle: z.boolean().optional(),
-    has_versioning: z.boolean().optional(),
     is_importable: z.boolean().optional(),
     is_exportable: z.boolean().optional(),
     is_bulk_editable: z.boolean().optional(),
     /** Entity participates in an approval workflow (drives detail_renderer default). */
     is_approvable: z.boolean().optional(),
-    /** Entity has child line items in a related table. */
-    has_line_items: z.boolean().optional(),
-    /** Entity has ledger postings (journal entries). */
-    has_accounting_entries: z.boolean().optional(),
     /** Entity has a payment schedule / settlement tracking. */
     has_payment_schedule: z.boolean().optional(),
     /** Entity has budget impact / availability check. */
@@ -207,6 +202,46 @@ export const CompiledEntitySchema = z.object({
     has_related_documents: z.boolean().optional(),
     /** Payables | receivables | treasury | etc. — used for context-sensitive UI. */
     document_category: z.string().optional(),
+
+    // ── Spec-canonical tab-driving flags (RUNTIME_ROUTING_SPEC §4) ────────────
+    /** Threaded comments panel. Canonical name: comments_enabled. */
+    comments_enabled: z.boolean().optional(),
+    /** @deprecated Use comments_enabled. Kept for seed backward-compat. */
+    has_comments: z.boolean().optional(),
+
+    /** Domain event log / audit trail panel. Canonical name: event_history. */
+    event_history: z.boolean().optional(),
+    /** @deprecated Use event_history. Kept for seed backward-compat. */
+    has_activity_log: z.boolean().optional(),
+
+    /** Version chain + compare subroutes. Canonical name: version_control. */
+    version_control: z.boolean().optional(),
+    /** @deprecated Use version_control. Kept for seed backward-compat. */
+    has_versioning: z.boolean().optional(),
+
+    /** Child line-item grid tab. Canonical name: has_lines. */
+    has_lines: z.boolean().optional(),
+    /** @deprecated Use has_lines. Kept for seed backward-compat. */
+    has_line_items: z.boolean().optional(),
+
+    /** Accounting distribution grid tab. Canonical name: has_accounting_distribution. */
+    has_accounting_distribution: z.boolean().optional(),
+    /** @deprecated Use has_accounting_distribution. Kept for seed backward-compat. */
+    has_accounting_entries: z.boolean().optional(),
+
+    // ── New tab-driving flags (no legacy aliases) ─────────────────────────────
+    /** Work items assigned to this record. */
+    has_tasks: z.boolean().optional(),
+    /** Notification subscribers. */
+    has_watchers: z.boolean().optional(),
+    /** Policy bindings / business rules. */
+    has_rules: z.boolean().optional(),
+    /** Webhook events / external sync panel. */
+    has_integrations: z.boolean().optional(),
+    /** Per-record validation results. */
+    quality_checks: z.boolean().optional(),
+    /** Record-scoped report links. */
+    record_reports: z.boolean().optional(),
   }),
 
   governance_level: z.string(),
@@ -326,3 +361,81 @@ export const EntityCapabilitySchema = z.object({
   config: z.record(z.string(), z.unknown()).nullable(),
 });
 export type EntityCapability = z.infer<typeof EntityCapabilitySchema>;
+
+// ═══════════════════════════════════════════════════════════════
+// DETAIL TAB — canonical tab identifiers (RUNTIME_ROUTING_SPEC §3)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * All possible tab slots in the detail page tab bar.
+ * "overview" is always present.
+ * All others are driven by feature_flags or class profile defaults.
+ * Source of truth: RUNTIME_ROUTING_SPEC §3.1.
+ */
+export const DetailTabSchema = z.enum([
+  "overview",       // always — primary field grid
+  "lines",          // child line-item grid
+  "distributions",  // accounting distribution grid
+  "workflow",       // inline approval stages
+  "attachments",    // file list
+  "versions",       // version timeline
+  "comments",       // threaded comments
+  "approvals",      // approval history
+  "tasks",          // work items
+  "watchers",       // notification subscribers
+  "rules",          // policy / business-rule bindings
+  "integrations",   // webhook / external-sync events
+  "quality",        // per-record validation results
+  "reports",        // record-scoped report links
+  "events",         // domain event log / audit trail
+]);
+export type DetailTab = z.infer<typeof DetailTabSchema>;
+
+/**
+ * Canonical display order for detail-page tabs (RUNTIME_ROUTING_SPEC §3.2).
+ * resolveTabs() sorts its output against this array so the rendered tab bar
+ * is deterministic regardless of which feature flags or overlays are active.
+ * Tabs not present in this list sort to the end in insertion order.
+ */
+export const CANONICAL_TAB_ORDER: readonly DetailTab[] = [
+  "overview",
+  "lines",
+  "distributions",
+  "workflow",
+  "attachments",
+  "versions",
+  "comments",
+  "approvals",
+  "tasks",
+  "watchers",
+  "rules",
+  "integrations",
+  "quality",
+  "reports",
+  "events",
+] as const;
+
+// ═══════════════════════════════════════════════════════════════
+// ENTITY CLASS PROFILE — per-class tab/layout defaults
+// Source: control.entity_class_profile
+// ═══════════════════════════════════════════════════════════════
+
+export const EntityClassProfileSchema = z.object({
+  entity_class: EntityClassSchema,
+  /** Tab slots that are on by default for all entities of this class. */
+  default_tabs: z.array(DetailTabSchema).optional(),
+  /** Preferred detail page layout hint for this class. */
+  default_layout: z.string().optional(),
+});
+export type EntityClassProfile = z.infer<typeof EntityClassProfileSchema>;
+
+// ═══════════════════════════════════════════════════════════════
+// OVERLAY TAB CHANGE — tenant-level tab customisation
+// Carried inside snapshot.entity_compiled_overlay compiled_json.
+// ═══════════════════════════════════════════════════════════════
+
+export const OverlayTabChangeSchema = z.object({
+  tab: DetailTabSchema,
+  operation: z.enum(["add", "remove"]),
+});
+export type OverlayTabChange = z.infer<typeof OverlayTabChangeSchema>;

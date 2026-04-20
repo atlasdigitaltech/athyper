@@ -15,7 +15,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/test-cases/${id}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/test-cases/${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: buildRuntimeHeaders(session),
       cache: "no-store",

@@ -25,6 +25,7 @@ import {
   type UseQueryOptions,
   type UseMutationOptions,
 } from "@tanstack/react-query";
+import { getCsrfToken } from "@/lib/bff-fetch";
 import { Search, X, AlertTriangle, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -249,7 +250,12 @@ export async function relayFetch<T = unknown>(
   init?: RequestInit,
 ): Promise<T> {
   const url = path.startsWith("/api/relay") ? path : `/api/relay${path.startsWith("/") ? "" : "/"}${path}`;
-  const res = await fetch(url, init);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
+  if (method !== "GET") {
+    headers["X-CSRF-Token"] = getCsrfToken();
+  }
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string; message?: string };
     throw new Error(body.message ?? body.error ?? `HTTP ${res.status}`);

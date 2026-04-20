@@ -29,3 +29,4 @@ export {
   AlertDialogCancel, AlertDialogAction,
 } from "./AlertDialog";
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./Collapsible";
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./Tooltip";

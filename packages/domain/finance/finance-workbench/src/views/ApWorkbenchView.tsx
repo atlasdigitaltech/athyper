@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight, CreditCard } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
@@ -371,9 +371,8 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
               <tr><td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">No invoices</td></tr>
             )}
             {(data?.items ?? []).map((inv) => (
-              <>
+              <Fragment key={inv.id}>
                 <tr
-                  key={inv.id}
                   className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
                   onClick={() => toggleExpand(inv.id)}
                 >
@@ -398,13 +397,13 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
                   </td>
                 </tr>
                 {expandedId === inv.id && (
-                  <tr key={`${inv.id}-detail`} className="border-b bg-muted/10">
+                  <tr className="border-b bg-muted/10">
                     <td colSpan={8}>
                       <InvoiceDetailPanel invoiceId={inv.id} />
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

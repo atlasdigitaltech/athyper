@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
 
   const { commentId } = await params;
   const qs = forwardSearchParams(req.url, ["limit", "offset"]);
-  const url = `${COLLAB_API_URL}/api/collab/comments/${commentId}/replies${qs ? `?${qs}` : ""}`;
+  const url = `${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}/replies${qs ? `?${qs}` : ""}`;
 
   try {
     const res = await fetch(url, {
@@ -29,7 +29,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("[api/collab/comments/[commentId]/replies GET]", msg);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }
 
@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
   }
 
   try {
-    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${commentId}/replies`, {
+    const res = await fetch(`${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}/replies`, {
       method: "POST",
       headers: {
         ...buildRuntimeHeaders(session),
@@ -66,6 +66,6 @@ export async function POST(req: Request, { params }: { params: Params }) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("[api/collab/comments/[commentId]/replies POST]", msg);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }

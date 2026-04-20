@@ -92,29 +92,31 @@ export class CompanyCodeScopeService {
       throw new Error(`Company code ${companyCodeId} not found in tenant ${tenantId}`);
     }
 
-    // Upsert via delete+insert (simpler than ON CONFLICT for cross-DB portability)
-    await this.db
-      .deleteFrom("master.company_code_access" as never)
-      .where("tenant_id" as never, "=", tenantId as never)
-      .where("entity_type" as never, "=", entityType as never)
-      .where("entity_id" as never, "=", entityId as never)
-      .where("company_code_id" as never, "=", companyCodeId as never)
-      .execute()
-      .catch(() => { /* best-effort */ });
+    // Upsert wrapped in a transaction: if the insert fails after the delete the
+    // grant is not silently lost.  Swallowing the delete error was unsafe here.
+    const row = await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("master.company_code_access" as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("entity_type" as never, "=", entityType as never)
+        .where("entity_id" as never, "=", entityId as never)
+        .where("company_code_id" as never, "=", companyCodeId as never)
+        .execute();
 
-    const row = await this.db
-      .insertInto("master.company_code_access" as never)
-      .values({
-        tenant_id:      tenantId,
-        entity_type:    entityType,
-        entity_id:      entityId,
-        company_code_id: companyCodeId,
-        inherit_subtree: inheritSubtree,
-        granted_by:     grantedBy,
-        created_by:     grantedBy,
-      } as never)
-      .returning("id" as never)
-      .executeTakeFirstOrThrow() as { id: string };
+      return trx
+        .insertInto("master.company_code_access" as never)
+        .values({
+          tenant_id:       tenantId,
+          entity_type:     entityType,
+          entity_id:       entityId,
+          company_code_id: companyCodeId,
+          inherit_subtree: inheritSubtree,
+          granted_by:      grantedBy,
+          created_by:      grantedBy,
+        } as never)
+        .returning("id" as never)
+        .executeTakeFirstOrThrow() as Promise<{ id: string }>;
+    });
 
     return {
       id:             row.id,

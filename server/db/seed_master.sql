@@ -2,20 +2,20 @@
 -- Athyper Master Seed Data
 -- Generated: 2026-04-16 03:30:24 UTC
 -- Sources:
---   900_seed_data/010_system/** (excludes commodity* and industry*)
---   900_seed_data/020_blueprint/**
---   900_seed_data/030_tenant/**
+--   900_seed_data/010_platform/** (excludes commodity* and industry*)
+--   900_seed_data/020_universal/**
+--   900_seed_data/040_tenant/**
 -- ============================================================
 
 -- ============================================================
--- SECTION: 010_system
+-- SECTION: 010_platform
 -- ============================================================
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/000_lookup_domains.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/000_lookup_domains.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/002_control/LookupDomain/000_lookup_domains.sql
+-- 900_seed_data/010_platform/003_control/LookupDomain/000_lookup_domains.sql
 -- Master registry: ALL lookup domain definitions across all schemas.
 -- Schema: control | Table: lookup_domain
 -- Depends on: 04_tables/002_control.sql
@@ -1301,7 +1301,7 @@ ON CONFLICT (code) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/asset_class_book_policy_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/asset_class_book_policy_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/asset_class_book_policy_status.sql
@@ -1324,7 +1324,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/backing_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/backing_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/backing_type.sql
@@ -1353,7 +1353,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_format_rule_bank_id_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_format_rule_bank_id_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_format_rule_bank_id_type.sql
@@ -1375,7 +1375,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_format_rule_direction.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_format_rule_direction.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_format_rule_direction.sql
@@ -1392,7 +1392,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_format_rule_payment_network.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_format_rule_payment_network.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_format_rule_payment_network.sql
@@ -1424,7 +1424,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_format_rule_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_format_rule_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_format_rule_status.sql
@@ -1441,7 +1441,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_interface_file_format.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_interface_file_format.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_interface_file_format.sql
@@ -1463,7 +1463,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_interface_profile_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_interface_profile_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_interface_profile_status.sql
@@ -1478,7 +1478,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bank_interface_profile_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bank_interface_profile_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bank_interface_profile_type.sql
@@ -1495,7 +1495,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/book_posting_rule_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/book_posting_rule_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/book_posting_rule_status.sql
@@ -1518,7 +1518,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bpr_account_strategy.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bpr_account_strategy.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bpr_account_strategy.sql
@@ -1541,7 +1541,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bpr_amount_strategy.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bpr_amount_strategy.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bpr_amount_strategy.sql
@@ -1565,7 +1565,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/bpr_recognition_timing.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/bpr_recognition_timing.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/bpr_recognition_timing.sql
@@ -1588,7 +1588,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/depreciation_start_rule.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/depreciation_start_rule.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/depreciation_start_rule.sql
@@ -1611,7 +1611,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/dimension_policy_behavior.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/dimension_policy_behavior.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/dimension_policy_behavior.sql
@@ -1674,7 +1674,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/document_sequence_doc_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/document_sequence_doc_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/document_sequence_doc_type.sql
@@ -1757,7 +1757,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/document_sequence_reset_strategy.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/document_sequence_reset_strategy.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/document_sequence_reset_strategy.sql
@@ -1808,7 +1808,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/entity_class.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/entity_class.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/entity_class.sql
@@ -1838,7 +1838,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/field_cardinality.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/field_cardinality.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/field_cardinality.sql
@@ -1861,7 +1861,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/field_data_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/field_data_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/field_data_type.sql
@@ -1902,7 +1902,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/field_origin.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/field_origin.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/field_origin.sql
@@ -1925,7 +1925,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/governance_level.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/governance_level.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/governance_level.sql
@@ -1949,7 +1949,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/mfa_method_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/mfa_method_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/mfa_method_type.sql
@@ -1989,7 +1989,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/mutability.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/mutability.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/mutability.sql
@@ -2012,7 +2012,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/notification_channel.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/notification_channel.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/notification_channel.sql
@@ -2069,7 +2069,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/notification_digest_frequency.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/notification_digest_frequency.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/notification_digest_frequency.sql
@@ -2111,7 +2111,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/notification_priority.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/notification_priority.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/notification_priority.sql
@@ -2157,7 +2157,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/overlay_change_kind.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/overlay_change_kind.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/overlay_change_kind.sql
@@ -2186,7 +2186,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/ownership_model.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/ownership_model.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/ownership_model.sql
@@ -2210,7 +2210,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/payment_method_company_policy_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/payment_method_company_policy_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/payment_method_company_policy_status.sql
@@ -2225,7 +2225,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/payment_method_interface_binding_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/payment_method_interface_binding_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/payment_method_interface_binding_status.sql
@@ -2240,7 +2240,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/payment_settlement_posting_role.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/payment_settlement_posting_role.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/payment_settlement_posting_role.sql
@@ -2268,7 +2268,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/payment_settlement_rule_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/payment_settlement_rule_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/payment_settlement_rule_status.sql
@@ -2283,7 +2283,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/relation_kind.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/relation_kind.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/relation_kind.sql
@@ -2306,7 +2306,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/residual_value_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/residual_value_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/residual_value_mode.sql
@@ -2329,7 +2329,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/resolution_event_code.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/resolution_event_code.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/resolution_event_code.sql
@@ -2374,7 +2374,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/control/security_tier.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/control/security_tier.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/control/security_tier.sql
@@ -2398,7 +2398,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/asset_transaction_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/asset_transaction_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/asset_transaction_status.sql
@@ -2422,7 +2422,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/asset_txn_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/asset_txn_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/asset_txn_type.sql
@@ -2455,7 +2455,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/depreciation_run_line_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/depreciation_run_line_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/depreciation_run_line_status.sql
@@ -2480,7 +2480,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/depreciation_run_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/depreciation_run_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/depreciation_run_status.sql
@@ -2505,7 +2505,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/je_source_doc_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/je_source_doc_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/je_source_doc_type.sql
@@ -2539,7 +2539,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/jl_party_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/jl_party_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/jl_party_type.sql
@@ -2564,7 +2564,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/jl_subledger_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/jl_subledger_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/jl_subledger_type.sql
@@ -2590,7 +2590,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/jlr_ref_doc_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/jlr_ref_doc_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/jlr_ref_doc_type.sql
@@ -2618,7 +2618,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/jlr_ref_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/jlr_ref_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/jlr_ref_type.sql
@@ -2644,7 +2644,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/journal_entry_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/journal_entry_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/journal_entry_status.sql
@@ -2668,7 +2668,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/p2p_lookup_values.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/p2p_lookup_values.sql
 -- ------------------------------------------------------------
 
 -- =============================================================================
@@ -3018,7 +3018,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/payment_entry_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/payment_entry_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/payment_entry_status.sql
@@ -3049,7 +3049,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/priority.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/priority.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/priority.sql
@@ -3073,7 +3073,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/purchase_order.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/purchase_order.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/purchase_order.sql
@@ -3136,7 +3136,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/document/upupr_request_scope.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/document/upupr_request_scope.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/document/upupr_request_scope.sql
@@ -3175,7 +3175,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/event/evt_event_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/event/evt_event_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/event/evt_event_type.sql
@@ -3205,7 +3205,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/event/task_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/event/task_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/event/task_type.sql
@@ -3274,7 +3274,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/event/workflow_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/event/workflow_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/event/workflow_type.sql
@@ -3336,7 +3336,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/governance/book_period_status_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/governance/book_period_status_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/governance/book_period_status_status.sql
@@ -3360,7 +3360,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/activity_domain.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/activity_domain.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/activity_domain.sql
@@ -3409,7 +3409,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/activity_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/activity_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/activity_type.sql
@@ -3466,7 +3466,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/actor_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/actor_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/actor_type.sql
@@ -3502,7 +3502,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/ai_feedback_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/ai_feedback_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/ai_feedback_type.sql
@@ -3532,7 +3532,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/attachment_access_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/attachment_access_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/attachment_access_type.sql
@@ -3594,7 +3594,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/close_activity_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/close_activity_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/close_activity_type.sql
@@ -3639,7 +3639,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/export_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/export_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/export_type.sql
@@ -3673,7 +3673,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/field_classification.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/field_classification.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/field_classification.sql
@@ -3717,7 +3717,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/password_change_reason.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/password_change_reason.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/password_change_reason.sql
@@ -3761,7 +3761,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/log/security_event_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/log/security_event_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/log/security_event_category.sql
@@ -3813,7 +3813,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/address_purpose.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/address_purpose.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/address_purpose.sql
@@ -3934,7 +3934,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/address_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/address_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/address_type.sql
@@ -4035,7 +4035,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_assignment_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_assignment_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_assignment_type.sql
@@ -4067,7 +4067,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_book_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_book_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_book_status.sql
@@ -4091,7 +4091,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_book_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_book_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_book_type.sql
@@ -4115,7 +4115,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_class_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_class_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_class_status.sql
@@ -4138,7 +4138,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_component_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_component_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_component_status.sql
@@ -4161,7 +4161,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_life_override_policy.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_life_override_policy.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_life_override_policy.sql
@@ -4184,7 +4184,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_nature.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_nature.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_nature.sql
@@ -4210,7 +4210,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_prorate_basis.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_prorate_basis.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_prorate_basis.sql
@@ -4234,7 +4234,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_reserve_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_reserve_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_reserve_type.sql
@@ -4259,7 +4259,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_retirement_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_retirement_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_retirement_type.sql
@@ -4286,7 +4286,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/asset_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/asset_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/asset_status.sql
@@ -4313,7 +4313,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/attachment_kind.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/attachment_kind.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/attachment_kind.sql
@@ -4354,7 +4354,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_house_config_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_house_config_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_house_config_status.sql
@@ -4371,7 +4371,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_id_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_id_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_id_type.sql
@@ -4398,7 +4398,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_link_purpose.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_link_purpose.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_link_purpose.sql
@@ -4420,7 +4420,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_local_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_local_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_local_type.sql
@@ -4439,7 +4439,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_nature.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_nature.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_nature.sql
@@ -4457,7 +4457,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_reconciliation_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_reconciliation_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_reconciliation_mode.sql
@@ -4474,7 +4474,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_status.sql
@@ -4492,7 +4492,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_usage_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_usage_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_usage_type.sql
@@ -4512,7 +4512,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_account_verification_method.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_account_verification_method.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_account_verification_method.sql
@@ -4532,7 +4532,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_party_institution_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_party_institution_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_party_institution_type.sql
@@ -4552,7 +4552,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_party_national_bank_code_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_party_national_bank_code_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_party_national_bank_code_type.sql
@@ -4574,7 +4574,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/bank_party_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/bank_party_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/bank_party_status.sql
@@ -4591,7 +4591,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/book_assignment_conflict.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/book_assignment_conflict.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_book_assignment_conflict.sql
@@ -4614,7 +4614,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/book_assignment_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/book_assignment_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_book_assignment_status.sql
@@ -4637,7 +4637,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_classification_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_classification_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_classification_type.sql
@@ -4659,7 +4659,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_domain_code.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_domain_code.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_domain_code.sql
@@ -4686,7 +4686,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_mapping_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_mapping_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_mapping_type.sql
@@ -4711,7 +4711,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_owner_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_owner_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_owner_type.sql
@@ -4737,7 +4737,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_provenance.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_provenance.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_provenance.sql
@@ -4762,7 +4762,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cc_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cc_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cc_status.sql
@@ -4784,7 +4784,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ccca_assignment_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ccca_assignment_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ccca_assignment_type.sql
@@ -4807,7 +4807,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ccga_reconciliation_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ccga_reconciliation_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ccga_reconciliation_type.sql
@@ -4830,7 +4830,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/chart_of_account_framework.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/chart_of_account_framework.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/chart_of_account_framework.sql
@@ -4854,7 +4854,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/chart_of_account_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/chart_of_account_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/chart_of_account_status.sql
@@ -4878,7 +4878,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/comment_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/comment_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/comment_type.sql
@@ -4918,7 +4918,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/company_code_access_entity_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/company_code_access_entity_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_access_entity_type.sql
@@ -4949,7 +4949,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/company_code_framework.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/company_code_framework.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_framework.sql
@@ -4972,7 +4972,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/company_code_fy_variant.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/company_code_fy_variant.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_fy_variant.sql
@@ -4997,7 +4997,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/company_code_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/company_code_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_status.sql
@@ -5020,7 +5020,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/contact_link_channel_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/contact_link_channel_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/contact_link_channel_type.sql
@@ -5068,7 +5068,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/contact_link_purpose.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/contact_link_purpose.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/contact_link_purpose.sql
@@ -5120,7 +5120,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/content_item_kind.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/content_item_kind.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/content_item_kind.sql
@@ -5160,7 +5160,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/content_item_link_relation_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/content_item_link_relation_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/content_item_link_relation_type.sql
@@ -5195,7 +5195,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/conversation_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/conversation_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/conversation_type.sql
@@ -5239,7 +5239,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cost_center_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cost_center_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cost_center_category.sql
@@ -5266,7 +5266,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cost_center_node_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cost_center_node_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cost_center_node_type.sql
@@ -5288,7 +5288,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/cost_center_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/cost_center_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/cost_center_status.sql
@@ -5312,7 +5312,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/credit_rating.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/credit_rating.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/credit_rating.sql
@@ -5340,7 +5340,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/customer_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/customer_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/customer_status.sql
@@ -5364,7 +5364,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/customer_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/customer_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/customer_type.sql
@@ -5388,7 +5388,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/delegation_scope.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/delegation_scope.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/delegation_scope.sql
@@ -5462,7 +5462,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/depreciation_convention.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/depreciation_convention.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/depreciation_convention.sql
@@ -5487,7 +5487,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/depreciation_method.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/depreciation_method.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/depreciation_method.sql
@@ -5513,7 +5513,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/dimension_type_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/dimension_type_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/dimension_type_category.sql
@@ -5565,7 +5565,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/dimension_type_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/dimension_type_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/dimension_type_status.sql
@@ -5614,7 +5614,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/dimension_value_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/dimension_value_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/dimension_value_status.sql
@@ -5669,7 +5669,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/employee_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/employee_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/employee_status.sql
@@ -5693,7 +5693,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/employment_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/employment_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/employment_type.sql
@@ -5718,7 +5718,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/fiscal_period_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/fiscal_period_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/fiscal_period_status.sql
@@ -5742,7 +5742,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/fiscal_period_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/fiscal_period_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/fiscal_period_type.sql
@@ -5766,7 +5766,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/flag_reason.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/flag_reason.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/flag_reason.sql
@@ -5810,7 +5810,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/gl_account_balance.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/gl_account_balance.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/gl_account_balance.sql
@@ -5832,7 +5832,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/gl_account_class.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/gl_account_class.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/gl_account_class.sql
@@ -5862,7 +5862,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/gl_account_node_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/gl_account_node_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/gl_account_node_type.sql
@@ -5884,7 +5884,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/gl_account_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/gl_account_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/gl_account_status.sql
@@ -5908,7 +5908,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/gl_account_subledger.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/gl_account_subledger.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/gl_account_subledger.sql
@@ -5934,7 +5934,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/holiday_calendar_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/holiday_calendar_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/holiday_calendar_status.sql
@@ -5969,7 +5969,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/item_category_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/item_category_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/item_category_status.sql
@@ -5992,7 +5992,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/item_master_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/item_master_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/item_master_status.sql
@@ -6015,7 +6015,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ledger_book_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ledger_book_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ledger_book_category.sql
@@ -6039,7 +6039,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ledger_book_close_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ledger_book_close_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ledger_book_close_mode.sql
@@ -6062,7 +6062,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ledger_book_standard.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ledger_book_standard.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ledger_book_standard.sql
@@ -6087,7 +6087,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ledger_book_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ledger_book_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ledger_book_status.sql
@@ -6110,7 +6110,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/legal_entity_consolidation.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/legal_entity_consolidation.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/legal_entity_consolidation.sql
@@ -6134,7 +6134,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/legal_entity_framework.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/legal_entity_framework.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/legal_entity_framework.sql
@@ -6160,7 +6160,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/legal_entity_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/legal_entity_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/legal_entity_status.sql
@@ -6184,7 +6184,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/legal_entity_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/legal_entity_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/legal_entity_type.sql
@@ -6210,7 +6210,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/notification_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/notification_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/notification_category.sql
@@ -6262,7 +6262,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ou_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ou_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ou_type.sql
@@ -6279,7 +6279,7 @@ WHERE code = 'ou_type';
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/party_payment_terms.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/party_payment_terms.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/party_payment_terms.sql
@@ -6306,7 +6306,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_method_direction.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_method_direction.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_method_direction.sql
@@ -6323,7 +6323,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_method_instrument_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_method_instrument_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_method_instrument_mode.sql
@@ -6346,7 +6346,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_method_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_method_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_method_status.sql
@@ -6362,7 +6362,7 @@ WHERE NOT EXISTS (SELECT 1 FROM control.lookup_value x WHERE x.domain_code = v.d
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_term_category.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_term_category.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_term_category.sql
@@ -6401,7 +6401,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_term_recovery_method.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_term_recovery_method.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_term_recovery_method.sql
@@ -6438,7 +6438,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_term_release_event.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_term_release_event.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_term_release_event.sql
@@ -6477,7 +6477,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_term_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_term_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_term_status.sql
@@ -6514,7 +6514,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/payment_term_trigger_event.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/payment_term_trigger_event.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/payment_term_trigger_event.sql
@@ -6554,7 +6554,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/principal_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/principal_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/principal_status.sql
@@ -6590,7 +6590,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/principal_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/principal_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/principal_type.sql
@@ -6626,7 +6626,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/procurement_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/procurement_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/procurement_type.sql
@@ -6649,7 +6649,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/product_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/product_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/product_status.sql
@@ -6673,7 +6673,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/product_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/product_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/product_type.sql
@@ -6697,7 +6697,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/profit_center_node_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/profit_center_node_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/profit_center_node_type.sql
@@ -6719,7 +6719,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/profit_center_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/profit_center_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/profit_center_status.sql
@@ -6743,7 +6743,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/profit_center_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/profit_center_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/profit_center_type.sql
@@ -6767,7 +6767,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/project_item_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/project_item_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/project_item_status.sql
@@ -6791,7 +6791,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/project_item_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/project_item_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/project_item_type.sql
@@ -6814,7 +6814,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/project_settlement_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/project_settlement_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/project_settlement_type.sql
@@ -6838,7 +6838,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/project_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/project_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/project_status.sql
@@ -6863,7 +6863,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/project_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/project_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/project_type.sql
@@ -6889,7 +6889,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/reaction_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/reaction_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/reaction_type.sql
@@ -6922,7 +6922,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/site_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/site_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/site_status.sql
@@ -6946,7 +6946,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/site_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/site_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/site_type.sql
@@ -6972,7 +6972,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/spend_category_ou_mapping_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/spend_category_ou_mapping_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/company_code_spend_policy_status.sql
@@ -6994,7 +6994,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/spend_category_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/spend_category_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/spend_category_status.sql
@@ -7017,7 +7017,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/spend_visibility.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/spend_visibility.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/spend_visibility.sql
@@ -7040,7 +7040,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/statement_cycle.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/statement_cycle.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/statement_cycle.sql
@@ -7064,7 +7064,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/supplier_payment_method.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/supplier_payment_method.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/supplier_payment_method.sql
@@ -7090,7 +7090,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/supplier_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/supplier_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/supplier_status.sql
@@ -7114,7 +7114,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/supplier_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/supplier_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/supplier_type.sql
@@ -7139,7 +7139,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/tax_id_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/tax_id_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/tax_id_type.sql
@@ -7169,7 +7169,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/template_engine.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/template_engine.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/template_engine.sql
@@ -7205,7 +7205,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/template_kind.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/template_kind.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/template_kind.sql
@@ -7248,7 +7248,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/tenant_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/tenant_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/tenant_status.sql
@@ -7284,7 +7284,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/tenant_subscription.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/tenant_subscription.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/tenant_subscription.sql
@@ -7324,7 +7324,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_appearance_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_appearance_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_appearance_mode.sql
@@ -7349,7 +7349,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_breakpoint.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_breakpoint.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_breakpoint.sql
@@ -7376,7 +7376,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_dashboard_scope.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_dashboard_scope.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_dashboard_scope.sql
@@ -7400,7 +7400,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_density.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_density.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_density.sql
@@ -7424,7 +7424,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_preference_code.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_preference_code.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_preference_code.sql
@@ -7528,7 +7528,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_surface_code.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_surface_code.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_surface_code.sql
@@ -7609,7 +7609,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_view_scope.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_view_scope.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_view_scope.sql
@@ -7633,7 +7633,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/ui_widget_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/ui_widget_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/ui_widget_type.sql
@@ -7662,7 +7662,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/valuation_method.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/valuation_method.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/valuation_method.sql
@@ -7686,7 +7686,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/warehouse_status.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/warehouse_status.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/warehouse_status.sql
@@ -7709,7 +7709,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/master/warehouse_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/master/warehouse_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/master/warehouse_type.sql
@@ -7734,7 +7734,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/shared/persona_scope_mode.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/shared/persona_scope_mode.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/shared/persona_scope_mode.sql
@@ -7766,7 +7766,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_lookups/LookupDomain/shared/uom_quantity_type.sql
+-- FILE: 010_platform/000_lookups/LookupDomain/shared/uom_quantity_type.sql
 -- ------------------------------------------------------------
 
 -- LookupDomain/shared/uom_quantity_type.sql
@@ -7888,10 +7888,10 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/000_public/000_bootstrap.sql
+-- FILE: 010_platform/000_bootstrap/000_bootstrap.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/000_public/000_bootstrap.sql
+-- 900_seed_data/010_platform/000_bootstrap/000_bootstrap.sql
 -- Bootstrap: system tenant + system principal (self-referential)
 -- Must execute FIRST — before all other seeds.
 -- Uses session_replication_role = replica to bypass FK/CHECK triggers during bootstrap.
@@ -7941,10 +7941,10 @@ COMMIT;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/001_country.sql
+-- FILE: 010_platform/001_global_reference/001_country.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/001_country.sql
+-- 900_seed_data/010_platform/001_global_reference/001_country.sql
 -- Seed: ISO 3166-1 countries + phone/postal/address rendering profiles
 -- Schema: shared | Table: country
 -- Idempotent: ON CONFLICT (code) DO UPDATE throughout
@@ -8670,10 +8670,10 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/002_state_region.sql
+-- FILE: 010_platform/001_global_reference/002_state_region.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/002_state_region.sql
+-- 900_seed_data/010_platform/001_global_reference/002_state_region.sql
 -- Seed: ISO 3166-2 subdivisions
 -- Schema: shared | Table: state_region
 -- Source: 200_seed_standard.sql (backup)
@@ -9090,10 +9090,10 @@ on conflict (code, country_code) do nothing;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/003_currency.sql
+-- FILE: 010_platform/001_global_reference/003_currency.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/003_currency.sql
+-- 900_seed_data/010_platform/001_global_reference/003_currency.sql
 -- Seed: ISO 4217 currencies
 -- Schema: shared | Table: currency
 --
@@ -9433,10 +9433,10 @@ where code = 'MRU';
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/004_language.sql
+-- FILE: 010_platform/001_global_reference/004_language.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/004_language.sql
+-- 900_seed_data/010_platform/001_global_reference/004_language.sql
 -- Seed: ISO 639-1 languages
 -- Schema: shared | Table: language
 -- Source: 200_seed_standard.sql (backup)
@@ -9649,10 +9649,10 @@ on conflict (code) do update set
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/005_locale.sql
+-- FILE: 010_platform/001_global_reference/005_locale.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/005_locale.sql
+-- 900_seed_data/010_platform/001_global_reference/005_locale.sql
 -- Seed: BCP 47 locales
 -- Schema: shared | Table: locale
 --
@@ -10031,10 +10031,10 @@ on conflict (code) do update set
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/006_timezone.sql
+-- FILE: 010_platform/001_global_reference/006_timezone.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/006_timezone.sql
+-- 900_seed_data/010_platform/001_global_reference/006_timezone.sql
 -- Seed: IANA tzdb time zones
 -- Schema: shared | Table: timezone
 --
@@ -10581,10 +10581,10 @@ on conflict (code) do update set
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/007_uom.sql
+-- FILE: 010_platform/001_global_reference/007_uom.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/007_uom.sql
+-- 900_seed_data/010_platform/001_global_reference/007_uom.sql
 -- Seed: UN/ECE Rec 20 units of measure
 -- Schema: shared | Table: uom
 --
@@ -11058,10 +11058,10 @@ on conflict (code) do update set
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/010_persona.sql
+-- FILE: 010_platform/002_permission_model/010_persona.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/010_persona.sql
+-- 900_seed_data/010_platform/002_permission_model/010_persona.sql
 -- Seed: System personas (role templates)
 -- Schema: shared | Table: persona
 -- Idempotent: on conflict (code) do nothing
@@ -11078,10 +11078,10 @@ on conflict (code) do nothing;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/011_workspace.sql
+-- FILE: 010_platform/002_permission_model/011_workspace.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/011_workspace.sql
+-- 900_seed_data/010_platform/002_permission_model/011_workspace.sql
 -- Seed: Product workspaces
 -- Schema: shared | Table: workspace
 -- Idempotent: on conflict (code) do update
@@ -11105,10 +11105,10 @@ on conflict (code) do update set
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/012_module.sql
+-- FILE: 010_platform/002_permission_model/012_module.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/012_module.sql
+-- 900_seed_data/010_platform/002_permission_model/012_module.sql
 -- Seed: Product modules + workspace linkage
 -- Schema: shared | Table: module
 -- Depends on: 011_workspace.sql
@@ -11334,10 +11334,10 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/013_enterprise_feature.sql
+-- FILE: 010_platform/002_permission_model/013_enterprise_feature.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/013_enterprise_feature.sql
+-- 900_seed_data/010_platform/002_permission_model/013_enterprise_feature.sql
 -- Seed: Enterprise feature registry (Special Ops toggles)
 -- Schema: shared | Table: enterprise_feature
 -- Idempotent: on conflict (code) do nothing
@@ -11354,10 +11354,10 @@ on conflict (code) do nothing;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/014_subscription_plan.sql
+-- FILE: 010_platform/002_permission_model/014_subscription_plan.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/014_subscription_plan.sql
+-- 900_seed_data/010_platform/002_permission_model/014_subscription_plan.sql
 -- Seed: Subscription plan tiers
 -- Schema: shared | Table: subscription_plan
 -- Idempotent: on conflict (code) do nothing
@@ -11372,10 +11372,10 @@ on conflict (code) do nothing;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/015_permission_category.sql
+-- FILE: 010_platform/002_permission_model/015_permission_category.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/015_permission_category.sql
+-- 900_seed_data/010_platform/002_permission_model/015_permission_category.sql
 -- Seed: Permission categories
 -- Schema: shared | Table: permission_category
 -- Idempotent: on conflict (code) do nothing
@@ -11393,10 +11393,10 @@ on conflict (code) do nothing;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/016_permission.sql
+-- FILE: 010_platform/002_permission_model/016_permission.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/016_permission.sql
+-- 900_seed_data/010_platform/002_permission_model/016_permission.sql
 -- Seed: 40 atomic permissions across 8 categories (36 operational + 4 special)
 -- Schema: shared | Table: permission
 -- Depends on: 015_permission_category.sql
@@ -11469,10 +11469,10 @@ ON CONFLICT (code) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/017_persona_permission.sql
+-- FILE: 010_platform/002_permission_model/017_persona_permission.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/017_persona_permission.sql
+-- 900_seed_data/010_platform/002_permission_model/017_persona_permission.sql
 -- Seed: Persona × Permission grant matrix
 -- Schema: shared | Table: persona_permission
 -- Depends on: 010_persona.sql, 016_permission.sql
@@ -11568,10 +11568,10 @@ ON CONFLICT (persona_id, permission_id) DO UPDATE
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/018_role.sql
+-- FILE: 010_platform/002_permission_model/018_role.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/010_system/001_shared/018_role.sql
+-- 900_seed_data/010_platform/002_permission_model/018_role.sql
 -- Seed: shared.role — one role per (persona × module)
 -- Schema: shared | Table: role
 -- Scope lives on master.auth_group_role; roles are platform-level, not per-tenant.
@@ -11604,10 +11604,10 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/001_shared/019_permission_return.sql
+-- FILE: 010_platform/002_permission_model/019_permission_return.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/001_shared/019_permission_return.sql
+-- 900_seed_data/010_platform/002_permission_model/019_permission_return.sql
 -- Purpose: shared.permission "return" + persona_permission grants (manager, owner, agent)
 -- Idempotent: yes — ON CONFLICT throughout
 
@@ -11635,10 +11635,10 @@ ON CONFLICT (persona_id, permission_id) DO UPDATE SET is_granted = true;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/001_entity_class_profile.sql
+-- FILE: 010_platform/003_control/001_entity_class_profile.sql
 -- ------------------------------------------------------------
 
--- 002_control/001_entity_class_profile.sql
+-- 003_control/001_entity_class_profile.sql
 -- Seed: Platform-global entity class governance profiles
 -- Schema: control | Table: entity_class_profile
 -- These are immutable platform constants, seeded at install time.
@@ -11744,7 +11744,7 @@ ON CONFLICT (class_key) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/002_hook_actions.sql
+-- FILE: 010_platform/003_control/002_hook_actions.sql
 -- ------------------------------------------------------------
 
 -- =============================================================================
@@ -11932,10 +11932,10 @@ ON CONFLICT ON CONSTRAINT har_key_uq DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/007_upupr_entity_registration.sql
+-- FILE: 010_platform/003_control/007_upupr_entity_registration.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/002_control/007_upupr_entity_registration.sql
+-- 900_seed_data/010_platform/003_control/007_upupr_entity_registration.sql
 -- Purpose: control.entity + control.entity_version + control.entity_field (2 rows)
 -- Depends on: 002_hook_actions.sql (control schema), shared.module rows (IAM)
 -- Idempotent: yes — WHERE NOT EXISTS / ON CONFLICT DO NOTHING
@@ -12012,10 +12012,10 @@ ON CONFLICT DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/008_upupr_lifecycle.sql
+-- FILE: 010_platform/003_control/008_upupr_lifecycle.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/002_control/008_upupr_lifecycle.sql
+-- 900_seed_data/010_platform/003_control/008_upupr_lifecycle.sql
 -- Purpose: control.lifecycle + 8 states + 10 transitions + entity_lifecycle binding
 -- Depends on: 007_upupr_entity_registration.sql
 -- Idempotent: yes — ON CONFLICT DO NOTHING throughout
@@ -12080,10 +12080,10 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/009_upupr_workflow.sql
+-- FILE: 010_platform/003_control/009_upupr_workflow.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/002_control/009_upupr_workflow.sql
+-- 900_seed_data/010_platform/003_control/009_upupr_workflow.sql
 -- Purpose: control.workflow_template + stage + rule + workflow_definition
 -- Depends on: 007_upupr_entity_registration.sql
 -- Idempotent: yes — ON CONFLICT DO NOTHING throughout
@@ -12147,11 +12147,11 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/010_transaction_flow_template.sql
+-- FILE: 010_platform/003_control/010_transaction_flow_template.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
--- 900_seed_data/002_control/010_transaction_flow_template.sql
+-- 900_seed_data/010_platform/003_control/010_transaction_flow_template.sql
 -- Engine 4.13: Platform-global transaction flow template seed
 -- Depends on: 04_tables/002_control.sql (control.transaction_flow_template)
 -- 15 flow codes, 61 event rows. tenant_id IS NULL = platform-global.
@@ -12264,7 +12264,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/002_control/011_notification_routing_collab.sql
+-- FILE: 010_platform/003_control/011_notification_routing_collab.sql
 -- ------------------------------------------------------------
 
 -- control/011_notification_routing_collab.sql
@@ -12352,7 +12352,7 @@ WHERE NOT EXISTS (
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/003_master/001_owner_type.sql
+-- FILE: 010_platform/003_master/001_owner_type.sql
 -- ------------------------------------------------------------
 
 -- 900_seed_data/003_master/001_owner_type.sql
@@ -12561,7 +12561,7 @@ ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/008_governance/001_finance_close_cycle.sql
+-- FILE: 010_platform/008_governance/001_finance_close_cycle.sql
 -- ------------------------------------------------------------
 
 -- 900_seed_data/008_governance/001_finance_close_cycle.sql
@@ -12730,7 +12730,7 @@ $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/100_master/001_vendor.sql
+-- FILE: 010_platform/005_domain_registrations/100_master/001_vendor.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/100_master/001_vendor.sql
@@ -12853,7 +12853,7 @@ WHERE ef.entity_version_id = ev.id
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/100_master/002_vendor_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/100_master/002_vendor_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/100_master/002_vendor_lifecycle.sql
@@ -12920,7 +12920,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/100_master/003_customer.sql
+-- FILE: 010_platform/005_domain_registrations/100_master/003_customer.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/100_master/003_customer.sql
@@ -13009,7 +13009,7 @@ WHERE ef.entity_version_id = ev.id
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/100_master/004_customer_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/100_master/004_customer_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/100_master/004_customer_lifecycle.sql
@@ -13071,7 +13071,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/001_invoice.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/001_invoice.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/001_invoice.sql
@@ -13173,7 +13173,7 @@ WHERE ef.entity_version_id = ev.id
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/002_invoice_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/002_invoice_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/002_invoice_lifecycle.sql
@@ -13243,7 +13243,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/003_invoice_workflow.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/003_invoice_workflow.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/003_invoice_workflow.sql
@@ -13356,7 +13356,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/004_purchase_order.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/004_purchase_order.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/004_purchase_order.sql
@@ -13448,7 +13448,7 @@ WHERE ef.entity_version_id = ev.id
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/005_purchase_order_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/005_purchase_order_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/005_purchase_order_lifecycle.sql
@@ -13519,7 +13519,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/006_purchase_order_workflow.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/006_purchase_order_workflow.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/006_purchase_order_workflow.sql
@@ -13633,7 +13633,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/007_journal_entry.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/007_journal_entry.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/007_journal_entry.sql
@@ -13757,7 +13757,7 @@ WHERE ef.entity_version_id = ev.id
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/008_journal_entry_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/008_journal_entry_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/008_journal_entry_lifecycle.sql
@@ -13820,7 +13820,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/009_journal_entry_workflow.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/009_journal_entry_workflow.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/009_journal_entry_workflow.sql
@@ -13887,7 +13887,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/010_payment_entry.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/010_payment_entry.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/010_payment_entry.sql
@@ -13967,7 +13967,7 @@ ON CONFLICT DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/200_document/011_payment_entry_lifecycle.sql
+-- FILE: 010_platform/005_domain_registrations/200_document/011_payment_entry_lifecycle.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/200_document/011_payment_entry_lifecycle.sql
@@ -14048,7 +14048,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/100_finance/900_operations/001_fin_operations.sql
+-- FILE: 010_platform/005_domain_registrations/900_operations/001_fin_operations.sql
 -- ------------------------------------------------------------
 
 -- 100_finance/900_operations/001_fin_operations.sql
@@ -14171,10 +14171,10 @@ ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/002_field_groups.sql
+-- FILE: 010_platform/004_entity_engine/002_field_groups.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/010_system/entity_engine/002_field_groups.sql
+-- 900_seed_data/010_platform/004_entity_engine/002_field_groups.sql
 -- Seed: 11 standard field groups (UI section groupings for canonical fields)
 -- Schema: control | Table: field_group
 -- Phase 1 — Foundation. No FK dependencies.
@@ -14263,7 +14263,7 @@ ON CONFLICT (group_key) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/001_lc_active_inactive.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/001_lc_active_inactive.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/001_lc_active_inactive.sql
@@ -14318,7 +14318,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/002_lc_active_inactive_archived.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/002_lc_active_inactive_archived.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/002_lc_active_inactive_archived.sql
@@ -14373,7 +14373,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/003_lc_org_master.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/003_lc_org_master.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/003_lc_org_master.sql
@@ -14435,7 +14435,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/004_lc_bp_master.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/004_lc_bp_master.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/004_lc_bp_master.sql
@@ -14504,7 +14504,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/005_lc_tenant.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/005_lc_tenant.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/005_lc_tenant.sql
@@ -14565,7 +14565,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/006_lc_principal.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/006_lc_principal.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/006_lc_principal.sql
@@ -14630,7 +14630,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/007_lc_employee.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/007_lc_employee.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/007_lc_employee.sql
@@ -14697,7 +14697,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/008_lc_gl_account.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/008_lc_gl_account.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/008_lc_gl_account.sql
@@ -14757,7 +14757,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/009_lc_fiscal_period.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/009_lc_fiscal_period.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/009_lc_fiscal_period.sql
@@ -14819,7 +14819,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/010_lc_attachment.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/010_lc_attachment.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/010_lc_attachment.sql
@@ -14879,7 +14879,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/011_lc_comment.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/011_lc_comment.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/011_lc_comment.sql
@@ -14946,7 +14946,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/012_lc_conversation.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/012_lc_conversation.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/012_lc_conversation.sql
@@ -14999,7 +14999,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/013_lc_template.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/013_lc_template.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/013_lc_template.sql
@@ -15057,7 +15057,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/014_lc_master_doc.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/014_lc_master_doc.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/014_lc_master_doc.sql
@@ -15115,7 +15115,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/015_lc_project.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/015_lc_project.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/015_lc_project.sql
@@ -15180,7 +15180,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/016_lc_asset.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/016_lc_asset.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/016_lc_asset.sql
@@ -15240,7 +15240,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/017_lc_budget_profile.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/017_lc_budget_profile.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/017_lc_budget_profile.sql
@@ -15303,7 +15303,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/018_lc_budget_allocation.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/018_lc_budget_allocation.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/018_lc_budget_allocation.sql
@@ -15361,7 +15361,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/019_lc_bank_account.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/019_lc_bank_account.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/019_lc_bank_account.sql
@@ -15421,7 +15421,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/020_lc_content.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/020_lc_content.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/020_lc_content.sql
@@ -15481,7 +15481,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/010_lifecycles/021_lc_delegation.sql
+-- FILE: 010_platform/004_entity_engine/010_lifecycles/021_lc_delegation.sql
 -- ------------------------------------------------------------
 
 -- 010_lifecycles/021_lc_delegation.sql
@@ -15541,7 +15541,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/001_master_identity.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/001_master_identity.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/001_master_identity.sql
@@ -15875,7 +15875,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/002_master_notifications.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/002_master_notifications.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/002_master_notifications.sql
@@ -15931,7 +15931,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/003_master_content.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/003_master_content.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/003_master_content.sql
@@ -16083,7 +16083,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/004_master_doc_template.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/004_master_doc_template.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/004_master_doc_template.sql
@@ -16199,7 +16199,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/005_master_finance_org.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/005_master_finance_org.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/005_master_finance_org.sql
@@ -16289,7 +16289,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/006_master_coa_gl.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/006_master_coa_gl.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/006_master_coa_gl.sql
@@ -16379,7 +16379,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/007_master_project_fiscal.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/007_master_project_fiscal.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/007_master_project_fiscal.sql
@@ -16445,7 +16445,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/008_master_partners.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/008_master_partners.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/008_master_partners.sql
@@ -16525,7 +16525,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/009_master_assets.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/009_master_assets.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/009_master_assets.sql
@@ -16603,7 +16603,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/010_master_dimensions.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/010_master_dimensions.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/010_master_dimensions.sql
@@ -16693,7 +16693,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/011_master_tax_fx.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/011_master_tax_fx.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/011_master_tax_fx.sql
@@ -16749,7 +16749,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/012_master_budget.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/012_master_budget.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/012_master_budget.sql
@@ -16803,7 +16803,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/013_master_banking.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/013_master_banking.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/013_master_banking.sql
@@ -16881,7 +16881,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/014_master_payment_terms.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/014_master_payment_terms.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/014_master_payment_terms.sql
@@ -16959,7 +16959,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/015_master_products.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/015_master_products.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/015_master_products.sql
@@ -17051,7 +17051,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/020_entities/016_master_ui.sql
+-- FILE: 010_platform/004_entity_engine/020_entities/016_master_ui.sql
 -- ------------------------------------------------------------
 
 -- 020_entities/016_master_ui.sql
@@ -17181,10 +17181,10 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/025_entity_versions.sql
+-- FILE: 010_platform/004_entity_engine/025_entity_versions.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/010_system/entity_engine/025_entity_versions.sql
+-- 900_seed_data/010_platform/004_entity_engine/025_entity_versions.sql
 -- Creates version 1 (EFFECTIVE) for every master.* system entity registered above.
 -- Run AFTER all 020_entities/*.sql files.
 -- The entity INSERT trigger auto-creates entity_publish_state — do NOT seed it manually.
@@ -17224,7 +17224,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/030_canonical_fields/000_canonical_dictionary.sql
+-- FILE: 010_platform/004_entity_engine/030_canonical_fields/000_canonical_dictionary.sql
 -- ------------------------------------------------------------
 
 -- 030_canonical_fields/000_canonical_dictionary.sql
@@ -17398,7 +17398,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/000_common_fields.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/000_common_fields.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/000_common_fields.sql
@@ -17632,7 +17632,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/001_fields_identity.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/001_fields_identity.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/001_fields_identity.sql
@@ -18315,7 +18315,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/002_fields_notifications.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/002_fields_notifications.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/002_fields_notifications.sql
@@ -18397,7 +18397,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/003_fields_content.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/003_fields_content.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/003_fields_content.sql
@@ -18649,7 +18649,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/004_fields_doc_template.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/004_fields_doc_template.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/004_fields_doc_template.sql
@@ -18867,7 +18867,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/005_fields_finance_org.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/005_fields_finance_org.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/005_fields_finance_org.sql
@@ -19049,7 +19049,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/006_fields_coa_gl.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/006_fields_coa_gl.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/006_fields_coa_gl.sql
@@ -19224,7 +19224,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/007_fields_project_fiscal.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/007_fields_project_fiscal.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/007_fields_project_fiscal.sql
@@ -19349,7 +19349,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/008_fields_partners.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/008_fields_partners.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/008_fields_partners.sql
@@ -19509,7 +19509,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/009_fields_assets.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/009_fields_assets.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/009_fields_assets.sql
@@ -19674,7 +19674,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/010_fields_dimensions.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/010_fields_dimensions.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/010_fields_dimensions.sql
@@ -19869,7 +19869,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/011_fields_tax_fx.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/011_fields_tax_fx.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/011_fields_tax_fx.sql
@@ -19973,7 +19973,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/012_fields_budget.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/012_fields_budget.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/012_fields_budget.sql
@@ -20101,7 +20101,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/013_fields_banking.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/013_fields_banking.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/013_fields_banking.sql
@@ -20266,7 +20266,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/014_fields_payment_terms.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/014_fields_payment_terms.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/014_fields_payment_terms.sql
@@ -20435,7 +20435,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/015_fields_products.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/015_fields_products.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/015_fields_products.sql
@@ -20626,7 +20626,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/035_version_fields/016_fields_ui.sql
+-- FILE: 010_platform/004_entity_engine/035_version_fields/016_fields_ui.sql
 -- ------------------------------------------------------------
 
 -- 035_version_fields/016_fields_ui.sql
@@ -20903,7 +20903,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/040_field_group_members.sql
+-- FILE: 010_platform/004_entity_engine/040_field_group_members.sql
 -- ------------------------------------------------------------
 
 -- 040_field_group_members.sql
@@ -20989,7 +20989,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/050_entity_lifecycles.sql
+-- FILE: 010_platform/004_entity_engine/050_entity_lifecycles.sql
 -- ------------------------------------------------------------
 
 -- 050_entity_lifecycles.sql
@@ -21201,7 +21201,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/001_ops_iam.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/001_ops_iam.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/001_ops_iam.sql
@@ -21209,7 +21209,7 @@ END $$;
 -- Covers: tenant, principal, auth_group, team, label, owner_type, address,
 --         access_grant, delegation_grant, principal_persona
 -- Idempotent: ON CONFLICT (tenant_id, entity_name, permission_code) DO NOTHING
--- Run AFTER: 010_system/entity_engine/020_entities/001_master_identity.sql
+-- Run AFTER: 010_platform/004_entity_engine/020_entities/001_master_identity.sql
 
 DO $$
 DECLARE v_su uuid := '00000000-0000-0000-0000-000000000000';
@@ -21395,7 +21395,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/002_ops_finance_org.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/002_ops_finance_org.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/002_ops_finance_org.sql
@@ -21583,7 +21583,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/003_ops_coa_partners.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/003_ops_coa_partners.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/003_ops_coa_partners.sql
@@ -21717,7 +21717,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/004_ops_budget_banking.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/004_ops_budget_banking.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/004_ops_budget_banking.sql
@@ -21946,7 +21946,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/005_ops_templates_docs.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/005_ops_templates_docs.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/005_ops_templates_docs.sql
@@ -22069,7 +22069,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/006_ops_master_data.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/006_ops_master_data.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/006_ops_master_data.sql
@@ -22225,7 +22225,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/060_entity_operations/007_ops_ui_cms.sql
+-- FILE: 010_platform/004_entity_engine/060_entity_operations/007_ops_ui_cms.sql
 -- ------------------------------------------------------------
 
 -- 060_entity_operations/007_ops_ui_cms.sql
@@ -22352,7 +22352,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 010_system/entity_engine/070_entity_relations.sql
+-- FILE: 010_platform/004_entity_engine/070_entity_relations.sql
 -- ------------------------------------------------------------
 
 -- 070_entity_relations.sql
@@ -22532,11 +22532,11 @@ END $$;
 
 
 -- ============================================================
--- SECTION: 020_blueprint
+-- SECTION: 020_universal
 -- ============================================================
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/000_registry/000_blueprint_registry.sql
+-- FILE: 020_universal/000_registry/000_blueprint_registry.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -22547,7 +22547,7 @@ END $$;
 -- Purpose:  (A) Create control.blueprint_registry and
 --               control.tenant_blueprint_application tables,
 --           (B) Register all available blueprints with metadata
--- Depends:  010_system (all system seed complete)
+-- Depends:  010_platform (all system seed complete)
 -- Idempotent: Yes — CREATE TABLE IF NOT EXISTS + ON CONFLICT DO UPDATE
 -- Run:      Once at system install (DDL), then again when new packs are added
 -- ============================================================================
@@ -22564,13 +22564,13 @@ CREATE TABLE IF NOT EXISTS control.blueprint_registry (
     id                  uuid        NOT NULL DEFAULT gen_random_uuid(),
     code                text        NOT NULL,   -- unique pack identifier, e.g. 'pack_utilities'
     name                text        NOT NULL,   -- human label
-    category            text        NOT NULL,   -- 'base' | 'industry_pack' | 'coa_framework' | 'default_rules'
+    category            text        NOT NULL,   -- 'base' | 'foundation' | 'industry_pack' | 'coa_framework' | 'module_pack'
     industry_vertical   text[],                 -- slug array, e.g. ARRAY['utilities','construction']
     framework           text,                   -- 'IFRS' | 'GAAP' | 'MFRS' | NULL (not framework-specific)
     base_version        text        NOT NULL DEFAULT '1.0.0',
     status              text        NOT NULL DEFAULT 'active',  -- 'active' | 'deprecated'
     dependencies        text[],                 -- codes that MUST be applied before this one
-    seed_files          text[],                 -- ordered relative paths (from 020_blueprint/ root)
+    seed_files          text[],                 -- ordered relative paths (from 020_universal/ root)
     description         text,
     metadata            jsonb,
     created_at          timestamptz NOT NULL DEFAULT now(),
@@ -22579,16 +22579,16 @@ CREATE TABLE IF NOT EXISTS control.blueprint_registry (
     CONSTRAINT blueprint_registry_pkey PRIMARY KEY (id),
     CONSTRAINT blueprint_registry_code_uq UNIQUE (code),
     CONSTRAINT blueprint_registry_category_chk
-        CHECK (category IN ('base', 'industry_pack', 'coa_framework', 'default_rules')),
+        CHECK (category IN ('base', 'foundation', 'industry_pack', 'coa_framework', 'module_pack')),
     CONSTRAINT blueprint_registry_status_chk
         CHECK (status IN ('active', 'deprecated'))
 );
 
 COMMENT ON TABLE  control.blueprint_registry             IS 'Catalogue of all available blueprint packs selectable during tenant provisioning';
 COMMENT ON COLUMN control.blueprint_registry.code        IS 'Stable identifier used as FK target and in dependency arrays';
-COMMENT ON COLUMN control.blueprint_registry.category    IS 'base=universal prereq; industry_pack=vertical-specific; coa_framework=accounting framework; default_rules=system defaults';
+COMMENT ON COLUMN control.blueprint_registry.category    IS 'base=universal prereq (always first); foundation=always-apply data; coa_framework=select-one framework; industry_pack=select-many verticals; module_pack=optional subscription packs';
 COMMENT ON COLUMN control.blueprint_registry.dependencies IS 'Ordered list of blueprint codes that must be applied before this one';
-COMMENT ON COLUMN control.blueprint_registry.seed_files  IS 'Ordered relative file paths under 020_blueprint/ for the runner to execute';
+COMMENT ON COLUMN control.blueprint_registry.seed_files  IS 'Ordered relative file paths under 900_seed_data/ for the runner to execute';
 
 
 -- ============================================================================
@@ -22629,204 +22629,194 @@ COMMENT ON COLUMN control.tenant_blueprint_application.applied_version IS 'Snaps
 -- PART C: SEED — Register all blueprints
 -- ============================================================================
 
+-- Remove legacy 'default_rules' entry replaced by 'foundation_bank'
+DELETE FROM control.blueprint_registry WHERE code = 'default_rules';
+
 INSERT INTO control.blueprint_registry
     (code, name, category, industry_vertical, framework, base_version, status, dependencies, seed_files, description)
 VALUES
 
--- ── BASE (must run before all packs) ────────────────────────────────────────
+-- ════════════════════════════════════════════════════════════════════════════
+-- TIER 1 — FOUNDATION  (always applied to every new tenant, in this order)
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- [1/5] Universal spend taxonomy — prerequisite for every other pack
 (
-    'base',
-    'Universal Base',
-    'base',
-    NULL, NULL, '1.0.0', 'active',
-    NULL,
+    'base', 'Universal Base', 'base',
+    NULL, NULL, '1.0.0', 'active', NULL,
     ARRAY[
-        '010_base/019_pre_seed_foundation.sql',
-        '010_base/020_spend_categories.sql',
-        '010_base/021_business_intents.sql',
-        '010_base/025_base_item_categories.sql',
-        '010_base/022_spend_intent_link.sql',
-        '010_base/023_commodity_bridge.sql',
-        '010_base/024_routing_rules.sql',
-        '010_base/026_base_intent_rules.sql'
+        '020_universal/010_spend_taxonomy/019_pre_seed_foundation.sql',
+        '020_universal/010_spend_taxonomy/020_spend_categories.sql',
+        '020_universal/010_spend_taxonomy/021_business_intents.sql',
+        '020_universal/010_spend_taxonomy/025_base_item_categories.sql',
+        '020_universal/010_spend_taxonomy/022_spend_intent_link.sql',
+        '020_universal/010_spend_taxonomy/027_commodity_bridge.sql',
+        '020_universal/010_spend_taxonomy/024_routing_rules.sql',
+        '020_universal/010_spend_taxonomy/026_base_intent_rules.sql'
     ],
-    'Universal spend categories, business intents, item categories, commodity bridge and routing rules. Required by all industry packs.'
+    'Universal spend categories, business intents, item categories, commodity-to-intent bridge and routing rules. Applied first; required by all other packs.'
 ),
 
--- ── DEFAULT RULES ───────────────────────────────────────────────────────────
+-- [2/5] Tax jurisdictions, types, rate schedules, group compositions and FX rates
 (
-    'default_rules',
-    'Default Rules',
-    'default_rules',
-    NULL, NULL, '1.0.0', 'active',
-    ARRAY['base'],
+    'foundation_tax', 'Tax Foundation', 'foundation',
+    NULL, NULL, '1.0.0', 'active', ARRAY['base'],
     ARRAY[
-        '300_defaults/340_asset_classes.sql',
-        '300_defaults/001_bank_format_rule_defaults.sql'
+        '020_universal/020_tax/320_tax_jurisdictions.sql',
+        '020_universal/020_tax/321_tax_types.sql',
+        '020_universal/020_tax/322_tax_rate_schedules.sql',
+        '020_universal/020_tax/323_tax_groups.sql',
+        '020_universal/020_tax/330_fx_rates.sql'
     ],
-    'Default asset class hierarchy and bank interface format rules applied unless tenant overrides.'
+    'Tax jurisdictions (13 countries), types, effective-dated rate schedules, group compositions and FX period-end closing rates. Replicated to every tenant on provisioning.'
 ),
 
--- ── COA FRAMEWORKS ──────────────────────────────────────────────────────────
+-- [3/5] Public holiday calendars and payment term definitions
 (
-    'coa_ifrs',
-    'Chart of Accounts — IFRS',
-    'coa_framework',
-    NULL, 'IFRS', '1.0.0', 'active',
-    ARRAY['base'],
+    'foundation_pay', 'Payment Foundation', 'foundation',
+    NULL, NULL, '1.0.0', 'active', ARRAY['base'],
     ARRAY[
-        '200_coa_frameworks/200_chart_catalog.sql',
-        '200_coa_frameworks/210_group_chart_accounts.sql',
-        '200_coa_frameworks/211_framework_ifrs_accounts.sql'
+        '020_universal/030_payments/340_holiday_calendars.sql',
+        '020_universal/030_payments/341_payment_terms.sql'
     ],
-    'IFRS-aligned chart of accounts catalog with group-level and framework account definitions.'
+    'Public holiday calendars for 14 jurisdictions and 25 payment term definitions (standard, construction, government, lease, trade). Replicated to every tenant on provisioning.'
 ),
 
--- ── INDUSTRY PACKS ──────────────────────────────────────────────────────────
+-- [4/5] Asset class hierarchy with statutory and management book policies
 (
-    'pack_utilities',
-    'Utilities — Electricity & Water Supply',
-    'industry_pack',
-    ARRAY['utilities'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/100_pack_utilities.sql'],
-    'Spend categories, business intents, item categories, commodity bridge and routing rules for electricity and water supply operations.'
+    'foundation_assets', 'Asset Foundation', 'foundation',
+    NULL, NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY[
+        '020_universal/040_assets/340_asset_classes.sql'
+    ],
+    'Asset class hierarchy (PLANT/BUILDING/FURNITURE/TOOLS + 12 L2 leaves) with statutory and management depreciation book policies per company. Replicated to every tenant on provisioning.'
+),
+
+-- [5/5] Payment rail format and validation rules
+(
+    'foundation_bank', 'Bank & Payment Rail Rules', 'foundation',
+    NULL, NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY[
+        '020_universal/050_bank/001_bank_format_rule_defaults.sql'
+    ],
+    'Payment rail format and validation rules for 12+ countries (SWIFT, ACH, SEPA, BACS, BSB, IFSC, sort-code) and digital rails (UPI, M-Pesa). Applied globally; tenant may override per entity.'
+),
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- TIER 2a — COA FRAMEWORK  (select exactly one per tenant at onboarding)
+-- ════════════════════════════════════════════════════════════════════════════
+(
+    'coa_ifrs', 'Chart of Accounts — IFRS', 'coa_framework',
+    NULL, 'IFRS', '1.0.0', 'active', ARRAY['base'],
+    ARRAY[
+        '020_universal/200_coa_frameworks/200_chart_catalog.sql',
+        '020_universal/200_coa_frameworks/210_group_chart_accounts.sql',
+        '020_universal/200_coa_frameworks/211_framework_ifrs_accounts.sql'
+    ],
+    'IFRS-aligned chart of accounts: group consolidation chart, full framework account tree with posting-level codes and _group_map mappings. Required before any finance document or ledger data.'
+),
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- TIER 2b — INDUSTRY PACKS  (select one or more per tenant; additive)
+-- ════════════════════════════════════════════════════════════════════════════
+(
+    'pack_utilities', 'Utilities — Electricity & Water Supply', 'industry_pack',
+    ARRAY['utilities'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/100_pack_utilities.sql'],
+    'Procurement taxonomy, intents and routing rules for electricity and water supply operations.'
 ),
 (
-    'pack_construction',
-    'Construction',
-    'industry_pack',
-    ARRAY['construction'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/101_pack_construction.sql'],
-    'Construction industry procurement taxonomy, intents and routing rules.'
+    'pack_construction', 'Construction', 'industry_pack',
+    ARRAY['construction'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/101_pack_construction.sql'],
+    'Procurement taxonomy, intents and routing rules for construction and civil engineering.'
 ),
 (
-    'pack_real_estate',
-    'Real Estate',
-    'industry_pack',
-    ARRAY['real_estate'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/102_pack_real_estate.sql'],
-    'Real estate industry procurement taxonomy, intents and routing rules.'
+    'pack_real_estate', 'Real Estate', 'industry_pack',
+    ARRAY['real_estate'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/102_pack_real_estate.sql'],
+    'Procurement taxonomy, intents and routing rules for real estate development and property management.'
 ),
 (
-    'pack_transport',
-    'Transportation & Storage',
-    'industry_pack',
-    ARRAY['transport'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/103_pack_transport.sql'],
-    'Transport and logistics procurement taxonomy, intents and routing rules.'
+    'pack_transport', 'Transportation & Storage', 'industry_pack',
+    ARRAY['transport'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/103_pack_transport.sql'],
+    'Procurement taxonomy, intents and routing rules for transport, logistics and warehousing.'
 ),
 (
-    'pack_trading',
-    'Wholesale & Retail Trade',
-    'industry_pack',
-    ARRAY['trading'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/104_pack_trading.sql'],
-    'Trading (wholesale/retail) procurement taxonomy, intents and routing rules.'
+    'pack_trading', 'Wholesale & Retail Trade', 'industry_pack',
+    ARRAY['trading'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/104_pack_trading.sql'],
+    'Procurement taxonomy, intents and routing rules for wholesale and retail trading.'
 ),
 (
-    'pack_hospitality',
-    'Accommodation & Food Service',
-    'industry_pack',
-    ARRAY['hospitality'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/105_pack_hospitality.sql'],
-    'Hospitality industry procurement taxonomy, intents and routing rules.'
+    'pack_hospitality', 'Accommodation & Food Service', 'industry_pack',
+    ARRAY['hospitality'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/105_pack_hospitality.sql'],
+    'Procurement taxonomy, intents and routing rules for hospitality, hotel and food service.'
 ),
 (
-    'pack_infocomm',
-    'Information & Communication',
-    'industry_pack',
-    ARRAY['infocomm'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/106_pack_infocomm.sql'],
-    'Infocomm technology sector procurement taxonomy, intents and routing rules.'
+    'pack_infocomm', 'Information & Communication', 'industry_pack',
+    ARRAY['infocomm'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/106_pack_infocomm.sql'],
+    'Procurement taxonomy, intents and routing rules for ICT, software and communications.'
 ),
 (
-    'pack_financial',
-    'Financial & Insurance Services',
-    'industry_pack',
-    ARRAY['financial'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/107_pack_financial.sql'],
-    'Financial and insurance services procurement taxonomy, intents and routing rules.'
+    'pack_financial', 'Financial & Insurance Services', 'industry_pack',
+    ARRAY['financial'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/107_pack_financial.sql'],
+    'Procurement taxonomy, intents and routing rules for banking, financial services and insurance.'
 ),
 (
-    'pack_mfg_textile',
-    'Manufacturing — Textiles & Leather',
-    'industry_pack',
-    ARRAY['mfg_textile'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/108_pack_mfg_textile.sql'],
-    'Textile and leather manufacturing procurement taxonomy, intents and routing rules.'
+    'pack_mfg_textile', 'Manufacturing — Textiles & Leather', 'industry_pack',
+    ARRAY['mfg_textile'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/108_pack_mfg_textile.sql'],
+    'Procurement taxonomy, intents and routing rules for textile, apparel and leather manufacturing.'
 ),
 (
-    'pack_mfg_food_bev',
-    'Manufacturing — Food & Beverage',
-    'industry_pack',
-    ARRAY['mfg_food_bev'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/109_pack_mfg_food_bev.sql'],
-    'Food and beverage manufacturing procurement taxonomy, intents and routing rules.'
+    'pack_mfg_food_bev', 'Manufacturing — Food & Beverage', 'industry_pack',
+    ARRAY['mfg_food_bev'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/109_pack_mfg_food_bev.sql'],
+    'Procurement taxonomy, intents and routing rules for food and beverage manufacturing.'
 ),
 (
-    'pack_mfg_pharma',
-    'Manufacturing — Pharmaceutical',
-    'industry_pack',
-    ARRAY['mfg_pharma'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/110_pack_mfg_pharma.sql'],
-    'Pharmaceutical manufacturing procurement taxonomy, intents and routing rules.'
+    'pack_mfg_pharma', 'Manufacturing — Pharmaceutical', 'industry_pack',
+    ARRAY['mfg_pharma'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/110_pack_mfg_pharma.sql'],
+    'Procurement taxonomy, intents and routing rules for pharmaceutical and biotech manufacturing.'
 ),
 (
-    'pack_mfg_electronics',
-    'Manufacturing — Electronics & Optics',
-    'industry_pack',
-    ARRAY['mfg_electronics'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/111_pack_mfg_electronics.sql'],
-    'Electronics and optics manufacturing procurement taxonomy, intents and routing rules.'
+    'pack_mfg_electronics', 'Manufacturing — Electronics & Optics', 'industry_pack',
+    ARRAY['mfg_electronics'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/111_pack_mfg_electronics.sql'],
+    'Procurement taxonomy, intents and routing rules for electronics, semiconductors and optics manufacturing.'
 ),
 (
-    'pack_mining_petroleum',
-    'Mining & Crude Petroleum',
-    'industry_pack',
-    ARRAY['mining_petroleum'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/112_pack_mining_petroleum.sql'],
-    'Mining and petroleum extraction procurement taxonomy, intents and routing rules.'
+    'pack_mining_petroleum', 'Mining & Crude Petroleum', 'industry_pack',
+    ARRAY['mining_petroleum'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/112_pack_mining_petroleum.sql'],
+    'Procurement taxonomy, intents and routing rules for mining, oil and gas extraction.'
 ),
 (
-    'pack_agriculture',
-    'Agriculture & Animal Production',
-    'industry_pack',
-    ARRAY['agriculture'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/113_pack_agriculture.sql'],
-    'Agriculture and animal production procurement taxonomy, intents and routing rules.'
+    'pack_agriculture', 'Agriculture & Animal Production', 'industry_pack',
+    ARRAY['agriculture'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/113_pack_agriculture.sql'],
+    'Procurement taxonomy, intents and routing rules for crop farming, livestock and agri-processing.'
 ),
 (
-    'pack_education',
-    'Education Services',
-    'industry_pack',
-    ARRAY['education'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/114_pack_education.sql'],
-    'Education sector procurement taxonomy, intents and routing rules.'
+    'pack_education', 'Education Services', 'industry_pack',
+    ARRAY['education'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/114_pack_education.sql'],
+    'Procurement taxonomy, intents and routing rules for schools, universities and training providers.'
 ),
 (
-    'pack_healthcare',
-    'Hospital & Healthcare Services',
-    'industry_pack',
-    ARRAY['healthcare'], NULL, '1.0.0', 'active',
-    ARRAY['base'],
-    ARRAY['100_industry_packs/115_pack_healthcare.sql'],
-    'Healthcare and hospital services procurement taxonomy, intents and routing rules.'
+    'pack_healthcare', 'Hospital & Healthcare Services', 'industry_pack',
+    ARRAY['healthcare'], NULL, '1.0.0', 'active', ARRAY['base'],
+    ARRAY['030_industry/100_industry_packs/115_pack_healthcare.sql'],
+    'Procurement taxonomy, intents and routing rules for hospitals, clinics and healthcare providers.'
 )
+
+-- TIER 3 module packs registered separately (001_ap_non_po_registry.sql, etc.)
 
 ON CONFLICT (code) DO UPDATE SET
     name                = EXCLUDED.name,
@@ -22863,15 +22853,16 @@ WHERE status = 'active'
 ORDER BY
     CASE category
         WHEN 'base'          THEN 1
-        WHEN 'coa_framework' THEN 2
-        WHEN 'default_rules' THEN 3
+        WHEN 'foundation'    THEN 2
+        WHEN 'coa_framework' THEN 3
         WHEN 'industry_pack' THEN 4
+        WHEN 'module_pack'   THEN 5
     END,
     code;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/000_tenant/000_athyper_tenant.sql
+-- FILE: 020_universal/000_tenant/000_athyper_tenant.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -22880,7 +22871,7 @@ ORDER BY
 -- File:     000_athyper_tenant.sql
 -- Schema:   master.tenant
 -- Purpose:  Ensure the ATHYPER blueprint tenant exists before any Tier 2/3 seed
--- Depends:  000_public/000_bootstrap.sql (system principal)
+-- Depends:  000_bootstrap/000_bootstrap.sql (system principal)
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- ============================================================================
 
@@ -22947,7 +22938,7 @@ END $tenant$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/019_pre_seed_foundation.sql
+-- FILE: 020_universal/010_spend_taxonomy/019_pre_seed_foundation.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -22957,7 +22948,7 @@ END $tenant$;
 -- Schemas:  control.lookup_value, control.classification_config
 -- Purpose:  Prerequisites that MUST land before any Tier 2 seed file executes
 -- Depends:  000_tenant/000_athyper_tenant.sql,
---           002_control/LookupDomain/master/cc_provenance.sql (platform seed)
+--           003_control/LookupDomain/master/cc_provenance.sql (platform seed)
 -- Idempotent: Yes — ON CONFLICT DO NOTHING / DO UPDATE
 -- Spec ref: §7.5 (provenance prerequisite), §2 (execution order)
 -- ============================================================================
@@ -23153,7 +23144,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/020_spend_categories.sql
+-- FILE: 020_universal/010_spend_taxonomy/020_spend_categories.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -23590,7 +23581,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/021_business_intents.sql
+-- FILE: 020_universal/010_spend_taxonomy/021_business_intents.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -23838,7 +23829,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/022_spend_intent_link.sql
+-- FILE: 020_universal/010_spend_taxonomy/022_spend_intent_link.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -24099,7 +24090,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/024_routing_rules.sql
+-- FILE: 020_universal/010_spend_taxonomy/024_routing_rules.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -24108,7 +24099,7 @@ END $seed$;
 -- File:     024_routing_rules.sql
 -- Schema:   control.commodity_to_spend_category_rule
 -- Purpose:  Route incoming commodity codes → spend categories (3-layer rules)
--- Depends:  020_spend_categories.sql, 001_shared/008a_commodity_code_unspsc.sql
+-- Depends:  020_spend_categories.sql, 001_global_reference/008a_commodity_code_unspsc.sql
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- Spec ref: §8 Routing Rule Conventions
 -- ============================================================================
@@ -24401,7 +24392,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/025_base_item_categories.sql
+-- FILE: 020_universal/010_spend_taxonomy/025_base_item_categories.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -24649,7 +24640,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/026_base_intent_rules.sql
+-- FILE: 020_universal/010_spend_taxonomy/026_base_intent_rules.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -24958,7 +24949,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/010_base/027_commodity_bridge.sql
+-- FILE: 020_universal/010_spend_taxonomy/027_commodity_bridge.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -24968,7 +24959,7 @@ END $seed$;
 -- Schema:   master.commodity_classification
 -- Purpose:  Bridge spend_category + item_category → UNSPSC commodity codes
 -- Depends:  020_spend_categories.sql, 025_base_item_categories.sql,
---           001_shared/008a_commodity_code_unspsc.sql
+--           001_global_reference/008a_commodity_code_unspsc.sql
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- Spec ref: §7 Commodity Classification Bridge, §15 Alignment Rules
 -- ============================================================================
@@ -25430,7 +25421,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/100_pack_utilities.sql
+-- FILE: 030_industry/100_industry_packs/100_pack_utilities.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -25963,7 +25954,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/101_pack_construction.sql
+-- FILE: 030_industry/100_industry_packs/101_pack_construction.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -26495,7 +26486,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/102_pack_real_estate.sql
+-- FILE: 030_industry/100_industry_packs/102_pack_real_estate.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -27010,7 +27001,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/103_pack_transport.sql
+-- FILE: 030_industry/100_industry_packs/103_pack_transport.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -27546,7 +27537,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/104_pack_trading.sql
+-- FILE: 030_industry/100_industry_packs/104_pack_trading.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -28034,7 +28025,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/105_pack_hospitality.sql
+-- FILE: 030_industry/100_industry_packs/105_pack_hospitality.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -28509,7 +28500,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/106_pack_infocomm.sql
+-- FILE: 030_industry/100_industry_packs/106_pack_infocomm.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -29005,7 +28996,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/107_pack_financial.sql
+-- FILE: 030_industry/100_industry_packs/107_pack_financial.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -29496,7 +29487,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/108_pack_mfg_textile.sql
+-- FILE: 030_industry/100_industry_packs/108_pack_mfg_textile.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -29810,7 +29801,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/109_pack_mfg_food_bev.sql
+-- FILE: 030_industry/100_industry_packs/109_pack_mfg_food_bev.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -30091,7 +30082,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/110_pack_mfg_pharma.sql
+-- FILE: 030_industry/100_industry_packs/110_pack_mfg_pharma.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -30403,7 +30394,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/111_pack_mfg_electronics.sql
+-- FILE: 030_industry/100_industry_packs/111_pack_mfg_electronics.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -30715,7 +30706,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/112_pack_mining_petroleum.sql
+-- FILE: 030_industry/100_industry_packs/112_pack_mining_petroleum.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -31027,7 +31018,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/113_pack_agriculture.sql
+-- FILE: 030_industry/100_industry_packs/113_pack_agriculture.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -31339,7 +31330,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/114_pack_education.sql
+-- FILE: 030_industry/100_industry_packs/114_pack_education.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -31651,7 +31642,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/100_industry_packs/115_pack_healthcare.sql
+-- FILE: 030_industry/100_industry_packs/115_pack_healthcare.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -31963,7 +31954,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/200_coa_frameworks/200_chart_catalog.sql
+-- FILE: 020_universal/200_coa_frameworks/200_chart_catalog.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -32085,7 +32076,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/200_coa_frameworks/210_group_chart_accounts.sql
+-- FILE: 020_universal/200_coa_frameworks/210_group_chart_accounts.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -32571,7 +32562,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/200_coa_frameworks/211_framework_ifrs_accounts.sql
+-- FILE: 020_universal/200_coa_frameworks/211_framework_ifrs_accounts.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33287,7 +33278,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 020_blueprint/300_defaults/001_bank_format_rule_defaults.sql
+-- FILE: 020_universal/050_bank/001_bank_format_rule_defaults.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33379,11 +33370,11 @@ WHERE NOT EXISTS (
 
 
 -- ============================================================
--- SECTION: 030_tenant
+-- SECTION: 040_tenant
 -- ============================================================
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/000_tenant/000_athyper_tenant.sql
+-- FILE: 040_tenant/000_tenant/000_athyper_tenant.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33392,7 +33383,7 @@ WHERE NOT EXISTS (
 -- File:     000_athyper_tenant.sql
 -- Schema:   master.tenant
 -- Purpose:  Ensure the ATHYPER blueprint tenant exists before any Tier 2/3 seed
--- Depends:  000_public/000_bootstrap.sql (system principal)
+-- Depends:  000_bootstrap/000_bootstrap.sql (system principal)
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- ============================================================================
 
@@ -33459,7 +33450,7 @@ END $tenant$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/000_tenant/001_athyper_tenant_profile.sql
+-- FILE: 040_tenant/000_tenant/001_athyper_tenant_profile.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33550,7 +33541,7 @@ END $tenant_profile$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/000_tenant/002_demo_tenants.sql
+-- FILE: 040_tenant/000_tenant/002_demo_tenants.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33597,7 +33588,7 @@ END $demo_tenants$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/199_gl_preseed.sql
+-- FILE: 040_tenant/100_org_structure/199_gl_preseed.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -33942,7 +33933,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/200_demo_legal_entities.sql
+-- FILE: 040_tenant/100_org_structure/200_demo_legal_entities.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -34180,7 +34171,7 @@ END $demo_le$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/201_athyper_subsidiaries.sql
+-- FILE: 040_tenant/100_org_structure/201_athyper_subsidiaries.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -34448,7 +34439,7 @@ END $athyper_subs$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/300_operating_units.sql
+-- FILE: 040_tenant/100_org_structure/300_operating_units.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -34462,7 +34453,7 @@ END $athyper_subs$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/301_cost_centers.sql
+-- FILE: 040_tenant/100_org_structure/301_cost_centers.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -34642,7 +34633,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/302_profit_centers.sql
+-- FILE: 040_tenant/100_org_structure/302_profit_centers.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -34888,7 +34879,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/303_sites.sql
+-- FILE: 040_tenant/100_org_structure/303_sites.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -35428,7 +35419,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/304_warehouses.sql
+-- FILE: 040_tenant/100_org_structure/304_warehouses.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36003,7 +35994,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/305_demo_operating_units.sql
+-- FILE: 040_tenant/100_org_structure/305_demo_operating_units.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36017,7 +36008,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/310_fiscal_periods.sql
+-- FILE: 040_tenant/100_org_structure/310_fiscal_periods.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36202,7 +36193,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/100_org_structure/311_ledger_books.sql
+-- FILE: 040_tenant/100_org_structure/311_ledger_books.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36427,7 +36418,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/200_finance/201_company_chart_assignments.sql
+-- FILE: 040_tenant/200_finance/201_company_chart_assignments.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36619,7 +36610,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/200_finance/270_refresh_mv.sql
+-- FILE: 040_tenant/200_finance/270_refresh_mv.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36651,7 +36642,7 @@ END $check$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/200_finance/280_validation_assertions.sql
+-- FILE: 040_tenant/200_finance/280_validation_assertions.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36853,7 +36844,7 @@ END $validate$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/300_tax/320_tax_jurisdictions.sql
+-- FILE: 020_universal/020_tax/320_tax_jurisdictions.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -36967,7 +36958,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/300_tax/321_tax_types.sql
+-- FILE: 020_universal/020_tax/321_tax_types.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -37096,7 +37087,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/300_tax/322_tax_rate_schedules.sql
+-- FILE: 020_universal/020_tax/322_tax_rate_schedules.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -37343,7 +37334,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/300_tax/323_tax_groups.sql
+-- FILE: 020_universal/020_tax/323_tax_groups.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -37643,7 +37634,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/300_tax/330_fx_rates.sql
+-- FILE: 020_universal/020_tax/330_fx_rates.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -37852,7 +37843,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/400_payments/340_holiday_calendars.sql
+-- FILE: 020_universal/030_payments/340_holiday_calendars.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -38397,7 +38388,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/400_payments/341_payment_terms.sql
+-- FILE: 020_universal/030_payments/341_payment_terms.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -39113,7 +39104,7 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/500_asset/340_asset_classes.sql
+-- FILE: 020_universal/040_assets/340_asset_classes.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -39606,10 +39597,10 @@ END $seed$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/800_subscriptions/001_demo_module_subscriptions.sql
+-- FILE: 040_tenant/800_subscriptions/001_demo_module_subscriptions.sql
 -- ------------------------------------------------------------
 
--- 900_seed_data/030_tenant/800_subscriptions/001_demo_module_subscriptions.sql
+-- 900_seed_data/040_tenant/800_subscriptions/001_demo_module_subscriptions.sql
 -- Seed: Subscribe all tenants to all modules
 -- Schema: master | Table: tenant_module_subscription
 -- Strategy: cross-join all tenants × all modules, status = 'active'
@@ -39634,7 +39625,7 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/001_demo_principals.sql
+-- FILE: 040_tenant/900_principals/001_demo_principals.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -39817,7 +39808,7 @@ END $demo_principals$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/002_demo_principal_personas.sql
+-- FILE: 040_tenant/900_principals/002_demo_principal_personas.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -39894,7 +39885,7 @@ END $demo_personas$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/003_demo_delegation_grants.sql
+-- FILE: 040_tenant/900_principals/003_demo_delegation_grants.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -39980,7 +39971,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/004_athq_principals.sql
+-- FILE: 040_tenant/900_principals/004_athq_principals.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -40067,7 +40058,7 @@ END $athq_principals$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/005_named_tenant_principals.sql
+-- FILE: 040_tenant/900_principals/005_named_tenant_principals.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -40245,7 +40236,7 @@ END $named_tenant_principals$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/900_principals/006_principal_users.sql
+-- FILE: 040_tenant/900_principals/006_principal_users.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -40642,7 +40633,7 @@ END $principal_users$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/950_rbac/001_demo_rbac.sql
+-- FILE: 040_tenant/950_rbac/001_demo_rbac.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -40959,7 +40950,7 @@ END $verify$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/950_rbac/002_demo_group_members.sql
+-- FILE: 040_tenant/950_rbac/002_demo_group_members.sql
 -- ------------------------------------------------------------
 
 -- ============================================================================
@@ -41218,15 +41209,15 @@ GROUP BY t.code, pg.code
 ORDER BY t.code, pg.code;
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/entity_engine/010_entity_policies.sql
+-- FILE: 040_tenant/entity_engine/010_entity_policies.sql
 -- ------------------------------------------------------------
 
--- 030_tenant/entity_engine/010_entity_policies.sql
+-- 040_tenant/entity_engine/010_entity_policies.sql
 -- Seeds control.entity_policy rows for the Athyper blueprint tenant.
 -- entity_policy is globally unique per entity (UNIQUE on entity_id, entity_version_id)
 -- so this file seeds system-level policies owned by the Athyper tenant.
 -- Idempotent: ON CONFLICT (entity_id, entity_version_id) DO NOTHING
--- Run AFTER: 010_system/entity_engine/020_entities/*.sql + 030_tenant/000_tenant/000_athyper_tenant.sql
+-- Run AFTER: 010_platform/004_entity_engine/020_entities/*.sql + 040_tenant/000_tenant/000_athyper_tenant.sql
 
 DO $$
 DECLARE
@@ -41237,7 +41228,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'Athyper tenant not found — run 030_tenant/000_tenant/000_athyper_tenant.sql first';
+        RAISE EXCEPTION 'Athyper tenant not found — run 040_tenant/000_tenant/000_athyper_tenant.sql first';
     END IF;
 
     -- ── Seed one entity_policy per master.* entity using defaults ────────────
@@ -41289,14 +41280,14 @@ END $$;
 
 
 -- ------------------------------------------------------------
--- FILE: 030_tenant/entity_engine/020_field_security_policies.sql
+-- FILE: 040_tenant/entity_engine/020_field_security_policies.sql
 -- ------------------------------------------------------------
 
--- 030_tenant/entity_engine/020_field_security_policies.sql
+-- 040_tenant/entity_engine/020_field_security_policies.sql
 -- Seeds PII/masking policies for known sensitive canonical and entity fields.
 -- Covers: tax_id, national_id, iban, account_no, email, phone, date_of_birth, salary.
 -- Idempotent: checked via existence test (no single unique key across all columns).
--- Run AFTER: 030_tenant/000_tenant/000_athyper_tenant.sql + system entity registration.
+-- Run AFTER: 040_tenant/000_tenant/000_athyper_tenant.sql + system entity registration.
 
 DO $$
 DECLARE
@@ -41316,7 +41307,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'Athyper tenant not found — run 030_tenant/000_tenant/000_athyper_tenant.sql first';
+        RAISE EXCEPTION 'Athyper tenant not found — run 040_tenant/000_tenant/000_athyper_tenant.sql first';
     END IF;
 
     -- Resolve entity IDs

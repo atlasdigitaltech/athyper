@@ -147,7 +147,11 @@ export class HashChainIntegrityService {
       };
     }
 
-    let prevHash    = this.GENESIS_HASH;
+    // Seed prevHash from the anchor immediately before the range so that
+    // verifying a sub-range (e.g. April 10–14) does not produce false-positive
+    // failures caused by using GENESIS_HASH instead of the real predecessor hash.
+    const preRangeAnchor = await this.getPreviousAnchor(tenantId, anchors[0]!.anchor_date);
+    let prevHash    = preRangeAnchor?.lastHash ?? this.GENESIS_HASH;
     let brokenAt:   string | null = null;
     const gaps:     string[] = [];
     let prevDate:   string | null = null;

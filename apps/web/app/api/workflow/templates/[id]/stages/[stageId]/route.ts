@@ -12,7 +12,7 @@ export async function PUT(request: Request, { params }: Params) {
   try {
     const { id, stageId } = await params;
     const body = await request.json();
-    const url  = `${RUNTIME_API_URL}/api/workflow/templates/${id}/stages/${stageId}`;
+    const url  = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/stages/${encodeURIComponent(stageId)}`;
 
     const res  = await fetch(url, {
       method:  "PUT",
@@ -34,7 +34,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   try {
     const { id, stageId } = await params;
-    const url = `${RUNTIME_API_URL}/api/workflow/templates/${id}/stages/${stageId}`;
+    const url = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/stages/${encodeURIComponent(stageId)}`;
 
     const res  = await fetch(url, { method: "DELETE", headers: buildRuntimeHeaders(session) });
     const data = await res.json().catch(() => ({}));

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCsrfToken } from "@/lib/bff-fetch";
 import { Layers, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, UserCheck, Users } from "lucide-react";
 import {
   Badge, Button, Checkbox, Dialog, DialogContent, DialogDescription,
@@ -63,7 +64,7 @@ function StepUpDialog({
     try {
       const r = await fetch("/api/iam/mfa/elevate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ action_class: actionClass, code: code.trim(), method_type: "totp" }),
       });
       const body = await r.json() as Record<string, unknown>;
@@ -176,7 +177,7 @@ function GrantDelegationDialog({
     try {
       const r = await fetch("/api/iam/delegations/my", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({
           delegate_id: selectedDelegate.id,
           scope_type: scopeType,
@@ -375,6 +376,7 @@ function DelegationsTab() {
   const [grantOpen, setGrantOpen]           = useState(false);
   const [stepUpOpen, setStepUpOpen]         = useState(false);
   const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
+  const [revokeError, setRevokeError]       = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["iam-delegations-my"],
@@ -390,12 +392,18 @@ function DelegationsTab() {
   });
 
   async function handleRevoke(id: string) {
-    const r = await fetch(`/api/iam/delegations/${id}/revoke-own`, { method: "POST" });
+    setRevokeError(null);
+    const r = await fetch(`/api/iam/delegations/${id}/revoke-own`, {
+      method: "POST",
+      headers: { "X-CSRF-Token": getCsrfToken() },
+    });
     const body = await r.json() as Record<string, unknown>;
     if (!r.ok) {
       if (body["error"] === "STEP_UP_REQUIRED") {
         setPendingRevokeId(id);
         setStepUpOpen(true);
+      } else {
+        setRevokeError(String(body["message"] ?? body["error"] ?? "Failed to revoke delegation"));
       }
       return;
     }
@@ -429,6 +437,10 @@ function DelegationsTab() {
         onOpenChange={setGrantOpen}
         onGranted={() => queryClient.invalidateQueries({ queryKey: ["iam-delegations-my"] })}
       />
+
+      {revokeError && (
+        <Banner variant="warn">{revokeError}</Banner>
+      )}
 
       {/* Delegations Given (self-managed) */}
       <SectionCard

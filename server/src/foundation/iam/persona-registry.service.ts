@@ -173,26 +173,28 @@ export class PersonaRegistryService {
       throw new Error(`Persona ${personaId} not found or not active`);
     }
 
-    // Upsert: remove existing assignment if any, then insert fresh
-    await this.db
-      .deleteFrom("master.principal_persona" as never)
-      .where("tenant_id" as never, "=", tenantId as never)
-      .where("principal_id" as never, "=", principalId as never)
-      .execute()
-      .catch(() => { /* best-effort — may not exist */ });
+    // Upsert wrapped in a transaction: if the insert fails after the delete the
+    // assignment is not silently lost.  Swallowing the delete error was unsafe here.
+    const row = await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("master.principal_persona" as never)
+        .where("tenant_id" as never, "=", tenantId as never)
+        .where("principal_id" as never, "=", principalId as never)
+        .execute();
 
-    const row = await this.db
-      .insertInto("master.principal_persona" as never)
-      .values({
-        tenant_id:    tenantId,
-        principal_id: principalId,
-        persona_id:   personaId,
-        assigned_by:  assignedBy,
-        expires_at:   expiresAt ?? null,
-        created_by:   assignedBy,
-      } as never)
-      .returning(["id", "created_at"] as never[])
-      .executeTakeFirstOrThrow() as { id: string; created_at: string };
+      return trx
+        .insertInto("master.principal_persona" as never)
+        .values({
+          tenant_id:    tenantId,
+          principal_id: principalId,
+          persona_id:   personaId,
+          assigned_by:  assignedBy,
+          expires_at:   expiresAt ?? null,
+          created_by:   assignedBy,
+        } as never)
+        .returning(["id", "created_at"] as never[])
+        .executeTakeFirstOrThrow() as Promise<{ id: string; created_at: string }>;
+    });
 
     return {
       id:          row.id,

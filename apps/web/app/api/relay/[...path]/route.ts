@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
-import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
+import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from "@/lib/server/runtime-headers";
 
 /**
  * GET /api/relay/[...path]
@@ -89,7 +89,7 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
     const body = await upstream.arrayBuffer();
 
     const resHeaders: Record<string, string> = { "Content-Type": contentType };
-    if (contentDisposition) resHeaders["Content-Disposition"] = contentDisposition;
+    if (contentDisposition) resHeaders["Content-Disposition"] = sanitizeContentDisposition(contentDisposition);
 
     return new NextResponse(body, {
       status: upstream.status,

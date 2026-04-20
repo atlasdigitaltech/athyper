@@ -17,7 +17,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${id}/rules`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${encodeURIComponent(id)}/rules`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });
@@ -39,7 +39,7 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${id}/rules`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/definitions/${encodeURIComponent(id)}/rules`, {
       method: "POST",
       headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
       body: JSON.stringify(body),

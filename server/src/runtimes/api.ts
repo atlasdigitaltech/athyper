@@ -45,6 +45,8 @@ import { createOpenApiRouter } from "../../framework/runtime/openapi/openapi-gen
 
 import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
+import { runComplianceSuiteIfDev } from "../foundation/metadata/entity-compliance.js";
+import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
 import { runWithContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
@@ -563,6 +565,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     } finally {
       jwksWarmupCompleted = true;
     }
+  });
+
+  // RUNTIME_ROUTING_SPEC §10 — Entity compliance suite (dev/staging only).
+  // Compiles all system entities first so snapshot.entity_compiled rows exist,
+  // then validates the 10-point checklist. Never blocks boot or affects /readyz.
+  lifecycle.onReady(async () => {
+    await createEntityCompilerService(_db).compileAllSystemEntities();
+    await runComplianceSuiteIfDev(_db, logger);
   });
 
   // ─── Signal handlers ───────────────────────────────────────────────────────

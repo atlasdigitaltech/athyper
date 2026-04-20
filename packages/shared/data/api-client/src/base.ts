@@ -63,12 +63,15 @@ export function createFetch(config: FetchConfig) {
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-      const first = (body["errors"] as Record<string, unknown>[] | undefined)?.[0];
+      const errors = Array.isArray(body["errors"]) ? body["errors"] as Record<string, unknown>[] : [];
+      const first = errors[0];
       throw new ApiError(
         response.status,
-        first?.["code"] as string ?? "UNKNOWN",
-        first?.["message"] as string ?? response.statusText,
-        first?.["details"] as Record<string, unknown> | undefined,
+        String(first?.["code"] ?? "UNKNOWN"),
+        String(first?.["message"] ?? response.statusText),
+        first?.["details"] != null && typeof first["details"] === "object"
+          ? first["details"] as Record<string, unknown>
+          : undefined,
       );
     }
 

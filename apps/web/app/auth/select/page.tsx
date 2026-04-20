@@ -29,6 +29,7 @@ import {
 import {
   getWorkbenchLabel,
   getWorkbenchDescription,
+  getWorkbenchDefaultRoute,
 } from "@/lib/auth/workbench-config";
 import { parseOrgAlias } from "@/lib/auth/parse-org-alias";
 import { sanitizeReturnUrl } from "@/lib/auth/validate-return-url";
@@ -67,7 +68,7 @@ function groupByTenant(orgs: Record<string, OrgMembership>): TenantGroup[] {
   return Array.from(map.entries()).map(([tenant, orgs]) => ({ tenant, orgs }));
 }
 
-function getEntityInitial(name: string): string {
+function getInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase();
 }
 
@@ -77,9 +78,11 @@ function SelectPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const returnUrl = sanitizeReturnUrl(params.get("returnUrl"), "/home");
-  // "user" | "partner" — set by /login to restrict visible workbench tiles.
-  // null means show all workbenches.
-  const workbenchFilter = params.get("filter") as "user" | "partner" | null;
+
+  // Validate filter — only "user" | "partner" are accepted; anything else is ignored.
+  const rawFilter = params.get("filter");
+  const workbenchFilter: "user" | "partner" | null =
+    rawFilter === "user" || rawFilter === "partner" ? rawFilter : null;
 
   const [session, setSession] = useState<PublicSession | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +105,9 @@ function SelectPageInner() {
         }
         setLastContext(org.alias, workbench);
         const destination = returnUrl === "/home"
-          ? import("@/lib/auth/workbench-config").then((m) => m.getWorkbenchDefaultRoute(workbench))
-          : Promise.resolve(returnUrl);
-        router.replace(await destination);
+          ? getWorkbenchDefaultRoute(workbench)
+          : returnUrl;
+        router.replace(destination);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to activate context");
         setActivating(null);
@@ -189,7 +192,18 @@ function SelectPageInner() {
     );
   }
 
-  const tenantGroups = session ? groupByTenant(session.organizations ?? {}) : [];
+  // Apply workbenchFilter to the orgs used for rendering, mirroring the
+  // auto-selection logic above so the displayed buttons match what is selectable.
+  const filteredOrgs: Record<string, OrgMembership> = {};
+  for (const [alias, m] of Object.entries(session?.organizations ?? {})) {
+    const filteredRoles = workbenchFilter
+      ? m.roles.filter((r) => r === workbenchFilter)
+      : m.roles;
+    if (filteredRoles.length > 0) {
+      filteredOrgs[alias] = { ...m, roles: filteredRoles };
+    }
+  }
+  const tenantGroups = session ? groupByTenant(filteredOrgs) : [];
   const allOrgs = tenantGroups.flatMap((g) => g.orgs);
 
   return (
@@ -214,7 +228,7 @@ function SelectPageInner() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
             <AthyperLogo className="text-primary" width={28} height={28} />
-            <span className="text-sm font-medium text-foreground">Neon</span>
+            <span className="text-sm font-medium text-foreground">athyper</span>
           </div>
 
           {/* User chip */}
@@ -222,7 +236,7 @@ function SelectPageInner() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {getEntityInitial(session.displayName)}
+                  {getInitial(session.displayName)}
                 </div>
                 <div>
                   <p className="text-sm font-medium leading-none">{session.displayName}</p>
@@ -279,7 +293,7 @@ function SelectPageInner() {
 
                   <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-                      {getEntityInitial(selectedOrg.name)}
+                      {getInitial(selectedOrg.name)}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{selectedOrg.name}</p>
@@ -332,7 +346,7 @@ function SelectPageInner() {
                             disabled={activating !== null}
                           >
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                              {getEntityInitial(org.name)}
+                              {getInitial(org.name)}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium group-hover:text-primary">

@@ -694,11 +694,6 @@ DROP TRIGGER IF EXISTS trg_bpr_status_changed ON control.book_posting_rule;
 CREATE TRIGGER trg_bpr_status_changed BEFORE UPDATE ON control.book_posting_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_bpr_status_lookup ON control.book_posting_rule;
-CREATE TRIGGER trg_bpr_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.book_posting_rule
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('control.book_posting_rule_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_bpr_account_strategy_lookup ON control.book_posting_rule;
 CREATE TRIGGER trg_bpr_account_strategy_lookup
     BEFORE INSERT OR UPDATE OF account_strategy ON control.book_posting_rule
@@ -979,12 +974,6 @@ DROP TRIGGER IF EXISTS trg_bfr_status_changed ON control.bank_format_rule;
 CREATE TRIGGER trg_bfr_status_changed BEFORE UPDATE ON control.bank_format_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_bfr_status_lookup ON control.bank_format_rule;
-CREATE TRIGGER trg_bfr_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.bank_format_rule
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.bank_format_rule_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_bfr_payment_network_lookup ON control.bank_format_rule;
 CREATE TRIGGER trg_bfr_payment_network_lookup
     BEFORE INSERT OR UPDATE OF payment_network ON control.bank_format_rule
@@ -1020,12 +1009,6 @@ DROP TRIGGER IF EXISTS trg_pmcp_status_changed ON control.payment_method_company
 CREATE TRIGGER trg_pmcp_status_changed BEFORE UPDATE ON control.payment_method_company_policy
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_pmcp_status_lookup ON control.payment_method_company_policy;
-CREATE TRIGGER trg_pmcp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.payment_method_company_policy
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.payment_method_company_policy_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_pmcp_direction_lookup ON control.payment_method_company_policy;
 CREATE TRIGGER trg_pmcp_direction_lookup
     BEFORE INSERT OR UPDATE OF direction ON control.payment_method_company_policy
@@ -1047,12 +1030,6 @@ CREATE TRIGGER trg_bip_updated_at BEFORE UPDATE ON control.bank_interface_profil
 DROP TRIGGER IF EXISTS trg_bip_status_changed ON control.bank_interface_profile;
 CREATE TRIGGER trg_bip_status_changed BEFORE UPDATE ON control.bank_interface_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_bip_status_lookup ON control.bank_interface_profile;
-CREATE TRIGGER trg_bip_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.bank_interface_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.bank_interface_profile_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_bip_type_lookup ON control.bank_interface_profile;
 CREATE TRIGGER trg_bip_type_lookup
@@ -1084,12 +1061,6 @@ DROP TRIGGER IF EXISTS trg_pmib_status_changed ON control.payment_method_interfa
 CREATE TRIGGER trg_pmib_status_changed BEFORE UPDATE ON control.payment_method_interface_binding
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_pmib_status_lookup ON control.payment_method_interface_binding;
-CREATE TRIGGER trg_pmib_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.payment_method_interface_binding
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.payment_method_interface_binding_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_pmib_direction_lookup ON control.payment_method_interface_binding;
 CREATE TRIGGER trg_pmib_direction_lookup
     BEFORE INSERT OR UPDATE OF direction ON control.payment_method_interface_binding
@@ -1112,12 +1083,6 @@ CREATE TRIGGER trg_psr_updated_at BEFORE UPDATE ON control.payment_settlement_ru
 DROP TRIGGER IF EXISTS trg_psr_status_changed ON control.payment_settlement_rule;
 CREATE TRIGGER trg_psr_status_changed BEFORE UPDATE ON control.payment_settlement_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_psr_status_lookup ON control.payment_settlement_rule;
-CREATE TRIGGER trg_psr_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.payment_settlement_rule
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.payment_settlement_rule_status', 'status');
 
 DROP TRIGGER IF EXISTS trg_psr_direction_lookup ON control.payment_settlement_rule;
 CREATE TRIGGER trg_psr_direction_lookup
@@ -1194,12 +1159,6 @@ CREATE TRIGGER trg_acbp_status_changed BEFORE UPDATE ON control.asset_class_book
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 -- Lookup validations
-DROP TRIGGER IF EXISTS trg_acbp_status_lookup ON control.asset_class_book_policy;
-CREATE TRIGGER trg_acbp_status_lookup
-    BEFORE INSERT OR UPDATE OF status ON control.asset_class_book_policy
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'control.asset_class_book_policy_status', 'status');
-
 DROP TRIGGER IF EXISTS trg_acbp_depr_method_lookup ON control.asset_class_book_policy;
 CREATE TRIGGER trg_acbp_depr_method_lookup
     BEFORE INSERT OR UPDATE OF depreciation_method ON control.asset_class_book_policy

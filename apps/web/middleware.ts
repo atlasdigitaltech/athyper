@@ -39,9 +39,10 @@ const GATEWAY_ORIGIN = process.env.GATEWAY_ORIGIN ?? "";
 // HTTP methods that modify state — only these require CSRF protection.
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-// All /api/auth/* routes are exempt from CSRF — they run before a session
-// is fully established (login, callback) or perform session destruction
-// (logout, refresh). These routes all require their own auth checks.
+// All /api/auth/* routes are already intercepted by the public-bypass block
+// above and never reach the CSRF check. This constant is kept as a
+// defensive guard so that the CSRF condition is self-documenting even if
+// the bypass order ever changes.
 const CSRF_EXEMPT_PREFIX = "/api/auth/";
 
 // Routes where MFA has not yet been verified are still allowed.

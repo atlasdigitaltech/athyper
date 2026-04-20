@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: Params) {
   try {
     const { id, stageId } = await params;
     const body = await request.json();
-    const url  = `${RUNTIME_API_URL}/api/workflow/templates/${id}/stages/${stageId}/rules`;
+    const url  = `${RUNTIME_API_URL}/api/workflow/templates/${encodeURIComponent(id)}/stages/${encodeURIComponent(stageId)}/rules`;
 
     const res  = await fetch(url, {
       method:  "POST",

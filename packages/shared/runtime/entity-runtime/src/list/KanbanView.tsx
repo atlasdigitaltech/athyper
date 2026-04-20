@@ -15,7 +15,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Badge } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, kanbanStatusIntent } from "@athyper/theme";
+import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
+import { kanbanStatusIntent } from "@athyper/theme/domain-intents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 
 function colColor(status: string): string {

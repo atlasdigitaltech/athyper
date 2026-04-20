@@ -9,6 +9,8 @@ import { normalizeOrganizationClaim } from "@/lib/auth/org-normalize";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import { generateSid, hashValue, setCsrfCookie, setSessionCookie } from "@/lib/auth/session";
+import { pkceStateKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import { resolvePublicBaseUrl } from "@/lib/auth/resolve-public-base-url";
 import type { V4Session } from "@/lib/auth/types";
 
 // ─── KC org enrichment (id + name only — workbenches come from JWT roles) ────
@@ -150,6 +152,7 @@ function hasAccessRole(resourceAccess: unknown): boolean {
  *   1. Validate PKCE state (one-time, prevents CSRF replay)
  *   2. Exchange code + codeVerifier for tokens
  *   3. Decode JWT claims; normalize organization claim
+ *   3b. ACCESS gate — reject users without the ACCESS client role
  *   4. Compute IP/UA hashes for soft session binding
  *   5. Create Redis session (8 h TTL)
  *   6. Add sid to user_sessions index
@@ -162,16 +165,7 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  // Derive the public base URL from request headers — the same logic as login/route.ts.
-  // Keycloak redirects the browser back here, so the Host header reflects the origin
-  // the user actually used (neon.athyper.local, localhost:3000, etc.).
-  // PUBLIC_BASE_URL overrides this for containerised deployments.
-  const publicBaseUrl = (() => {
-    if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-    const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-    const host = req.headers.get("host") ?? url.host;
-    return `${proto}://${host}`;
-  })();
+  const publicBaseUrl = resolvePublicBaseUrl(req);
 
   if (error) {
     const desc =
@@ -196,8 +190,7 @@ export async function GET(req: Request) {
 
   try {
     // ─── Step 1: Validate PKCE state ────────────────────────────────────────
-    const stateKey = `pkce_state:${state}`;
-    const stateRaw = await redis.get(stateKey);
+    const stateRaw = await redis.get(pkceStateKey(state));
 
     if (!stateRaw) {
       return NextResponse.redirect(
@@ -211,14 +204,15 @@ export async function GET(req: Request) {
     const pkceState = JSON.parse(stateRaw) as {
       codeVerifier: string;
       returnUrl: string;
+      filter: "user" | "partner" | null;
       isPlatformLogin: boolean;
       realm: string;
       provider: string | null;
       redirectUri?: string;
     };
-    await redis.del(stateKey); // One-time use — delete immediately to prevent replay
+    await redis.del(pkceStateKey(state)); // One-time use — delete immediately to prevent replay
 
-    const { codeVerifier, returnUrl } = pkceState;
+    const { codeVerifier, returnUrl, filter } = pkceState;
     const isPlatformLogin = pkceState.isPlatformLogin === true;
     const pkceProvider = typeof pkceState.provider === "string" ? pkceState.provider : null;
 
@@ -252,7 +246,7 @@ export async function GET(req: Request) {
     const displayName =
       typeof claims.name === "string" ? claims.name : preferredUsername;
 
-    // ─── Step 3: ACCESS gate ────────────────────────────────────────────────
+    // ─── Step 3b: ACCESS gate ────────────────────────────────────────────────
     // Every user MUST have the ACCESS client role (IAM §6 step 3).
     if (!hasAccessRole(claims.resource_access)) {
       console.warn("[auth/callback] ACCESS role missing for user:", sub);
@@ -295,7 +289,7 @@ export async function GET(req: Request) {
         }
       }
     } catch (enrichErr) {
-      console.warn("[auth/callback] Org enrichment failed:", enrichErr);
+      console.warn("[auth/callback] Org enrichment failed:", enrichErr instanceof Error ? enrichErr.message : String(enrichErr), { userId: sub, realm });
     }
 
     // Assign WB_* roles uniformly to all org memberships (IAM §5.2 — roles are global).
@@ -360,13 +354,13 @@ export async function GET(req: Request) {
     };
 
     await redis.set(
-      `sess:${sessionNamespace}:${sid}`,
+      sessKey(sessionNamespace, sid),
       JSON.stringify(session),
       { EX: 28800 }, // 8 h absolute TTL
     );
 
     // ─── Step 6: User session index (enables mass revocation) ───────────────
-    await redis.sAdd(`user_sessions:${sessionNamespace}:${sub}`, sid);
+    await redis.sAdd(userSessionsKey(sessionNamespace, sub), sid);
 
     // ─── Step 7: Set cookies ─────────────────────────────────────────────────
     await setSessionCookie(sid, env);
@@ -401,14 +395,16 @@ export async function GET(req: Request) {
     if (returnUrl && returnUrl !== "/") {
       selectUrl.searchParams.set("returnUrl", returnUrl);
     }
+    if (filter) {
+      selectUrl.searchParams.set("filter", filter);
+    }
     const response = NextResponse.redirect(selectUrl);
     response.cookies.delete("neon_realm"); // clear any stale platform cookie
     return response;
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Callback error";
-    console.error("[auth/callback] Error:", message);
+    console.error("[auth/callback] Error:", e instanceof Error ? e.message : e);
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(message)}`, publicBaseUrl),
+      new URL("/login?error=AUTH_CALLBACK_ERROR", publicBaseUrl),
     );
   }
 }

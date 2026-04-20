@@ -14,13 +14,14 @@
  *   3. Load all active fields from control.entity_field for that version
  *   4. Load class profile from control.entity_class_profile if entity_class_id set
  *   5. Produce CompiledEntity descriptor
- *   6. Write/update snapshot.entity_compiled (upsert by tenant_id + entity_code)
+ *   6. Write to snapshot.entity_compiled (INSERT … ON CONFLICT DO NOTHING — append-only)
  *   7. Cache result in-process (5-min TTL)
  *
- * On cache miss, the caller gets a fresh compile from DB.
- * The snapshot table serves as warm-start cache across process restarts.
+ * On cache miss the compiler does a full compile from the control schema.
+ * The snapshot table provides compliance visibility; serving uses compiled-entity.route.ts.
  */
 
+import { createHash } from "node:crypto";
 import type { Kysely } from "kysely";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ export class EntityCompilerService {
   /**
    * Get the compiled entity descriptor. Returns cached result if fresh.
    * @param entityCode   control.entity.name
-   * @param tenantId     Used for snapshot write; pass system tenant for global entities
+   * @param tenantId     Unused (kept for API compatibility); system entities use the system UUID
    */
   async compile(entityCode: string, tenantId?: string): Promise<CompiledEntity | null> {
     const key = entityCode;
@@ -138,21 +139,32 @@ export class EntityCompilerService {
       return cached.compiled;
     }
 
-    // Try warm-start from snapshot table
-    const snapshot = await this.loadSnapshot(entityCode, tenantId ?? "system");
-    if (snapshot && (now - new Date(snapshot.compiled_at as string).getTime()) < CACHE_TTL_MS) {
-      const compiled = JSON.parse(snapshot.payload as string) as CompiledEntity;
-      this.cache.set(key, { compiled, fetchedAt: now });
-      return compiled;
-    }
-
-    // Full compile from control schema
     const compiled = await this.fullCompile(entityCode);
     if (!compiled) return null;
 
     this.cache.set(key, { compiled, fetchedAt: now });
-    void this.writeSnapshot(compiled, tenantId ?? "system");
+    void this.writeSnapshot(compiled);
     return compiled;
+  }
+
+  /**
+   * Compile every active system entity (tenant_id IS NULL) and persist each to
+   * snapshot.entity_compiled. Called once at startup so the compliance suite finds
+   * populated snapshots when it checks immediately after the server is ready.
+   */
+  async compileAllSystemEntities(): Promise<void> {
+    try {
+      const rows = await this.db
+        .selectFrom("control.entity as e" as never)
+        .select("e.name" as never)
+        .where("e.tenant_id" as never, "is" as never, null as never)
+        .where("e.status" as never, "=" as never, "ACTIVE" as never)
+        .execute() as Array<{ name: string }>;
+
+      for (const row of rows) {
+        await this.compile(String(row.name));
+      }
+    } catch { /* best-effort */ }
   }
 
   /**
@@ -266,35 +278,23 @@ export class EntityCompilerService {
     };
   }
 
-  private async loadSnapshot(entityCode: string, tenantId: string) {
-    return this.db
-      .selectFrom("snapshot.entity_compiled as sec" as never)
-      .select(["sec.payload", "sec.compiled_at"] as never[])
-      .where("sec.entity_code" as never, "=", entityCode as never)
-      .where("sec.tenant_id" as never, "=", tenantId as never)
-      .executeTakeFirst() as Promise<{ payload: string; compiled_at: string } | undefined>;
-  }
-
-  private async writeSnapshot(compiled: CompiledEntity, tenantId: string): Promise<void> {
+  private async writeSnapshot(compiled: CompiledEntity): Promise<void> {
     try {
+      const payload = JSON.stringify(compiled);
+      const hash    = createHash("sha256").update(payload).digest("hex"); // 64 hex chars — satisfies ec_hash_chk
       await this.db
         .insertInto("snapshot.entity_compiled" as never)
         .values({
-          tenant_id:     tenantId,
-          entity_code:   compiled.entityCode,
-          entity_id:     null,
-          payload:       JSON.stringify(compiled),
-          schema_version: compiled.schemaVersion,
-          compiled_at:   new Date(compiled.compiledAt),
-          created_by:    "00000000-0000-0000-0000-000000000000",
+          tenant_id:         "00000000-0000-0000-0000-000000000000",
+          entity_version_id: compiled.versionId,
+          compiled_json:     JSON.parse(payload) as never,
+          compiled_hash:     hash,
+          compliance_report: {},
+          created_by:        "00000000-0000-0000-0000-000000000000",
         } as never)
         .onConflict((oc: any) =>
-          oc.columns(["tenant_id", "entity_code"] as never[])
-            .doUpdateSet({
-              payload:        JSON.stringify(compiled),
-              schema_version: compiled.schemaVersion,
-              compiled_at:    new Date(compiled.compiledAt),
-            } as never)
+          oc.columns(["entity_version_id"] as never[])
+            .doNothing()           // table is append-only — trg_fn_ec_immutable blocks UPDATE
         )
         .execute();
     } catch { /* snapshot write is best-effort */ }

@@ -13,7 +13,7 @@
  *   - Quick navigation shortcuts
  */
 
-import { Bell, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
+import { Bell, Bookmark, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
 import { EmptyState } from "@athyper/ui/feedback";
@@ -81,7 +81,7 @@ const WORKSPACES = [
 const QUICK_LINKS = [
   { href: "/inbox",         label: "Workflow Inbox",    icon: Inbox },
   { href: "/notifications", label: "Notifications",     icon: Bell },
-  { href: "/saved-views",   label: "Saved Views",       icon: LayoutDashboard },
+  { href: "/saved-views",   label: "Saved Views",       icon: Bookmark },
   { href: "/dashboards",    label: "Dashboard Gallery", icon: LayoutDashboard },
 ] as const;
 

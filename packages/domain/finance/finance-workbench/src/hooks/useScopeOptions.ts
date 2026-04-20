@@ -53,7 +53,7 @@ export interface EntityOption {
   entityType: string;
   consolidationMethod: string | null;
   parentEntityId: string | null;
-  countryCocde: string;
+  countryCode: string;
 }
 
 export interface ScopeOptionsData {

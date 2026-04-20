@@ -124,7 +124,7 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
                     {fmt(Math.abs(item.runningBalance))}{item.runningBalance < 0 ? " DR" : ""}
                   </td>
                   <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
-                    {isCleared ? fmtDate(((item as unknown) as Record<string, unknown>)["clearedDate"] as string | null) : "—"}
+                    {isCleared ? fmtDate(item.clearedDate) : "—"}
                   </td>
                   <td className="py-1.5 px-3 capitalize text-muted-foreground">{item.status}</td>
                 </tr>
@@ -269,9 +269,7 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
                   {item.bankReference ?? "—"}
                 </td>
                 <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
-                  {((item as unknown) as Record<string, unknown>)["clearedDate"]
-                    ? fmtDate(((item as unknown) as Record<string, unknown>)["clearedDate"] as string)
-                    : "—"}
+                  {item.clearedDate ? fmtDate(item.clearedDate) : "—"}
                 </td>
                 <td className="py-1.5 px-3 capitalize text-warning font-medium">{item.status}</td>
               </tr>

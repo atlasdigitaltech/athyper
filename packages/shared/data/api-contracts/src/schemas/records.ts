@@ -33,3 +33,43 @@ export const BulkOperationSchema = z.object({
 });
 
 export type BulkOperation = z.infer<typeof BulkOperationSchema>;
+
+// ── Record versioning ─────────────────────────────────────────────────────────
+// Returned by GET /api/records/:entity/:id/versions
+// Gated by feature_flags.version_control on the entity.
+
+export const RecordVersionStatusSchema = z.enum([
+  "draft",
+  "approved",
+  "superseded",
+  "cancelled",
+]);
+export type RecordVersionStatus = z.infer<typeof RecordVersionStatusSchema>;
+
+export const RecordVersionChangeTypeSchema = z.enum([
+  "original",
+  "amendment",
+  "reversal",
+  "correction",
+]);
+export type RecordVersionChangeType = z.infer<typeof RecordVersionChangeTypeSchema>;
+
+/** Summary row returned by GET /api/records/:entity/:id/versions */
+export const RecordVersionSummarySchema = z.object({
+  version_no:      z.number().int().positive(),
+  status:          RecordVersionStatusSchema,
+  change_type:     RecordVersionChangeTypeSchema,
+  change_reason:   z.string().nullable(),
+  created_at:      z.string().datetime(),
+  created_by_name: z.string().nullable(),
+  data_hash:       z.string(),
+  is_current:      z.boolean(),
+});
+export type RecordVersionSummary = z.infer<typeof RecordVersionSummarySchema>;
+
+/** Full detail returned by GET /api/records/:entity/:id/versions/:versionNo */
+export const RecordVersionDetailSchema = RecordVersionSummarySchema.extend({
+  /** Entity field values at the time this version was created. */
+  fields: z.record(z.string(), z.unknown()),
+});
+export type RecordVersionDetail = z.infer<typeof RecordVersionDetailSchema>;

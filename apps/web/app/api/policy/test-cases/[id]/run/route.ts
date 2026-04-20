@@ -18,7 +18,7 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/policy/test-cases/${id}/run`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/policy/test-cases/${encodeURIComponent(id)}/run`, {
       method: "POST",
       headers: buildRuntimeHeaders(session),
       cache: "no-store",

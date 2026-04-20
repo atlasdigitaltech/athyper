@@ -21,7 +21,7 @@ export async function POST(
 
   try {
     const res = await fetch(
-      `${COLLAB_API_URL}/api/collab/comments/${commentId}/flag`,
+      `${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}/flag`,
       {
         method: "POST",
         headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
@@ -31,11 +31,11 @@ export async function POST(
     );
     if (!res.ok) {
       console.error("[api/collab/flag POST] upstream", res.status);
-      return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
     }
     return NextResponse.json(await res.json(), { status: res.status });
   } catch (e) {
     console.error("[api/collab/flag POST]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }

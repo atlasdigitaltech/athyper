@@ -6,21 +6,29 @@ import { clearLastContext } from "@/lib/auth/context-resolver";
 
 export default function LogoutPage() {
   useEffect(() => {
+    const controller = new AbortController();
+
     async function doLogout() {
       clearLastContext();
       try {
-        const res = await fetch("/api/auth/logout", { method: "POST" });
+        const res = await fetch("/api/auth/logout", {
+          method: "POST",
+          signal: controller.signal,
+        });
         const data = (await res.json()) as { logoutUrl?: string };
         if (data.logoutUrl) {
           window.location.href = data.logoutUrl;
         } else {
           window.location.href = "/login";
         }
-      } catch {
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
         window.location.href = "/login";
       }
     }
-    doLogout();
+
+    void doLogout();
+    return () => controller.abort();
   }, []);
 
   return (

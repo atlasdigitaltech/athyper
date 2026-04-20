@@ -521,6 +521,18 @@ BEGIN
                 GROUP BY t.from_state_id
             ) sub
             JOIN control.lifecycle_state fs ON fs.id = sub.from_state_id
+        ), '{}'::jsonb),
+        'states', COALESCE((
+            SELECT jsonb_object_agg(s.code, jsonb_build_object(
+                'name',        s.name,
+                'description', s.description,
+                'is_initial',  s.is_initial,
+                'is_terminal', s.is_terminal,
+                'sort_order',  s.sort_order,
+                'config',      s.config
+            ))
+            FROM control.lifecycle_state s
+            WHERE s.lifecycle_id = p_lifecycle_id
         ), '{}'::jsonb)
     ) INTO v_route;
 

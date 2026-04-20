@@ -21,7 +21,7 @@ export async function GET(
 
   const { id } = await params;
   const qs = forwardSearchParams(request.url, ALLOWED_PARAMS);
-  const url = `${RUNTIME_API_URL}/api/workflow/requests/${id}/activity${qs ? `?${qs}` : ""}`;
+  const url = `${RUNTIME_API_URL}/api/workflow/requests/${encodeURIComponent(id)}/activity${qs ? `?${qs}` : ""}`;
 
   try {
     const res = await fetch(url, {

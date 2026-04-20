@@ -1,5 +1,3 @@
-import { createHash, randomUUID } from "node:crypto";
-
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -8,17 +6,24 @@ import { normalizeOrganizationClaim } from "@/lib/auth/org-normalize";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import {
+  generateSid,
   getSessionId,
   setCsrfCookie,
   setSessionCookie,
 } from "@/lib/auth/session";
+import { sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import { randomUUID } from "node:crypto";
 import type { V4Session } from "@/lib/auth/types";
 
 /**
- * POST /api/auth/refresh (CSRF-protected via middleware)
+ * POST /api/auth/refresh
  *
  * Proactively refreshes the access token before it expires and rotates
  * the session ID to prevent session fixation.
+ *
+ * Note: /api/auth/* routes are in the middleware public-bypass list and
+ * therefore bypass CSRF enforcement. This route relies on the httpOnly
+ * neon_sid cookie (not readable by JS) as the sole auth check.
  *
  * Security controls:
  *   1. Idle timeout (15 min) — refuses to refresh an idle session even if the
@@ -42,12 +47,12 @@ export async function POST() {
 
   const cookieStore = await cookies();
   const isPlatformSession = cookieStore.get("neon_realm")?.value === "platform";
-  const { sessionNamespace } = resolveRealmConfig(isPlatformSession);
+  const { realm, clientId, sessionNamespace } = resolveRealmConfig(isPlatformSession);
 
   const redis = await getSessionRedis();
 
   try {
-    const raw = await redis.get(`sess:${sessionNamespace}:${sid}`);
+    const raw = await redis.get(sessKey(sessionNamespace, sid));
     if (!raw) {
       return NextResponse.json(
         { redirect: "/api/auth/login" },
@@ -58,14 +63,15 @@ export async function POST() {
     const session = JSON.parse(raw) as V4Session;
     const now = Math.floor(Date.now() / 1000);
 
-    const { realm, clientId } = resolveRealmConfig(isPlatformSession);
-
     // ─── Idle timeout check ──────────────────────────────────────────────────
     const IDLE_TIMEOUT_SEC = 900; // 15 min
     const lastSeenAt =
       typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
     if (lastSeenAt > 0 && now - lastSeenAt >= IDLE_TIMEOUT_SEC) {
-      await redis.del(`sess:${sessionNamespace}:${sid}`);
+      await redis.del(sessKey(sessionNamespace, sid));
+      if (session.userId) {
+        await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid);
+      }
       return NextResponse.json(
         { redirect: "/api/auth/login", reason: "idle_expired" },
         { status: 401 },
@@ -83,7 +89,7 @@ export async function POST() {
     }
 
     if (!session.refreshToken) {
-      await redis.del(`sess:${sessionNamespace}:${sid}`);
+      await redis.del(sessKey(sessionNamespace, sid));
       return NextResponse.json({ redirect: "/api/auth/login" }, { status: 401 });
     }
 
@@ -96,9 +102,7 @@ export async function POST() {
     });
 
     // ─── Rotate session ID ───────────────────────────────────────────────────
-    const newSid = createHash("sha256")
-      .update(randomUUID() + Date.now().toString())
-      .digest("hex");
+    const newSid = generateSid();
     const newCsrfToken = randomUUID();
 
     // Re-decode claims — roles may have changed (e.g. org membership updated)
@@ -146,21 +150,21 @@ export async function POST() {
     // Preserve the remaining absolute TTL from the original session.
     // Resetting to 28800 on every refresh would allow indefinite session
     // extension — the 8h window must be anchored to the original login time.
-    const remainingTtl = await redis.ttl(`sess:${sessionNamespace}:${sid}`);
+    const remainingTtl = await redis.ttl(sessKey(sessionNamespace, sid));
     const sessionTtl = remainingTtl > 0 ? remainingTtl : 28800;
 
     // Write new key, delete old (atomic rotation)
     await redis.set(
-      `sess:${sessionNamespace}:${newSid}`,
+      sessKey(sessionNamespace, newSid),
       JSON.stringify(updatedSession),
       { EX: sessionTtl },
     );
-    await redis.del(`sess:${sessionNamespace}:${sid}`);
+    await redis.del(sessKey(sessionNamespace, sid));
 
     // Update user session index
     if (session.userId) {
-      await redis.sRem(`user_sessions:${sessionNamespace}:${session.userId}`, sid);
-      await redis.sAdd(`user_sessions:${sessionNamespace}:${session.userId}`, newSid);
+      await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid);
+      await redis.sAdd(userSessionsKey(sessionNamespace, session.userId), newSid);
     }
 
     await setSessionCookie(newSid, env);
@@ -173,7 +177,7 @@ export async function POST() {
     });
   } catch (e: unknown) {
     try {
-      await redis.del(`sess:${sessionNamespace}:${sid}`);
+      await redis.del(sessKey(sessionNamespace, sid));
     } catch {
       /* best effort */
     }

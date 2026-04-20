@@ -67,11 +67,16 @@ export function kanbanStatusIntent(value: string): SemanticIntent {
 // ── Entity class (metadata / schema browser) ─────────────────────────────────
 
 const ENTITY_CLASS_INTENT: Record<string, SemanticIntent> = {
-  REFERENCE: "neutral",
-  MASTER:    "primary",
-  DOCUMENT:  "warning",
-  CONTROL:   "accent",
-  JOURNAL:   "success",
+  REFERENCE:         "neutral",
+  MASTER:            "primary",
+  DOCUMENT:          "warning",
+  DOCUMENT_RELATION: "muted",
+  CONTROL:           "accent",
+  LEDGER:            "success",
+  LOG:               "info",
+  AGGREGATE:         "info",
+  DIMENSION:         "neutral",
+  RELATION:          "muted",
 };
 
 /** Map a metadata entity class to a SemanticIntent. */
@@ -176,13 +181,11 @@ export function ownerTypeIntent(owner: string): SemanticIntent {
 const PAYMENT_DIRECTION_INTENT: Record<string, SemanticIntent> = {
   INBOUND:  "success",
   OUTBOUND: "primary",
-  inbound:  "success",
-  outbound: "primary",
 };
 
 /** Map a payment direction to a SemanticIntent. */
 export function paymentDirectionIntent(direction: string): SemanticIntent {
-  return PAYMENT_DIRECTION_INTENT[direction] ?? "neutral";
+  return PAYMENT_DIRECTION_INTENT[direction.toUpperCase()] ?? "neutral";
 }
 
 // ── Finance: reconciliation type ─────────────────────────────────────────────

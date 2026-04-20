@@ -153,7 +153,7 @@ COMMENT ON VIEW control.v_acct_profile_full IS
 -- ============================================================================
 -- §V3  control.v_blueprint_catalogue
 -- Active blueprint packs for tenant provisioning wizard and API.
--- R6: moved from 900_seed_data/020_blueprint/000_registry/000_blueprint_registry.sql
+-- R6: moved from 900_seed_data/020_universal/000_registry/000_blueprint_registry.sql
 -- into the main view bundle so it is always present after 07_views.sql runs,
 -- regardless of whether blueprint seed files have executed.
 -- ============================================================================
@@ -174,13 +174,14 @@ WHERE status = 'active'
 ORDER BY
     CASE category
         WHEN 'base'          THEN 1
-        WHEN 'coa_framework' THEN 2
-        WHEN 'default_rules' THEN 3
+        WHEN 'foundation'    THEN 2
+        WHEN 'coa_framework' THEN 3
         WHEN 'industry_pack' THEN 4
+        WHEN 'module_pack'   THEN 5
     END,
     code;
 
 COMMENT ON VIEW control.v_blueprint_catalogue IS
     'Active blueprint packs ordered for the tenant provisioning wizard. '
-    'base packs first, then coa_framework, default_rules, industry_packs. '
+    'Tier order: base → foundation → coa_framework → industry_pack → module_pack. '
     'R6: moved from seed file into main view bundle.';

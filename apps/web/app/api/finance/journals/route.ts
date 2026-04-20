@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     return NextResponse.json(body, { status: res.status });
   } catch (e) {
     console.error("[api/finance/journals GET]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 502 });
   }
 }
 
@@ -41,6 +41,6 @@ export async function POST(req: Request) {
     return NextResponse.json(body, { status: res.status });
   } catch (e) {
     console.error("[api/finance/journals POST]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "Service unavailable" }, { status: 502 });
   }
 }

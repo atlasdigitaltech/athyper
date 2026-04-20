@@ -85,15 +85,14 @@ export class FeatureFlagService {
         if (tenantCached !== null) return tenantCached === "1";
       }
 
-      // 2. Try global cache
-      const globalCached = await this.redis.get(`${CACHE_PREFIX}${code}`);
-      if (globalCached !== null) {
-        const globalEnabled = globalCached === "1";
-        // Cache per-tenant result as well
-        if (tenantId) {
-          await this.setCached(`${CACHE_PREFIX}${code}:${tenantId}`, globalEnabled);
-        }
-        return globalEnabled;
+      // 2. Try global cache — only when no tenantId is requested.
+      // When a tenantId is present, tenant_overrides or rollout_pct may flip the
+      // global default, so we must fall through to the DB (step 3) to resolve them.
+      // Returning the global value here would cache and return the wrong result for
+      // tenants that have an active per-tenant override.
+      if (!tenantId) {
+        const globalCached = await this.redis.get(`${CACHE_PREFIX}${code}`);
+        if (globalCached !== null) return globalCached === "1";
       }
 
       // 3. DB fallback

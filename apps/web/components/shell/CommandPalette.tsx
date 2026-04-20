@@ -195,15 +195,7 @@ export interface CommandPaletteProps {
 // generic records CRUD. Domain-specific overrides can be added here as they
 // surface (e.g. finance pages have their own routes for invoices + JEs).
 function hitHref(hit: SearchHit): string {
-  switch (hit.entity_type) {
-    case "invoice":
-    case "purchase_invoice":
-      return `/runtime/app/purchase-invoice/${hit.entity_id}`;
-    case "journal_entry":
-      return `/finance/journals/${hit.entity_id}`;
-    default:
-      return `/records/${hit.entity_type.replace(/_/g, "-")}/${hit.entity_id}`;
-  }
+  return `/app/${hit.entity_type.replace(/_/g, "-")}/${hit.entity_id}`;
 }
 
 export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) {

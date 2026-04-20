@@ -45,18 +45,78 @@ export interface RecordsRouteDeps {
 
 // ── Entity table resolver ─────────────────────────────────────────────────────
 
+interface EntityTableInfo {
+  table_schema:       string;
+  table_name:         string;
+  natural_key_fields: string[];
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<{ table_schema: string; table_name: string } | null> {
+async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<EntityTableInfo | null> {
   // Normalise URL slug → DB name (journal-entry → journal_entry)
   const name = entityCode.replace(/-/g, "_");
   const row = await db
     .selectFrom("control.entity as e")
-    .select(["e.table_schema", "e.table_name"])
+    .select(["e.table_schema", "e.table_name", "e.natural_key_fields"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .executeTakeFirst();
   if (!row) return null;
-  return { table_schema: String(row.table_schema), table_name: String(row.table_name) };
+  return {
+    table_schema:       String(row.table_schema),
+    table_name:         String(row.table_name),
+    natural_key_fields: Array.isArray(row.natural_key_fields)
+      ? (row.natural_key_fields as string[])
+      : [],
+  };
+}
+
+// ── Business-key / UUID dual resolver ────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve a record row by either UUID (globally unique, no tenant scope) or
+ * canonical business key (tenant-scoped via natural_key_fields).
+ *
+ * Returns undefined when:
+ *   - id is not a UUID and no natural_key_fields are configured
+ *   - id is not a UUID and tenantId is null
+ *   - the row simply does not exist
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveRecordRow(
+  db:               Kysely<any>,
+  fullTable:        `${string}.${string}`,
+  id:               string,
+  naturalKeyFields: string[],
+  fieldMap:         Map<string, string>,
+  tenantId:         string | null,
+): Promise<Record<string, unknown> | undefined> {
+  if (UUID_RE.test(id)) {
+    return db
+      .selectFrom(fullTable)
+      .selectAll()
+      .where("id" as never, "=", id as never)
+      .executeTakeFirst() as Promise<Record<string, unknown> | undefined>;
+  }
+
+  // Business-key path — requires tenant scope and at least one natural key field
+  if (!tenantId || naturalKeyFields.length === 0) return undefined;
+
+  // Map logical field names → physical column names
+  const nkColumns = naturalKeyFields.map((f) => fieldMap.get(f) ?? f);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return db
+    .selectFrom(fullTable)
+    .selectAll()
+    .where("tenant_id" as never, "=", tenantId as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .where((eb: any) =>
+      eb.or(nkColumns.map((col: string) => eb(col as never, "=", id as never))),
+    )
+    .executeTakeFirst() as Promise<Record<string, unknown> | undefined>;
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────
@@ -303,7 +363,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-      const row = await db.selectFrom(fullTable).selectAll().where("id" as never, "=", id as never).executeTakeFirst();
+
+      // Resolve field map early — needed for both business-key lookup and response remapping
+      const fieldMap = await resolveFieldMap(db, entityCode);
+
+      // Resolve tenant for business-key path (UUID path works without tenant scope)
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const row = await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId);
 
       if (!row) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
@@ -312,39 +381,37 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       // Build a reverse map: physical column_name → logical field name
       // so the detail page can access data[field.name] correctly.
-      const fieldMap = await resolveFieldMap(db, entityCode);
       const reverseMap = new Map<string, string>();
       for (const [fieldName, columnName] of fieldMap.entries()) {
         reverseMap.set(columnName, fieldName);
       }
 
       // Remap DB row keys: column_name → field_name
-      const rowData = row as Record<string, unknown>;
       const data: Record<string, unknown> = {};
-      for (const [col, val] of Object.entries(rowData)) {
+      for (const [col, val] of Object.entries(row)) {
         const fieldName = reverseMap.get(col) ?? col;
         data[fieldName] = val;
       }
 
       const detailBody: Record<string, unknown> = {
-        id: rowData.id,
-        entity_code: entityCode,
-        tenant_id: rowData.tenant_id,
-        status: rowData.status,
-        is_active: rowData.is_active,
-        created_at: rowData.created_at,
-        created_by: rowData.created_by,
-        updated_at: rowData.updated_at ?? null,
-        updated_by: rowData.updated_by ?? null,
-        status_changed_at: rowData.status_changed_at ?? null,
-        status_changed_by: rowData.status_changed_by ?? null,
+        id:               row.id,
+        entity_code:      entityCode,
+        tenant_id:        row.tenant_id,
+        status:           row.status,
+        is_active:        row.is_active,
+        created_at:       row.created_at,
+        created_by:       row.created_by,
+        updated_at:       row.updated_at ?? null,
+        updated_by:       row.updated_by ?? null,
+        status_changed_at: row.status_changed_at ?? null,
+        status_changed_by: row.status_changed_by ?? null,
         data,
       };
 
       // Apply field-security masking using tenantId from the fetched row
-      if (typeof rowData.tenant_id === "string") {
+      if (typeof row.tenant_id === "string") {
         const roles = Array.isArray(claims["roles"]) ? (claims["roles"] as string[]) : [];
-        await applyFieldSecurityMask(db, rowData.tenant_id, entityCode, roles, detailBody, logger);
+        await applyFieldSecurityMask(db, row.tenant_id, entityCode, roles, detailBody, logger);
       }
 
       res.json(detailBody);
@@ -440,6 +507,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+
       // Remap form field names → physical column names
       const fieldMap = await resolveFieldMap(db, entityCode);
       const body = req.body as { data?: Record<string, unknown> };
@@ -447,16 +524,14 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName);
-        if (columnName) {
-          mappedData[columnName] = value;
-        }
+        if (columnName) mappedData[columnName] = value;
       }
 
-      // Resolve tenant + principal for tenant isolation and audit (updated_by FK → master.principal)
-      const xOrg = (req.headers["x-org"] as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
+      // Resolve UUID from business key when caller passes a canonical key
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      if (!physicalId) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
@@ -467,11 +542,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
 
-      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db.updateTable(fullTable) as any)
         .set(mappedData)
-        .where("id", "=", id)
+        .where("id", "=", physicalId)
         .where("tenant_id", "=", tenantId)
         .returningAll()
         .executeTakeFirst();
@@ -523,7 +597,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       // Resolve tenant + principal
-      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) {
@@ -550,9 +624,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const fieldMap = await resolveFieldMap(db, entityCode);
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
-        // Accept both logical name and direct column name (fallback)
         const columnName = fieldMap.get(fieldName) ?? fieldName;
-        // Skip system-managed audit columns that callers must not overwrite
         if (["id", "tenant_id", "created_by", "created_at"].includes(columnName)) continue;
         mappedData[columnName] = value;
       }
@@ -561,10 +633,20 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       mappedData.updated_at = new Date().toISOString();
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+
+      // Resolve UUID from business key when caller passes a canonical key
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      if (!physicalId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db.updateTable(fullTable) as any)
         .set(mappedData)
-        .where("id", "=", id)
+        .where("id", "=", physicalId)
         .where("tenant_id", "=", tenantId)
         .returningAll()
         .executeTakeFirst();
@@ -611,7 +693,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
-      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) {
@@ -620,23 +702,34 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+
+      // Resolve UUID from business key so the delete is always by primary key
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, new Map(), tenantId))?.id ?? "");
+      if (!physicalId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (db.deleteFrom(fullTable) as any)
-        .where("id", "=", id)
+        .where("id", "=", physicalId)
         .where("tenant_id", "=", tenantId)
         .execute();
 
       // Emit delete event so the search outbox handler removes the doc.
       // Delete events are recognised by the `.deleted` suffix on event_type.
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
       try {
         await emitOutboxEvent(db, {
           tenantId,
           topic:      "search",
           eventType:  `${entityCode}.deleted`,
           entityType: entityCode,
-          entityId:   id,
+          entityId:   physicalId,
           actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
         });
       } catch (emitErr) {
@@ -691,8 +784,42 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── Sub-resource stubs ────────────────────────────────────────────────────────
+  // Return { data: [] } once auth + entity are verified.
+  // Each sub-resource will be replaced with a real implementation when the
+  // backing service layer is ready.
+  function subResourceStub(subPath: string): RequestHandler {
+    return async (req, res, next) => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+        const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+        const table = await resolveEntityTable(db, entityCode);
+        if (!table) {
+          res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+          return;
+        }
+        res.json({ data: [] });
+      } catch (err) {
+        logger?.error(`records_${subPath.replace(/-/g, "_")}_error`, { err: String(err) });
+        next(err);
+      }
+    };
+  }
+
   router.get("/records/:entity", listHandler);
   router.get("/records/:entity/_debug", debugHandler);
+  // Sub-resource routes must be registered before /:id to avoid shadowing
+  router.get("/records/:entity/:id/workflow",           subResourceStub("workflow"));
+  router.get("/records/:entity/:id/attachments",        subResourceStub("attachments"));
+  router.get("/records/:entity/:id/distributions",      subResourceStub("distributions"));
+  router.get("/records/:entity/:id/approvals",          subResourceStub("approvals"));
+  router.get("/records/:entity/:id/tasks",              subResourceStub("tasks"));
+  router.get("/records/:entity/:id/watchers",           subResourceStub("watchers"));
+  router.get("/records/:entity/:id/rules",              subResourceStub("rules"));
+  router.get("/records/:entity/:id/integration-events", subResourceStub("integration-events"));
+  router.get("/records/:entity/:id/quality",            subResourceStub("quality"));
+  router.get("/records/:entity/:id/reports",            subResourceStub("reports"));
   router.get("/records/:entity/:id", getHandler);
   router.post("/records/:entity", createHandler);
   router.put("/records/:entity/:id", updateHandler);

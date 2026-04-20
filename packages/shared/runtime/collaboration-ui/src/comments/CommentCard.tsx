@@ -12,6 +12,8 @@ import { Reply, Pencil, Trash2, Flag, Check, X, Loader2 } from "lucide-react";
 
 import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
+import { getCsrfToken } from "../utils/csrf";
+import { useCommentActions, type EntityComment } from "../hooks/collab";
 
 // ── Flag reasons ──────────────────────────────────────────────────────────────
 
@@ -24,13 +26,6 @@ const FLAG_REASONS = [
 ] as const;
 
 type FlagReason = typeof FLAG_REASONS[number]["value"];
-
-function getCsrfToken(): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
-  return match ? decodeURIComponent(match[1]!) : "";
-}
-import { useCommentActions, type EntityComment } from "../hooks/collab";
 
 import { CommentForm } from "./CommentForm";
 import { CommentReactions } from "./CommentReactions";

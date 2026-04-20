@@ -20,7 +20,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const res = await fetch(`${RUNTIME_API_URL}/api/workflow/requests/${id}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/workflow/requests/${encodeURIComponent(id)}`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });

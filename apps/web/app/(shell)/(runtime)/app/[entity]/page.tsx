@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { EntityListPage } from "@athyper/entity-runtime/list";
+import { Skeleton } from "@athyper/ui/primitives";
 
 /**
  * Runtime entity list — /app/[entity]
@@ -38,7 +39,17 @@ export default async function AppEntityListRoute({
   // Suspense boundary is required because EntityListPage uses useSearchParams()
   // (via useEntityListUrl) which opts the subtree into Suspense in Next.js App Router.
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="space-y-3 p-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-full" />
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      }
+    >
       <EntityListPage entityCode={entity} />
     </Suspense>
   );

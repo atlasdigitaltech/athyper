@@ -117,8 +117,10 @@ export abstract class BaseWorker<TData = Record<string, unknown>> {
     this.bullWorker = new Worker<TData>(
       this.queueName,
       async (job) => {
-        this.processedCount++;
         await this.process(job);
+        // Increment only after successful completion so the counter reflects
+        // jobs that actually finished without error, not attempts.
+        this.processedCount++;
       },
       {
         connection:  this.connection,

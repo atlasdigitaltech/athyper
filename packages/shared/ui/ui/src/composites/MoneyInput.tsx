@@ -12,7 +12,7 @@
 
 import { forwardRef, useCallback, useId } from "react";
 
-import { cn } from "@athyper/theme";
+import { cn } from "@athyper/theme/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

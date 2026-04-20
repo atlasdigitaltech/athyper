@@ -243,6 +243,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/shared/data/metadata-client:
     dependencies:
@@ -259,6 +262,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/shared/data/query:
     dependencies:
@@ -468,6 +474,9 @@ importers:
       '@athyper/query':
         specifier: workspace:*
         version: link:../../data/query
+      '@athyper/workflow-ui':
+        specifier: workspace:*
+        version: link:../workflow-ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*

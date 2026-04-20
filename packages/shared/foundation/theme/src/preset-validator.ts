@@ -82,11 +82,11 @@ export function validatePresetCSS(css: string, presetName: string): PresetValida
     }
   }
 
-  const allKnown = new Set([...required, ...optional]);
+  const allKnown: Set<string> = new Set([...required, ...optional]);
   const allFound = new Set([...lightVars, ...darkVars]);
   const extraVariables: string[] = [];
   for (const v of allFound) {
-    if (!allKnown.has(v as keyof typeof REQUIRED_THEME_VARIABLES extends never ? string : string)) {
+    if (!allKnown.has(v)) {
       extraVariables.push(v);
     }
   }

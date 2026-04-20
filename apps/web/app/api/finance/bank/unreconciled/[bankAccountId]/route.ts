@@ -14,7 +14,7 @@ export async function GET(
   try {
     const { bankAccountId } = await params;
     const qs = forwardSearchParams(req.url, ALLOWED);
-    const res = await fetch(`${RUNTIME_API_URL}/api/finance/bank/unreconciled/${bankAccountId}?${qs}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/bank/unreconciled/${encodeURIComponent(bankAccountId)}?${qs}`, {
       headers: buildRuntimeHeaders(session),
       cache: "no-store",
     });

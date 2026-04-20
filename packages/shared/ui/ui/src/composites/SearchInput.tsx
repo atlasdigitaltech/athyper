@@ -15,7 +15,7 @@ import {
   type InputHTMLAttributes,
 } from "react";
 
-import { cn } from "@athyper/theme";
+import { cn } from "@athyper/theme/utils";
 
 export interface SearchInputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> {

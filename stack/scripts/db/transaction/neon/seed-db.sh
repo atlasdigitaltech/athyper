@@ -6,28 +6,63 @@
 # Seeds the application database via the provisioning system.
 #
 # Usage:
-#   ./seed-db.sh                 # Phase 1+2+3 — DDL + 010_system + 020_blueprint
-#                                #               + 030_tenant + 040_prod_tenant
-#   ./seed-db.sh --ddl-only      # Phase 1 only — schemas/tables, no seed data
-#   ./seed-db.sh --system-only   # Phase 2 only — 010_system (system/lookup seed only)
-#                                #               DDL must already exist
-#   ./seed-db.sh --no-demo       # Phase 1+2   — DDL + 010_system (system/lookup seed)
-#                                #               020_blueprint / 030_tenant / 040_prod_tenant skipped
-#   ./seed-db.sh --demo-only     # Phase 1+2+3 — all phases; checksum tracking skips already-done files
-#                                #               safe to run on any DB state (fresh or partial)
-#   ./seed-db.sh --reset         # DROP all schemas + schema_provisions, then re-seed Phase 1+2+3
-#   ./seed-db.sh --drop-only     # DROP all schemas + schema_provisions only (no re-seed)
+#   ./seed-db.sh                 # Run all phases (DDL + platform seed + blueprints + tenants)
+#   ./seed-db.sh --all           # Same as default
+#   ./seed-db.sh --ddl-only      # Phase 1 only — DDL (schemas/tables/indexes/triggers)
+#   ./seed-db.sh --system-only   # Phase 2 only — 010_platform/ (platform seed; DDL must exist)
+#   ./seed-db.sh --no-demo       # Phase 1+2    — DDL + platform seed only
+#                                #   blueprints (020_universal/ 030_industry/) and
+#                                #   tenant data (040_tenants/) are skipped
+#   ./seed-db.sh --demo-only     # Phase 1+2+3  — same as default; alias for clarity
+#   ./seed-db.sh --reset         # DROP all app schemas + tracking tables, then re-seed
+#                                #   can combine: --reset --ddl-only  (drop + DDL only)
+#                                #                --reset --no-demo   (drop + Phase 1+2 only)
+#   ./seed-db.sh --drop-only     # DROP all app schemas + tracking tables only (no re-seed)
 #   ./seed-db.sh --status        # Read-only report — shows OK / PENDING / CHANGED per file
 #   ./seed-db.sh --force         # Re-run all phases even if checksum unchanged
+#   ./seed-db.sh --phase=N       # Low-level: run explicit phase(s) — N is 1, 2, or 3
+#                                #   e.g. --phase=1 --phase=2 for DDL + platform seed only
+#   ./seed-db.sh --tenant-id=UUID  # Set app.seed_tenant_id for the entire Phase 3 session
+#                                #   Blueprints (020_universal/ 030_industry/) and tenant
+#                                #   instance files use this UUID to scope their inserts.
+#                                #   Can also be set via SEED_TENANT_ID env var.
+#                                #   If omitted, each SQL file uses its own baked-in UUID
+#                                #   (correct for the demo tenant; required for new clients).
+#
+# Environment variables:
+#   DATABASE_ADMIN_URL   Direct Postgres connection URL. Must NOT point to PgBouncer.
+#                        e.g. postgres://athyperadmin:pass@localhost:5432/athyper_dev1
+#                        Resolution order: shell env → stack/env/.env → (error)
+#                        Docker-internal hostnames are rewritten to localhost automatically:
+#                          @db:           → @localhost:
+#                          @dbpool-apps:  → @localhost:
+#                          @dbpool-session: → @localhost:
+#                        Script aborts if the resolved URL targets a PgBouncer port
+#                        (:6432 or :6433) — migrate.ts requires a direct connection.
+#
+#   DB_HOST              Fallback host when DATABASE_ADMIN_URL is absent (default: localhost)
+#                        Used to build: postgres://DB_USER:DB_PASSWORD@DB_HOST:DB_PORT/DB_NAME
+#   DB_PORT              Fallback port (default: 5432). Must be direct Postgres, not PgBouncer.
+#   DB_NAME              Fallback database name (default: athyper_dev1)
+#   DB_USER              Fallback database user (default: athyperadmin)
+#   DB_PASSWORD          Fallback password. Resolution order: shell env → stack/env/.env
+#                        Required when DATABASE_ADMIN_URL is not set.
+#
+#   SEED_TENANT_ID       UUID of target tenant for Phase 3 provisioning.
+#                        Resolution order: shell env → stack/env/.env
+#                        Overridden by --tenant-id=UUID CLI flag.
+#                        If omitted, each Phase 3 SQL file uses its own baked-in UUID.
 #
 # Phase layout (migrate.ts):
 #   Phase 1 — DDL        : all dirs under server/db/sql/ except 900_seed_data/
-#   Phase 2 — System     : 900_seed_data/010_system/
-#   Phase 3 — Blueprint  : 900_seed_data/020_blueprint/
-#             Tenant     : 900_seed_data/030_tenant/
-#             Prod Tenant: 900_seed_data/040_prod_tenant/
+#   Phase 2 — Platform   : 900_seed_data/010_platform/
+#   Phase 3 — Blueprint  : 900_seed_data/020_universal/  (TIER 1 foundation + TIER 2a COA)
+#                        : 900_seed_data/030_industry/   (TIER 2b industry packs + TIER 3 modules)
+#             Tenant     : 900_seed_data/040_tenants/{client}/
 #
-# Requires: Docker running with athyper-stack-db-1 container
+# Requires: Node.js with tsx available (npx tsx)
+#           DATABASE_ADMIN_URL must be a DIRECT Postgres connection — not PgBouncer.
+#           DDL (CREATE SCHEMA, ALTER TABLE …) fails over a pooled connection.
 # =======================================================================
 
 set -euo pipefail
@@ -93,20 +128,52 @@ if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Rewrite Docker-internal hostnames to localhost (this script runs on the host)
-# The .env file uses Docker service names (e.g. @db:5432) which only resolve
-# inside the Docker network. Replace them with localhost equivalents.
+# Rewrite Docker-internal hostnames to localhost (this script runs on the host).
+# The .env file uses Docker service names (e.g. @db:5432) that only resolve
+# inside the Docker network. Rewrite @db:/@dbpool-*: to @localhost: so the
+# host-side Node process can connect. PgBouncer ports (:6432/:6433) are
+# checked and rejected separately below — DDL requires a direct connection.
 # ---------------------------------------------------------------------------
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@db:/@localhost:}"
+
+# Warn and abort if the URL still routes through PgBouncer (ports 6432/6433).
+# migrate.ts explicitly requires a direct connection — PgBouncer breaks DDL.
+if echo "$DATABASE_ADMIN_URL" | grep -qE ':6432|:6433'; then
+  echo -e "${RED}ERROR: DATABASE_ADMIN_URL appears to use a PgBouncer port (:6432 or :6433).${NC}"
+  echo -e "${RED}       migrate.ts requires a direct Postgres connection (port 5432).${NC}"
+  echo -e "${YELLOW}       Set DATABASE_ADMIN_URL to the direct DB URL, e.g.:${NC}"
+  echo -e "${YELLOW}         postgres://athyperadmin:<pass>@localhost:5432/athyper_dev1${NC}"
+  exit 1
+fi
+# Rewrite dbpool hostnames only after the port check (so the error message is
+# actionable — user sees the original pooler address, not localhost).
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-apps:/@localhost:}"
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-session:/@localhost:}"
 
 export DATABASE_ADMIN_URL
 
+# ---------------------------------------------------------------------------
+# Read SEED_TENANT_ID — environment variable takes precedence over .env file.
+# Optional — only used by Phase 3 (blueprint + tenant provisioning).
+# ---------------------------------------------------------------------------
+if [ -z "${SEED_TENANT_ID:-}" ]; then
+  if [ -f "$ENV_FILE" ]; then
+    SEED_TENANT_ID=$(grep -E '^SEED_TENANT_ID=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  fi
+fi
+# If --tenant-id=UUID was passed on the command line, migrate.ts handles that
+# precedence internally; we export SEED_TENANT_ID here only as the env fallback.
+export SEED_TENANT_ID
+
 # Show connection target (mask password — strip everything up to first @)
 DB_TARGET="${DATABASE_ADMIN_URL#*@}"
-echo -e "${GREEN}Database: ${DB_TARGET}${NC}"
-echo -e "${GREEN}Server directory: ${SERVER_DIR}${NC}"
+echo -e "${GREEN}Database : ${DB_TARGET}${NC}"
+echo -e "${GREEN}Server   : ${SERVER_DIR}${NC}"
+if [ -n "${SEED_TENANT_ID:-}" ]; then
+  echo -e "${GREEN}Tenant ID: ${SEED_TENANT_ID}${NC}"
+else
+  echo -e "${YELLOW}Tenant ID: (not set — Phase 3 files use baked-in UUIDs)${NC}"
+fi
 echo -e "${GREEN}Arguments: ${*:-<none>}${NC}"
 echo ""
 
@@ -119,9 +186,12 @@ if ! command -v npx &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# Pass args directly to migrate.ts — it understands all flags natively:
+# Pass all args directly to migrate.ts.
+# Supported flags:
 #   (no args) / --all / --ddl-only / --system-only / --no-demo / --demo-only
-#   --reset / --drop-only / --status / --force / --phase=N
+#   --reset [--ddl-only | --no-demo] / --drop-only / --status / --force
+#   --phase=N  (repeatable, N = 1 | 2 | 3)
+#   --tenant-id=UUID  (sets app.seed_tenant_id for Phase 3; overrides SEED_TENANT_ID)
 # ---------------------------------------------------------------------------
 MIGRATE_ARGS="${*:---all}"
 

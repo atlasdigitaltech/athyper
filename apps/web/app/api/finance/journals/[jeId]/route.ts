@@ -31,7 +31,7 @@ export async function PATCH(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${jeId}`, {
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/journals/${encodeURIComponent(jeId)}`, {
       method: "PATCH",
       headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
       body: JSON.stringify(body),

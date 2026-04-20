@@ -25,6 +25,7 @@ import type { ApprovalContext, WorkflowStageDetail, WorkItem } from "@athyper/ap
 import { useState } from "react";
 import { bffFetch } from "@/lib/bff-fetch";
 import { formatTitle } from "@/lib/format";
+import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
@@ -131,7 +132,7 @@ function WorkItemRow({ item }: { item: WorkItem }) {
   return (
     <div className="flex items-center gap-2 text-sm">
       <StatusIcon className={`h-4 w-4 shrink-0 ${statusColor[item.status] ?? "text-muted-foreground"}`} />
-      <span className="flex-1 text-muted-foreground">Assignee</span>
+      <span className="flex-1 capitalize text-muted-foreground">{item.assignee_type}</span>
       <Badge variant="outline" className="capitalize text-[10px]">{item.status}</Badge>
       {item.decision_at && (
         <span className="text-xs text-muted-foreground">{fmtDate(item.decision_at)}</span>
@@ -158,7 +159,7 @@ function StageCard({ stage, isCurrent }: { stage: WorkflowStageDetail; isCurrent
         <div className="flex items-center gap-2">
           <span className="text-xs tabular-nums font-mono text-muted-foreground w-5">{stage.stage_order}</span>
           <span className="font-medium text-sm">{stage.stage_name}</span>
-          <Badge variant="outline" className="text-[10px]">{stage.stage_mode}</Badge>
+          <Badge variant="outline" className="capitalize text-[10px]">{stage.stage_mode.toLowerCase()}</Badge>
         </div>
         <div className="flex items-center gap-1.5">
           {isCurrent && <Badge variant="info" className="text-[10px]">Current</Badge>}
@@ -192,6 +193,7 @@ function StageCard({ stage, isCurrent }: { stage: WorkflowStageDetail; isCurrent
 function ActionPanel({ context, requestId }: { context: ApprovalContext; requestId: string }) {
   const [remarks, setRemarks] = useState("");
   const [actionInFlight, setActionInFlight] = useState<"approve" | "reject" | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const mutation = useWorkItemAction(requestId);
   const currentStage = context.stages[context.current_stage_index ?? -1];
   const pendingItem  = currentStage?.work_items.find((i) => i.status === "pending");
@@ -201,9 +203,12 @@ function ActionPanel({ context, requestId }: { context: ApprovalContext; request
   async function submit(action: "approve" | "reject") {
     if (!pendingItem) return;
     setActionInFlight(action);
+    setSubmitError(null);
     try {
       await mutation.mutateAsync({ workItemId: pendingItem.id, action, remarks: remarks || undefined });
       setRemarks("");
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Action failed. Please try again.");
     } finally {
       setActionInFlight(null);
     }
@@ -239,6 +244,9 @@ function ActionPanel({ context, requestId }: { context: ApprovalContext; request
           <ThumbsDown className="h-3.5 w-3.5" /> Reject
         </Button>
       </div>
+      {submitError && (
+        <p className="text-xs text-destructive">{submitError}</p>
+      )}
     </div>
   );
 }
@@ -276,6 +284,11 @@ export default function AppEntityFlowPage() {
   const { data: request, isLoading: requestLoading } = useEntityWorkflowRequest(entity, id);
   const { data: context, isLoading: contextLoading } = useApprovalContext(request?.id ?? null);
   const isLoading = requestLoading || (!!request && contextLoading);
+
+  // Guard — all hooks above; safe to return early from here
+  const { guardLoading, denied } = useSubrouteGuard(entity, "hasFlow");
+  if (guardLoading) return <GuardSkeleton />;
+  if (denied) return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
 
   return (
     <PageFrame

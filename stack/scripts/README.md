@@ -237,17 +237,21 @@ stack\scripts\stack-profile\logs.bat -f
 
 ```bash
 # Git Bash / WSL
-bash stack/scripts/db/transaction/neon/seed-db.sh              # Full seed (DDL + standard + demo data)
-bash stack/scripts/db/transaction/neon/seed-db.sh --no-demo    # Production-like (no demo data)
-bash stack/scripts/db/transaction/neon/seed-db.sh --demo-only  # Demo data only
+bash stack/scripts/db/transaction/neon/seed-db.sh              # Full seed (DDL + platform + blueprint + tenant)
+bash stack/scripts/db/transaction/neon/seed-db.sh --all        # Same as above (explicit alias)
+bash stack/scripts/db/transaction/neon/seed-db.sh --no-demo    # Production-like (DDL + platform only)
+bash stack/scripts/db/transaction/neon/seed-db.sh --demo-only  # All phases, alias for default
 bash stack/scripts/db/transaction/neon/seed-db.sh --status     # Show provision status, no changes
+bash stack/scripts/db/transaction/neon/seed-db.sh --tenant-id=<UUID>  # Provision for a specific tenant UUID
 ```
 ```bat
 :: Command Prompt / PowerShell
 stack\scripts\db\transaction\neon\seed-db.bat
+stack\scripts\db\transaction\neon\seed-db.bat --all
 stack\scripts\db\transaction\neon\seed-db.bat --no-demo
 stack\scripts\db\transaction\neon\seed-db.bat --demo-only
 stack\scripts\db\transaction\neon\seed-db.bat --status
+stack\scripts\db\transaction\neon\seed-db.bat --tenant-id=<UUID>
 ```
 
 Requires: Node.js 18+, running Postgres container.
@@ -303,7 +307,9 @@ bash stack/scripts/stack-profile/restart.sh           # Restart all running serv
 bash stack/scripts/stack-profile/restart.sh gateway   # Restart a specific service
 bash stack/scripts/stack-profile/logs.sh -f
 bash stack/scripts/stack-profile/logs.sh gateway -f --tail 100
+bash stack/scripts/db/transaction/neon/seed-db.sh --all    # Explicit alias for full provision
 bash stack/scripts/db/transaction/neon/seed-db.sh --reset  # Re-run DB seed (e.g. after schema change)
+bash stack/scripts/db/transaction/neon/seed-db.sh --tenant-id=<UUID>  # Provision Phase 3 for a specific tenant
 
 # Application services (local: runs pnpm dev; staging/prod: compose up/stop)
 bash stack/scripts/app/api-up.sh                      # Start backend API (default mode)
@@ -326,7 +332,9 @@ stack\scripts\stack-profile\restart.bat
 stack\scripts\stack-profile\restart.bat gateway
 stack\scripts\stack-profile\logs.bat -f
 stack\scripts\stack-profile\logs.bat gateway -f --tail 100
+stack\scripts\db\transaction\neon\seed-db.bat --all
 stack\scripts\db\transaction\neon\seed-db.bat --reset
+stack\scripts\db\transaction\neon\seed-db.bat --tenant-id=<UUID>
 
 stack\scripts\app\api-up.bat
 stack\scripts\app\api-up.bat worker
@@ -352,12 +360,18 @@ The `STACK_PROFILE` env var (also settable as a CLI arg to `stack-profile/up`) c
 | `analytics` | core + Metabase | Analytics / BI (requires governance gate — see validate-env) |
 | `monitoring` | core + GlitchTip, Healthchecks, Uptime Kuma | Error tracking + uptime monitoring |
 | `render` | core + Gotenberg + Tika | Document rendering / extraction |
-| `security` | core + ClamAV | Antivirus scanning |
 | `security-infisical` | core + Infisical | Secrets management |
-| `memorycache-jobs` | adds dedicated Redis for BullMQ | High-isolation job queue |
+| `memorycache` | standalone Redis container | Add Redis independently of `core` |
+| `memorycache-jobs` | dedicated Redis for BullMQ | High-isolation job queue |
+| `objectstorage` | standalone MinIO container | Add MinIO independently of `core` |
 | `admin` | core + BullBoard + pgweb | Admin UIs for queues and database |
 | `apps` | core + athyper-api + athyper-neon-web (containerised) | Staging / production full-stack |
-| `all` | all of the above | Integration testing, CI |
+| `db` | standalone Postgres + PgBouncer containers | Add DB tier independently of `core` |
+| `iam` | standalone Keycloak container | Add IAM independently of `core` |
+| `gateway` | standalone Traefik container | Add ingress independently of `core` |
+| `dev` | development-specific helper services | Local developer tooling |
+| `emergency` | break-glass emergency services | Incident response (see RBAC posture) |
+| `all` | every profile above | Integration testing, CI |
 
 Set the default in `stack/env/.env`:
 ```
@@ -706,23 +720,29 @@ seed-db.bat [flags...]
 
 | Flag | Description |
 |------|-------------|
-| _(none)_ | Full provision: DDL + system data + blueprint/tenant data + demo data |
-| `--ddl-only` | Phase 1 only — DDL migrations; no seed data |
-| `--system-only` | Phase 2 only — system/lookup seed; DDL must already exist |
-| `--no-demo` | Phase 1+2 only — DDL + system data; skips blueprint/tenant/demo phases |
-| `--demo-only` | All phases with checksum tracking; safe to run on any DB state |
+| _(none)_ or `--all` | Full provision: DDL + platform seed + blueprint/tenant data (same result) |
+| `--ddl-only` | Phase/Stage 1 only — DDL migrations; no seed data |
+| `--system-only` | Phase/Stage 2 only — platform seed (`010_platform/`); DDL must already exist |
+| `--no-demo` | Phase/Stage 1+2 only — DDL + platform seed; skips blueprint/tenant phases |
+| `--demo-only` | All phases with checksum tracking; explicit alias for the default |
 | `--reset` | **Destructive**: drop all schemas + re-provision all phases from scratch |
+| `--reset --ddl-only` | **Destructive**: drop all schemas + DDL only (no seed data) |
+| `--reset --no-demo` | **Destructive**: drop all schemas + Phase 1+2 only |
 | `--drop-only` | **Destructive**: drop all schemas only (no re-seed) |
 | `--status` | Read-only report — shows OK / PENDING / CHANGED per file, no DB changes |
 | `--force` | Re-run all phases even if checksum unchanged |
-| `--phase=N` | Run only phase N (1 = DDL, 2 = system/010, 3 = blueprint/tenant/demo) |
+| `--phase=N` (`.sh`) / `--stage=N` (`.bat`) | Run only phase N (1 = DDL, 2 = platform seed, 3 = blueprint/tenant) |
+| `--tenant-id=UUID` | Set `app.seed_tenant_id` for Phase 3; overrides `SEED_TENANT_ID` env var. Required when seeding a new client tenant; omit to use the baked-in UUID (demo tenant). |
 
 Seed phases:
-1. DDL — schema migrations
-2. System data — `db/seed/010_system/`
-3. Tenant + blueprint + demo data — `db/seed/020_blueprint/`, `030_tenant/`, `040_prod_tenant/`, demo overlays
+1. **DDL** — all dirs under `server/db/sql/` except `900_seed_data/`
+2. **Platform data** — `server/db/sql/900_seed_data/010_platform/`
+3. **Blueprint + Tenant data**:
+   - `900_seed_data/020_universal/` — TIER 1 foundation + TIER 2a COA
+   - `900_seed_data/030_industry/` — TIER 2b industry packs + TIER 3 modules
+   - `900_seed_data/040_tenants/{client}/` — per-client tenant instance files
 
-Requires `DATABASE_URL` (or `DATABASE_ADMIN_URL`) to be set in `server/.env`.
+Requires `DATABASE_ADMIN_URL` (direct Postgres; **not** PgBouncer) set in `stack/env/.env` or `server/.env`. Docker-internal hostnames (`@db:`, `@dbpool-apps:`, `@dbpool-session:`) are rewritten to `localhost` automatically.
 
 ### db/session/iam/seed-iam-credentials
 
@@ -827,6 +847,7 @@ Requires: running IAM container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 | `KEYCLOAK_IMAGE_TAG` | Yes | Keycloak Docker image tag (used by import/export scripts) |
 | `ATHYPER_DATA` | Yes | Absolute path to data volume root (e.g. `/path/to/stack/data`) |
 | `ATHYPER_KERNEL_CONFIG_PATH` | Yes | Relative path to kernel config JSON under `stack/config/` |
+| `SEED_TENANT_ID` | No | UUID of target tenant for Phase 3 provisioning (overridden by `--tenant-id=UUID`) |
 | `CREDENTIAL_MASTER_KEY` | Prod | Encryption key (≥32 chars, base64) for credential storage |
 | `SKIP_ENV_VALIDATION` | No | Set to `1` to bypass validate-env in `up` (not recommended) |
 
@@ -964,8 +985,8 @@ The `.bat` scripts are not affected by MSYS path mangling.
 | `app/web-up` | _(none)_ | Start web frontend (local: pnpm dev; staging/prod: compose up) | No |
 | `app/web-down` | _(none)_ | Stop web frontend | No |
 | `app/web-restart` | _(none)_ | Restart web frontend | No |
-| `db/transaction/neon/seed-db` | `[--ddl-only\|--system-only\|--no-demo\|--demo-only\|--reset\|--drop-only\|--status\|--force\|--phase=N]` | Run database provisioner (DDL + seed data) | Additive |
-| `db/transaction/neon/seed-db --reset` | `--reset [--force]` | Drop and re-provision all schemas | **Yes** |
+| `db/transaction/neon/seed-db` | `[--all\|--ddl-only\|--system-only\|--no-demo\|--demo-only\|--reset\|--drop-only\|--status\|--force\|--phase=N (.sh) / --stage=N (.bat)\|--tenant-id=UUID]` | Run database provisioner (DDL + seed data) | Additive |
+| `db/transaction/neon/seed-db --reset` | `--reset [--ddl-only\|--no-demo\|--force]` | Drop and re-provision all schemas | **Yes** |
 | `db/transaction/neon/seed-db --drop-only` | `--drop-only` | Drop all schemas without re-seeding | **Yes** |
 | `db/session/iam/seed-iam-credentials` | _(none)_ | Set demo user passwords in Keycloak (idempotent) | No |
 | `db/session/iam/reset-iam` | _(none)_ — 10s countdown | Wipe IAM DB + reimport realm JSON + seed passwords [0/5]–[5/5] | **Yes** |

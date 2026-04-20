@@ -17,13 +17,19 @@ export async function GET(
 
   try {
     const res = await fetch(
-      `${COLLAB_API_URL}/api/collab/comments/${commentId}/reactions`,
+      `${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}/reactions`,
       { headers: buildRuntimeHeaders(session), cache: "no-store" },
     );
-    if (!res.ok) return NextResponse.json({ ok: true, data: [] });
-    return NextResponse.json(await res.json());
-  } catch {
-    return NextResponse.json({ ok: true, data: [] });
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 410) return NextResponse.json({ ok: true, data: [] });
+      console.error("[api/collab/reactions GET] upstream", res.status, { userId: session.userId });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
+    }
+    const data: unknown = await res.json().catch(() => null);
+    return NextResponse.json(data ?? { ok: true, data: [] });
+  } catch (e) {
+    console.error("[api/collab/reactions GET]", e instanceof Error ? e.message : e, { userId: session.userId });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }
 
@@ -42,7 +48,7 @@ export async function POST(
 
   try {
     const res = await fetch(
-      `${COLLAB_API_URL}/api/collab/comments/${commentId}/reactions`,
+      `${COLLAB_API_URL}/api/collab/comments/${encodeURIComponent(commentId)}/reactions`,
       {
         method: "POST",
         headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
@@ -51,12 +57,12 @@ export async function POST(
       },
     );
     if (!res.ok) {
-      console.error("[api/collab/reactions POST] upstream", res.status);
-      return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+      console.error("[api/collab/reactions POST] upstream", res.status, { userId: session.userId });
+      return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
     }
     return NextResponse.json(await res.json());
   } catch (e) {
-    console.error("[api/collab/reactions POST]", e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: "Collab service unavailable" }, { status: 503 });
+    console.error("[api/collab/reactions POST]", e instanceof Error ? e.message : e, { userId: session.userId });
+    return NextResponse.json({ error: "Collab service unavailable" }, { status: 502 });
   }
 }
