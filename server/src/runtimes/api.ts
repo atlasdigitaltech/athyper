@@ -21,6 +21,7 @@ import { registerRecordsRoutes } from "@athyper/svc-records";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
+import { registerCollabAttachmentRoutes } from "../../framework/runtime/services/collab/routes/collab-attachments.route.js";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
 import {
   registerPlatformRoutes,
@@ -396,6 +397,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
     mentionService,
     redis,
+    logger,
+  });
+
+  registerCollabAttachmentRoutes(apiRouter, {
+    db: db.kysely,
+    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    objectStorage: config.objectStorage
+      ? { adapterRef: objectStorageRef, bucket: config.objectStorage.bucket, maxUploadMb: config.objectStorage.maxUploadMb }
+      : undefined,
     logger,
   });
 

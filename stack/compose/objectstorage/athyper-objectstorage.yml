@@ -33,6 +33,9 @@ services:
       TEMPO_S3_BUCKET:        ${TEMPO_S3_BUCKET}
       TEMPO_S3_ACCESS_KEY:    ${TEMPO_S3_ACCESS_KEY}
       TEMPO_S3_SECRET_KEY:    ${TEMPO_S3_SECRET_KEY}
+      LOKI_S3_BUCKET:         ${LOKI_S3_BUCKET}
+      LOKI_S3_ACCESS_KEY:     ${LOKI_S3_ACCESS_KEY}
+      LOKI_S3_SECRET_KEY:     ${LOKI_S3_SECRET_KEY}
     depends_on:
       objectstorage:
         condition: service_healthy
@@ -41,13 +44,7 @@ services:
       - |
         set -eu
 
-        # Local dev: root credentials are reused by all services — no scoped accounts needed.
-        if [ "$${ENVIRONMENT}" = "local" ]; then
-          echo "[objectstorage-init] ENVIRONMENT=local — skipping account provisioning"
-          exit 0
-        fi
-
-        echo "[objectstorage-init] provisioning MinIO service accounts for $${ENVIRONMENT}..."
+        echo "[objectstorage-init] connecting to MinIO ($${S3_ENDPOINT}) for $${ENVIRONMENT}..."
 
         # Connect as root. Retry up to 6×5 s to tolerate slow MinIO startup.
         for i in 1 2 3 4 5 6; do
@@ -59,9 +56,25 @@ services:
         done
         mc alias ls storage >/dev/null
 
+        # ── Buckets (ALL environments — local dev needs buckets too) ──────────
+        # --ignore-existing makes this safe to run on every stack restart.
+        mc mb --ignore-existing "storage/$${S3_BUCKET}"
+        mc mb --ignore-existing "storage/$${BACKUP_S3_BUCKET}"
+        mc mb --ignore-existing "storage/$${TEMPO_S3_BUCKET}"
+        mc mb --ignore-existing "storage/$${LOKI_S3_BUCKET}"
+        echo "[objectstorage-init] buckets ready: $${S3_BUCKET}, $${BACKUP_S3_BUCKET}, $${TEMPO_S3_BUCKET}, $${LOKI_S3_BUCKET}"
+
+        # Local dev: all services share root credentials — no scoped accounts needed.
+        if [ "$${ENVIRONMENT}" = "local" ]; then
+          echo "[objectstorage-init] ENVIRONMENT=local — skipping scoped account provisioning"
+          exit 0
+        fi
+
+        echo "[objectstorage-init] provisioning scoped service accounts for $${ENVIRONMENT}..."
+
         # ── Policies ──────────────────────────────────────────────────────────
         # Scoped to specific buckets only. Recreated on each run so bucket-name
-        # changes (e.g. athyper-staging → athyper-prod) are picked up.
+        # changes (e.g. athyper-staging → athyper-prod) are picked up automatically.
 
         cat > /tmp/athyper-app-policy.json << EOF
         {
@@ -130,12 +143,38 @@ services:
         }
         EOF
 
+        cat > /tmp/athyper-loki-policy.json << EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+                "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"
+              ],
+              "Resource": ["arn:aws:s3:::$${LOKI_S3_BUCKET}/*"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket", "s3:GetBucketLocation",
+                "s3:ListBucketMultipartUploads"
+              ],
+              "Resource": ["arn:aws:s3:::$${LOKI_S3_BUCKET}"]
+            }
+          ]
+        }
+        EOF
+
         mc admin policy rm storage athyper-app-policy    2>/dev/null || true
         mc admin policy rm storage athyper-backup-policy 2>/dev/null || true
         mc admin policy rm storage athyper-tempo-policy  2>/dev/null || true
+        mc admin policy rm storage athyper-loki-policy   2>/dev/null || true
         mc admin policy create storage athyper-app-policy    /tmp/athyper-app-policy.json
         mc admin policy create storage athyper-backup-policy /tmp/athyper-backup-policy.json
         mc admin policy create storage athyper-tempo-policy  /tmp/athyper-tempo-policy.json
+        mc admin policy create storage athyper-loki-policy   /tmp/athyper-loki-policy.json
         echo "[objectstorage-init] policies created"
 
         # ── Users (idempotent — skip if access key already registered) ─────────
@@ -145,19 +184,38 @@ services:
           || mc admin user add storage "$${BACKUP_S3_ACCESS_KEY}" "$${BACKUP_S3_SECRET_KEY}"
         mc admin user info storage "$${TEMPO_S3_ACCESS_KEY}"  >/dev/null 2>&1 \
           || mc admin user add storage "$${TEMPO_S3_ACCESS_KEY}"  "$${TEMPO_S3_SECRET_KEY}"
+        mc admin user info storage "$${LOKI_S3_ACCESS_KEY}"   >/dev/null 2>&1 \
+          || mc admin user add storage "$${LOKI_S3_ACCESS_KEY}"   "$${LOKI_S3_SECRET_KEY}"
         echo "[objectstorage-init] users ready"
 
         # ── Policy attachments (idempotent) ────────────────────────────────────
         mc admin policy attach storage athyper-app-policy    --user "$${APP_S3_ACCESS_KEY}"
         mc admin policy attach storage athyper-backup-policy --user "$${BACKUP_S3_ACCESS_KEY}"
         mc admin policy attach storage athyper-tempo-policy  --user "$${TEMPO_S3_ACCESS_KEY}"
+        mc admin policy attach storage athyper-loki-policy   --user "$${LOKI_S3_ACCESS_KEY}"
         echo "[objectstorage-init] policies attached"
 
-        # ── Buckets ────────────────────────────────────────────────────────────
-        mc mb --ignore-existing "storage/$${S3_BUCKET}"
-        mc mb --ignore-existing "storage/$${BACKUP_S3_BUCKET}"
-        mc mb --ignore-existing "storage/$${TEMPO_S3_BUCKET}"
-        echo "[objectstorage-init] buckets ready: $${S3_BUCKET}, $${BACKUP_S3_BUCKET}, $${TEMPO_S3_BUCKET}"
+        # ── Object lifecycle (ILM) — non-local only ───────────────────────────
+        # Automatically expire orphaned objects that were never linked to a
+        # document (reference_count stays 0). The application sets a
+        # custom tag  "status=pending"  on every uploaded object; the server
+        # clears it to "status=active" when the first entity link is created.
+        # MinIO expires objects whose "status" tag equals "pending" after 7 days,
+        # covering uploads that were abandoned before linking. Active objects
+        # carry no expiry rule — retention is managed by the application layer.
+        #
+        # Multipart uploads that were interrupted are expired after 2 days via a
+        # separate AbortIncompleteMultipartUpload rule on each bucket.
+        #
+        # mc ilm rule add is idempotent with --id — safe to re-run.
+        mc ilm rule add --id "app-pending-expiry"    --expire-days 7  --tags "status=pending" "storage/$${S3_BUCKET}"
+        mc ilm rule add --id "app-abort-multipart"   --expire-days 2  --noncurrent-expire-days 0 --expire-delete-marker "storage/$${S3_BUCKET}" 2>/dev/null || \
+          mc ilm rule add --id "app-abort-multipart" --expire-days 2 "storage/$${S3_BUCKET}" 2>/dev/null || true
+
+        mc ilm rule add --id "backup-abort-multipart"  --expire-days 2 "storage/$${BACKUP_S3_BUCKET}" 2>/dev/null || true
+        mc ilm rule add --id "tempo-abort-multipart"   --expire-days 2 "storage/$${TEMPO_S3_BUCKET}"  2>/dev/null || true
+        mc ilm rule add --id "loki-abort-multipart"    --expire-days 2 "storage/$${LOKI_S3_BUCKET}"   2>/dev/null || true
+        echo "[objectstorage-init] ILM lifecycle rules configured"
 
         echo "[objectstorage-init] provisioning complete"
     networks: [edge]
@@ -184,6 +242,13 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
       MINIO_BROWSER: "on"
       MINIO_BROWSER_REDIRECT: "true"
+    # Port 9000 bound to loopback only: accessible from the host for local dev
+    # (server running outside Docker uses S3_ENDPOINT=http://127.0.0.1:9000).
+    # Safe in staging/production — loopback is not reachable from outside the host;
+    # external S3 API traffic routes through Traefik on the edge network.
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - ${ATHYPER_DATA}/objectstorage:/data
     networks: [edge]

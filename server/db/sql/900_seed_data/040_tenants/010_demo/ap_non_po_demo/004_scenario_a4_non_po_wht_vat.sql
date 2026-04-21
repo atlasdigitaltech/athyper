@@ -21,7 +21,7 @@ DECLARE
     v_cc_id        uuid;
     v_vendor_id    uuid;
     v_sys          uuid := '00000000-0000-0000-0000-000000000000';
-    v_invoice_id   uuid;
+    v_invoice_id   uuid := '00000001-0000-0000-0001-000000000004';  -- INV-A4-0001 (pinned)
     v_sc_opex_id   uuid;
     v_bi_opex_id   uuid;
     v_tg_vat_id    uuid;
@@ -56,7 +56,9 @@ BEGIN
 
     -- ── Invoice header ──────────────────────────────────────────────────────
     INSERT INTO document.purchase_invoice (
+        id,
         tenant_id, company_code_id,
+        code, name,
         invoice_number, invoice_source, invoice_type,
         supplier_id, supplier_invoice_number, supplier_invoice_date,
         document_date, posting_date, received_date,
@@ -66,7 +68,9 @@ BEGIN
         description, status, created_by,
         fiscal_year, period_number
     ) VALUES (
+        v_invoice_id,
         v_tenant_id, v_cc_id,
+        'INV-A4-0001', 'Non-PO Invoice with VAT + WHT',
         'INV-A4-0001', 'NON_PO', 'STANDARD',
         v_vendor_id, 'ACME-2026-00104', CURRENT_DATE,
         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
@@ -77,8 +81,7 @@ BEGIN
         'draft', v_sys,
         extract(year FROM CURRENT_DATE)::smallint,
         extract(month FROM CURRENT_DATE)::smallint
-    )
-    RETURNING id INTO v_invoice_id;
+    );
 
     -- ── Line 1 ──────────────────────────────────────────────────────────────
     INSERT INTO document.purchase_invoice_line (

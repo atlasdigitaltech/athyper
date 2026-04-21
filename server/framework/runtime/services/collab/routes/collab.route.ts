@@ -24,6 +24,7 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import {
   verifyBearer,
   isUuid,
@@ -93,6 +94,63 @@ function toComment(row: Record<string, unknown>) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Creates entity_document_link rows linking pre-uploaded attachments to a
+ * comment. Called inside the comment insert flow — any DB error rolls back
+ * the whole operation via the caller's try/catch.
+ * reference_count on master.attachment is incremented for each valid link.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function linkAttachmentsToComment(
+  db: Kysely<any>,
+  tenantId: string,
+  commentId: string,
+  principalId: string,
+  attachmentIds: string[],
+): Promise<void> {
+  const validIds = attachmentIds.filter(isUuid).slice(0, 10); // spec: max 10
+  if (validIds.length === 0) return;
+
+  // Verify all attachment_ids belong to this tenant and are active
+  const rows = await db
+    .selectFrom("master.attachment as a")
+    .select(["a.id"])
+    .where("a.tenant_id", "=", tenantId)
+    .where("a.status",    "=", "active")
+    .where("a.id",        "in", validIds)
+    .execute() as { id: string }[];
+
+  const confirmedIds = rows.map((r) => r.id);
+  if (confirmedIds.length === 0) return;
+
+  // Insert link rows
+  await db
+    .insertInto("master.entity_document_link" as never)
+    .values(
+      confirmedIds.map((aid) => ({
+        tenant_id:     tenantId,
+        entity_type:   "master.comment",
+        entity_id:     commentId,
+        attachment_id: aid,
+        link_kind:     "related",
+        display_order: 0,
+        created_by:    principalId,
+      })),
+    )
+    .onConflict((oc) => oc.doNothing() as never)
+    .execute();
+
+  // Increment reference_count on each linked attachment
+  if (confirmedIds.length > 0) {
+    await db
+      .updateTable("master.attachment" as never)
+      .set({ reference_count: sql`reference_count + 1`, updated_at: new Date() } as never)
+      .where("id"        as never, "in", confirmedIds as never)
+      .where("tenant_id" as never, "=",  tenantId     as never)
+      .execute();
+  }
+}
 
 /** Resolve org headers → tenantId, 400 on failure. */
 async function resolveTenant(
@@ -174,11 +232,13 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const rows = await db
         .selectFrom("master.comment as c")
+        .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
           "c.commenter_id", "c.comment_text", "c.parent_comment_id",
           "c.thread_depth", "c.visibility",
           "c.created_at", "c.updated_at", "c.created_by",
+          "p.name as commenter_name" as never,
         ])
         .where("c.tenant_id",   "=", tenantId)
         .where("c.entity_type", "=", entityType)
@@ -191,7 +251,28 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .execute() as Record<string, unknown>[];
 
       const hasMore = rows.length > limit;
-      const data = rows.slice(0, limit).map(toComment);
+      const pageRows = rows.slice(0, limit);
+
+      // Bulk-count replies for each root comment in this page
+      let replyCounts: Record<string, number> = {};
+      if (pageRows.length > 0) {
+        const commentIds = pageRows.map((r) => r.id as string);
+        const rcResult = await sql<{ parent_comment_id: string; cnt: string }>`
+          SELECT parent_comment_id, COUNT(*)::text AS cnt
+          FROM master.comment
+          WHERE parent_comment_id = ANY(${sql.val(commentIds)}::uuid[])
+            AND deleted_at IS NULL
+          GROUP BY parent_comment_id
+        `.execute(db);
+        for (const r of rcResult.rows) {
+          replyCounts[r.parent_comment_id] = Number(r.cnt);
+        }
+      }
+
+      const data = pageRows.map((row) => ({
+        ...toComment(row),
+        replyCount: replyCounts[row.id as string] ?? 0,
+      }));
 
       res.json({ ok: true, data, hasMore });
     } catch (err) {
@@ -333,6 +414,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const { entityType, entityId, commentText, parentCommentId } =
         req.body as Record<string, string | undefined>;
+      const attachmentIds: string[] = Array.isArray((req.body as Record<string, unknown>).attachment_ids)
+        ? ((req.body as Record<string, unknown>).attachment_ids as string[])
+        : [];
 
       if (!entityType || !entityId || !commentText?.trim()) {
         res.status(400).json({ error: "entityType, entityId, and commentText are required" });
@@ -387,6 +471,11 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const createdAt  = (row as Record<string, unknown>).created_at instanceof Date
         ? ((row as Record<string, unknown>).created_at as Date).toISOString()
         : String((row as Record<string, unknown>).created_at);
+
+      // Link pre-uploaded attachments to this comment — best-effort, non-fatal
+      if (attachmentIds.length > 0) {
+        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, attachmentIds).catch(() => {});
+      }
 
       // Publish to Redis pub/sub and write to activity log — both fire-and-forget
       const commentEvt = {
@@ -445,6 +534,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const parentCommentId = req.params["commentId"] as string;
       const { commentText } = req.body as Record<string, string | undefined>;
+      const replyAttachmentIds: string[] = Array.isArray((req.body as Record<string, unknown>).attachment_ids)
+        ? ((req.body as Record<string, unknown>).attachment_ids as string[])
+        : [];
 
       if (!isUuid(parentCommentId)) {
         res.status(404).json({ error: "Comment not found" });
@@ -500,6 +592,10 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const createdAt  = (row as Record<string, unknown>).created_at instanceof Date
         ? ((row as Record<string, unknown>).created_at as Date).toISOString()
         : String((row as Record<string, unknown>).created_at);
+
+      if (replyAttachmentIds.length > 0) {
+        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, replyAttachmentIds).catch(() => {});
+      }
 
       // Publish to Redis pub/sub and write to activity log — both fire-and-forget
       const replyEvt = {
@@ -576,10 +672,12 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const rows = await db
         .selectFrom("master.comment as c")
+        .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
           "c.commenter_id", "c.comment_text", "c.parent_comment_id",
           "c.thread_depth", "c.visibility", "c.created_at", "c.updated_at", "c.created_by",
+          "p.name as commenter_name" as never,
         ])
         .where("c.tenant_id", "=", tenantId)
         .where("c.parent_comment_id", "=", parentId)
@@ -587,7 +685,28 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .orderBy("c.created_at", "asc")
         .execute() as Record<string, unknown>[];
 
-      res.json({ ok: true, data: rows.map(toComment) });
+      // Bulk-count nested replies for each reply in this thread
+      let replyCounts: Record<string, number> = {};
+      if (rows.length > 0) {
+        const replyIds = rows.map((r) => r.id as string);
+        const rcResult = await sql<{ parent_comment_id: string; cnt: string }>`
+          SELECT parent_comment_id, COUNT(*)::text AS cnt
+          FROM master.comment
+          WHERE parent_comment_id = ANY(${sql.val(replyIds)}::uuid[])
+            AND deleted_at IS NULL
+          GROUP BY parent_comment_id
+        `.execute(db);
+        for (const r of rcResult.rows) {
+          replyCounts[r.parent_comment_id] = Number(r.cnt);
+        }
+      }
+
+      const data = rows.map((row) => ({
+        ...toComment(row),
+        replyCount: replyCounts[row.id as string] ?? 0,
+      }));
+
+      res.json({ ok: true, data });
     } catch (err) {
       logger?.error("collab_replies_error", { err: String(err) });
       next(err);
@@ -1201,12 +1320,60 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     }
   };
 
+  // ── GET /api/collab/comments/:commentId/attachments ─────────────────────
+  // Returns attachments linked to a specific comment (entity_document_link
+  // where entity_type='master.comment' and entity_id=commentId).
+
+  const listCommentAttachmentsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const commentId = req.params["commentId"] as string;
+      if (!isUuid(commentId)) { res.json({ ok: true, data: [] }); return; }
+
+      const tenantId = await resolveTenant(req, res, db);
+      if (!tenantId) { res.json({ ok: true, data: [] }); return; }
+
+      const rows = await db
+        .selectFrom("master.entity_document_link as edl")
+        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .select([
+          "a.id as attachment_id",
+          "a.file_name",
+          "a.content_type",
+          "a.size_bytes",
+        ])
+        .where("edl.tenant_id"   as never, "=", tenantId              as never)
+        .where("edl.entity_type" as never, "=", "master.comment"      as never)
+        .where("edl.entity_id"   as never, "=", commentId             as never)
+        .where("a.status"        as never, "=", "active"              as never)
+        .orderBy("edl.display_order" as never, "asc")
+        .execute() as Record<string, unknown>[];
+
+      res.json({
+        ok: true,
+        data: rows.map((r) => ({
+          attachmentId: r["attachment_id"] as string,
+          fileName:     r["file_name"]     as string,
+          contentType:  r["content_type"]  as string,
+          sizeBytes:    Number(r["size_bytes"] ?? 0),
+          downloadUrl:  `/api/collab/attachments/${r["attachment_id"] as string}/download`,
+        })),
+      });
+    } catch (err) {
+      logger?.error("collab_comment_attachments_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── Register routes ───────────────────────────────────────────────────────
   // Static paths must come before the :commentId param routes.
   router.get("/collab/comments/unread-count",           unreadCountHandler);
   router.post("/collab/comments/mark-all-read",         markAllReadHandler);
   router.get("/collab/comments",                         listCommentsHandler);
   router.post("/collab/comments",                        createCommentHandler);
+  router.get("/collab/comments/:commentId/attachments",  listCommentAttachmentsHandler);
   router.get("/collab/comments/:commentId/replies",      listRepliesHandler);
   router.post("/collab/comments/:commentId/replies",     createReplyHandler);
   router.get("/collab/comments/:commentId/reactions",    listReactionsHandler);

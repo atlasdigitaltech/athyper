@@ -29,6 +29,8 @@ export interface ApprovableIdentity {
   number: string;
   /** Optional version badge, e.g. "v2" */
   version?: string;
+  /** Short document title / description shown below the doc number */
+  title?: string;
   /** Human-readable status, e.g. "Approved" */
   statusLabel: string;
   statusIntent: SemanticIntent;
@@ -82,12 +84,37 @@ export interface ApprovableDates {
   createdAt?: string;
 }
 
+/** Canonical lifecycle + audit trail fields from the DB record. */
+export interface ApprovableAudit {
+  /** Formatted created_at timestamp */
+  createdAt?: string;
+  /** Display name of the creator (created_by) */
+  createdBy?: string;
+  /** Formatted updated_at timestamp */
+  updatedAt?: string;
+  /** Display name of the last editor (updated_by) */
+  updatedBy?: string;
+  /** Formatted status_changed_at timestamp */
+  statusChangedAt?: string;
+  /** Display name of who last changed the status */
+  statusChangedBy?: string;
+}
+
 export interface ApprovableReference {
   /** e.g. "PO REFERENCE", "CONTRACT" */
   label: string;
   /** e.g. "Multi-Parent", "CTR-0042" */
   value: string;
   url?: string;
+  /**
+   * Rendering hint derived from the entity field's data_type.
+   * "code"   → monospace pill (uuid, reference)
+   * "date"   → plain formatted date
+   * "amount" → numeric value
+   * "enum"   → formatted label
+   * "text"   → default plain text
+   */
+  valueType?: "text" | "code" | "date" | "amount" | "enum";
 }
 
 export interface ApprovableFlowStep {
@@ -97,6 +124,23 @@ export interface ApprovableFlowStep {
   assignee?: string;
   /** Contextual note: "2/3 hrs", "next: 17 Apr" */
   note?: string;
+}
+
+// ── Progress rail ───────────────────────────────────────────────────────────
+
+export interface ProgressStage {
+  key: string;
+  label: string;
+  reachedAt?: string;
+  actor?: string;
+  targetAt?: string;
+}
+
+export interface ProgressRail {
+  stages: ProgressStage[];
+  currentKey: string;
+  stepIndex: number;
+  nextActionCopy?: string;
 }
 
 // ── Root DTO ────────────────────────────────────────────────────────────────
@@ -159,4 +203,13 @@ export interface ApprovableDocumentHeaderDTO {
 
   /** Destructive action: Cancel, Void */
   destructiveAction?: ApprovableAction;
+
+  /** Document lifecycle progress rail */
+  progressRail?: ProgressRail;
+
+  /** Next-step hint shown below state chips */
+  nextStep?: { label: string; copy: string };
+
+  /** Canonical audit trail: created/updated/status-changed metadata */
+  audit?: ApprovableAudit;
 }

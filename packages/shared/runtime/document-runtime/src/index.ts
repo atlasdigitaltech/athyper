@@ -45,3 +45,16 @@ export { AmountSummaryCard, type AmountSummaryCardProps } from "./amounts";
 export { ValidationBanner, type ValidationBannerProps } from "./validation";
 export { DocumentActionBar, type DocumentActionBarProps } from "./actions";
 export { buildOrchestratorFromRecord, type OrchestratorData } from "./orchestrator";
+
+// ── Standalone primitives ────────────────────────────────────────────────────
+export {
+  DocumentIdentityCard,
+  type DocumentIdentityCardProps,
+  type IdentityAction,
+  type IdentityDueMeta,
+} from "./identity";
+export {
+  DocumentKpiStrip,
+  type DocumentKpiStripProps,
+  type KpiStripCell,
+} from "./kpi";

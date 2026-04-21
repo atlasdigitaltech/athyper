@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS document.stocktake (
     -- Identity
     id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid            NOT NULL,
+    code                text            NOT NULL DEFAULT '',
+    name                text            NOT NULL DEFAULT '',
 
     -- Company scope
     company_code_id     uuid            NOT NULL,

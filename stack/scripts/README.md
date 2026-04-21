@@ -38,6 +38,7 @@ stack/scripts/
 │   ├── data-dirs-create.sh / .bat    # Create stack/data/ volume mount folders (idempotent)
 │   ├── data-dirs-reset.sh / .bat     # DESTRUCTIVE: wipe and recreate stack/data/ folders
 │   ├── generate-certs.sh / .bat      # Generate local TLS certs via mkcert (local env only)
+│   ├── verify-objectstorage.sh / .bat  # Post-startup: verify MinIO health, buckets, scoped accounts
 │   └── verify-port-hardening.sh / .bat  # CI guard: ensure no service bypasses the Traefik ingress
 │
 ├── stack-profile/                    # Profile-aware stack lifecycle
@@ -233,6 +234,31 @@ bash stack/scripts/stack-profile/logs.sh -f
 stack\scripts\stack-profile\logs.bat -f
 ```
 
+### Step 6b — Verify object storage
+
+After the stack is healthy, confirm MinIO is reachable and all buckets are provisioned:
+
+```bash
+# Git Bash / WSL
+bash stack/scripts/setup/verify-objectstorage.sh
+```
+```bat
+:: Command Prompt / PowerShell
+stack\scripts\setup\verify-objectstorage.bat
+```
+
+Exit code 0 = pass. Exit code 1 = MinIO not reachable or a bucket/user is missing.
+
+The `objectstorage-init` sidecar provisions all buckets automatically on stack start (it runs as a one-shot container after MinIO is healthy). If verify-objectstorage fails:
+
+1. Check init logs: `docker logs $(docker ps -aqf name=objectstorage-init)`
+2. Re-run the sidecar: `docker compose --profile core up objectstorage-init`
+3. Re-run verify: `bash stack/scripts/setup/verify-objectstorage.sh`
+
+> **Local dev**: if `S3_ENDPOINT` is not set in `stack/env/.env`, the API server disables object storage
+> (file attachments return 503). Set `S3_ENDPOINT=http://objectstorage:9000` or the server `.env`
+> override `S3_ENDPOINT=http://127.0.0.1:9000` if running the API server outside Docker.
+
 ### Step 7 — Seed the application database
 
 ```bash
@@ -293,6 +319,53 @@ stack\scripts\db\session\iam\seed-iam-credentials.bat
 
 Demo user passwords are controlled by `IAM_DEMO_USER_PASSWORD` in `stack/env/.env`.
 Default (if unset): `Demo@1234` for athyper realm, `admin` for platform-control realm.
+
+---
+
+## New Tenant Onboarding
+
+When a new tenant is registered in the system, no additional object storage steps are required. Storage is automatically scoped per tenant at the application layer.
+
+### Object storage — how it works
+
+All tenants share the same MinIO bucket (`S3_BUCKET`, e.g. `athyper-prod`). Tenant isolation is enforced by key prefixes that the API server writes:
+
+```
+tenant/<tenantId>/master/comment/<attachmentId>/v1/<filename>
+tenant/<tenantId>/master/attachment/<attachmentId>/v1/<filename>
+```
+
+The server checks `tenant_id` on every `master.attachment` row before issuing presigned URLs — a tenant can never read or write another tenant's objects even though the keys live in the same bucket.
+
+### What happens automatically on first upload
+
+When a user from a new tenant uploads their first file:
+
+1. The API server generates a UUID for the attachment and constructs the tenant-prefixed key.
+2. A presigned PUT URL is issued to the browser (15-minute TTL).
+3. The browser uploads directly to MinIO; the server never proxies binary data.
+4. After the upload, the server links the attachment to the document via `master.entity_document_link`.
+
+No bucket creation, IAM provisioning, or configuration change is needed per tenant.
+
+### Tenant offboarding (data cleanup)
+
+When a tenant is deprovisioned, their objects must be purged from the shared bucket. Use the MinIO client targeting the tenant's prefix:
+
+```bash
+# Remove all objects for a specific tenant (irreversible)
+docker run --rm --network athyper-edge \
+  -e MC_CONFIG_DIR=/tmp/.mc \
+  minio/mc:RELEASE.2025-08-13T08-35-41Z \
+  alias set storage http://objectstorage:9000 <root_key> <root_secret>
+
+docker run --rm --network athyper-edge \
+  -e MC_CONFIG_DIR=/tmp/.mc \
+  minio/mc:RELEASE.2025-08-13T08-35-41Z \
+  rm --recursive --force "storage/<S3_BUCKET>/tenant/<tenantId>/"
+```
+
+Also run the application-level cleanup (removes DB rows from `master.attachment` and `master.entity_document_link`) as part of the tenant deprovisioning flow in the admin API.
 
 ---
 

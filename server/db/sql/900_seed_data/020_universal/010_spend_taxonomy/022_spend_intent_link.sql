@@ -216,12 +216,14 @@ BEGIN
 
 
     -- ── STAGE D: HARD FAIL — selectable nodes without default_intent_id ──
+    -- Scope: only 020_base categories; industry packs link their own categories.
     SELECT count(*) INTO v_orphan_count
     FROM master.spend_category
     WHERE tenant_id = v_tid
       AND status = 'active'
       AND default_intent_id IS NULL
-      AND NOT COALESCE((metadata->'_seed'->>'container')::boolean, false);
+      AND NOT COALESCE((metadata->'_seed'->>'container')::boolean, false)
+      AND metadata->'_seed'->>'pack' = '020_base';
 
     IF v_orphan_count > 0 THEN
         RAISE EXCEPTION '[022_base] HARD FAIL — % selectable spend categories without default_intent_id: %',
@@ -231,25 +233,30 @@ BEGIN
              WHERE tenant_id = v_tid
                AND status = 'active'
                AND default_intent_id IS NULL
-               AND NOT COALESCE((metadata->'_seed'->>'container')::boolean, false));
+               AND NOT COALESCE((metadata->'_seed'->>'container')::boolean, false)
+               AND metadata->'_seed'->>'pack' = '020_base');
     END IF;
 
     -- ── STAGE E: Count assertions ────────────────────────────────────────
+    -- Stage C stamps pack='022_base' on every linked row; count those.
     IF (SELECT count(*) FROM master.spend_category
         WHERE tenant_id = v_tid
           AND status = 'active'
-          AND default_intent_id IS NOT NULL) < 80 THEN
+          AND default_intent_id IS NOT NULL
+          AND metadata->'_seed'->>'pack' = v_pack) < 80 THEN
         RAISE EXCEPTION '[022_base] Selectable nodes with intent incomplete: expected ≥80, got %',
             (SELECT count(*) FROM master.spend_category
              WHERE tenant_id = v_tid
                AND status = 'active'
-               AND default_intent_id IS NOT NULL);
+               AND default_intent_id IS NOT NULL
+               AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
-    RAISE NOTICE '[022_base] Spend-intent linkage complete: % categories linked, 0 orphans',
+    RAISE NOTICE '[022_base] Spend-intent linkage complete: % universal categories linked, 0 orphans',
         (SELECT count(*) FROM master.spend_category
          WHERE tenant_id = v_tid
            AND status = 'active'
-           AND default_intent_id IS NOT NULL);
+           AND default_intent_id IS NOT NULL
+           AND metadata->'_seed'->>'pack' = v_pack);
 
 END $seed$;

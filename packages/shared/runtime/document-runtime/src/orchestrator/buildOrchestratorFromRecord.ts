@@ -77,6 +77,26 @@ const PLACEMENT_TO_GROUP: Record<string, ActionBundleGroup> = {
   CONTEXT: "overflow",
 };
 
+// ── Built-in status-driven action groups ────────────────────────────────────
+// Applied automatically for any entity with detail_renderer = "approvable"
+// when no entity-specific action_groups is found in display_config.
+// Entity-specific config (display_config.action_groups) overrides this entirely.
+
+const APPROVABLE_STATUS_GROUPS: ActionGroupsConfig = {
+  draft:            { primary: ["update", "submit"],        working: ["cancel"] },
+  submitted:        { primary: ["approve", "deny"],         working: ["cancel"] },
+  pending_approval: { primary: ["approve", "deny"],         working: ["cancel"] },
+  in_review:        { primary: ["approve", "deny"],         working: ["cancel"] },
+  on_hold:          { primary: ["release_hold"],            working: ["cancel"] },
+  approved:         { primary: ["post"],                    working: ["propose_payment", "cancel"], output: ["view_je"] },
+  posted:           { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
+  partially_paid:   { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
+  paid:             { output: ["view_je"] },
+  cancelled:        {},
+  rejected:         { working: ["copy"] },
+  reversed:         { working: ["copy"] },
+};
+
 // ── Amount formatting ───────────────────────────────────────────────────────
 
 function fmtAmount(val: unknown): number {
@@ -130,7 +150,9 @@ export function buildOrchestratorFromRecord(
   const amountBreakdown = buildAmountBreakdown(data, dh);
 
   // ── Action Bundle ───────────────────────────────────────────────────────
-  const actionBundle = buildActionBundle(operations);
+  const actionGroups = (entity.display_config.action_groups as ActionGroupsConfig | undefined)
+    ?? (entity.display_config.detail_renderer === "approvable" ? APPROVABLE_STATUS_GROUPS : undefined);
+  const actionBundle = buildActionBundle(operations, statusNorm, actionGroups);
 
   return {
     statusDimensions,
@@ -338,8 +360,18 @@ function buildAmountBreakdown(
 
 // ── Action Bundle ────────────────────────────────────────────────────────────
 
-function buildActionBundle(operations: EntityOperation[]): ActionBundleItem[] {
-  return operations
+type ActionGroupsConfig = Record<string, {
+  primary?: string[];
+  working?: string[];
+  output?: string[];
+}>;
+
+function buildActionBundle(
+  operations: EntityOperation[],
+  statusNorm: string,
+  actionGroups?: ActionGroupsConfig,
+): ActionBundleItem[] {
+  const items: ActionBundleItem[] = operations
     .filter((op) => op.is_enabled)
     .filter((op) => op.surface === "DETAIL" || op.surface === "BOTH")
     .filter((op) => op.placement !== "COMMAND")
@@ -349,8 +381,6 @@ function buildActionBundle(operations: EntityOperation[]): ActionBundleItem[] {
         ? op.permission_code.split(".").pop()!
         : op.permission_code;
 
-      // Map placement → output group (separate from working/overflow)
-      // TOOLBAR actions that are output-like (export, print) go to "output"
       const isOutputAction = ["export", "print"].includes(code);
       const group: ActionBundleGroup =
         isOutputAction && op.placement === "TOOLBAR"
@@ -368,5 +398,25 @@ function buildActionBundle(operations: EntityOperation[]): ActionBundleItem[] {
         sort_order: op.sort_order,
         requires_confirmation: CONFIRMATION_CODES.has(code) || op.handler_type === "MODAL",
       };
+    });
+
+  // Apply status-driven group override when action_groups config is present.
+  // Operations not listed for the current status are demoted to "overflow".
+  const statusConfig = actionGroups?.[statusNorm];
+  if (!statusConfig) return items;
+
+  const allListed = new Set([
+    ...(statusConfig.primary ?? []),
+    ...(statusConfig.working ?? []),
+    ...(statusConfig.output  ?? []),
+  ]);
+
+  return items
+    .filter((item) => allListed.has(item.action_code))
+    .map((item) => {
+      const c = item.action_code;
+      if (statusConfig.primary?.includes(c)) return { ...item, group: "primary" as ActionBundleGroup };
+      if (statusConfig.working?.includes(c)) return { ...item, group: "working" as ActionBundleGroup };
+      return { ...item, group: "output" as ActionBundleGroup };
     });
 }

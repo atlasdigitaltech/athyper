@@ -6,6 +6,7 @@ export {
   MODULE_WORKSPACE_MAP,
   WORKSPACE_LABELS,
   WORKSPACE_SORT_ORDER,
+  WORKSPACE_HREF_MAP,
   CORE_GROUPS,
   PARTNER_GROUPS,
 } from "./module-workspace-map";

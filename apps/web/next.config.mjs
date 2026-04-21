@@ -106,8 +106,10 @@ export default withSentryConfig(nextConfig, {
 
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  disableLogger: true,
   hideSourceMaps: true,
-  reactComponentAnnotation: { enabled: false },
   tunnelRoute: undefined,
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+    reactComponentAnnotation: { enabled: false },
+  },
 });

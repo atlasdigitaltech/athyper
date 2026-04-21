@@ -15,6 +15,55 @@
 
 @import "tailwindcss";
 
+/*
+ * ── Entity Document Typography Scale ───────────────────────────────────────
+ *
+ * Shared by all 100+ document entities (invoice, PO, payment, contract, etc.)
+ * via ApprovableDocumentHeader, DocumentIdentityCard, DocumentKpiStrip.
+ *
+ * Token roles (not locations):
+ *   doc-number      — primary document identifier  (INV-A1-0001, PO-2026-001)
+ *   doc-subtitle    — secondary descriptor below the number
+ *   doc-badge       — status badge, entity type chip
+ *   doc-field-label — KPI strip column headers     (SUPPLIER, INVOICE DATE)
+ *   doc-field-value — KPI strip column values      (Acme Consulting, 21 Apr)
+ *   doc-amount      — monetary / numeric hero value (1,000.00)
+ *   doc-support     — sub-lines under values        (Subtotal · Tax)
+ *   doc-action      — action button text            (Update, Submit)
+ *
+ * Compact sticky re-mapping (no new sizes needed):
+ *   sticky.number  = doc-field-value  (14px/600)
+ *   sticky.amount  = doc-field-value + font-mono
+ */
+:root {
+  --doc-number-size:       0.8125rem;  /* 13px */
+  --doc-number-weight:     600;
+  --doc-number-tracking:   -0.01em;
+
+  --doc-subtitle-size:     0.6875rem;  /* 11px */
+  --doc-subtitle-weight:   400;
+
+  --doc-badge-size:        0.6875rem;  /* 11px */
+  --doc-badge-weight:      600;
+
+  --doc-field-label-size:     0.5625rem;  /* 9px */
+  --doc-field-label-weight:   600;
+  --doc-field-label-tracking: 0.10em;
+
+  --doc-field-value-size:    0.75rem;   /* 12px */
+  --doc-field-value-weight:  600;
+
+  --doc-amount-size:       0.75rem;   /* 12px */
+  --doc-amount-weight:     700;
+  --doc-amount-tracking:   -0.005em;
+
+  --doc-support-size:    0.625rem;    /* 10px */
+  --doc-support-weight:  400;
+
+  --doc-action-size:    0.71875rem;   /* 11.5px */
+  --doc-action-weight:  600;
+}
+
 @layer base {
   * {
     border-color: var(--border);

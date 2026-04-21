@@ -181,7 +181,37 @@ export const CompiledEntitySchema = z.object({
       date_field: z.string().optional(),
       /** Due / expiry date field, e.g. "due_date" */
       due_date_field: z.string().optional(),
+      /** Short document title / description field shown below the doc number */
+      title_field: z.string().optional(),
+      /** Audit: created_at timestamp field */
+      created_at_field: z.string().optional(),
+      /** Audit: created_by user field */
+      created_by_field: z.string().optional(),
+      /** Audit: updated_at timestamp field */
+      updated_at_field: z.string().optional(),
+      /** Audit: updated_by user field */
+      updated_by_field: z.string().optional(),
+      /** Lifecycle: status_changed_at timestamp field */
+      status_changed_at_field: z.string().optional(),
+      /** Lifecycle: status_changed_by user field */
+      status_changed_by_field: z.string().optional(),
     }).optional(),
+    /**
+     * Status-driven action grouping consumed by buildOrchestratorFromRecord().
+     * Maps status value → { primary, working, output } operation-code lists.
+     * Operations not listed for the current status are demoted to "overflow".
+     * Example:
+     *   "draft":     { primary: ["update","submit"], working: ["cancel"] }
+     *   "submitted": { primary: ["approve","deny"],  working: ["cancel"] }
+     */
+    action_groups: z.record(
+      z.string(),
+      z.object({
+        primary: z.array(z.string()).optional(),
+        working: z.array(z.string()).optional(),
+        output:  z.array(z.string()).optional(),
+      }),
+    ).optional(),
   }),
 
   feature_flags: z.object({

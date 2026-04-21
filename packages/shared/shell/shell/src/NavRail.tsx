@@ -37,6 +37,8 @@ export interface NavRailWorkspace {
   key: string;
   label: string;
   icon: LucideIcon;
+  /** When provided, right-click on this icon offers "Open in new tab". */
+  href?: string;
 }
 
 export interface NavRailProps {
@@ -65,6 +67,8 @@ interface RailIconProps {
   isPlatform?: boolean;
   /** Workbench accent hex for the active left-bar indicator. */
   accentColor?: string;
+  /** When provided, renders as <a> so the browser natively offers "Open in new tab" on right-click. */
+  href?: string;
   onClick?: () => void;
 }
 
@@ -75,25 +79,22 @@ function RailIcon({
   badge,
   isPlatform = false,
   accentColor,
+  href,
   onClick,
 }: RailIconProps) {
-  return (
-    <button
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-        isPlatform
-          ? active
-            ? "bg-accent/10 text-accent-foreground"
-            : "bg-accent/5 text-accent-foreground/60 hover:bg-accent/10 hover:text-accent-foreground"
-          : active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-      )}
-    >
+  const className = cn(
+    "relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+    isPlatform
+      ? active
+        ? "bg-accent/10 text-accent-foreground"
+        : "bg-accent/5 text-accent-foreground/60 hover:bg-accent/10 hover:text-accent-foreground"
+      : active
+        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+  );
+
+  const inner = (
+    <>
       {/* Left accent bar for active non-platform items */}
       {active && !isPlatform && (
         <span
@@ -117,6 +118,38 @@ function RailIcon({
           {badge > 99 ? "99+" : badge}
         </span>
       )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        title={label}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
+        className={className}
+        onClick={(e) => {
+          // Ctrl/Cmd/Shift+click → let browser open in new tab/window
+          if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+          e.preventDefault();
+          onClick?.();
+        }}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onClick}
+      className={className}
+    >
+      {inner}
     </button>
   );
 }
@@ -140,8 +173,8 @@ export function NavRail({
   return (
     <div className="flex h-full flex-col items-center gap-0.5 py-2">
       {/* ── Zone 1: Global ─────────────────────────────────────── */}
-      <RailIcon icon={Home}   label="Home"   active={activeKey === "home"}   accentColor={accentColor} onClick={() => onSelect("home")} />
-      <RailIcon icon={Inbox}  label="Inbox"  active={activeKey === "inbox"}  accentColor={accentColor} badge={inboxCount} onClick={() => onSelect("inbox")} />
+      <RailIcon icon={Home}   label="Home"   href="/home"   active={activeKey === "home"}   accentColor={accentColor} onClick={() => onSelect("home")} />
+      <RailIcon icon={Inbox}  label="Inbox"  href="/inbox"  active={activeKey === "inbox"}  accentColor={accentColor} badge={inboxCount} onClick={() => onSelect("inbox")} />
       <RailIcon icon={Search} label="Search" active={activeKey === "search"} accentColor={accentColor} onClick={() => onSelect("search")} />
 
       {/* ── Zone 2: Workspaces ─────────────────────────────────── */}
@@ -158,6 +191,7 @@ export function NavRail({
               label={ws.label}
               active={activeKey === ws.key}
               accentColor={accentColor}
+              href={ws.href}
               onClick={() => onSelect(ws.key)}
             />
           ))}
@@ -183,7 +217,7 @@ export function NavRail({
         <ZoneSep />
         <RailIcon icon={Star}     label="Favorites" active={activeKey === "favorites"} onClick={() => onSelect("favorites")} />
         <RailIcon icon={Clock}    label="Recent"    active={activeKey === "recent"}    onClick={() => onSelect("recent")} />
-        <RailIcon icon={Settings} label="Settings"  active={activeKey === "settings"}  onClick={() => onSelect("settings")} />
+        <RailIcon icon={Settings} label="Settings"  href="/settings" active={activeKey === "settings"}  onClick={() => onSelect("settings")} />
       </div>
     </div>
   );

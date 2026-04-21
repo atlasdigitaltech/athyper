@@ -131,6 +131,19 @@ const athyperPreset: Config = {
 
     // ── Extended ─────────────────────────────────────────────
     extend: {
+      fontSize: {
+        // ── Entity Document Typography Scale ────────────────────────────────
+        // Shared by all document entities via ApprovableDocumentHeader et al.
+        // Token names describe role, not location — safe to use on any entity.
+        "doc-number":      ["16px",    { lineHeight: "1.2",  fontWeight: "600", letterSpacing: "-0.01em"  }],
+        "doc-subtitle":    ["12px",    { lineHeight: "1.4",  fontWeight: "400"  }],
+        "doc-badge":       ["13px",    { lineHeight: "1",    fontWeight: "600"  }],
+        "doc-field-label": ["10px",    { lineHeight: "1",    fontWeight: "600",  letterSpacing: "0.12em"  }],
+        "doc-field-value": ["14px",    { lineHeight: "1.2",  fontWeight: "600"  }],
+        "doc-amount":      ["14px",    { lineHeight: "1.2",  fontWeight: "700",  letterSpacing: "-0.005em" }],
+        "doc-support":     ["11px",    { lineHeight: "1.4",  fontWeight: "400"  }],
+        "doc-action":      ["12.5px",  { lineHeight: "1",    fontWeight: "600"  }],
+      },
       width: {
         sidebar: "256px",
         "sidebar-collapsed": "64px",

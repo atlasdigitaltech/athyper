@@ -227,6 +227,8 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    code                    text            NOT NULL DEFAULT '',
+    name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
     -- Natural key
@@ -334,6 +336,8 @@ CREATE TABLE IF NOT EXISTS document.delivery_note (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    code                    text            NOT NULL DEFAULT '',
+    name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
     -- Natural key
@@ -472,6 +476,8 @@ CREATE TABLE IF NOT EXISTS document.goods_receipt (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    code                    text            NOT NULL DEFAULT '',
+    name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
     -- Natural key
@@ -645,6 +651,8 @@ CREATE TABLE IF NOT EXISTS document.service_entry_sheet (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    code                    text            NOT NULL DEFAULT '',
+    name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
     -- Natural key

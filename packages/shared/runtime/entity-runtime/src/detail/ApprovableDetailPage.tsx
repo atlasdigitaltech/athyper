@@ -14,7 +14,7 @@
  * Versions tab navigates to /app/:entity/:id/versions (does not render inline).
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
@@ -25,6 +25,7 @@ import {
   buildApprovableHeaderFromRecord,
   AmountSummaryCard,
   ItemsGrid,
+  type ApprovableReference,
 } from "@athyper/document-runtime";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
@@ -82,6 +83,31 @@ function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: st
   return <ItemsGrid lines={data?.data ?? []} />;
 }
 
+// ── Field-schema → rendering hint ────────────────────────────────────────────
+// Maps entity field data_type to ApprovableReference.valueType so the KPI
+// strip can render values correctly without guessing from the label string.
+
+function resolveRefMeta(
+  entity: CompiledEntity,
+  fieldName: string,
+  fallbackLabel: string,
+): { label: string; valueType: ApprovableReference["valueType"] } {
+  const field = entity.fields.find(
+    (f) => f.name === fieldName || f.column_name === fieldName,
+  );
+  const label = field?.label ?? fallbackLabel;
+  let valueType: ApprovableReference["valueType"] = "text";
+  if (field) {
+    const dt = field.data_type;
+    if (dt === "uuid" || dt === "reference")                             valueType = "code";
+    else if (dt === "date" || dt === "datetime" || dt === "timestamptz") valueType = "date";
+    else if (dt === "decimal" || dt === "numeric" || dt === "money")     valueType = "amount";
+    else if (dt === "enum")                                              valueType = "enum";
+    // integer/bigint are counts, years, sequence numbers — plain text
+  }
+  return { label, valueType };
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ApprovableDetailPage({
@@ -99,11 +125,144 @@ export function ApprovableDetailPage({
   // Orchestrator
   const orchestrator = buildOrchestratorFromRecord(entity, data, operations ?? []);
 
-  // Header DTO
+  // ── Reference resolution helpers ──────────────────────────────────────────
+  // All UUID reference fields are resolved via the BFF relay:
+  //   GET /api/relay/api/records/:refEntity/:id
+  // This is a plain fetch() wrapped in useQuery — NOT Kysely (server-only).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const partyIdField = entity.display_config.document_header?.party_id_field;
+  const partyId = partyIdField ? String(data[partyIdField] ?? "") : "";
+
+  const partyRefEntity = useMemo(() => {
+    if (!partyIdField) return null;
+    const field = entity.fields.find((f) => f.name === partyIdField);
+    return field?.reference_config?.target_entity ?? null;
+  }, [entity, partyIdField]);
+
+  const { data: partyRecord } = useQuery<{ data: Record<string, unknown> } | null>({
+    queryKey: ["entity-ref", partyRefEntity, partyId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(partyRefEntity!)}/${encodeURIComponent(partyId)}`,
+        { signal },
+      );
+      if (!res.ok) return null;
+      return res.json() as Promise<{ data: Record<string, unknown> }>;
+    },
+    enabled: !!partyRefEntity && UUID_RE.test(partyId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const resolvedPartyName = useMemo<string | null>(() => {
+    if (!partyRecord?.data) return null;
+    const d = partyRecord.data;
+    for (const key of ["name", "legal_name", "trade_name", "display_name"]) {
+      const val = d[key];
+      if (val && typeof val === "string" && val.trim()) return val.trim();
+    }
+    return null;
+  }, [partyRecord]);
+
+  // ── Company code resolution ────────────────────────────────────────────────
+  // Resolves company_code_id (UUID) → { code, name } from master.company_code
+  // via the same BFF relay pattern used for party resolution.
+  const companyCodeId = String(data["company_code_id"] ?? "");
+  const companyCodeRefEntity = useMemo(() => {
+    const field = entity.fields.find((f) => f.name === "company_code_id");
+    return field?.reference_config?.target_entity ?? null;
+  }, [entity]);
+
+  const { data: companyCodeRecord } = useQuery<{ data: Record<string, unknown> } | null>({
+    queryKey: ["entity-ref", companyCodeRefEntity, companyCodeId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(companyCodeRefEntity!)}/${encodeURIComponent(companyCodeId)}`,
+        { signal },
+      );
+      if (!res.ok) return null;
+      return res.json() as Promise<{ data: Record<string, unknown> }>;
+    },
+    enabled: !!companyCodeRefEntity && UUID_RE.test(companyCodeId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const resolvedCompanyCode = useMemo<{ code: string; name: string } | null>(() => {
+    if (!companyCodeRecord?.data) return null;
+    const d = companyCodeRecord.data;
+    const code = d["code"];
+    const name = d["name"];
+    if (!code || typeof code !== "string") return null;
+    return {
+      code: code.trim(),
+      name: typeof name === "string" ? name.trim() : code.trim(),
+    };
+  }, [companyCodeRecord]);
+
+  // ── Header DTO ─────────────────────────────────────────────────────────────
   const headerData = buildApprovableHeaderFromRecord(entity, data);
-  headerData.statusDimensions = orchestrator.statusDimensions;
-  headerData.actionBundle     = orchestrator.actionBundle;
-  headerData.blockedReasons   = orchestrator.blockedReasons;
+
+  // Resolve party name (replaces raw UUID shown before async fetch completes)
+  if (resolvedPartyName && headerData.party) {
+    const words = resolvedPartyName.split(/\s+/);
+    const initials =
+      words.length === 1
+        ? (words[0] ?? "").slice(0, 2).toUpperCase()
+        : ((words[0]?.[0] ?? "") + (words[words.length - 1]?.[0] ?? "")).toUpperCase();
+    headerData.party = { ...headerData.party, name: resolvedPartyName, initials };
+  }
+
+  // Add key reference fields to the metadata row.
+  // Label and valueType are derived from the entity field schema — no label guessing.
+  const refs: ApprovableReference[] = [];
+  const vendorRef = data["vendor_invoice_ref"] ?? data["supplier_invoice_number"];
+  if (vendorRef && typeof vendorRef === "string" && vendorRef.trim()) {
+    const { label, valueType } = resolveRefMeta(entity, "vendor_invoice_ref", "Vendor Ref");
+    refs.push({ label, value: vendorRef.trim(), valueType });
+  }
+  // Company code — resolved from company_code_id UUID via master.company_code.
+  // Shows "CC-001 · Acme Corp" when resolved; falls back to fiscal year context.
+  if (resolvedCompanyCode) {
+    refs.push({
+      label:     "Company Code",
+      value:     `${resolvedCompanyCode.code} · ${resolvedCompanyCode.name}`,
+      valueType: "code",
+    });
+  } else {
+    const fiscalYear = data["fiscal_year"];
+    const periodNo   = data["period_number"];
+    if (fiscalYear != null) {
+      const { label } = resolveRefMeta(entity, "fiscal_year", "Fiscal Year");
+      const value = periodNo != null ? `FY${fiscalYear} / P${periodNo}` : `FY${fiscalYear}`;
+      refs.push({ label, value, valueType: "text" });
+    }
+  }
+  const invoiceSource = data["invoice_source"];
+  if (invoiceSource && typeof invoiceSource === "string") {
+    const { label, valueType } = resolveRefMeta(entity, "invoice_source", "Source");
+    refs.push({
+      label,
+      value: invoiceSource.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      valueType,
+    });
+  }
+  const description = data["description"];
+  if (description && typeof description === "string" && description.trim()) {
+    refs.push({ label: "Description", value: description.trim(), valueType: "text" });
+    if (!headerData.identity.title) {
+      headerData.identity.title = description.trim();
+    }
+  }
+  if (refs.length > 0) headerData.references = refs;
+
+  // Remove the lifecycle dimension — it's already shown as the status badge
+  // in the identity bar (identity.statusLabel). The strip should show only
+  // the supplementary dimensions (accounting, settlement, matching).
+  headerData.statusDimensions = (orchestrator.statusDimensions ?? []).filter(
+    (d) => d.dimension !== "lifecycle",
+  );
+  headerData.actionBundle   = orchestrator.actionBundle;
+  headerData.blockedReasons = orchestrator.blockedReasons;
 
   // Build ordered tab list
   const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;

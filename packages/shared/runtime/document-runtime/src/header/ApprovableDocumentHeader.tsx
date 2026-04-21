@@ -1,45 +1,47 @@
 /**
- * @athyper/document-runtime — Approvable Document Header
+ * @athyper/document-runtime — ApprovableDocumentHeader v5
  *
- * Reusable header for all approvable documents (Invoice, PO, Payment Entry, etc.).
- * Three display modes:
- *   expanded  — full identity + party/money/dates + metadata + approval flow + tabs
- *   collapsed — identity bar + tabs only (compact)
- *   pinned    — expanded but sticky to top (z-30)
- *
- * Tabs are caller-managed; pass `tabs`, `activeTab`, `onTabChange` as props.
+ * Composition layer:
+ *   DocumentIdentityCard  — single row: chip · number · status · [actions | v | pin]
+ *   DocumentKpiStrip      — Total | Supplier | Date | Due Date | Refs | Currency
+ *   ProgressRailRow       — 5-stage lifecycle rail with pulsing active dot + inline hint
+ *   OpDims row            — tier-2 operational status chips
+ *   Tabs                  — standard tab strip
  */
 "use client";
 
 import React, { useState } from "react";
-import { Check, Clock, AlertCircle, PanelTopOpen, PanelTop, Pin } from "lucide-react";
+import { ChevronDown, ChevronUp, Pin } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Badge, Button, Separator } from "@athyper/ui/primitives";
 import type {
+  ApprovableAudit,
   ApprovableDocumentHeaderDTO,
-  ApprovableFlowStep,
   HeaderMode,
+  ProgressRail,
+  ProgressStage,
 } from "./types";
-import { StatusBadgeStrip } from "../status/StatusBadgeStrip";
 import { DocumentActionBar } from "../actions/DocumentActionBar";
+import { DocumentIdentityCard, type IdentityAction, type IdentityDueMeta } from "../identity/DocumentIdentityCard";
+import { DocumentKpiStrip, type KpiStripCell } from "../kpi/DocumentKpiStrip";
 
-// ── Tab type (public) ────────────────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ── Exported tab interface ─────────────────────────────────────────────────
 
 export interface ApprovableDocumentHeaderTab {
   id: string;
   label: string;
-  /** Rendered as a compact count badge beside the label */
   count?: number;
+  countIntent?: "default" | "attention";
   disabled?: boolean;
 }
 
-// ── Props ────────────────────────────────────────────────────────────────────
+// ── Props ──────────────────────────────────────────────────────────────────
 
 export interface ApprovableDocumentHeaderProps {
   data: ApprovableDocumentHeaderDTO;
   initialMode?: HeaderMode;
   onModeChange?: (mode: HeaderMode) => void;
-  /** Called with the action code from data.primaryAction / secondaryActions / destructiveAction */
   onAction?: (action: string) => void;
   tabs?: ApprovableDocumentHeaderTab[];
   activeTab?: string;
@@ -47,157 +49,320 @@ export interface ApprovableDocumentHeaderProps {
   className?: string;
 }
 
-// ── Internal sub-components ──────────────────────────────────────────────────
+// ── Tier-2 op chip ─────────────────────────────────────────────────────────
 
-function PartyAvatar({ initials, color }: { initials: string; color?: string }) {
+const OP_DOT: Record<string, string> = {
+  warn: "bg-warning", warning: "bg-warning",
+  info: "bg-info",
+  ok: "bg-success", success: "bg-success",
+  error: "bg-destructive",
+  dim: "bg-muted-foreground/40", neutral: "bg-muted-foreground/40",
+};
+
+function OpChip({ value, intent }: { value: string; intent: string }) {
+  const dotCls = OP_DOT[intent] ?? "bg-muted-foreground/40";
   return (
-    <div
-      className={cn(
-        "flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full text-sm font-bold text-white",
-        color ?? "bg-primary",
-      )}
-    >
-      {initials.slice(0, 2).toUpperCase()}
-    </div>
+    <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-[10px] font-semibold bg-muted text-muted-foreground border border-border leading-none whitespace-nowrap">
+      <span className={cn("w-[5px] h-[5px] rounded-full flex-none", dotCls)} />
+      {value}
+    </span>
   );
 }
 
-function ModeToggle({
+// ── Inline action dot-button (mirrors DotButton in DocumentIdentityCard) ──
+
+function ActionDotButton({
+  label,
+  onClick,
+  disabled,
+  variant = "default",
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "destructive";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-[12.5px] font-semibold leading-none whitespace-nowrap transition-opacity",
+        variant === "destructive"
+          ? "bg-destructive text-destructive-foreground hover:opacity-90"
+          : "bg-foreground text-background hover:opacity-85",
+        disabled && "opacity-40 pointer-events-none",
+      )}
+    >
+      <span className="w-[6px] h-[6px] rounded-full bg-background/60 flex-none" />
+      {label}
+    </button>
+  );
+}
+
+// ── Toggle button group — buttons only, no strip wrapper ──────────────────
+
+function ToggleButtonGroup({
   mode,
   onChange,
 }: {
   mode: HeaderMode;
   onChange: (m: HeaderMode) => void;
 }) {
-  const modes: { key: HeaderMode; icon: React.ReactNode; title: string }[] = [
-    { key: "expanded", icon: <PanelTopOpen className="h-3.5 w-3.5" />, title: "Expanded" },
-    { key: "collapsed", icon: <PanelTop className="h-3.5 w-3.5" />, title: "Collapsed" },
-    { key: "pinned", icon: <Pin className="h-3.5 w-3.5" />, title: "Pinned" },
-  ];
-
+  const isCollapsed = mode === "collapsed";
+  const isPinned    = mode === "pinned";
   return (
-    <div className="flex items-center overflow-hidden rounded-md border">
-      {modes.map(({ key, icon, title }, i) => (
-        <button
-          key={key}
-          title={title}
-          onClick={() => onChange(key)}
-          className={cn(
-            "flex items-center justify-center px-2 py-1.5 transition-colors",
-            i > 0 && "border-l",
-            mode === key
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          {icon}
-        </button>
-      ))}
+    <div className="flex items-center gap-1">
+      <button
+        title={isCollapsed ? "Expand header" : "Collapse header"}
+        onClick={() => onChange(isCollapsed ? "expanded" : "collapsed")}
+        className="w-[28px] h-[28px] rounded-md border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        {isCollapsed
+          ? <ChevronDown className="h-3.5 w-3.5" />
+          : <ChevronUp   className="h-3.5 w-3.5" />}
+      </button>
+      <button
+        title={isPinned ? "Unpin header" : "Pin header"}
+        onClick={() => onChange(isPinned ? "expanded" : "pinned")}
+        className={cn(
+          "w-[28px] h-[28px] rounded-md border flex items-center justify-center transition-colors",
+          isPinned
+            ? "border-foreground bg-foreground text-background"
+            : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
+        <Pin className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
 
-function DueBadge({ label, intent }: { label: string; intent: "info" | "warning" | "error" }) {
-  const cls = {
-    info: "bg-info/10 text-info border-info/30",
-    warning: "bg-warning/10 text-warning border-warning/30",
-    error: "bg-destructive/10 text-destructive border-destructive/30",
-  }[intent];
-  return (
-    <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-semibold", cls)}>
-      {label}
-    </span>
-  );
-}
+// ── Audit meta bar ─────────────────────────────────────────────────────────
 
-function MetadataItem({
-  label,
-  value,
-  url,
-}: {
-  label: string;
-  value: string;
-  url?: string;
-}) {
+function AuditMetaBar({ audit }: { audit: ApprovableAudit }) {
+  const parts: string[] = [];
+  if (audit.createdAt) {
+    parts.push(`Created ${audit.createdAt}${audit.createdBy ? ` · ${audit.createdBy}` : ""}`);
+  }
+  if (audit.updatedAt) {
+    parts.push(`Updated ${audit.updatedAt}${audit.updatedBy ? ` · ${audit.updatedBy}` : ""}`);
+  }
+  if (audit.statusChangedAt) {
+    parts.push(`Status ${audit.statusChangedAt}${audit.statusChangedBy ? ` · ${audit.statusChangedBy}` : ""}`);
+  }
+  if (parts.length === 0) return null;
   return (
-    <div className="min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
+    <div className="border-t border-dashed border-border/40 px-4 py-[7px] sm:px-5 lg:px-[22px]">
+      <p className="text-[10px] text-muted-foreground/55 leading-none tracking-[0.01em]">
+        {parts.join("   ·   ")}
       </p>
-      {url ? (
-        <a href={url} className="text-xs font-medium text-primary hover:underline">
-          {value}
-        </a>
-      ) : (
-        <p className="truncate text-xs font-medium">{value}</p>
-      )}
     </div>
   );
 }
 
-function ApprovalFlowStrip({ steps }: { steps: ApprovableFlowStep[] }) {
+// ── Progress rail ──────────────────────────────────────────────────────────
+
+function ProgressRailRow({ rail }: { rail: ProgressRail }) {
+  const activeIdx = Math.max(0, rail.stages.findIndex((s) => s.key === rail.currentKey));
+
   return (
-    <div className="flex items-start overflow-x-auto pb-1">
-      {steps.flatMap((step, i) => {
-        const dotClass = {
-          completed: "border-success bg-success",
-          current: "border-primary bg-primary/10 ring-2 ring-primary/20",
-          blocked: "border-destructive bg-destructive/10",
-          pending: "border-muted-foreground/40 bg-background",
-        }[step.status];
+    <div>
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Progress
+        </span>
+        <span className="text-[11px] text-muted-foreground tabular-nums">
+          Step {activeIdx + 1} / {rail.stages.length}
+        </span>
+      </div>
 
-        const icon = {
-          completed: <Check className="h-3 w-3 text-white" />,
-          current: <Clock className="h-3 w-3 text-primary" />,
-          blocked: <AlertCircle className="h-3 w-3 text-destructive" />,
-          pending: <Clock className="h-3 w-3 text-muted-foreground/50" />,
-        }[step.status];
+      <div
+        className="overflow-x-auto pb-0.5"
+        style={{ display: "grid", gridTemplateColumns: `repeat(${rail.stages.length}, minmax(96px, 1fr))` }}
+      >
+        {rail.stages.map((stage: ProgressStage, i: number) => {
+          const isActive = i === activeIdx;
+          const isPast   = i < activeIdx;
+          return (
+            <div key={stage.key} className="min-w-0 pr-2">
+              <div className="flex items-center">
+                {/* Dot — active stage has a slow pulsing ripple ring */}
+                <div className="relative flex-none flex items-center justify-center w-[17px] h-[17px]">
+                  {isActive && (
+                    <span
+                      className="absolute inset-0 rounded-full animate-ping bg-foreground/12"
+                      style={{ animationDuration: "2.4s" }}
+                    />
+                  )}
+                  <div
+                    className={cn(
+                      "w-[11px] h-[11px] rounded-full relative z-[1]",
+                      isActive
+                        ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_rgba(11,11,10,0.07)]"
+                        : isPast
+                        ? "bg-foreground border-[1.5px] border-foreground"
+                        : "bg-card border-[1.5px] border-border",
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute inset-[2.5px] rounded-full bg-foreground" />
+                    )}
+                  </div>
+                </div>
+                {i < rail.stages.length - 1 && (
+                  <div className={cn("flex-1 h-px ml-1 min-w-[16px]", isPast ? "bg-foreground" : "bg-border")} />
+                )}
+              </div>
 
-        const lineClass =
-          step.status === "completed" ? "bg-success" : "bg-border";
+              <div className="mt-2">
+                <div className={cn(
+                  "text-[12px] leading-tight",
+                  isActive || isPast ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
+                )}>
+                  {stage.label}
+                </div>
 
-        const items = [
-          <div key={`step-${i}`} className="flex flex-col items-center">
-            <div
-              className={cn(
-                "flex h-6 w-6 items-center justify-center rounded-full border-2",
-                dotClass,
-              )}
-            >
-              {icon}
+                {stage.reachedAt ? (
+                  <div className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">
+                    {stage.reachedAt}{stage.actor ? ` · ${stage.actor}` : ""}
+                  </div>
+                ) : stage.targetAt ? (
+                  <div className="text-[10.5px] text-muted-foreground/50 mt-0.5">target {stage.targetAt}</div>
+                ) : (
+                  <div className="text-[10.5px] text-muted-foreground/40 mt-0.5">—</div>
+                )}
+
+                {/* Next-action hint inline under the active stage */}
+                {isActive && rail.nextActionCopy && (
+                  <div className="mt-[7px] pl-[8px] border-l-[2px] border-foreground/20 max-w-[170px]">
+                    <span className="text-[10.5px] text-muted-foreground leading-snug block">
+                      {rail.nextActionCopy}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <span className="mt-1.5 whitespace-nowrap text-[11px] font-medium leading-tight">
-              {step.name}
-            </span>
-            {step.assignee && (
-              <span className="whitespace-nowrap text-[10px] leading-tight text-muted-foreground">
-                {step.assignee}
-              </span>
-            )}
-            {step.note && (
-              <span className="whitespace-nowrap text-[10px] leading-tight text-muted-foreground">
-                {step.note}
-              </span>
-            )}
-          </div>,
-        ];
-
-        if (i < steps.length - 1) {
-          items.push(
-            <div
-              key={`line-${i}`}
-              className={cn("mt-3 h-0.5 min-w-[24px] flex-1", lineClass)}
-            />,
           );
-        }
-
-        return items;
-      })}
+        })}
+      </div>
     </div>
   );
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── DTO → component props mapping ──────────────────────────────────────────
+
+function buildIdentityActions(
+  data: ApprovableDocumentHeaderDTO,
+): IdentityAction[] {
+  const { primaryAction, secondaryActions, destructiveAction } = data;
+  const out: IdentityAction[] = [];
+  if (primaryAction)
+    out.push({ action: primaryAction.action, label: primaryAction.label });
+  (secondaryActions ?? []).forEach((a) =>
+    out.push({ action: a.action, label: a.label }),
+  );
+  if (destructiveAction)
+    out.push({ action: destructiveAction.action, label: destructiveAction.label, variant: "destructive" });
+  return out;
+}
+
+function buildDueMeta(data: ApprovableDocumentHeaderDTO): IdentityDueMeta | undefined {
+  const { dates, money } = data;
+  if (!dates?.dueDate && !dates?.dueMeta) return undefined;
+  return {
+    label:  dates?.dueMeta?.label ?? (dates?.dueDate ? `Due ${dates.dueDate}` : ""),
+    date:   dates?.dueDate,
+    terms:  money?.paymentTerms,
+    intent: (dates?.dueMeta?.intent ?? "neutral") as IdentityDueMeta["intent"],
+  };
+}
+
+function buildKpiCells(data: ApprovableDocumentHeaderDTO): KpiStripCell[] {
+  const { money, party, dates, references } = data;
+  const cells: KpiStripCell[] = [];
+
+  // ── 1. Supplier / Party (supplier-related) ─────────────────────────────
+  if (party && !UUID_RE.test(party.name)) {
+    cells.push({
+      key:      "supplier",
+      label:    "Supplier",
+      value:    party.name,
+      subValue: party.subtitle,
+    });
+  }
+
+  // ── 2. Document date (supplier-related) ───────────────────────────────
+  if (dates?.documentDate) {
+    cells.push({
+      key:   "doc-date",
+      label: dates.documentDateLabel ?? "Invoice Date",
+      value: dates.documentDate,
+    });
+  }
+
+  // ── 3. Due date (commercial) ───────────────────────────────────────────
+  if (dates?.dueDate) {
+    const subParts: string[] = [];
+    if (dates.dueMeta?.label) subParts.push(dates.dueMeta.label);
+    if (money?.paymentTerms)  subParts.push(money.paymentTerms);
+    cells.push({
+      key:       "due-date",
+      label:     "Due Date",
+      value:     dates.dueDate,
+      intent:    dates.dueMeta?.intent === "error"   ? "error"
+                : dates.dueMeta?.intent === "warning" ? "warning"
+                : undefined,
+      subValue:  subParts.join(" · ") || undefined,
+      subIntent: dates.dueMeta?.intent === "error"   ? "error"
+                : dates.dueMeta?.intent === "warning" ? "warning"
+                : undefined,
+    });
+  }
+
+  // ── 4. References — skip "source" and "description" (shown in identity title) ──
+  // mono is driven by valueType from the entity field schema, not label guessing.
+  const SKIP_REF_LABELS = new Set(["source", "description"]);
+  (references ?? [])
+    .filter((r) => !SKIP_REF_LABELS.has(r.label.toLowerCase()))
+    .forEach((ref) => {
+      cells.push({
+        key:   ref.label,
+        label: ref.label,
+        value: ref.value,
+        mono:  ref.valueType === "code",
+      });
+    });
+
+  // ── 5. Currency (only if no formatted total) ───────────────────────────
+  if (money?.currency && !money.formatted) {
+    cells.push({
+      key:   "currency",
+      label: "Currency",
+      value: money.currency,
+      mono:  true,
+    });
+  }
+
+  // ── 6. Total — hero XL cell, last (commercial summary) ────────────────
+  if (money?.formatted) {
+    const subParts: string[] = [];
+    if (money.subtotal) subParts.push(`Subtotal ${money.subtotal}`);
+    if (money.tax)      subParts.push(`Tax ${money.tax}`);
+    cells.push({
+      key:      "total",
+      label:    money.totalLabel ?? "Invoice Total",
+      value:    money.formatted,
+      currency: money.currency,
+      xl:       true,
+      subValue: subParts.length > 0 ? subParts.join(" · ") : undefined,
+    });
+  }
+
+  return cells;
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 
 export function ApprovableDocumentHeader({
   data,
@@ -210,287 +375,150 @@ export function ApprovableDocumentHeader({
   className,
 }: ApprovableDocumentHeaderProps) {
   const [mode, setMode] = useState<HeaderMode>(initialMode);
-
-  const handleModeChange = (m: HeaderMode) => {
-    setMode(m);
-    onModeChange?.(m);
-  };
-
-  const {
-    identity,
-    party,
-    money,
-    dates,
-    references,
-    submittedBy,
-    costCenter,
-    approvalFlow,
-    statusDimensions,
-    actionBundle,
-    blockedReasons,
-    primaryAction,
-    secondaryActions,
-    destructiveAction,
-  } = data;
-
-  const useActionBundle = actionBundle != null && actionBundle.length > 0;
-
+  const handleMode = (m: HeaderMode) => { setMode(m); onModeChange?.(m); };
   const isExpanded = mode !== "collapsed";
 
-  const statusVariant = (
-    {
-      success: "success",
-      warning: "warning",
-      error: "destructive",
-      info: "info",
-      neutral: "outline",
-      primary: "outline",
-      accent: "outline",
-      muted: "muted",
-    } as const
-  )[identity.statusIntent] ?? "outline";
+  const { identity, statusDimensions, actionBundle, blockedReasons, progressRail } = data;
 
-  const hasMetadata =
-    (references && references.length > 0) ||
-    submittedBy ||
-    costCenter ||
-    money?.paymentTerms ||
-    dates?.createdAt;
+  const useActionBundle = (actionBundle?.length ?? 0) > 0;
+  const tier2Dims       = (statusDimensions ?? []).filter((d) => d.dimension !== "workflow");
+  const workflowDim     = (statusDimensions ?? []).find((d) => d.dimension === "workflow");
+  const showProcess     = isExpanded && (progressRail || tier2Dims.length > 0 || workflowDim);
+  const isBlocked       = (blockedReasons?.length ?? 0) > 0;
+
+  // Build identity card props
+  const identityActions = useActionBundle ? [] : buildIdentityActions(data);
+  const dueMeta         = buildDueMeta(data);
+
+  // Toggle buttons always appear in the identity card right slot so the header
+  // is a single cohesive row: [chip | number · status] ──── [actions] [v][pin]
+  const toggleBtns = <ToggleButtonGroup mode={mode} onChange={handleMode} />;
+
+  const actionsSlot: React.ReactNode = (() => {
+    if (useActionBundle) {
+      return (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <DocumentActionBar
+            actions={actionBundle!}
+            blockedReasons={blockedReasons}
+            onAction={(code) => onAction?.(code)}
+          />
+          <span className="w-px h-5 bg-border/60 self-center shrink-0" />
+          {toggleBtns}
+        </div>
+      );
+    }
+    if (identityActions.length > 0) {
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {identityActions.slice(0, 3).map((a) => (
+            <ActionDotButton
+              key={a.action}
+              label={a.label}
+              onClick={() => onAction?.(a.action)}
+              variant={a.variant}
+              disabled={a.disabled || (isBlocked && a.variant !== "destructive")}
+            />
+          ))}
+          {identityActions.length > 3 && (
+            <ActionDotButton label="More" onClick={() => onAction?.("__more")} />
+          )}
+          <span className="w-px h-5 bg-border/60 self-center shrink-0" />
+          {toggleBtns}
+        </div>
+      );
+    }
+    return toggleBtns;
+  })();
+
+  const kpiCells = isExpanded ? buildKpiCells(data) : [];
 
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border bg-card",
+        "overflow-hidden rounded-xl border bg-card shadow-sm",
         mode === "pinned" && "sticky top-0 z-30",
         className,
       )}
     >
-      {/* ── Identity Bar ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
-        {/* Left: type chip + number + version + status */}
-        <div className="flex min-w-0 items-center gap-2">
-          <Badge variant="outline" className="shrink-0 text-[10px] font-bold uppercase tracking-wide">
-            {identity.typeLabel}
-          </Badge>
-          <span className="truncate text-base font-semibold">{identity.number}</span>
-          {identity.version && (
-            <Badge variant="muted" className="shrink-0 text-[10px]">
-              {identity.version}
-            </Badge>
-          )}
-          <Badge variant={statusVariant} className="shrink-0">
-            {identity.statusLabel}
-          </Badge>
+      {/* ── IDENTITY CARD — always visible ───────────────────────────── */}
+      <DocumentIdentityCard
+        typeLabel={identity.typeLabel}
+        number={identity.number}
+        statusLabel={identity.statusLabel}
+        statusIntent={identity.statusIntent as "success" | "warning" | "error" | "info" | "neutral"}
+        title={identity.title}
+        dueMeta={dueMeta}
+        actionsSlot={actionsSlot}
+        blockedReasons={blockedReasons ?? []}
+        onAction={onAction}
+      />
 
-          {/* Multi-dimensional status badges (when provided) */}
-          {statusDimensions && statusDimensions.length > 0 && (
-            <StatusBadgeStrip dimensions={statusDimensions} />
-          )}
-        </div>
+      {/* ── KPI STRIP — expanded only ────────────────────────────────── */}
+      {isExpanded && kpiCells.length > 0 && (
+        <DocumentKpiStrip cells={kpiCells} />
+      )}
 
-        {/* Right: mode toggle + actions */}
-        <div className="flex shrink-0 items-center gap-2">
-          <ModeToggle mode={mode} onChange={handleModeChange} />
+      {/* ── PROCESS: progress rail + op dims — expanded only ─────────── */}
+      {showProcess && (
+        <div className="border-t border-border px-4 py-3.5 sm:px-5 sm:py-4 lg:px-[22px]">
+          {progressRail && <ProgressRailRow rail={progressRail} />}
 
-          {/* State-adaptive action bundle (when provided) */}
-          {useActionBundle ? (
-            <>
-              <Separator orientation="vertical" className="h-5" />
-              <DocumentActionBar
-                actions={actionBundle!}
-                blockedReasons={blockedReasons}
-                onAction={(code) => onAction?.(code)}
-              />
-            </>
-          ) : (
-            <>
-              {(primaryAction || (secondaryActions && secondaryActions.length > 0) || destructiveAction) && (
-                <Separator orientation="vertical" className="h-5" />
-              )}
-
-              {primaryAction && (
-                <Button
-                  size="sm"
-                  onClick={() => onAction?.(primaryAction.action)}
-                  className="text-xs"
-                >
-                  {primaryAction.label}
-                </Button>
-              )}
-
-              {secondaryActions?.map((a) => (
-                <Button
-                  key={a.action}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onAction?.(a.action)}
-                  className="text-xs"
-                >
-                  {a.label}
-                </Button>
+          {(tier2Dims.length > 0 || workflowDim) && (
+            <div className={cn(
+              "flex items-center flex-wrap gap-x-4 gap-y-2",
+              progressRail && "border-t border-dashed border-border mt-3 pt-3",
+            )}>
+              {tier2Dims.map((dim) => (
+                <div key={dim.dimension} className="inline-flex items-center gap-[7px] text-[12px]">
+                  <span className="text-muted-foreground font-medium capitalize">{dim.label}</span>
+                  <OpChip value={dim.status_label} intent={dim.intent} />
+                </div>
               ))}
-
-              {destructiveAction && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onAction?.(destructiveAction.action)}
-                  className="text-xs text-destructive hover:text-destructive"
-                >
-                  {destructiveAction.label}
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Expanded body ─────────────────────────────────────── */}
-      {isExpanded && (
-        <>
-          <Separator />
-
-          {/* Party · Money · Dates */}
-          {(party || money || dates) && (
-            <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-4 py-4">
-              {/* Party */}
-              {party && (
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <PartyAvatar initials={party.initials} color={party.avatarColor} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{party.name}</p>
-                    {party.subtitle && (
-                      <p className="text-xs text-muted-foreground">{party.subtitle}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Money */}
-              {money && (
-                <div className="shrink-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {money.totalLabel ?? "Total"}
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold tabular-nums">{money.formatted}</span>
-                    <span className="text-sm text-muted-foreground">{money.currency}</span>
-                  </div>
-                  {(money.subtotal || money.tax) && (
-                    <p className="text-[10px] tabular-nums text-muted-foreground">
-                      {money.subtotal && `Subtotal ${money.subtotal}`}
-                      {money.subtotal && money.tax && " + "}
-                      {money.tax && `VAT ${money.tax}`}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Vertical separator between money and dates */}
-              {money && dates && (
-                <Separator orientation="vertical" className="hidden h-12 self-center md:block" />
-              )}
-
-              {/* Dates */}
-              {dates && (
-                <div className="shrink-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {dates.documentDateLabel ?? "Date"}
-                  </p>
-                  <p className="text-sm font-medium">{dates.documentDate}</p>
-                  {dates.dueDate && (
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                      <p className="text-xs text-muted-foreground">{dates.dueDate}</p>
-                      {dates.dueMeta && (
-                        <DueBadge label={dates.dueMeta.label} intent={dates.dueMeta.intent} />
-                      )}
-                    </div>
-                  )}
+              {workflowDim && (
+                <div className="inline-flex items-center gap-[7px] text-[12px]">
+                  <span className="text-muted-foreground font-medium">{workflowDim.label}</span>
+                  <span className="font-semibold text-muted-foreground">{workflowDim.status_label}</span>
                 </div>
               )}
             </div>
           )}
-
-          {/* Metadata row */}
-          {hasMetadata && (
-            <>
-              <Separator />
-              <div className="flex flex-wrap items-start gap-x-8 gap-y-3 px-4 py-3">
-                {references?.map((ref) => (
-                  <MetadataItem key={ref.label} label={ref.label} value={ref.value} url={ref.url} />
-                ))}
-                {costCenter && (
-                  <MetadataItem
-                    label="Cost Center"
-                    value={`${costCenter.code} · ${costCenter.name}`}
-                  />
-                )}
-                {money?.paymentTerms && (
-                  <MetadataItem
-                    label="Payment Terms"
-                    value={
-                      money.earlyPayDiscount
-                        ? `${money.paymentTerms} · ${money.earlyPayDiscount} discount`
-                        : money.paymentTerms
-                    }
-                  />
-                )}
-                {submittedBy && <MetadataItem label="Submitted By" value={submittedBy} />}
-                {dates?.createdAt && <MetadataItem label="Created" value={dates.createdAt} />}
-              </div>
-            </>
-          )}
-
-          {/* Approval flow strip */}
-          {approvalFlow && approvalFlow.length > 0 && (
-            <>
-              <Separator />
-              <div className="px-4 py-3">
-                <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Approval Flow
-                </p>
-                <ApprovalFlowStrip steps={approvalFlow} />
-              </div>
-            </>
-          )}
-        </>
+        </div>
       )}
 
-      {/* ── Tabs bar ──────────────────────────────────────────── */}
+      {/* ── AUDIT META — expanded only ───────────────────────────────── */}
+      {isExpanded && data.audit && <AuditMetaBar audit={data.audit} />}
+
+      {/* ── TABS ─────────────────────────────────────────────────────── */}
       {tabs && tabs.length > 0 && (
-        <>
-          <Separator />
-          <div className="flex items-center overflow-x-auto px-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                disabled={tab.disabled}
-                onClick={() => onTabChange?.(tab.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-colors",
-                  activeTab === tab.id
-                    ? "border-primary font-medium text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                  tab.disabled && "pointer-events-none opacity-50",
-                )}
-              >
-                {tab.label}
-                {tab.count != null && (
-                  <span
-                    className={cn(
-                      "rounded px-1 py-0.5 text-[10px] tabular-nums",
-                      activeTab === tab.id
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </>
+        <div className="border-t border-border px-4 flex items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5 lg:px-[22px]">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              disabled={tab.disabled}
+              onClick={() => onTabChange?.(tab.id)}
+              className={cn(
+                "relative py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors shrink-0",
+                activeTab === tab.id
+                  ? "text-foreground after:absolute after:left-0 after:right-0 after:-bottom-px after:h-0.5 after:bg-foreground after:content-['']"
+                  : "text-muted-foreground hover:text-foreground",
+                tab.disabled && "pointer-events-none opacity-50",
+              )}
+            >
+              {tab.label}
+              {tab.count != null && (
+                <span className={cn(
+                  "ml-1.5 text-[10px] px-1 py-0.5 rounded font-semibold tabular-nums",
+                  tab.countIntent === "attention"
+                    ? "bg-info/10 text-info"
+                    : "bg-muted text-muted-foreground",
+                )}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

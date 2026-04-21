@@ -22,7 +22,7 @@ DECLARE
     v_cc_id         uuid;
     v_vendor_id     uuid;
     v_sys           uuid := '00000000-0000-0000-0000-000000000000';
-    v_advance_id    uuid;
+    v_advance_id    uuid := '00000002-0000-0000-0002-000000000020';  -- ADV-VA-0001 (pinned)
     v_pm_wire_id    uuid;
     v_house_bank_id uuid;
 BEGIN
@@ -50,7 +50,9 @@ BEGIN
     END IF;
 
     INSERT INTO document.payment_entry (
+        id,
         tenant_id, company_code_id,
+        code, name,
         payment_number, payment_type, payment_direction,
         supplier_id, supplier_name,
         payment_method_id, bank_account_id,
@@ -61,7 +63,9 @@ BEGIN
         fiscal_year, period_number,
         metadata
     ) VALUES (
+        v_advance_id,
         v_tenant_id, v_cc_id,
+        'ADV-VA-0001', 'Standalone Vendor Advance',
         'ADV-VA-0001', 'ADVANCE', 'OUTBOUND',
         v_vendor_id, 'Acme Consulting LLC',
         v_pm_wire_id, v_house_bank_id,
@@ -78,7 +82,7 @@ BEGIN
             'recovery_strategy',  'open_ended_multi_invoice',
             'expected_profile',   'AP_ADVANCE_VENDOR',
             'expected_event',     'ADVANCE_PAID')
-    ) RETURNING id INTO v_advance_id;
+    );
 
     -- Note: no payment_entry_allocation rows — standalone advance has no
     -- invoice allocations yet. Allocations will be created ad-hoc as future

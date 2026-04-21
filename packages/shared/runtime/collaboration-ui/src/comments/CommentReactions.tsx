@@ -45,7 +45,7 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
             type="button"
             onClick={() => toggleReaction(r.reactionType)}
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors hover:bg-accent",
+              "inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs transition-colors hover:bg-accent",
               r.reacted && "border-primary/40 bg-primary/5",
             )}
           >

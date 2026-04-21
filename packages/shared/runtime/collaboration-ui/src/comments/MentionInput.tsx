@@ -143,7 +143,7 @@ export function MentionInput({
       />
 
       {showDropdown && users.length > 0 && (
-        <div className="absolute z-50 mt-1 max-h-48 w-64 overflow-y-auto rounded-md border bg-popover shadow-md">
+        <div className="absolute z-50 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md">
           {users.map((user, i) => (
             <button
               key={user.id}

@@ -114,6 +114,9 @@ export function SessionProvider({
   // Track the latest known accessExpiresAt so the timer can chain
   const accessExpiresAtRef = useRef<number>(initialSession.accessExpiresAt ?? 0);
 
+  // Timestamp of the last heartbeat sent (ms). Used to throttle touch calls.
+  const lastHeartbeatRef = useRef(0);
+
   // ── Last-used context restore ─────────────────────────────────────────────
   // On mount: if the BFF session has no active context (e.g. first login or
   // session cleared), try to restore from localStorage and re-select.
@@ -187,6 +190,34 @@ export function SessionProvider({
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
   }, [scheduleTokenRefresh]);
+
+  // ── Activity heartbeat ────────────────────────────────────────────────────
+  // Updates lastSeenAt in Redis while the user is actively interacting with
+  // the page. Throttled to at most once per HEARTBEAT_INTERVAL_MS so normal
+  // mouse/keyboard events don't flood the server.
+  //
+  // Without this, lastSeenAt is only written at login and context switches.
+  // For tokens with lifetime > 16 min the proactive refresh would always fire
+  // after the 15-min idle window, producing false "session expired" dialogs.
+  const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000; // 5 min — well inside 15-min idle window
+
+  const touchSession = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastHeartbeatRef.current < HEARTBEAT_INTERVAL_MS) return;
+    lastHeartbeatRef.current = now;
+    try {
+      await fetch("/api/auth/touch", { method: "POST" });
+    } catch {
+      // Non-fatal — next activity event will retry
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const events = ["mousemove", "keydown", "click", "touchstart"] as const;
+    const handler = () => { void touchSession(); };
+    events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
+    return () => events.forEach((e) => window.removeEventListener(e, handler));
+  }, [touchSession]);
 
   // ── Runtime session fetch ─────────────────────────────────────────────────
 

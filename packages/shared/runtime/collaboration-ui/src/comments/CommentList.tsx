@@ -30,8 +30,8 @@ export function CommentList({ entityType, entityId, className }: CommentListProp
   const { unreadCount, markAllAsRead } = useCollabUnreadCount(entityType, entityId);
 
   const handleSubmit = useCallback(
-    async (text: string) => {
-      await createComment({ commentText: text });
+    async (text: string, attachmentIds: string[]) => {
+      await createComment({ commentText: text, attachmentIds });
       refetch();
     },
     [createComment, refetch],
@@ -61,7 +61,7 @@ export function CommentList({ entityType, entityId, className }: CommentListProp
 
   if (error) {
     return (
-      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
         Failed to load comments.
       </div>
     );
@@ -104,7 +104,7 @@ export function CommentList({ entityType, entityId, className }: CommentListProp
             No comments yet. Be the first to comment!
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {topLevelComments.map((comment) =>
               renderCard({
                 comment,

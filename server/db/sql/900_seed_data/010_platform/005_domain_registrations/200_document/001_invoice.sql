@@ -66,6 +66,7 @@ CROSS JOIN (VALUES
     ('document_no',              'invoice_number',          'Invoice No.',        'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":50}'::jsonb,             10),
     ('invoice_type',             'invoice_type',            'Invoice Type',       'enum',           'one',         'document.purchase_invoice_type'::text,       true,  true,  NULL::jsonb,                            20),
     ('status',                   'status',                  'Status',             'lifecycle_state','one',         NULL::text,                                   true,  true,  NULL::jsonb,                            30),
+    ('company_code_id',          'company_code_id',         'Company Code',       'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"company_code"}'::jsonb, 35),
     -- ── B: Counterparty & Dates ───────────────────────────────────────────────
     ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"vendor"}'::jsonb,       40),
     ('supplier_invoice_date',    'supplier_invoice_date',   'Vendor Invoice Date','date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
@@ -132,6 +133,19 @@ SET display_config = jsonb_build_object(
     'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","gross_amount","currency_code"]'::jsonb,
     'default_sort_field', 'invoice_date',
     'default_sort_order', 'desc',
+    'action_groups', jsonb_build_object(
+        'draft',          jsonb_build_object('primary', '["update","submit"]'::jsonb,        'working', '["cancel"]'::jsonb),
+        'submitted',      jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'pending_approval',jsonb_build_object('primary','["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'in_review',      jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'on_hold',        jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel"]'::jsonb),
+        'approved',       jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel"]'::jsonb, 'output', '["view_je"]'::jsonb),
+        'posted',         jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
+        'partially_paid', jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
+        'paid',           jsonb_build_object('output',  '["view_je"]'::jsonb),
+        'cancelled',      jsonb_build_object(),
+        'rejected',       jsonb_build_object('working', '["copy"]'::jsonb)
+    ),
     'document_header', jsonb_build_object(
         'number_field',     'document_no',
         'status_field',     'status',
@@ -144,12 +158,51 @@ SET display_config = jsonb_build_object(
         'tax_field',        'tax_amount',
         'currency_field',   'currency_code',
         'date_field',       'invoice_date',
-        'due_date_field',   'due_date'
+        'due_date_field',   'due_date',
+        'title_field',      'description'
     )
 )
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
+
+-- ── 4b. Patch: add title_field to document_header on already-seeded databases ──
+-- The initial UPDATE (above) only fires on a fresh DB (display_config = '{}').
+-- This idempotent patch backfills the key on any existing configuration.
+UPDATE control.entity
+SET display_config = jsonb_set(
+    display_config,
+    '{document_header,title_field}',
+    '"description"'::jsonb,
+    true
+)
+WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (display_config -> 'document_header' ->> 'title_field') IS NULL;
+
+-- ── 4c. Patch: add action_groups to display_config on already-seeded databases ─
+UPDATE control.entity
+SET display_config = jsonb_set(
+    display_config,
+    '{action_groups}',
+    jsonb_build_object(
+        'draft',           jsonb_build_object('primary', '["update","submit"]'::jsonb,        'working', '["cancel"]'::jsonb),
+        'submitted',       jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'pending_approval',jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'in_review',       jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
+        'on_hold',         jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel"]'::jsonb),
+        'approved',        jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel"]'::jsonb, 'output', '["view_je"]'::jsonb),
+        'posted',          jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
+        'partially_paid',  jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
+        'paid',            jsonb_build_object('output',  '["view_je"]'::jsonb),
+        'cancelled',       jsonb_build_object(),
+        'rejected',        jsonb_build_object('working', '["copy"]'::jsonb)
+    ),
+    true
+)
+WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (display_config -> 'action_groups') IS NULL;
 
 -- ── 5. Runtime wiring — module, feature flags, numbering, natural key ─────────
 -- All idempotent. Designed to be re-run safely on an already-seeded database.

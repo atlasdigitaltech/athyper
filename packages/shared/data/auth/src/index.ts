@@ -24,4 +24,5 @@ export {
   checkDelegationPermission,
 } from "./types";
 
-export { getSession, isAuthenticated, requireSession, SESSION_COOKIE_NAME } from "./session";
+export { getSession, isAuthenticated, requireSession } from "./session";
+export { SESSION_COOKIE_NAME } from "./constants";

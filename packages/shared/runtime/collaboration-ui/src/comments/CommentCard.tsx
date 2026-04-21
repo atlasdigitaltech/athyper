@@ -30,6 +30,8 @@ type FlagReason = typeof FLAG_REASONS[number]["value"];
 import { CommentForm } from "./CommentForm";
 import { CommentReactions } from "./CommentReactions";
 import { CommentThread, MAX_DEPTH, type CommentCardProps } from "./CommentThread";
+import { useCommentAttachmentList } from "../hooks/attachments";
+import { RenderedAttachmentChip, RenderedImageChip } from "../attachments/AttachmentChip";
 
 export type { CommentCardProps };
 
@@ -59,6 +61,33 @@ function timeAgo(dateStr: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+function CommentAttachments({ commentId }: { commentId: string }) {
+  const { items, isLoading } = useCommentAttachmentList(commentId);
+  if (isLoading || items.length === 0) return null;
+
+  const images = items.filter((i) => i.contentType.startsWith("image/"));
+  const files  = items.filter((i) => !i.contentType.startsWith("image/"));
+
+  return (
+    <div className="mt-2 space-y-2">
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {images.map((item) => (
+            <RenderedImageChip key={item.attachmentId} item={item} />
+          ))}
+        </div>
+      )}
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {files.map((item) => (
+            <RenderedAttachmentChip key={item.attachmentId} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CommentCard({
   comment,
   depth,
@@ -74,6 +103,7 @@ export function CommentCard({
   const [flagNote, setFlagNote] = useState("");
   const [isFlagging, setIsFlagging] = useState(false);
   const [flagDone, setFlagDone] = useState(false);
+  const [hasReplied, setHasReplied] = useState(false);
 
   const { replyToComment, updateComment, deleteComment } = useCommentActions(entityType, entityId);
 
@@ -93,8 +123,9 @@ export function CommentCard({
   }, [comment.id, flagReason, flagNote]);
 
   const handleReply = useCallback(
-    async (text: string) => {
-      await replyToComment({ parentId: comment.id, commentText: text });
+    async (text: string, attachmentIds: string[]) => {
+      await replyToComment({ parentId: comment.id, commentText: text, attachmentIds });
+      setHasReplied(true);
       setShowReply(false);
     },
     [comment.id, replyToComment],
@@ -111,7 +142,7 @@ export function CommentCard({
   }, [comment.id, deleteComment]);
 
   return (
-    <div className="group">
+    <div className={cn("group", depth === 0 && "rounded-lg border border-border bg-card p-4 shadow-2xs")}>
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
@@ -139,7 +170,7 @@ export function CommentCard({
               <textarea
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
-                className="w-full rounded-md border bg-background p-2 text-sm"
+                className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 rows={3}
               />
               <div className="flex gap-1">
@@ -164,6 +195,9 @@ export function CommentCard({
               {comment.commentText}
             </p>
           )}
+
+          {/* Attachments */}
+          <CommentAttachments commentId={comment.id} />
 
           {/* Reactions */}
           <div className="mt-2">
@@ -240,7 +274,7 @@ export function CommentCard({
 
           {/* Inline flag form */}
           {showFlag && (
-            <div className="mt-2 rounded-md border border-warning/30 bg-warning/5 p-3 space-y-2">
+            <div className="mt-2 rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
               <p className="text-xs font-medium text-warning">Report this comment</p>
               <div className="flex gap-2 flex-wrap">
                 {FLAG_REASONS.map((r) => (
@@ -249,10 +283,10 @@ export function CommentCard({
                     type="button"
                     onClick={() => setFlagReason(r.value)}
                     className={cn(
-                      "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                      "rounded-full border px-2.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                       flagReason === r.value
                         ? "border-warning bg-warning/10 text-warning font-medium"
-                        : "text-muted-foreground hover:border-warning/50",
+                        : "border-border text-muted-foreground hover:border-warning/50",
                     )}
                   >
                     {r.label}
@@ -264,7 +298,7 @@ export function CommentCard({
                 onChange={(e) => setFlagNote(e.target.value)}
                 placeholder="Additional context (optional)"
                 rows={2}
-                className="w-full rounded-md border bg-background p-2 text-xs"
+                className="w-full rounded-md border border-input bg-background p-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <div className="flex gap-1 justify-end">
                 <Button
@@ -278,8 +312,9 @@ export function CommentCard({
                 </Button>
                 <Button
                   type="button"
+                  variant="warning"
                   size="sm"
-                  className="h-6 px-2 text-xs bg-warning text-warning-foreground hover:bg-warning/90"
+                  className="h-6 px-2 text-xs"
                   onClick={() => void handleFlag()}
                   disabled={isFlagging}
                 >
@@ -290,13 +325,13 @@ export function CommentCard({
           )}
 
           {/* Threaded replies */}
-          {(comment.replyCount ?? 0) > 0 && (
+          {((comment.replyCount ?? 0) > 0 || hasReplied) && (
             <CommentThread
               parentId={comment.id}
               depth={depth}
               entityType={entityType}
               entityId={entityId}
-              replyCount={comment.replyCount}
+              replyCount={hasReplied ? Math.max(1, comment.replyCount ?? 0) : comment.replyCount}
               renderCard={renderCard}
             />
           )}

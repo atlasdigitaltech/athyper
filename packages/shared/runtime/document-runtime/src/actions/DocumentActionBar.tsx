@@ -196,7 +196,7 @@ export function DocumentActionBar({
               className="text-xs"
             >
               {Icon && <Icon className="mr-1 h-3.5 w-3.5" />}
-              <span className="hidden xl:inline">{action.label}</span>
+              {action.label}
             </Button>
           );
         })}
@@ -219,7 +219,7 @@ export function DocumentActionBar({
               className="text-xs text-muted-foreground"
             >
               {Icon && <Icon className="mr-1 h-3.5 w-3.5" />}
-              <span className="hidden xl:inline">{action.label}</span>
+              {action.label}
             </Button>
           );
         })}

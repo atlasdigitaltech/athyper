@@ -131,7 +131,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # If unset, the compose default ('db') leaks the dev service name into prod.
   require_var DB_HOST
   require_var DBPOOL_APPS_PASSWORD
-  require_var DBPOOL_AUTH_PASSWORD
+  require_var DBPOOL_SESSION_PASSWORD
   require_var IAM_ADMIN_PASSWORD
   require_var IAM_CLIENT_SECRET
   require_var MEMORYCACHE_PASSWORD
@@ -237,7 +237,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   fi
 
   # Detect dev passwords in non-local environments
-  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET; do
+  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY; do
     val="${ENV_MAP[$var]:-}"
     if [[ "$val" == "athyperadmin" ]]; then
       echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT environment (dev password leaked to non-local)"
@@ -348,21 +348,28 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
     ERRORS=$((ERRORS + 1))
   fi
 
-  # I-11 — MinIO scoped service accounts: APP_S3_* and BACKUP_S3_* must be
-  # set and must not be the local dev defaults. objectstorage-init provisions
-  # these users in MinIO on first stack start using the root credentials.
+  # I-11 — MinIO scoped service accounts: APP_S3_*, BACKUP_S3_*, TEMPO_S3_*, and
+  # LOKI_S3_* must be set. objectstorage-init provisions these users in MinIO on
+  # first stack start using the root credentials.
   require_var APP_S3_ACCESS_KEY
   require_var APP_S3_SECRET_KEY
   require_var BACKUP_S3_ACCESS_KEY
   require_var BACKUP_S3_SECRET_KEY
+  require_var TEMPO_S3_ACCESS_KEY
+  require_var TEMPO_S3_SECRET_KEY
+  require_var LOKI_S3_ACCESS_KEY
+  require_var LOKI_S3_SECRET_KEY
 
-  for var in APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY; do
-    val="${ENV_MAP[$var]:-}"
-    if [[ "$val" == "athyperadmin" ]]; then
-      echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT (dev credential leaked to non-local; inject from secrets manager)"
-      ERRORS=$((ERRORS + 1))
-    fi
-  done
+  # P2.10 / Loki — storage backend for logs. Mirrors the Tempo requirement:
+  # non-local envs must use s3 (MinIO) for durable, lifecycle-managed log storage.
+  LOKI_BACKEND="${ENV_MAP[LOKI_STORAGE_BACKEND]:-}"
+  if [[ "$LOKI_BACKEND" != "s3" ]]; then
+    echo "  FAIL  LOKI_STORAGE_BACKEND=$LOKI_BACKEND in $ENVIRONMENT (must be 's3' outside local)"
+    ERRORS=$((ERRORS + 1))
+  else
+    require_var LOKI_S3_BUCKET
+    require_var LOKI_S3_ENDPOINT
+  fi
 
   # Track B4 — analytics profile (Metabase) governance gate.
   # The analytics profile cannot come up in staging/production unless
@@ -403,6 +410,18 @@ fi
 
 if [[ "$ENVIRONMENT" == "local" ]]; then
   warn_var CREDENTIAL_MASTER_KEY "credential encryption disabled (optional in local dev)"
+fi
+
+# Object storage: warn if S3_ENDPOINT is not set in local dev.
+# The server silently disables attachments when S3_ENDPOINT is absent — the
+# warning surfaces this early rather than waiting for an upload to fail.
+if [[ "$ENVIRONMENT" == "local" ]]; then
+  S3EP="${ENV_MAP[S3_ENDPOINT]:-}"
+  if [[ -z "$S3EP" ]]; then
+    echo "  WARN  S3_ENDPOINT not set — object storage (file attachments) will be disabled."
+    echo "        To enable: set S3_ENDPOINT=http://objectstorage:9000 and S3_ACCESS_KEY/S3_SECRET_KEY."
+    WARNINGS=$((WARNINGS + 1))
+  fi
 fi
 
 # Certificate expiry check (all environments)

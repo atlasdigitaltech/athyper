@@ -13,7 +13,7 @@
  * the badge without pulling in the full semantic-colors palette at build time.
  */
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
-import type { ApprovableDocumentHeaderDTO } from "./types";
+import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage } from "./types";
 
 // ── Simple status → intent mapping ───────────────────────────────────────────
 
@@ -95,6 +95,24 @@ function calcDueMeta(
   return { label: `Due in ${diffDays}d`, intent: "info" };
 }
 
+// ── Progress rail constants ───────────────────────────────────────────────────
+
+const APPROVABLE_STAGES: ProgressStage[] = [
+  { key: "draft",     label: "Draft" },
+  { key: "submitted", label: "Submitted" },
+  { key: "approved",  label: "Approved" },
+  { key: "posted",    label: "Posted" },
+  { key: "paid",      label: "Paid" },
+];
+
+const NEXT_ACTION_COPY: Record<string, string> = {
+  draft:     "Submit for approval — it will be routed to your approver",
+  submitted: "Awaiting review from Finance Manager",
+  approved:  "Ready to post — create accounting entries",
+  posted:    "Mark as paid when settlement is confirmed",
+  paid:      "Invoice is settled — no further action needed",
+};
+
 // ── Initials helper ───────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
@@ -127,10 +145,15 @@ export function buildApprovableHeaderFromRecord(
   const statusRaw = dh?.status_field ? data[dh.status_field] : undefined;
   const statusLabel = statusRaw ? String(statusRaw) : "Unknown";
 
+  const titleVal = dh?.title_field && data[dh.title_field]
+    ? String(data[dh.title_field])
+    : undefined;
+
   const dto: ApprovableDocumentHeaderDTO = {
     identity: {
       typeLabel: dh?.type_label ?? entity.entity_name.toUpperCase(),
       number: numberVal,
+      title: titleVal,
       statusLabel,
       statusIntent: statusToIntent(statusRaw),
     },
@@ -181,10 +204,51 @@ export function buildApprovableHeaderFromRecord(
     };
   }
 
+  // ── Audit trail ─────────────────────────────────────────────────────────────
+  const auditOut: ApprovableAudit = {};
+  if (dh?.created_at_field    && data[dh.created_at_field])
+    auditOut.createdAt       = fmtDate(data[dh.created_at_field]) ?? String(data[dh.created_at_field]);
+  if (dh?.created_by_field    && data[dh.created_by_field])
+    auditOut.createdBy       = String(data[dh.created_by_field]);
+  if (dh?.updated_at_field    && data[dh.updated_at_field])
+    auditOut.updatedAt       = fmtDate(data[dh.updated_at_field]) ?? String(data[dh.updated_at_field]);
+  if (dh?.updated_by_field    && data[dh.updated_by_field])
+    auditOut.updatedBy       = String(data[dh.updated_by_field]);
+  if (dh?.status_changed_at_field && data[dh.status_changed_at_field])
+    auditOut.statusChangedAt = fmtDate(data[dh.status_changed_at_field]) ?? String(data[dh.status_changed_at_field]);
+  if (dh?.status_changed_by_field && data[dh.status_changed_by_field])
+    auditOut.statusChangedBy = String(data[dh.status_changed_by_field]);
+  if (Object.keys(auditOut).length > 0) dto.audit = auditOut;
+
   // ── Context counters ────────────────────────────────────────────────────────
   dto.context = {
     lineItems: flags.has_line_items ? 0 : undefined,
   };
+
+  // ── Progress rail ───────────────────────────────────────────────────────────
+  const statusKey = typeof statusRaw === "string"
+    ? statusRaw.toLowerCase().replace(/[\s-]/g, "_")
+    : "draft";
+  const stepIndex = APPROVABLE_STAGES.findIndex((s) => s.key === statusKey);
+  const effectiveIndex = stepIndex === -1 ? 0 : stepIndex;
+  const currentKey = stepIndex === -1 ? "draft" : statusKey;
+
+  dto.progressRail = {
+    stages: APPROVABLE_STAGES.map((stage, i) => ({
+      ...stage,
+      reachedAt: i === effectiveIndex && docDateFormatted ? docDateFormatted : undefined,
+      targetAt: stage.key === "paid" && i > effectiveIndex && dto.dates?.dueDate
+        ? dto.dates.dueDate
+        : undefined,
+    })),
+    currentKey,
+    stepIndex: effectiveIndex,
+    nextActionCopy: NEXT_ACTION_COPY[currentKey],
+  };
+
+  if (NEXT_ACTION_COPY[currentKey]) {
+    dto.nextStep = { label: "Next", copy: NEXT_ACTION_COPY[currentKey]! };
+  }
 
   return dto;
 }

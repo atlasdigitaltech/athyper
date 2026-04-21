@@ -87,6 +87,18 @@ export const WORKSPACE_LABELS: Record<string, string> = {
   "partner-management":   "Partner",
 };
 
+/** Maps workspace key → landing page URL (used for right-click "Open in new tab" on rail icons). */
+export const WORKSPACE_HREF_MAP: Record<string, string> = {
+  "finance":                  "/finance",
+  "supply-chain":             "/supply-chain",
+  "customer-experience":      "/customer-experience",
+  "people-management":        "/people",
+  "project-management":       "/projects",
+  "manufacturing-operations": "/manufacturing",
+  "asset-management":         "/asset-management",
+  // "partner-management" has no landing page yet
+};
+
 /** Sort order for workspaces in the rail (lower = higher). */
 export const WORKSPACE_SORT_ORDER: Record<string, number> = {
   "finance":                  0,

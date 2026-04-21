@@ -23,8 +23,8 @@ DECLARE
     v_cc_id        uuid;
     v_vendor_id    uuid;
     v_sys          uuid := '00000000-0000-0000-0000-000000000000';
-    v_invoice_id   uuid;
-    v_advance_id   uuid;
+    v_invoice_id   uuid := '00000001-0000-0000-0001-000000000007';  -- INV-A7-0001 (pinned)
+    v_advance_id   uuid := '00000002-0000-0000-0002-000000000007';  -- ADV-A7-0001 (pinned)
     v_sc_opex_id   uuid;
     v_bi_opex_id   uuid;
     v_pm_wire_id   uuid;
@@ -56,7 +56,9 @@ BEGIN
          WHERE tenant_id = v_tenant_id AND payment_number = 'ADV-A7-0001'
     ) THEN
         INSERT INTO document.payment_entry (
+            id,
             tenant_id, company_code_id,
+            code, name,
             payment_number, payment_type, payment_direction,
             supplier_id, supplier_name,
             payment_method_id, bank_account_id,
@@ -66,7 +68,9 @@ BEGIN
             notes, status, created_by,
             fiscal_year, period_number
         ) VALUES (
+            v_advance_id,
             v_tenant_id, v_cc_id,
+            'ADV-A7-0001', 'Vendor Advance — A7 Step 1',
             'ADV-A7-0001', 'ADVANCE', 'OUTBOUND',
             v_vendor_id, 'Acme Consulting LLC',
             v_pm_wire_id, v_house_bank_id,
@@ -77,7 +81,7 @@ BEGIN
             'draft', v_sys,
             extract(year FROM CURRENT_DATE)::smallint,
             extract(month FROM CURRENT_DATE)::smallint
-        ) RETURNING id INTO v_advance_id;
+        );
 
         RAISE NOTICE 'demo/005 scenario A7 step 1: ADV-A7-0001 created (draft, USD 500 advance)';
     END IF;
@@ -88,7 +92,9 @@ BEGIN
          WHERE tenant_id = v_tenant_id AND invoice_number = 'INV-A7-0001'
     ) THEN
         INSERT INTO document.purchase_invoice (
+            id,
             tenant_id, company_code_id,
+            code, name,
             invoice_number, invoice_source, invoice_type,
             supplier_id, supplier_invoice_number, supplier_invoice_date,
             document_date, posting_date, received_date,
@@ -98,7 +104,9 @@ BEGIN
             description, status, created_by,
             fiscal_year, period_number
         ) VALUES (
+            v_invoice_id,
             v_tenant_id, v_cc_id,
+            'INV-A7-0001', 'Invoice with Advance Recovery (A7 Step 2)',
             'INV-A7-0001', 'NON_PO', 'STANDARD',
             v_vendor_id, 'ACME-2026-00107', CURRENT_DATE,
             CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
@@ -109,7 +117,7 @@ BEGIN
             'draft', v_sys,
             extract(year FROM CURRENT_DATE)::smallint,
             extract(month FROM CURRENT_DATE)::smallint
-        ) RETURNING id INTO v_invoice_id;
+        );
 
         INSERT INTO document.purchase_invoice_line (
             tenant_id, purchase_invoice_id, line_no,

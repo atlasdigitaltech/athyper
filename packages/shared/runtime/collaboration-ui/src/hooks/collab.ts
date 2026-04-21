@@ -207,15 +207,18 @@ export function useCommentActions(entityType: string, entityId: string) {
     mutationFn: ({
       commentText,
       parentCommentId,
+      attachmentIds,
     }: {
       commentText: string;
       parentCommentId?: string;
+      attachmentIds?: string[];
     }) =>
       collabMutate<CommentActionResponse>("/api/collab/comments", "POST", {
         entityType,
         entityId,
         commentText,
         parentCommentId,
+        ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listKey });
@@ -226,14 +229,19 @@ export function useCommentActions(entityType: string, entityId: string) {
     mutationFn: ({
       parentId,
       commentText,
+      attachmentIds,
     }: {
       parentId: string;
       commentText: string;
+      attachmentIds?: string[];
     }) =>
       collabMutate<CommentActionResponse>(
         `/api/collab/comments/${parentId}/replies`,
         "POST",
-        { commentText },
+        {
+          commentText,
+          ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
+        },
       ),
     onSuccess: (_data, { parentId }) => {
       queryClient.invalidateQueries({ queryKey: listKey });

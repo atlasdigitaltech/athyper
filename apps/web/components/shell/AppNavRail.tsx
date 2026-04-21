@@ -13,7 +13,7 @@
 import { useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { NavRail, type NavRailKey } from "@athyper/shell";
-import { deriveNavTree } from "@athyper/navigation";
+import { deriveNavTree, WORKSPACE_HREF_MAP } from "@athyper/navigation";
 import { useShellSession } from "@/components/providers/SessionProvider";
 
 export interface AppNavRailProps {
@@ -89,6 +89,7 @@ export function AppNavRail({
         key: ws.key,
         label: ws.label,
         icon: ws.icon,
+        href: WORKSPACE_HREF_MAP[ws.key],
       }))}
       hasPlatform={hasPlatform}
       activeKey={routeKey}

@@ -17,4 +17,6 @@ export type {
   ApprovableFlowStep,
   ApprovableAction,
   HeaderMode,
+  ProgressStage,
+  ProgressRail,
 } from "./types";

@@ -11,7 +11,7 @@ import {
   setCsrfCookie,
   setSessionCookie,
 } from "@/lib/auth/session";
-import { sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import { refreshLockKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
 import { randomUUID } from "node:crypto";
 import type { V4Session } from "@/lib/auth/types";
 
@@ -50,6 +50,7 @@ export async function POST() {
   const { realm, clientId, sessionNamespace } = resolveRealmConfig(isPlatformSession);
 
   const redis = await getSessionRedis();
+  const lockKey = refreshLockKey(sessionNamespace, sid);
 
   try {
     const raw = await redis.get(sessKey(sessionNamespace, sid));
@@ -91,6 +92,20 @@ export async function POST() {
     if (!session.refreshToken) {
       await redis.del(sessKey(sessionNamespace, sid));
       return NextResponse.json({ redirect: "/api/auth/login" }, { status: 401 });
+    }
+
+    // ─── Distributed lock — prevent concurrent refresh races ─────────────────
+    // Multiple browser tabs can call /api/auth/refresh simultaneously when the
+    // token is close to expiry. KC refresh tokens are single-use; the second
+    // concurrent call would receive "Maximum allowed refresh token reuse exceeded."
+    // Acquire a short-lived lock on this sid. The losing tab waits briefly and
+    // returns 200 — the winning tab's Set-Cookie has already updated neon_sid in
+    // the browser (shared across all tabs for the same origin), so the losing
+    // tab's next real request will carry the new sid.
+    const acquired = await redis.set(lockKey, "1", { NX: true, EX: 10 });
+    if (!acquired) {
+      await new Promise<void>((r) => setTimeout(r, 300));
+      return NextResponse.json({ ok: true, message: "Refresh in progress" });
     }
 
     // ─── Refresh tokens at Keycloak ──────────────────────────────────────────
@@ -170,6 +185,7 @@ export async function POST() {
     await setSessionCookie(newSid, env);
     await setCsrfCookie(newCsrfToken, env);
 
+    await redis.del(lockKey).catch(() => { /* best effort */ });
     return NextResponse.json({
       ok: true,
       accessExpiresAt: updatedSession.accessExpiresAt,
@@ -181,8 +197,15 @@ export async function POST() {
     } catch {
       /* best effort */
     }
+    await redis.del(lockKey).catch(() => { /* best effort */ });
     const reason = e instanceof Error ? e.message : "Refresh failed";
-    console.error("[auth/refresh] Failed:", reason);
+    const isKcInvalidGrant = reason.includes("invalid_grant");
+    console.error(
+      isKcInvalidGrant
+        ? "[auth/refresh] KC session invalidated (re-login required):"
+        : "[auth/refresh] Failed:",
+      reason,
+    );
     return NextResponse.json({ redirect: "/api/auth/login", reason }, { status: 401 });
   }
 }

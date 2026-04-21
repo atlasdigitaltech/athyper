@@ -299,7 +299,7 @@ export async function bootstrap(
         });
       })
       .catch((err: unknown) => {
-        logger.error("object_storage_bucket_validation_failed", {
+        logger.warn("object_storage_bucket_validation_failed", {
           bucket: config.objectStorage!.bucket,
           endpoint: config.objectStorage!.endpoint,
           err: err instanceof Error ? err.message : String(err),

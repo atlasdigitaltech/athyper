@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    code                    text            NOT NULL DEFAULT '',
+    name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
     -- Natural key

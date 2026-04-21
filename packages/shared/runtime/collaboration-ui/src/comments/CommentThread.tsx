@@ -40,7 +40,7 @@ export function CommentThread({
   replyCount,
   renderCard,
 }: CommentThreadProps) {
-  const [expanded, setExpanded] = useState(depth < 2);
+  const [expanded, setExpanded] = useState(false);
 
   const { replies, isLoading } = useReplies(parentId, expanded);
   const count = replyCount ?? replies.length;
@@ -48,7 +48,10 @@ export function CommentThread({
   if (count === 0 && !expanded) return null;
 
   return (
-    <div className={cn("mt-2", depth > 0 && "ml-6 border-l pl-4")}>
+    <div className={cn(
+      depth === 0 && "mt-3 rounded-md border border-border/50 bg-muted/30 p-3",
+      depth > 0  && "mt-2 border-t border-border/40 pt-2 pl-3",
+    )}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}

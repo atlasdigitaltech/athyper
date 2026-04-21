@@ -53,7 +53,7 @@ const MFA_EXEMPT_PREFIXES = [
   "/api/auth/session",
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
 

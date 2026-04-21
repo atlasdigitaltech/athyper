@@ -23,6 +23,10 @@ export const sessKey = (namespace: string, sid: string): string =>
 export const userSessionsKey = (namespace: string, userId: string): string =>
   `user_sessions:${namespace}:${userId}`;
 
+/** Distributed lock used to serialise concurrent refresh attempts. TTL: 10s. */
+export const refreshLockKey = (namespace: string, sid: string): string =>
+  `refresh_lock:${namespace}:${sid}`;
+
 // ─── Pattern matchers ─────────────────────────────────────────────────────────
 
 export const sessPattern = (namespace: string): string => `sess:${namespace}:*`;

@@ -523,8 +523,42 @@ CREATE TRIGGER trg_stl_denorm_counts
 
 
 -- =============================================================================
+-- §P2P0  document.purchase_order_confirmation
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_poc_updated_at ON document.purchase_order_confirmation;
+CREATE TRIGGER trg_poc_updated_at BEFORE UPDATE ON document.purchase_order_confirmation
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_poc_status_changed ON document.purchase_order_confirmation;
+CREATE TRIGGER trg_poc_status_changed BEFORE UPDATE ON document.purchase_order_confirmation
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
+-- §P2P0b  document.delivery_note
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_dn_updated_at ON document.delivery_note;
+CREATE TRIGGER trg_dn_updated_at BEFORE UPDATE ON document.delivery_note
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_dn_status_changed ON document.delivery_note;
+CREATE TRIGGER trg_dn_status_changed BEFORE UPDATE ON document.delivery_note
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- =============================================================================
 -- §P2P1  document.goods_receipt  — §15.1 GR header company consistency
 -- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_gr_updated_at ON document.goods_receipt;
+CREATE TRIGGER trg_gr_updated_at BEFORE UPDATE ON document.goods_receipt
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_gr_status_changed ON document.goods_receipt;
+CREATE TRIGGER trg_gr_status_changed BEFORE UPDATE ON document.goods_receipt
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 DROP TRIGGER IF EXISTS trg_gr_company_guard ON document.goods_receipt;
 CREATE TRIGGER trg_gr_company_guard
@@ -544,6 +578,19 @@ CREATE TRIGGER trg_grl_company_guard
     ON document.goods_receipt_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_guard_gr_line_company();
+
+
+-- =============================================================================
+-- §P2P3a  document.service_entry_sheet
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_ses_updated_at ON document.service_entry_sheet;
+CREATE TRIGGER trg_ses_updated_at BEFORE UPDATE ON document.service_entry_sheet
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ses_status_changed ON document.service_entry_sheet;
+CREATE TRIGGER trg_ses_status_changed BEFORE UPDATE ON document.service_entry_sheet
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 
 -- =============================================================================

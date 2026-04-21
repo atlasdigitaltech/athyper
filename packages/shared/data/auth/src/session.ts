@@ -9,8 +9,7 @@
  *   const session = await getSession();
  */
 import { type Session } from "./types";
-
-const SESSION_COOKIE_NAME = "neon_sid";
+import { SESSION_COOKIE_NAME } from "./constants";
 
 function isValidSession(value: unknown): value is Session {
   if (!value || typeof value !== "object") return false;
@@ -80,4 +79,4 @@ export async function requireSession(): Promise<Session> {
   return session;
 }
 
-export { SESSION_COOKIE_NAME };
+export { SESSION_COOKIE_NAME } from "./constants";
