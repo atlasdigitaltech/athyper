@@ -67,3 +67,22 @@ export async function clearCsrfCookie(): Promise<void> {
   const store = await cookies();
   store.delete(CSRF_COOKIE_NAME);
 }
+
+export const MFA_PENDING_COOKIE = "neon_mfa_pending";
+
+/** Set the MFA-pending cookie (JS-readable so middleware edge runtime can read it). */
+export async function setMfaPendingCookie(env: string): Promise<void> {
+  const store = await cookies();
+  store.set(MFA_PENDING_COOKIE, "1", {
+    httpOnly: false,
+    secure: env !== "local",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 900, // 15 min — must complete MFA within this window
+  });
+}
+
+export async function clearMfaPendingCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(MFA_PENDING_COOKIE);
+}

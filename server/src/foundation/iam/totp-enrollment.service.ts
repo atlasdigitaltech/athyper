@@ -22,6 +22,7 @@
 
 import { createHmac, randomBytes } from "crypto";
 import type { Kysely } from "kysely";
+import QRCode from "qrcode";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ export class TotpEnrollmentService {
       .returning("id" as never)
       .executeTakeFirstOrThrow() as { id: string };
 
-    const qrSvg = buildQrSvgStub(otpauthUri);
+    const qrSvg = await QRCode.toString(otpauthUri, { type: "svg", width: 200, margin: 2 });
 
     return {
       mfaConfigId:  row.id,
@@ -276,21 +277,6 @@ function base32Decode(encoded: string): Buffer {
     }
   }
   return Buffer.from(bytes);
-}
-
-// ── QR stub (text-based placeholder — replace with qrcode library in v2) ─────
-
-function buildQrSvgStub(uri: string): string {
-  // Phase 6.1: Returns an SVG with the URI text as a placeholder.
-  // In production, replace with qrcode.toSvg(uri) or similar.
-  const escaped = uri.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="white"/>
-  <text x="10" y="20" font-size="8" fill="#333">Scan with authenticator app:</text>
-  <text x="10" y="35" font-size="6" fill="#666" word-spacing="0"
-    style="word-break:break-all;white-space:pre-wrap;max-width:180px">${escaped.substring(0, 100)}</text>
-  <text x="10" y="50" font-size="7" fill="#999">Phase 6.1 QR stub — replace with qrcode lib</text>
-</svg>`;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────

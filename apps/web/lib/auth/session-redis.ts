@@ -15,11 +15,13 @@ let _client: AnyRedisClient = null;
 let _promise: Promise<AnyRedisClient> | null = null;
 
 const CONNECT_TIMEOUT_MS = 5000;
-// Socket timeout: close the socket if no data is received for > 3s.
-// @redis/client has no per-command timeout — socketTimeout is the correct
-// option. It fires when the connection goes silent, triggering reconnect
-// and unblocking any queued commands waiting on a stale TCP socket.
-const SOCKET_TIMEOUT_MS = 3000;
+// Socket timeout: close the socket if no data is received for this many ms.
+// 0 = disabled (recommended for local dev — idle connections between page loads
+// would otherwise trigger constant reconnects on Windows Docker).
+// Set REDIS_SOCKET_TIMEOUT_MS in production to detect stale TCP sockets.
+const SOCKET_TIMEOUT_MS = process.env.REDIS_SOCKET_TIMEOUT_MS
+  ? parseInt(process.env.REDIS_SOCKET_TIMEOUT_MS, 10)
+  : 0;
 
 // Exponential backoff: 300ms, 600ms, 1200ms, 2400ms, 5000ms (cap), then give up.
 // 5 retries gives ~9.5s of total recovery time — enough to survive a transient
@@ -43,9 +45,9 @@ function createConnection(): Promise<AnyRedisClient> {
       url,
       socket: {
         connectTimeout: CONNECT_TIMEOUT_MS,
-        socketTimeout: SOCKET_TIMEOUT_MS,
+        ...(SOCKET_TIMEOUT_MS > 0 ? { socketTimeout: SOCKET_TIMEOUT_MS } : {}),
         noDelay: true,
-        keepAlive: true, // TCP keepalive — prevents Docker port-map drops
+        keepAlive: true,
         reconnectStrategy,
       },
     });

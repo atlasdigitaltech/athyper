@@ -37,7 +37,7 @@ import {
   resolvePrincipalIdOrNull,
   setCachePrivate,
 } from "../../shared/route-helpers.js";
-import { createStepUpService, hashDeviceToken, type ActionClass } from "../mfa/step-up.service.js";
+import { createStepUpService, hashDeviceToken, isDeviceTrusted, type ActionClass } from "../mfa/step-up.service.js";
 import { createTotpEnrollmentService } from "../../../../../src/foundation/iam/totp-enrollment.service.js";
 import { createMfaSyncService } from "../mfa/mfa-sync.service.js";
 import type { CacheClient } from "../session/session.service.js";
@@ -69,8 +69,15 @@ export interface MfaRoutesDeps {
     baseUrl: string;
     /** KC realm name, e.g. "athyper" */
     realm: string;
-    /** OIDC client ID registered in KC — used as `client_id` in AIA redirect */
+    /** OIDC client ID registered in KC — used for admin token (client_credentials) */
     clientId: string;
+    /**
+     * OIDC client ID of the web app (e.g. "neon-web").
+     * Used as `client_id` in WebAuthn AIA redirect — must match the client
+     * the user logged in with, otherwise KC rejects the AIA request.
+     * Defaults to clientId when not set.
+     */
+    webClientId?: string;
     /**
      * Returns a fresh KC admin access token.
      * Use service-account client_credentials grant — never a human admin password.
@@ -172,6 +179,9 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       if (!caller) return;
       const { sub, tenantId, principalId } = caller;
 
+      // Check elevation first (avoids TOCTOU: elevation state checked before DB query)
+      const elevated = await stepUp.isElevated(sub, "security_change");
+
       // Require step-up if there is already an active TOTP method (re-enrollment)
       const existingTotp = await db
         .selectFrom("control.mfa_config as mc")
@@ -183,16 +193,13 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         .where("mc.is_verified", "=", true)
         .executeTakeFirst();
 
-      if (existingTotp) {
-        const elevated = await stepUp.isElevated(sub, "security_change");
-        if (!elevated) {
-          res.status(403).json({
-            error: "STEP_UP_REQUIRED",
-            action_class: "security_change",
-            message: "Re-enrolling TOTP requires step-up MFA. Complete a security_change challenge first.",
-          });
-          return;
-        }
+      if (existingTotp && !elevated) {
+        res.status(403).json({
+          error: "STEP_UP_REQUIRED",
+          action_class: "security_change",
+          message: "Re-enrolling TOTP requires step-up MFA. Complete a security_change challenge first.",
+        });
+        return;
       }
 
       // Get account label (email) for the otpauth URI
@@ -294,12 +301,24 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         return;
       }
 
-      await db
-        .deleteFrom("control.mfa_config")
-        .where("id", "=", methodId)
-        .where("principal_id", "=", principalId)
-        .where("tenant_id", "=", tenantId)
-        .execute();
+      // For WebAuthn, revoke from Keycloak first (KC is source of truth).
+      // revokeCredential() deletes both the KC credential and the local row atomically.
+      if (method.method_type === "webauthn" && mfaSync && kc) {
+        try {
+          await mfaSync.revokeCredential(tenantId, principalId, methodId, kc.realm);
+        } catch (err) {
+          logger?.error("mfa_webauthn_kc_revoke_failed", { methodId, err: String(err) });
+          res.status(502).json({ error: "KC_UNAVAILABLE", message: "Failed to revoke credential from Keycloak. Try again." });
+          return;
+        }
+      } else {
+        await db
+          .deleteFrom("control.mfa_config")
+          .where("id", "=", methodId)
+          .where("principal_id", "=", principalId)
+          .where("tenant_id", "=", tenantId)
+          .execute();
+      }
 
       res.status(204).end();
     } catch (err) {
@@ -661,7 +680,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       const cookieMaxAge = ttlDays * 24 * 60 * 60; // seconds
       res.setHeader(
         "Set-Cookie",
-        `td_token=${rawToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/iam; Max-Age=${cookieMaxAge}`,
+        `td_token=${rawToken}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${cookieMaxAge}`,
       );
 
       setCachePrivate(res, 0);
@@ -672,6 +691,36 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       });
     } catch (err) {
       logger?.error("trusted_device_register_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+  // ── POST /api/iam/trusted-devices/verify ──────────────────────────────────
+  // Verify a raw td_token from a cookie — used by the login callback to bypass
+  // MFA challenge for already-trusted devices.
+  // Body: { token: string }
+  router.post("/iam/trusted-devices/verify", (async (req, res, next) => {
+    try {
+      const caller = await resolveCallerAuth(req, res, db, auth);
+      if (!caller) return;
+      const { tenantId, principalId } = caller;
+
+      const { token } = req.body as { token?: string };
+      if (!token?.trim()) {
+        res.status(400).json({ error: "MISSING_TOKEN" });
+        return;
+      }
+
+      const trusted = await isDeviceTrusted(db, tenantId, principalId, token, "security_change");
+      if (!trusted) {
+        res.status(401).json({ error: "INVALID_TOKEN", message: "Device token not recognised or expired" });
+        return;
+      }
+
+      setCachePrivate(res, 0);
+      res.json({ trusted: true });
+    } catch (err) {
+      logger?.error("trusted_device_verify_error", { err: String(err) });
       next(err);
     }
   }) as RequestHandler);
@@ -794,7 +843,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
 
       const redirectUrl = mfaSync.buildAiaUrl(
         kc.realm,
-        kc.clientId,
+        kc.webClientId ?? kc.clientId, // AIA must use the web client the user logged in with
         body.redirect_uri,
         "webauthn-register",
       );
@@ -826,10 +875,19 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       if (!caller) return;
       const { tenantId, principalId } = caller;
 
+      // Pull WebAuthn credentials from KC into app mirror
       const result = await mfaSync.syncFromKC(tenantId, principalId, kc.realm);
 
+      // Also push any pending TOTP secrets to KC (app → KC direction)
+      const totpResult = await mfaSync.syncPendingTotp(tenantId, principalId, kc.realm);
+
       setCachePrivate(res, 0);
-      res.json({ synced: result.synced, drifted: result.drifted });
+      res.json({
+        synced:       result.synced + totpResult.synced,
+        drifted:      result.drifted,
+        totp_synced:  totpResult.synced,
+        totp_failed:  totpResult.failed,
+      });
     } catch (err) {
       logger?.error("mfa_sync_error", { err: String(err) });
       next(err);

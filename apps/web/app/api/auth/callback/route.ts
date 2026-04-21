@@ -353,53 +353,120 @@ export async function GET(req: Request) {
       mfaVerified: false,
     };
 
+    // ─── Step 5b: Check app-level MFA ────────────────────────────────────────
+    // Backend requires X-Org (tenantCode--entityCode) and X-Realm.
+    let requiresMfaChallenge = false;
+    const firstOrgAlias = Object.keys(organizations)[0] ?? null;
+    if (firstOrgAlias) {
+      try {
+        const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
+        const mfaRes = await fetchWithTimeout(`${runtimeApiUrl}/api/iam/mfa`, {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            "X-Org": firstOrgAlias,
+            "X-Realm": realm,
+          },
+        });
+        if (mfaRes.ok) {
+          const mfaData = await mfaRes.json() as { methods?: Array<{ is_enabled: boolean; is_verified: boolean }> };
+          requiresMfaChallenge = mfaData.methods?.some((m) => m.is_enabled && m.is_verified) ?? false;
+        }
+        console.log("[auth/callback] MFA check:", { status: mfaRes.status, xOrg: firstOrgAlias, requiresMfaChallenge });
+      } catch (e) {
+        console.warn("[auth/callback] MFA check failed — backend unreachable, skipping MFA gate", e);
+      }
+    }
+
+    // ─── Step 5c: Trusted device bypass ──────────────────────────────────────
+    // If the browser presents a valid td_token cookie, skip MFA challenge.
+    if (requiresMfaChallenge && firstOrgAlias) {
+      try {
+        const { cookies: nextCookies } = await import("next/headers");
+        const cookieStore = await nextCookies();
+        const rawToken = cookieStore.get("td_token")?.value;
+        if (rawToken) {
+          const runtimeApiUrl = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
+          const tdRes = await fetchWithTimeout(
+            `${runtimeApiUrl}/api/iam/trusted-devices/verify`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${tokens.access_token}`,
+                "X-Org": firstOrgAlias,
+                "X-Realm": realm,
+              },
+              body: JSON.stringify({ token: rawToken }),
+            },
+          );
+          if (tdRes.ok) {
+            requiresMfaChallenge = false;
+            session.mfaVerified = true;
+            console.log("[auth/callback] Trusted device bypass — MFA skipped");
+          }
+        }
+      } catch {
+        // Fail safe: if verify fails, still require MFA
+      }
+    }
+
+    if (requiresMfaChallenge) {
+      session.mfaRequired = true;
+    }
+
     await redis.set(
       sessKey(sessionNamespace, sid),
       JSON.stringify(session),
-      { EX: 28800 }, // 8 h absolute TTL
+      { EX: 28800 },
     );
 
-    // ─── Step 6: User session index (enables mass revocation) ───────────────
+    // ─── Step 6: User session index ─────────────────────────────────────────
     await redis.sAdd(userSessionsKey(sessionNamespace, sub), sid);
 
     // ─── Step 7: Set cookies ─────────────────────────────────────────────────
     await setSessionCookie(sid, env);
     await setCsrfCookie(csrfToken, env);
 
-    // Log for debugging tenant/org resolution issues
-    console.log("[auth/callback] Session created:", {
-      sub,
-      username: preferredUsername,
-      realm,
-      orgCount: Object.keys(organizations).length,
-      orgAliases: Object.keys(organizations),
-      provider: pkceProvider,
-    });
+    console.log("[auth/callback] Session created:", { sub, username: preferredUsername, realm, requiresMfaChallenge });
 
     // ─── Step 8: Redirect ────────────────────────────────────────────────────
+    // neon_mfa_pending is set DIRECTLY on the redirect response — cookies()
+    // helper writes are not guaranteed to carry over to an explicit redirect.
     if (isPlatformLogin) {
       const target = new URL("/platform", publicBaseUrl);
       const response = NextResponse.redirect(target);
       response.cookies.set("neon_realm", "platform", {
-        httpOnly: true,
-        secure: env !== "local",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 28800,
+        httpOnly: true, secure: env !== "local", sameSite: "lax", path: "/", maxAge: 28800,
       });
       return response;
     }
 
-    // Tenant login → entity/workbench selector
+    // Build the post-auth destination (entity/workbench selector)
     const selectUrl = new URL("/auth/select", publicBaseUrl);
-    if (returnUrl && returnUrl !== "/") {
-      selectUrl.searchParams.set("returnUrl", returnUrl);
+    if (returnUrl && returnUrl !== "/") selectUrl.searchParams.set("returnUrl", returnUrl);
+    if (filter) selectUrl.searchParams.set("filter", filter);
+
+    // If MFA is required, go to challenge page first — passing selectUrl as returnUrl.
+    // Do NOT rely on middleware to intercept /auth/select: that path is in the
+    // public-routes exemption so the MFA gate never runs for it.
+    if (requiresMfaChallenge) {
+      const challengeUrl = new URL("/mfa/challenge", publicBaseUrl);
+      challengeUrl.searchParams.set("returnUrl", selectUrl.pathname + selectUrl.search);
+
+      const mfaResponse = NextResponse.redirect(challengeUrl);
+      mfaResponse.cookies.delete("neon_realm");
+      mfaResponse.cookies.set("neon_mfa_pending", "1", {
+        httpOnly: false,
+        secure: env !== "local",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 900,
+      });
+      return mfaResponse;
     }
-    if (filter) {
-      selectUrl.searchParams.set("filter", filter);
-    }
+
     const response = NextResponse.redirect(selectUrl);
-    response.cookies.delete("neon_realm"); // clear any stale platform cookie
+    response.cookies.delete("neon_realm");
     return response;
   } catch (e: unknown) {
     console.error("[auth/callback] Error:", e instanceof Error ? e.message : e);

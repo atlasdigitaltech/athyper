@@ -42,6 +42,7 @@ import {
   Input, Label, Skeleton,
 } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
+import { getCsrfToken } from "@/lib/bff-fetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ function StepUpDialog({
     mutationFn: async () => {
       const res = await fetch("/api/iam/mfa/elevate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ action_class: actionClass, code: code.trim(), method_type: "totp" }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Invalid code");
@@ -199,7 +200,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
 
   const begin = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/iam/mfa/totp/begin", { method: "POST" });
+      const res = await fetch("/api/iam/mfa/totp/begin", { method: "POST", headers: { "X-CSRF-Token": getCsrfToken() } });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Failed to start enrollment");
       return res.json() as Promise<EnrollBeginResult>;
     },
@@ -216,7 +217,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
       if (!pending) throw new Error("No pending enrollment");
       const res = await fetch("/api/iam/mfa/totp/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ mfa_config_id: pending.mfa_config_id, code: code.trim() }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Invalid code");
@@ -292,7 +293,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
-            className="max-w-[140px] font-mono text-center text-lg tracking-widest"
+            className="max-w-35 font-mono text-center text-lg tracking-widest"
             maxLength={6}
             autoFocus
             onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify.mutate()}
@@ -337,7 +338,7 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
       const redirectUri = `${window.location.origin}/settings?section=security&mfa_sync=1`;
       const res = await fetch("/api/iam/mfa/webauthn/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ redirect_uri: redirectUri }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Failed to start WebAuthn enrollment");
@@ -356,7 +357,7 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
     setSyncing(true);
     setError(null);
     try {
-      const res = await fetch("/api/iam/mfa/sync", { method: "POST" });
+      const res = await fetch("/api/iam/mfa/sync", { method: "POST", headers: { "X-CSRF-Token": getCsrfToken() } });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Sync failed");
       onSyncDone();
     } catch (e) {
@@ -434,7 +435,7 @@ function TrustedDevicesPanel() {
     mutationFn: async () => {
       const res = await fetch("/api/iam/trusted-devices", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ device_name: deviceName.trim() || undefined, ttl_days: 30 }),
       });
       if (res.status === 403) {
@@ -456,7 +457,7 @@ function TrustedDevicesPanel() {
 
   const revokeDevice = useMutation({
     mutationFn: async (deviceId: string) => {
-      const res = await fetch(`/api/iam/trusted-devices/${deviceId}`, { method: "DELETE" });
+      const res = await fetch(`/api/iam/trusted-devices/${deviceId}`, { method: "DELETE", headers: { "X-CSRF-Token": getCsrfToken() } });
       if (!res.ok && res.status !== 204) throw new Error("Failed to revoke");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["trusted-devices"] }),
@@ -464,7 +465,7 @@ function TrustedDevicesPanel() {
 
   const revokeAll = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/iam/trusted-devices", { method: "DELETE" });
+      const res = await fetch("/api/iam/trusted-devices", { method: "DELETE", headers: { "X-CSRF-Token": getCsrfToken() } });
       if (!res.ok) throw new Error("Failed to revoke all");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["trusted-devices"] }),
@@ -634,7 +635,7 @@ export function MfaSection({ active }: { active: boolean }) {
       window.history.replaceState({}, "", url.toString());
 
       // Trigger sync
-      void fetch("/api/iam/mfa/sync", { method: "POST" }).then(() => {
+      void fetch("/api/iam/mfa/sync", { method: "POST", headers: { "X-CSRF-Token": getCsrfToken() } }).then(() => {
         void qc.invalidateQueries({ queryKey: ["iam-mfa-methods"] });
       });
     }
@@ -658,7 +659,7 @@ export function MfaSection({ active }: { active: boolean }) {
 
   const deleteMethod = useMutation({
     mutationFn: async (methodId: string) => {
-      const res = await fetch(`/api/iam/mfa/${methodId}`, { method: "DELETE" });
+      const res = await fetch(`/api/iam/mfa/${methodId}`, { method: "DELETE", headers: { "X-CSRF-Token": getCsrfToken() } });
       if (res.status === 403) {
         const json = await res.json().catch(() => ({})) as { error?: string };
         if (json.error === "STEP_UP_REQUIRED") {
@@ -738,9 +739,12 @@ export function MfaSection({ active }: { active: boolean }) {
                       ? <Badge variant="muted" className="text-[10px]">Disabled</Badge>
                       : <Badge variant="warning" className="text-[10px]">Pending verification</Badge>
                     }
-                    {m.keycloak_sync_status && m.keycloak_sync_status !== "synced" && (
-                      <Badge variant={SYNC_VARIANT[m.keycloak_sync_status] ?? "muted"} className="text-[9px]">
-                        sync: {m.keycloak_sync_status}
+                    {m.keycloak_sync_status && (
+                      <Badge
+                        variant={SYNC_VARIANT[m.keycloak_sync_status] ?? "muted"}
+                        className="text-[9px]"
+                      >
+                        {m.keycloak_sync_status === "synced" ? "sync: active" : `sync: ${m.keycloak_sync_status}`}
                       </Badge>
                     )}
                   </div>
@@ -755,7 +759,7 @@ export function MfaSection({ active }: { active: boolean }) {
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
                   title="Remove method"
                   onClick={() => deleteMethod.mutate(m.id)}
-                  disabled={deleteMethod.isPending}
+                  disabled={deleteMethod.isPending || stepUpOpen}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

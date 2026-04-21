@@ -38,12 +38,21 @@ export function makeModuleRelay(modulePrefix: string) {
 
     try {
       const upstream = await fetch(upstreamUrl, init);
-      if (upstream.status === 204) return new NextResponse(null, { status: 204 });
+      if (upstream.status === 204) {
+        const noContentRes = new NextResponse(null, { status: 204 });
+        const setCookie = upstream.headers.get("Set-Cookie");
+        if (setCookie) noContentRes.headers.set("Set-Cookie", setCookie);
+        return noContentRes;
+      }
       const ct = upstream.headers.get("Content-Type") ?? "application/json";
       const disposition = upstream.headers.get("Content-Disposition");
       const resHeaders: Record<string, string> = { "Content-Type": ct };
       if (disposition) resHeaders["Content-Disposition"] = sanitizeContentDisposition(disposition);
-      return new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers: resHeaders });
+      const res = new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers: resHeaders });
+      // Forward Set-Cookie from backend (e.g. td_token for trusted-device registration)
+      const setCookie = upstream.headers.get("Set-Cookie");
+      if (setCookie) res.headers.set("Set-Cookie", setCookie);
+      return res;
     } catch (err) {
       console.error(`[relay:${modulePrefix}] upstream error`, err);
       return NextResponse.json({ error: "Bad Gateway" }, { status: 502 });

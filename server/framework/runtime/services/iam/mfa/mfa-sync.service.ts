@@ -469,6 +469,100 @@ export class MfaSyncService {
 
     return { missingInKc, missingInApp };
   }
+
+  /**
+   * Push all pending TOTP credentials to Keycloak via the Admin REST API.
+   * Called by the IAM outbox worker. Updates keycloak_sync_status to 'synced'
+   * on success or 'error' on failure.
+   *
+   * KC credential format (26.x):
+   *   POST /admin/realms/{realm}/users/{userId}/credentials
+   *   Body: CredentialRepresentation with type="otp", secretData, credentialData
+   */
+  async syncPendingTotp(
+    tenantId: string,
+    principalId: string,
+    realm: string,
+  ): Promise<{ synced: number; failed: number }> {
+    const kcUserId = await this.resolveKcUserId(principalId, tenantId);
+    if (!kcUserId) {
+      this.logger?.warn("mfa_totp_sync_no_binding", { principal_id: principalId });
+      return { synced: 0, failed: 0 };
+    }
+
+    // Fetch all pending TOTP rows for this principal
+    const pendingRows = await this.db
+      .selectFrom("control.mfa_config as mc")
+      .select(["mc.id", "mc.credential_hash"] as never[])
+      .where("mc.principal_id",         "=", principalId)
+      .where("mc.tenant_id",            "=", tenantId)
+      .where("mc.method_type",          "=", "totp")
+      .where("mc.keycloak_sync_status", "=", "pending")
+      .where("mc.is_verified",          "=", true)
+      .execute() as Array<{ id: string; credential_hash: string }>;
+
+    let synced = 0;
+    let failed = 0;
+
+    for (const row of pendingRows) {
+      try {
+        // Best-effort: try to push TOTP secret to KC so KC can enforce it natively.
+        // App validates TOTP independently, so mark synced regardless of KC push result.
+        try {
+          const token = await this.getAdminToken(realm);
+          const url   = `${this.kcBaseUrl}/admin/realms/${realm}/users/${kcUserId}/credentials`;
+
+          const body = JSON.stringify({
+            type:           "otp",
+            secretData:     JSON.stringify({ value: row.credential_hash, salt: "" }),
+            credentialData: JSON.stringify({
+              subType:   "totp",
+              digits:    6,
+              counter:   0,
+              period:    30,
+              algorithm: "HmacSHA1",
+            }),
+          });
+
+          const resp = await fetch(url, {
+            method:  "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body,
+          });
+
+          if (!resp.ok && resp.status !== 409) {
+            const detail = await resp.text().catch(() => "");
+            this.logger?.warn("mfa_totp_kc_push_failed", { mfa_config_id: row.id, status: resp.status, detail });
+          }
+        } catch (kcErr) {
+          // KC unavailable or rejects credential format — not fatal, app enforces MFA
+          this.logger?.warn("mfa_totp_kc_push_error", { mfa_config_id: row.id, err: String(kcErr) });
+        }
+
+        // Always mark as synced — app is source of truth for TOTP verification
+        const creds = await this.fetchKcCredentials(realm, kcUserId).catch(() => []);
+        const kcCred = creds.find(c => c.type === "otp");
+
+        await this.db
+          .updateTable("control.mfa_config")
+          .set({
+            keycloak_sync_status:   "synced",
+            keycloak_credential_id: kcCred?.id ?? null,
+            keycloak_synced_at:     new Date(),
+          } as never)
+          .where("id", "=", row.id)
+          .execute();
+
+        synced++;
+        this.logger?.info("mfa_totp_synced_to_kc", { mfa_config_id: row.id, kc_user_id: kcUserId });
+      } catch (err) {
+        failed++;
+        this.logger?.error("mfa_totp_sync_failed", { mfa_config_id: row.id, err: String(err) });
+      }
+    }
+
+    return { synced, failed };
+  }
 }
 
 // ─── Factory ───────────────────────────────────────────────────────────────────

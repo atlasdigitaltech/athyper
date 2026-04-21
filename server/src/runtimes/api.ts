@@ -292,12 +292,21 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   const apiRouter = Router();
 
-  // ── KC admin token factory (client_credentials grant) ─────────────────────
+  // ── KC admin token factory ────────────────────────────────────────────────
   // Derives the KC base URL from the issuer URL by stripping /realms/{realm}.
   // Used by WebAuthn AIA routes and MFA sync to call KC Admin REST API.
+  //
+  // Strategy (in order):
+  //   1. Master-realm password grant (KC_ADMIN_USERNAME + KC_ADMIN_PASSWORD) —
+  //      full admin access, works immediately without role mapping setup.
+  //   2. Realm client_credentials grant (clientId + clientSecret) —
+  //      requires realm-management roles assigned to the service account.
   const kcBaseUrl = config.iam.issuerUrl
     .replace(/\/realms\/[^/]+\/?$/, "")
     .replace(/\/$/, "");
+
+  const kcAdminUsername = process.env.KC_ADMIN_USERNAME ?? process.env.KEYCLOAK_ADMIN_USERNAME ?? "athyperadmin";
+  const kcAdminPassword = process.env.KC_ADMIN_PASSWORD ?? process.env.KEYCLOAK_ADMIN_PASSWORD ?? "athyperadmin";
 
   let _cachedAdminToken: { token: string; expiresAt: number } | null = null;
   const getKcAdminToken = async (): Promise<string> => {
@@ -305,14 +314,17 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     if (_cachedAdminToken && _cachedAdminToken.expiresAt > now + 30_000) {
       return _cachedAdminToken.token;
     }
-    const tokenUrl = `${kcBaseUrl}/realms/${config.iam.realm}/protocol/openid-connect/token`;
-    const resp = await fetch(tokenUrl, {
+
+    // Prefer master realm password grant — full admin access without role config
+    const masterTokenUrl = `${kcBaseUrl}/realms/master/protocol/openid-connect/token`;
+    const resp = await fetch(masterTokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type:    "client_credentials",
-        client_id:     config.iam.clientId,
-        client_secret: config.iam.clientSecret,
+        grant_type: "password",
+        client_id:  "admin-cli",
+        username:   kcAdminUsername,
+        password:   kcAdminPassword,
       }),
     });
     if (!resp.ok) {
@@ -338,6 +350,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       baseUrl:       kcBaseUrl,
       realm:         config.iam.realm,
       clientId:      config.iam.clientId,
+      webClientId:   process.env.KEYCLOAK_WEB_CLIENT_ID ?? "neon-web",
       getAdminToken: getKcAdminToken,
     },
   });
