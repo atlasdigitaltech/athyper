@@ -62,7 +62,7 @@ const OP_DOT: Record<string, string> = {
 function OpChip({ value, intent }: { value: string; intent: string }) {
   const dotCls = OP_DOT[intent] ?? "bg-muted-foreground/40";
   return (
-    <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-[10px] font-semibold bg-muted text-muted-foreground border border-border leading-none whitespace-nowrap">
+    <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-xs font-semibold bg-muted text-muted-foreground border border-border leading-none whitespace-nowrap">
       <span className={cn("w-[5px] h-[5px] rounded-full flex-none", dotCls)} />
       {value}
     </span>
@@ -87,7 +87,7 @@ function ActionDotButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-[12.5px] font-semibold leading-none whitespace-nowrap transition-opacity",
+        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-xs font-semibold tracking-wider leading-none whitespace-nowrap transition-opacity",
         variant === "destructive"
           ? "bg-destructive text-destructive-foreground hover:opacity-90"
           : "bg-foreground text-background hover:opacity-85",
@@ -161,91 +161,69 @@ function AuditMetaBar({ audit }: { audit: ApprovableAudit }) {
   );
 }
 
-// ── Progress rail ──────────────────────────────────────────────────────────
+// ── Progress rail — expanded grid only ────────────────────────────────────
 
-function ProgressRailRow({ rail }: { rail: ProgressRail }) {
+function ProgressRailGrid({ rail }: { rail: ProgressRail }) {
   const activeIdx = Math.max(0, rail.stages.findIndex((s) => s.key === rail.currentKey));
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Progress
-        </span>
-        <span className="text-[11px] text-muted-foreground tabular-nums">
-          Step {activeIdx + 1} / {rail.stages.length}
-        </span>
-      </div>
-
-      <div
-        className="overflow-x-auto pb-0.5"
-        style={{ display: "grid", gridTemplateColumns: `repeat(${rail.stages.length}, minmax(96px, 1fr))` }}
-      >
-        {rail.stages.map((stage: ProgressStage, i: number) => {
-          const isActive = i === activeIdx;
-          const isPast   = i < activeIdx;
-          return (
-            <div key={stage.key} className="min-w-0 pr-2">
-              <div className="flex items-center">
-                {/* Dot — active stage has a slow pulsing ripple ring */}
-                <div className="relative flex-none flex items-center justify-center w-[17px] h-[17px]">
-                  {isActive && (
-                    <span
-                      className="absolute inset-0 rounded-full animate-ping bg-foreground/12"
-                      style={{ animationDuration: "2.4s" }}
-                    />
+    <div
+      className="overflow-x-auto pb-0.5"
+      style={{ display: "grid", gridTemplateColumns: `repeat(${rail.stages.length}, minmax(96px, 1fr))` }}
+    >
+      {rail.stages.map((stage: ProgressStage, i: number) => {
+        const isActive = i === activeIdx;
+        const isPast   = i < activeIdx;
+        return (
+          <div key={stage.key} className="min-w-0 pr-2">
+            <div className="flex items-center">
+              <div className="relative flex-none flex items-center justify-center w-[17px] h-[17px]">
+                {isActive && (
+                  <span
+                    className="absolute inset-0 rounded-full animate-ping bg-foreground/12"
+                    style={{ animationDuration: "2.4s" }}
+                  />
+                )}
+                <div
+                  className={cn(
+                    "w-[11px] h-[11px] rounded-full relative z-[1]",
+                    isActive
+                      ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_rgba(11,11,10,0.07)]"
+                      : isPast
+                      ? "bg-foreground border-[1.5px] border-foreground"
+                      : "bg-card border-[1.5px] border-border",
                   )}
-                  <div
-                    className={cn(
-                      "w-[11px] h-[11px] rounded-full relative z-[1]",
-                      isActive
-                        ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_rgba(11,11,10,0.07)]"
-                        : isPast
-                        ? "bg-foreground border-[1.5px] border-foreground"
-                        : "bg-card border-[1.5px] border-border",
-                    )}
-                  >
-                    {isActive && (
-                      <span className="absolute inset-[2.5px] rounded-full bg-foreground" />
-                    )}
-                  </div>
+                >
+                  {isActive && (
+                    <span className="absolute inset-[2.5px] rounded-full bg-foreground" />
+                  )}
                 </div>
-                {i < rail.stages.length - 1 && (
-                  <div className={cn("flex-1 h-px ml-1 min-w-[16px]", isPast ? "bg-foreground" : "bg-border")} />
-                )}
               </div>
-
-              <div className="mt-2">
-                <div className={cn(
-                  "text-[12px] leading-tight",
-                  isActive || isPast ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
-                )}>
-                  {stage.label}
-                </div>
-
-                {stage.reachedAt ? (
-                  <div className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">
-                    {stage.reachedAt}{stage.actor ? ` · ${stage.actor}` : ""}
-                  </div>
-                ) : stage.targetAt ? (
-                  <div className="text-[10.5px] text-muted-foreground/50 mt-0.5">target {stage.targetAt}</div>
-                ) : (
-                  <div className="text-[10.5px] text-muted-foreground/40 mt-0.5">—</div>
-                )}
-
-                {/* Next-action hint inline under the active stage */}
-                {isActive && rail.nextActionCopy && (
-                  <div className="mt-[7px] pl-[8px] border-l-[2px] border-foreground/20 max-w-[170px]">
-                    <span className="text-[10.5px] text-muted-foreground leading-snug block">
-                      {rail.nextActionCopy}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {i < rail.stages.length - 1 && (
+                <div className={cn("flex-1 h-px ml-1 min-w-[16px]", isPast ? "bg-foreground" : "bg-border")} />
+              )}
             </div>
-          );
-        })}
-      </div>
+
+            <div className="mt-2">
+              <div className={cn(
+                "text-xs leading-tight",
+                isActive || isPast ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
+              )}>
+                {stage.label}
+              </div>
+              {stage.reachedAt ? (
+                <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                  {stage.reachedAt}{stage.actor ? ` · ${stage.actor}` : ""}
+                </div>
+              ) : stage.targetAt ? (
+                <div className="text-xs text-muted-foreground/50 mt-0.5">target {stage.targetAt}</div>
+              ) : (
+                <div className="text-xs text-muted-foreground/40 mt-0.5">—</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -327,10 +305,11 @@ function buildKpiCells(data: ApprovableDocumentHeaderDTO): KpiStripCell[] {
     .filter((r) => !SKIP_REF_LABELS.has(r.label.toLowerCase()))
     .forEach((ref) => {
       cells.push({
-        key:   ref.label,
-        label: ref.label,
-        value: ref.value,
-        mono:  ref.valueType === "code",
+        key:      ref.label,
+        label:    ref.label,
+        value:    ref.value,
+        subValue: ref.subValue,
+        mono:     ref.valueType === "code",
       });
     });
 
@@ -374,7 +353,8 @@ export function ApprovableDocumentHeader({
   onTabChange,
   className,
 }: ApprovableDocumentHeaderProps) {
-  const [mode, setMode] = useState<HeaderMode>(initialMode);
+  const [mode, setMode]           = useState<HeaderMode>(initialMode);
+  const [railExpanded, setRailExpanded] = useState(false);
   const handleMode = (m: HeaderMode) => { setMode(m); onModeChange?.(m); };
   const isExpanded = mode !== "collapsed";
 
@@ -459,46 +439,93 @@ export function ApprovableDocumentHeader({
         <DocumentKpiStrip cells={kpiCells} />
       )}
 
-      {/* ── PROCESS: progress rail + op dims — expanded only ─────────── */}
-      {showProcess && (
-        <div className="border-t border-border px-4 py-3.5 sm:px-5 sm:py-4 lg:px-[22px]">
-          {progressRail && <ProgressRailRow rail={progressRail} />}
+      {/* ── PROCESS: single status row + collapsible timeline ───────── */}
+      {showProcess && (() => {
+        const activeIdx   = progressRail
+          ? Math.max(0, progressRail.stages.findIndex((s) => s.key === progressRail.currentKey))
+          : 0;
+        const activeStage = progressRail?.stages[activeIdx];
 
-          {(tier2Dims.length > 0 || workflowDim) && (
-            <div className={cn(
-              "flex items-center flex-wrap gap-x-4 gap-y-2",
-              progressRail && "border-t border-dashed border-border mt-3 pt-3",
-            )}>
+        return (
+          <div className="border-t border-border px-4 py-2 sm:px-5 lg:px-[22px]">
+            {/* Single line: [dot + stage + step] | [op dims] ··· [Timeline ›] */}
+            <div className="flex items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+              {/* Progress summary */}
+              {progressRail && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative flex-none flex items-center justify-center w-[14px] h-[14px]">
+                    <span
+                      className="absolute inset-0 rounded-full animate-ping bg-foreground/12"
+                      style={{ animationDuration: "2.4s" }}
+                    />
+                    <div className="w-[8px] h-[8px] rounded-full bg-card border-2 border-foreground relative z-[1]">
+                      <span className="absolute inset-[1.5px] rounded-full bg-foreground" />
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold text-foreground">{activeStage?.label ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    · Step {activeIdx + 1} / {progressRail.stages.length}
+                  </span>
+                </div>
+              )}
+
+              {/* Vertical separator before op dims */}
+              {progressRail && (tier2Dims.length > 0 || workflowDim) && (
+                <span className="w-px h-3.5 bg-border shrink-0" />
+              )}
+
+              {/* Op dims */}
               {tier2Dims.map((dim) => (
-                <div key={dim.dimension} className="inline-flex items-center gap-[7px] text-[12px]">
+                <div key={dim.dimension} className="inline-flex items-center gap-[7px] text-xs shrink-0">
                   <span className="text-muted-foreground font-medium capitalize">{dim.label}</span>
                   <OpChip value={dim.status_label} intent={dim.intent} />
                 </div>
               ))}
               {workflowDim && (
-                <div className="inline-flex items-center gap-[7px] text-[12px]">
+                <div className="inline-flex items-center gap-[7px] text-xs shrink-0">
                   <span className="text-muted-foreground font-medium">{workflowDim.label}</span>
                   <span className="font-semibold text-muted-foreground">{workflowDim.status_label}</span>
                 </div>
               )}
+
+              {/* Timeline toggle — pushed to far right */}
+              {progressRail && (
+                <button
+                  onClick={() => setRailExpanded((v) => !v)}
+                  className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                >
+                  <span className="font-medium">{railExpanded ? "Less" : "Timeline"}</span>
+                  {railExpanded
+                    ? <ChevronUp   className="h-3 w-3" />
+                    : <ChevronDown className="h-3 w-3" />}
+                </button>
+              )}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Expanded timeline grid */}
+            {railExpanded && progressRail && (
+              <div className="mt-3 pt-3 border-t border-dashed border-border">
+                <ProgressRailGrid rail={progressRail} />
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── AUDIT META — expanded only ───────────────────────────────── */}
       {isExpanded && data.audit && <AuditMetaBar audit={data.audit} />}
 
       {/* ── TABS ─────────────────────────────────────────────────────── */}
       {tabs && tabs.length > 0 && (
-        <div className="border-t border-border px-4 flex items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5 lg:px-[22px]">
+        <div className="border-t border-border bg-muted/50 px-4 flex items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5 lg:px-[22px]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               disabled={tab.disabled}
               onClick={() => onTabChange?.(tab.id)}
               className={cn(
-                "relative py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors shrink-0",
+                "relative py-2.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0",
                 activeTab === tab.id
                   ? "text-foreground after:absolute after:left-0 after:right-0 after:-bottom-px after:h-0.5 after:bg-foreground after:content-['']"
                   : "text-muted-foreground hover:text-foreground",

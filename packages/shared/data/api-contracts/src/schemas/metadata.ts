@@ -48,6 +48,7 @@ export const FieldDataTypeSchema = z.enum([
   "boolean", "uuid", "date", "datetime", "timestamptz",
   "json", "jsonb", "enum", "reference", "money", "tsvector",
   "text_array", "uuid_array", "int_array", "jsonb_array",
+  "lifecycle_state",
 ]);
 export type FieldDataType = z.infer<typeof FieldDataTypeSchema>;
 

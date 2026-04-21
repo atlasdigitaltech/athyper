@@ -943,6 +943,7 @@ VALUES
     ('document.acct_dist_account_source',    'Accounting Distribution Account Source', 'How the GL account was determined for an accounting distribution row (posting_role, from_intent, fixed, from_category). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.procurement_type',            'Invoice Line Procurement Type',          'Nature of the item or service on an invoice line (goods, services, mixed, freight, misc). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_match_status',        'Invoice Match Status',                   'Three-way match progress status for an invoice or invoice line (unmatched, partially_matched, fully_matched, match_exception). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.invoice_budget_check_result', 'Invoice Budget Check Result',            'Outcome of the budget availability check on a purchase invoice (PASSED, WARNED, OVERRIDE, BLOCKED, EXEMPT). Platform-governed.',                        'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('master.company_code_access_entity_type',  'Company Code Access Entity Type',  'Entity types scoped to company codes via master.company_code_access. is_extensible=true — tenants may add new entity types without DDL.',                  'master', true,  'active', '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (code) DO NOTHING;
 

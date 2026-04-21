@@ -56,7 +56,7 @@ BEGIN
         v_invoice_id,
         v_tenant_id, v_cc_id,
         'INV-A1-0001', 'Plain Non-PO Invoice — Tax Exempt',
-        'INV-A1-0001', 'NON_PO', 'STANDARD',
+        'INV-A1-0001', 'non_po', 'standard',
         v_vendor_id, 'ACME-2026-00101', CURRENT_DATE,
         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
         'USD', 'USD', 1.0,
@@ -68,7 +68,7 @@ BEGIN
         extract(month FROM CURRENT_DATE)::smallint
     );
 
-    -- ── Line 1: consulting USD 1,000, no tax ───────────────────────────────
+    -- ── Lines (4 lines, sum = USD 1,000) ────────────────────────────────────
     INSERT INTO document.purchase_invoice_line (
         tenant_id, purchase_invoice_id, line_no,
         item_description, procurement_type,
@@ -76,14 +76,27 @@ BEGIN
         uom_code, quantity, unit_price,
         tax_amount, withholding_tax_amount, gross_amount,
         created_by
-    ) VALUES (
-        v_tenant_id, v_invoice_id, 1,
-        'Q2 2026 Consulting Services', 'services',
-        v_sc_opex_id, v_bi_opex_id,
-        'EA', 1, 1000.00,
-        0.00, 0.00, 1000.00,
-        v_sys
-    );
+    ) VALUES
+        -- Line 1: consulting retainer, 5 hrs × USD 120
+        (v_tenant_id, v_invoice_id, 1,
+         'Q2 2026 Consulting Services', 'services',
+         v_sc_opex_id, v_bi_opex_id,
+         'HR', 5, 120.00, 0.00, 0.00, 600.00, v_sys),
+        -- Line 2: technical documentation, 2 days × USD 150
+        (v_tenant_id, v_invoice_id, 2,
+         'Technical Documentation & Deliverables', 'services',
+         v_sc_opex_id, v_bi_opex_id,
+         'DAY', 2, 150.00, 0.00, 0.00, 300.00, v_sys),
+        -- Line 3: travel & accommodation, 1 trip × USD 75
+        (v_tenant_id, v_invoice_id, 3,
+         'Travel and Accommodation — Site Visit', 'services',
+         v_sc_opex_id, v_bi_opex_id,
+         'EA', 1, 75.00, 0.00, 0.00, 75.00, v_sys),
+        -- Line 4: software license (annual), 1 × USD 25
+        (v_tenant_id, v_invoice_id, 4,
+         'Annual Software License — Project Tools', 'goods',
+         v_sc_opex_id, v_bi_opex_id,
+         'EA', 1, 25.00, 0.00, 0.00, 25.00, v_sys);
 
-    RAISE NOTICE 'demo/002 scenario A1: INV-A1-0001 created (draft, USD 1,000, no tax)';
+    RAISE NOTICE 'demo/002 scenario A1: INV-A1-0001 created (draft, USD 1,000, 4 lines, no tax)';
 END $scenario_a1$;

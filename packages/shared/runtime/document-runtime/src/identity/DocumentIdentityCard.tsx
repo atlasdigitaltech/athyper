@@ -84,7 +84,7 @@ function StatusBadge({
   const cls = STATUS_BADGE_CLS[intent] ?? STATUS_BADGE_CLS.neutral;
   return (
     <span className={cn(
-      "inline-flex items-center h-[22px] px-2.5 rounded-md text-[10.5px] font-semibold border leading-none whitespace-nowrap",
+      "inline-flex items-center h-[22px] px-2.5 rounded-md text-xs font-semibold tracking-wider border leading-none whitespace-nowrap",
       cls,
     )}>
       {label}
@@ -110,7 +110,7 @@ function DotButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-[12.5px] font-semibold leading-none whitespace-nowrap transition-opacity",
+        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-xs font-semibold tracking-wider leading-none whitespace-nowrap transition-opacity",
         variant === "destructive"
           ? "bg-destructive text-destructive-foreground hover:opacity-90"
           : "bg-foreground text-background hover:opacity-85",
@@ -162,7 +162,7 @@ export function DocumentIdentityCard({
   );
 
   return (
-    <div className={cn("px-4 py-2 sm:px-5 lg:px-[22px]", className)}>
+    <div className={cn("px-4 py-2 sm:px-5 lg:px-[22px] bg-muted/50", className)}>
       {/* Outer row: left identity zone + right action zone — wraps on mobile */}
       <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
 
@@ -170,7 +170,7 @@ export function DocumentIdentityCard({
         <div className="flex items-center gap-3 min-w-0 flex-1" style={{ minWidth: "200px" }}>
 
           {/* Column 1 — type chip (logo/brand) */}
-          <span className="inline-flex items-center h-[34px] px-4 rounded-lg bg-foreground text-background text-[10.5px] font-semibold shrink-0 leading-none tracking-[0.01em]">
+          <span className="inline-flex items-center h-[34px] px-4 rounded-lg bg-foreground text-background text-xs font-semibold tracking-wider shrink-0 leading-none">
             {typeLabel}
           </span>
 
@@ -179,11 +179,11 @@ export function DocumentIdentityCard({
 
             {/* Left stack: code (row 1) + name (row 2) */}
             <div className="min-w-0">
-              <div className="text-[14px] font-semibold tabular-nums whitespace-nowrap text-foreground leading-tight">
+              <div className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground leading-tight">
                 {number}
               </div>
               {title && (
-                <div className="mt-[3px] text-[12px] font-medium text-muted-foreground leading-snug truncate max-w-[340px]">
+                <div className="mt-[3px] text-xs font-medium text-muted-foreground leading-snug truncate max-w-[340px]">
                   {title}
                 </div>
               )}
@@ -202,7 +202,7 @@ export function DocumentIdentityCard({
             {rightSlot}
 
             {dueMeta && (
-              <div className="flex items-center gap-1.5 text-[12px] flex-wrap justify-end">
+              <div className="flex items-center gap-1.5 text-xs flex-wrap justify-end">
                 <span className={cn(
                   "w-[6px] h-[6px] rounded-full flex-none shrink-0",
                   INTENT_DOT[dueMeta.intent] ?? INTENT_DOT.neutral,

@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition (
     requisition_number      text            NOT NULL,
 
     -- Classification
-    requisition_type        text            NOT NULL DEFAULT 'STANDARD',
+    requisition_type        text            NOT NULL DEFAULT 'standard',
     description             text,
     priority                text            NOT NULL DEFAULT 'normal',
 
@@ -123,9 +123,9 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition (
         'draft','pending_approval','approved','rejected',
         'partially_converted','fully_converted','closed','cancelled')),
     CONSTRAINT pr_type_chk          CHECK (requisition_type IN (
-        'STANDARD','URGENT','BLANKET','FRAMEWORK_CALL_OFF','CAPEX')),
+        'standard','urgent','blanket','framework_call_off','capex')),
     CONSTRAINT pr_check_chk         CHECK (budget_check_result IS NULL OR budget_check_result IN (
-        'PASSED','WARNED','OVERRIDE','BLOCKED','EXEMPT')),
+        'passed','warned','override','blocked','exempt')),
     CONSTRAINT pr_encumbrance_chk   CHECK (encumbrance_type IN (
         'NONE','PRE_ENCUMBRANCE','STATISTICAL_ONLY')),
     CONSTRAINT pr_amount_nonneg     CHECK (total_estimated_amount >= 0),

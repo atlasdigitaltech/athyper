@@ -121,7 +121,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
           <div
             key={cell.key}
             className={cn(
-              "group relative min-w-0 px-3 py-2 transition-colors hover:bg-muted/20",
+              "group relative min-w-0 px-3 py-2 transition-colors hover:bg-accent-foreground/5",
               hasIntent && "pl-[13px]",
               leftBorderCls,
               i < cells.length - 1 && "border-r border-border/50",
@@ -129,7 +129,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
           >
             {/* ── Label row: label + optional badge chip ─────────────── */}
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground leading-none truncate">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-none truncate">
                 {cell.label}
               </span>
 
@@ -151,15 +151,15 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
                 title={cell.value}
               >
                 {cell.currency && getCurrencySymbol(cell.currency) && (
-                  <span className="text-[11px] text-muted-foreground tabular-nums">
+                  <span className="text-sm font-bold tabular-nums text-foreground">
                     {getCurrencySymbol(cell.currency)}
                   </span>
                 )}
-                <span className="text-[14px] font-bold tabular-nums text-foreground whitespace-nowrap">
+                <span className="text-sm font-bold tabular-nums text-foreground whitespace-nowrap">
                   {cell.value}
                 </span>
                 {cell.currency && (
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-[8.5px] text-muted-foreground font-mono">
                     {cell.currency}
                   </span>
                 )}
@@ -167,7 +167,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
             ) : cell.mono ? (
               /* Reference code — monospace pill, same font weight/size */
               <div
-                className="inline-flex items-center max-w-full rounded-[6px] bg-muted border border-border/60 px-2 py-[5px] font-mono text-[14px] font-semibold text-foreground leading-none"
+                className="inline-flex items-center max-w-full rounded-[6px] bg-muted border border-border/60 px-2 py-[5px] font-mono text-sm font-semibold text-foreground leading-none"
                 title={cell.value}
               >
                 <span className="truncate">{cell.value}</span>
@@ -176,7 +176,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
               /* Standard value */
               <div
                 className={cn(
-                  "text-[14px] font-semibold leading-tight tabular-nums truncate",
+                  "text-sm font-semibold leading-tight tabular-nums truncate",
                   cell.intent ? INTENT_VALUE_TEXT[cell.intent] : "text-foreground",
                 )}
                 title={cell.value}
@@ -188,7 +188,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
             {/* ── Sub-value ──────────────────────────────────────────── */}
             {cell.subValue && (
               <div className={cn(
-                "text-[11px] mt-1 leading-snug truncate",
+                "text-xs mt-1 leading-snug truncate",
                 cell.subIntent ? INTENT_SUB_TEXT[cell.subIntent] : "text-muted-foreground",
               )}>
                 {cell.subValue}

@@ -122,22 +122,20 @@ async function loadPolicies(
     return cached.policies;
   }
 
-  // control.field_security_policy joined to control.entity_field + control.entity
+  // control.field_security_policy joined directly to control.entity via entity_id
+  const normalizedEntityType = entityType.replace(/-/g, "_");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows = await (db as any)
     .selectFrom("control.field_security_policy as fsp")
-    .innerJoin("control.entity_field as ef", "ef.id", "fsp.entity_field_id")
-    .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
-    .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+    .innerJoin("control.entity as e", "e.id", "fsp.entity_id")
     .select([
-      "ef.name",
-      "ef.column_name",
-      "fsp.masking_strategy",
-      "fsp.access_roles",
+      "fsp.field_path",
+      "fsp.mask_strategy",
+      "fsp.role_list",
       "fsp.pii_classification",
     ])
-    .where("e.name", "=", entityType)
-    .where("ev.status", "=", "EFFECTIVE")
+    .where("e.entity_code", "=", normalizedEntityType)
+    .where("fsp.is_active", "=", true)
     .where((eb: any) =>
       eb.or([
         eb("fsp.tenant_id", "is", null),
@@ -146,13 +144,19 @@ async function loadPolicies(
     )
     .execute() as Record<string, unknown>[];
 
-  const policies: FieldPolicy[] = rows.map((row) => ({
-    fieldName:         row["name"] as string,
-    columnName:        row["column_name"] as string,
-    maskingStrategy:   (row["masking_strategy"] as "full" | "partial" | "hash") ?? "full",
-    accessRoles:       Array.isArray(row["access_roles"]) ? (row["access_roles"] as string[]) : [],
-    piiClassification: (row["pii_classification"] as string) ?? "pii",
-  }));
+  const policies: FieldPolicy[] = rows.map((row) => {
+    const rawStrategy = row["mask_strategy"] as string;
+    const maskingStrategy: "full" | "partial" | "hash" =
+      rawStrategy === "partial" ? "partial" :
+      rawStrategy === "hash"    ? "hash"    : "full";
+    return {
+      fieldName:         row["field_path"] as string,
+      columnName:        row["field_path"] as string,
+      maskingStrategy,
+      accessRoles:       Array.isArray(row["role_list"]) ? (row["role_list"] as string[]) : [],
+      piiClassification: (row["pii_classification"] as string) ?? "pii",
+    };
+  });
 
   policyCache.set(key, { policies, fetchedAt: Date.now() });
   return policies;

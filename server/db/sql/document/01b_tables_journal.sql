@@ -470,7 +470,7 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     CONSTRAINT ad_category_req      CHECK (
         account_source <> 'FROM_CATEGORY' OR spend_category_id IS NOT NULL),
     CONSTRAINT ad_budget_chk        CHECK (budget_check_result IS NULL OR budget_check_result IN (
-        'PASSED','WARNED','OVERRIDE','BLOCKED','EXEMPT')),
+        'passed','warned','override','blocked','exempt')),
     CONSTRAINT ad_tax_override_chk  CHECK (tax_treatment_override IS NULL OR
         tax_treatment_override IN (
             'STANDARD','ZERO_RATED','EXEMPT','REVERSE_CHARGE','OUT_OF_SCOPE'))

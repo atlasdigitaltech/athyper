@@ -66,7 +66,7 @@ BEGIN
         v_advance_id,
         v_tenant_id, v_cc_id,
         'ADV-VA-0001', 'Standalone Vendor Advance',
-        'ADV-VA-0001', 'ADVANCE', 'OUTBOUND',
+        'ADV-VA-0001', 'advance', 'OUTBOUND',
         v_vendor_id, 'Acme Consulting LLC',
         v_pm_wire_id, v_house_bank_id,
         CURRENT_DATE, CURRENT_DATE,

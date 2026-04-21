@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
     payment_number          text            NOT NULL,
 
     -- Classification
-    payment_type            text            NOT NULL DEFAULT 'STANDARD',
+    payment_type            text            NOT NULL DEFAULT 'standard',
     payment_direction       text            NOT NULL DEFAULT 'OUTBOUND',
 
     -- Counterparty
@@ -127,8 +127,8 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
         'draft','pending_approval','approved','posted','transmitted',
         'printed','cleared','reversed','voided','cancelled','rejected')),
     CONSTRAINT pe_type_chk          CHECK (payment_type IN (
-        'STANDARD','ADVANCE','RETENTION_RELEASE','PARTIAL','FINAL',
-        'DOWN_PAYMENT','URGENT','NETTING')),
+        'standard','advance','retention_release','partial','final',
+        'down_payment','urgent','netting')),
     CONSTRAINT pe_direction_chk     CHECK (payment_direction IN ('OUTBOUND','INBOUND')),
     CONSTRAINT pe_amount_pos        CHECK (payment_amount > 0),
     CONSTRAINT pe_period_chk        CHECK (period_number BETWEEN 1 AND 16),

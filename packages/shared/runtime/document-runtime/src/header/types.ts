@@ -115,6 +115,8 @@ export interface ApprovableReference {
    * "text"   → default plain text
    */
   valueType?: "text" | "code" | "date" | "amount" | "enum";
+  /** Secondary line shown below the value in the KPI strip cell */
+  subValue?: string;
 }
 
 export interface ApprovableFlowStep {

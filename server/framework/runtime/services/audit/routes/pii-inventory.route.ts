@@ -82,25 +82,22 @@ export function createPiiInventoryRoute(router: Router, deps: PiiInventoryRouteD
       }
 
       // ── Query ────────────────────────────────────────────────────────────────
-      // Join field_security_policy → entity_field → entity_version → entity.
-      // Filter: only PII-tier classifications + active policies + effective schema version.
+      // Join field_security_policy directly to control.entity via entity_id.
+      // Filter: only PII-tier classifications + active policies.
       // Include global policies (tenant_id IS NULL) and tenant-specific overrides.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db as any)
         .selectFrom("control.field_security_policy as fsp")
-        .innerJoin("control.entity_field as ef",   "ef.id", "fsp.entity_field_id")
-        .innerJoin("control.entity_version as ev",  "ev.id", "ef.entity_version_id")
-        .innerJoin("control.entity as e",           "e.id",  "ev.entity_id")
+        .innerJoin("control.entity as e", "e.id", "fsp.entity_id")
         .select([
           "e.name as entity_name",
-          "ef.name as field_path",
+          "fsp.field_path",
           "fsp.pii_classification as classification",
-          "fsp.masking_strategy as masking_type",
-          "fsp.access_roles as required_roles",
+          "fsp.mask_strategy as masking_type",
+          "fsp.role_list as required_roles",
         ])
         .where("fsp.pii_classification", "in", ["pii", "spii", "sensitive"])
         .where("fsp.is_active", "=", true)
-        .where("ev.status", "=", "EFFECTIVE")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .where((eb: any) =>
           eb.or([
@@ -108,8 +105,8 @@ export function createPiiInventoryRoute(router: Router, deps: PiiInventoryRouteD
             eb("fsp.tenant_id", "=",   tenantId),
           ])
         )
-        .orderBy("e.name",  "asc")
-        .orderBy("ef.name", "asc")
+        .orderBy("e.name",       "asc")
+        .orderBy("fsp.field_path", "asc")
         .execute() as Array<{
           entity_name:   string;
           field_path:    string;

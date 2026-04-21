@@ -57,26 +57,22 @@ const DEFAULT_COLUMNS: ItemsGridColumn[] = [
 
 // ── Cell renderer ─────────────────────────────────────────────────────────────
 
+function fmtNum(v: unknown, decimals = 2): string {
+  const n = Number(v);
+  return isNaN(n) ? "—" : n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
 function cellValue(line: DocumentLine, col: ItemsGridColumn): string {
   switch (col) {
     case "lineNumber":  return String(line.line_number);
     case "itemCode":    return line.item_code    ?? "—";
     case "description": return line.description  ?? "—";
-    case "quantity":    return line.quantity   != null ? String(line.quantity)   : "—";
+    case "quantity":    return line.quantity   != null ? fmtNum(line.quantity, 0) : "—";
     case "unitCode":    return line.unit_code   ?? "—";
-    case "unitPrice":
-      return line.unit_price != null
-        ? line.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })
-        : "—";
-    case "lineAmount":
-      return line.line_amount != null
-        ? line.line_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
-        : "—";
+    case "unitPrice":   return line.unit_price  != null ? fmtNum(line.unit_price)  : "—";
+    case "lineAmount":  return line.line_amount != null ? fmtNum(line.line_amount) : "—";
     case "taxCode":     return line.tax_code ?? "—";
-    case "taxAmount":
-      return line.tax_amount != null
-        ? line.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
-        : "—";
+    case "taxAmount":   return line.tax_amount  != null ? fmtNum(line.tax_amount)  : "—";
   }
 }
 
@@ -109,7 +105,7 @@ export function ItemsGrid({
   for (const col of amountCols) {
     if (!columns.includes(col)) continue;
     const field = col === "lineAmount" ? "line_amount" : "tax_amount";
-    const sum = lines.reduce((acc, l) => acc + ((l[field as keyof DocumentLine] as number | null) ?? 0), 0);
+    const sum = lines.reduce((acc, l) => acc + (Number(l[field as keyof DocumentLine]) || 0), 0);
     colTotals.set(col, sum);
   }
   const hasFooter = colTotals.size > 0;
@@ -159,7 +155,7 @@ export function ItemsGrid({
                 >
                   {i === 0 ? `${lines.length} item${lines.length !== 1 ? "s" : ""}` :
                    colTotals.has(col)
-                     ? colTotals.get(col)!.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                     ? fmtNum(colTotals.get(col)!)
                      : ""}
                 </td>
               ))}

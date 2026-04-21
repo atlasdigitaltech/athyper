@@ -166,7 +166,7 @@ export function DocumentActionBar({
                   ? blockedReasons[0]
                   : action.disabled_reason ?? undefined
               }
-              className="text-xs font-semibold"
+              className="text-xs font-semibold tracking-wider"
             >
               {isLoading ? (
                 <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -193,7 +193,7 @@ export function DocumentActionBar({
               size="sm"
               disabled={action.is_disabled}
               onClick={() => handleClick(action)}
-              className="text-xs"
+              className="text-xs font-semibold tracking-wider"
             >
               {Icon && <Icon className="mr-1 h-3.5 w-3.5" />}
               {action.label}
@@ -216,7 +216,7 @@ export function DocumentActionBar({
               size="sm"
               disabled={action.is_disabled}
               onClick={() => handleClick(action)}
-              className="text-xs text-muted-foreground"
+              className="text-xs font-semibold tracking-wider text-muted-foreground"
             >
               {Icon && <Icon className="mr-1 h-3.5 w-3.5" />}
               {action.label}

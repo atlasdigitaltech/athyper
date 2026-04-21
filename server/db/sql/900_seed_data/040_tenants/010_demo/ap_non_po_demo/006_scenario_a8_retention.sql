@@ -62,7 +62,7 @@ BEGIN
         v_invoice_id,
         v_tenant_id, v_cc_id,
         'INV-A8-0001', 'Non-PO Invoice with 10% Retention',
-        'INV-A8-0001', 'NON_PO', 'STANDARD',
+        'INV-A8-0001', 'non_po', 'standard',
         v_vendor_id, 'ACME-2026-00108', CURRENT_DATE,
         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
         'USD', 'USD', 1.0,

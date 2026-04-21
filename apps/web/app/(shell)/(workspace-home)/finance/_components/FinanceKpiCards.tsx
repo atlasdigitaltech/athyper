@@ -22,16 +22,14 @@ interface KpiTileProps {
   label: string;
   value: string;
   icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
   loading?: boolean;
 }
 
-function KpiTile({ label, value, icon: Icon, iconColor, iconBg, loading }: KpiTileProps) {
+function KpiTile({ label, value, icon: Icon, loading }: KpiTileProps) {
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${iconBg}`}>
-        <Icon className={`h-4.5 w-4.5 ${iconColor}`} />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <Icon className="h-4.5 w-4.5 text-muted-foreground" />
       </div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground truncate">{label}</p>
@@ -51,48 +49,12 @@ export function FinanceKpiCards() {
   const { data, isLoading } = useFinanceDashboardKpis();
 
   const tiles: KpiTileProps[] = [
-    {
-      label:     "Revenue MTD",
-      value:     fmtCurrency(data?.revenueMtd ?? null),
-      icon:      TrendingUp,
-      iconColor: "text-success",
-      iconBg:    "bg-success/10",
-    },
-    {
-      label:     "Expenses MTD",
-      value:     fmtCurrency(data?.expensesMtd ?? null),
-      icon:      TrendingDown,
-      iconColor: "text-destructive",
-      iconBg:    "bg-destructive/10",
-    },
-    {
-      label:     "Open AP",
-      value:     fmtCurrency(data?.openAp ?? null),
-      icon:      CreditCard,
-      iconColor: "text-warning",
-      iconBg:    "bg-warning/10",
-    },
-    {
-      label:     "Open AR",
-      value:     fmtCurrency(data?.openAr ?? null),
-      icon:      DollarSign,
-      iconColor: "text-info",
-      iconBg:    "bg-info/10",
-    },
-    {
-      label:     "Cash Balance",
-      value:     fmtCurrency(data?.cashBalance ?? null),
-      icon:      Landmark,
-      iconColor: "text-primary",
-      iconBg:    "bg-primary/10",
-    },
-    {
-      label:     "Journal Entries",
-      value:     fmtCount(data?.journalCount ?? null),
-      icon:      BookOpen,
-      iconColor: "text-accent-foreground",
-      iconBg:    "bg-accent/10",
-    },
+    { label: "Revenue MTD",    value: fmtCurrency(data?.revenueMtd  ?? null), icon: TrendingUp   },
+    { label: "Expenses MTD",   value: fmtCurrency(data?.expensesMtd ?? null), icon: TrendingDown },
+    { label: "Open AP",        value: fmtCurrency(data?.openAp      ?? null), icon: CreditCard   },
+    { label: "Open AR",        value: fmtCurrency(data?.openAr      ?? null), icon: DollarSign   },
+    { label: "Cash Balance",   value: fmtCurrency(data?.cashBalance  ?? null), icon: Landmark     },
+    { label: "Journal Entries",value: fmtCount(data?.journalCount   ?? null), icon: BookOpen     },
   ];
 
   return (

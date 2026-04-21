@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
     fiscal_document_number  text,
 
     -- Classification
-    invoice_source          text            NOT NULL DEFAULT 'PO_BASED',
-    invoice_type            text            NOT NULL DEFAULT 'STANDARD',
+    invoice_source          text            NOT NULL DEFAULT 'po_based',
+    invoice_type            text            NOT NULL DEFAULT 'standard',
     description             text,
 
     -- Counterparty
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
     posted_by               uuid,
 
     -- Matching
-    match_type              text            NOT NULL DEFAULT 'THREE_WAY',
+    match_type              text            NOT NULL DEFAULT 'three_way',
     match_status            text            NOT NULL DEFAULT 'unmatched',
 
     -- Reversal / credit note
@@ -154,21 +154,21 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
         'draft','pending_approval','approved','posted','partially_paid',
         'fully_paid','on_hold','reversed','cancelled','rejected')),
     CONSTRAINT pi_source_chk        CHECK (invoice_source IN (
-        'PO_BASED','CONTRACT_BASED','NON_PO','ONE_TIME_VENDOR')),
+        'po_based','contract_based','non_po','one_time_vendor')),
     CONSTRAINT pi_type_chk          CHECK (invoice_type IN (
-        'STANDARD','CREDIT_NOTE','DEBIT_NOTE','ADVANCE','RETENTION_RELEASE',
-        'PROFORMA','SELF_BILLED','DOWN_PAYMENT','FINAL')),
+        'standard','credit_note','debit_note','advance','retention_release',
+        'proforma','self_billed','down_payment','final')),
     CONSTRAINT pi_match_type_chk    CHECK (match_type IN (
-        'THREE_WAY','TWO_WAY','NO_MATCH','EVALUATED_RECEIPT')),
+        'three_way','two_way','no_match','evaluated_receipt')),
     CONSTRAINT pi_match_status_chk  CHECK (match_status IN (
         'unmatched','partially_matched','fully_matched','match_exception')),
     CONSTRAINT pi_commitment_req    CHECK (
-        invoice_source NOT IN ('PO_BASED','CONTRACT_BASED')
+        invoice_source NOT IN ('po_based','contract_based')
         OR commitment_id IS NOT NULL),
     CONSTRAINT pi_amount_chk        CHECK (total_amount >= 0 OR is_credit_note),
     CONSTRAINT pi_period_chk        CHECK (period_number BETWEEN 1 AND 16),
     CONSTRAINT pi_budget_chk        CHECK (budget_check_result IS NULL OR budget_check_result IN (
-        'PASSED','WARNED','OVERRIDE','BLOCKED','EXEMPT')),
+        'passed','warned','override','blocked','exempt')),
     CONSTRAINT pi_no_self_reversal  CHECK (reversal_of_id IS DISTINCT FROM id),
     CONSTRAINT pi_retention_chk     CHECK (
         retention_pct IS NULL OR retention_pct BETWEEN 0 AND 100),
@@ -447,7 +447,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_match_case (
     commitment_id           uuid,
 
     -- Match result
-    match_type              text            NOT NULL DEFAULT 'THREE_WAY',
+    match_type              text            NOT NULL DEFAULT 'three_way',
     match_result            text            NOT NULL DEFAULT 'pending',
 
     -- Variances
@@ -477,7 +477,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_match_case (
     CONSTRAINT imc_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT imc_invoice_uq   UNIQUE (tenant_id, purchase_invoice_id),
     CONSTRAINT imc_type_chk     CHECK (match_type IN (
-        'THREE_WAY','TWO_WAY','NO_MATCH','EVALUATED_RECEIPT')),
+        'three_way','two_way','no_match','evaluated_receipt')),
     CONSTRAINT imc_result_chk   CHECK (match_result IN (
         'pending','matched','matched_with_tolerance',
         'exception','force_matched','rejected')),

@@ -5,6 +5,7 @@
  * Call registerDefaults() at app startup to populate the registry.
  */
 import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
 import { EntityRefPicker, type EntityRefOption } from "@athyper/ui/composites";
@@ -228,11 +229,33 @@ function ReferencePickerField({
   );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
-  const entityCode = getReferenceEntityCode(field);
+  const entityCode    = getReferenceEntityCode(field);
+  const displayField  = field.reference_config?.display_field ?? "name";
+  const uuid          = typeof value === "string" && UUID_RE.test(value) ? value : null;
+
+  const { data: refRecord } = useQuery<{ data: Record<string, unknown> } | null>({
+    queryKey: ["entity-ref", entityCode, uuid],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(uuid!)}`,
+        { signal },
+      );
+      if (!res.ok) return null;
+      return res.json() as Promise<{ data: Record<string, unknown> }>;
+    },
+    enabled: mode === "view" && !!entityCode && !!uuid,
+    staleTime: 5 * 60 * 1000,
+  });
 
   if (mode === "view") {
     if (!value) return <span className="text-sm text-muted-foreground">—</span>;
+    const displayName = refRecord?.data?.[displayField];
+    if (displayName && typeof displayName === "string") {
+      return <span className="text-sm">{displayName}</span>;
+    }
     return (
       <span className="font-mono text-xs text-muted-foreground">
         {String(value).slice(0, 8)}…

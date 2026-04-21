@@ -66,9 +66,9 @@ CROSS JOIN (VALUES
     ('document_no',              'invoice_number',          'Invoice No.',        'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":50}'::jsonb,             10),
     ('invoice_type',             'invoice_type',            'Invoice Type',       'enum',           'one',         'document.purchase_invoice_type'::text,       true,  true,  NULL::jsonb,                            20),
     ('status',                   'status',                  'Status',             'lifecycle_state','one',         NULL::text,                                   true,  true,  NULL::jsonb,                            30),
-    ('company_code_id',          'company_code_id',         'Company Code',       'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"company_code"}'::jsonb, 35),
+    ('company_code_id',          'company_code_id',         'Company Code',       'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"company_code","display_field":"name"}'::jsonb, 35),
     -- ── B: Counterparty & Dates ───────────────────────────────────────────────
-    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"vendor"}'::jsonb,       40),
+    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"vendor","display_field":"name"}'::jsonb,       40),
     ('supplier_invoice_date',    'supplier_invoice_date',   'Vendor Invoice Date','date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
     ('invoice_date',             'document_date',           'Invoice Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            50),
     ('posting_date',             'posting_date',            'Posting Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            55),
@@ -277,3 +277,60 @@ WHERE table_schema    = 'document'
   AND table_name      = 'purchase_invoice'
   AND tenant_id       IS NULL
   AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
+
+-- ── 3b. Full-coverage entity fields — all remaining business columns ───────────
+-- Excluded (intentionally): id, tenant_id, code, name (system identity);
+-- term_snapshot, dimension_set_id, ap_je_id, workflow_request_id (internal);
+-- is_posted, is_active (derived/GENERATED); posted_at/by, approved_at/by,
+-- status_changed_at/by, created_at/by, updated_at/by (audit trail);
+-- line_count, metadata (system-managed counters/opaque store).
+-- budget_check_result requires lookup domain: document.invoice_budget_check_result
+--   with values: PASSED, WARNED, OVERRIDE, BLOCKED, EXEMPT
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, data_type,
+    cardinality, origin, enum_domain_code, is_required, is_filterable,
+    validation, sort_order, created_by)
+SELECT ev.id,
+       f.name, f.column_name, f.label, f.data_type,
+       f.cardinality, 'standard', f.enum_domain_code,
+       f.is_required, f.is_filterable,
+       f.validation, f.sort_order,
+       '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+CROSS JOIN (VALUES
+    -- ── A: Identity additions (15, 22) ────────────────────────────────────────
+    ('fiscal_document_number', 'fiscal_document_number',  'Fiscal Doc. No.',    'text',      'zero_or_one', NULL::text,                                   false, true,  '{"max_length":100}'::jsonb,          15),
+    ('is_credit_note',         'is_credit_note',          'Credit Note',        'boolean',   'one',         NULL::text,                                   false, true,  NULL::jsonb,                          22),
+    -- ── B: Counterparty & Dates additions (42, 47, 57) ───────────────────────
+    ('commitment_id',          'commitment_id',           'PO / Commitment',    'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"commitment"}'::jsonb, 42),
+    ('received_date',          'received_date',           'Received Date',      'date',      'one',         NULL::text,                                   true,  true,  NULL::jsonb,                          47),
+    ('baseline_date',          'baseline_date',           'Baseline Date',      'date',      'zero_or_one', NULL::text,                                   false, true,  NULL::jsonb,                          57),
+    -- ── C: Currency & Amounts additions (72–109) ─────────────────────────────
+    ('base_currency_code',     'base_currency_code',      'Base Currency',      'text',      'one',         NULL::text,                                   true,  true,  '{"max_length":3}'::jsonb,            72),
+    ('exchange_rate',          'exchange_rate',           'Exchange Rate',      'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   74),
+    ('discount_amount',        'discount_amount',         'Discount',           'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   82),
+    ('freight_amount',         'freight_amount',          'Freight',            'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   84),
+    ('misc_charges_amount',    'misc_charges_amount',     'Misc. Charges',      'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   86),
+    ('payable_amount',         'payable_amount',          'Payable Amount',     'decimal',   'one',         NULL::text,                                   false, true,  '{"computed":true}'::jsonb,          103),
+    ('advance_deduction_amount','advance_deduction_amount','Advance Deduction', 'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                  105),
+    ('retention_amount',       'retention_amount',        'Retention Amount',   'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                  107),
+    ('retention_pct',          'retention_pct',           'Retention %',        'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0,"max":100}'::jsonb,        109),
+    -- ── D: References & Terms additions (142–147) ────────────────────────────
+    ('payment_method_id',      'payment_method_id',       'Payment Method',     'reference', 'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_method"}'::jsonb, 142),
+    ('notes',                  'notes',                   'Notes',              'text',      'zero_or_one', NULL::text,                                   false, false, '{"max_length":2000}'::jsonb,        145),
+    ('tags',                   'tags',                    'Tags',               'text',      'many',        NULL::text,                                   false, true,  NULL::jsonb,                         147),
+    -- ── E: Matching, Hold & Budget additions (162–168) ───────────────────────
+    ('is_reversal',            'is_reversal',             'Is Reversal',        'boolean',   'one',         NULL::text,                                   false, true,  NULL::jsonb,                         162),
+    ('reversal_of_id',         'reversal_of_id',          'Reversal Of',        'reference', 'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"purchase_invoice"}'::jsonb, 163),
+    ('is_on_hold',             'is_on_hold',              'On Hold',            'boolean',   'one',         NULL::text,                                   false, true,  NULL::jsonb,                         165),
+    ('budget_allocation_id',   'budget_allocation_id',    'Budget Allocation',  'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"budget_allocation"}'::jsonb, 167),
+    ('budget_check_result',    'budget_check_result',     'Budget Check',       'enum',      'zero_or_one', 'document.invoice_budget_check_result'::text, false, true,  NULL::jsonb,                         168),
+    -- ── F: Dimensions additions (205, 215) ───────────────────────────────────
+    ('profit_center_id',       'profit_center_id',        'Profit Centre',      'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"profit_center"}'::jsonb, 205),
+    ('site_id',                'site_id',                 'Site',               'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"site"}'::jsonb,      215)
+) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
+       is_required, is_filterable, validation, sort_order)
+WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+ON CONFLICT DO NOTHING;

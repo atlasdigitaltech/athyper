@@ -87,7 +87,7 @@ function useVersionList(entityCode: string, entityId: string) {
     queryKey: ["record-versions", entityCode, entityId],
     queryFn: () =>
       bffFetch<VersionListResponse>(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/versions`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/versions`,
       ),
     staleTime: 30 * 1000,
   });
@@ -98,7 +98,7 @@ function useAmendRecord(entityCode: string, entityId: string) {
   return useMutation({
     mutationFn: (reason?: string) =>
       bffFetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/amend`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/amend`,
         { method: "POST", body: reason ? { reason } : {} },
       ),
     onSuccess: () => {

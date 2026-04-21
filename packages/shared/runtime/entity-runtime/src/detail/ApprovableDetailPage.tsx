@@ -17,6 +17,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import {
@@ -106,6 +107,139 @@ function resolveRefMeta(
     // integer/bigint are counts, years, sequence numbers — plain text
   }
   return { label, valueType };
+}
+
+// ── Field-groups panel ────────────────────────────────────────────────────────
+// Groups entity fields by sort_order bands — matches the band conventions used
+// across the entity engine seed files (A:0-39, B:40-69, C:70-119, D:120-149,
+// E:150-179, F:200+). No field_groups seed required.
+
+const FIELD_BANDS = [
+  { key: "identity",     label: "Identity & Classification", min: 0,   max: 39  },
+  { key: "counterparty", label: "Counterparty & Dates",      min: 40,  max: 69  },
+  { key: "amounts",      label: "Currency & Amounts",         min: 70,  max: 119 },
+  { key: "references",   label: "References & Terms",         min: 120, max: 149 },
+  { key: "matching",     label: "Matching & Hold",            min: 150, max: 179 },
+  { key: "dimensions",   label: "Dimensions & Fiscal",        min: 200, max: 999 },
+] as const;
+
+// Fields shown in the identity card / KPI strip — omit from the detail grid
+// to avoid duplication between the sticky header and the body.
+const HEADER_DISPLAY_FIELDS = new Set([
+  "document_no", "status", "code", "name",
+]);
+
+function fmtFieldValue(
+  value: unknown,
+  dataType: string,
+  resolvedRefs: Map<string, string>,
+): { text: string; kind: "text" | "bool"; boolOn?: boolean } {
+  if (value === null || value === undefined || value === "") return { text: "—", kind: "text" };
+
+  if (dataType === "boolean") {
+    const on = value === true || value === "true" || value === 1;
+    return { text: on ? "Yes" : "No", kind: "bool", boolOn: on };
+  }
+  if (dataType === "date") {
+    try {
+      return {
+        text: new Intl.DateTimeFormat("en-GB", {
+          day: "2-digit", month: "short", year: "numeric",
+        }).format(new Date(String(value))),
+        kind: "text",
+      };
+    } catch { return { text: String(value), kind: "text" }; }
+  }
+  if (dataType === "decimal" || dataType === "numeric") {
+    const n = Number(value);
+    if (!isNaN(n)) {
+      return {
+        text: new Intl.NumberFormat("en-US", {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        }).format(n),
+        kind: "text",
+      };
+    }
+  }
+  if (dataType === "enum" || dataType === "lifecycle_state") {
+    return {
+      text: String(value).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      kind: "text",
+    };
+  }
+  if (dataType === "reference") {
+    const str = String(value);
+    const resolved = resolvedRefs.get(str);
+    if (resolved) return { text: resolved, kind: "text" };
+    if (/^[0-9a-f-]{36}$/i.test(str)) return { text: str.slice(0, 8) + "…", kind: "text" };
+    return { text: str, kind: "text" };
+  }
+  return { text: String(value), kind: "text" };
+}
+
+function DocumentFieldsPanel({
+  entity,
+  data,
+  resolvedRefs,
+}: {
+  entity: CompiledEntity;
+  data: Record<string, unknown>;
+  resolvedRefs: Map<string, string>;
+}) {
+  const grouped = FIELD_BANDS.map((band) => ({
+    ...band,
+    fields: entity.fields
+      .filter((f) =>
+        !HEADER_DISPLAY_FIELDS.has(f.name) &&
+        f.data_type !== "lifecycle_state" &&
+        (f.sort_order ?? 0) >= band.min &&
+        (f.sort_order ?? 0) <= band.max,
+      )
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+  })).filter((g) => g.fields.length > 0);
+
+  if (grouped.length === 0) return null;
+
+  return (
+    <div className="space-y-5">
+      {grouped.map((group) => (
+        <Card key={group.key}>
+          <CardContent className="pt-5">
+            <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </h4>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+              {group.fields.map((field) => {
+                const raw = data[field.name] ?? data[field.column_name ?? ""];
+                const { text, kind, boolOn } = fmtFieldValue(raw, field.data_type, resolvedRefs);
+                return (
+                  <div key={field.name}>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-1.5">
+                      {field.label ?? field.name}
+                    </dt>
+                    <dd className="text-sm font-semibold text-foreground leading-snug">
+                      {kind === "bool" ? (
+                        <span className={cn(
+                          "inline-flex items-center h-[20px] px-2 rounded-md text-xs font-semibold tracking-wider border leading-none",
+                          boolOn
+                            ? "bg-success/10 text-success border-success/20"
+                            : "bg-muted text-muted-foreground border-border",
+                        )}>
+                          {text}
+                        </span>
+                      ) : (
+                        text
+                      )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -209,7 +343,9 @@ export function ApprovableDetailPage({
       words.length === 1
         ? (words[0] ?? "").slice(0, 2).toUpperCase()
         : ((words[0]?.[0] ?? "") + (words[words.length - 1]?.[0] ?? "")).toUpperCase();
-    headerData.party = { ...headerData.party, name: resolvedPartyName, initials };
+    const partyCode = partyRecord?.data?.["code"];
+    const subtitle  = partyCode && typeof partyCode === "string" ? partyCode.trim() : undefined;
+    headerData.party = { ...headerData.party, name: resolvedPartyName, initials, subtitle };
   }
 
   // Add key reference fields to the metadata row.
@@ -225,8 +361,9 @@ export function ApprovableDetailPage({
   if (resolvedCompanyCode) {
     refs.push({
       label:     "Company Code",
-      value:     `${resolvedCompanyCode.code} · ${resolvedCompanyCode.name}`,
-      valueType: "code",
+      value:     resolvedCompanyCode.name,
+      subValue:  resolvedCompanyCode.code,
+      valueType: "text",
     });
   } else {
     const fiscalYear = data["fiscal_year"];
@@ -264,6 +401,16 @@ export function ApprovableDetailPage({
   headerData.actionBundle   = orchestrator.actionBundle;
   headerData.blockedReasons = orchestrator.blockedReasons;
 
+  // ── Resolved refs map — UUID → display name for all known references ────────
+  const resolvedRefs = useMemo(() => {
+    const m = new Map<string, string>();
+    if (partyId && resolvedPartyName) m.set(partyId, resolvedPartyName);
+    if (companyCodeId && resolvedCompanyCode) {
+      m.set(companyCodeId, `${resolvedCompanyCode.code} · ${resolvedCompanyCode.name}`);
+    }
+    return m;
+  }, [partyId, resolvedPartyName, companyCodeId, resolvedCompanyCode]);
+
   // Build ordered tab list
   const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;
   const sectionTabs = detailConfig.sections.map((s) => ({
@@ -272,9 +419,7 @@ export function ApprovableDetailPage({
   }));
 
   const tabs = [
-    ...(hasAmountBreakdown || sectionTabs.length > 0
-      ? [{ id: "__overview", label: "Overview" }]
-      : []),
+    { id: "__overview", label: "Overview" },
     ...sectionTabs,
     ...(resolvedTabs.includes("lines")         ? [{ id: "__lines",         label: "Lines" }]         : []),
     ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Distributions" }] : []),
@@ -313,7 +458,6 @@ export function ApprovableDetailPage({
       <ApprovableDocumentShell
         data={headerData}
         persistMode
-        healthTiles={orchestrator.healthTiles}
         validationNotices={orchestrator.validationNotices}
         tabs={tabs}
         activeTab={activeTab}
@@ -322,34 +466,17 @@ export function ApprovableDetailPage({
           if (action === "copy") void navigator.clipboard?.writeText(title);
         }}
       >
-        {/* Overview — amounts + first section fields */}
+        {/* Overview — amount summary + grouped header fields */}
         {activeTab === "__overview" && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {hasAmountBreakdown && (
               <AmountSummaryCard lines={orchestrator.amountBreakdown} />
             )}
-
-            {detailConfig.sections[0] && (
-              <Card>
-                <CardContent className="pt-5">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {detailConfig.sections[0].fields.map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      return (
-                        <div key={field.name}>
-                          <dt className="text-xs font-medium text-muted-foreground">
-                            {field.label ?? field.name}
-                          </dt>
-                          <dd className="mt-1">
-                            <Renderer value={data[field.name]} field={field} mode="view" />
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <DocumentFieldsPanel
+              entity={entity}
+              data={data}
+              resolvedRefs={resolvedRefs}
+            />
           </div>
         )}
 

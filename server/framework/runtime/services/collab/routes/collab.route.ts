@@ -1125,7 +1125,6 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .where("cd.principal_id" as never, "=", principalId as never)
         .where("cd.entity_type" as never,  "=", entityType as never)
         .where("cd.entity_id" as never,    "=", entityId as never)
-        .where("cd.deleted_at" as never,   "is", null);
 
       if (parentCommentId && isUuid(parentCommentId)) {
         query = query.where("cd.parent_comment_id" as never, "=", parentCommentId as never);

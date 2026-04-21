@@ -247,3 +247,22 @@ WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Invoice budget check result
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO control.lookup_value
+    (code, name, domain_code, description, sort_order, is_system, status, created_by)
+SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
+       true, 'active', '00000000-0000-0000-0000-000000000000'
+FROM (VALUES
+    ('passed',   'Passed',            'document.invoice_budget_check_result', 'Budget check passed; sufficient funds available',             10),
+    ('warned',   'Warned',            'document.invoice_budget_check_result', 'Budget nearly exhausted; within warning threshold',           20),
+    ('override', 'Override Approved', 'document.invoice_budget_check_result', 'Over budget but manually overridden by authorised user',      30),
+    ('blocked',  'Blocked',           'document.invoice_budget_check_result', 'Insufficient budget; invoice cannot proceed without override', 40),
+    ('exempt',   'Exempt',            'document.invoice_budget_check_result', 'Invoice is exempt from budget checking (e.g. statutory)',     50)
+) AS v(code, name, domain_code, description, sort_order)
+WHERE NOT EXISTS (
+    SELECT 1 FROM control.lookup_value x
+    WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
+);

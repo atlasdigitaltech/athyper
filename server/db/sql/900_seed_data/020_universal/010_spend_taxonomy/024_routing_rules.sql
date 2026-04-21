@@ -243,7 +243,17 @@ BEGIN
         'active',
         v_su
     FROM tmp_route r
-    JOIN tmp_sc_map sm ON sm.code = r.sc_code;
+    JOIN tmp_sc_map sm ON sm.code = r.sc_code
+    ON CONFLICT (tenant_id, commodity_domain_code, code_from, priority)
+    WHERE is_active = true
+    DO UPDATE SET
+        match_mode        = EXCLUDED.match_mode,
+        code_to           = EXCLUDED.code_to,
+        spend_category_id = EXCLUDED.spend_category_id,
+        confidence        = EXCLUDED.confidence,
+        metadata          = EXCLUDED.metadata,
+        updated_at        = now(),
+        updated_by        = EXCLUDED.created_by;
 
     -- ── STAGE E: Assertions ──────────────────────────────────────────────
     IF (SELECT count(*) FROM control.commodity_to_spend_category_rule

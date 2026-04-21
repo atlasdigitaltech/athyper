@@ -1531,7 +1531,7 @@ BEGIN
     FROM document.payment_entry
     WHERE id = NEW.payment_entry_id;
 
-    IF v_payment_type = 'ADVANCE' THEN
+    IF v_payment_type = 'advance' THEN
         IF NEW.commitment_id IS NULL THEN
             RAISE EXCEPTION
                 'Advance payment allocation requires commitment_id'
@@ -1544,7 +1544,7 @@ BEGIN
         END IF;
     END IF;
 
-    IF v_payment_type IN ('STANDARD','PARTIAL','FINAL','DOWN_PAYMENT') THEN
+    IF v_payment_type IN ('standard','partial','final','down_payment') THEN
         IF NEW.purchase_invoice_id IS NULL THEN
             RAISE EXCEPTION
                 'Payment type % allocation requires purchase_invoice_id',
@@ -1553,7 +1553,7 @@ BEGIN
         END IF;
     END IF;
 
-    IF v_payment_type = 'RETENTION_RELEASE' THEN
+    IF v_payment_type = 'retention_release' THEN
         IF NEW.purchase_invoice_id IS NULL AND NEW.commitment_id IS NULL THEN
             RAISE EXCEPTION
                 'Retention release allocation requires purchase_invoice_id or commitment_id'
@@ -1561,7 +1561,7 @@ BEGIN
         END IF;
     END IF;
 
-    IF v_payment_type = 'NETTING' THEN
+    IF v_payment_type = 'netting' THEN
         -- Netting settles existing AP invoice balances across a run; it does not
         -- operate against open commitments, recover advances, or release retention.
         -- Those adjustments must be completed on their respective payment types first.
@@ -1609,7 +1609,7 @@ BEGIN
         FROM   (SELECT DISTINCT payment_entry_id FROM new_rows) AS changed
         JOIN   document.payment_entry pe
           ON   pe.id = changed.payment_entry_id
-         AND   pe.payment_type = 'NETTING'
+         AND   pe.payment_type = 'netting'
         WHERE  (
                    SELECT COUNT(*)
                    FROM   document.payment_entry_allocation

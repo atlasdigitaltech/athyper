@@ -882,7 +882,20 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         rows = [];
       }
 
-      res.json({ data: rows });
+      // Normalise DB column names → DocumentLine contract field names
+      const data = rows.map((r) => ({
+        ...r,
+        document_id: r[fkCol]                             ?? r["document_id"],
+        line_number: r["line_no"]                         ?? r["line_number"],
+        description: r["item_description"]                ?? r["description"],
+        unit_code:   r["uom_code"]                        ?? r["unit_code"],
+        line_amount: r["gross_amount"] ?? r["net_amount"] ?? r["line_amount"],
+        item_code:   r["item_code"]    ?? null,
+        tax_code:    r["tax_code"]     ?? null,
+        data:        r["metadata"]     ?? r["data"]        ?? {},
+      }));
+
+      res.json({ data });
     } catch (err) {
       logger?.error("records_lines_error", { err: String(err) });
       next(err);
@@ -893,6 +906,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.get("/records/:entity/_debug", debugHandler);
   // Sub-resource routes must be registered before /:id to avoid shadowing
   router.get("/records/:entity/:id/lines",              linesHandler);
+  router.get("/records/:entity/:id/versions",           subResourceStub("versions"));
   router.get("/records/:entity/:id/workflow",           subResourceStub("workflow"));
   router.get("/records/:entity/:id/attachments",        subResourceStub("attachments"));
   router.get("/records/:entity/:id/distributions",      subResourceStub("distributions"));

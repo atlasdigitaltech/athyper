@@ -93,6 +93,7 @@ export interface IamRoutesDeps {
     baseUrl: string;
     realm: string;
     clientId: string;
+    webClientId?: string;
     getAdminToken(): Promise<string>;
   };
 }

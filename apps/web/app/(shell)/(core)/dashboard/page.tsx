@@ -31,48 +31,36 @@ const WORKSPACES = [
     title: "Finance",
     description: "Accounting, GL, COA, close cycle",
     icon: Building2,
-    iconClass: "text-primary",
-    iconBgClass: "bg-primary/10",
   },
   {
     href: "/supply-chain",
     title: "Supply Chain",
     description: "Procurement, inventory, logistics",
     icon: Package,
-    iconClass: "text-warning",
-    iconBgClass: "bg-warning/10",
   },
   {
     href: "/people",
     title: "People",
     description: "HR, payroll, org management",
     icon: Users,
-    iconClass: "text-accent-foreground",
-    iconBgClass: "bg-accent/10",
   },
   {
     href: "/projects",
     title: "Projects",
     description: "Project costing, ITSM",
     icon: FolderKanban,
-    iconClass: "text-success",
-    iconBgClass: "bg-success/10",
   },
   {
     href: "/manufacturing",
     title: "Manufacturing",
     description: "Production, maintenance",
     icon: Factory,
-    iconClass: "text-destructive",
-    iconBgClass: "bg-destructive/10",
   },
   {
     href: "/asset-management",
     title: "Asset Management",
     description: "Fixed assets, real estate, facilities",
     icon: Briefcase,
-    iconClass: "text-info",
-    iconBgClass: "bg-info/10",
   },
 ] as const;
 
@@ -118,7 +106,7 @@ export default function DashboardPage() {
             className="group flex items-center justify-between rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
           >
             <div className="flex items-center gap-3">
-              <Inbox className="h-4 w-4 text-warning" />
+              <Inbox className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Inbox</span>
             </div>
             {inboxLoading ? (

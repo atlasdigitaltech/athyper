@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS document.commitment (
     CONSTRAINT cmt_encumbrance_chk      CHECK (encumbrance_type IN (
         'NONE','STANDARD','PRE_ENCUMBRANCE','STATISTICAL_ONLY')),
     CONSTRAINT cmt_check_chk            CHECK (budget_check_result IS NULL OR budget_check_result IN (
-        'PASSED','WARNED','OVERRIDE','BLOCKED','EXEMPT')),
+        'passed','warned','override','blocked','exempt')),
     CONSTRAINT cmt_amount_nonneg        CHECK (total_amount >= 0),
     CONSTRAINT cmt_fulfilled_nonneg     CHECK (fulfilled_amount >= 0),
     CONSTRAINT cmt_released_nonneg      CHECK (released_amount >= 0),
