@@ -540,14 +540,15 @@ BEGIN
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_sites', 'version', '1.0.0', 'seeded_at', now()::text));
 
-    INSERT INTO master.site (tenant_id, company_code_id, code, name, site_type, address_line1, city, country_code, metadata, status, created_by)
+    -- site_tenant_code_uq UNIQUE (tenant_id, code) — code is globally unique within tenant
+    INSERT INTO master.site (tenant_id, company_code_id, code, name, site_type, country_code, timezone_code, metadata, status, created_by)
     VALUES
-    (v_tid, v_cc_tksa, 'SITE-RUH-HQ',  'Riyadh Group HQ',        'office',     'P.O. Box 305099',             'Riyadh',    'SA', v_meta, 'active', v_su),
-    (v_tid, v_cc_ssk,  'SITE-RUH-SSK', 'Riyadh SSK Office',      'office',     'P.O. Box 305099',             'Riyadh',    'SA', v_meta, 'active', v_su),
-    (v_tid, v_cc_ssk,  'SITE-JED-SSK', 'Jeddah SSK Site',        'production', 'Industrial Area, Jeddah',     'Jeddah',    'SA', v_meta, 'active', v_su),
-    (v_tid, v_cc_tegy, 'SITE-CAI-TEGY','Cairo Technostat Office', 'office',     '1st District, New Cairo',     'Cairo',     'EG', v_meta, 'active', v_su),
-    (v_tid, v_cc_sdtx, 'SITE-CAI-SDTX','Cairo SDTX Operations',  'office',     '1st District, New Cairo',     'Cairo',     'EG', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, company_code_id, code) DO NOTHING;
+    (v_tid, v_cc_tksa, 'SITE-RUH-HQ',  'Riyadh Group HQ',        'office',     'SA', 'Asia/Riyadh',  v_meta, 'active', v_su),
+    (v_tid, v_cc_ssk,  'SITE-RUH-SSK', 'Riyadh SSK Office',      'office',     'SA', 'Asia/Riyadh',  v_meta, 'active', v_su),
+    (v_tid, v_cc_ssk,  'SITE-JED-SSK', 'Jeddah SSK Site',        'yard',       'SA', 'Asia/Riyadh',  v_meta, 'active', v_su),
+    (v_tid, v_cc_tegy, 'SITE-CAI-TEGY','Cairo Technostat Office', 'office',     'EG', 'Africa/Cairo', v_meta, 'active', v_su),
+    (v_tid, v_cc_sdtx, 'SITE-CAI-SDTX','Cairo SDTX Operations',  'office',     'EG', 'Africa/Cairo', v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, code) DO NOTHING;
 
     RAISE NOTICE '[P09] 5 sites seeded (Riyadh + Jeddah + Cairo)';
 END $p09$;
@@ -575,13 +576,13 @@ BEGIN
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_wh', 'version', '1.0.0', 'seeded_at', now()::text));
 
-    INSERT INTO master.warehouse (tenant_id, company_code_id, site_id, code, name, warehouse_type, metadata, status, created_by)
+    INSERT INTO master.warehouse (tenant_id, site_id, code, name, description, warehouse_type, metadata, status, created_by)
     VALUES
-    (v_tid, v_cc_ssk,  v_site_ruh_ssk,  'WH-RUH-MAT', 'Riyadh Materials Store',  'raw_materials', v_meta, 'active', v_su),
-    (v_tid, v_cc_ssk,  v_site_ruh_ssk,  'WH-RUH-EQP', 'Riyadh Equipment Yard',   'finished_goods',v_meta, 'active', v_su),
-    (v_tid, v_cc_tegy, v_site_cai_tegy, 'WH-CAI-TEGY','Cairo Trading Warehouse',  'finished_goods',v_meta, 'active', v_su),
-    (v_tid, v_cc_sdtx, v_site_cai_sdtx, 'WH-CAI-SDTX','Cairo ICT Stock Room',    'finished_goods', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, company_code_id, code) DO NOTHING;
+    (v_tid, v_site_ruh_ssk,  'WH-RUH-MAT', 'Riyadh Materials Store', 'Construction materials and equipment yard.',     'raw',           v_meta, 'active', v_su),
+    (v_tid, v_site_ruh_ssk,  'WH-RUH-EQP', 'Riyadh Equipment Yard',  'Network, DC, and smart solution staging.',       'finished_goods', v_meta, 'active', v_su),
+    (v_tid, v_site_cai_tegy, 'WH-CAI-TEGY','Cairo Trading Warehouse', 'Trading goods and IT equipment.',                'finished_goods', v_meta, 'active', v_su),
+    (v_tid, v_site_cai_sdtx, 'WH-CAI-SDTX','Cairo ICT Stock Room',   'Equipment staging for DT project installations.','finished_goods', v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, site_id, code) DO NOTHING;
 
     RAISE NOTICE '[P10] 4 warehouses seeded';
 END $p10$;
@@ -654,7 +655,11 @@ END $p11$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P12: LEDGER BOOKS + ASSIGNMENTS                                         ║
+-- ║  P12: LEDGER BOOKS + ASSIGNMENTS  (DDL-aligned)                          ║
+-- ║  ledger_book:               category, base_currency_code, is_primary,    ║
+-- ║                             close_mode, sort_order                        ║
+-- ║  company_code_book_assignment: effective_from, priority,                 ║
+-- ║                             conflict_strategy (all NOT NULL)              ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
 DO $p12$
@@ -662,98 +667,140 @@ DECLARE
     v_su       uuid := '00000000-0000-0000-0000-000000000000';
     v_tid      uuid;
     v_meta     jsonb;
-    v_b_ifrs   uuid; v_b_socpa uuid; v_b_eas uuid;
-    v_cc_tksa  uuid; v_cc_ssk  uuid; v_cc_tegy uuid; v_cc_sdtx uuid;
+    v_b_ifrs   uuid; v_b_socpa uuid; v_b_eas uuid; v_b_mgmt uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND code = 'SSK';
-    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND code = 'TEGY';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_lb', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_lb', 'version', '1.0.0', 'seeded_at', now()::text));
-
-    INSERT INTO master.ledger_book (tenant_id, code, name, description, primary_framework, metadata, status, created_by)
+    -- category: 'statutory' | 'management' | 'tax' | 'consolidation'
+    -- close_mode: 'unified' | 'standalone'
+    INSERT INTO master.ledger_book (tenant_id, code, name, description, category,
+        base_currency_code, is_primary, close_mode, sort_order, metadata, status, created_by)
     VALUES
-    (v_tid, 'LB-IFRS',  'IFRS Ledger',  'Primary IFRS reporting ledger — TKSA + SDTX', 'ifrs',       v_meta, 'active', v_su),
-    (v_tid, 'LB-SOCPA', 'SOCPA Ledger', 'Saudi GAAP ledger — SSK construction',         'local_gaap', v_meta, 'active', v_su),
-    (v_tid, 'LB-EAS',   'EAS Ledger',   'Egyptian accounting standards — TEGY',         'local_gaap', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    (v_tid, 'BOOK-IFRS',  'IFRS Ledger',      'Primary IFRS reporting book — TKSA + SDTX',   'statutory',  'SAR', true,  'unified', 10, v_meta, 'active', v_su),
+    (v_tid, 'BOOK-SOCPA', 'SOCPA Ledger',      'Saudi GAAP / SOCPA statutory book — SSK',     'statutory',  'SAR', false, 'unified', 20, v_meta, 'active', v_su),
+    (v_tid, 'BOOK-EAS',   'EAS Ledger',        'Egyptian Accounting Standards — TEGY/SDTX',   'statutory',  'EGP', false, 'unified', 30, v_meta, 'active', v_su),
+    (v_tid, 'BOOK-MGMT',  'Management Book',   'Group management reporting and analytics',    'management', 'SAR', false, 'unified', 40, v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        name=EXCLUDED.name, updated_at=now(), updated_by=v_su;
 
-    SELECT id INTO v_b_ifrs  FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'LB-IFRS';
-    SELECT id INTO v_b_socpa FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'LB-SOCPA';
-    SELECT id INTO v_b_eas   FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'LB-EAS';
+    SELECT id INTO v_b_ifrs  FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'BOOK-IFRS';
+    SELECT id INTO v_b_socpa FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'BOOK-SOCPA';
+    SELECT id INTO v_b_eas   FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'BOOK-EAS';
+    SELECT id INTO v_b_mgmt  FROM master.ledger_book WHERE tenant_id = v_tid AND code = 'BOOK-MGMT';
 
-    INSERT INTO master.ledger_book_assignment (tenant_id, ledger_book_id, company_code_id, is_primary, metadata, status, created_by)
-    VALUES
-    (v_tid, v_b_ifrs,  v_cc_tksa, true,  v_meta, 'active', v_su),
-    (v_tid, v_b_socpa, v_cc_tksa, false, v_meta, 'active', v_su),
-    (v_tid, v_b_socpa, v_cc_ssk,  true,  v_meta, 'active', v_su),
-    (v_tid, v_b_eas,   v_cc_tegy, true,  v_meta, 'active', v_su),
-    (v_tid, v_b_ifrs,  v_cc_sdtx, true,  v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, ledger_book_id, company_code_id) DO NOTHING;
+    -- effective_from, priority (lower = higher priority), conflict_strategy — all NOT NULL
+    INSERT INTO master.company_code_book_assignment (tenant_id, company_code_id, book_id,
+        effective_from, priority, conflict_strategy, metadata, status, created_by)
+    SELECT v_tid, cc.id, book.id, '2025-01-01'::date, v.priority, 'highest_priority', v_meta, 'active', v_su
+    FROM (VALUES
+        ('TKSA', 'BOOK-IFRS',  1::smallint),
+        ('TKSA', 'BOOK-SOCPA', 2::smallint),
+        ('TKSA', 'BOOK-MGMT',  3::smallint),
+        ('SSK',  'BOOK-SOCPA', 1::smallint),
+        ('SSK',  'BOOK-IFRS',  2::smallint),
+        ('SSK',  'BOOK-MGMT',  3::smallint),
+        ('TEGY', 'BOOK-EAS',   1::smallint),
+        ('TEGY', 'BOOK-IFRS',  2::smallint),
+        ('SDTX', 'BOOK-IFRS',  1::smallint),
+        ('SDTX', 'BOOK-EAS',   2::smallint),
+        ('SDTX', 'BOOK-MGMT',  3::smallint)
+    ) AS v(cc_code, book_code, priority)
+    JOIN master.company_code cc   ON cc.tenant_id   = v_tid AND cc.code   = v.cc_code
+    JOIN master.ledger_book  book ON book.tenant_id = v_tid AND book.code = v.book_code
+    ON CONFLICT (tenant_id, company_code_id, book_id) DO UPDATE SET
+        priority=EXCLUDED.priority, updated_at=now(), updated_by=v_su;
 
-    RAISE NOTICE '[P12] 3 ledger books + 5 assignments seeded';
+    RAISE NOTICE '[P12] 4 ledger books + 11 assignments seeded (DDL-aligned)';
 END $p12$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P13: TAX SETUP — KSA VAT 15% · Egypt VAT 14% · Egypt WHT               ║
+-- ║  P13: TAX SETUP — KSA VAT 15% · Egypt VAT 14% · WHT  (DDL-aligned)     ║
+-- ║  tax_jurisdiction:   jurisdiction_type NOT NULL, level_no               ║
+-- ║  tax_type:           category IN ('INDIRECT','WITHHOLDING',...)          ║
+-- ║  control.tax_rate_schedule: structured identity, ON CONFLICT DO NOTHING  ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
 DO $p13$
 DECLARE
-    v_su     uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid    uuid;
-    v_meta   jsonb;
-    v_tj_sa  uuid; v_tj_eg uuid;
-    v_tt_vat_sa uuid; v_tt_vat_eg uuid; v_tt_wht_eg uuid;
+    v_su       uuid := '00000000-0000-0000-0000-000000000000';
+    v_tid      uuid;
+    v_meta     jsonb;
+    v_tj_sa    uuid; v_tj_eg   uuid;
+    v_tt_vatsa uuid; v_tt_whtsa uuid;
+    v_tt_vateg uuid; v_tt_whteg uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_tax', 'version', '1.0.0', 'seeded_at', now()::text));
+    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_tax', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    -- Tax jurisdictions
-    INSERT INTO master.tax_jurisdiction (tenant_id, code, name, country_code, metadata, status, created_by)
+    -- ── Tax Jurisdictions ────────────────────────────────────────────────────
+    -- jurisdiction_type NOT NULL: COUNTRY | STATE | PROVINCE | CITY | DISTRICT | SPECIAL_ZONE | TREATY
+    INSERT INTO master.tax_jurisdiction (tenant_id, code, name, description, country_code,
+        jurisdiction_type, level_no, metadata, status, created_by)
     VALUES
-    (v_tid, 'TJ-SA', 'Saudi Arabia — GAZT/ZATCA', 'SA', v_meta, 'active', v_su),
-    (v_tid, 'TJ-EG', 'Egypt — Egyptian Tax Authority', 'EG', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    (v_tid, 'TJ-SA', 'Saudi Arabia', 'Kingdom of Saudi Arabia — ZATCA jurisdiction', 'SA', 'COUNTRY', 1, v_meta, 'active', v_su),
+    (v_tid, 'TJ-EG', 'Egypt',        'Arab Republic of Egypt — ETA jurisdiction',    'EG', 'COUNTRY', 1, v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, code) DO UPDATE SET name=EXCLUDED.name, updated_at=now(), updated_by=v_su;
 
     SELECT id INTO v_tj_sa FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-SA';
     SELECT id INTO v_tj_eg FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-EG';
 
-    -- Tax types
-    INSERT INTO master.tax_type (tenant_id, code, name, tax_category, jurisdiction_id, metadata, status, created_by)
+    -- ── Tax Types (category CHECK: 'INDIRECT' | 'WITHHOLDING' | 'CUSTOMS_DUTY' | 'SURCHARGE') ─
+    INSERT INTO master.tax_type (tenant_id, code, name, description,
+        category, is_recoverable, is_deducted_at_source,
+        is_included_in_price, is_compound_eligible, sort_order,
+        metadata, status, created_by)
     VALUES
-    (v_tid, 'VAT-SA',  'KSA Value Added Tax',       'vat', v_tj_sa, v_meta, 'active', v_su),
-    (v_tid, 'WHT-SA',  'KSA Withholding Tax',        'wht', v_tj_sa, v_meta, 'active', v_su),
-    (v_tid, 'VAT-EG',  'Egypt Value Added Tax',      'vat', v_tj_eg, v_meta, 'active', v_su),
-    (v_tid, 'WHT-EG',  'Egypt Withholding Tax',      'wht', v_tj_eg, v_meta, 'active', v_su),
-    (v_tid, 'CIT-EG',  'Egypt Corporate Income Tax', 'cit', v_tj_eg, v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    (v_tid, 'VAT-SA', 'KSA VAT',   'Saudi VAT per ZATCA. Standard 15%, zero-rated 0%.',
+     'INDIRECT',    true,  false, false, false, 10, v_meta, 'active', v_su),
+    (v_tid, 'WHT-SA', 'KSA WHT',   'KSA WHT on non-resident payments. Art 68: 5/15/20%.',
+     'WITHHOLDING', false, true,  false, false, 20, v_meta, 'active', v_su),
+    (v_tid, 'VAT-EG', 'Egypt VAT', 'Egyptian VAT per ETA. Standard 14%.',
+     'INDIRECT',    true,  false, false, false, 30, v_meta, 'active', v_su),
+    (v_tid, 'WHT-EG', 'Egypt WHT', 'Egyptian WHT on services/royalties.',
+     'WITHHOLDING', false, true,  false, false, 40, v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        category=EXCLUDED.category, is_recoverable=EXCLUDED.is_recoverable,
+        is_deducted_at_source=EXCLUDED.is_deducted_at_source,
+        updated_at=now(), updated_by=v_su;
 
-    SELECT id INTO v_tt_vat_sa FROM master.tax_type WHERE tenant_id = v_tid AND code = 'VAT-SA';
-    SELECT id INTO v_tt_vat_eg FROM master.tax_type WHERE tenant_id = v_tid AND code = 'VAT-EG';
-    SELECT id INTO v_tt_wht_eg FROM master.tax_type WHERE tenant_id = v_tid AND code = 'WHT-EG';
+    SELECT id INTO v_tt_vatsa FROM master.tax_type WHERE tenant_id = v_tid AND code = 'VAT-SA';
+    SELECT id INTO v_tt_whtsa FROM master.tax_type WHERE tenant_id = v_tid AND code = 'WHT-SA';
+    SELECT id INTO v_tt_vateg FROM master.tax_type WHERE tenant_id = v_tid AND code = 'VAT-EG';
+    SELECT id INTO v_tt_whteg FROM master.tax_type WHERE tenant_id = v_tid AND code = 'WHT-EG';
 
-    -- Tax rate schedules
-    INSERT INTO master.tax_rate_schedule (tenant_id, tax_type_id, code, name, rate_pct, effective_from, metadata, status, created_by)
+    -- ── Tax Rate Schedules (control schema; structured identity — no code/name cols) ─
+    INSERT INTO control.tax_rate_schedule (
+        tenant_id, jurisdiction_id, tax_type_id,
+        tax_direction, rate_kind, rate_value,
+        recoverability_mode, calculation_basis, rounding_stage,
+        priority, description, effective_from,
+        metadata, status, created_by)
     VALUES
-    (v_tid, v_tt_vat_sa, 'VAT-SA-15',  'KSA VAT 15%',        15.00, '2020-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tt_vat_eg, 'VAT-EG-14',  'Egypt VAT 14%',       14.00, '2017-09-08', v_meta, 'active', v_su),
-    (v_tid, v_tt_wht_eg, 'WHT-EG-5',   'Egypt WHT 5% (services)', 5.00, '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, (SELECT id FROM master.tax_type WHERE tenant_id = v_tid AND code = 'WHT-SA'),
-            'WHT-SA-5',  'KSA WHT 5% (local services)', 5.00, '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, (SELECT id FROM master.tax_type WHERE tenant_id = v_tid AND code = 'CIT-EG'),
-            'CIT-EG-22', 'Egypt CIT 22.5%',           22.50, '2015-07-01', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, tax_type_id, code) DO NOTHING;
+    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT', 15.00, 'NONE', 'LINE_NET', 'LINE',  0, 'KSA VAT 15% on sales',                   '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_vatsa, 'PURCHASE', 'PERCENT', 15.00, 'FULL', 'LINE_NET', 'LINE',  0, 'KSA VAT 15% on purchases (recoverable)',  '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'LINE', 10, 'KSA VAT zero-rated/exempt',               '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'LINE',  0, 'KSA WHT 5% technical services',          '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 15.00, 'NONE', 'LINE_NET', 'LINE', 10, 'KSA WHT 15% royalties',                  '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'LINE', 20, 'KSA WHT 20% management fees',            '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT', 14.00, 'NONE', 'LINE_NET', 'LINE',  0, 'Egypt VAT 14% on sales',                 '2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'PURCHASE', 'PERCENT', 14.00, 'FULL', 'LINE_NET', 'LINE',  0, 'Egypt VAT 14% on purchases (recoverable)','2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'LINE', 10, 'Egypt VAT exempt',                       '2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'LINE',  0, 'Egypt WHT 5% domestic services',         '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'LINE', 10, 'Egypt WHT 20% non-resident royalties',   '2020-01-01', v_meta, 'active', v_su)
+    ON CONFLICT DO NOTHING;
 
-    RAISE NOTICE '[P13] Tax jurisdictions, types, and rate schedules seeded';
+    RAISE NOTICE '[P13] 2 jurisdictions, 4 tax types, 11 rate schedules seeded (DDL-aligned)';
 END $p13$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P14: FX RATES — SAR · EGP baseline                                     ║
+-- ║  P14: FX RATES — SAR · EGP baseline  (DDL-aligned)                      ║
+-- ║  rate_type: SPOT | PERIOD_AVG | PERIOD_END  (uppercase CHECK)            ║
+-- ║  source: NOT NULL ('MANUAL' for seed data)                               ║
+-- ║  inverse_rate: GENERATED ALWAYS — do not insert                          ║
+-- ║  No unique index → ON CONFLICT DO NOTHING                                ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
 DO $p14$
@@ -763,100 +810,125 @@ DECLARE
     v_meta jsonb;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_fx', 'version', '1.0.0', 'seeded_at', now()::text));
+    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_fx', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    INSERT INTO master.fx_rate (tenant_id, from_currency, to_currency, rate, rate_date, rate_type, metadata, status, created_by)
+    INSERT INTO master.fx_rate (tenant_id, from_currency, to_currency,
+        rate, rate_type, effective_date, source, metadata, status, created_by)
     VALUES
-    -- SAR → USD
-    (v_tid, 'SAR', 'USD', 0.26667, '2025-01-01', 'closing', v_meta, 'active', v_su),
-    (v_tid, 'SAR', 'USD', 0.26667, '2025-12-31', 'closing', v_meta, 'active', v_su),
-    -- USD → SAR
-    (v_tid, 'USD', 'SAR', 3.75000, '2025-01-01', 'closing', v_meta, 'active', v_su),
-    (v_tid, 'USD', 'SAR', 3.75000, '2025-12-31', 'closing', v_meta, 'active', v_su),
-    -- EGP → SAR
-    (v_tid, 'EGP', 'SAR', 0.07500, '2025-01-01', 'closing', v_meta, 'active', v_su),
-    (v_tid, 'EGP', 'SAR', 0.07500, '2025-12-31', 'closing', v_meta, 'active', v_su),
-    -- SAR → EGP
-    (v_tid, 'SAR', 'EGP', 13.3333, '2025-01-01', 'closing', v_meta, 'active', v_su),
-    (v_tid, 'SAR', 'EGP', 13.3333, '2025-12-31', 'closing', v_meta, 'active', v_su),
-    -- EGP → USD
-    (v_tid, 'EGP', 'USD', 0.02000, '2025-01-01', 'closing', v_meta, 'active', v_su),
-    (v_tid, 'EGP', 'USD', 0.02000, '2025-12-31', 'closing', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, from_currency, to_currency, rate_date, rate_type) DO UPDATE SET
-        rate = EXCLUDED.rate, updated_at = now(), updated_by = v_su
-    WHERE master.fx_rate.rate IS DISTINCT FROM EXCLUDED.rate;
+    (v_tid, 'USD', 'SAR',  3.75000, 'SPOT',       '2025-01-01', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'EGP', 'SAR',  0.07500, 'SPOT',       '2025-01-01', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'USD', 'EGP', 48.75000, 'SPOT',       '2025-01-01', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'USD', 'SAR',  3.75000, 'PERIOD_AVG', '2025-01-01', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'EGP', 'SAR',  0.07800, 'PERIOD_AVG', '2025-01-01', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'USD', 'SAR',  3.75000, 'PERIOD_END', '2025-12-31', 'MANUAL', v_meta, 'active', v_su),
+    (v_tid, 'EGP', 'SAR',  0.07500, 'PERIOD_END', '2025-12-31', 'MANUAL', v_meta, 'active', v_su)
+    ON CONFLICT DO NOTHING;
 
-    RAISE NOTICE '[P14] FX rates seeded (SAR/EGP/USD baseline)';
+    RAISE NOTICE '[P14] 7 FX rates seeded (SPOT + PERIOD_AVG + PERIOD_END)';
 END $p14$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P15: PAYMENT TERMS                                                      ║
+-- ║  P15: PAYMENT TERMS  (DDL-aligned)                                       ║
+-- ║  Requires: applicable_to, base_event, due_rule_type, term_category       ║
+-- ║  ON CONFLICT: (tenant_id, code, version)                                 ║
+-- ║  Discounts → master.payment_term_discount_tier (child table, seeded for  ║
+-- ║  2/10 Net 30 only)                                                        ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
 DO $p15$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid  uuid;
-    v_meta jsonb;
+    v_su     uuid := '00000000-0000-0000-0000-000000000000';
+    v_tid    uuid;
+    v_meta   jsonb;
+    v_pt_210 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_pt', 'version', '1.0.0', 'seeded_at', now()::text));
+    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_pt', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    INSERT INTO master.payment_term (tenant_id, code, name, description, net_days, discount_days, discount_pct, metadata, status, created_by)
+    -- Remove stale rows before re-seeding: DELETE bypasses the immutability BEFORE UPDATE
+    -- trigger and avoids CHECK constraint violations on pre-existing rows with legacy values.
+    DELETE FROM master.payment_term_discount_tier
+    WHERE tenant_id = v_tid;
+
+    DELETE FROM master.payment_term
+    WHERE tenant_id = v_tid;
+
+    INSERT INTO master.payment_term (tenant_id, code, name, description,
+        applicable_to, base_event, due_rule_type, due_days,
+        grace_days, term_category, sort_order,
+        metadata, status, created_by)
     VALUES
-    (v_tid, 'NET30',   'Net 30',        'Payment due 30 days from invoice date',           30,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, 'NET45',   'Net 45',        'Payment due 45 days from invoice date',           45,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, 'NET60',   'Net 60',        'Payment due 60 days from invoice date',           60,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, 'NET90',   'Net 90',        'Payment due 90 days from invoice date',           90,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, '2/10N30', '2/10 Net 30',   '2% discount if paid within 10 days, net 30',     30, 10,  2.00, v_meta, 'active', v_su),
-    (v_tid, 'ADVANCE', 'Advance Payment','Payment required before delivery',                0,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, 'MILEST',  'Milestone',     'Payment linked to project milestone completion',  0,  0,  0.00, v_meta, 'active', v_su),
-    (v_tid, 'RET5',    '5% Retention',  '5% held on final payment until defects clear',   30,  0,  0.00, v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    (v_tid, 'ADVANCE', 'Advance Payment',  '100% upfront before delivery',              'BOTH', 'CONTRACT_DATE', 'PREPAID',  NULL, 0, 'standard',  5, v_meta, 'active', v_su),
+    (v_tid, 'NET-30',  'Net 30',           '30 days from invoice date',                 'BOTH', 'INVOICE_DATE',  'NET_DAYS',   30, 0, 'standard', 20, v_meta, 'active', v_su),
+    (v_tid, 'NET-45',  'Net 45',           '45 days from invoice date',                 'BOTH', 'INVOICE_DATE',  'NET_DAYS',   45, 0, 'standard', 25, v_meta, 'active', v_su),
+    (v_tid, 'NET-60',  'Net 60',           '60 days from invoice date',                 'BOTH', 'INVOICE_DATE',  'NET_DAYS',   60, 0, 'standard', 30, v_meta, 'active', v_su),
+    (v_tid, 'NET-90',  'Net 90',           '90 days — typical government contracts',    'SALE', 'INVOICE_DATE',  'NET_DAYS',   90, 0, 'standard', 40, v_meta, 'active', v_su),
+    (v_tid, 'NET-120', 'Net 120',          '120 days — extended gov/SOE terms',         'SALE', 'INVOICE_DATE',  'NET_DAYS',  120, 0, 'standard', 45, v_meta, 'active', v_su),
+    (v_tid, '2-10-30', '2/10 Net 30',      '2% discount if paid within 10 days, net 30','BOTH', 'INVOICE_DATE', 'NET_DAYS',   30, 0, 'standard', 50, v_meta, 'active', v_su),
+    (v_tid, 'EOM-30',  'End of Month +30', 'Due 30d after end of invoice month',        'BOTH', 'INVOICE_DATE',  'EOM',      NULL, 0, 'standard', 55, v_meta, 'active', v_su),
+    (v_tid, 'MILEST',  'Milestone',        'Payment on project milestone completion',   'SALE', 'CONTRACT_DATE', 'COD',       NULL, 0, 'construction', 60, v_meta, 'active', v_su),
+    (v_tid, 'RET-5',   '5% Retention',     '5% retention held until defects cleared',  'SALE', 'INVOICE_DATE',  'NET_DAYS',   30, 0, 'construction', 70, v_meta, 'active', v_su)
+    ON CONFLICT (tenant_id, code, version) DO NOTHING;
 
-    RAISE NOTICE '[P15] 8 payment terms seeded';
+    -- 2/10 Net 30 discount tier
+    SELECT id INTO v_pt_210 FROM master.payment_term
+    WHERE tenant_id = v_tid AND code = '2-10-30' AND is_current_version = true;
+    IF v_pt_210 IS NOT NULL THEN
+        INSERT INTO master.payment_term_discount_tier (tenant_id, payment_term_id, tier_no,
+            qualify_within_days, discount_pct, discount_basis_mode, metadata, created_by)
+        VALUES (v_tid, v_pt_210, 1, 10, 2.00, 'GROSS', v_meta, v_su)
+        ON CONFLICT (payment_term_id, tier_no) DO UPDATE SET discount_pct=EXCLUDED.discount_pct;
+    END IF;
+
+    RAISE NOTICE '[P15] 10 payment terms + 1 discount tier seeded (DDL-aligned)';
 END $p15$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P16: ASSET CLASSES — IT-specific hierarchy                              ║
+-- ║  P16: ASSET CLASSES — ICT-specific  (DDL-aligned)                        ║
+-- ║  No parent_id column; company_code_id NOT NULL → loop per CC             ║
+-- ║  useful_life_months + residual_pct go into depreciation_defaults JSONB   ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
 DO $p16$
 DECLARE
-    v_su     uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid    uuid;
-    v_meta   jsonb;
-    v_ac_it  uuid;
+    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_tid  uuid;
+    v_meta jsonb;
+    v_cc   record;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_ac', 'version', '1.0.0', 'seeded_at', now()::text));
+    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_ac', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    INSERT INTO master.asset_class (tenant_id, code, name, parent_id, asset_nature, useful_life_years, depreciation_method, metadata, status, created_by)
-    VALUES
-    -- Root categories
-    (v_tid, 'AC-IT',    'IT & Technology',     NULL, 'tangible',   5,  'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-INFRA', 'Infrastructure',      NULL, 'tangible',   10, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-SOFT',  'Software & Intangibles', NULL, 'intangible', 3, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-FURN',  'Furniture & Fixtures',NULL, 'tangible',   10, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-VEHCL', 'Vehicles',            NULL, 'tangible',   5,  'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-EQUIP', 'Equipment',           NULL, 'tangible',   7,  'straight_line', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    FOR v_cc IN
+        SELECT id AS cc_id, code AS cc_code, functional_currency AS ccy
+        FROM master.company_code WHERE tenant_id = v_tid AND status = 'active'
+    LOOP
+        INSERT INTO master.asset_class (
+            tenant_id, company_code_id, code, name, description,
+            asset_nature, is_depreciable, currency_code,
+            depreciation_defaults, sort_order, metadata, status, created_by)
+        VALUES
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-IT',     'IT Equipment',             'Laptops, desktops, monitors, printers',      'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 36,  'residual_pct', 5.00),  10, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-SERVER',  'Servers & Storage',        'Rack servers, blades, NAS/SAN',              'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 10.00), 12, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-NETWORK', 'Network Equipment',        'Switches, routers, firewalls, WLC',          'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 5.00),  14, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-MOBILE',  'Mobile Devices',           'Phones, tablets for field engineers',        'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 24,  'residual_pct', 0.00),  20, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-FURN',    'Furniture & Fixtures',     'Office furniture, workstations',             'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 10.00), 30, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-VEH',     'Vehicles',                 'Company vehicles and fleet',                 'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 15.00), 35, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-LHI',     'Leasehold Improvements',   'Office fit-out, partitions, electrical',     'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 0.00),  40, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-SWPROD',  'Capitalised Product Dev',  'IAS 38 capitalised software products',       'intangible', true,  v_cc.ccy, jsonb_build_object('useful_life_months', 60,  'residual_pct', 0.00),  50, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-LICACQ',  'Acquired Licences',        '3rd-party perpetual software licences',      'intangible', true,  v_cc.ccy, jsonb_build_object('useful_life_months', 36,  'residual_pct', 0.00),  55, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-PATENT',  'Patents & Trademarks',     'Registered IP assets',                       'intangible', true,  v_cc.ccy, jsonb_build_object('useful_life_months', 120, 'residual_pct', 0.00),  60, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-LAB',     'Lab & Demo Equipment',     'Demo racks, test servers, POC equipment',    'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 36,  'residual_pct', 5.00),  65, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-TOOLS',   'Tools & Test Equipment',   'Cable testers, OTDR, crimpers, meters',      'tangible',   true,  v_cc.ccy, jsonb_build_object('useful_life_months', 48,  'residual_pct', 5.00),  70, v_meta, 'active', v_su),
+        (v_tid, v_cc.cc_id, v_cc.cc_code||'-AC-CWIP',    'Capital Work in Progress', 'Assets under construction / deployment',     'cwip',       false, v_cc.ccy, jsonb_build_object('useful_life_months', null,'residual_pct', null),  90, v_meta, 'active', v_su)
+        ON CONFLICT (tenant_id, company_code_id, code) DO UPDATE SET
+            name=EXCLUDED.name, depreciation_defaults=EXCLUDED.depreciation_defaults,
+            updated_at=now(), updated_by=v_su;
+    END LOOP;
 
-    SELECT id INTO v_ac_it FROM master.asset_class WHERE tenant_id = v_tid AND code = 'AC-IT';
-
-    -- IT sub-classes
-    INSERT INTO master.asset_class (tenant_id, code, name, parent_id, asset_nature, useful_life_years, depreciation_method, metadata, status, created_by)
-    VALUES
-    (v_tid, 'AC-IT-SERVER',  'Servers & Computing',   v_ac_it, 'tangible', 5, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-IT-NETWORK', 'Network Equipment',     v_ac_it, 'tangible', 5, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-IT-END',     'End-User Devices',      v_ac_it, 'tangible', 3, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-IT-STORE',   'Storage Systems',       v_ac_it, 'tangible', 5, 'straight_line', v_meta, 'active', v_su),
-    (v_tid, 'AC-IT-SURV',    'Surveillance & Safety', v_ac_it, 'tangible', 7, 'straight_line', v_meta, 'active', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
-
-    RAISE NOTICE '[P16] 11 asset classes seeded';
+    RAISE NOTICE '[P16] 13 asset classes × 4 company codes seeded (DDL-aligned)';
 END $p16$;
 
 

@@ -188,6 +188,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS pt_current_version_uq
     ON master.payment_term (tenant_id, code)
     WHERE is_current_version = true;
 
+-- Re-apply constraints idempotently so that DBs created before 'COD'/'PREPAID' were
+-- added to the allowed set are brought up to the current definition on the next migration run.
+ALTER TABLE master.payment_term DROP CONSTRAINT IF EXISTS pt_due_rule_chk;
+ALTER TABLE master.payment_term ADD CONSTRAINT pt_due_rule_chk CHECK (
+    due_rule_type IN ('NET_DAYS','EOM','FIXED_DAY','COD','PREPAID'));
+
+ALTER TABLE master.payment_term DROP CONSTRAINT IF EXISTS pt_cod_no_days_chk;
+ALTER TABLE master.payment_term ADD CONSTRAINT pt_cod_no_days_chk CHECK (
+    due_rule_type NOT IN ('COD','PREPAID') OR due_days IS NULL);
+
 COMMENT ON TABLE master.payment_term IS
     'ARCHETYPE=B;SCOPE=T. Payment term master: executable net-days rule + container for clause children. '
     'Versioned per (tenant, code, version). Supersedes chain for audit trail.';

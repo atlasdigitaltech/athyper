@@ -96,7 +96,7 @@ function FileRow({
   const [movingMode,  setMovingMode]  = useState(false);
   const [isMoving,    setIsMoving]    = useState(false);
 
-  const { ext } = splitFilename(att.filename);
+  const { base, ext } = splitFilename(att.filename);
 
   const handleDelete = async () => {
     setIsDeleting(true);

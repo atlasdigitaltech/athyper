@@ -134,7 +134,7 @@ function MfaChallengeInner() {
       }
       function b64urlEncode(buf: ArrayBuffer) {
         const a = new Uint8Array(buf); let s = "";
-        for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+        for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]!);
         return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
       }
 

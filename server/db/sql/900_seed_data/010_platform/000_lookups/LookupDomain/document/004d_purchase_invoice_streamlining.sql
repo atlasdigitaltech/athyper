@@ -32,6 +32,18 @@ UPDATE document.purchase_invoice
  WHERE invoice_type = 'proforma';
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- §S1b  Catch-all: any remaining non-conforming invoice_type → standard
+--       Handles edge-case rows that §S1 specific backfills did not cover.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+UPDATE document.purchase_invoice
+   SET invoice_type = 'standard'
+ WHERE invoice_type NOT IN (
+     'standard', 'credit_note', 'debit_note', 'advance',
+     'retention_release', 'self_billed', 'final'
+ );
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- §S2  Retire deprecated lookup values
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -59,24 +71,24 @@ UPDATE control.lookup_value
 -- ─────────────────────────────────────────────────────────────────────────────
 
 DO $$
-DECLARE
-    v_constraint_name text;
 BEGIN
-    -- Find and drop the existing invoice_type check constraint (any name)
-    SELECT constraint_name
-      INTO v_constraint_name
-      FROM information_schema.table_constraints
-     WHERE table_schema = 'document'
-       AND table_name   = 'purchase_invoice'
-       AND constraint_type = 'CHECK'
-       AND constraint_name LIKE '%invoice_type%'
-     LIMIT 1;
+    -- Drop the original DDL constraint (pi_type_chk — 9 values, name does not match
+    -- the '%invoice_type%' pattern so it was never dropped by the old code).
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+           AND constraint_type = 'CHECK' AND constraint_name = 'pi_type_chk'
+    ) THEN
+        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_type_chk;
+    END IF;
 
-    IF v_constraint_name IS NOT NULL THEN
-        EXECUTE format(
-            'ALTER TABLE document.purchase_invoice DROP CONSTRAINT %I',
-            v_constraint_name
-        );
+    -- Drop any prior pi_invoice_type_chk (idempotent re-run guard)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+           AND constraint_type = 'CHECK' AND constraint_name = 'pi_invoice_type_chk'
+    ) THEN
+        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_invoice_type_chk;
     END IF;
 END $$;
 
