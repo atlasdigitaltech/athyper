@@ -60,7 +60,12 @@ export interface ApprovableDetailPageProps {
 
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
-function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: string }) {
+function LinesPanel({
+  entityCode, recordId, companyCodeId, record,
+}: {
+  entityCode: string; recordId: string;
+  companyCodeId?: string; record?: Record<string, unknown>;
+}) {
   const qc = useQueryClient();
 
   const linesQuery = useQuery<{ data: import("@athyper/api-contracts/documents").DocumentLine[] }>({
@@ -98,6 +103,8 @@ function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: st
     <LinesGrid
       entityCode={entityCode}
       recordId={recordId}
+      companyCodeId={companyCodeId}
+      record={record}
       lines={linesQuery.data?.data ?? []}
       distributions={distQuery.data?.data ?? []}
       isLoading={linesQuery.isLoading}
@@ -578,7 +585,12 @@ export function ApprovableDetailPage({
         {/* Lines */}
         {activeTab === "__lines" && (
           <Card className="overflow-hidden">
-            <LinesPanel entityCode={entity.entity_code} recordId={recordId} />
+            <LinesPanel
+              entityCode={entity.entity_code}
+              recordId={recordId}
+              companyCodeId={companyCodeId}
+              record={data}
+            />
           </Card>
         )}
 

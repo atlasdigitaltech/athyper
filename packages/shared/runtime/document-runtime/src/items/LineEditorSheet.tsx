@@ -7,10 +7,10 @@
  * Actions: Edit (active) · Delete
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Plus, Trash2, Sparkles, ChevronsUpDown,
-  Pencil, XCircle,
+  Plus, Trash2, ChevronsUpDown,
+  Pencil, XCircle, Maximize2, Minimize2,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
@@ -64,6 +64,9 @@ export interface LineEditorSheetProps {
   line: DocumentLine;
   distributions: AccountingDistribution[];
   currencyCode?: string;
+  companyCodeId?: string;
+  /** Full document header record — used to auto-derive cost centre / project. */
+  record?: Record<string, unknown>;
   entityCode: string;
   recordId: string;
   initialTab?: TabId;
@@ -94,7 +97,7 @@ function blankRow(cc: string, nextNo: number): SplitRow {
   return {
     id: null, distribution_no: nextNo, distribution_basis: "PERCENT",
     split_pct: 0, split_amount: 0, split_quantity: 0,
-    account_source: "FROM_CATEGORY", account_code: "", cost_center_id: "",
+    account_source: "FIXED", account_code: "", cost_center_id: "",
     project_id: "", site_id: "", is_capex: false, tax_treatment_override: "",
     description: "", distributed_amount: 0, currency_code: cc,
     _dirty: true, _isNew: true, _expanded: false,
@@ -154,6 +157,103 @@ function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) 
       <button onClick={onClick} disabled={saving}
         className="h-9 px-4 text-sm font-semibold rounded-lg bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
       >{saving ? "Saving…" : "Save"}</button>
+    </div>
+  );
+}
+
+// ── Entity search input ───────────────────────────────────────────────────────
+
+function EntitySearchInput({
+  entityCode, companyCodeId, valueId, displayValue, onSelect, placeholder,
+}: {
+  entityCode: string; companyCodeId?: string;
+  valueId: string; displayValue: string;
+  onSelect: (id: string, label: string) => void;
+  placeholder?: string;
+}) {
+  const [query,    setQuery]    = useState(displayValue);
+  const [results,  setResults]  = useState<Record<string, unknown>[]>([]);
+  const [open,     setOpen]     = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const ref   = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setQuery(displayValue); }, [displayValue]);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function search(v: string) {
+    setQuery(v);
+    if (timer.current) clearTimeout(timer.current);
+    if (!v.trim()) { setResults([]); setOpen(false); return; }
+    setOpen(true);
+    timer.current = setTimeout(async () => {
+      setFetching(true);
+      try {
+        const params = new URLSearchParams({ q: v, page_size: "8" });
+        if (companyCodeId) params.set("filters", JSON.stringify({ company_code_id: companyCodeId }));
+        const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params.toString()}`);
+        if (r.ok) {
+          const data = await r.json() as { data?: Record<string, unknown>[] };
+          setResults(data.data ?? []);
+        }
+      } finally { setFetching(false); }
+    }, 300);
+  }
+
+  function pick(row: Record<string, unknown>) {
+    const id   = String(row.id   ?? "");
+    const code = String(row.code ?? "");
+    const name = String(row.name ?? "");
+    const label = code ? `${code} · ${name}` : name;
+    setQuery(label); setResults([]); setOpen(false);
+    onSelect(id, label);
+  }
+
+  function clear() { setQuery(""); setResults([]); setOpen(false); onSelect("", ""); }
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <input value={query} onChange={(e) => search(e.target.value)} placeholder={placeholder}
+          className={cn(
+            "w-full h-9 px-3 text-sm border border-border/60 rounded-lg bg-transparent",
+            "focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors",
+            "placeholder:text-muted-foreground/40",
+            valueId && "pr-7",
+          )}
+        />
+        {valueId && (
+          <button type="button" onClick={clear} tabIndex={-1}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          ><XCircle className="h-3.5 w-3.5" /></button>
+        )}
+      </div>
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border/60 bg-background shadow-lg overflow-hidden">
+          {fetching ? (
+            <p className="px-3 py-2.5 text-xs text-muted-foreground">Searching…</p>
+          ) : results.length === 0 ? (
+            <p className="px-3 py-2.5 text-xs text-muted-foreground/60">No results</p>
+          ) : (
+            <div className="py-1 max-h-48 overflow-y-auto">
+              {results.map((row, i) => (
+                <button key={String(row.id ?? i)} onClick={() => pick(row)}
+                  className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors"
+                >
+                  <span className="font-mono font-medium text-foreground shrink-0">{String(row.code ?? "")}</span>
+                  <span className="text-muted-foreground truncate">{String(row.name ?? "")}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -293,18 +393,22 @@ function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
 
 // ── ACCOUNTING TAB ────────────────────────────────────────────────────────────
 
-function AccountingTab({ line, distributions, currencyCode, entityCode, recordId, onMutated }: {
+function AccountingTab({ line, distributions, currencyCode, entityCode, recordId, companyCodeId, record, onMutated }: {
   line: DocumentLine; distributions: AccountingDistribution[]; currencyCode: string;
-  entityCode: string; recordId: string; onMutated?: () => void;
+  entityCode: string; recordId: string; companyCodeId?: string;
+  record?: Record<string, unknown>; onMutated?: () => void;
 }) {
   const cc         = currencyCode;
   const lineAmount = Number(line.line_amount) || 0;
   const lineQty    = Number(line.quantity)    || 0;
   const [accMode, setAccMode] = useState<AccountingMode>(distributions.length > 1 ? "split" : "single");
   const single = distributions[0] ?? null;
-  const [sCostCenter, setSCostCenter] = useState(single?.cost_center_id ?? "");
-  const [sProject,    setSProject]    = useState(single?.project_id     ?? "");
-  const [sAccount,    setSAccount]    = useState(single?.account_code   ?? "");
+  // UUID state (what we send to the API)
+  const [sCostCenterId,    setSCostCenterId]    = useState(single?.cost_center_id ?? "");
+  const [sCostCenterLabel, setSCostCenterLabel] = useState("");
+  const [sProjectId,       setSProjectId]       = useState(single?.project_id     ?? "");
+  const [sProjectLabel,    setSProjectLabel]    = useState("");
+  const [sAccount,         setSAccount]         = useState(single?.account_code   ?? "");
   const [sIsCapex,    setSIsCapex]    = useState(single?.is_capex       ?? false);
   const [sSaving,     setSSaving]     = useState(false);
   const [sDirty,      setSDirty]      = useState(false);
@@ -313,6 +417,48 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
   const [basis, setBasis] = useState<DistBasis>(distributions[0]?.distribution_basis ?? "PERCENT");
   const [rows,  setRows]  = useState<SplitRow[]>(() => distributions.map(distToRow));
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+
+  // On mount: resolve existing UUIDs to labels, or auto-derive from document header.
+  useEffect(() => {
+    const resolve = async (id: string, entity: string, setLabel: (v: string) => void) => {
+      if (!id) return;
+      try {
+        const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
+        if (!r.ok) return;
+        const d = await r.json() as { data?: Record<string, unknown> };
+        if (d.data) {
+          const code = String(d.data.code ?? "");
+          const name = String(d.data.name ?? "");
+          setLabel(code ? `${code} · ${name}` : name);
+        }
+      } catch { /* ignore */ }
+    };
+
+    if (distributions.length === 0 && record) {
+      // Auto-derive cost centre + project from the document header when no
+      // distributions exist yet and the invoice is not sourced from a PO/contract
+      // (PO/contract-based: derive from PO line instead — future work).
+      const invoiceSource = String(record.invoice_source ?? "");
+      const isPOBased = invoiceSource === "po_based" || invoiceSource === "contract_based";
+      if (!isPOBased) {
+        const headerCcId   = String(record.cost_center_id ?? "");
+        const headerProjId = String(record.project_id     ?? "");
+        if (headerCcId) {
+          setSCostCenterId(headerCcId);
+          void resolve(headerCcId, "cost_center", setSCostCenterLabel);
+        }
+        if (headerProjId) {
+          setSProjectId(headerProjId);
+          void resolve(headerProjId, "project", setSProjectLabel);
+        }
+        if (headerCcId || headerProjId) setSDirty(true);
+      }
+    } else {
+      void resolve(sCostCenterId, "cost_center", setSCostCenterLabel);
+      void resolve(sProjectId,    "project",     setSProjectLabel);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function recompute(r: SplitRow, b: DistBasis): SplitRow {
     let amt = 0;
@@ -334,10 +480,14 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
   }
 
   async function saveSingle() {
+    if (!sAccount.trim()) {
+      setSError("GL account code is required — enter an account code (e.g. 6100-OPEX) before saving.");
+      return;
+    }
     setSSaving(true);
     setSError(null);
     try {
-      const payload = { distribution_basis: "PERCENT", split_pct: 100, distributed_amount: lineAmount, currency_code: cc, account_source: sAccount ? "FIXED" : "FROM_CATEGORY", account_code: sAccount || null, cost_center_id: sCostCenter || null, project_id: sProject || null, is_capex: sIsCapex };
+      const payload = { distribution_basis: "PERCENT", split_pct: 100, distributed_amount: lineAmount, currency_code: cc, account_source: "FIXED", account_code: sAccount.trim(), cost_center_id: sCostCenterId || null, project_id: sProjectId || null, is_capex: sIsCapex };
       const url = single?.id ? distUrl(entityCode, recordId, line.id, single.id) : distUrl(entityCode, recordId, line.id);
       const res = await relayMutate(url, { method: single?.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
       if (res.ok) {
@@ -354,11 +504,15 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
   async function saveRow(idx: number) {
     const row = rows[idx]; if (!row?._dirty) return;
+    if (row.account_source === "FIXED" && !row.account_code.trim()) {
+      setRowError("GL account code is required for Fixed GL source. Enter a code in the expanded row details.");
+      return;
+    }
     const key = row.id ?? `new-${idx}`;
     setSaving((s) => ({ ...s, [key]: true }));
     setRowError(null);
     try {
-      const payload = { distribution_basis: row.distribution_basis, split_pct: row.distribution_basis === "PERCENT" ? row.split_pct : null, split_amount: row.distribution_basis === "AMOUNT" ? row.split_amount : null, split_quantity: row.distribution_basis === "QUANTITY" ? row.split_quantity : null, distributed_amount: row.distributed_amount, currency_code: row.currency_code || cc, account_source: row.account_source, account_code: row.account_code || null, cost_center_id: row.cost_center_id || null, project_id: row.project_id || null, is_capex: row.is_capex, description: row.description || null };
+      const payload = { distribution_basis: row.distribution_basis, split_pct: row.distribution_basis === "PERCENT" ? row.split_pct : null, split_amount: row.distribution_basis === "AMOUNT" ? row.split_amount : null, split_quantity: row.distribution_basis === "QUANTITY" ? row.split_quantity : null, distributed_amount: row.distributed_amount, currency_code: row.currency_code || cc, account_source: row.account_source, account_code: row.account_code.trim() || null, cost_center_id: row.cost_center_id || null, project_id: row.project_id || null, is_capex: row.is_capex, description: row.description || null };
       const url = row._isNew || !row.id ? distUrl(entityCode, recordId, line.id) : distUrl(entityCode, recordId, line.id, row.id);
       const res = await relayMutate(url, { method: row._isNew || !row.id ? "POST" : "PATCH", body: JSON.stringify(payload) });
       if (!res.ok) {
@@ -403,8 +557,26 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
       {accMode === "single" && (
         <div className="space-y-3">
-          <Field label="Cost centre"><Input value={sCostCenter} onChange={(v) => { setSCostCenter(v); setSDirty(true); }} placeholder="CC-XXX" /></Field>
-          <Field label="Project"><Input value={sProject} onChange={(v) => { setSProject(v); setSDirty(true); }} placeholder="PRJ-XXX" /></Field>
+          <Field label="Cost centre">
+            <EntitySearchInput
+              entityCode="cost_center"
+              companyCodeId={companyCodeId}
+              valueId={sCostCenterId}
+              displayValue={sCostCenterLabel}
+              onSelect={(id, label) => { setSCostCenterId(id); setSCostCenterLabel(label); setSDirty(true); }}
+              placeholder="Search cost centre…"
+            />
+          </Field>
+          <Field label="Project">
+            <EntitySearchInput
+              entityCode="project"
+              companyCodeId={companyCodeId}
+              valueId={sProjectId}
+              displayValue={sProjectLabel}
+              onSelect={(id, label) => { setSProjectId(id); setSProjectLabel(label); setSDirty(true); }}
+              placeholder="Search project…"
+            />
+          </Field>
           <Field label="GL account"><Input value={sAccount} onChange={(v) => { setSAccount(v); setSDirty(true); }} placeholder="6100-OPEX" className="font-mono text-xs" /></Field>
           <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border/40 bg-muted/10">
             <div>
@@ -540,44 +712,48 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
 // ── CLASSIFY TAB ──────────────────────────────────────────────────────────────
 
-function ClassifyTab({ line }: { line: DocumentLine }) {
-  const hasItem = !!(line.item_code);
+function ClassifyTab({ line, entityCode, recordId, onSaved }: {
+  line: DocumentLine; entityCode: string; recordId: string; onSaved?: () => void;
+}) {
+  const lineData     = (line.data as Record<string, unknown> | null) ?? {};
+  const [unspscCode,    setUnspscCode]    = useState(String(lineData.unspsc_code    ?? ""));
+  const [spendCategory, setSpendCategory] = useState(String(lineData.spend_category ?? ""));
+  const [hsCode,        setHsCode]        = useState(String(lineData.hs_code        ?? ""));
+  const [saving,        setSaving]        = useState(false);
+  const [dirty,         setDirty]         = useState(false);
+  const [saveError,     setSaveError]     = useState<string | null>(null);
+  function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
+
+  async function save() {
+    setSaving(true); setSaveError(null);
+    try {
+      const data = { ...lineData, unspsc_code: unspscCode || null, spend_category: spendCategory || null, hs_code: hsCode || null };
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify({ data }) });
+      if (res.ok) {
+        setDirty(false);
+        onSaved?.();
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
+    } finally { setSaving(false); }
+  }
+
   return (
     <div className="px-5 py-4 space-y-4">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Primary · UNSPSC{!hasItem && <span className="text-destructive ml-0.5">*</span>}</span>
-        {hasItem ? (
-          <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/40 bg-muted/30">
-            <span className="font-mono text-xs">—</span>
-            <span className="text-xs text-muted-foreground italic">Lookup not configured</span>
-            <span className="ml-auto text-2xs px-1.5 py-0.5 border border-border/50 rounded text-muted-foreground">inherited</span>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <input placeholder="Search UNSPSC (8 digits or keyword)" className="w-full h-9 px-3 text-sm border border-border/60 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground/40" />
-            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-info/10 border border-info/20 text-xs">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-info mt-0.5" />
-              <div className="flex-1 min-w-0 text-info">Suggested: <span className="font-mono bg-background px-1.5 py-0.5 rounded text-foreground text-2xs">80101504</span> Business management consulting services <span className="font-semibold">· 87%</span></div>
-              <button className="shrink-0 h-6 px-2.5 rounded-md bg-info text-background text-2xs font-semibold hover:opacity-85">Accept</button>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Spend category</span>
-        <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/40 bg-muted/30">
-          <span className="font-mono text-xs">SC-PRO-CON</span>
-          <span className="text-xs text-muted-foreground">{hasItem ? "Professional services — consulting" : "Auto from code"}</span>
-          <span className="ml-auto text-2xs px-1.5 py-0.5 bg-success/10 text-success border border-success/20 rounded">{hasItem ? "routed" : "auto"}</span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trade · HS code</span>
-        <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/40 bg-muted/30">
-          <span className="text-xs text-muted-foreground italic">{hasItem ? "8471.30 — Portable data processing machines" : "Not applicable for services"}</span>
-        </div>
-      </div>
-      {!hasItem && <p className="text-2xs text-muted-foreground border-t border-border/30 pt-3">Classification required for non-item lines &gt; $500. Spend category routes automatically from the UNSPSC code.</p>}
+      <Field label="UNSPSC code">
+        <Input value={unspscCode} onChange={mark(setUnspscCode)} placeholder="e.g. 80101504" className="font-mono" />
+      </Field>
+      <Field label="Spend category">
+        <Input value={spendCategory} onChange={mark(setSpendCategory)} placeholder="e.g. IT-SOFTWARE" className="font-mono" />
+      </Field>
+      <Field label="HS / Trade code">
+        <Input value={hsCode} onChange={mark(setHsCode)} placeholder="e.g. 8471.30 (goods only)" className="font-mono" />
+      </Field>
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
+      {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
 }
@@ -836,13 +1012,14 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 
 export function LineEditorSheet({
-  open, onOpenChange, line, distributions, currencyCode, entityCode, recordId,
+  open, onOpenChange, line, distributions, currencyCode, companyCodeId, record, entityCode, recordId,
   initialTab, onLineSaved, onMutated, onLineCopied, onLineDeleted,
 }: LineEditorSheetProps) {
   const cc         = currencyCode ?? "USD";
   const lineAmount = Number(line.line_amount) || 0;
   const [tab, setTab] = useState<TabId>(initialTab ?? "details");
   const [headerError, setHeaderError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
@@ -873,14 +1050,22 @@ export function LineEditorSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[520px] max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent side="right" className={cn("max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden transition-[width] duration-200", expanded ? "w-[860px]" : "w-[520px]")}>
+        {/* Expand toggle — positioned just left of the built-in close button */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          aria-label={expanded ? "Collapse panel" : "Expand panel"}
+          className="absolute top-4 right-10 z-10 inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+        >
+          {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        </button>
         {/* Header */}
         <SheetHeader className="shrink-0 px-5 pt-5 pb-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="shrink-0 inline-flex items-center h-5 px-2 rounded text-2xs font-semibold bg-muted text-muted-foreground border border-border/50 leading-none">LINE {line.line_number}</span>
               {distributions.length > 0 && (
-                <span className="shrink-0 inline-flex items-center h-5 px-1.5 rounded text-2xs font-semibold bg-info/10 border border-info/20 text-info leading-none">{distributions.length} split{distributions.length !== 1 ? "s" : ""}</span>
+                <span className="shrink-0 inline-flex items-center h-5 px-1.5 rounded text-2xs font-semibold bg-muted border border-border/50 text-muted-foreground leading-none">{distributions.length} split{distributions.length !== 1 ? "s" : ""}</span>
               )}
             </div>
             <SheetTitle className="text-sm font-semibold text-foreground leading-snug truncate">{line.description ?? line.item_code ?? `Line ${line.line_number}`}</SheetTitle>
@@ -924,8 +1109,8 @@ export function LineEditorSheet({
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {tab === "details"    && <ItemDetailsTab  line={line} entityCode={entityCode} recordId={recordId} currencyCode={cc} onSaved={onLineSaved} />}
-          {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
-          {tab === "classify"   && <ClassifyTab     line={line} />}
+          {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} record={record} onMutated={onMutated} />}
+          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} onSaved={onMutated} />}
           {tab === "discount"   && <DiscountTab     line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
           {tab === "charges"    && <ChargesTab      line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
           {tab === "tax"        && <TaxTab          line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}

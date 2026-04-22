@@ -1064,6 +1064,151 @@
       "notBefore": 0
     },
     {
+      "id": "cc001000-0000-0000-0000-000000000001",
+      "username": "tksa.owner",
+      "firstName": "Technostat",
+      "lastName": "Group Owner",
+      "email": "tksa.owner@technostat.demo",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1745280000000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "default-roles-athyper"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
+      "groups": [
+        "/grp:workbench:user"
+      ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000002",
+      "username": "tksa.admin",
+      "firstName": "Technostat",
+      "lastName": "Group Admin",
+      "email": "tksa.admin@technostat.demo",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1745280000000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "default-roles-athyper"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
+      "groups": [
+        "/grp:workbench:user"
+      ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000003",
+      "username": "ssk.admin",
+      "firstName": "SSK",
+      "lastName": "Admin",
+      "email": "ssk.admin@technostat.demo",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1745280000000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "default-roles-athyper"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
+      "groups": [
+        "/grp:workbench:user"
+      ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000004",
+      "username": "tegy.admin",
+      "firstName": "Technostat",
+      "lastName": "Egypt Admin",
+      "email": "tegy.admin@technostat.demo",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1745280000000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "default-roles-athyper"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
+      "groups": [
+        "/grp:workbench:user"
+      ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000005",
+      "username": "sdtx.admin",
+      "firstName": "Satellites",
+      "lastName": "DT Admin",
+      "email": "sdtx.admin@technostat.demo",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1745280000000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "default-roles-athyper"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "WB_USER"
+        ]
+      },
+      "groups": [
+        "/grp:workbench:user"
+      ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
       "username": "service-account-neon-svc-bff",
       "serviceAccountClientId": "neon-svc-bff",
       "enabled": true,
@@ -4729,6 +4874,95 @@
       },
       "domains": [],
       "members": []
+    },
+    {
+      "id": "bb000022-0000-0000-0000-000000000001",
+      "alias": "technostat--tksa",
+      "name": "Technostat Group",
+      "enabled": true,
+      "description": "Technostat Group holding entity — Riyadh, Saudi Arabia",
+      "attributes": {
+        "entity_code": ["TKSA"],
+        "entity_type": ["holding"],
+        "display_name": ["Technostat Group"],
+        "country": ["SA"],
+        "currency": ["SAR"],
+        "industry_vertical": ["ict"],
+        "tenant_code": ["technostat"]
+      },
+      "domains": [
+        {
+          "name": "technostat.net",
+          "verified": false
+        }
+      ],
+      "members": [
+        {"username": "tksa.owner", "membershipType": "UNMANAGED"},
+        {"username": "tksa.admin", "membershipType": "UNMANAGED"}
+      ]
+    },
+    {
+      "id": "bb000023-0000-0000-0000-000000000001",
+      "alias": "technostat--ssk",
+      "name": "SSK Saudi",
+      "enabled": true,
+      "description": "SSK Saudi construction subsidiary — Riyadh, Saudi Arabia",
+      "attributes": {
+        "entity_code": ["SSK"],
+        "entity_type": ["subsidiary"],
+        "display_name": ["SSK Saudi"],
+        "country": ["SA"],
+        "currency": ["SAR"],
+        "industry_vertical": ["construction"],
+        "tenant_code": ["technostat"]
+      },
+      "domains": [],
+      "members": [
+        {"username": "tksa.admin", "membershipType": "UNMANAGED"},
+        {"username": "ssk.admin",  "membershipType": "UNMANAGED"}
+      ]
+    },
+    {
+      "id": "bb000024-0000-0000-0000-000000000001",
+      "alias": "technostat--tegy",
+      "name": "Technostat Egypt",
+      "enabled": true,
+      "description": "Technostat Egypt trading subsidiary — New Cairo, Egypt",
+      "attributes": {
+        "entity_code": ["TEGY"],
+        "entity_type": ["subsidiary"],
+        "display_name": ["Technostat Egypt"],
+        "country": ["EG"],
+        "currency": ["EGP"],
+        "industry_vertical": ["trading"],
+        "tenant_code": ["technostat"]
+      },
+      "domains": [],
+      "members": [
+        {"username": "tksa.admin",  "membershipType": "UNMANAGED"},
+        {"username": "tegy.admin",  "membershipType": "UNMANAGED"}
+      ]
+    },
+    {
+      "id": "bb000025-0000-0000-0000-000000000001",
+      "alias": "technostat--sdtx",
+      "name": "Satellites for Digital Transformation",
+      "enabled": true,
+      "description": "Satellites for Digital Transformation ICT subsidiary — New Cairo, Egypt",
+      "attributes": {
+        "entity_code": ["SDTX"],
+        "entity_type": ["subsidiary"],
+        "display_name": ["Satellites for Digital Transformation"],
+        "country": ["EG"],
+        "currency": ["EGP"],
+        "industry_vertical": ["digital_transformation"],
+        "tenant_code": ["technostat"]
+      },
+      "domains": [],
+      "members": [
+        {"username": "tksa.admin",  "membershipType": "UNMANAGED"},
+        {"username": "sdtx.admin",  "membershipType": "UNMANAGED"}
+      ]
     }
   ],
   "verifiableCredentialsEnabled": false,

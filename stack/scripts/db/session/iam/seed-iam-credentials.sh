@@ -75,6 +75,8 @@ ATHYPER_USERS=(
   athq.owner  athq.admin    aqtu.manager   asac.manager auic.manager
   asgf.manager athq.cfo     partner.viewer partner.agent partner.manager
   partner.owner karim.dual
+  # Technostat Group (tenant: technostat) — 5 admin users
+  tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin
 )
 
 PCC_USERS=(product.admin tenant.manager support.admin)

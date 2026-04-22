@@ -33,6 +33,9 @@ export interface LinesGridProps {
   entityCode:     string;
   recordId:       string;
   currencyCode?:  string;
+  companyCodeId?: string;
+  /** Full document header record — forwarded to LineEditorSheet for cost-centre auto-derive. */
+  record?:        Record<string, unknown>;
   lines:          DocumentLine[];
   distributions:  AccountingDistribution[];
   isLoading?:     boolean;
@@ -142,39 +145,11 @@ function AllocatedToCell({
   line,
   dists,
   onOpenEditor,
-  onQuickAssign,
 }: {
   line: DocumentLine;
   dists: AccountingDistribution[];
   onOpenEditor: (line: DocumentLine, tab: TabId) => void;
-  onQuickAssign: (line: DocumentLine, ccCode: string) => Promise<void>;
 }) {
-  const [popOpen,    setPopOpen]    = useState(false);
-  const [ccInput,    setCcInput]    = useState("");
-  const [assigning,  setAssigning]  = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!popOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setPopOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [popOpen]);
-
-  async function handleAssign() {
-    if (!ccInput.trim()) return;
-    setAssigning(true);
-    try {
-      await onQuickAssign(line, ccInput.trim());
-      setCcInput("");
-      setPopOpen(false);
-    } finally {
-      setAssigning(false);
-    }
-  }
-
   // State 2 — multiple distributions
   if (dists.length > 1) {
     return (
@@ -204,55 +179,15 @@ function AllocatedToCell({
     );
   }
 
-  // State 3 — not allocated (inline CC picker)
+  // State 3 — not allocated: open accounting drawer directly
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setPopOpen((v) => !v)}
-        aria-label="Not allocated — click to assign cost center"
-        className={cn(
-          "text-xs italic text-muted-foreground/50 px-1.5 py-0.5 rounded transition-all",
-          "hover:not-italic hover:font-medium hover:text-foreground hover:bg-muted/60",
-          popOpen && "text-foreground bg-muted/60 font-medium",
-        )}
-      >
-        Not allocated
-      </button>
-
-      {popOpen && (
-        <div className="absolute left-0 top-full mt-1 z-dropdown w-52 rounded-lg border border-border/60 bg-background shadow-lg p-3 space-y-2">
-          <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Assign cost center
-          </p>
-          <div className="flex gap-1.5">
-            <input
-              autoFocus
-              value={ccInput}
-              onChange={(e) => setCcInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleAssign();
-                if (e.key === "Escape") setPopOpen(false);
-              }}
-              placeholder="CC-XXX"
-              className="flex-1 h-7 px-2 text-xs border border-border/60 rounded-md bg-transparent focus:outline-none focus:ring-1 focus:ring-ring/40 font-mono placeholder:text-muted-foreground/40"
-            />
-            <button
-              onClick={() => void handleAssign()}
-              disabled={!ccInput.trim() || assigning}
-              className="h-7 px-2.5 text-xs font-semibold rounded-md bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
-            >
-              {assigning ? "…" : "Set"}
-            </button>
-          </div>
-          <button
-            onClick={() => { setPopOpen(false); onOpenEditor(line, "accounting"); }}
-            className="text-2xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
-          >
-            Need to split instead? →
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      onClick={() => onOpenEditor(line, "accounting")}
+      aria-label="Not allocated — click to assign cost centre"
+      className="text-xs italic text-muted-foreground/50 px-1.5 py-0.5 rounded transition-all hover:not-italic hover:font-medium hover:text-foreground hover:bg-muted/60"
+    >
+      Not allocated
+    </button>
   );
 }
 
@@ -733,6 +668,8 @@ export function LinesGrid({
   entityCode,
   recordId,
   currencyCode = "USD",
+  companyCodeId,
+  record,
   lines,
   distributions,
   isLoading,
@@ -869,24 +806,6 @@ export function LinesGrid({
       next.delete(line.id);
       return next;
     });
-    onRefresh?.();
-  }
-
-  async function quickAssign(line: DocumentLine, ccCode: string) {
-    await relayMutate(
-      `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          distribution_basis: "PERCENT",
-          split_pct:          100,
-          distributed_amount: Number(line.gross_amount ?? line.line_amount) || 0,
-          currency_code:      currencyCode,
-          account_source:     "FROM_CATEGORY",
-          cost_center_id:     ccCode,
-        }),
-      },
-    );
     onRefresh?.();
   }
 
@@ -1054,7 +973,7 @@ export function LinesGrid({
                     </p>
                     <button
                       onClick={() => void handleAddLine()}
-                      className="mt-1 text-xs text-info hover:underline transition-colors"
+                      className="mt-1 text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
                     >
                       + Add first line
                     </button>
@@ -1116,7 +1035,6 @@ export function LinesGrid({
                         line={line}
                         dists={lineDists}
                         onOpenEditor={openSheet}
-                        onQuickAssign={quickAssign}
                       />
                     </td>
 
@@ -1203,6 +1121,8 @@ export function LinesGrid({
           entityCode={entityCode}
           recordId={recordId}
           initialTab={sheetTab}
+          companyCodeId={companyCodeId}
+          record={record}
           onLineSaved={onRefresh}
           onMutated={onRefresh}
         />
