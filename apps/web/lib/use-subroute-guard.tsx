@@ -37,7 +37,7 @@ type BooleanCap = {
  *   if (guardLoading) return <GuardSkeleton />;
  *   if (denied)       return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
  *
- * @param entityCode  URL segment, e.g. "purchase-invoice"
+ * @param entityCode  URL segment, e.g. "purchase_invoice"
  * @param cap         Boolean capability key from EntityCapabilities
  */
 export function useSubrouteGuard(

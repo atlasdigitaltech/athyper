@@ -102,43 +102,46 @@ interface CreateAction {
 const MODULE_CREATE_ACTIONS: Partial<Record<string, CreateAction[]>> = {
   ACC: [
     { label: "New Journal Entry", href: "/app/journal/new", moduleCode: "ACC", keywords: ["journal", "entry", "je", "posting", "debit", "credit"] },
-    { label: "New Invoice", href: "/app/invoice/new", moduleCode: "ACC", keywords: ["invoice", "inv", "billing", "receivable"] },
+    { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "ACC", keywords: ["purchase", "invoice", "ap", "payable", "supplier invoice"] },
+  ],
+  AP: [
+    { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "AP", keywords: ["purchase", "invoice", "ap", "payable", "vendor", "supplier invoice", "pi"] },
   ],
   PAY: [
     { label: "New Payment", href: "/app/payment/new", moduleCode: "PAY", keywords: ["payment", "pay", "disbursement"] },
     { label: "New Expense Claim", href: "/app/expense/new", moduleCode: "PAY", keywords: ["expense", "claim", "reimburse", "travel"] },
   ],
   PRC: [
-    { label: "New Purchase Order", href: "/app/purchase-order/new", moduleCode: "PRC", keywords: ["po", "purchase", "order"] },
+    { label: "New Purchase Order", href: "/app/purchase_order/new", moduleCode: "PRC", keywords: ["po", "purchase", "order"] },
     { label: "New Requisition", href: "/app/requisition/new", moduleCode: "PRC", keywords: ["pr", "requisition", "request", "purchase request"] },
   ],
   BUY: [
     { label: "New Requisition", href: "/app/requisition/new", moduleCode: "BUY", keywords: ["pr", "requisition", "request"] },
-    { label: "New Purchase Order", href: "/app/purchase-order/new", moduleCode: "BUY", keywords: ["po", "purchase", "order", "buy"] },
+    { label: "New Purchase Order", href: "/app/purchase_order/new", moduleCode: "BUY", keywords: ["po", "purchase", "order", "buy"] },
   ],
   SRM: [
     { label: "New Supplier", href: "/app/supplier/new", moduleCode: "SRM", keywords: ["supplier", "vendor", "srm", "new supplier"] },
-    { label: "New Supplier Evaluation", href: "/app/supplier-eval/new", moduleCode: "SRM", keywords: ["evaluation", "assess", "qualify", "approve supplier"] },
+    { label: "New Supplier Evaluation", href: "/app/supplier_eval/new", moduleCode: "SRM", keywords: ["evaluation", "assess", "qualify", "approve supplier"] },
   ],
   SOURCE: [
     { label: "Submit RFQ", href: "/app/rfq/new", moduleCode: "SOURCE", keywords: ["rfq", "quote", "request for quotation", "source", "bid"] },
-    { label: "New Sourcing Event", href: "/app/sourcing-event/new", moduleCode: "SOURCE", keywords: ["sourcing", "event", "tender", "auction"] },
+    { label: "New Sourcing Event", href: "/app/sourcing_event/new", moduleCode: "SOURCE", keywords: ["sourcing", "event", "tender", "auction"] },
   ],
   CONTRACT: [
     { label: "New Contract", href: "/app/contract/new", moduleCode: "CONTRACT", keywords: ["contract", "agreement", "legal"] },
-    { label: "New Contract Amendment", href: "/app/contract-amendment/new", moduleCode: "CONTRACT", keywords: ["amendment", "change", "modify contract"] },
+    { label: "New Contract Amendment", href: "/app/contract_amendment/new", moduleCode: "CONTRACT", keywords: ["amendment", "change", "modify contract"] },
   ],
   INV: [
     { label: "New Invoice", href: "/app/invoice/new", moduleCode: "INV", keywords: ["invoice", "billing", "ar", "receivable"] },
-    { label: "New Credit Note", href: "/app/credit-note/new", moduleCode: "INV", keywords: ["credit", "note", "refund", "adjustment"] },
+    { label: "New Credit Note", href: "/app/credit_note/new", moduleCode: "INV", keywords: ["credit", "note", "refund", "adjustment"] },
   ],
   HR: [
     { label: "New Employee", href: "/app/employee/new", moduleCode: "HR", keywords: ["employee", "hire", "onboard", "staff", "headcount"] },
     { label: "New Leave Request", href: "/app/leave/new", moduleCode: "HR", keywords: ["leave", "holiday", "absence", "pto", "time off"] },
   ],
   BUDGET: [
-    { label: "New Budget Request", href: "/app/budget-request/new", moduleCode: "BUDGET", keywords: ["budget", "request", "allocation", "fund"] },
-    { label: "New Budget Version", href: "/app/budget-version/new", moduleCode: "BUDGET", keywords: ["budget", "version", "plan", "revision"] },
+    { label: "New Budget Request", href: "/app/budget_request/new", moduleCode: "BUDGET", keywords: ["budget", "request", "allocation", "fund"] },
+    { label: "New Budget Version", href: "/app/budget_version/new", moduleCode: "BUDGET", keywords: ["budget", "version", "plan", "revision"] },
   ],
 };
 

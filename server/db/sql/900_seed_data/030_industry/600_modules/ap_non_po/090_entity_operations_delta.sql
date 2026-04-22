@@ -59,14 +59,13 @@ END $$;
 -- ── Step 1b: Fix already-seeded NAVIGATE handler_targets (idempotent) ────────
 UPDATE control.entity_operation
 SET handler_target = CASE
-    WHEN permission_code = 'propose_payment' THEN '/app/payment-entry/new?invoice={id}'
-    WHEN permission_code = 'view_je'         THEN '/app/journal-entry?source_id={id}'
+    WHEN permission_code = 'propose_payment' THEN '/app/payment_entry/new?invoice={id}'
+    WHEN permission_code = 'view_je'         THEN '/app/journal_entry?source_id={id}'
 END
 WHERE tenant_id IS NULL
   AND entity_name = 'purchase_invoice'
   AND permission_code IN ('propose_payment','view_je')
-  AND handler_type = 'NAVIGATE'
-  AND handler_target LIKE '/document/%';
+  AND handler_type = 'NAVIGATE';
 
 -- ── Step 2: Insert entity operations ─────────────────────────────────────────
 
@@ -84,11 +83,11 @@ VALUES
      true, 120, '00000000-0000-0000-0000-000000000000'),
 
     (NULL, 'purchase_invoice', 'propose_payment',
-     'DETAIL', 'TOOLBAR', 'NAVIGATE', '/app/payment-entry/new?invoice={id}',
+     'DETAIL', 'TOOLBAR', 'NAVIGATE', '/app/payment_entry/new?invoice={id}',
      true, 130, '00000000-0000-0000-0000-000000000000'),
 
     (NULL, 'purchase_invoice', 'view_je',
-     'DETAIL', 'OVERFLOW', 'NAVIGATE', '/app/journal-entry?source_id={id}',
+     'DETAIL', 'OVERFLOW', 'NAVIGATE', '/app/journal_entry?source_id={id}',
      true, 140, '00000000-0000-0000-0000-000000000000'),
 
     (NULL, 'purchase_invoice', 'match_advance',

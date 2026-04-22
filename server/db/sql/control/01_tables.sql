@@ -5179,7 +5179,10 @@ CREATE TABLE IF NOT EXISTS control.metadata_change_request (
     )),
     CONSTRAINT mcr_change_type_chk  CHECK (change_type IN (
         'add_field', 'remove_field', 'update_field', 'reorder_fields',
-        'update_entity_config', 'add_overlay', 'remove_overlay'
+        'update_entity_config', 'add_overlay', 'remove_overlay',
+        'add_flow', 'update_flow', 'publish_flow', 'retire_flow',
+        'add_flow_step', 'update_flow_step', 'remove_flow_step', 'reorder_flow_steps',
+        'bind_flow_field', 'update_flow_field', 'unbind_flow_field'
     )),
     CONSTRAINT mcr_payload_chk      CHECK (jsonb_typeof(payload) = 'object'),
     CONSTRAINT mcr_review_chk       CHECK (
@@ -5946,3 +5949,269 @@ COMMENT ON COLUMN control.ai_drift_baseline.model_id IS
 COMMENT ON COLUMN control.ai_drift_baseline.is_current IS
     'True for the single active baseline per (tenant, action_code, doc_class, model_id). '
     'Partial unique index adb_current_uq enforces at most one current baseline per scope.';
+
+
+-- =============================================================================
+-- §EF1  control.entity_flow — named, versioned intake experience
+-- =============================================================================
+-- Bound to an entity_version + trigger_context. Tenants may override platform
+-- flows by inserting tenant-scoped rows with the same flow_code. Exactly one
+-- active default per (entity_version, trigger_context, tenant) scope.
+
+CREATE TABLE IF NOT EXISTS control.entity_flow (
+    id                    uuid         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid,
+    entity_version_id     uuid         NOT NULL,
+
+    flow_code             text         NOT NULL,
+    label                 text         NOT NULL,
+    description           text,
+    icon_key              text,
+
+    trigger_context       text         NOT NULL,
+    is_default            boolean      NOT NULL DEFAULT false,
+
+    config                jsonb        NOT NULL DEFAULT '{}',
+
+    version_no            integer      NOT NULL DEFAULT 1,
+    status                text         NOT NULL DEFAULT 'draft',
+    effective_from        timestamptz,
+    effective_to          timestamptz,
+    supersedes_flow_id    uuid,
+
+    created_at            timestamptz  NOT NULL DEFAULT now(),
+    created_by            uuid         NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
+
+    CONSTRAINT eflow_pkey              PRIMARY KEY (id),
+    CONSTRAINT eflow_tenant_id_uq      UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT eflow_version_uq        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_version_id, flow_code, version_no),
+    CONSTRAINT eflow_flow_code_fmt     CHECK (flow_code ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT eflow_trigger_chk       CHECK (trigger_context IN (
+        'new','edit','approve','duplicate','read_only','clone')),
+    CONSTRAINT eflow_status_chk        CHECK (status IN (
+        'draft','active','superseded','archived')),
+    CONSTRAINT eflow_version_chk       CHECK (version_no >= 1),
+    CONSTRAINT eflow_effective_chk     CHECK (effective_to IS NULL OR effective_to > effective_from),
+    CONSTRAINT eflow_config_chk        CHECK (jsonb_typeof(config) = 'object')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS eflow_default_per_ctx_uq
+    ON control.entity_flow (
+        COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        entity_version_id,
+        trigger_context
+    )
+    WHERE is_default = true AND status = 'active';
+
+CREATE INDEX IF NOT EXISTS eflow_entity_version_idx
+    ON control.entity_flow (entity_version_id, status)
+    WHERE status = 'active';
+
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow
+        ADD CONSTRAINT eflow_entity_version_fk
+        FOREIGN KEY (entity_version_id) REFERENCES control.entity_version (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow
+        ADD CONSTRAINT eflow_supersedes_fk
+        FOREIGN KEY (supersedes_flow_id) REFERENCES control.entity_flow (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON TABLE control.entity_flow IS
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Named intake experience bound to an entity_version. '
+    'Versioned and tenant-overrideable. config jsonb carries cross-step concerns: '
+    'summary panel, input modes, dedup index binding, assist rules, and layout.';
+
+
+-- =============================================================================
+-- §EF2  control.entity_flow_step — ordered stages within a flow
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS control.entity_flow_step (
+    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id        uuid,
+    flow_id          uuid         NOT NULL,
+
+    step_key         text         NOT NULL,
+    label            text         NOT NULL,
+    description      text,
+    icon_key         text,
+    sort_order       smallint     NOT NULL,
+
+    skip_when        jsonb,
+    advance_rule     jsonb        NOT NULL DEFAULT '{}',
+    layout_hint      text         NOT NULL DEFAULT 'two_column',
+
+    created_at       timestamptz  NOT NULL DEFAULT now(),
+    created_by       uuid         NOT NULL,
+    updated_at       timestamptz,
+    updated_by       uuid,
+
+    CONSTRAINT efs_pkey              PRIMARY KEY (id),
+    CONSTRAINT efs_tenant_id_uq      UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT efs_flow_step_uq      UNIQUE (flow_id, step_key),
+    CONSTRAINT efs_flow_order_uq     UNIQUE (flow_id, sort_order),
+    CONSTRAINT efs_step_key_fmt      CHECK (step_key ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT efs_layout_chk        CHECK (layout_hint IN (
+        'two_column','single_column','summary_side','line_editor','grid','card')),
+    CONSTRAINT efs_skip_when_chk     CHECK (skip_when IS NULL OR jsonb_typeof(skip_when) = 'object'),
+    CONSTRAINT efs_advance_chk       CHECK (jsonb_typeof(advance_rule) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS efs_flow_idx ON control.entity_flow_step (flow_id, sort_order);
+
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow_step
+        ADD CONSTRAINT efs_flow_fk
+        FOREIGN KEY (flow_id) REFERENCES control.entity_flow (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON TABLE control.entity_flow_step IS
+    'ARCHETYPE=A;SCOPE=T. Ordered stages within a flow. '
+    'skip_when makes steps conditionally vanish (JSONLogic over draft). '
+    'advance_rule gates progression — required_fields list + optional predicate.';
+
+
+-- =============================================================================
+-- §EF3  control.entity_flow_field — per-step field rendering behavior
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS control.entity_flow_field (
+    id                      uuid         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid,
+    flow_step_id            uuid         NOT NULL,
+    entity_field_id         uuid         NOT NULL,
+
+    mode                    text         NOT NULL,
+    derivation_mode         text,
+
+    visible_when            jsonb,
+    required_when           jsonb,
+
+    default_source          text,
+    derive_expression       text,
+    override_permission     text,
+    override_requires_note  boolean      NOT NULL DEFAULT false,
+
+    summary_role            text,
+    ui_variant              text,
+    format                  text,
+    span                    smallint     NOT NULL DEFAULT 1,
+    help_text               text,
+    placeholder             text,
+    sort_order              smallint     NOT NULL DEFAULT 0,
+
+    created_at              timestamptz  NOT NULL DEFAULT now(),
+    created_by              uuid         NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT eff_pkey               PRIMARY KEY (id),
+    CONSTRAINT eff_tenant_id_uq       UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT eff_step_field_uq      UNIQUE (flow_step_id, entity_field_id),
+    CONSTRAINT eff_mode_chk           CHECK (mode IN (
+        'required','editable','readonly','hidden','summary_only','chip')),
+    CONSTRAINT eff_deriv_mode_chk     CHECK (derivation_mode IS NULL OR derivation_mode IN (
+        'derived_locked','derived_overrideable','manual')),
+    CONSTRAINT eff_deriv_expr_chk     CHECK (
+        derivation_mode IS NULL
+        OR derivation_mode = 'manual'
+        OR derive_expression IS NOT NULL
+    ),
+    CONSTRAINT eff_override_perm_chk  CHECK (
+        override_permission IS NULL
+        OR derivation_mode = 'derived_overrideable'
+    ),
+    CONSTRAINT eff_summary_role_chk   CHECK (summary_role IS NULL OR summary_role IN (
+        'total','subtotal','addition','deduction','line_badge','warning','meta')),
+    CONSTRAINT eff_span_chk           CHECK (span IN (1, 2, 3)),
+    CONSTRAINT eff_visible_chk        CHECK (visible_when  IS NULL OR jsonb_typeof(visible_when)  = 'object'),
+    CONSTRAINT eff_required_chk       CHECK (required_when IS NULL OR jsonb_typeof(required_when) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS eff_step_idx  ON control.entity_flow_field (flow_step_id, sort_order);
+CREATE INDEX IF NOT EXISTS eff_field_idx ON control.entity_flow_field (entity_field_id);
+CREATE INDEX IF NOT EXISTS eff_mode_step_idx
+    ON control.entity_flow_field (flow_step_id, mode, sort_order);
+
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow_field
+        ADD CONSTRAINT eff_step_fk
+        FOREIGN KEY (flow_step_id) REFERENCES control.entity_flow_step (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow_field
+        ADD CONSTRAINT eff_field_fk
+        FOREIGN KEY (entity_field_id) REFERENCES control.entity_field (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON TABLE control.entity_flow_field IS
+    'ARCHETYPE=A;SCOPE=T. Per-flow, per-step rendering behavior for a canonical field. '
+    'derivation_mode encodes the three-state model: derived_locked, derived_overrideable, manual. '
+    'mode is the render role. visible_when/required_when run as JSONLogic over the in-progress draft.';
+
+
+-- =============================================================================
+-- §EF4  Hardening triggers
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION control.trg_fn_flow_field_validate_perm()
+RETURNS trigger LANGUAGE plpgsql SET search_path = control, shared AS $$
+BEGIN
+    IF NEW.override_permission IS NULL THEN RETURN NEW; END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM shared.permission
+         WHERE code = NEW.override_permission AND status = 'active'
+    ) THEN
+        RAISE EXCEPTION
+            'entity_flow_field.override_permission "%" is not an active shared.permission.code',
+            NEW.override_permission
+        USING ERRCODE = 'foreign_key_violation',
+              HINT    = 'Seed the permission in shared.permission before binding.';
+    END IF;
+    RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_flow_field_validate_perm ON control.entity_flow_field;
+CREATE TRIGGER trg_flow_field_validate_perm
+BEFORE INSERT OR UPDATE OF override_permission
+ON control.entity_flow_field
+FOR EACH ROW EXECUTE FUNCTION control.trg_fn_flow_field_validate_perm();
+
+CREATE OR REPLACE FUNCTION control.trg_fn_flow_field_one_writer()
+RETURNS trigger LANGUAGE plpgsql SET search_path = control AS $$
+DECLARE
+    v_flow_id uuid;
+    v_writers integer;
+BEGIN
+    IF NEW.mode NOT IN ('required','editable') THEN RETURN NEW; END IF;
+    SELECT flow_id INTO v_flow_id
+      FROM control.entity_flow_step WHERE id = NEW.flow_step_id;
+    SELECT count(*) INTO v_writers
+      FROM control.entity_flow_field eff
+      JOIN control.entity_flow_step efs ON efs.id = eff.flow_step_id
+     WHERE efs.flow_id = v_flow_id
+       AND eff.entity_field_id = NEW.entity_field_id
+       AND eff.mode IN ('required','editable')
+       AND eff.id <> COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid);
+    IF v_writers > 0 THEN
+        RAISE EXCEPTION
+            'Field % already has a write-capable binding in flow %. '
+            'Only one step per flow may hold required|editable for a given field.',
+            NEW.entity_field_id, v_flow_id
+        USING ERRCODE = 'unique_violation',
+              HINT    = 'Use readonly or chip mode in the other steps.';
+    END IF;
+    RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_flow_field_one_writer ON control.entity_flow_field;
+CREATE TRIGGER trg_flow_field_one_writer
+BEFORE INSERT OR UPDATE OF mode, entity_field_id, flow_step_id
+ON control.entity_flow_field
+FOR EACH ROW EXECUTE FUNCTION control.trg_fn_flow_field_one_writer();

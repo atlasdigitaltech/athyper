@@ -26,6 +26,11 @@ import {
   Shield,
   Users,
   FileText,
+  FileCheck,
+  FileText as FileDraft,
+  RotateCcw,
+  Ban,
+  Send,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
@@ -49,6 +54,7 @@ export interface DocumentActionBarProps {
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  // Standard document actions
   credit_card: CreditCard,
   pencil: Pencil,
   document_duplicate: Copy,
@@ -62,6 +68,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
   users: Users,
   document: FileText,
   arrow_path: ArrowRight,
+  // AP / document-lifecycle actions (matches icon_override seeds)
+  "file-check": FileCheck,
+  "file-text-dashed": FileDraft,
+  "rotate-ccw": RotateCcw,
+  ban: Ban,
+  send: Send,
 };
 
 function getIcon(key: string | null): LucideIcon | null {

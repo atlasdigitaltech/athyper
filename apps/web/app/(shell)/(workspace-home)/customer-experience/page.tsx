@@ -20,7 +20,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-primary/10",
   },
   {
-    href: "/app/sales-order",
+    href: "/app/sales_order",
     title: "Sales Orders",
     description: "Order entry, fulfilment, and delivery tracking",
     icon: ShoppingBag,
@@ -28,7 +28,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-success/10",
   },
   {
-    href: "/app/sales-invoice",
+    href: "/app/sales_invoice",
     title: "Sales Invoices",
     description: "Customer billing and AR management",
     icon: FileText,

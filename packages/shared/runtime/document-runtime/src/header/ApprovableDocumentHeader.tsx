@@ -51,19 +51,10 @@ export interface ApprovableDocumentHeaderProps {
 
 // ── Tier-2 op chip ─────────────────────────────────────────────────────────
 
-const OP_DOT: Record<string, string> = {
-  warn: "bg-warning", warning: "bg-warning",
-  info: "bg-info",
-  ok: "bg-success", success: "bg-success",
-  error: "bg-destructive",
-  dim: "bg-muted-foreground/40", neutral: "bg-muted-foreground/40",
-};
 
-function OpChip({ value, intent }: { value: string; intent: string }) {
-  const dotCls = OP_DOT[intent] ?? "bg-muted-foreground/40";
+function OpChip({ value }: { value: string; intent?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-xs font-semibold bg-muted text-muted-foreground border border-border leading-none whitespace-nowrap">
-      <span className={cn("w-[5px] h-[5px] rounded-full flex-none", dotCls)} />
+    <span className="inline-flex items-center h-[18px] px-[6px] rounded-[4px] text-xs font-semibold bg-muted text-muted-foreground border border-border leading-none whitespace-nowrap">
       {value}
     </span>
   );

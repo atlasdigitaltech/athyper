@@ -21,11 +21,11 @@ import { EntityDetailPage } from "@athyper/entity-runtime/detail";
  *
  * Examples:
  *   /app/vendor/VND-001               → Vendor detail
- *   /app/purchase-invoice/INV-10045   → Invoice detail with DocumentShell
- *   /app/journal-entry/JE-10045       → Journal entry (standalone form view)
+ *   /app/purchase_invoice/INV-10045   → Invoice detail with DocumentShell
+ *   /app/journal_entry/JE-10045       → Journal entry (standalone form view)
  *
  * Decision rule:
- *   /app/journal-entry/JE-10045 is the record form (runtime).
+ *   /app/journal_entry/JE-10045 is the record form (runtime).
  *   /finance/gl?entry=JE-10045 is the workbench focus (workbench panel).
  *   Both coexist — different purposes, different contexts.
  */

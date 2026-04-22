@@ -16,21 +16,22 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@athyper/theme/utils";
-import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
+import { Card, CardContent } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import {
   ApprovableDocumentShell,
   buildOrchestratorFromRecord,
   buildApprovableHeaderFromRecord,
   AmountSummaryCard,
-  ItemsGrid,
+  LinesGrid,
+  FlowModal,
   type ApprovableReference,
 } from "@athyper/document-runtime";
+import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
-import type { DocumentLine } from "@athyper/api-contracts/documents";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import {
   TasksPanel,
@@ -60,7 +61,9 @@ export interface ApprovableDetailPageProps {
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
 function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: string }) {
-  const { data, isLoading } = useQuery<{ data: DocumentLine[] }>({
+  const qc = useQueryClient();
+
+  const linesQuery = useQuery<{ data: import("@athyper/api-contracts/documents").DocumentLine[] }>({
     queryKey: ["record-lines", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
@@ -68,20 +71,39 @@ function LinesPanel({ entityCode, recordId }: { entityCode: string; recordId: st
         { signal },
       );
       if (!res.ok) return { data: [] };
-      return res.json() as Promise<{ data: DocumentLine[] }>;
+      return res.json() as Promise<{ data: import("@athyper/api-contracts/documents").DocumentLine[] }>;
     },
-    staleTime: 60 * 1000,
+    staleTime: 60_000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-      </div>
-    );
+  const distQuery = useQuery<{ data: import("@athyper/api-contracts/documents").AccountingDistribution[] }>({
+    queryKey: ["record-distributions", entityCode, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/distributions`,
+        { signal },
+      );
+      if (!res.ok) return { data: [] };
+      return res.json() as Promise<{ data: import("@athyper/api-contracts/documents").AccountingDistribution[] }>;
+    },
+    staleTime: 60_000,
+  });
+
+  function handleRefresh() {
+    void qc.invalidateQueries({ queryKey: ["record-lines",         entityCode, recordId] });
+    void qc.invalidateQueries({ queryKey: ["record-distributions", entityCode, recordId] });
   }
 
-  return <ItemsGrid lines={data?.data ?? []} />;
+  return (
+    <LinesGrid
+      entityCode={entityCode}
+      recordId={recordId}
+      lines={linesQuery.data?.data ?? []}
+      distributions={distQuery.data?.data ?? []}
+      isLoading={linesQuery.isLoading}
+      onRefresh={handleRefresh}
+    />
+  );
 }
 
 // ── Field-schema → rendering hint ────────────────────────────────────────────
@@ -211,25 +233,14 @@ function DocumentFieldsPanel({
             <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
               {group.fields.map((field) => {
                 const raw = data[field.name] ?? data[field.column_name ?? ""];
-                const { text, kind, boolOn } = fmtFieldValue(raw, field.data_type, resolvedRefs);
+                const { text } = fmtFieldValue(raw, field.data_type, resolvedRefs);
                 return (
                   <div key={field.name}>
                     <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-1.5">
                       {field.label ?? field.name}
                     </dt>
                     <dd className="text-sm font-semibold text-foreground leading-snug">
-                      {kind === "bool" ? (
-                        <span className={cn(
-                          "inline-flex items-center h-[20px] px-2 rounded-md text-xs font-semibold tracking-wider border leading-none",
-                          boolOn
-                            ? "bg-success/10 text-success border-success/20"
-                            : "bg-muted text-muted-foreground border-border",
-                        )}>
-                          {text}
-                        </span>
-                      ) : (
-                        text
-                      )}
+                      {text}
                     </dd>
                   </div>
                 );
@@ -255,6 +266,14 @@ export function ApprovableDetailPage({
 
   const detailConfig  = resolveDetailConfig(entity);
   const resolvedTabs  = resolveTabs(entity, null, []);
+
+  // ── MODAL operation dispatch ───────────────────────────────────────────────
+  // Handles entity_operation rows where handler_type='MODAL'. Fetches the
+  // named flow bundle (handler_target='flow:<code>'), then renders FlowModal.
+  const opDispatch = useOperationDispatch({
+    entityCode: entity.entity_code,
+    recordId,
+  });
 
   // Orchestrator
   const orchestrator = buildOrchestratorFromRecord(entity, data, operations ?? []);
@@ -463,7 +482,8 @@ export function ApprovableDetailPage({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onAction={(action) => {
-          if (action === "copy") void navigator.clipboard?.writeText(title);
+          if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
+          opDispatch.dispatch(action, operations ?? []);
         }}
       >
         {/* Overview — amount summary + grouped header fields */}
@@ -507,10 +527,8 @@ export function ApprovableDetailPage({
 
         {/* Lines */}
         {activeTab === "__lines" && (
-          <Card>
-            <CardContent className="pt-5">
-              <LinesPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
+          <Card className="overflow-hidden">
+            <LinesPanel entityCode={entity.entity_code} recordId={recordId} />
           </Card>
         )}
 
@@ -622,6 +640,19 @@ export function ApprovableDetailPage({
           </Card>
         )}
       </ApprovableDocumentShell>
+
+      {/* MODAL-type operation overlay — rendered outside the shell so it sits
+          at the top of the stacking context, not inside the header scroll. */}
+      {opDispatch.isModalOpen && opDispatch.activeBundle && (
+        <FlowModal
+          open={opDispatch.isModalOpen}
+          onClose={opDispatch.closeModal}
+          bundle={opDispatch.activeBundle}
+          userPermissions={opDispatch.activeBundle.user_permissions}
+          onSubmit={opDispatch.submitModal}
+          submitting={opDispatch.isSubmitting}
+        />
+      )}
     </PageFrame>
   );
 }

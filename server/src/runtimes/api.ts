@@ -15,7 +15,7 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import { Router } from "express";
 
-import { registerIamRoutes } from "@athyper/svc-iam";
+import { registerIamRoutes, checkPermissionBatch } from "@athyper/svc-iam";
 import { registerMetadataRoutes } from "@athyper/svc-metadata";
 import { registerRecordsRoutes } from "@athyper/svc-records";
 import { registerSearchRoutes } from "@athyper/svc-search";
@@ -360,6 +360,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: db.kysely,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
     logger,
+    checkPermissionBatch,
   });
 
   registerRecordsRoutes(apiRouter, {

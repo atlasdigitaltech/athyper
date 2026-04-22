@@ -272,7 +272,38 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice_line (
 
 COMMENT ON TABLE document.purchase_invoice_line IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. AP invoice line items. '
-    'net_amount GENERATED. match_status tracks per-line three-way matching progress.';
+    'net_amount GENERATED. match_status tracks per-line three-way matching progress. '
+    'Retention: retention_pct withholds a % of gross_amount per line; retention_amount is the held-back sum.';
+
+-- Idempotent additions for retention at line level (works on existing schemas)
+-- ADD COLUMN IF NOT EXISTS skips the CONSTRAINT clause when the column already exists,
+-- so constraints are added separately to ensure they are always present.
+ALTER TABLE document.purchase_invoice_line
+    ADD COLUMN IF NOT EXISTS retention_pct    numeric(5,2)  DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS retention_amount numeric(18,4) NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'pil_retention_pct_chk'
+          AND conrelid = 'document.purchase_invoice_line'::regclass
+    ) THEN
+        ALTER TABLE document.purchase_invoice_line
+            ADD CONSTRAINT pil_retention_pct_chk
+                CHECK (retention_pct IS NULL OR retention_pct BETWEEN 0 AND 100);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'pil_retention_amt_nonneg'
+          AND conrelid = 'document.purchase_invoice_line'::regclass
+    ) THEN
+        ALTER TABLE document.purchase_invoice_line
+            ADD CONSTRAINT pil_retention_amt_nonneg
+                CHECK (retention_amount >= 0);
+    END IF;
+END
+$$;
 
 
 -- ============================================================================

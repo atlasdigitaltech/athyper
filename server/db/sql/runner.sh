@@ -88,7 +88,7 @@ done
 phase 3 "Tables (all schemas — cross-schema FKs deferred)"
 
 for schema in "${SCHEMAS[@]}"; do
-    for f in "$SQL_DIR/${schema}"/01_tables*.sql; do
+    for f in "$SQL_DIR/${schema}"/01*.sql; do
         run_file "$f"
     done
 done

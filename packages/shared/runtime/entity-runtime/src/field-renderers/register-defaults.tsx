@@ -237,10 +237,10 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
   const uuid          = typeof value === "string" && UUID_RE.test(value) ? value : null;
 
   const { data: refRecord } = useQuery<{ data: Record<string, unknown> } | null>({
-    queryKey: ["entity-ref", entityCode, uuid],
+    queryKey: ["entity-ref", entityCode ?? "", uuid ?? ""],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(uuid!)}`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode!)}/${encodeURIComponent(uuid!)}`,
         { signal },
       );
       if (!res.ok) return null;

@@ -4,6 +4,7 @@ export {
   useCompiledEntity,
   useEntityOperations,
   useLookupDomain,
+  useEntityFlow,
   // Records
   useEntityList,
   useEntityDetail,

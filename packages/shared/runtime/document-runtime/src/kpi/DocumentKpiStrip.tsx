@@ -159,7 +159,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
                   {cell.value}
                 </span>
                 {cell.currency && (
-                  <span className="text-[8.5px] text-muted-foreground font-mono">
+                  <span className="text-[9.5px] text-muted-foreground font-mono">
                     {cell.currency}
                   </span>
                 )}

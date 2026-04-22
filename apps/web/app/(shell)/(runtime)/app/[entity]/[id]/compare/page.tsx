@@ -16,7 +16,7 @@
  * [id] = canonical business key (NOT UUID).
  *
  * Examples:
- *   /app/purchase-invoice/PINV-ACME-2026-00001/compare?from=1&to=2
+ *   /app/purchase_invoice/PINV-ACME-2026-00001/compare?from=1&to=2
  */
 
 import { Suspense } from "react";

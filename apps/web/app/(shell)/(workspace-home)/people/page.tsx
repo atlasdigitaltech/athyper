@@ -20,7 +20,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-accent/10",
   },
   {
-    href: "/app/payroll-run",
+    href: "/app/payroll_run",
     title: "Payroll",
     description: "Payroll processing runs and pay registers",
     icon: Wallet,
@@ -28,7 +28,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-success/10",
   },
   {
-    href: "/app/leave-request",
+    href: "/app/leave_request",
     title: "Leave & Attendance",
     description: "Leave requests, approvals, and attendance records",
     icon: CalendarDays,

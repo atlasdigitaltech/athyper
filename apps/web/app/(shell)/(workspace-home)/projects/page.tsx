@@ -28,7 +28,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-primary/10",
   },
   {
-    href: "/app/support-ticket",
+    href: "/app/support_ticket",
     title: "Support Tickets",
     description: "ITSM — service requests, incidents, and resolutions",
     icon: HeadphonesIcon,

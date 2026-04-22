@@ -12,7 +12,7 @@ import { SectionLabel } from "@/components/home/SectionLabel";
 
 const WORKBENCH_ACTIONS = [
   {
-    href: "/app/work-order",
+    href: "/app/work_order",
     title: "Work Orders",
     description: "Production work orders, operations, and scheduling",
     icon: Factory,
@@ -28,7 +28,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-primary/10",
   },
   {
-    href: "/app/maintenance-order",
+    href: "/app/maintenance_order",
     title: "Maintenance",
     description: "Preventive and corrective maintenance orders",
     icon: Wrench,

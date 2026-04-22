@@ -45,13 +45,58 @@ export const DocumentLineSchema = z.object({
   quantity: z.number().nullable(),
   unit_code: z.string().nullable(),
   unit_price: z.number().nullable(),
+  /** gross_amount — quantity × unit_price + tax − discount (application-maintained). Maps to line_amount. */
   line_amount: z.number().nullable(),
+  /** net_amount — quantity × unit_price / price_unit (DB-generated, pre-discount/tax). */
+  net_amount: z.number().nullable().optional(),
+  gross_amount: z.number().nullable().optional(),
   tax_code: z.string().nullable(),
   tax_amount: z.number().nullable(),
+  withholding_tax_amount: z.number().nullable().optional(),
+  /** Line-level trade discount as a percentage (0-100). */
+  discount_pct: z.number().min(0).max(100).nullable().optional(),
+  /** Computed discount deduction amount. */
+  discount_amount: z.number().min(0).nullable().optional(),
+  /** Retention withheld on this line as a percentage (0-100). */
+  retention_pct: z.number().min(0).max(100).nullable().optional(),
+  /** Computed retention hold-back amount for this line. */
+  retention_amount: z.number().min(0).nullable().optional(),
   data: z.record(z.string(), z.unknown()),
 }).merge(AuditSchema);
 
 export type DocumentLine = z.infer<typeof DocumentLineSchema>;
+
+/** Accounting distribution split row for a document line. */
+export const AccountingDistributionSchema = z.object({
+  id: UuidSchema,
+  tenant_id: UuidSchema,
+  source_doc_type: z.string(),
+  source_doc_id: UuidSchema,
+  source_line_id: UuidSchema,
+  distribution_no: z.number().int(),
+  distribution_basis: z.enum(["PERCENT", "AMOUNT", "QUANTITY"]),
+  split_pct: z.number().nullable(),
+  split_amount: z.number().nullable(),
+  split_quantity: z.number().nullable(),
+  distributed_amount: z.number(),
+  currency_code: z.string(),
+  account_source: z.enum(["FROM_CATEGORY", "FIXED", "FROM_INTENT", "POSTING_ROLE"]),
+  posting_role_code: z.string().nullable(),
+  account_code: z.string().nullable(),
+  gl_account_id: UuidSchema.nullable(),
+  business_intent_id: UuidSchema.nullable(),
+  spend_category_id: UuidSchema.nullable(),
+  cost_center_id: UuidSchema.nullable(),
+  profit_center_id: UuidSchema.nullable(),
+  project_id: UuidSchema.nullable(),
+  site_id: UuidSchema.nullable(),
+  is_capex: z.boolean(),
+  asset_class_id: UuidSchema.nullable(),
+  budget_check_result: z.string().nullable(),
+  description: z.string().nullable(),
+}).partial({ budget_check_result: true });
+
+export type AccountingDistribution = z.infer<typeof AccountingDistributionSchema>;
 
 /** Document with lines — the full detail response. */
 export const DocumentDetailSchema = z.object({
@@ -257,6 +302,89 @@ export const ActionBundleItemSchema = z.object({
   requires_confirmation: z.boolean().default(false),
 });
 export type ActionBundleItem = z.infer<typeof ActionBundleItemSchema>;
+
+// ═══════════════════════════════════════════════════════════════
+// FLOW ENGINE — metadata-driven intake wizard contracts
+// Mirrors control.entity_flow / entity_flow_step / entity_flow_field
+// ═══════════════════════════════════════════════════════════════
+
+export const FlowFieldModeSchema = z.enum([
+  "required", "editable", "readonly", "hidden", "summary_only", "chip",
+]);
+export type FlowFieldMode = z.infer<typeof FlowFieldModeSchema>;
+
+export const FlowDerivationModeSchema = z.enum([
+  "derived_locked", "derived_overrideable", "manual",
+]);
+export type FlowDerivationMode = z.infer<typeof FlowDerivationModeSchema>;
+
+export const FlowSummaryRoleSchema = z.enum([
+  "total", "subtotal", "addition", "deduction", "line_badge", "warning", "meta",
+]);
+export type FlowSummaryRole = z.infer<typeof FlowSummaryRoleSchema>;
+
+/** Resolved field binding — combines entity_flow_field + entity_field.name/label/data_type. */
+export const FlowFieldBindingSchema = z.object({
+  id: z.string(),
+  entity_field_id: z.string(),
+  field_name: z.string(),
+  field_label: z.string(),
+  data_type: z.string(),
+  mode: FlowFieldModeSchema,
+  derivation_mode: FlowDerivationModeSchema.nullable().optional(),
+  visible_when: z.unknown().nullable().optional(),
+  required_when: z.unknown().nullable().optional(),
+  default_source: z.string().nullable().optional(),
+  derive_expression: z.string().nullable().optional(),
+  override_permission: z.string().nullable().optional(),
+  summary_role: FlowSummaryRoleSchema.nullable().optional(),
+  ui_variant: z.string().nullable().optional(),
+  span: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
+  help_text: z.string().nullable().optional(),
+  placeholder: z.string().nullable().optional(),
+  sort_order: z.number().int(),
+  /** Current derived value (populated by derive endpoint response). */
+  derived_value: z.unknown().optional(),
+  /** Whether the user has manually overridden this derived field. */
+  is_overridden: z.boolean().default(false),
+});
+export type FlowFieldBinding = z.infer<typeof FlowFieldBindingSchema>;
+
+/** One step in the wizard — entity_flow_step + its field bindings. */
+export const FlowStepSchema = z.object({
+  id: z.string(),
+  step_key: z.string(),
+  label: z.string(),
+  icon_key: z.string().nullable().optional(),
+  sort_order: z.number().int(),
+  skip_when: z.unknown().nullable().optional(),
+  advance_rule: z.object({
+    required_fields: z.array(z.string()).default([]),
+    predicate: z.unknown().nullable().optional(),
+  }),
+  layout_hint: z.string(),
+  fields: z.array(FlowFieldBindingSchema),
+});
+export type FlowStep = z.infer<typeof FlowStepSchema>;
+
+/** Resolved flow bundle — returned by GET /meta/flow?entity=&trigger= */
+export const FlowBundleSchema = z.object({
+  flow_id: z.string(),
+  flow_code: z.string(),
+  label: z.string(),
+  config: z.object({
+    summary: z.object({
+      fields: z.array(z.string()),
+      running_totals: z.array(z.string()),
+    }).optional(),
+    input_modes: z.array(z.string()).optional(),
+    layout: z.string().optional(),
+  }),
+  steps: z.array(FlowStepSchema),
+  /** Active permissions for the current user — used to gate overrides. */
+  user_permissions: z.array(z.string()),
+});
+export type FlowBundle = z.infer<typeof FlowBundleSchema>;
 
 /** Full document orchestrator payload — extends the base document detail. */
 export const DocumentOrchestratorSchema = z.object({

@@ -848,6 +848,201 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     };
   }
 
+  // ── GET /:entity/:id/distributions — accounting_distribution by source_doc_id ─
+  const distributionsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id = req.params["id"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      let rows: Record<string, unknown>[] = [];
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = (db as any)
+          .selectFrom("document.accounting_distribution")
+          .selectAll()
+          .where("source_doc_id", "=", id);
+        if (tenantId !== null) q = q.where("tenant_id", "=", tenantId);
+        q = q
+          .orderBy("source_line_id", "asc")
+          .orderBy("distribution_no", "asc");
+        rows = await q.execute();
+      } catch {
+        rows = [];
+      }
+
+      res.json({ data: rows });
+    } catch (err) {
+      logger?.error("records_distributions_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── POST /:entity/:id/lines/:lineId/distributions — create a split ───────────
+  const createDistributionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { sub } = claims as { sub: string };
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id        = req.params["id"]     as string;
+      const lineId    = req.params["lineId"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND" });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const body = req.body as Record<string, unknown>;
+
+      // Derive source_doc_type from entity_code — for now only purchase_invoice_line is supported
+      const sourceDocType = body["source_doc_type"] as string | undefined
+        ?? `${entityCode.replace("purchase_invoice", "PURCHASE_INVOICE")}_LINE`.toUpperCase();
+
+      // Next distribution_no for this line
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const maxRow = await (db as any)
+        .selectFrom("document.accounting_distribution")
+        .select((eb: any) => eb.fn.max("distribution_no").as("maxNo"))
+        .where("source_line_id", "=", lineId)
+        .executeTakeFirst();
+      const nextNo = ((maxRow?.maxNo as number | null) ?? 0) + 1;
+
+      const insert: Record<string, unknown> = {
+        tenant_id:          tenantId,
+        source_doc_type:    sourceDocType,
+        source_doc_id:      id,
+        source_line_id:     lineId,
+        distribution_no:    nextNo,
+        distribution_basis: body["distribution_basis"] ?? "PERCENT",
+        split_pct:          body["split_pct"]          ?? null,
+        split_amount:       body["split_amount"]       ?? null,
+        split_quantity:     body["split_quantity"]      ?? null,
+        distributed_amount: body["distributed_amount"] ?? 0,
+        currency_code:      body["currency_code"]      ?? "USD",
+        account_source:     body["account_source"]     ?? "FROM_CATEGORY",
+        posting_role_code:  body["posting_role_code"]  ?? null,
+        account_code:       body["account_code"]       ?? null,
+        gl_account_id:      body["gl_account_id"]      ?? null,
+        business_intent_id: body["business_intent_id"] ?? null,
+        spend_category_id:  body["spend_category_id"]  ?? null,
+        cost_center_id:     body["cost_center_id"]     ?? null,
+        profit_center_id:   body["profit_center_id"]   ?? null,
+        project_id:         body["project_id"]         ?? null,
+        site_id:            body["site_id"]            ?? null,
+        is_capex:           body["is_capex"]           ?? false,
+        asset_class_id:     body["asset_class_id"]     ?? null,
+        description:        body["description"]        ?? null,
+        created_by:         sub,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [created] = await (db as any)
+        .insertInto("document.accounting_distribution")
+        .values(insert)
+        .returningAll()
+        .execute();
+
+      res.status(201).json({ data: created });
+    } catch (err) {
+      logger?.error("records_distribution_create_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /:entity/:id/lines/:lineId/distributions/:distId — update a split ──
+  const patchDistributionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { sub } = claims as { sub: string };
+
+      const lineId  = req.params["lineId"] as string;
+      const distId  = req.params["distId"] as string;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const body = req.body as Record<string, unknown>;
+      const allowedKeys = [
+        "distribution_basis","split_pct","split_amount","split_quantity",
+        "distributed_amount","account_source","posting_role_code","account_code",
+        "gl_account_id","business_intent_id","spend_category_id",
+        "cost_center_id","profit_center_id","project_id","site_id",
+        "is_capex","asset_class_id","description",
+      ];
+      const patch: Record<string, unknown> = { updated_at: new Date(), updated_by: sub };
+      for (const k of allowedKeys) {
+        if (k in body) patch[k] = body[k];
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = (db as any)
+        .updateTable("document.accounting_distribution")
+        .set(patch)
+        .where("id", "=", distId)
+        .where("source_line_id", "=", lineId);
+      if (tenantId !== null) q = q.where("tenant_id", "=", tenantId);
+      const [updated] = await q.returningAll().execute();
+
+      if (!updated) {
+        res.status(404).json({ error: "DISTRIBUTION_NOT_FOUND" });
+        return;
+      }
+      res.json({ data: updated });
+    } catch (err) {
+      logger?.error("records_distribution_patch_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /:entity/:id/lines/:lineId/distributions/:distId ──────────────────
+  const deleteDistributionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const lineId  = req.params["lineId"] as string;
+      const distId  = req.params["distId"] as string;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = (db as any)
+        .deleteFrom("document.accounting_distribution")
+        .where("id", "=", distId)
+        .where("source_line_id", "=", lineId);
+      if (tenantId !== null) q = q.where("tenant_id", "=", tenantId);
+      await q.execute();
+
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("records_distribution_delete_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── GET /:entity/:id/lines — query convention-based {table_name}_line table ──
   const linesHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -885,14 +1080,25 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Normalise DB column names → DocumentLine contract field names
       const data = rows.map((r) => ({
         ...r,
-        document_id: r[fkCol]                             ?? r["document_id"],
-        line_number: r["line_no"]                         ?? r["line_number"],
-        description: r["item_description"]                ?? r["description"],
-        unit_code:   r["uom_code"]                        ?? r["unit_code"],
-        line_amount: r["gross_amount"] ?? r["net_amount"] ?? r["line_amount"],
-        item_code:   r["item_code"]    ?? null,
-        tax_code:    r["tax_code"]     ?? null,
-        data:        r["metadata"]     ?? r["data"]        ?? {},
+        document_id:       r[fkCol]                             ?? r["document_id"],
+        line_number:       r["line_no"]                         ?? r["line_number"],
+        description:       r["item_description"]                ?? r["description"],
+        unit_code:         r["uom_code"]                        ?? r["unit_code"],
+        // line_amount maps to gross_amount (after tax/discount); net_amount is pre-discount/tax
+        line_amount:       r["gross_amount"] ?? r["net_amount"] ?? r["line_amount"],
+        net_amount:        r["net_amount"]   ?? null,
+        gross_amount:      r["gross_amount"] ?? null,
+        item_code:         r["item_code"]    ?? null,
+        tax_code:          r["tax_code"]     ?? null,
+        // Discount
+        discount_pct:      r["discount_pct"]    ?? null,
+        discount_amount:   r["discount_amount"] ?? null,
+        // Retention
+        retention_pct:     r["retention_pct"]    ?? null,
+        retention_amount:  r["retention_amount"] ?? null,
+        // WHT
+        withholding_tax_amount: r["withholding_tax_amount"] ?? null,
+        data:              r["metadata"]     ?? r["data"]        ?? {},
       }));
 
       res.json({ data });
@@ -905,11 +1111,14 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.get("/records/:entity", listHandler);
   router.get("/records/:entity/_debug", debugHandler);
   // Sub-resource routes must be registered before /:id to avoid shadowing
-  router.get("/records/:entity/:id/lines",              linesHandler);
+  router.get("/records/:entity/:id/lines",                                      linesHandler);
+  router.post("/records/:entity/:id/lines/:lineId/distributions",               createDistributionHandler);
+  router.patch("/records/:entity/:id/lines/:lineId/distributions/:distId",      patchDistributionHandler);
+  router.delete("/records/:entity/:id/lines/:lineId/distributions/:distId",     deleteDistributionHandler);
   router.get("/records/:entity/:id/versions",           subResourceStub("versions"));
   router.get("/records/:entity/:id/workflow",           subResourceStub("workflow"));
   router.get("/records/:entity/:id/attachments",        subResourceStub("attachments"));
-  router.get("/records/:entity/:id/distributions",      subResourceStub("distributions"));
+  router.get("/records/:entity/:id/distributions",      distributionsHandler);
   router.get("/records/:entity/:id/approvals",          subResourceStub("approvals"));
   router.get("/records/:entity/:id/tasks",              subResourceStub("tasks"));
   router.get("/records/:entity/:id/watchers",           subResourceStub("watchers"));

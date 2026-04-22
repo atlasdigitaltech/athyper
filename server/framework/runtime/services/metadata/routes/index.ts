@@ -3,6 +3,7 @@
  *
  * Routes registered:
  *   GET /api/metadata/entities/:entity/compiled    — compiled entity descriptor
+ *   GET /api/metadata/entities/:entity/flow        — active intake flow bundle
  *   GET /api/metadata/entities/:entity/operations  — entity action operations
  *   GET /api/metadata/lookups/:domain              — lookup domain bundle (values)
  *   POST/PATCH /api/metadata/lookups/:domain/values — tenant value mutations
@@ -23,6 +24,7 @@
 import type { Router } from "express";
 import type { Kysely } from "kysely";
 import { createCompiledEntityRoute } from "./compiled-entity.route.js";
+import { createEntityFlowRoute } from "./entity-flow.route.js";
 import { createLookupRoute } from "./lookup.route.js";
 import { createEntityOperationsRoute } from "./entity-operations.route.js";
 import { createMetadataAdminRoutes } from "./metadata-admin.route.js";
@@ -37,10 +39,13 @@ export interface MetadataRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
 }
 
 export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps): Router {
   createCompiledEntityRoute(router, deps);
+  createEntityFlowRoute(router, deps);
   createLookupRoute(router, deps);
   createEntityOperationsRoute(router, deps);
   createMetadataAdminRoutes(router, deps);

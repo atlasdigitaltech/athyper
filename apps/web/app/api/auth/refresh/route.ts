@@ -105,7 +105,11 @@ export async function POST() {
     const acquired = await redis.set(lockKey, "1", { NX: true, EX: 10 });
     if (!acquired) {
       await new Promise<void>((r) => setTimeout(r, 300));
-      return NextResponse.json({ ok: true, message: "Refresh in progress" });
+      // Return the current (pre-rotation) accessExpiresAt so the losing tab
+      // reschedules its timer. The new neon_sid cookie set by the winning tab
+      // is already in the browser; when this timer fires (~30s later) the
+      // remaining > 120 early-exit will return the correct new expiry.
+      return NextResponse.json({ ok: true, message: "Refresh in progress", accessExpiresAt: session.accessExpiresAt });
     }
 
     // ─── Refresh tokens at Keycloak ──────────────────────────────────────────
@@ -192,20 +196,29 @@ export async function POST() {
       csrfToken: newCsrfToken,
     });
   } catch (e: unknown) {
-    try {
-      await redis.del(sessKey(sessionNamespace, sid));
-    } catch {
-      /* best effort */
-    }
     await redis.del(lockKey).catch(() => { /* best effort */ });
     const reason = e instanceof Error ? e.message : "Refresh failed";
-    const isKcInvalidGrant = reason.includes("invalid_grant");
-    console.error(
-      isKcInvalidGrant
-        ? "[auth/refresh] KC session invalidated (re-login required):"
-        : "[auth/refresh] Failed:",
-      reason,
-    );
-    return NextResponse.json({ redirect: "/api/auth/login", reason }, { status: 401 });
+
+    // Hard failure: Keycloak explicitly rejected this session.
+    // Covers: invalid_grant (RT expired/revoked/reused), Session not active,
+    // Token not found, user/client disabled.
+    // ONLY in these cases do we destroy the Redis session and force re-login.
+    const isHardFailure =
+      reason.includes("invalid_grant") ||
+      reason.includes("Session not active") ||
+      reason.includes("Token not found") ||
+      reason.includes("client not found");
+
+    if (isHardFailure) {
+      try { await redis.del(sessKey(sessionNamespace, sid)); } catch { /* best effort */ }
+      console.error("[auth/refresh] KC session invalidated — re-login required:", reason);
+      return NextResponse.json({ redirect: "/api/auth/login", reason }, { status: 401 });
+    }
+
+    // Transient failure: KC unavailable, network timeout, 5xx, DNS, etc.
+    // Keep the Redis session alive so the user is not force-logged out.
+    // Return a retryable 503 so the client reschedules the refresh timer.
+    console.warn("[auth/refresh] Transient KC failure — session preserved, will retry:", reason);
+    return NextResponse.json({ ok: false, retryAfter: 30, reason }, { status: 503 });
   }
 }

@@ -46,7 +46,7 @@ WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice_line'
   AND  e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
--- ── 3. control.entity_field (25 fields) ──────────────────────────────────────
+-- ── 3. control.entity_field (27 fields) ──────────────────────────────────────
 -- Group A: Identity & Parent          (5-10)
 -- Group B: Item classification        (20-45)
 -- Group C: Quantity & Pricing         (50-82)
@@ -83,10 +83,12 @@ CROSS JOIN (VALUES
     ('discount_pct',        'discount_pct',        'Discount %',          'decimal',   'zero_or_one', NULL::text,                                 false, false, '{"min":0,"max":100}'::jsonb,                 75),
     ('net_amount',          'net_amount',          'Net Amount',          'decimal',   'one',         NULL::text,                                 false, false, '{"min":0}'::jsonb,                           80),
     ('discount_amount',     'discount_amount',     'Discount Amt',        'decimal',   'zero_or_one', NULL::text,                                 false, false, '{"min":0}'::jsonb,                           82),
-    -- ── D: Tax & Gross ────────────────────────────────────────────────────────
+    -- ── D: Tax, Gross & Retention ──────────────────────────────────────────────
     ('tax_amount',          'tax_amount',          'Tax Amount',          'decimal',   'one',         NULL::text,                                 false, false, '{"min":0}'::jsonb,                           90),
     ('withholding_tax_amount','withholding_tax_amount','WHT Amount',       'decimal',   'one',         NULL::text,                                 false, false, '{"min":0}'::jsonb,                           95),
     ('gross_amount',        'gross_amount',        'Gross Amount',        'decimal',   'one',         NULL::text,                                 true,  false, '{"min":0}'::jsonb,                          100),
+    ('retention_pct',       'retention_pct',       'Retention %',         'decimal',   'zero_or_one', NULL::text,                                 false, false, '{"min":0,"max":100}'::jsonb,                 102),
+    ('retention_amount',    'retention_amount',    'Retention Amt',       'decimal',   'zero_or_one', NULL::text,                                 false, false, '{"min":0}'::jsonb,                          104),
     -- ── E: Dimensions ─────────────────────────────────────────────────────────
     ('cost_center_id',      'cost_center_id',      'Cost Centre',         'reference', 'zero_or_one', NULL::text,                                 false, true,  '{"ref_entity":"cost_center"}'::jsonb,       110),
     ('profit_center_id',    'profit_center_id',    'Profit Centre',       'reference', 'zero_or_one', NULL::text,                                 false, false, '{"ref_entity":"profit_center"}'::jsonb,     115),

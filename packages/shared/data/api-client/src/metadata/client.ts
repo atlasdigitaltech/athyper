@@ -12,6 +12,7 @@ import {
   type LookupDomainBundle,
   type EntityCapability,
 } from "@athyper/api-contracts/metadata";
+import { type FlowBundle } from "@athyper/api-contracts/documents";
 
 export function createMetadataClient(fetch: ApiFetch) {
   return {
@@ -43,6 +44,20 @@ export function createMetadataClient(fetch: ApiFetch) {
     /** Fetch entity capabilities for the current tenant */
     async getEntityCapabilities(entityName: string): Promise<EntityCapability[]> {
       return fetch(`/api/metadata/entities/${entityName}/capabilities`);
+    },
+
+    /** Fetch the active intake flow bundle for an entity + trigger context */
+    async getEntityFlow(
+      entityCode: string,
+      trigger: string = "new",
+    ): Promise<FlowBundle | null> {
+      try {
+        return await fetch(
+          `/api/metadata/entities/${encodeURIComponent(entityCode)}/flow?trigger=${encodeURIComponent(trigger)}`,
+        );
+      } catch {
+        return null;
+      }
     },
   };
 }

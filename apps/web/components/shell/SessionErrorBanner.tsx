@@ -156,7 +156,7 @@ export function SessionErrorBanner() {
 
   // "Stay on page" converts the auth modal to a collapsed banner
   const [stayedOnPage, setStayedOnPage] = useState(false);
-  // Dismissed state for infra/access banners
+  // Dismissed state for infra/access banners; also used for auth banner after "stay on page"
   const [dismissed, setDismissed] = useState<string | null>(null);
   // Retry loading state
   const [retrying, setRetrying] = useState(false);
@@ -178,8 +178,9 @@ export function SessionErrorBanner() {
     );
   }
 
-  // ── After "stay on page": persistent non-dismissible banner with sign-in link
+  // ── After "stay on page": dismissible banner with sign-in link
   if (meta.treatment === "auth" && stayedOnPage) {
+    if (dismissed === errorKey) return null;
     return (
       <div
         role="alert"
@@ -198,6 +199,7 @@ export function SessionErrorBanner() {
             </a>{" "}
             to continue where you left off.
           </p>
+          <CloseButton onClick={() => setDismissed(errorKey)} />
         </div>
       </div>
     );

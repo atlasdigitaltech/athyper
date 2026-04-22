@@ -46,6 +46,12 @@ export async function GET(req: Request) {
   const filter: "user" | "partner" | null =
     rawFilter === "user" || rawFilter === "partner" ? rawFilter : null;
 
+  // force=1 → include prompt=login (used after explicit logout so the user must
+  // re-enter credentials even if a Keycloak SSO session still exists).
+  // Omitting prompt on the normal expiry-redirect path lets Keycloak silently
+  // reuse its own SSO session and return the user to the app without a password prompt.
+  const forceLogin = url.searchParams.get("force") === "1";
+
   const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
   const publicBaseUrl = resolvePublicBaseUrl(req);
   const redirectUri = `${publicBaseUrl}/api/auth/callback`;
@@ -86,7 +92,7 @@ export async function GET(req: Request) {
     redirectUri,
     codeChallenge,
     state,
-    prompt: "login", // Force Keycloak login form even if SSO session exists
+    prompt: forceLogin ? "login" : undefined,
     idpHint: provider ?? undefined,
   });
 

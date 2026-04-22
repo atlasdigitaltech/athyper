@@ -7,7 +7,7 @@
  *
  * Examples:
  *   /module/acc  → /app/invoice  (first non-"Saved views" page of ACC)
- *   /module/buy  → /app/purchase-requisition
+ *   /module/buy  → /app/purchase_requisition
  *   /module/meta → /setup/metadata
  *
  * Falls back to /dashboard if the module code is unknown.

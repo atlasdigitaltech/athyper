@@ -10,8 +10,8 @@
  * [id] = canonical business key (NOT UUID).
  *
  * Examples:
- *   /app/purchase-invoice/INV-10045/attachments
- *   /app/purchase-order/PO-2045/attachments
+ *   /app/purchase_invoice/INV-10045/attachments
+ *   /app/purchase_order/PO-2045/attachments
  *   /app/vendor/VND-001/attachments
  */
 

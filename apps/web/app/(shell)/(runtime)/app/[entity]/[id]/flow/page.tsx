@@ -9,9 +9,9 @@
  * [id] = canonical business key (NOT UUID).
  *
  * Examples:
- *   /app/purchase-invoice/INV-10045/flow
- *   /app/purchase-order/PO-2045/flow
- *   /app/journal-entry/JE-10045/flow
+ *   /app/purchase_invoice/INV-10045/flow
+ *   /app/purchase_order/PO-2045/flow
+ *   /app/journal_entry/JE-10045/flow
  */
 
 import { useParams, useRouter } from "next/navigation";

@@ -20,7 +20,8 @@
     "./amounts": "./src/amounts/index.ts",
     "./validation": "./src/validation/index.ts",
     "./actions": "./src/actions/index.ts",
-    "./orchestrator": "./src/orchestrator/index.ts"
+    "./orchestrator": "./src/orchestrator/index.ts",
+    "./intake": "./src/intake/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

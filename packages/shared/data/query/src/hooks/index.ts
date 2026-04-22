@@ -15,7 +15,7 @@ import { type MasterRecord } from "@athyper/api-contracts/records";
 import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent } from "@athyper/api-contracts/workflow";
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
 import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient } from "@athyper/api-client";
-import { type DocumentDetail } from "@athyper/api-contracts/documents";
+import { type DocumentDetail, type FlowBundle } from "@athyper/api-contracts/documents";
 import { type StatusTransitionRequest } from "@athyper/api-contracts/documents";
 
 // ── Client singletons ───────────────────────────────────────────
@@ -105,6 +105,15 @@ export function useEntityCapabilities(entityName: string) {
     queryKey: queryKeys.capabilities.byEntity(entityName),
     queryFn: () => meta().getEntityCapabilities(entityName),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useEntityFlow(entityCode: string, trigger: string = "new") {
+  return useQuery<FlowBundle | null>({
+    queryKey: ["meta", "flow", entityCode, trigger],
+    queryFn: () => meta().getEntityFlow(entityCode, trigger),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
   });
 }
 

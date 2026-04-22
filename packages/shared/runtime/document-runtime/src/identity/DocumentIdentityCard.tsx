@@ -48,13 +48,6 @@ export interface DocumentIdentityCardProps {
 
 // ── Intent maps ────────────────────────────────────────────────────────────
 
-const STATUS_BADGE_CLS: Record<string, string> = {
-  success: "bg-success/12 text-success border-success/20",
-  warning: "bg-warning/12 text-warning border-warning/20",
-  error:   "bg-destructive/12 text-destructive border-destructive/20",
-  info:    "bg-info/12 text-info border-info/20",
-  neutral: "bg-muted text-muted-foreground border-border",
-};
 
 const INTENT_DOT: Record<string, string> = {
   success: "bg-success",
@@ -74,23 +67,6 @@ const INTENT_TEXT: Record<string, string> = {
 
 // ── Status badge ───────────────────────────────────────────────────────────
 
-function StatusBadge({
-  label,
-  intent = "neutral",
-}: {
-  label: string;
-  intent?: string;
-}) {
-  const cls = STATUS_BADGE_CLS[intent] ?? STATUS_BADGE_CLS.neutral;
-  return (
-    <span className={cn(
-      "inline-flex items-center h-[22px] px-2.5 rounded-md text-xs font-semibold tracking-wider border leading-none whitespace-nowrap",
-      cls,
-    )}>
-      {label}
-    </span>
-  );
-}
 
 // ── Dark dot-button ────────────────────────────────────────────────────────
 
@@ -174,25 +150,23 @@ export function DocumentIdentityCard({
             {typeLabel}
           </span>
 
-          {/* Column 2 — stacked code+name | status badge centered to both rows */}
-          <div className="min-w-0 flex items-center gap-3">
-
-            {/* Left stack: code (row 1) + name (row 2) */}
-            <div className="min-w-0">
-              <div className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground leading-tight">
+          {/* Column 2 — stacked [code + status] / name */}
+          <div className="min-w-0">
+            {/* Row 1: code + status badge inline */}
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="text-sm font-semibold tabular-nums text-foreground leading-tight">
                 {number}
+              </span>
+              <span className="inline-flex items-center h-[18px] px-[7px] rounded-[4px] text-xs font-semibold bg-muted text-muted-foreground border border-border leading-none shrink-0">
+                {statusLabel}
+              </span>
+            </div>
+            {/* Row 2: description */}
+            {title && (
+              <div className="mt-[3px] text-xs font-medium text-muted-foreground leading-snug truncate max-w-[340px]">
+                {title}
               </div>
-              {title && (
-                <div className="mt-[3px] text-xs font-medium text-muted-foreground leading-snug truncate max-w-[340px]">
-                  {title}
-                </div>
-              )}
-            </div>
-
-            {/* Status badge — self-center spans both text rows */}
-            <div className="shrink-0 self-center">
-              <StatusBadge label={statusLabel} intent={statusIntent} />
-            </div>
+            )}
           </div>
         </div>
 

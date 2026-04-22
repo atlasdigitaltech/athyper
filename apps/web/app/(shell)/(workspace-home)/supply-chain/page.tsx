@@ -13,7 +13,7 @@ import { SectionLabel } from "@/components/home/SectionLabel";
 
 const WORKBENCH_ACTIONS = [
   {
-    href: "/app/purchase-order",
+    href: "/app/purchase_order",
     title: "Purchase Orders",
     description: "Create and manage procurement orders",
     icon: ShoppingCart,
@@ -21,7 +21,7 @@ const WORKBENCH_ACTIONS = [
     iconBgClass: "bg-primary/10",
   },
   {
-    href: "/app/purchase-invoice",
+    href: "/app/purchase_invoice",
     title: "Supplier Invoices",
     description: "Receive, match, and approve supplier invoices",
     icon: FileText,

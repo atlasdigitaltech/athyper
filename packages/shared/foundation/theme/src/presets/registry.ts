@@ -83,6 +83,16 @@ export const themePresets: readonly ThemePresetMeta[] = [
     mutedColor: "oklch(0.9580 0.0133 286.1454)",
   },
   {
+    value: "mesh-bloom",
+    label: "mesh bloom",
+    description: "Vivid violet primary with bright green and orange chart accents. Crisp and energetic.",
+    radius: "0.625rem",
+    category: "expressive",
+    contractVersion: THEME_CONTRACT_VERSION,
+    primaryColor: "#7033ff",
+    mutedColor: "#f5f5f5",
+  },
+  {
     value: "athyper-pop",
     label: "athyper pop",
     description: "Candy-colored palette with generous rounding.",
@@ -121,6 +131,16 @@ export const themePresets: readonly ThemePresetMeta[] = [
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.5016 0.1887 27.4816)",
     mutedColor: "oklch(0.7826 0 0)",
+  },
+  {
+    value: "atlas-vintage",
+    label: "atlas vintage",
+    description: "Warm parchment background with earthy brown tones. Understated and timeless.",
+    radius: "0.625rem",
+    category: "retro",
+    contractVersion: THEME_CONTRACT_VERSION,
+    primaryColor: "#a67c52",
+    mutedColor: "#ece5d8",
   },
 ] as const;
 

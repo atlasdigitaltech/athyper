@@ -13,8 +13,8 @@
  * [id] = canonical business key (NOT UUID).
  *
  * Examples:
- *   /app/purchase-invoice/PINV-ACME-2026-00001/versions
- *   /app/purchase-order/PO-ACME-2026-00042/versions
+ *   /app/purchase_invoice/PINV-ACME-2026-00001/versions
+ *   /app/purchase_order/PO-ACME-2026-00042/versions
  */
 
 import { useState } from "react";

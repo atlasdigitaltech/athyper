@@ -97,10 +97,10 @@ const WORKBENCH_ACTIONS = [
 // ── Document shortcuts ────────────────────────────────────────────────────────
 
 const DOCUMENT_SHORTCUTS = [
-  { href: "/app/purchase-invoice", label: "Purchase Invoices", icon: FileText },
-  { href: "/app/journal-entry",    label: "Journal Entries",   icon: ScrollText },
-  { href: "/app/purchase-order",   label: "Purchase Orders",   icon: FileText },
-  { href: "/app/payment-entry",    label: "Payment Entries",   icon: Landmark },
+  { href: "/app/purchase_invoice", label: "Purchase Invoices", icon: FileText },
+  { href: "/app/journal_entry",    label: "Journal Entries",   icon: ScrollText },
+  { href: "/app/purchase_order",   label: "Purchase Orders",   icon: FileText },
+  { href: "/app/payment_entry",    label: "Payment Entries",   icon: Landmark },
 ] as const;
 
 // ── Page ──────────────────────────────────────────────────────────────────────

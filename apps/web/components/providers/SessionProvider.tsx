@@ -160,6 +160,7 @@ export function SessionProvider({
           ok?: boolean;
           redirect?: string;
           accessExpiresAt?: number;
+          retryAfter?: number;
           reason?: string;
         };
 
@@ -168,15 +169,24 @@ export function SessionProvider({
           accessExpiresAtRef.current = body.accessExpiresAt;
           scheduleTokenRefresh(body.accessExpiresAt);
         } else if (body.redirect) {
-          // Refresh token expired or session destroyed — surface as auth error
+          // Hard failure: KC explicitly invalidated the session (invalid_grant,
+          // session expired, user disabled). Show the re-auth dialog.
           setRuntimeError({
             code: "INVALID_TOKEN",
             message: body.reason ?? "Your session has expired. Please sign in again.",
             status: 401,
           });
+        } else {
+          // Transient failure: KC temporarily unavailable or network error.
+          // Do NOT surface a dialog — session is still alive in Redis.
+          // Reschedule a retry using the server-suggested delay (default 30s).
+          const retryMs = typeof body.retryAfter === "number" ? body.retryAfter * 1000 : 30_000;
+          refreshTimerRef.current = setTimeout(() => scheduleTokenRefresh(accessExpiresAtRef.current), retryMs);
         }
       } catch {
-        // Network error — will surface naturally on the next runtime fetch
+        // Network-level error reaching /api/auth/refresh — retry in 30s.
+        // The existing access token may still be valid; don't break the chain.
+        refreshTimerRef.current = setTimeout(() => scheduleTokenRefresh(accessExpiresAtRef.current), 30_000);
       }
     }, fireInMs);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -213,11 +223,30 @@ export function SessionProvider({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const events = ["mousemove", "keydown", "click", "touchstart"] as const;
+    const events = ["mousemove", "keydown", "click", "touchstart", "scroll"] as const;
     const handler = () => { void touchSession(); };
     events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
     return () => events.forEach((e) => window.removeEventListener(e, handler));
   }, [touchSession]);
+
+  // When the tab becomes visible again (wake from sleep, switching tabs) immediately
+  // touch the session so lastSeenAt is fresh, then reschedule the refresh timer.
+  // Without this, the timer fires with a stale lastSeenAt and the server treats
+  // the session as idle even if the user was just active in another window.
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== "visible") return;
+      lastHeartbeatRef.current = 0; // Allow immediate touch on next user event too
+      try {
+        await fetch("/api/auth/touch", { method: "POST" });
+      } catch {
+        // Non-fatal — proceed with reschedule regardless
+      }
+      scheduleTokenRefresh(accessExpiresAtRef.current);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [scheduleTokenRefresh]);
 
   // ── Runtime session fetch ─────────────────────────────────────────────────
 
@@ -228,7 +257,43 @@ export function SessionProvider({
       try {
         const params = new URLSearchParams({ tenant, entity, workbench });
         if (delegationId) params.set("delegation", delegationId);
-        const res = await fetch(`/api/runtime/session?${params}`);
+        const runtimeUrl = `/api/runtime/session?${params}`;
+
+        let res = await fetch(runtimeUrl);
+
+        // One-shot reactive refresh: if the access token expired between the
+        // proactive timer and this request, refresh via POST /api/auth/refresh
+        // (which holds the distributed lock + rotates SID) then retry once.
+        // Doing this client-side avoids the race where a server-side refresh
+        // and the proactive timer both consume the single-use KC refresh token.
+        if (res.status === 401) {
+          const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+          if (errBody.error === "INVALID_TOKEN" || errBody.error === "MISSING_TOKEN") {
+            const refreshRes = await fetch("/api/auth/refresh", { method: "POST" }).catch(() => null);
+            const refreshBody = (await refreshRes?.json().catch(() => ({})) ?? {}) as {
+              ok?: boolean;
+              accessExpiresAt?: number;
+              redirect?: string;
+            };
+
+            if (refreshBody.ok && refreshBody.accessExpiresAt) {
+              // Refresh succeeded — update timer and retry with new neon_sid cookie
+              accessExpiresAtRef.current = refreshBody.accessExpiresAt;
+              scheduleTokenRefresh(refreshBody.accessExpiresAt);
+              res = await fetch(runtimeUrl);
+            } else {
+              // Refresh failed (idle timeout, invalid_grant, etc.) — show dialog
+              setRuntime(null);
+              setRuntimeError({
+                code: "INVALID_TOKEN",
+                message: "Your session has expired. Please sign in again.",
+                status: 401,
+              });
+              return;
+            }
+          }
+        }
+
         if (res.ok) {
           const data = (await res.json()) as RuntimeSession;
           setRuntime(data);
@@ -251,7 +316,7 @@ export function SessionProvider({
         setRuntimeLoading(false);
       }
     },
-    [],
+    [scheduleTokenRefresh], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // Fetch runtime session whenever the active context changes

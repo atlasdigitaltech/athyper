@@ -3,11 +3,11 @@
  */
 
 /**
- * Converts a kebab-case slug to a display title.
- * "purchase-invoice" → "Purchase Invoice"
+ * Converts a snake_case entity slug to a display title.
+ * "purchase_invoice" → "Purchase Invoice"
  */
 export function formatTitle(code: string): string {
-  return code.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return code.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 /**
