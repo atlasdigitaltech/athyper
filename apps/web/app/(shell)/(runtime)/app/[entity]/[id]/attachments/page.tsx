@@ -61,7 +61,7 @@ function useAttachments(entityCode: string, entityId: string) {
     queryKey: ["attachments", entityCode, entityId],
     queryFn: async () => {
       const res = await fetch(
-        `/api/relay/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/attachments`,
+        `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/attachments`,
       );
       if (!res.ok) throw new Error("Failed to load attachments");
       return res.json() as Promise<Attachment[]>;

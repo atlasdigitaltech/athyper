@@ -879,6 +879,9 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
     try {
       const c = await resolveCtx(req, res);
       if (!c) return;
+      const xOrgHdr      = (req.headers["x-org"] as string) ?? "";
+      const tenantCode   = (xOrgHdr.split("--")[0] ?? "").trim() || undefined;
+      const companyCode  = (xOrgHdr.split("--")[1] ?? "").trim() || undefined;
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
@@ -923,6 +926,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
           const quarantined = await attachSvc.upload({
             tenantId:    c.tenantId,
+            tenantCode,
+            companyCode,
             entityType:  CONTENT_ENTITY_TYPE,
             entityId:    id,
             fileBuffer,
@@ -960,6 +965,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       const result = await attachSvc.upload({
         tenantId:    c.tenantId,
+        tenantCode,
+        companyCode,
         entityType:  CONTENT_ENTITY_TYPE,
         entityId:    id,
         fileBuffer,
@@ -1440,6 +1447,9 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
     try {
       const c = await resolveCtx(req, res);
       if (!c) return;
+      const xOrgVer     = (req.headers["x-org"] as string) ?? "";
+      const tCodeVer    = (xOrgVer.split("--")[0] ?? "").trim() || c.tenantId;
+      const cCodeVer    = (xOrgVer.split("--")[1] ?? "").trim() || c.tenantId;
       const { id: itemId, attachmentId } = req.params;
       if (!isUuid(itemId) || !isUuid(attachmentId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
@@ -1483,9 +1493,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const contentType     = (body.content_type ?? "application/octet-stream").slice(0, 200);
       const sha256          = createHash("sha256").update(fileBuffer).digest("hex");
 
-      // Storage key pattern: tenant/{tenantId}/master/content_item/{itemId}/{newId}/v{N}/{fileName}
       const safeFileName = body.filename.replace(/[/\\]/g, "_").replace(/[^\w.\-]/g, "_").slice(0, 200);
-      const storageKey   = `tenant/${c.tenantId}/master/content_item/${itemId}/${newAttachmentId}/v${nextVersionNo}/${safeFileName}`;
+      const storageKey   = `${tCodeVer}/${cCodeVer}/content/content_item/${itemId}/${newAttachmentId}/v${nextVersionNo}/${safeFileName}`;
 
       // Step 1: upload bytes to S3
       await objectStorage!.adapter.put(storageKey, fileBuffer, { contentType });

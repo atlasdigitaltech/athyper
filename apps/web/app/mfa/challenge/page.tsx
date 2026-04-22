@@ -56,6 +56,8 @@ function MfaChallengeInner() {
   const [slide, setSlide] = useState(0);
   const [trustDevice, setTrustDevice] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("");
+  const [method, setMethod] = useState<"totp" | "webauthn">("totp");
+  const [webauthnPending, setWebauthnPending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -97,6 +99,100 @@ function MfaChallengeInner() {
       setError("Something went wrong. Please try again.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleSecurityKey() {
+    setWebauthnPending(true);
+    setError(null);
+    try {
+      // 1. Get assertion challenge from backend
+      const beginRes = await fetch("/api/auth/mfa/webauthn-begin", {
+        method: "POST",
+        headers: { "X-CSRF-Token": getCsrfToken() },
+      });
+      if (!beginRes.ok) {
+        const d = await beginRes.json().catch(() => ({})) as { error?: string; message?: string };
+        const msg = d.error === "NO_WEBAUTHN"
+          ? "No passkey found. If you recently enrolled one, go to Settings → Security and tap Sync, then try again."
+          : (d.message ?? "Security Key verification failed. Use the authenticator code instead.");
+        setError(msg);
+        return;
+      }
+      const { challenge, allowCredentials, rpId } = await beginRes.json() as {
+        challenge: string;
+        allowCredentials: Array<{ type: string; id: string }>;
+        rpId: string;
+      };
+
+      // 2. Call WebAuthn API
+      function b64urlDecode(s: string) {
+        const b = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+        const a = new Uint8Array(b.length);
+        for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+        return a;
+      }
+      function b64urlEncode(buf: ArrayBuffer) {
+        const a = new Uint8Array(buf); let s = "";
+        for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+        return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+      }
+
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: b64urlDecode(challenge),
+          rpId: rpId || window.location.hostname,
+          allowCredentials: allowCredentials.map(c => ({
+            type: "public-key" as PublicKeyCredentialType,
+            id: b64urlDecode(c.id),
+          })),
+          userVerification: "preferred",
+          timeout: 60000,
+        },
+      }) as PublicKeyCredential | null;
+
+      if (!credential) { setError("Security Key verification cancelled."); return; }
+
+      const assertionResponse = credential.response as AuthenticatorAssertionResponse;
+
+      // 3. Send assertion to verify route
+      const verifyRes = await fetch("/api/auth/mfa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify({
+          type: "webauthn",
+          id: credential.id,
+          rawId: b64urlEncode(credential.rawId),
+          response: {
+            clientDataJSON:    b64urlEncode(assertionResponse.clientDataJSON),
+            authenticatorData: b64urlEncode(assertionResponse.authenticatorData),
+            signature:         b64urlEncode(assertionResponse.signature),
+            userHandle:        assertionResponse.userHandle ? b64urlEncode(assertionResponse.userHandle) : null,
+          },
+        }),
+      });
+
+      if (verifyRes.ok) {
+        if (trustDevice) {
+          await fetch("/api/auth/mfa/trust-device", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+            body: JSON.stringify({ device_name: deviceLabel.trim() || "Security Key Device", ttl_days: 30 }),
+          }).catch(() => {});
+        }
+        router.replace(returnUrl);
+      } else {
+        const d = await verifyRes.json().catch(() => ({})) as { message?: string };
+        setError(d.message ?? "Security Key verification failed. Try again.");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        setError("Security Key verification was cancelled or timed out.");
+      } else {
+        setError("Security Key verification failed. Try the authenticator code instead.");
+      }
+    } finally {
+      setWebauthnPending(false);
     }
   }
 
@@ -153,72 +249,108 @@ function MfaChallengeInner() {
             <div className="space-y-1 text-center">
               <h2 className="text-2xl font-medium tracking-tight">Two-factor authentication</h2>
               <p className="text-sm text-muted-foreground">
-                Enter the 6-digit code from your authenticator app.
+                {method === "totp"
+                  ? "Enter the 6-digit code from your authenticator app."
+                  : "Use your registered Security Key or Passkey."}
               </p>
             </div>
 
-            {/* Code input */}
-            <div className="space-y-3">
-              <input
-                ref={inputRef}
-                type="text"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                autoFocus
-                autoComplete="one-time-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                placeholder="000000"
-                disabled={pending}
-                className="w-full rounded-md border border-input bg-background px-4 py-3 text-center font-mono text-2xl tracking-[0.5em] outline-none ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-
-              {error && (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={handleVerify}
-                disabled={code.length !== 6 || pending}
-                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-              >
-                {pending ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Verifying…
-                  </>
-                ) : "Verify"}
-              </button>
-
-              {/* Trust this device */}
-              <div className="space-y-2 pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={trustDevice}
-                    onChange={(e) => setTrustDevice(e.target.checked)}
-                    className="h-4 w-4 rounded border-input accent-primary"
-                  />
-                  <span className="text-sm text-muted-foreground">Trust this device for 30 days</span>
-                </label>
-                {trustDevice && (
-                  <input
-                    type="text"
-                    value={deviceLabel}
-                    onChange={(e) => setDeviceLabel(e.target.value)}
-                    placeholder="Device label (optional, e.g. Work Laptop)"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                )}
+            {error && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
               </div>
-            </div>
+            )}
+
+            {/* ── Security Key method ── */}
+            {method === "webauthn" ? (
+              <div className="space-y-3">
+                <button
+                  onClick={handleSecurityKey}
+                  disabled={webauthnPending}
+                  className="inline-flex w-full items-center justify-center gap-2.5 rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {webauthnPending ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Waiting for key…
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Use Security Key
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setMethod("totp"); setError(null); }}
+                  className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  Use authenticator code instead
+                </button>
+              </div>
+            ) : (
+              /* ── TOTP method ── */
+              <div className="space-y-3">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  autoFocus
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+                  placeholder="000000"
+                  disabled={pending}
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-center font-mono text-2xl tracking-[0.5em] outline-none ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+
+                <button
+                  onClick={handleVerify}
+                  disabled={code.length !== 6 || pending}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {pending ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Verifying…
+                    </>
+                  ) : "Verify"}
+                </button>
+
+                {/* Switch to Security Key */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-background px-2 text-muted-foreground">or</span></div>
+                </div>
+                <button
+                  onClick={() => { setMethod("webauthn"); setError(null); }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Use Security Key instead
+                </button>
+
+                {/* Trust this device */}
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} className="h-4 w-4 rounded border-input accent-primary"/>
+                    <span className="text-sm text-muted-foreground">Trust this device for 30 days</span>
+                  </label>
+                  {trustDevice && (
+                    <input type="text" value={deviceLabel} onChange={(e) => setDeviceLabel(e.target.value)} placeholder="Device label (e.g. Work Laptop)" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"/>
+                  )}
+                </div>
+              </div>
+            )}
 
           </div>
         </div>

@@ -61,8 +61,11 @@ function sanitizeFileName(name: string): string {
     .slice(0, 200);
 }
 
-function storageKey(tenantId: string, attachmentId: string, fileName: string): string {
-  return `tenant/${tenantId}/master/comment/${attachmentId}/v1/${sanitizeFileName(fileName)}`;
+function storageKey(tenantCode: string, companyCode: string, attachmentId: string, fileName: string): string {
+  const now   = new Date();
+  const year  = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${tenantCode}/${companyCode}/${year}/${month}/collab/${attachmentId}/v1/${sanitizeFileName(fileName)}`;
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────
@@ -108,6 +111,10 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         return;
       }
 
+      // X-Org format: "{tenantCode}--{companyCode}" (e.g. "athyper--ACFB")
+      const tenantCode   = (xOrg.split("--")[0] ?? "").trim() || tenantId;
+      const companyCode  = (xOrg.split("--")[1] ?? "").trim() || tenantId;
+
       const body = req.body as {
         filename?:     string;
         content_type?: string;
@@ -142,16 +149,19 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const sizeBytes   = body.size_bytes ?? fileBuffer.length;
       const sha256      = createHash("sha256").update(fileBuffer).digest("hex");
       const attachmentId = crypto.randomUUID();
-      const key          = storageKey(tenantId, attachmentId, fileName);
+      const key          = storageKey(tenantCode, companyCode, attachmentId, fileName);
 
-      // sha256 dedup — if identical file already active for this tenant, increment ref_count
+      // sha256 dedup — reuse only if the object lives in the CURRENT bucket.
+      // Without the bucket guard, records from deleted buckets would short-circuit
+      // the upload and leave athyper-dms empty while the UI falsely reports success.
       const existing = await db
         .selectFrom("master.attachment as a")
         .select(["a.id", "a.storage_key"])
-        .where("a.tenant_id", "=", tenantId)
-        .where("a.sha256",    "=", sha256)
-        .where("a.is_current", "=", true)
-        .where("a.status",     "=", "active")
+        .where("a.tenant_id",      "=", tenantId)
+        .where("a.sha256",         "=", sha256)
+        .where("a.storage_bucket", "=", bucket)
+        .where("a.is_current",     "=", true)
+        .where("a.status",         "=", "active")
         .executeTakeFirst();
 
       if (existing) {

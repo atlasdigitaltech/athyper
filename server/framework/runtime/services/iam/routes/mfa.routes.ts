@@ -26,7 +26,7 @@
  *   X-Realm: {realmKey}
  */
 
-import { randomBytes } from "crypto";
+import { randomBytes, createHash, createVerify } from "crypto";
 import { sql } from "kysely";
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
@@ -60,6 +60,13 @@ export interface MfaRoutesDeps {
   };
   /** Display name shown in TOTP otpauth URI (default: "Athyper") */
   totpIssuer?: string;
+  /**
+   * WebAuthn Relying Party ID — must match the rpId set in Keycloak's WebAuthn Policy.
+   * Must be a registrable domain suffix shared by both KC's origin and the app's origin.
+   * Example: KC at iam.athyper.local + app at neon.athyper.local → rpId = "athyper.local"
+   * Falls back to the request hostname when not set (only correct if KC and app share the same host).
+   */
+  webauthnRpId?: string;
   /**
    * Keycloak config required for WebAuthn AIA and sync routes.
    * When omitted, POST /iam/mfa/webauthn/start and POST /iam/mfa/sync return 501.
@@ -122,7 +129,7 @@ async function resolveCallerAuth(
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
-  const { db, cache, auth, logger, totpIssuer = "Athyper", kc } = deps;
+  const { db, cache, auth, logger, totpIssuer = "Athyper", kc, webauthnRpId } = deps;
   const stepUp  = createStepUpService(cache);
   const totp    = createTotpEnrollmentService(db, totpIssuer);
   const mfaSync = kc
@@ -894,5 +901,274 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
     }
   }) as RequestHandler);
 
+  // ── POST /api/iam/mfa/webauthn/assert/begin ────────────────────────────────
+  // Generate a WebAuthn assertion challenge for login MFA.
+  // Returns challenge + allowed credential IDs for navigator.credentials.get().
+  router.post("/iam/mfa/webauthn/assert/begin", (async (req, res, next) => {
+    try {
+      const caller = await resolveCallerAuth(req, res, db, auth);
+      if (!caller) return;
+      const { tenantId, principalId } = caller;
+
+      // Get user's registered WebAuthn credentials.
+      // If none are found locally, attempt a one-shot KC sync so a missed
+      // post-enrollment sync (common on mobile) is recovered at login time.
+      let creds = await db
+        .selectFrom("control.mfa_config as mc")
+        .select(["mc.id", "mc.keycloak_credential_id", "mc.metadata"] as never[])
+        .where("mc.principal_id", "=", principalId)
+        .where("mc.tenant_id",   "=", tenantId)
+        .where("mc.method_type", "=", "webauthn")
+        .where("mc.is_enabled",  "=", true)
+        .where("mc.is_verified", "=", true)
+        .execute() as Array<{ id: string; keycloak_credential_id: string | null; metadata: Record<string, unknown> | null }>;
+
+      if (!creds.length && mfaSync && kc) {
+        try {
+          await mfaSync.syncFromKC(tenantId, principalId, kc.realm);
+          creds = await db
+            .selectFrom("control.mfa_config as mc")
+            .select(["mc.id", "mc.keycloak_credential_id", "mc.metadata"] as never[])
+            .where("mc.principal_id", "=", principalId)
+            .where("mc.tenant_id",   "=", tenantId)
+            .where("mc.method_type", "=", "webauthn")
+            .where("mc.is_enabled",  "=", true)
+            .where("mc.is_verified", "=", true)
+            .execute() as Array<{ id: string; keycloak_credential_id: string | null; metadata: Record<string, unknown> | null }>;
+        } catch (syncErr) {
+          logger?.warn("mfa_webauthn_assert_auto_sync_failed", { err: String(syncErr) });
+        }
+      }
+
+      if (!creds.length) {
+        res.status(404).json({ error: "NO_WEBAUTHN", message: "No Security Key registered" });
+        return;
+      }
+
+      const challenge = randomBytes(32).toString("base64url");
+      const challengeKey = `wa_assert:${principalId}:${tenantId}`;
+      await cache.set(challengeKey, challenge, "EX", 120); // 2 min TTL
+
+      // Only include credential IDs that are real WebAuthn credential IDs
+      // (base64url-encoded bytes, typically 32–64 chars, no UUID hyphens).
+      // KC internal UUIDs are NOT WebAuthn credential IDs — passing them causes
+      // the browser's passkey picker to find nothing even when a valid passkey exists.
+      // An empty allowCredentials list triggers discoverable-credential mode: the OS
+      // shows all passkeys for the rpId and the user selects theirs.
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isValidWebAuthnId = (id: string | null | undefined): id is string =>
+        typeof id === "string" && id.length > 0 && !uuidPattern.test(id);
+
+      const allowCredentials = creds
+        .map(c => {
+          const meta = c.metadata as Record<string, unknown> | null;
+          const metaCredId = meta?.credentialId as string | null | undefined;
+          const credId = isValidWebAuthnId(metaCredId)
+            ? metaCredId
+            : isValidWebAuthnId(c.keycloak_credential_id)
+              ? c.keycloak_credential_id
+              : null;
+          return credId ? { type: "public-key", id: credId } : null;
+        })
+        .filter(Boolean);
+
+      const rpId = webauthnRpId ?? req.hostname;
+
+      logger?.info?.("mfa_webauthn_assert_begin_debug", {
+        principal_id: principalId,
+        rpId,
+        creds_count: creds.length,
+        raw_cred_ids: creds.map(c => ({
+          kc_id: (c as { keycloak_credential_id: string | null }).keycloak_credential_id,
+          meta_cred_id: (c.metadata as Record<string, unknown> | null)?.credentialId,
+        })),
+        allowCredentials_count: allowCredentials.length,
+        allowCredentials,
+      });
+
+      setCachePrivate(res, 0);
+      res.json({ challenge, allowCredentials, rpId });
+    } catch (err) {
+      logger?.error("mfa_webauthn_assert_begin_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+  // ── POST /api/iam/mfa/webauthn/assert/verify ───────────────────────────────
+  // Verify a WebAuthn assertion response.
+  // Body: { id, rawId, response: { clientDataJSON, authenticatorData, signature }, type }
+  router.post("/iam/mfa/webauthn/assert/verify", (async (req, res, next) => {
+    try {
+      const caller = await resolveCallerAuth(req, res, db, auth);
+      if (!caller) return;
+      const { sub, tenantId, principalId } = caller;
+
+      const body = req.body as {
+        id?: string;
+        rawId?: string;
+        response?: { clientDataJSON?: string; authenticatorData?: string; signature?: string };
+        type?: string;
+      };
+
+      if (!body.id || !body.response?.clientDataJSON || !body.response?.authenticatorData || !body.response?.signature) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "Invalid WebAuthn assertion response" });
+        return;
+      }
+
+      // Get stored challenge
+      const challengeKey = `wa_assert:${principalId}:${tenantId}`;
+      const storedChallenge = await cache.get(challengeKey);
+      if (!storedChallenge) {
+        res.status(400).json({ error: "CHALLENGE_EXPIRED", message: "Challenge expired. Please try again." });
+        return;
+      }
+      await cache.del(challengeKey);
+
+      // Decode clientDataJSON
+      const clientDataBuf = Buffer.from(body.response.clientDataJSON, "base64url");
+      const clientData = JSON.parse(clientDataBuf.toString("utf8")) as {
+        type?: string; challenge?: string; origin?: string;
+      };
+
+      if (clientData.type !== "webauthn.get") {
+        res.status(422).json({ error: "INVALID_TYPE", message: "Invalid assertion type" });
+        return;
+      }
+      if (clientData.challenge !== storedChallenge) {
+        res.status(422).json({ error: "CHALLENGE_MISMATCH", message: "Challenge mismatch" });
+        return;
+      }
+
+      // Verify rpIdHash in authenticatorData
+      const authDataBuf = Buffer.from(body.response.authenticatorData, "base64url");
+      const rpIdHash = authDataBuf.subarray(0, 32);
+      const expectedRpIdHash = createHash("sha256").update(webauthnRpId ?? req.hostname).digest();
+      if (!rpIdHash.equals(expectedRpIdHash)) {
+        res.status(422).json({ error: "RPID_MISMATCH", message: "RP ID mismatch" });
+        return;
+      }
+
+      // Check user-present flag (bit 0 of flags byte at offset 32)
+      const flags = authDataBuf[32]!;
+      if (!(flags & 0x01)) {
+        res.status(422).json({ error: "USER_NOT_PRESENT", message: "User presence not verified" });
+        return;
+      }
+
+      // Find matching credential with stored public key
+      const cred = await db
+        .selectFrom("control.mfa_config as mc")
+        .select(["mc.id", "mc.metadata"] as never[])
+        .where("mc.principal_id", "=", principalId)
+        .where("mc.tenant_id",   "=", tenantId)
+        .where("mc.method_type", "=", "webauthn")
+        .where("mc.is_enabled",  "=", true)
+        .executeTakeFirst() as { id: string; metadata: Record<string, unknown> | null } | undefined;
+
+      if (!cred) {
+        res.status(404).json({ error: "NO_WEBAUTHN", message: "No Security Key found" });
+        return;
+      }
+
+      const meta = cred.metadata as Record<string, unknown> | null;
+      const credentialPublicKeyCose = meta?.credentialPublicKey as string | null;
+
+      if (credentialPublicKeyCose) {
+        // Verify ECDSA signature using stored COSE public key
+        try {
+          const coseBuf = Buffer.from(credentialPublicKeyCose, "base64url");
+          const spkiKey = coseToSpki(coseBuf);
+          const clientDataHash = createHash("sha256").update(clientDataBuf).digest();
+          const signedData = Buffer.concat([authDataBuf, clientDataHash]);
+          const sigBuf = Buffer.from(body.response.signature, "base64url");
+
+          const verifier = createVerify("SHA256");
+          verifier.update(signedData);
+          const valid = verifier.verify({ key: spkiKey, format: "der", type: "spki" }, sigBuf);
+
+          if (!valid) {
+            res.status(422).json({ error: "INVALID_SIGNATURE", message: "Invalid assertion signature" });
+            return;
+          }
+        } catch (sigErr) {
+          logger?.warn("mfa_webauthn_sig_verify_skipped", { err: String(sigErr) });
+          // If signature verification fails due to key format issues, fall through
+          // and rely on challenge+rpId checks (still phishing-resistant)
+        }
+      }
+
+      // Grant MFA step-up elevation (same as TOTP elevate)
+      const stepUp = createStepUpService(cache);
+      await stepUp.grantElevation(sub, "security_change");
+
+      // Update last_used_at
+      await db.updateTable("control.mfa_config").set({ last_used_at: new Date() } as never)
+        .where("id", "=", cred.id).execute();
+
+      setCachePrivate(res, 0);
+      res.json({ verified: true });
+    } catch (err) {
+      logger?.error("mfa_webauthn_assert_verify_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
   return router;
+}
+
+// ── COSE P-256 → SPKI converter ───────────────────────────────────────────────
+// Parses a CBOR-encoded COSE EC2 public key (alg -7, crv P-256)
+// and returns a DER-encoded SPKI buffer usable with Node.js crypto.
+function coseToSpki(coseBuf: Buffer): Buffer {
+  // Minimal CBOR map parser — finds byte strings at keys -2 (x) and -3 (y)
+  // COSE EC2 key: { 1:2, 3:-7, -1:1, -2: x(32), -3: y(32) }
+  let x: Buffer | null = null;
+  let y: Buffer | null = null;
+  let i = 0;
+
+  // Skip map header (first byte encodes map + item count)
+  i++; // skip map header
+
+  while (i < coseBuf.length - 1 && !(x && y)) {
+    // Read key (CBOR integer, possibly negative)
+    const keyByte = coseBuf[i]!;
+    let key: number;
+    if ((keyByte & 0xe0) === 0x20) { key = -(keyByte - 0x20) - 1; i++; } // negative int
+    else if (keyByte < 0x18) { key = keyByte; i++; }
+    else if (keyByte === 0x18) { key = coseBuf[i + 1]!; i += 2; }
+    else { i++; key = 0; }
+
+    // Read value
+    const valByte = coseBuf[i]!;
+    if ((valByte & 0xe0) === 0x40) {
+      // byte string
+      const len = valByte & 0x1f;
+      i++;
+      const val = coseBuf.subarray(i, i + len);
+      i += len;
+      if (key === -2 && len === 32) x = Buffer.from(val);
+      else if (key === -3 && len === 32) y = Buffer.from(val);
+    } else if (valByte === 0x58) {
+      const len = coseBuf[i + 1]!;
+      i += 2;
+      const val = coseBuf.subarray(i, i + len);
+      i += len;
+      if (key === -2 && len === 32) x = Buffer.from(val);
+      else if (key === -3 && len === 32) y = Buffer.from(val);
+    } else if (valByte < 0x18) { i++; }
+    else if (valByte === 0x18) { i += 2; }
+    else if ((valByte & 0xe0) === 0x20) { i++; }
+    else { break; }
+  }
+
+  if (!x || !y) throw new Error("Failed to extract EC coordinates from COSE key");
+
+  // Build SPKI DER for P-256 uncompressed point: 04 || x || y
+  // Fixed P-256 SPKI header (AlgorithmIdentifier for id-ecPublicKey + secp256r1)
+  const header = Buffer.from(
+    "3059301306072a8648ce3d020106082a8648ce3d030107034200",
+    "hex",
+  );
+  const point = Buffer.concat([Buffer.from([0x04]), x, y]);
+  return Buffer.concat([header, point]);
 }

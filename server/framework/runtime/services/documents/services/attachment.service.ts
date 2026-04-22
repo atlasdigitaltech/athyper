@@ -26,6 +26,10 @@ import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
 
 export interface UploadParams {
   tenantId:    string;
+  /** Tenant code (e.g. "athyper") — first segment of X-Org header. */
+  tenantCode?: string;
+  /** Company code (e.g. "ASAC") — second segment of X-Org header. */
+  companyCode?: string;
   entityType:  string;
   /** UUID of the owning document record, passed as string (entity_id is text in DB). */
   entityId:    string;
@@ -118,6 +122,10 @@ class Sha256PassThrough extends Transform {
 
 export interface UploadStreamParams {
   tenantId:    string;
+  /** Tenant code (e.g. "athyper") — first segment of X-Org header. */
+  tenantCode?: string;
+  /** Company code (e.g. "ASAC") — second segment of X-Org header. */
+  companyCode?: string;
   entityType:  string;
   entityId:    string;
   stream:      NodeJS.ReadableStream;
@@ -155,9 +163,12 @@ export class ContentAttachmentService {
   }
 
   /**
-   * Generates a deterministic S3 key for a given attachment.
-   * Pattern: tenant/{tenantId}/{schemaSlug}/{entityId}/{attachmentId}/v1/{fileName}
-   * e.g.    tenant/uuid/document/purchase_invoice/uuid/uuid/v1/invoice.pdf
+   * Generates a deterministic S3 key for a document attachment.
+   *
+   * Path: {tenantCode}/{companyCode}/{year}/{month}/{entityType}/{entityId}/{attachmentId}/v{N}/{fileName}
+   * e.g.  athyper/ASAC/2026/04/document/invoice/019.../019.../v1/invoice.pdf
+   *
+   * Falls back to tenantId when tenant/company codes are unavailable.
    */
   generateStorageKey(
     tenantId:     string,
@@ -165,18 +176,25 @@ export class ContentAttachmentService {
     entityId:     string,
     attachmentId: string,
     fileName:     string,
+    versionNo = 1,
+    companyCode?: string,
+    tenantCode?:  string,
   ): string {
-    // "document.purchase_invoice" → "document/purchase_invoice"
-    const safeType = entityType.replace(/\./g, "/");
-    const sanitized = this.sanitizeFileName(fileName);
-    return `tenant/${tenantId}/${safeType}/${entityId}/${attachmentId}/v1/${sanitized}`;
+    const now        = new Date();
+    const year       = now.getUTCFullYear();
+    const month      = String(now.getUTCMonth() + 1).padStart(2, "0");
+    const safeType   = entityType.replace(/\./g, "/");
+    const sanitized  = this.sanitizeFileName(fileName);
+    const tCode      = tenantCode  ?? tenantId;
+    const cCode      = companyCode ?? tenantId;
+    return `${tCode}/${cCode}/${year}/${month}/${safeType}/${entityId}/${attachmentId}/v${versionNo}/${sanitized}`;
   }
 
   // ── Upload ───────────────────────────────────────────────────────────────────
 
   async upload(params: UploadParams): Promise<UploadResult> {
     const {
-      tenantId, entityType, entityId,
+      tenantId, tenantCode, companyCode, entityType, entityId,
       fileBuffer, fileName, contentType, sizeBytes,
       principalId, linkKind = "related",
       initialStatus = "active",
@@ -185,7 +203,7 @@ export class ContentAttachmentService {
     } = params;
 
     const attachmentId = crypto.randomUUID();
-    const storageKey   = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName);
+    const storageKey   = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
     const sha256       = createHash("sha256").update(fileBuffer).digest("hex");
 
     // ── Step 1: upload to S3 before touching the DB ──────────────────────────
@@ -267,14 +285,14 @@ export class ContentAttachmentService {
 
   async uploadStream(params: UploadStreamParams): Promise<UploadResult> {
     const {
-      tenantId, entityType, entityId,
+      tenantId, tenantCode, companyCode, entityType, entityId,
       stream, fileName, contentType,
       contentLength,
       principalId, linkKind = "related",
     } = params;
 
     const attachmentId  = crypto.randomUUID();
-    const storageKey    = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName);
+    const storageKey    = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
 
     // Pipe the incoming stream through the hashing transform before S3
     const sha256Stream  = new Sha256PassThrough();

@@ -20,6 +20,7 @@ import type { Queue } from "bullmq";
 import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
 import type { ExtractTextJobData, SweepJobData } from "@athyper/svc-jobs";
 import { registerAttachmentRoutes } from "./attachments.route.js";
+import { registerFolderRoutes } from "./folder.route.js";
 import { resolveDocumentEntity } from "./entity-resolver.js";
 import {
   verifyBearer,
@@ -582,7 +583,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
     }
   };
 
-  // Attachment routes — registered first; more specific paths take priority
+  // Folder + attachment routes — more specific paths registered first
+  registerFolderRoutes(router, { db, auth, logger });
   registerAttachmentRoutes(router, deps);
 
   router.get("/documents/:docType",                 listHandler);

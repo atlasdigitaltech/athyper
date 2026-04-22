@@ -2684,6 +2684,45 @@ COMMENT ON COLUMN master.entity_document_link.entity_id IS
     'text type allows linking to composite-key or non-uuid entities.';
 
 
+-- ── §12.8  master.attachment_folder ──────────────────────────────────────────
+-- Virtual folder hierarchy for grouping entity attachments.
+-- Folders are scoped per (tenant, entity_type, entity_id).
+-- entity_document_link.folder_id FK → this table (nullable; NULL = uncategorized).
+
+CREATE TABLE IF NOT EXISTS master.attachment_folder (
+    id            uuid        NOT NULL DEFAULT gen_random_uuid(),
+    tenant_id     uuid        NOT NULL,
+
+    -- Polymorphic entity scope (mirrors entity_document_link)
+    entity_type   text        NOT NULL,
+    entity_id     text        NOT NULL,
+
+    name          text        NOT NULL,
+    parent_id     uuid        REFERENCES master.attachment_folder(id) ON DELETE SET NULL,
+    display_order integer     NOT NULL DEFAULT 0,
+
+    -- Audit
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    created_by    uuid        NOT NULL,
+    updated_at    timestamptz NOT NULL DEFAULT now(),
+    updated_by    uuid,
+
+    CONSTRAINT af_pkey            PRIMARY KEY (id),
+    CONSTRAINT af_name_chk        CHECK (btrim(name) <> ''),
+    CONSTRAINT af_entity_type_chk CHECK (btrim(entity_type) <> ''),
+    CONSTRAINT af_entity_id_chk   CHECK (btrim(entity_id) <> '')
+);
+
+COMMENT ON TABLE master.attachment_folder IS
+    'ARCHETYPE=D;SCOPE=T. Virtual folder hierarchy for grouping entity_document_link rows. '
+    'Scoped per (tenant, entity_type, entity_id). NULL folder_id in entity_document_link = uncategorized.';
+
+
+-- ── §12.7 addendum — folder_id on entity_document_link ───────────────────────
+ALTER TABLE master.entity_document_link
+    ADD COLUMN IF NOT EXISTS folder_id uuid REFERENCES master.attachment_folder(id) ON DELETE SET NULL;
+
+
 -- ============================================================================
 -- §trusted_device — step-up suppression tokens (app-owned, NOT a KC credential)
 -- ============================================================================

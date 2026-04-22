@@ -96,6 +96,13 @@ export interface IamRoutesDeps {
     webClientId?: string;
     getAdminToken(): Promise<string>;
   };
+  /**
+   * WebAuthn Relying Party ID — must match KC's WebAuthn Policy rpId.
+   * Use the shared parent domain of KC and the app origins.
+   * e.g. KC at iam.athyper.local + app at neon.athyper.local → "athyper.local"
+   * Reads from WEBAUTHN_RP_ID env var when not passed explicitly.
+   */
+  webauthnRpId?: string;
 }
 
 export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
@@ -113,6 +120,7 @@ export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
   createMfaRoutes(router, {
     ...deps,
     kc: deps.kc,
+    webauthnRpId: deps.webauthnRpId ?? process.env.WEBAUTHN_RP_ID,
   });
 
   // Sprint 43: Company-code access admin + permission log viewer + IdP sync health

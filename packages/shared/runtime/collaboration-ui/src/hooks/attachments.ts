@@ -94,26 +94,28 @@ export function useCommentAttachments(): UseCommentAttachmentsResult {
     (files: FileList | File[]) => {
       const fileArr = Array.from(files);
 
+      // Build entries OUTSIDE the setState updater. React Strict Mode double-invokes
+      // updater functions to surface side effects — putting uploadFile inside the
+      // updater (even via setTimeout) caused two S3 uploads per file in dev.
+      const allNew: StagedAttachment[] = fileArr.map((file) => ({
+        key:          `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        progress:     0,
+        status:       "uploading" as StagedStatus,
+        attachmentId: null,
+        errorMessage: null,
+      }));
+
+      if (allNew.length === 0) return;
+
       setStaged((prev) => {
         const available = MAX_FILES - prev.length;
         if (available <= 0) return prev;
-
-        const toAdd: StagedAttachment[] = fileArr.slice(0, available).map((file) => ({
-          key:          `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          file,
-          progress:     0,
-          status:       "uploading" as StagedStatus,
-          attachmentId: null,
-          errorMessage: null,
-        }));
-
-        // Kick off uploads outside of setState
-        setTimeout(() => {
-          toAdd.forEach((entry) => void uploadFile(entry));
-        }, 0);
-
-        return [...prev, ...toAdd];
+        return [...prev, ...allNew.slice(0, available)];
       });
+
+      // Trigger uploads once, outside the updater — safe from Strict Mode double-invoke.
+      allNew.forEach((entry) => void uploadFile(entry));
     },
     [uploadFile],
   );

@@ -44,7 +44,7 @@ function toAttachmentResponse(result: UploadResult, docType: string, docId: stri
     status:          result.status,
     version_no:      result.versionNo,
     created_by_name: null,
-    download_url: `/api/relay/documents/${encodeURIComponent(docType)}/${encodeURIComponent(docId)}/attachments/${encodeURIComponent(result.id)}/download`,
+    download_url: `/api/relay/api/documents/${encodeURIComponent(docType)}/${encodeURIComponent(docId)}/attachments/${encodeURIComponent(result.id)}/download`,
   };
 }
 
@@ -174,6 +174,22 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         entityId:   id,
       });
 
+      // Fetch folder_id per link row (not on the attachment itself)
+      const folderMap = await db
+        .selectFrom("master.entity_document_link as edl")
+        .select(["edl.attachment_id", "edl.folder_id"])
+        .where("edl.tenant_id",  "=", tenantId)
+        .where("edl.entity_type","=", entity.name as string)
+        .where("edl.entity_id",  "=", id)
+        .execute()
+        .then((rows) => {
+          const m: Record<string, string | null> = {};
+          (rows as Record<string, unknown>[]).forEach((r) => {
+            m[r["attachment_id"] as string] = (r["folder_id"] as string) ?? null;
+          });
+          return m;
+        });
+
       res.json(
         items.map((item) => ({
           id:              item.id,
@@ -184,7 +200,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
           created_by_name: item.uploadedByName,
           link_kind:       item.linkKind,
           version_no:      item.versionNo,
-          download_url: `/api/relay/documents/${encodeURIComponent(docType)}/${encodeURIComponent(id)}/attachments/${encodeURIComponent(item.id)}/download`,
+          folder_id:       folderMap[item.id] ?? null,
+          download_url: `/api/relay/api/documents/${encodeURIComponent(docType)}/${encodeURIComponent(id)}/attachments/${encodeURIComponent(item.id)}/download`,
         })),
       );
     } catch (err) {
@@ -244,8 +261,13 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       const sizeBytes   = body.size_bytes ?? fileBuffer.length;
       const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
 
+      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || undefined;
+      const companyCode = (xOrg.split("--")[1] ?? "").trim() || undefined;
+
       const result = await svc.upload({
         tenantId,
+        tenantCode,
+        companyCode,
         entityType:  entity.name as string,
         entityId:    id,
         fileBuffer,
@@ -317,7 +339,10 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       let uploadPromise: Promise<UploadResult> | null = null;
       let fileLimitExceeded = false;
 
-      bb.on("file", (fieldName, fileStream, info) => {
+      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || undefined;
+      const companyCode = (xOrg.split("--")[1] ?? "").trim() || undefined;
+
+      bb.on("file", (_fieldName, fileStream, info) => {
         const { filename, mimeType } = info;
 
         fileStream.on("limit", () => {
@@ -328,6 +353,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
 
         uploadPromise = svc.uploadStream({
           tenantId,
+          tenantCode,
+          companyCode,
           entityType:    entity.name as string,
           entityId:      id,
           stream:        fileStream,
@@ -608,9 +635,84 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
     }
   };
 
+  // ── RENAME attachment (PATCH) ────────────────────────────────────────────────
+  const renameHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { docType, id, attachmentId } = req.params as {
+        docType: string; id: string; attachmentId: string;
+      };
+
+      if (!isUuid(id) || !isUuid(attachmentId)) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Attachment not found" });
+        return;
+      }
+
+      const body = req.body as { filename?: string };
+      const newFilename = body.filename?.trim().slice(0, 500);
+      if (!newFilename) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "filename is required" });
+        return;
+      }
+
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
+        return;
+      }
+
+      const entity = await resolveDocumentEntity(db, docType);
+      if (!entity) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
+        return;
+      }
+
+      const sub         = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalId(db, sub, tenantId);
+
+      // Verify attachment belongs to this entity before renaming
+      const link = await db
+        .selectFrom("master.entity_document_link as edl")
+        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .select(["a.id"] as never[])
+        .where("edl.tenant_id"  as never, "=", tenantId              as never)
+        .where("edl.entity_type" as never, "=", (entity.name as string) as never)
+        .where("edl.entity_id"  as never, "=", id                    as never)
+        .where("a.id"           as never, "=", attachmentId           as never)
+        .where("a.status"       as never, "=", "active"              as never)
+        .executeTakeFirst();
+
+      if (!link) {
+        res.status(404).json({ error: "ATTACHMENT_NOT_FOUND", message: "Attachment not found" });
+        return;
+      }
+
+      await db
+        .updateTable("master.attachment" as never)
+        .set({
+          file_name:  newFilename as never,
+          updated_at: new Date()  as never,
+          updated_by: principalId as never,
+        } as never)
+        .where("id"        as never, "=", attachmentId as never)
+        .where("tenant_id" as never, "=", tenantId     as never)
+        .execute();
+
+      res.json({ id: attachmentId, filename: newFilename });
+    } catch (err) {
+      logger?.error("attachments_rename_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // Register routes — more specific paths first
   router.get(    "/documents/:docType/:id/attachments/:attachmentId/download", downloadHandler);
   router.post(   "/documents/:docType/:id/attachments/:attachmentId/reindex",  reindexHandler);
+  router.patch(  "/documents/:docType/:id/attachments/:attachmentId",          renameHandler);
   router.get(    "/documents/:docType/:id/attachments",                        listHandler);
   router.post(   "/documents/:docType/:id/attachments",                        uploadHandler);
   router.delete( "/documents/:docType/:id/attachments/:attachmentId",          deleteHandler);

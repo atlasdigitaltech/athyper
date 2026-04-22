@@ -113,6 +113,16 @@ export const themePresets: readonly ThemePresetMeta[] = [
     mutedColor: "oklch(0.94 0.015 340)",
   },
   {
+    value: "atlas-vintage",
+    label: "atlas vintage",
+    description: "Warm ochre and parchment tones. Earthy elegance for timeless interfaces.",
+    radius: "0.625rem",
+    category: "retro",
+    contractVersion: THEME_CONTRACT_VERSION,
+    primaryColor: "#a67c52",
+    mutedColor: "#ece5d8",
+  },
+  {
     value: "atlas-neo",
     label: "atlas neo",
     description: "Zero radius, black borders, hard offset shadows. Raw and uncompromising.",
@@ -131,16 +141,6 @@ export const themePresets: readonly ThemePresetMeta[] = [
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.5016 0.1887 27.4816)",
     mutedColor: "oklch(0.7826 0 0)",
-  },
-  {
-    value: "atlas-vintage",
-    label: "atlas vintage",
-    description: "Warm parchment background with earthy brown tones. Understated and timeless.",
-    radius: "0.625rem",
-    category: "retro",
-    contractVersion: THEME_CONTRACT_VERSION,
-    primaryColor: "#a67c52",
-    mutedColor: "#ece5d8",
   },
 ] as const;
 

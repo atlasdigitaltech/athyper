@@ -47,6 +47,8 @@ export interface KcCredential {
   userLabel?: string;
   createdDate?: number; // epoch ms
   priority?: number;
+  credentialData?: string; // JSON string: { credentialId, credentialPublicKey, aaguid, counter, ... }
+  secretData?: string;
 }
 
 export interface SyncResult {
@@ -286,8 +288,22 @@ export class MfaSyncService {
       const existing = appRowByKcId.get(kcCred.id);
       const enrolledAt = kcCred.createdDate ? new Date(kcCred.createdDate) : new Date();
 
+      // Extract public key from KC credentialData for assertion verification later
+      let credMeta: Record<string, unknown> = {};
+      if (kcCred.credentialData) {
+        try {
+          const parsed = JSON.parse(kcCred.credentialData) as Record<string, unknown>;
+          credMeta = {
+            credentialPublicKey: parsed.credentialPublicKey ?? null,
+            aaguid:              parsed.aaguid ?? null,
+            counter:             parsed.counter ?? 0,
+            credentialId:        parsed.credentialId ?? kcCred.id,
+          };
+        } catch { /* ignore malformed credentialData */ }
+      }
+      const metaJson = JSON.stringify(credMeta);
+
       if (existing) {
-        // Update sync status and label for the existing row
         await this.db
           .updateTable("control.mfa_config")
           .set({
@@ -296,6 +312,7 @@ export class MfaSyncService {
             user_label:             kcCred.userLabel ?? null,
             is_enabled:             true,
             is_verified:            true,
+            metadata:               sql`${metaJson}::jsonb`,
             enrolled_at:            existing.is_enabled ? undefined : enrolledAt,
             verified_at:            existing.is_verified ? undefined : enrolledAt,
             updated_at:             sql`now()`,
@@ -303,16 +320,14 @@ export class MfaSyncService {
           .where("id", "=", existing.id)
           .execute();
       } else {
-        // Upsert: insert if no row for this method_type, else update the existing row.
-        // Uses ON CONFLICT on the (tenant_id, principal_id, method_type) unique key.
         await sql`
           INSERT INTO control.mfa_config
             (tenant_id, principal_id, method_type, is_primary, is_enabled, is_verified,
-             keycloak_credential_id, keycloak_sync_status, user_label,
+             keycloak_credential_id, keycloak_sync_status, user_label, metadata,
              enrolled_at, verified_at, created_by)
           VALUES (
             ${tenantId}::uuid, ${principalId}::uuid, ${methodType}, false, true, true,
-            ${kcCred.id}, 'synced', ${kcCred.userLabel ?? null},
+            ${kcCred.id}, 'synced', ${kcCred.userLabel ?? null}, ${metaJson}::jsonb,
             ${enrolledAt.toISOString()}::timestamptz, ${enrolledAt.toISOString()}::timestamptz,
             ${principalId}::uuid
           )
@@ -321,6 +336,7 @@ export class MfaSyncService {
             keycloak_credential_id = EXCLUDED.keycloak_credential_id,
             keycloak_sync_status   = 'synced',
             user_label             = EXCLUDED.user_label,
+            metadata               = EXCLUDED.metadata,
             is_enabled             = true,
             is_verified            = true,
             enrolled_at            = COALESCE(control.mfa_config.enrolled_at, EXCLUDED.enrolled_at),

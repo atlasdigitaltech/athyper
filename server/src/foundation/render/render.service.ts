@@ -30,6 +30,10 @@ import type { PdfRenderOptions, SyncPdfRenderer } from "./pdf-renderer-client.js
 
 export interface RenderDocumentInput {
   tenantId:          string;
+  /** Tenant code (e.g. "athyper") for storage path partitioning. */
+  tenantCode?:       string;
+  /** Company code (e.g. "ACFB") for storage path partitioning. */
+  companyCode?:      string;
   entityType:        string;
   entityId:          string;
   operation:         string;
@@ -99,7 +103,13 @@ export class RenderService {
       // Upload to object storage
       let storageKey: string | null = null;
       if (this.storage) {
-        storageKey = `renders/${input.tenantId}/${input.entityType}/${input.entityId}/${outputId}.pdf`;
+        const rNow   = new Date();
+        const rYear  = rNow.getUTCFullYear();
+        const rMon   = String(rNow.getUTCMonth() + 1).padStart(2, "0");
+        const rType  = input.entityType.replace(/\./g, "/");
+        const tCode  = input.tenantCode  ?? input.tenantId;
+        const cCode  = input.companyCode ?? input.tenantId;
+        storageKey = `${tCode}/${cCode}/${rYear}/${rMon}/renders/${rType}/${input.entityId}/${outputId}.pdf`;
         await this.storage.put(storageKey, pdfBuffer, { contentType: "application/pdf" });
       }
 
