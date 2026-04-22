@@ -1806,7 +1806,8 @@ CREATE TABLE IF NOT EXISTS master.payment_method (
     CONSTRAINT payment_method_tenant_code_uq    UNIQUE (tenant_id, code),
     CONSTRAINT payment_method_code_nonempty     CHECK (btrim(code) <> ''),
     CONSTRAINT payment_method_name_nonempty     CHECK (btrim(name) <> ''),
-    CONSTRAINT payment_method_sort_chk          CHECK (sort_order >= 0)
+    CONSTRAINT payment_method_sort_chk          CHECK (sort_order >= 0),
+    CONSTRAINT payment_method_status_chk        CHECK (status IN ('active', 'inactive', 'archived'))
 );
 
 COMMENT ON TABLE master.payment_method IS

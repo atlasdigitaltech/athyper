@@ -86,7 +86,10 @@ export function FlowSummaryPanel({
                 </span>
                 <span className={cn(
                   "text-sm tabular-nums shrink-0",
-                  ROLE_INTENT[line.summary_role] ?? "text-foreground",
+                  // Only apply semantic colour when the amount is non-zero
+                  Number(line.value) === 0
+                    ? "text-muted-foreground/50"
+                    : (ROLE_INTENT[line.summary_role] ?? "text-foreground"),
                 )}>
                   {fmt(line.value)}
                   {currencyCode && (
@@ -115,7 +118,7 @@ export function FlowSummaryPanel({
                   {line.label}
                 </span>
                 <span className="text-2xs font-medium text-foreground">
-                  {String(line.value ?? "—")}
+                  {line.displayValue ?? "—"}
                 </span>
               </div>
             ))}

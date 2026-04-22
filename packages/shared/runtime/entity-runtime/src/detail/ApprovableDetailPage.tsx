@@ -16,7 +16,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
@@ -284,6 +284,41 @@ export function ApprovableDetailPage({
   // This is a plain fetch() wrapped in useQuery — NOT Kysely (server-only).
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  // Collect ALL reference fields that carry a UUID value — driven entirely by
+  // entity_field.reference_config.target_entity (compiled from validation.ref_entity).
+  // No hardcoding needed: every field with data_type="reference" and a valid UUID value
+  // is resolved automatically.
+  const refFields = useMemo(() => {
+    return entity.fields
+      .filter(
+        (f) =>
+          f.data_type === "reference" &&
+          f.reference_config?.target_entity &&
+          UUID_RE.test(String(data[f.name] ?? data[f.column_name ?? ""] ?? "")),
+      )
+      .map((f) => ({
+        name: f.name,
+        targetEntity: f.reference_config!.target_entity,
+        displayField: f.reference_config?.display_field ?? "name",
+        value: String(data[f.name] ?? data[f.column_name ?? ""]),
+      }));
+  }, [entity.fields, data]);
+
+  const refQueries = useQueries({
+    queries: refFields.map(({ targetEntity, value }) => ({
+      queryKey: ["entity-ref", targetEntity, value],
+      queryFn: async ({ signal }: { signal: AbortSignal }) => {
+        const res = await fetch(
+          `/api/relay/api/records/${encodeURIComponent(targetEntity)}/${encodeURIComponent(value)}`,
+          { signal },
+        );
+        if (!res.ok) return null;
+        return res.json() as Promise<{ data: Record<string, unknown> }>;
+      },
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
   const partyIdField = entity.display_config.document_header?.party_id_field;
   const partyId = partyIdField ? String(data[partyIdField] ?? "") : "";
 
@@ -421,14 +456,29 @@ export function ApprovableDetailPage({
   headerData.blockedReasons = orchestrator.blockedReasons;
 
   // ── Resolved refs map — UUID → display name for all known references ────────
+  // Built from the generic refQueries batch (covers all reference fields) plus
+  // explicit overrides for party and company_code (richer format with code+name).
   const resolvedRefs = useMemo(() => {
     const m = new Map<string, string>();
+    // Generic resolution: payment_term, payment_method, cost_center, profit_center, site, etc.
+    refFields.forEach(({ value, displayField }, i) => {
+      const result = refQueries[i]?.data;
+      if (!result?.data) return;
+      const d = result.data;
+      const label =
+        (d[displayField] as string | undefined) ??
+        (d["name"] as string | undefined) ??
+        (d["code"] as string | undefined) ??
+        null;
+      if (label) m.set(value, label);
+    });
+    // Explicit overrides: party and company_code use richer display formats.
     if (partyId && resolvedPartyName) m.set(partyId, resolvedPartyName);
     if (companyCodeId && resolvedCompanyCode) {
       m.set(companyCodeId, `${resolvedCompanyCode.code} · ${resolvedCompanyCode.name}`);
     }
     return m;
-  }, [partyId, resolvedPartyName, companyCodeId, resolvedCompanyCode]);
+  }, [refFields, refQueries, partyId, resolvedPartyName, companyCodeId, resolvedCompanyCode]);
 
   // Build ordered tab list
   const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;

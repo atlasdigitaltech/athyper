@@ -101,6 +101,58 @@ WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
+-- ── Extended fields missing from v1 registration ──────────────────────────────
+-- These columns exist on document.purchase_invoice but were not initially seeded.
+INSERT INTO control.entity_field (
+    entity_version_id,
+    name, column_name, label, data_type,
+    cardinality, origin, enum_domain_code,
+    is_required, is_filterable,
+    validation, sort_order, created_by)
+SELECT ev.id,
+       f.name, f.column_name, f.label, f.data_type,
+       f.cardinality, 'standard', f.enum_domain_code,
+       f.is_required, f.is_filterable,
+       f.validation, f.sort_order,
+       '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+CROSS JOIN (VALUES
+    -- Commitment reference (P2P linkage)
+    ('commitment_id',            'commitment_id',            'Commitment/PO',      'reference', 'zero_or_one', NULL::text, false, true,  '{"ref_entity":"purchase_order"}'::jsonb,              43),
+    -- Dates not in original registration
+    ('received_date',            'received_date',            'Received Date',      'date',      'one',         NULL::text, true,  false, NULL::jsonb,                                          57),
+    ('baseline_date',            'baseline_date',            'Baseline Date',      'date',      'zero_or_one', NULL::text, false, false, NULL::jsonb,                                          62),
+    -- FX
+    ('base_currency_code',       'base_currency_code',       'Base Currency',      'text',      'one',         NULL::text, true,  true,  '{"max_length":3}'::jsonb,                            72),
+    ('exchange_rate',            'exchange_rate',            'Exchange Rate',      'decimal',   'zero_or_one', NULL::text, false, false, '{"min":0}'::jsonb,                                   74),
+    -- Amount detail breakdown
+    ('discount_amount',          'discount_amount',          'Discount',           'decimal',   'one',         NULL::text, false, false, '{"min":0}'::jsonb,                                   83),
+    ('freight_amount',           'freight_amount',           'Freight',            'decimal',   'one',         NULL::text, false, false, '{"min":0}'::jsonb,                                   85),
+    ('misc_charges_amount',      'misc_charges_amount',      'Misc. Charges',      'decimal',   'one',         NULL::text, false, false, '{"min":0}'::jsonb,                                   87),
+    -- Derived totals
+    ('payable_amount',           'payable_amount',           'Payable Amount',     'decimal',   'one',         NULL::text, false, true,  '{"min":0}'::jsonb,                                  107),
+    ('advance_deduction_amount', 'advance_deduction_amount', 'Advance Deduction',  'decimal',   'one',         NULL::text, false, false, '{"min":0}'::jsonb,                                  109),
+    ('retention_amount',         'retention_amount',         'Retention Amount',   'decimal',   'one',         NULL::text, false, false, '{"min":0}'::jsonb,                                  112),
+    ('retention_pct',            'retention_pct',            'Retention %',        'decimal',   'zero_or_one', NULL::text, false, false, '{"min":0,"max":100}'::jsonb,                         114),
+    -- Payment method
+    ('payment_method_id',        'payment_method_id',        'Payment Method',     'reference', 'zero_or_one', NULL::text, false, false, '{"ref_entity":"payment_method"}'::jsonb,             142),
+    -- Hold
+    ('is_on_hold',               'is_on_hold',               'On Hold',            'boolean',   'one',         NULL::text, false, false, NULL::jsonb,                                         163),
+    -- Freeform
+    ('notes',                    'notes',                    'Notes',              'text',      'zero_or_one', NULL::text, false, false, '{"max_length":2000}'::jsonb,                         170),
+    ('tags',                     'tags',                     'Tags',               'json',      'zero_or_one', NULL::text, false, false, NULL::jsonb,                                         175),
+    -- Budget result
+    ('budget_check_result',      'budget_check_result',      'Budget Check',       'text',      'zero_or_one', NULL::text, false, false, NULL::jsonb,                                         205),
+    -- Additional dimensions
+    ('profit_center_id',         'profit_center_id',         'Profit Center',      'reference', 'zero_or_one', NULL::text, false, true,  '{"ref_entity":"profit_center"}'::jsonb,              215),
+    ('site_id',                  'site_id',                  'Site',               'reference', 'zero_or_one', NULL::text, false, true,  '{"ref_entity":"site"}'::jsonb,                       222)
+) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
+       is_required, is_filterable, validation, sort_order)
+WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+ON CONFLICT DO NOTHING;
+
 -- ── Fix ref_entity: "supplier" → "vendor" on already-seeded rows ─────────────
 UPDATE control.entity_field ef
 SET validation = '{"ref_entity":"vendor"}'::jsonb

@@ -12,6 +12,9 @@ export type access_grant = {
     principal_id: string | null;
     permission_id: string;
     effect: string;
+    visibility_scope: string | null;
+    assignment_scope_type: string | null;
+    assignment_scope_ref_id: string | null;
     resource_type: string | null;
     resource_id: string | null;
     expires_at: Timestamp | null;
@@ -29,9 +32,6 @@ export type access_grant = {
     updated_by: string | null;
     status_changed_at: Timestamp | null;
     status_changed_by: string | null;
-    visibility_scope: string | null;
-    assignment_scope_type: string | null;
-    assignment_scope_ref_id: string | null;
 };
 export type accounting_distribution = {
     id: Generated<string>;
@@ -67,6 +67,28 @@ export type accounting_distribution = {
     encumbrance_je_id: string | null;
     description: string | null;
     metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type accounting_profile = {
+    id: Generated<string>;
+    tenant_id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    direction: Generated<string>;
+    subledger_type: Generated<string>;
+    domain_hint: string | null;
+    icon_key: string | null;
+    color_token: string | null;
+    sort_order: Generated<number>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -129,6 +151,7 @@ export type acct_profile_config = {
     reversal_period_offset: Generated<number>;
     tax_treatment: Generated<string>;
     default_tax_code: string | null;
+    default_tax_group_id: string | null;
     is_reverse_charge: Generated<boolean>;
     matching_type: Generated<string>;
     version: Generated<number>;
@@ -144,7 +167,6 @@ export type acct_profile_config = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_tax_group_id: string | null;
 };
 export type acct_profile_dimension_rule = {
     id: Generated<string>;
@@ -278,7 +300,7 @@ export type activity_log = {
     entity_id: string | null;
     actor_id: string | null;
     actor_type: string | null;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     detail: unknown | null;
     correlation_id: string | null;
     created_at: Generated<Timestamp>;
@@ -486,7 +508,6 @@ export type asset = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     description: string | null;
     asset_class_id: string;
     acquisition_date: Timestamp;
@@ -495,7 +516,6 @@ export type asset = {
     currency_code: Generated<string>;
     residual_value: Generated<string>;
     useful_life_months: number;
-    ou_id: string | null;
     cost_center_id: string | null;
     profit_center_id: string | null;
     project_id: string | null;
@@ -530,7 +550,6 @@ export type asset_assignment_history = {
     id: Generated<string>;
     tenant_id: string;
     company_code_id: string;
-    entity_code: string;
     asset_id: string;
     assignment_type: string;
     from_value_id: string | null;
@@ -556,7 +575,6 @@ export type asset_book = {
     code: Generated<string>;
     name: Generated<string>;
     company_code_id: string;
-    entity_code: string;
     asset_id: string;
     book_type: string;
     book_id: string | null;
@@ -603,16 +621,28 @@ export type asset_class = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     description: string | null;
     parent_id: string | null;
     level_no: Generated<number>;
     path: string | null;
     is_leaf: Generated<boolean>;
     capitalization_threshold: Generated<string>;
+    capitalization_currency: string | null;
     currency_code: Generated<string>;
     gl_account_defaults: Generated<unknown>;
     depreciation_defaults: Generated<unknown>;
+    asset_nature: Generated<string>;
+    is_depreciable: Generated<boolean>;
+    is_componentization_required: Generated<boolean>;
+    is_asset_tag_required: Generated<boolean>;
+    is_serial_tracking_required: Generated<boolean>;
+    is_location_tracking_required: Generated<boolean>;
+    default_uom_code: string | null;
+    useful_life_override_policy: Generated<string>;
+    disposal_requires_approval: Generated<boolean>;
+    transfer_requires_approval: Generated<boolean>;
+    revaluation_allowed: Generated<boolean>;
+    impairment_tracking_required: Generated<boolean>;
     sort_order: Generated<number>;
     tags: Generated<unknown>;
     metadata: Generated<unknown>;
@@ -624,19 +654,6 @@ export type asset_class = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    asset_nature: Generated<string>;
-    is_depreciable: Generated<boolean>;
-    capitalization_currency: string | null;
-    is_componentization_required: Generated<boolean>;
-    is_asset_tag_required: Generated<boolean>;
-    is_serial_tracking_required: Generated<boolean>;
-    is_location_tracking_required: Generated<boolean>;
-    default_uom_code: string | null;
-    useful_life_override_policy: Generated<string>;
-    disposal_requires_approval: Generated<boolean>;
-    transfer_requires_approval: Generated<boolean>;
-    revaluation_allowed: Generated<boolean>;
-    impairment_tracking_required: Generated<boolean>;
 };
 export type asset_class_book_policy = {
     id: Generated<string>;
@@ -690,7 +707,6 @@ export type asset_component = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     parent_asset_id: string;
     component_asset_id: string;
     component_type: string;
@@ -716,7 +732,6 @@ export type asset_revaluation_reserve = {
     id: Generated<string>;
     tenant_id: string;
     company_code_id: string;
-    entity_code: string;
     asset_id: string;
     asset_book_id: string;
     book_type: string;
@@ -746,7 +761,6 @@ export type asset_transaction = {
     code: Generated<string>;
     name: Generated<string>;
     company_code_id: string;
-    entity_code: string;
     asset_id: string;
     asset_book_id: string | null;
     book_type: string | null;
@@ -813,13 +827,21 @@ export type attachment = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    extracted_text: string | null;
+    extracted_text_chars: number | null;
+    text_extracted_at: Timestamp | null;
+    text_extraction_status: string | null;
+    text_extraction_error: string | null;
+    pii_detected: Generated<boolean>;
+    pii_types: Generated<unknown>;
+    pii_scanned_at: Timestamp | null;
 };
 export type attachment_access_log = {
     id: Generated<string>;
     tenant_id: string;
     log_type: Generated<string>;
     principal_id: string;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     attachment_id: string;
     parent_entity_type: string | null;
     parent_entity_id: string | null;
@@ -867,6 +889,19 @@ export type attachment_comment = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type audit_dlq = {
+    id: Generated<string>;
+    tenant_id: string;
+    queue_name: string;
+    job_name: string;
+    payload: unknown;
+    error_message: string;
+    retry_count: Generated<number>;
+    last_attempted_at: Timestamp;
+    retried_at: Timestamp | null;
+    retried_job_id: string | null;
+    created_at: Generated<Timestamp>;
+};
 export type audit_log = {
     id: Generated<string>;
     tenant_id: string;
@@ -876,7 +911,7 @@ export type audit_log = {
     operation: string;
     actor_id: string | null;
     actor_type: string | null;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     old_values: unknown | null;
     new_values: unknown | null;
     changed_fields: string[];
@@ -920,6 +955,10 @@ export type auth_group_role = {
     tenant_id: string;
     group_id: string;
     role_id: string;
+    visibility_scope: string;
+    assignment_scope_type: Generated<string>;
+    assignment_scope_ref_id: string | null;
+    include_descendants: Generated<boolean>;
     expires_at: Timestamp | null;
     assigned_by: string | null;
     metadata: Generated<unknown>;
@@ -929,10 +968,6 @@ export type auth_group_role = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    visibility_scope: string;
-    assignment_scope_type: string;
-    assignment_scope_ref_id: string | null;
-    include_descendants: Generated<boolean>;
 };
 export type bank_account = {
     id: Generated<string>;
@@ -1109,8 +1144,8 @@ export type blueprint_registry = {
     description: string | null;
     metadata: unknown | null;
     created_at: Generated<Timestamp>;
-    updated_at: Timestamp | null;
     created_by: string;
+    updated_at: Timestamp | null;
     updated_by: string | null;
 };
 export type book_period_status = {
@@ -1203,12 +1238,10 @@ export type budget_allocation = {
     fiscal_year: number;
     currency_code: string;
     cost_center_id: string | null;
-    ou_id: string | null;
     project_id: string | null;
     gl_account_id: string | null;
     profit_center_id: string | null;
     dimension_set_id: string | null;
-    owning_ou_id: string | null;
     responsible_person_id: string | null;
     allocated_amount: Generated<string>;
     reserved_amount: Generated<string>;
@@ -1283,7 +1316,6 @@ export type budget_profile = {
     fund_type: Generated<string>;
     fund_source: Generated<string>;
     fund_category: string | null;
-    owning_ou_id: string | null;
     responsible_person_id: string | null;
     currency_code: string;
     total_amount: Generated<string>;
@@ -1377,6 +1409,7 @@ export type business_intent = {
     depth: Generated<number>;
     default_gl_account_id: string | null;
     default_tax_code: string | null;
+    default_tax_group_id: string | null;
     default_asset_profile_code: string | null;
     is_approval_required: Generated<boolean>;
     max_auto_approve_amount: string | null;
@@ -1393,7 +1426,6 @@ export type business_intent = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_tax_group_id: string | null;
 };
 export type chart_of_account = {
     id: Generated<string>;
@@ -1469,13 +1501,12 @@ export type close_activity_log = {
     tenant_id: string;
     log_type: Generated<string>;
     activity_type: string;
-    entity_code: string;
     fiscal_year: number | null;
     period_number: number | null;
     close_period_id: string | null;
     actor_id: string | null;
     actor_type: string | null;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     detail: unknown | null;
     outcome: string | null;
     outcome_detail: string | null;
@@ -1489,7 +1520,6 @@ export type close_override_log = {
     tenant_id: string;
     log_type: Generated<string>;
     activity_type: string;
-    entity_code: string;
     book_code: string | null;
     fiscal_year: number | null;
     period_number: number | null;
@@ -1500,7 +1530,7 @@ export type close_override_log = {
     to_status: string | null;
     actor_id: string;
     actor_type: string | null;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     reason: string | null;
     evidence: unknown | null;
     correlation_id: string | null;
@@ -1659,12 +1689,16 @@ export type commitment = {
     project_id: string | null;
     site_id: string | null;
     dimension_set_id: string | null;
-    owning_ou_id: string | null;
     requested_by: string | null;
     advance_pct: string | null;
     advance_amount: string | null;
     retention_pct: string | null;
     retention_amount: string | null;
+    payment_term_id: string | null;
+    payment_term_version: number | null;
+    payment_term_snapshot: unknown | null;
+    payment_term_selected_at: Timestamp | null;
+    payment_term_selected_by: string | null;
     is_auto_renew: Generated<boolean>;
     renewal_terms: unknown | null;
     renewal_count: Generated<number>;
@@ -1689,11 +1723,6 @@ export type commitment = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    payment_term_id: string | null;
-    payment_term_version: number | null;
-    payment_term_snapshot: unknown | null;
-    payment_term_selected_at: Timestamp | null;
-    payment_term_selected_by: string | null;
 };
 export type commitment_address_snapshot = {
     id: Generated<string>;
@@ -2204,6 +2233,7 @@ export type company_code_supplier_profile = {
     payment_method_id: string | null;
     preferred_remittance_bank_link_id: string | null;
     tax_group_id: string | null;
+    default_wht_tax_group_id: string | null;
     settlement_profile_id: string | null;
     default_dimension_set_id: string | null;
     supplier_reconciliation_profile_id: string | null;
@@ -2217,8 +2247,25 @@ export type company_code_supplier_profile = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_wht_tax_group_id: string | null;
     payment_term_id: string | null;
+};
+export type connector_instance = {
+    id: Generated<string>;
+    tenant_id: string;
+    connector_type_id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    config: Generated<unknown>;
+    status: Generated<string>;
+    health_status: Generated<string>;
+    last_health_check_at: Timestamp | null;
+    last_error_message: string | null;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type connector_type = {
     id: Generated<string>;
@@ -2246,13 +2293,24 @@ export type consolidation_elimination = {
     fiscal_year: number;
     period_number: number;
     elimination_type: string;
+    consolidation_group: string | null;
+    ic_elimination_id: string | null;
     source_company_code_id: string;
     dest_company_code_id: string;
-    source_entity_code: string;
-    dest_entity_code: string;
     amount: string;
     currency_code: string;
+    functional_currency_code: string | null;
+    exchange_rate: string | null;
+    functional_amount: string | null;
     reference_je_id: string | null;
+    reversal_je_id: string | null;
+    approval_route: Generated<string>;
+    decision_score: string | null;
+    approved_at: Timestamp | null;
+    approved_by: string | null;
+    line_count: Generated<number>;
+    tags: Generated<unknown>;
+    metadata: Generated<unknown>;
     status: Generated<string>;
     posted_at: Timestamp | null;
     posted_by: string | null;
@@ -2260,19 +2318,6 @@ export type consolidation_elimination = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    ic_elimination_id: string | null;
-    consolidation_group: string | null;
-    functional_currency_code: string | null;
-    exchange_rate: string | null;
-    functional_amount: string | null;
-    line_count: Generated<number>;
-    decision_score: string | null;
-    approval_route: Generated<string>;
-    reversal_je_id: string | null;
-    approved_at: Timestamp | null;
-    approved_by: string | null;
-    tags: Generated<unknown>;
-    metadata: Generated<unknown>;
 };
 export type contact_email = {
     id: Generated<string>;
@@ -2439,7 +2484,6 @@ export type cost_center = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     parent_id: string | null;
     level_no: Generated<number>;
     path: string | null;
@@ -2567,7 +2611,7 @@ export type customer = {
 export type cycle_audit_log = {
     id: Generated<string>;
     tenant_id: string;
-    entity_code: string;
+    company_code_id: string | null;
     cycle_type_code: string | null;
     domain: string;
     event_type: string;
@@ -2900,6 +2944,8 @@ export type delegation_grant = {
 export type delivery_note = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     delivery_note_number: string;
     commitment_id: string;
@@ -2960,7 +3006,6 @@ export type depreciation_run = {
     code: Generated<string>;
     name: Generated<string>;
     company_code_id: string;
-    entity_code: string;
     book_type: string;
     book_id: string | null;
     fiscal_year: number;
@@ -3265,7 +3310,7 @@ export type employee = {
     department: string | null;
     title: string | null;
     manager_id: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     hire_date: Timestamp | null;
     termination_date: Timestamp | null;
     metadata: Generated<unknown>;
@@ -3278,7 +3323,6 @@ export type employee = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    company_code_id: string | null;
 };
 export type endpoint = {
     id: Generated<string>;
@@ -3323,9 +3367,9 @@ export type entity = {
     tenant_id: string | null;
     module_id: string;
     name: string;
-    entity_code: string | null;
     slug: string | null;
     entity_short: string | null;
+    entity_code: string;
     entity_class: Generated<string>;
     ownership_model: Generated<string>;
     kind: Generated<string>;
@@ -3482,6 +3526,69 @@ export type entity_field = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type entity_flow = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    entity_version_id: string;
+    flow_code: string;
+    label: string;
+    description: string | null;
+    icon_key: string | null;
+    trigger_context: string;
+    is_default: Generated<boolean>;
+    config: Generated<unknown>;
+    version_no: Generated<number>;
+    status: Generated<string>;
+    effective_from: Timestamp | null;
+    effective_to: Timestamp | null;
+    supersedes_flow_id: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type entity_flow_field = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    flow_step_id: string;
+    entity_field_id: string;
+    mode: string;
+    derivation_mode: string | null;
+    visible_when: unknown | null;
+    required_when: unknown | null;
+    default_source: string | null;
+    derive_expression: string | null;
+    override_permission: string | null;
+    override_requires_note: Generated<boolean>;
+    summary_role: string | null;
+    ui_variant: string | null;
+    format: string | null;
+    span: Generated<number>;
+    help_text: string | null;
+    placeholder: string | null;
+    sort_order: Generated<number>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type entity_flow_step = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    flow_id: string;
+    step_key: string;
+    label: string;
+    description: string | null;
+    icon_key: string | null;
+    sort_order: number;
+    skip_when: unknown | null;
+    advance_rule: Generated<unknown>;
+    layout_hint: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type entity_lifecycle = {
     id: Generated<string>;
     tenant_id: string | null;
@@ -3508,7 +3615,7 @@ export type entity_lifecycle_log = {
     to_state_id: string | null;
     actor_id: string | null;
     actor_type: string | null;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     remarks: string | null;
     payload: unknown | null;
     correlation_id: string | null;
@@ -3541,17 +3648,17 @@ export type entity_policy = {
     entity_id: string;
     entity_version_id: string | null;
     access_mode: Generated<string>;
-    ou_scope_mode: Generated<string>;
+    company_scope_mode: Generated<string>;
     audit_mode: Generated<string>;
     retention_policy: Generated<unknown>;
     default_filters: Generated<unknown>;
     cache_flags: Generated<unknown>;
+    field_scope_eval_order: Generated<string>;
+    extended_scope: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    field_scope_eval_order: Generated<string>;
-    extended_scope: Generated<unknown>;
 };
 export type entity_publish_state = {
     entity_id: string;
@@ -3564,11 +3671,11 @@ export type entity_publish_state = {
     last_schema_change_at: Timestamp | null;
     provenance: Generated<unknown>;
     status_summary: Generated<unknown>;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
     source_layer: Generated<string>;
     source_ref: string | null;
     applied_precedence: Generated<number>;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type entity_relation = {
     id: Generated<string>;
@@ -3618,7 +3725,7 @@ export type export_log = {
     entity_type: string | null;
     entity_id: string | null;
     actor_id: string;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     export_format: string | null;
     file_name: string | null;
     file_size_bytes: string | null;
@@ -3636,6 +3743,7 @@ export type feature_flag = {
     code: string;
     name: string;
     description: string | null;
+    flag_type: Generated<string>;
     is_enabled: Generated<boolean>;
     tenant_overrides: unknown | null;
     rollout_pct: number | null;
@@ -3645,14 +3753,13 @@ export type feature_flag = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    flag_type: Generated<string>;
 };
 export type field_access_log = {
     id: Generated<string>;
     tenant_id: string;
     log_type: Generated<string>;
     principal_id: string;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     entity_type: string;
     entity_id: string;
     field_name: string;
@@ -3765,7 +3872,7 @@ export type forecast_line = {
     project_id: string | null;
     budget_allocation_id: string | null;
     dimension_set_id: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     fiscal_year: number;
     period_from: Generated<number>;
     period_to: Generated<number>;
@@ -3806,7 +3913,6 @@ export type forecast_scenario = {
     period_from: Generated<number>;
     period_to: Generated<number>;
     planning_model_id: string | null;
-    owning_ou_id: string | null;
     responsible_person_id: string | null;
     base_currency_code: string;
     total_amount: Generated<string>;
@@ -3966,6 +4072,8 @@ export type gl_balance = {
 export type goods_receipt = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     receipt_number: string;
     commitment_id: string;
@@ -4119,12 +4227,12 @@ export type hook_action_registry = {
 export type ic_elimination = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     elimination_code: string;
     source_company_code_id: string;
     counterparty_company_code_id: string;
-    source_entity_code: string;
-    counterparty_entity_code: string;
     elimination_type: string;
     consolidation_group: string;
     book_id: string;
@@ -4180,6 +4288,48 @@ export type ic_elimination_line = {
     created_at: Generated<Timestamp>;
     created_by: string;
 };
+export type import_request = {
+    id: Generated<string>;
+    tenant_id: string;
+    entity_name: string;
+    file_ref: string;
+    file_name: string;
+    file_size_bytes: string | null;
+    file_format: Generated<string>;
+    mapping_config: Generated<unknown>;
+    import_mode: Generated<string>;
+    options: Generated<unknown>;
+    total_rows: number | null;
+    processed_rows: Generated<number>;
+    success_count: Generated<number>;
+    error_count: Generated<number>;
+    status: Generated<string>;
+    error_summary: unknown | null;
+    started_at: Timestamp | null;
+    completed_at: Timestamp | null;
+    submitted_by: string;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type import_request_chunk = {
+    id: Generated<string>;
+    tenant_id: string;
+    import_request_id: string;
+    chunk_index: number;
+    row_start: number;
+    row_end: number;
+    status: Generated<string>;
+    success_count: Generated<number>;
+    error_count: Generated<number>;
+    errors_json: Generated<unknown>;
+    job_id: string | null;
+    attempt_no: Generated<number>;
+    started_at: Timestamp | null;
+    completed_at: Timestamp | null;
+    duration_ms: number | null;
+};
 export type industry_code = {
     id: Generated<string>;
     code: string;
@@ -4226,8 +4376,7 @@ export type industry_crosswalk = {
 export type intent_profile_override = {
     id: Generated<string>;
     tenant_id: string;
-    entity_code: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     intent_id: string;
     direction: string | null;
     flow_code: string | null;
@@ -4251,12 +4400,11 @@ export type intent_profile_override = {
 export type intent_to_accounting_profile_rule = {
     id: Generated<string>;
     tenant_id: string;
-    entity_code: string | null;
     direction: string | null;
     intent_id: string | null;
     intent_domain: string | null;
     flow_code: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     doc_type: string | null;
     currency_code: string | null;
     min_amount: string | null;
@@ -4294,8 +4442,6 @@ export type intercompany_agreement = {
     agreement_number: string;
     source_company_code_id: string;
     dest_company_code_id: string;
-    source_entity_code: string;
-    dest_entity_code: string;
     agreement_type: string;
     description: string | null;
     transfer_pricing_method: string;
@@ -4316,7 +4462,6 @@ export type intercompany_agreement = {
     project_id: string | null;
     site_id: string | null;
     dimension_set_id: string | null;
-    owning_ou_id: string | null;
     agreement_owner_id: string | null;
     approved_at: Timestamp | null;
     approved_by: string | null;
@@ -4341,8 +4486,6 @@ export type intercompany_transaction = {
     ic_txn_number: string;
     source_company_code_id: string;
     dest_company_code_id: string;
-    source_entity_code: string;
-    dest_entity_code: string;
     txn_type: string;
     document_date: Timestamp;
     posting_date: Timestamp;
@@ -4578,6 +4721,7 @@ export type item_category = {
     parent_id: string | null;
     level_no: number | null;
     sort_order: Generated<number>;
+    default_tax_group_id: string | null;
     metadata: Generated<unknown>;
     status: Generated<string>;
     is_active: Generated<boolean | null>;
@@ -4587,7 +4731,6 @@ export type item_category = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_tax_group_id: string | null;
 };
 export type job_log = {
     id: Generated<string>;
@@ -4687,12 +4830,12 @@ export type journal_line = {
     source_doc_line_id: string | null;
     posted_at: Timestamp | null;
     posted_by: string | null;
+    tags: Generated<unknown>;
+    metadata: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    tags: Generated<unknown>;
-    metadata: Generated<unknown>;
 };
 export type journal_line_reference = {
     id: Generated<string>;
@@ -4719,7 +4862,7 @@ export type kpi_execution_log = {
     log_type: Generated<string>;
     kpi_id: string;
     kpi_version: number | null;
-    entity_code: string;
+    company_code_id: string | null;
     fiscal_year: number;
     period_number: number;
     dimension_set_id: string | null;
@@ -4886,7 +5029,7 @@ export type letterhead = {
     tenant_id: string;
     code: string;
     name: string;
-    operating_unit_id: string | null;
+    company_code_id: string | null;
     logo_storage_key: string | null;
     header_html: string | null;
     footer_html: string | null;
@@ -4904,7 +5047,6 @@ export type letterhead = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    company_code_id: string | null;
 };
 export type lifecycle = {
     id: Generated<string>;
@@ -5027,12 +5169,12 @@ export type lifecycle_transition_gate = {
     workflow_definition_id: string | null;
     conditions: unknown | null;
     threshold_rules: unknown | null;
+    resolves_via: Generated<string>;
+    policy_rule_id: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    resolves_via: Generated<string>;
-    policy_rule_id: string | null;
 };
 export type lifecycle_transition_hook = {
     id: Generated<string>;
@@ -5190,6 +5332,8 @@ export type mfa_config = {
     verified_at: Timestamp | null;
     last_used_at: Timestamp | null;
     contact_link_id: string | null;
+    credential_hash: string | null;
+    user_label: string | null;
     keycloak_credential_id: string | null;
     keycloak_synced_at: Timestamp | null;
     keycloak_sync_status: Generated<string>;
@@ -5240,12 +5384,12 @@ export type multipart_upload = {
 export type netting_batch = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     batch_number: string;
     company_code_a_id: string;
     company_code_b_id: string;
-    entity_code_a: string;
-    entity_code_b: string;
     batch_date: Timestamp;
     cut_off_date: Timestamp;
     settlement_date: Timestamp | null;
@@ -5357,6 +5501,19 @@ export type notification_delivery_attempt = {
     created_at: Generated<Timestamp>;
     created_by: string;
 };
+export type notification_dlq = {
+    id: Generated<string>;
+    tenant_id: string;
+    queue_name: string;
+    job_name: string;
+    payload: unknown;
+    error_message: string;
+    retry_count: Generated<number>;
+    last_attempted_at: Timestamp;
+    retried_at: Timestamp | null;
+    retried_job_id: string | null;
+    created_at: Generated<Timestamp>;
+};
 export type notification_message = {
     id: Generated<string>;
     tenant_id: string;
@@ -5409,6 +5566,7 @@ export type notification_routing_rule = {
     event_type: string;
     entity_type: string | null;
     lifecycle_state: string | null;
+    workflow_phase: string | null;
     condition_expr: unknown | null;
     template_key: string;
     channels: string[];
@@ -5422,7 +5580,6 @@ export type notification_routing_rule = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    workflow_phase: string | null;
 };
 export type notification_template = {
     id: Generated<string>;
@@ -5446,7 +5603,6 @@ export type notification_template = {
 export type obligation_horizon = {
     id: Generated<string>;
     tenant_id: string;
-    entity_code: string;
     commitment_id: string;
     schedule_id: string | null;
     fiscal_year: number;
@@ -5458,7 +5614,7 @@ export type obligation_horizon = {
     currency_code: string;
     fp_id: string | null;
     intent_id: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     spread_method: Generated<string>;
     period_amounts: unknown | null;
     confidence: Generated<string>;
@@ -5486,6 +5642,42 @@ export type obligation_horizon = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type orchestration_node = {
+    id: Generated<string>;
+    tenant_id: string;
+    run_id: string;
+    node_code: string;
+    node_type: string;
+    depends_on: Generated<string[]>;
+    status: Generated<string>;
+    job_id: string | null;
+    input: unknown | null;
+    output: unknown | null;
+    error: string | null;
+    retry_count: Generated<number>;
+    started_at: Timestamp | null;
+    completed_at: Timestamp | null;
+    duration_ms: number | null;
+};
+export type orchestration_run = {
+    id: Generated<string>;
+    tenant_id: string;
+    dag_id: string;
+    trigger_type: Generated<string>;
+    trigger_ref: string | null;
+    correlation_id: string | null;
+    status: Generated<string>;
+    total_nodes: Generated<number>;
+    completed_nodes: Generated<number>;
+    failed_nodes: Generated<number>;
+    skipped_nodes: Generated<number>;
+    started_at: Generated<Timestamp>;
+    completed_at: Timestamp | null;
+    timeout_at: Timestamp | null;
+    input: unknown | null;
+    output: unknown | null;
+    created_by: string | null;
+};
 export type outbox = {
     id: Generated<string>;
     tenant_id: string;
@@ -5506,11 +5698,11 @@ export type outbox = {
     available_at: Generated<Timestamp>;
     locked_at: Timestamp | null;
     locked_by: string | null;
+    locked_until: Timestamp | null;
     last_error: string | null;
     processed_at: Timestamp | null;
     created_at: Generated<Timestamp>;
     created_by: string;
-    locked_until: Timestamp | null;
 };
 export type outbox_routing_rule = {
     id: Generated<string>;
@@ -5600,6 +5792,8 @@ export type password_history = {
 export type payment_entry = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     payment_number: string;
     payment_type: Generated<string>;
@@ -5644,6 +5838,7 @@ export type payment_entry = {
     voided_at: Timestamp | null;
     voided_by: string | null;
     void_reason: string | null;
+    cleared_date: Timestamp | null;
     line_count: Generated<number>;
     notes: string | null;
     tags: Generated<unknown>;
@@ -5656,7 +5851,6 @@ export type payment_entry = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    cleared_date: Timestamp | null;
 };
 export type payment_entry_allocation = {
     id: Generated<string>;
@@ -6019,7 +6213,7 @@ export type permission_decision_log = {
     decision: string;
     decision_reason: string;
     scope_applied: string | null;
-    ou_scope_id: string | null;
+    company_code_id: string | null;
     matched_grant_id: string | null;
     matched_role_id: string | null;
     matched_group_id: string | null;
@@ -6132,7 +6326,7 @@ export type planning_driver_assumption = {
     period_to: Generated<number>;
     assumption_value: string;
     period_values: unknown | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     cost_center_id: string | null;
     project_id: string | null;
     growth_rate: string | null;
@@ -6201,7 +6395,6 @@ export type planning_model = {
     base_currency_code: string;
     fiscal_year_from: number;
     fiscal_year_to: number;
-    owning_ou_id: string | null;
     responsible_person_id: string | null;
     version: Generated<number>;
     is_current: Generated<boolean>;
@@ -6301,11 +6494,11 @@ export type policy_rule = {
     explanation: string | null;
     approvers: unknown | null;
     sla_hours: number | null;
+    budget_check_config_id: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    budget_check_config_id: string | null;
 };
 export type policy_rule_version = {
     id: Generated<string>;
@@ -6346,6 +6539,7 @@ export type principal = {
     is_active: Generated<boolean | null>;
     is_locked: Generated<boolean>;
     is_service_account: Generated<boolean>;
+    auth_epoch: Generated<number>;
     login_email: string | null;
     external_ref: string | null;
     principal_source: string | null;
@@ -6357,7 +6551,6 @@ export type principal = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    auth_epoch: Generated<number>;
 };
 export type principal_feature_grant = {
     id: Generated<string>;
@@ -6391,6 +6584,24 @@ export type principal_identity_binding = {
     idp_enabled: Generated<boolean>;
     idp_email_verified: Generated<boolean>;
     metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type principal_notification_preference = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    event_code: string;
+    channel: string;
+    is_enabled: boolean | null;
+    frequency_code: string | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -6442,7 +6653,6 @@ export type principal_profile = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_ou_id: string | null;
     supervisor_id: string | null;
     supervisor_source: string | null;
 };
@@ -6474,7 +6684,6 @@ export type principal_ui_profile = {
     home_workspace_code: string | null;
     home_module_code: string | null;
     default_company_code_id: string | null;
-    default_ou_id: string | null;
     default_book_id: string | null;
     default_dashboard_id: string | null;
     metadata: Generated<unknown>;
@@ -6529,6 +6738,7 @@ export type product = {
     currency_code: string | null;
     is_taxable: Generated<boolean>;
     tax_code: string | null;
+    default_tax_group_id: string | null;
     metadata: Generated<unknown>;
     tags: Generated<unknown>;
     status: Generated<string>;
@@ -6539,7 +6749,6 @@ export type product = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    default_tax_group_id: string | null;
 };
 export type profit_center = {
     id: Generated<string>;
@@ -6547,7 +6756,6 @@ export type profit_center = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     parent_id: string | null;
     level_no: Generated<number>;
     path: string | null;
@@ -6576,14 +6784,12 @@ export type project = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     description: string | null;
     project_type: string;
     parent_project_id: string | null;
     level_no: Generated<number>;
     path: string | null;
     responsible_person_id: string | null;
-    owning_ou_id: string | null;
     is_cross_company: Generated<boolean>;
     funding_profile_id: string | null;
     default_cost_center_id: string | null;
@@ -6656,6 +6862,8 @@ export type project_item = {
 export type purchase_invoice = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     invoice_number: string;
     fiscal_document_number: string | null;
@@ -6767,10 +6975,14 @@ export type purchase_invoice_line = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    retention_pct: Generated<string | null>;
+    retention_amount: Generated<string>;
 };
 export type purchase_order_confirmation = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     confirmation_number: string;
     commitment_id: string;
@@ -6819,7 +7031,6 @@ export type purchase_requisition = {
     priority: Generated<string>;
     requested_by: string;
     requested_for: string | null;
-    department_ou_id: string | null;
     document_date: Generated<Timestamp>;
     required_by_date: Timestamp | null;
     suggested_supplier_id: string | null;
@@ -7013,8 +7224,7 @@ export type resolution_log = {
     resolution_step: string;
     direction: string;
     flow_code: string | null;
-    entity_code: string | null;
-    ou_id: string | null;
+    company_code_id: string | null;
     doc_type: string | null;
     amount: string | null;
     currency_code: string | null;
@@ -7076,6 +7286,7 @@ export type rounding_rule = {
     method: Generated<string>;
     precision_digits: number | null;
     minimum_unit: string | null;
+    gl_variance_approval_required: Generated<boolean>;
     metadata: Generated<unknown>;
     status: Generated<string>;
     is_active: Generated<boolean | null>;
@@ -7085,7 +7296,6 @@ export type rounding_rule = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    gl_variance_approval_required: Generated<boolean>;
 };
 export type saved_view = {
     id: Generated<string>;
@@ -7160,6 +7370,8 @@ export type security_event_log = {
 export type service_entry_sheet = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     ses_number: string;
     commitment_id: string;
@@ -7231,7 +7443,7 @@ export type share_audit_log = {
     tenant_id: string;
     log_type: Generated<string>;
     actor_id: string;
-    organization_unit_id: string | null;
+    company_code_id: string | null;
     target_principal_id: string | null;
     target_group_id: string | null;
     shared_entity_type: string;
@@ -7253,7 +7465,6 @@ export type site = {
     code: string;
     name: string;
     company_code_id: string;
-    entity_code: string;
     description: string | null;
     site_type: string;
     parent_site_id: string | null;
@@ -7331,6 +7542,8 @@ export type status_route = {
 export type stocktake = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     warehouse_id: string;
     reference_no: string | null;
@@ -7979,6 +8192,8 @@ export type whatsapp_consent = {
 export type wht_certificate = {
     id: Generated<string>;
     tenant_id: string;
+    code: Generated<string>;
+    name: Generated<string>;
     company_code_id: string;
     counterparty_id: string;
     tax_type_id: string;
@@ -8286,6 +8501,9 @@ export type DB = {
     "control.entity": entity;
     "control.entity_class_profile": entity_class_profile;
     "control.entity_field": entity_field;
+    "control.entity_flow": entity_flow;
+    "control.entity_flow_field": entity_flow_field;
+    "control.entity_flow_step": entity_flow_step;
     "control.entity_lifecycle": entity_lifecycle;
     "control.entity_operation": entity_operation;
     "control.entity_policy": entity_policy;
@@ -8362,6 +8580,8 @@ export type DB = {
     "document.goods_receipt": goods_receipt;
     "document.goods_receipt_line": goods_receipt_line;
     "document.ic_elimination": ic_elimination;
+    "document.import_request": import_request;
+    "document.import_request_chunk": import_request_chunk;
     "document.intercompany_agreement": intercompany_agreement;
     "document.intercompany_transaction": intercompany_transaction;
     "document.invoice_address_snapshot": invoice_address_snapshot;
@@ -8397,11 +8617,14 @@ export type DB = {
     "document.workflow_request": workflow_request;
     "document.workflow_stage": workflow_stage;
     "event.comment_flag": comment_flag;
+    "event.connector_instance": connector_instance;
     "event.digest_staging": digest_staging;
     "event.endpoint": endpoint;
     "event.lifecycle_timer_schedule": lifecycle_timer_schedule;
     "event.notification_delivery": notification_delivery;
     "event.notification_message": notification_message;
+    "event.orchestration_node": orchestration_node;
+    "event.orchestration_run": orchestration_run;
     "event.outbox": outbox;
     "event.push_subscription": push_subscription;
     "event.webhook_subscription": webhook_subscription;
@@ -8446,6 +8669,7 @@ export type DB = {
     "log.ai_inference_log": ai_inference_log;
     "log.ai_monitoring_log": ai_monitoring_log;
     "log.attachment_access_log": attachment_access_log;
+    "log.audit_dlq": audit_dlq;
     "log.audit_log": audit_log;
     "log.close_activity_log": close_activity_log;
     "log.close_override_log": close_override_log;
@@ -8459,6 +8683,7 @@ export type DB = {
     "log.job_log": job_log;
     "log.kpi_execution_log": kpi_execution_log;
     "log.notification_delivery_attempt": notification_delivery_attempt;
+    "log.notification_dlq": notification_dlq;
     "log.password_history": password_history;
     "log.permission_decision_log": permission_decision_log;
     "log.policy_evaluation_log": policy_evaluation_log;
@@ -8470,6 +8695,7 @@ export type DB = {
     "log.workflow_event_log": workflow_event_log;
     "log.workspace_usage_metric": workspace_usage_metric;
     "master.access_grant": access_grant;
+    "master.accounting_profile": accounting_profile;
     "master.address": address;
     "master.address_link": address_link;
     "master.asset": asset;
@@ -8553,6 +8779,7 @@ export type DB = {
     "master.principal": principal;
     "master.principal_feature_grant": principal_feature_grant;
     "master.principal_identity_binding": principal_identity_binding;
+    "master.principal_notification_preference": principal_notification_preference;
     "master.principal_persona": principal_persona;
     "master.principal_profile": principal_profile;
     "master.principal_ui_preference": principal_ui_preference;

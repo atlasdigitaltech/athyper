@@ -1658,6 +1658,7 @@ CREATE TABLE IF NOT EXISTS master.company_code_supplier_profile (
 
     -- Extended AP settings
     default_accounting_profile_id      uuid,
+    payment_term_id                    uuid,    -- FK → master.payment_term; replaces legacy payment_terms text
     payment_method_id                  uuid,
     preferred_remittance_bank_link_id  uuid,
     tax_group_id                       uuid,

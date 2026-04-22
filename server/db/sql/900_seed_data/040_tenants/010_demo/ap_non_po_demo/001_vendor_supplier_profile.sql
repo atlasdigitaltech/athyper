@@ -24,6 +24,7 @@ DECLARE
     v_trs_vat_id     uuid;
     v_trs_wht_id     uuid;
     v_jur_id         uuid;
+    v_pt_net30_id    uuid;
 BEGIN
 
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
@@ -220,6 +221,13 @@ BEGIN
     SELECT id INTO v_acct_prof_id FROM master.accounting_profile
      WHERE tenant_id = v_tenant_id AND code = 'AP_NON_PO_STANDARD';
 
+    SELECT id INTO v_pt_net30_id
+      FROM master.payment_term
+     WHERE tenant_id = v_tenant_id
+       AND code = 'PT-NET30'
+       AND is_current_version = true
+     LIMIT 1;
+
     SELECT id INTO v_scp_id FROM master.company_code_supplier_profile
      WHERE tenant_id = v_tenant_id
        AND supplier_id = v_vendor_id
@@ -228,7 +236,7 @@ BEGIN
     IF v_scp_id IS NULL THEN
         INSERT INTO master.company_code_supplier_profile (
             tenant_id, supplier_id, company_code_id,
-            payment_terms, currency_code,
+            payment_terms, payment_term_id, currency_code,
             default_accounting_profile_id,
             payment_method_id,
             preferred_remittance_bank_link_id,
@@ -237,14 +245,20 @@ BEGIN
             is_blocked, status, created_by
         ) VALUES (
             v_tenant_id, v_vendor_id, v_cc_id,
-            'net_30', 'USD',
+            'net_30', v_pt_net30_id, 'USD',
             v_acct_prof_id,
             v_pm_wire_id,
-            NULL,  -- vendor's bank link (set separately if needed)
+            NULL,
             v_tg_vat_id,
             v_tg_wht_id,
             false, 'active', v_sys
         );
+    ELSE
+        -- Backfill payment_term_id for existing profile rows (new UUID FK column)
+        UPDATE master.company_code_supplier_profile
+           SET payment_term_id = COALESCE(payment_term_id, v_pt_net30_id)
+         WHERE id = v_scp_id
+           AND payment_term_id IS NULL;
     END IF;
 
     RAISE NOTICE 'demo/001: vendor ACME-CONSULT-US + profile for US01 set up';

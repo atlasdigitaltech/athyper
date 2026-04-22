@@ -4,13 +4,13 @@
  * LineEditorSheet — right-side drawer for editing a single invoice line.
  *
  * Tabs:    Item · Accounting · Classify · Discount · Charges · Tax · Retention
- * Actions: Edit (active) · Copy · Delete · Import · Export
+ * Actions: Edit (active) · Delete
  */
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus, Trash2, Sparkles, ChevronsUpDown,
-  Pencil, Copy, Download, Upload, XCircle,
+  Pencil, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import { fmtAmount } from "../_shared/format";
+import { relayMutate } from "../_shared/csrf";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ function blankRow(cc: string, nextNo: number): SplitRow {
 }
 
 function uid(): string { return Math.random().toString(36).slice(2, 10); }
-function lineUrl(e: string, r: string, l: string) { return `/api/relay/api/records/${encodeURIComponent(e)}/${encodeURIComponent(r)}/lines/${encodeURIComponent(l)}`; }
+function lineUrl(e: string, r: string, l: string) { return `/api/records/${encodeURIComponent(e)}/${encodeURIComponent(r)}/lines/${encodeURIComponent(l)}`; }
 function distUrl(e: string, r: string, l: string, d?: string) { const base = `${lineUrl(e, r, l)}/distributions`; return d ? `${base}/${encodeURIComponent(d)}` : base; }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
@@ -215,21 +216,14 @@ function AmountWaterfall({ rows, currency }: { rows: WaterfallRow[]; currency: s
 
 // ── Sheet action bar ──────────────────────────────────────────────────────────
 
-function SheetActionBar({ onCopy, onDelete, onImport, onExport }: {
-  onCopy: () => void; onDelete: () => void; onImport: () => void; onExport: () => void;
-}) {
+function SheetActionBar({ onDelete }: { onDelete: () => void }) {
   return (
     <div className="flex items-center gap-1 px-5 py-2 border-b border-border/40 bg-muted/20">
-      {/* Edit — always-active mode indicator */}
       <span className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-semibold rounded-md bg-foreground text-background select-none">
         <Pencil className="h-3 w-3" /> Edit
       </span>
       <span className="w-px h-4 bg-border/60 mx-1" />
-      <ABtn icon={<Copy className="h-3.5 w-3.5" />}     label="Copy"   onClick={onCopy} />
-      <ABtn icon={<Trash2 className="h-3.5 w-3.5" />}   label="Delete" onClick={onDelete} danger />
-      <span className="w-px h-4 bg-border/60 mx-1" />
-      <ABtn icon={<Upload className="h-3.5 w-3.5" />}   label="Import" onClick={onImport} />
-      <ABtn icon={<Download className="h-3.5 w-3.5" />} label="Export" onClick={onExport} />
+      <ABtn icon={<Trash2 className="h-3.5 w-3.5" />} label="Delete" onClick={onDelete} danger />
     </div>
   );
 }
@@ -264,7 +258,7 @@ function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
     setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { description: desc || null, item_code: itemCode || null, quantity: Number(qty) || null, unit_code: unitCode || null, unit_price: Number(unitPrice) || null, line_amount: netAmt || null };
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
         setDirty(false);
         onSaved?.(patch);
@@ -345,7 +339,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
     try {
       const payload = { distribution_basis: "PERCENT", split_pct: 100, distributed_amount: lineAmount, currency_code: cc, account_source: sAccount ? "FIXED" : "FROM_CATEGORY", account_code: sAccount || null, cost_center_id: sCostCenter || null, project_id: sProject || null, is_capex: sIsCapex };
       const url = single?.id ? distUrl(entityCode, recordId, line.id, single.id) : distUrl(entityCode, recordId, line.id);
-      const res = await fetch(url, { method: single?.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await relayMutate(url, { method: single?.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
       if (res.ok) {
         setSDirty(false);
         onMutated?.();
@@ -366,7 +360,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
     try {
       const payload = { distribution_basis: row.distribution_basis, split_pct: row.distribution_basis === "PERCENT" ? row.split_pct : null, split_amount: row.distribution_basis === "AMOUNT" ? row.split_amount : null, split_quantity: row.distribution_basis === "QUANTITY" ? row.split_quantity : null, distributed_amount: row.distributed_amount, currency_code: row.currency_code || cc, account_source: row.account_source, account_code: row.account_code || null, cost_center_id: row.cost_center_id || null, project_id: row.project_id || null, is_capex: row.is_capex, description: row.description || null };
       const url = row._isNew || !row.id ? distUrl(entityCode, recordId, line.id) : distUrl(entityCode, recordId, line.id, row.id);
-      const res = await fetch(url, { method: row._isNew || !row.id ? "POST" : "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await relayMutate(url, { method: row._isNew || !row.id ? "POST" : "PATCH", body: JSON.stringify(payload) });
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string };
         setRowError(body.error ?? `Save failed (${res.status})`);
@@ -385,7 +379,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
     if (row._isNew || !row.id) { setRows((p) => p.filter((_, i) => i !== idx)); return; }
     const key = row.id; setSaving((s) => ({ ...s, [key]: true }));
     try {
-      await fetch(distUrl(entityCode, recordId, line.id, row.id), { method: "DELETE" });
+      await relayMutate(distUrl(entityCode, recordId, line.id, row.id), { method: "DELETE" });
       setRows((p) => p.filter((_, i) => i !== idx)); onMutated?.();
     } finally { setSaving((s) => { const n = { ...s }; delete n[key]; return n; }); }
   }
@@ -610,7 +604,7 @@ function DiscountTab({ line, currencyCode, entityCode, recordId, onSaved }: {
     setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { discount_pct: discPct > 0 ? discPct : null, discount_amount: discPct > 0 ? discountAmt : null };
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
         setDirty(false);
         onSaved?.(patch);
@@ -666,7 +660,7 @@ function ChargesTab({ line, currencyCode, entityCode, recordId, onMutated }: {
     try {
       const payload = charges.map(({ id, charge_type, charge_code, description, amount }) => ({ id, charge_type, charge_code: charge_code || null, description: description || null, amount: Number(amount) || 0, currency_code: currencyCode }));
       const patch = { data: { ...((line.data as Record<string, unknown>) ?? {}), charges: payload } };
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
         setCharges((p) => p.map((c) => ({ ...c, _dirty: false, _isNew: false })));
         onMutated?.();
@@ -745,7 +739,7 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
     setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { tax_code: taxCode || null, tax_amount: taxAmtNum > 0 ? taxAmtNum : null, withholding_tax_amount: whtAmtNum > 0 ? whtAmtNum : null };
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
         setDirty(false);
         onSaved?.(patch);
@@ -805,7 +799,7 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
     setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { retention_pct: retPct > 0 ? retPct : null, retention_amount: retPct > 0 ? retAmt : null, data: { ...lineData, retention_release_terms: releaseTerms || null } };
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
         setDirty(false);
         onSaved?.(patch);
@@ -849,7 +843,6 @@ export function LineEditorSheet({
   const lineAmount = Number(line.line_amount) || 0;
   const [tab, setTab] = useState<TabId>(initialTab ?? "details");
   const [headerError, setHeaderError] = useState<string | null>(null);
-  const importRef   = useRef<HTMLInputElement>(null);
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
@@ -861,29 +854,10 @@ export function LineEditorSheet({
     { id: "retention",  label: "Retention", badge: line.retention_pct  ? `${line.retention_pct}%` : undefined },
   ];
 
-  async function handleCopy() {
-    setHeaderError(null);
-    try {
-      const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_code: line.item_code, description: line.description, quantity: line.quantity, unit_code: line.unit_code, unit_price: line.unit_price, line_amount: line.line_amount, tax_code: line.tax_code, tax_amount: line.tax_amount, data: line.data }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        setHeaderError(body.error ?? `Copy failed (${res.status})`);
-        return;
-      }
-      onLineCopied?.();
-      onMutated?.();
-    } catch (err) {
-      setHeaderError(err instanceof Error ? err.message : "Network error — please retry");
-    }
-  }
-
   async function handleDelete() {
     setHeaderError(null);
     try {
-      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "DELETE" });
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "DELETE" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string };
         setHeaderError(body.error ?? `Delete failed (${res.status})`);
@@ -897,17 +871,9 @@ export function LineEditorSheet({
     }
   }
 
-  function handleExport() {
-    const blob = new Blob([JSON.stringify(line, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a");
-    a.href = url; a.download = `line-${line.line_number}.json`; a.click(); URL.revokeObjectURL(url);
-  }
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[520px] max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden">
-        <input ref={importRef} type="file" accept=".json" className="hidden" onChange={(e) => { e.target.value = ""; }} />
-
         {/* Header */}
         <SheetHeader className="shrink-0 px-5 pt-5 pb-0">
           <div className="min-w-0">
@@ -928,12 +894,7 @@ export function LineEditorSheet({
         </SheetHeader>
 
         {/* Action bar */}
-        <SheetActionBar
-          onCopy={() => void handleCopy()}
-          onDelete={() => void handleDelete()}
-          onImport={() => importRef.current?.click()}
-          onExport={handleExport}
-        />
+        <SheetActionBar onDelete={() => void handleDelete()} />
 
         {/* Header-level error (copy / delete failures) */}
         {headerError && (

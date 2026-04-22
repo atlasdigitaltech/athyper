@@ -77,19 +77,38 @@ BEGIN
          advance_rule, layout_hint, created_by)
     VALUES
     (NULL, v_flow_id, 'identify',   'Identify',   'id-card',      10,
-     '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","supplier_invoice_number","supplier_invoice_date","posting_date","received_date"]}',
+     '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","vendor_invoice_ref","supplier_invoice_date","posting_date","received_date"]}',
      'summary_side', v_su),
     (NULL, v_flow_id, 'commercial', 'Commercial', 'receipt',      20,
-     '{"required_fields":["currency_code","total_amount"]}',
+     '{"required_fields":["currency_code","gross_amount"]}',
      'summary_side', v_su),
     (NULL, v_flow_id, 'review',     'Review',     'check-circle', 30,
      '{"required_fields":[]}',
      'summary_side', v_su)
     ON CONFLICT (flow_id, step_key) DO NOTHING;
 
+    -- Patch advance_rules on existing rows that had wrong field names
+    UPDATE control.entity_flow_step
+       SET advance_rule = '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","vendor_invoice_ref","supplier_invoice_date","posting_date","received_date"]}'::jsonb
+     WHERE flow_id = v_flow_id
+       AND step_key = 'identify'
+       AND advance_rule @> '{"required_fields":["supplier_invoice_number"]}'::jsonb;
+
+    UPDATE control.entity_flow_step
+       SET advance_rule = '{"required_fields":["currency_code","gross_amount"]}'::jsonb
+     WHERE flow_id = v_flow_id
+       AND step_key = 'commercial'
+       AND advance_rule->>'required_fields' != '["currency_code","gross_amount"]';
+
     SELECT id INTO v_step_1 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'identify';
     SELECT id INTO v_step_2 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'commercial';
     SELECT id INTO v_step_3 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'review';
+
+    -- Wipe platform-level field bindings so re-runs always reflect current seed state.
+    -- tenant_id IS NULL guard ensures tenant overrides are never touched.
+    DELETE FROM control.entity_flow_field
+     WHERE flow_step_id IN (v_step_1, v_step_2, v_step_3)
+       AND tenant_id IS NULL;
 
     -- ── Step 1: Identify ──────────────────────────────────────────────────────
     INSERT INTO control.entity_flow_field (
@@ -122,7 +141,7 @@ BEGIN
             '{"in":[{"var":"invoice_source"},["po_based","contract_based"]]}',
             NULL, NULL, NULL, NULL, 'inline_search', 2,
             'Required for PO-based and contract-based invoices.', 50),
-        ('supplier_invoice_number', 'required', 'manual',
+        ('vendor_invoice_ref',      'required', 'manual',
             NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1,
             'Vendor-issued invoice number — triggers duplicate detection.', 60),
         ('supplier_invoice_date',   'required', 'manual',
@@ -159,8 +178,7 @@ BEGIN
     ) AS v(field_name, mode, derivation_mode, visible_when, required_when,
            default_source, derive_expression, override_permission,
            summary_role, ui_variant, span, help_text, sort_order)
-       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id
-    ON CONFLICT (flow_step_id, entity_field_id) DO NOTHING;
+       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id;
 
     -- ── Step 2: Commercial ────────────────────────────────────────────────────
     INSERT INTO control.entity_flow_field (
@@ -186,7 +204,7 @@ BEGIN
             '{"!=":[{"var":"currency_code"},{"var":"base_currency_code"}]}',
             NULL, 'fx.resolve(currency_code, base_currency_code, document_date)', 'ap.override_fx_rate',
             NULL, NULL, 1, 'Shown only when invoice currency differs from base.', 30),
-        ('subtotal_amount',          'editable', 'manual',
+        ('net_amount',               'editable', 'manual',
             NULL, NULL, 'const:0', NULL, NULL, 'subtotal', 'money_big', 1, NULL, 40),
         ('discount_amount',          'editable', 'manual',
             NULL, NULL, 'const:0', NULL, NULL, 'deduction', NULL, 1, NULL, 50),
@@ -200,7 +218,7 @@ BEGIN
         ('withholding_tax_amount',   'editable', 'derived_overrideable',
             NULL, NULL, NULL, 'wht.compute(lines, supplier_id)', 'ap.override_wht_amount',
             'deduction', NULL, 1, NULL, 90),
-        ('total_amount',             'required', 'derived_overrideable',
+        ('gross_amount',             'required', 'derived_overrideable',
             NULL, NULL, NULL, 'sum(subtotal + freight + misc + tax - discount)', 'ap.override_total',
             'total', 'money_big', 1, NULL, 100),
         ('payable_amount',           'summary_only', 'derived_locked',
@@ -234,8 +252,7 @@ BEGIN
     ) AS v(field_name, mode, derivation_mode, visible_when, required_when,
            default_source, derive_expression, override_permission,
            summary_role, ui_variant, span, help_text, sort_order)
-       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id
-    ON CONFLICT (flow_step_id, entity_field_id) DO NOTHING;
+       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id;
 
     -- ── Step 3: Review ────────────────────────────────────────────────────────
     INSERT INTO control.entity_flow_field (
@@ -286,8 +303,7 @@ BEGIN
     ) AS v(field_name, mode, derivation_mode, visible_when, required_when,
            default_source, derive_expression, override_permission,
            summary_role, ui_variant, span, help_text, sort_order)
-       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id
-    ON CONFLICT (flow_step_id, entity_field_id) DO NOTHING;
+       ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id;
 
     RAISE NOTICE 'purchase_invoice create flow seeded: % steps',
                  (SELECT count(*) FROM control.entity_flow_step WHERE flow_id = v_flow_id);

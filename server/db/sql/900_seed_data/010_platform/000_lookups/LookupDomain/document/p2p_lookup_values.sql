@@ -105,7 +105,6 @@ FROM (VALUES
     ('retention_release',  'Retention Release',     'document.purchase_invoice_type', 'Release of withheld retention amount',        50),
     ('proforma',           'Pro-forma',             'document.purchase_invoice_type', 'Proforma invoice (not posted)',               60),
     ('self_billed',        'Self-Billed',           'document.purchase_invoice_type', 'Buyer-created invoice on behalf of vendor',   70),
-    ('down_payment',       'Down Payment',          'document.purchase_invoice_type', 'Down payment request invoice',                80),
     ('final',              'Final',                 'document.purchase_invoice_type', 'Final invoice closing the commitment',        90)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
@@ -121,7 +120,6 @@ UPDATE control.lookup_value SET code = 'advance'           WHERE domain_code = '
 UPDATE control.lookup_value SET code = 'retention_release' WHERE domain_code = 'document.purchase_invoice_type' AND code = 'RETENTION_RELEASE' AND tenant_id IS NULL;
 UPDATE control.lookup_value SET code = 'proforma'          WHERE domain_code = 'document.purchase_invoice_type' AND code = 'PROFORMA'          AND tenant_id IS NULL;
 UPDATE control.lookup_value SET code = 'self_billed'       WHERE domain_code = 'document.purchase_invoice_type' AND code = 'SELF_BILLED'       AND tenant_id IS NULL;
-UPDATE control.lookup_value SET code = 'down_payment'      WHERE domain_code = 'document.purchase_invoice_type' AND code = 'DOWN_PAYMENT'      AND tenant_id IS NULL;
 UPDATE control.lookup_value SET code = 'final'             WHERE domain_code = 'document.purchase_invoice_type' AND code = 'FINAL'             AND tenant_id IS NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────

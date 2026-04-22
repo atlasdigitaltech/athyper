@@ -501,6 +501,22 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         if (mappedData["supplier_invoice_number"] === undefined) {
           mappedData["supplier_invoice_number"] = "";
         }
+
+        // Auto-generate the system document number when the wizard doesn't supply one.
+        // Each document type has its own NOT NULL number column; a short random suffix
+        // keeps it unique within the tenant without a DB sequence.
+        const DOC_NUMBER_COLS: Record<string, { col: string; prefix: string }> = {
+          purchase_invoice: { col: "invoice_number",    prefix: "PI"  },
+          journal_entry:    { col: "je_number",         prefix: "JE"  },
+          purchase_order:   { col: "commitment_number", prefix: "PO"  },
+        };
+        const docNum = DOC_NUMBER_COLS[entityCode];
+        if (docNum && !mappedData[docNum.col]) {
+          const now    = new Date();
+          const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+          const rand   = Math.random().toString(36).substring(2, 8).toUpperCase();
+          mappedData[docNum.col] = `${docNum.prefix}-${yyyymm}-${rand}`;
+        }
       }
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
@@ -890,6 +906,221 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── Helpers shared by line mutation handlers ─────────────────────────────────
+
+  /** Maps a DocumentLine-shaped request body to the DB column set for the line table. */
+  function lineBodyToDb(
+    body: Record<string, unknown>,
+    fkCol: string,
+    parentId: string,
+    tenantId: string | null,
+  ): Record<string, unknown> {
+    const row: Record<string, unknown> = {};
+    if (tenantId)                              row["tenant_id"]      = tenantId;
+    row[fkCol]                                                       = parentId;
+    if (body["line_number"] != null)           row["line_no"]        = Number(body["line_number"]);
+    if (body["description"]   !== undefined)   row["item_description"] = body["description"] ?? "";
+    if (body["unit_code"]     !== undefined)   row["uom_code"]       = body["unit_code"]   ?? "EA";
+    if (body["quantity"]      !== undefined)   row["quantity"]       = body["quantity"]    ?? 1;
+    if (body["unit_price"]    !== undefined)   row["unit_price"]     = body["unit_price"]  ?? 0;
+    if (body["line_amount"]   !== undefined)   row["gross_amount"]   = body["line_amount"] ?? 0;
+    if (body["tax_amount"]    !== undefined)   row["tax_amount"]     = body["tax_amount"]  ?? 0;
+    if (body["withholding_tax_amount"] !== undefined) row["withholding_tax_amount"] = body["withholding_tax_amount"] ?? 0;
+    if (body["discount_pct"]  !== undefined)   row["discount_pct"]   = body["discount_pct"]  ?? 0;
+    if (body["discount_amount"] !== undefined) row["discount_amount"] = body["discount_amount"] ?? 0;
+    // item_code and tax_code have no dedicated DB column — persist in metadata
+    const existingMeta = (body["data"] as Record<string, unknown> | undefined) ?? {};
+    row["metadata"] = {
+      ...existingMeta,
+      ...(body["item_code"] !== undefined ? { item_code: body["item_code"] } : {}),
+      ...(body["tax_code"]  !== undefined ? { tax_code:  body["tax_code"]  } : {}),
+    };
+    return row;
+  }
+
+  /** Normalises a raw DB line row back to the DocumentLine contract shape. */
+  function normaliseLineRow(r: Record<string, unknown>, fkCol: string): Record<string, unknown> {
+    const meta = (r["metadata"] as Record<string, unknown> | undefined) ?? {};
+    return {
+      ...r,
+      document_id:             r[fkCol]                              ?? r["document_id"],
+      line_number:             r["line_no"]                          ?? r["line_number"],
+      description:             r["item_description"]                 ?? r["description"],
+      unit_code:               r["uom_code"]                         ?? r["unit_code"],
+      line_amount:             r["gross_amount"] ?? r["net_amount"]  ?? r["line_amount"],
+      net_amount:              r["net_amount"]   ?? null,
+      gross_amount:            r["gross_amount"] ?? null,
+      item_code:               meta["item_code"] ?? r["item_code"]   ?? null,
+      tax_code:                meta["tax_code"]  ?? r["tax_code"]    ?? null,
+      discount_pct:            r["discount_pct"]            ?? null,
+      discount_amount:         r["discount_amount"]          ?? null,
+      retention_pct:           r["retention_pct"]            ?? null,
+      retention_amount:        r["retention_amount"]         ?? null,
+      withholding_tax_amount:  r["withholding_tax_amount"]   ?? null,
+      data:                    meta,
+    };
+  }
+
+  // ── POST /:entity/:id/lines — create a new line ───────────────────────────────
+  const createLineHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { sub } = claims as { sub: string };
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id         = req.params["id"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
+      const fkCol      = `${table.table_name}_id`;
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+
+      // Auto-assign line_no if not supplied (MAX + 1, 1-safe)
+      if (body["line_number"] == null) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let q: any = db.selectFrom(linesTable).select((eb: any) => eb.fn.max("line_no").as("max_no")).where(fkCol as never, "=", id as never);
+          if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+          const row = await q.executeTakeFirst() as { max_no: number | null } | undefined;
+          body["line_number"] = (row?.max_no ?? 0) + 1;
+        } catch {
+          body["line_number"] = 1;
+        }
+      }
+
+      const insertRow = lineBodyToDb(body, fkCol, id, tenantId);
+      // Defaults for NOT NULL columns when creating a blank line.
+      // quantity uses falsy-check (not == null) because lineBodyToDb converts null → 0,
+      // which would violate the pil_qty_nonzero CHECK constraint.
+      if (!insertRow["item_description"]) insertRow["item_description"] = "";
+      if (!insertRow["uom_code"])         insertRow["uom_code"]         = "EA";
+      if (!insertRow["quantity"])          insertRow["quantity"]         = 1;
+      if (insertRow["unit_price"] == null) insertRow["unit_price"]      = 0;
+      const principalId = sub && tenantId
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : sub;
+      insertRow["created_by"] = principalId;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inserted = await (db.insertInto(linesTable) as any)
+        .values(insertRow)
+        .returningAll()
+        .executeTakeFirstOrThrow() as Record<string, unknown>;
+
+      res.status(201).json(normaliseLineRow(inserted, fkCol));
+    } catch (err) {
+      logger?.error("records_create_line_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH /:entity/:id/lines/:lineId — update a line ─────────────────────────
+  const patchLineHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id         = req.params["id"]     as string;
+      const lineId     = req.params["lineId"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
+      const fkCol      = `${table.table_name}_id`;
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const patchRow = lineBodyToDb(body, fkCol, id, tenantId);
+      // Remove identity columns from patch
+      delete patchRow["tenant_id"];
+      delete patchRow[fkCol];
+
+      if (Object.keys(patchRow).length === 0) {
+        res.status(400).json({ error: "EMPTY_PATCH", message: "No updatable fields supplied" });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = (db.updateTable(linesTable) as any)
+        .set(patchRow)
+        .where("id" as never, "=", lineId as never)
+        .where(fkCol as never, "=", id as never);
+      if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+
+      const updated = await q.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
+      if (!updated) {
+        res.status(404).json({ error: "LINE_NOT_FOUND", message: "Line not found" });
+        return;
+      }
+
+      res.json(normaliseLineRow(updated, fkCol));
+    } catch (err) {
+      logger?.error("records_patch_line_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /:entity/:id/lines/:lineId — delete a line ────────────────────────
+  const deleteLineHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id         = req.params["id"]     as string;
+      const lineId     = req.params["lineId"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg    = (req.headers["x-org"]   as string) ?? "";
+      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
+      const fkCol      = `${table.table_name}_id`;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = (db.deleteFrom(linesTable) as any)
+        .where("id" as never, "=", lineId as never)
+        .where(fkCol as never, "=", id as never);
+      if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+
+      const deleted = await q.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
+      if (!deleted) {
+        res.status(404).json({ error: "LINE_NOT_FOUND", message: "Line not found" });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("records_delete_line_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── POST /:entity/:id/lines/:lineId/distributions — create a split ───────────
   const createDistributionHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -1112,6 +1343,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.get("/records/:entity/_debug", debugHandler);
   // Sub-resource routes must be registered before /:id to avoid shadowing
   router.get("/records/:entity/:id/lines",                                      linesHandler);
+  router.post("/records/:entity/:id/lines",                                     createLineHandler);
+  router.patch("/records/:entity/:id/lines/:lineId",                            patchLineHandler);
+  router.delete("/records/:entity/:id/lines/:lineId",                           deleteLineHandler);
   router.post("/records/:entity/:id/lines/:lineId/distributions",               createDistributionHandler);
   router.patch("/records/:entity/:id/lines/:lineId/distributions/:distId",      patchDistributionHandler);
   router.delete("/records/:entity/:id/lines/:lineId/distributions/:distId",     deleteDistributionHandler);

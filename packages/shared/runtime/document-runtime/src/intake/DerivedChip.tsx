@@ -18,6 +18,8 @@ import { cn } from "@athyper/theme/utils";
 export interface DerivedChipProps {
   label: string;
   value: unknown;
+  /** Human-readable label to show instead of the raw value (e.g. "Net 30 Days" for a UUID). */
+  displayLabel?: string;
   derivationHint?: string;
   isOverrideable: boolean;
   canOverride: boolean;
@@ -36,6 +38,7 @@ function displayValue(v: unknown): string {
 export function DerivedChip({
   label,
   value,
+  displayLabel,
   derivationHint,
   isOverrideable,
   canOverride,
@@ -126,7 +129,7 @@ export function DerivedChip({
       </span>
 
       <span className="text-xs font-medium text-foreground">
-        {value !== null && value !== undefined ? displayValue(value) : (
+        {value !== null && value !== undefined ? (displayLabel ?? displayValue(value)) : (
           <span className="italic text-muted-foreground/60">deriving…</span>
         )}
       </span>

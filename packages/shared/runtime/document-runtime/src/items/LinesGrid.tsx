@@ -20,6 +20,7 @@ import {
   Pencil, Upload, Download,
 } from "lucide-react";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
+import { relayMutate } from "../_shared/csrf";
 import { LineEditorSheet } from "./LineEditorSheet";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ function MasterCheckbox({
       aria-checked={state === "all" ? true : state === "partial" ? "mixed" : false}
       className={cn(
         "w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors flex-shrink-0",
-        state === "none" ? "border-border/70 bg-background" : "bg-info border-info",
+        state === "none" ? "border-border/70 bg-background" : "bg-foreground border-foreground",
       )}
     >
       {state === "all"     && <Check className="h-2.5 w-2.5 text-background" strokeWidth={3} />}
@@ -96,7 +97,7 @@ function RowCheckbox({ checked }: { checked: boolean }) {
     <span
       className={cn(
         "inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm border flex-shrink-0 transition-colors",
-        checked ? "bg-info border-info" : "border-border/70 bg-background",
+        checked ? "bg-foreground border-foreground" : "border-border/70 bg-background",
       )}
     >
       {checked && <Check className="h-2.5 w-2.5 text-background" strokeWidth={3} />}
@@ -110,7 +111,7 @@ function MatchCell({ line }: { line: DocumentLine }) {
   const state = getMatchState(line);
   if (state === "matched") return (
     <span
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/15 text-success"
+      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/10 text-success"
       title="Fully matched"
     >
       <Check className="h-2.5 w-2.5" strokeWidth={3} />
@@ -118,7 +119,7 @@ function MatchCell({ line }: { line: DocumentLine }) {
   );
   if (state === "exception") return (
     <span
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/15 text-destructive font-bold text-2xs leading-none"
+      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/10 text-destructive font-bold text-2xs leading-none"
       title="Match exception"
     >
       !
@@ -126,7 +127,7 @@ function MatchCell({ line }: { line: DocumentLine }) {
   );
   if (state === "unmatched") return (
     <span
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-warning/15 text-warning"
+      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-warning/10 text-warning"
       title="Unmatched"
     >
       <AlertTriangle className="h-2.5 w-2.5" />
@@ -180,7 +181,7 @@ function AllocatedToCell({
       <button
         onClick={() => onOpenEditor(line, "accounting")}
         aria-label={`View ${dists.length} allocations for this line`}
-        className="inline-flex items-center gap-1 h-5 px-2 rounded text-xs font-semibold bg-info/10 border border-info/20 text-info leading-none hover:bg-info/20 transition-colors"
+        className="inline-flex items-center gap-1 h-5 px-2 rounded text-xs font-semibold bg-muted border border-border/50 text-foreground leading-none hover:bg-muted/70 transition-colors"
       >
         <SplitSquareHorizontal className="h-2.5 w-2.5" />
         {dists.length} splits
@@ -196,7 +197,7 @@ function AllocatedToCell({
       <button
         onClick={() => onOpenEditor(line, "accounting")}
         title={d.cost_center_id ?? d.account_code ?? undefined}
-        className="font-mono text-xs text-foreground hover:text-info hover:underline transition-colors truncate max-w-24 text-left"
+        className="font-mono text-xs text-foreground hover:text-foreground/70 hover:underline transition-colors truncate max-w-24 text-left"
       >
         {label}
       </button>
@@ -211,8 +212,8 @@ function AllocatedToCell({
         aria-label="Not allocated — click to assign cost center"
         className={cn(
           "text-xs italic text-muted-foreground/50 px-1.5 py-0.5 rounded transition-all",
-          "hover:not-italic hover:font-medium hover:text-info hover:bg-info/10",
-          popOpen && "text-info bg-info/10 font-medium",
+          "hover:not-italic hover:font-medium hover:text-foreground hover:bg-muted/60",
+          popOpen && "text-foreground bg-muted/60 font-medium",
         )}
       >
         Not allocated
@@ -245,7 +246,7 @@ function AllocatedToCell({
           </div>
           <button
             onClick={() => { setPopOpen(false); onOpenEditor(line, "accounting"); }}
-            className="text-2xs text-info hover:underline"
+            className="text-2xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
           >
             Need to split instead? →
           </button>
@@ -350,6 +351,61 @@ function RowMenu({
   );
 }
 
+// ── Add Line dropdown button ──────────────────────────────────────────────────
+
+function AddLineButton({
+  onAddBlankLine,
+  adding,
+}: {
+  onAddBlankLine: () => void;
+  adding: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={adding}
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-semibold rounded-md border border-border/60 bg-background text-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
+      >
+        <Plus className="h-3 w-3" />
+        {adding ? "Adding…" : "Add"}
+        <ChevronDown className="h-3 w-3 opacity-60" />
+      </button>
+
+      {menuOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1 z-dropdown min-w-44 rounded-lg border border-border/60 bg-background shadow-lg p-1"
+        >
+          <button
+            role="menuitem"
+            onClick={() => { onAddBlankLine(); setMenuOpen(false); }}
+            className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 text-xs rounded-md transition-colors text-foreground hover:bg-muted/60"
+          >
+            <Plus className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            Item
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── State-summary toolbar ─────────────────────────────────────────────────────
 
 function StateToolbar({
@@ -360,6 +416,8 @@ function StateToolbar({
   exceptionCount,
   activeFilter,
   onFilterToggle,
+  onAddLine,
+  adding,
 }: {
   lineCount: number;
   selCount: number;
@@ -368,6 +426,8 @@ function StateToolbar({
   exceptionCount: number;
   activeFilter: ActiveFilter;
   onFilterToggle: (f: ActiveFilter) => void;
+  onAddLine: () => void;
+  adding: boolean;
 }) {
   return (
     <div className="flex justify-between items-center px-3.5 py-2 bg-muted/40 border-b border-border/40 gap-2 flex-wrap">
@@ -377,7 +437,7 @@ function StateToolbar({
           {lineCount} line{lineCount !== 1 ? "s" : ""}
         </span>
         {selCount > 0 && (
-          <span className="font-semibold text-info">· {selCount} selected</span>
+          <span className="font-semibold text-foreground/60">· {selCount} selected</span>
         )}
         {splitCount > 0 && (
           <FilterPill
@@ -418,13 +478,7 @@ function StateToolbar({
 
       {/* Right: page actions */}
       <div className="flex items-center gap-1.5">
-        <ToolbarBtn
-          primary
-          icon={<Plus className="h-3 w-3" />}
-          iconAfter={<ChevronDown className="h-3 w-3 opacity-60" />}
-        >
-          Add line
-        </ToolbarBtn>
+        <AddLineButton onAddBlankLine={onAddLine} adding={adding} />
       </div>
     </div>
   );
@@ -456,36 +510,6 @@ function FilterPill({
     >
       <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
       {label}
-    </button>
-  );
-}
-
-function ToolbarBtn({
-  children,
-  primary,
-  icon,
-  iconAfter,
-  onClick,
-}: {
-  children: React.ReactNode;
-  primary?: boolean;
-  icon?: React.ReactNode;
-  iconAfter?: React.ReactNode | boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 h-7 px-2.5 text-xs rounded-md border transition-colors",
-        primary
-          ? "font-semibold border-info/40 bg-info/10 text-info hover:bg-info/20"
-          : "border-border/60 bg-background text-muted-foreground hover:text-foreground hover:border-border",
-      )}
-    >
-      {icon && <span className="flex items-center">{icon}</span>}
-      {children}
-      {iconAfter && typeof iconAfter !== "boolean" && <span className="flex items-center">{iconAfter}</span>}
     </button>
   );
 }
@@ -571,7 +595,7 @@ function BulkBar({
       {/* Left */}
       <div className="text-xs font-semibold flex items-center gap-2 flex-shrink-0">
         <span>{selCount} line{selCount !== 1 ? "s" : ""} selected</span>
-        <span className="text-background/45 font-normal">
+        <span className="opacity-40 font-normal">
           · {fmtAmtFull(selNet, currencyCode)} net
         </span>
       </div>
@@ -591,7 +615,7 @@ function BulkBar({
       <button
         onClick={onClear}
         aria-label="Clear selection"
-        className="text-xs text-background/45 hover:text-background underline underline-offset-2 transition-colors flex-shrink-0"
+        className="text-xs opacity-40 hover:opacity-100 underline underline-offset-2 transition-opacity flex-shrink-0"
       >
         Clear
       </button>
@@ -613,9 +637,9 @@ function BulkBtn({
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-1.5 h-7 px-3 text-xs rounded-md border transition-colors",
-        primary && "bg-info/25 border-info/50 text-info font-semibold hover:bg-info/35",
+        primary && "bg-info/20 border-info/50 text-info font-semibold hover:bg-info/30",
         danger  && "border-destructive/40 text-destructive hover:bg-destructive/20 hover:border-destructive/60",
-        !primary && !danger && "border-background/22 text-background hover:bg-background/10",
+        !primary && !danger && "border-background/20 text-background hover:bg-background/10",
       )}
     >
       {icon && <span className="flex items-center">{icon}</span>}
@@ -700,7 +724,7 @@ function MassField({
 }
 
 function BulkSep() {
-  return <span className="w-px h-4 bg-background/18 mx-1 flex-shrink-0" />;
+  return <span className="w-px h-4 bg-background/20 mx-1 flex-shrink-0" />;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -720,6 +744,7 @@ export function LinesGrid({
   const [sheetOpen,    setSheetOpen]    = useState(false);
   const [selectedIds,  setSelectedIds]  = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null);
+  const [adding,       setAdding]       = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [massDesc,      setMassDesc]      = useState("");
   const [massTaxCode,   setMassTaxCode]   = useState("");
@@ -785,12 +810,73 @@ export function LinesGrid({
     setSheetOpen(true);
   }, []);
 
-  async function quickAssign(line: DocumentLine, ccCode: string) {
-    await fetch(
-      `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions`,
+  async function handleAddLine() {
+    setAdding(true);
+    try {
+      const nextNo = lines.length + 1;
+      const res = await relayMutate(
+        `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            line_number:  nextNo,
+            description:  null,
+            quantity:     null,
+            unit_code:    null,
+            unit_price:   null,
+            line_amount:  null,
+            tax_code:     null,
+            data:         {},
+          }),
+        },
+      );
+      if (res.ok) {
+        const newLine: DocumentLine = await res.json() as DocumentLine;
+        onRefresh?.();
+        openSheet(newLine, "details");
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleDuplicateLine(line: DocumentLine) {
+    await relayMutate(
+      `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: line.description,
+          item_code:   line.item_code,
+          quantity:    line.quantity,
+          unit_code:   line.unit_code,
+          unit_price:  line.unit_price,
+          tax_code:    line.tax_code,
+          data:        line.data,
+        }),
+      },
+    );
+    onRefresh?.();
+  }
+
+  async function handleDeleteLine(line: DocumentLine) {
+    await relayMutate(
+      `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}`,
+      { method: "DELETE" },
+    );
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(line.id);
+      return next;
+    });
+    onRefresh?.();
+  }
+
+  async function quickAssign(line: DocumentLine, ccCode: string) {
+    await relayMutate(
+      `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions`,
+      {
+        method: "POST",
         body: JSON.stringify({
           distribution_basis: "PERCENT",
           split_pct:          100,
@@ -818,11 +904,10 @@ export function LinesGrid({
     const selected = lines.filter((l) => selectedIds.has(l.id));
     await Promise.all(
       selected.map((l) =>
-        fetch(
-          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
+        relayMutate(
+          `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               description: l.description,
               item_code:   l.item_code,
@@ -843,8 +928,8 @@ export function LinesGrid({
     const selected = lines.filter((l) => selectedIds.has(l.id));
     await Promise.all(
       selected.map((l) =>
-        fetch(
-          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(l.id)}`,
+        relayMutate(
+          `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(l.id)}`,
           { method: "DELETE" },
         ),
       ),
@@ -881,13 +966,9 @@ export function LinesGrid({
       if (massUnitPrice.trim()) patch.unit_price  = Number(massUnitPrice);
       await Promise.all(
         selected.map((l) =>
-          fetch(
-            `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(l.id)}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(patch),
-            },
+          relayMutate(
+            `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(l.id)}`,
+            { method: "PATCH", body: JSON.stringify(patch) },
           ),
         ),
       );
@@ -921,6 +1002,8 @@ export function LinesGrid({
         exceptionCount={exceptionCount}
         activeFilter={activeFilter}
         onFilterToggle={setActiveFilter}
+        onAddLine={() => void handleAddLine()}
+        adding={adding}
       />
 
       {/* Grid */}
@@ -969,6 +1052,12 @@ export function LinesGrid({
                     <p className="text-sm text-muted-foreground">
                       {activeFilter ? `No ${activeFilter} lines` : "No line items"}
                     </p>
+                    <button
+                      onClick={() => void handleAddLine()}
+                      className="mt-1 text-xs text-info hover:underline transition-colors"
+                    >
+                      + Add first line
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -982,7 +1071,7 @@ export function LinesGrid({
                     onClick={() => openSheet(line)}
                     className={cn(
                       "transition-colors cursor-pointer",
-                      isChecked ? "bg-info/7 hover:bg-info/10" : "hover:bg-muted/20",
+                      isChecked ? "bg-foreground/5 hover:bg-foreground/[0.07]" : "hover:bg-muted/20",
                     )}
                   >
                     {/* Checkbox — stops row-click propagation */}
@@ -1043,8 +1132,8 @@ export function LinesGrid({
                         dists={lineDists}
                         onEdit={() => openSheet(line, "details")}
                         onManageSplits={() => openSheet(line, "accounting")}
-                        onDuplicate={() => void 0}
-                        onDelete={() => void 0}
+                        onDuplicate={() => void handleDuplicateLine(line)}
+                        onDelete={() => void handleDeleteLine(line)}
                       />
                     </td>
                   </tr>

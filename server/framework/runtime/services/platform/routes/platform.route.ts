@@ -1492,7 +1492,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .where("cca.entity_type", "=", "principal")
           .where("cca.entity_id", "=", principalId)
           .where("cc.is_active", "=", true)
-          .execute() as Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>,
+          .execute() as Promise<Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>>,
         groupIds.length > 0
           ? db.selectFrom("master.company_code_access as cca")
               .innerJoin("master.company_code as cc", "cc.id", "cca.company_code_id")
@@ -1507,7 +1507,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
               .where("cca.entity_type", "=", "auth_group")
               .where("cca.entity_id", "in", groupIds)
               .where("cc.is_active", "=", true)
-              .execute() as Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>
+              .execute() as Promise<Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>>
           : Promise.resolve([]),
       ]);
 

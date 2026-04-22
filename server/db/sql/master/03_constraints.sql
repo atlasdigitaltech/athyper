@@ -2187,6 +2187,11 @@ DO $$ BEGIN
     ALTER TABLE master.payment_method ADD CONSTRAINT payment_method_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE master.payment_method ADD CONSTRAINT payment_method_status_chk
+        CHECK (status IN ('active', 'inactive', 'archived'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- 06_constraints/003d_master_payment_terms.sql
 -- Depends on: 04_tables/003d_master_payment_terms.sql, 04_tables/003_master.sql,
 --             04_tables/004_document.sql, 04_tables/005_ledger.sql,

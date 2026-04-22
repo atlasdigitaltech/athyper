@@ -157,14 +157,14 @@ export function FlowWizard({
                       key={f.id}
                       binding={f}
                       value={state.draft[f.field_name]}
+                      displayLabel={state.displayLabels[f.field_name]}
                       error={state.errors[f.field_name]}
                       userPermissions={userPermissions}
                       isOverridden={state.overrides.has(f.field_name)}
+                      draftCtx={state.draft}
                       onChange={(v) => setField(f.field_name, v)}
                       onOverride={(v) => setOverride(f.field_name, v)}
                       onReset={() => {
-                        // Reset to derived value: clear override flag
-                        // (a real impl would re-fetch derive endpoint)
                         setDerivedValue(f.field_name, null);
                       }}
                     />
@@ -180,6 +180,7 @@ export function FlowWizard({
                       key={f.id}
                       binding={f}
                       value={state.draft[f.field_name]}
+                      displayLabel={state.displayLabels[f.field_name]}
                       error={state.errors[f.field_name]}
                       userPermissions={userPermissions}
                       isOverridden={state.overrides.has(f.field_name)}

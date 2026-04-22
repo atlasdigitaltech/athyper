@@ -26,7 +26,8 @@
  * table name. Never use hyphens in entity codes.
  */
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo, useState, useCallback } from "react";
+import { cn } from "@athyper/theme/utils";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { EntityForm } from "@athyper/entity-runtime/form";
@@ -100,7 +101,7 @@ export default function AppEntityNewRoute({
     router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
   }
 
-  async function switchToAlternateFlow(flowCode: string) {
+  const switchToAlternateFlow = useCallback(async (flowCode: string) => {
     setAltLoading(true);
     try {
       const res = await fetch(
@@ -113,11 +114,11 @@ export default function AppEntityNewRoute({
     } finally {
       setAltLoading(false);
     }
-  }
+  }, [entity]);
 
-  function switchToDefaultFlow() {
-    setActiveBundle(undefined); // revert to defaultBundle
-  }
+  const switchToDefaultFlow = useCallback(() => {
+    setActiveBundle(undefined);
+  }, []);
 
   // Loading state
   if (flowLoading || altLoading) return <FlowWizardSkeleton />;
@@ -128,35 +129,42 @@ export default function AppEntityNewRoute({
 
   if (bundle) {
     return (
-      <div className="relative">
-        {/* Alternate-flow switcher pill — only shown when alternates exist */}
+      <div className="space-y-0">
+        {/* Flow mode switcher — [Invoice | Pro-forma] peer segmented control.
+            Placed above the wizard so both entry points feel equal, not
+            "correct path vs. fallback". is_default=true is 'Invoice';
+            alternate flows are peer options, not secondary actions. */}
         {alternates.length > 0 && (
-          <div className="absolute top-4 right-4 z-10 flex items-center gap-2 text-xs">
-            {isAlternate ? (
-              <>
-                <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
-                  {bundle.label}
-                </span>
-                <button
-                  type="button"
-                  onClick={switchToDefaultFlow}
-                  className="text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  Switch to standard invoice
-                </button>
-              </>
-            ) : (
-              alternates.map((alt) => (
+          <div className="flex justify-end px-4 pt-4">
+            <div className="flex items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={switchToDefaultFlow}
+                className={cn(
+                  "rounded-md px-3 py-1.5 font-semibold transition-colors",
+                  !isAlternate
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Invoice
+              </button>
+              {alternates.map((alt) => (
                 <button
                   key={alt.flow_code}
                   type="button"
-                  onClick={() => void switchToAlternateFlow(alt.flow_code)}
-                  className="rounded-full border border-border bg-background px-2.5 py-1 font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  onClick={!isAlternate ? () => void switchToAlternateFlow(alt.flow_code) : undefined}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 font-semibold transition-colors",
+                    isAlternate
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  {alt.label}
+                  Pro-forma
                 </button>
-              ))
-            )}
+              ))}
+            </div>
           </div>
         )}
 
