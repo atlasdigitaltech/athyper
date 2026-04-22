@@ -14,31 +14,12 @@ import { cn } from "@athyper/theme/utils";
 import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import { type AmountBreakdownLine } from "@athyper/api-contracts/documents";
+import { getCurrencySymbol, fmtNum } from "../_shared/format";
 
 export interface AmountSummaryCardProps {
   lines: AmountBreakdownLine[];
   title?: string;
   className?: string;
-}
-
-function getCurrencySymbol(code: string): string {
-  try {
-    const parts = new Intl.NumberFormat("en-US", {
-      style: "currency", currency: code,
-      minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).formatToParts(0);
-    const sym = parts.find((p) => p.type === "currency")?.value ?? code;
-    return sym === code ? "" : sym;
-  } catch {
-    return "";
-  }
-}
-
-function formatNumber(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 const INDENT_CLASS = ["", "pl-4", "pl-8"] as const;
@@ -89,9 +70,9 @@ export function AmountSummaryCard({
                     isBold ? "font-bold" : "font-medium",
                     !intentColors && "text-foreground",
                   )}>
-                    {formatNumber(line.amount)}
+                    {fmtNum(line.amount)}
                   </span>
-                  <span className="text-[9.5px] text-muted-foreground font-mono">
+                  <span className="text-2xs text-muted-foreground font-mono">
                     {line.currency_code}
                   </span>
                 </div>

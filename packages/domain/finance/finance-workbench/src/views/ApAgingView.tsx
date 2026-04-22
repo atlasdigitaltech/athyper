@@ -58,7 +58,7 @@ export function ApAgingView({ scope }: ApAgingViewProps) {
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-doc-support text-muted-foreground">
           Source: fin.ap_invoice · As at {data.asAt ? new Date(data.asAt).toLocaleDateString() : "period end"}
         </span>
         <div className="flex gap-3 text-xs text-muted-foreground">
@@ -75,11 +75,11 @@ export function ApAgingView({ scope }: ApAgingViewProps) {
           const isOverdue = b.key !== "current";
           return (
             <div key={b.key} className="rounded-lg border p-2.5 space-y-1">
-              <div className="text-[10px] text-muted-foreground">{b.label}</div>
+              <div className="text-doc-support text-muted-foreground">{b.label}</div>
               <div className={`text-sm font-semibold font-mono ${isOverdue && val > 0 ? "text-warning" : ""}`}>
                 {fmtCompact(val)}
               </div>
-              <div className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</div>
+              <div className="text-doc-support text-muted-foreground">{pct.toFixed(1)}%</div>
             </div>
           );
         })}
@@ -110,7 +110,7 @@ export function ApAgingView({ scope }: ApAgingViewProps) {
                   <td className="py-1.5 px-3">
                     <div className="font-medium">{row.supplierName ?? "Unknown vendor"}</div>
                     {row.supplierId && (
-                      <div className="text-[10px] text-muted-foreground">{row.supplierId}</div>
+                      <div className="text-doc-support text-muted-foreground">{row.supplierId}</div>
                     )}
                   </td>
                   {BUCKETS.map((b) => {

@@ -37,7 +37,7 @@ export function QualityPanel({ entityCode, recordId }: QualityPanelProps) {
     queryKey: ["record-quality", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/quality`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/quality`,
         { signal },
       );
       if (!res.ok) return { data: [] };

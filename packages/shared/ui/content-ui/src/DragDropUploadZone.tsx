@@ -189,14 +189,14 @@ export function DragDropUploadZone({
       >
         {isUploading ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="text-sm text-muted-foreground">Uploading…</p>
           </div>
         ) : (
           <>
             <UploadCloud
               className={cn(
-                "h-10 w-10 transition-colors",
+                "size-10 transition-colors",
                 isDragOver ? "text-primary" : "text-muted-foreground/50",
               )}
             />
@@ -239,8 +239,8 @@ export function DragDropUploadZone({
               )}
             >
               {uf.error
-                ? <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                : <FileText    className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                ? <AlertCircle className="size-4 shrink-0 text-destructive" />
+                : <FileText    className="size-4 shrink-0 text-muted-foreground" />}
 
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{uf.file.name}</p>
@@ -255,7 +255,7 @@ export function DragDropUploadZone({
                 className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
                 aria-label="Remove"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </button>
             </li>
           ))}

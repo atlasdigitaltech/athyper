@@ -64,6 +64,34 @@
   --doc-action-weight:  600;
 }
 
+/*
+ * ── Shared Layout Utilities ─────────────────────────────────────────────────
+ *
+ * section-label — uppercase micro-header used in cards, panels, and sidebars.
+ * Consumes doc-field-label tokens so it stays in sync with the doc scale.
+ */
+@layer utilities {
+  .section-label {
+    font-size: var(--doc-field-label-size);
+    font-weight: var(--doc-field-label-weight);
+    letter-spacing: var(--doc-field-label-tracking);
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /*
+   * Finance / dense-UI text scale — use these instead of arbitrary text-[Xpx].
+   * All sizes are backed by existing CSS variables defined above.
+   *
+   *   text-doc-label    → 9px  — field labels, axis ticks, micro badges
+   *   text-doc-support  → 10px — captions, sub-labels, meta lines
+   *   text-doc-subtitle → 11px — dense table body, section headers
+   */
+  .text-doc-label    { font-size: var(--doc-field-label-size); }
+  .text-doc-support  { font-size: var(--doc-support-size); }
+  .text-doc-subtitle { font-size: var(--doc-subtitle-size); }
+}
+
 @layer base {
   * {
     border-color: var(--border);

@@ -20,7 +20,7 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md px-3 text-xs",
         md: "h-9 px-4 py-2",
         lg: "h-10 rounded-md px-6 text-base",
-        icon: "h-9 w-9",
+        icon: "size-9",
       },
     },
     defaultVariants: {
@@ -48,7 +48,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && (
-          <svg className="h-4 w-4 animate-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="size-4 animate-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.07-5.07-2.83 2.83M9.76 14.24l-2.83 2.83m11.14 0-2.83-2.83M9.76 9.76 6.93 6.93" />
           </svg>
         )}

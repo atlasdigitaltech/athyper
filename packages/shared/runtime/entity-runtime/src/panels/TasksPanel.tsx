@@ -32,7 +32,7 @@ export function TasksPanel({ entityCode, recordId }: TasksPanelProps) {
     queryKey: ["record-tasks", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/tasks`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/tasks`,
         { signal },
       );
       if (!res.ok) return { data: [] };
@@ -70,7 +70,7 @@ export function TasksPanel({ entityCode, recordId }: TasksPanelProps) {
               {task.due_date}
             </span>
           )}
-          <Badge variant="outline" className="text-[10px]">{task.status}</Badge>
+          <Badge variant="outline" className="text-2xs">{task.status}</Badge>
         </div>
       ))}
     </div>

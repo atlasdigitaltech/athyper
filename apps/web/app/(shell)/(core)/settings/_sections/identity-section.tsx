@@ -20,6 +20,13 @@ import {
 interface GroupRole { role_code: string; role_name: string; visibility_scope: string; assignment_scope_type: string; assignment_scope_ref_id?: string | null; }
 interface GroupEntry extends Record<string, unknown> { roles: GroupRole[]; }
 
+interface AccessibleCompany {
+  company_code:        string;
+  company_name:        string;
+  legal_entity_code:   string | null;
+  legal_entity_name:   string | null;
+}
+
 interface IdentityData {
   persona:               Record<string, unknown> | null;
   groups:                GroupEntry[];
@@ -28,6 +35,7 @@ interface IdentityData {
   delegations_given:     Record<string, unknown>[];
   feature_grants?:       Record<string, unknown>[];
   access_grants?:        Record<string, unknown>[];
+  accessible_companies?: AccessibleCompany[];
 }
 
 interface DelegationRecord extends Record<string, unknown> {
@@ -604,6 +612,14 @@ export function IdentitySection({ active }: { active: boolean }) {
   const received  = data?.delegations_received ?? [];
   const features  = data?.feature_grants ?? [];
   const accessGrants = data?.access_grants ?? [];
+  const companies = data?.accessible_companies ?? [];
+
+  const legalEntityCount = new Set(companies.map((c) => c.legal_entity_code).filter(Boolean)).size;
+  const companiesByLE = companies.reduce<Record<string, AccessibleCompany[]>>((acc, c) => {
+    const key = c.legal_entity_code ?? "—";
+    (acc[key] ??= []).push(c);
+    return acc;
+  }, {});
 
   const showFeatures = features.length > 0;
 
@@ -638,11 +654,13 @@ export function IdentitySection({ active }: { active: boolean }) {
               editPath: "Contact tenant admin",
             }}
           >
-            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
                 { label: "Current Persona",       value: persona ? str(persona["persona_name"]) : "None" },
                 { label: "Active Groups",          value: `${groups.length} group${groups.length !== 1 ? "s" : ""}` },
                 { label: "Delegations Received",   value: String(received.length) },
+                { label: "Legal Entities",         value: companies.length === 0 ? "—" : String(legalEntityCount) },
+                { label: "Company Codes",          value: companies.length === 0 ? "—" : String(companies.length) },
                 { label: "Explicit Denials",       value: String(accessGrants.filter((a) => str(a["effect"]) === "deny").length) },
               ].map((card) => (
                 <div key={card.label} className="rounded-md bg-muted p-3">
@@ -655,6 +673,42 @@ export function IdentitySection({ active }: { active: boolean }) {
                 </div>
               ))}
             </div>
+
+            {companies.length > 0 && (
+              <>
+                <p className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Accessible Legal Entities &amp; Company Codes
+                </p>
+                <div className="mb-4 space-y-2">
+                  {Object.entries(companiesByLE).map(([leKey, leCos]) => {
+                    const le = leCos[0];
+                    const leLabel = le?.legal_entity_name
+                      ? `${leKey} — ${le.legal_entity_name}`
+                      : leKey;
+                    return (
+                      <div key={leKey} className="rounded-md border bg-muted/40 px-3 py-2">
+                        <p className="mb-1.5 text-xs font-semibold text-foreground">{leLabel}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {leCos.map((c) => (
+                            <span
+                              key={c.company_code}
+                              className="inline-flex items-center gap-1 rounded border bg-background px-2 py-0.5"
+                            >
+                              <span className="font-mono text-2xs font-semibold">{c.company_code}</span>
+                              <span className="text-2xs text-muted-foreground">{c.company_name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mb-3 text-2xs text-muted-foreground">
+                  Source: direct principal assignment or via group membership in{" "}
+                  <code className="rounded bg-muted px-1 font-mono text-2xs">master.company_code_access</code>.
+                </p>
+              </>
+            )}
 
             {accessGrants.length > 0 && (
               <>

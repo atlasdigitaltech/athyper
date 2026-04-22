@@ -15,7 +15,7 @@ export function CoaCatalogView({ onOpenChart }: CoaCatalogViewProps) {
 
   return (
     <div className="space-y-3">
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-doc-support text-muted-foreground">
         {isLoading ? "Loading…" : `${charts?.length ?? 0} charts · 3-tier architecture`}
       </div>
 
@@ -52,7 +52,7 @@ export function CoaCatalogView({ onOpenChart }: CoaCatalogViewProps) {
                     <td className="py-2 px-3 font-mono font-medium">{chart.code}</td>
                     <td className="py-2 px-3">{chart.name}</td>
                     <td className="py-2 px-3">
-                      <Badge variant="muted" className="text-[10px] py-0">{chart.framework}</Badge>
+                      <Badge variant="muted" className="text-doc-support py-0">{chart.framework}</Badge>
                     </td>
                     <td className="py-2 px-3"><TierBadge tier={chart.tier} /></td>
                     <td className="py-2 px-3 text-center text-muted-foreground">{chart.country ?? "—"}</td>

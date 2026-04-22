@@ -46,8 +46,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       if (!claims) return;
 
       // ── Params ────────────────────────────────────────────────────────────
-      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const trigger = (req.query["trigger"] as string | undefined) ?? "new";
+      const entityCode   = (req.params["entity"] as string).replace(/-/g, "_");
+      const trigger      = (req.query["trigger"]   as string | undefined) ?? "new";
+      const flowCodeParam = req.query["flow_code"] as string | undefined;
 
       // ── Tenant ────────────────────────────────────────────────────────────
       const { xOrg, xRealm } = extractOrgHeaders(req);
@@ -82,15 +83,23 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         return;
       }
 
-      // ── Active default flow for this entity version + trigger ─────────────
+      // ── Active flow for this entity version ───────────────────────────────
+      // When flow_code is supplied, fetch that specific flow regardless of
+      // is_default. When absent, fall back to the tenant's default flow for
+      // the requested trigger context.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let flowQuery: any = db
         .selectFrom("control.entity_flow as ef")
         .select(["ef.id", "ef.flow_code", "ef.label", "ef.config"])
         .where("ef.entity_version_id", "=", entityRow.version_id as string)
         .where("ef.trigger_context", "=", trigger)
-        .where("ef.is_default", "=", true)
         .where("ef.status", "=", "active");
+
+      if (flowCodeParam) {
+        flowQuery = flowQuery.where("ef.flow_code", "=", flowCodeParam);
+      } else {
+        flowQuery = flowQuery.where("ef.is_default", "=", true);
+      }
 
       if (tenantId) {
         flowQuery = flowQuery
@@ -106,7 +115,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       if (!flowRow) {
         res.status(404).json({
           error: "FLOW_NOT_FOUND",
-          message: `No active flow for entity '${entityCode}' trigger '${trigger}'`,
+          message: flowCodeParam
+            ? `No active flow '${flowCodeParam}' for entity '${entityCode}'`
+            : `No active flow for entity '${entityCode}' trigger '${trigger}'`,
         });
         return;
       }

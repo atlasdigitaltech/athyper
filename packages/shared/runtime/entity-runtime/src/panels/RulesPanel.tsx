@@ -32,7 +32,7 @@ export function RulesPanel({ entityCode, recordId }: RulesPanelProps) {
     queryKey: ["record-rules", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/rules`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/rules`,
         { signal },
       );
       if (!res.ok) return { data: [] };
@@ -60,7 +60,7 @@ export function RulesPanel({ entityCode, recordId }: RulesPanelProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{rule.name}</span>
-              <Badge variant={rule.is_enabled ? "success" : "outline"} className="text-[10px]">
+              <Badge variant={rule.is_enabled ? "success" : "outline"} className="text-2xs">
                 {rule.is_enabled ? "Active" : "Disabled"}
               </Badge>
             </div>

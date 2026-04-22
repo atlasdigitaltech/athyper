@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn, resolveSemanticColors, paymentDirectionIntent } from "@athyper/theme";
 import type { FinanceScope } from "../lib/scope";
+import { fmtCurrency, fmtDate } from "../components/format";
 import {
   useBankAccounts,
   useBankStatement,
@@ -12,15 +13,6 @@ import {
 } from "../hooks/useBankReconciliation";
 
 type BankTab = "statement" | "unreconciled";
-
-function fmt(n: number): string {
-  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-}
-
-function fmtDate(d: string | null): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 // ── Account selector ──────────────────────────────────────────────────────────
 
@@ -56,10 +48,10 @@ function AccountSelector({
           )}
         >
           <div className="text-xs font-medium">{acct.name}</div>
-          <div className="text-[10px] text-muted-foreground font-mono">
+          <div className="text-doc-support text-muted-foreground font-mono">
             {acct.accountIdType ?? ""} ····{acct.accountLast4 ?? ""}
           </div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-doc-support text-muted-foreground">
             {acct.currencyCode}{acct.isPrimary ? " · Primary" : ""}
             {acct.glAccountCode ? ` · GL ${acct.glAccountCode}` : ""}
           </div>
@@ -80,7 +72,7 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-doc-support text-muted-foreground">
         As at {data?.asAt ? fmtDate(data.asAt) : "—"} · {data?.items.length ?? 0} entries
       </div>
       <div className="rounded-xl border overflow-hidden">
@@ -108,22 +100,22 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
               return (
                 <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">{item.paymentNumber}</td>
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{item.paymentNumber}</td>
                   <td className="py-1.5 px-3">{item.counterpartyName ?? "—"}</td>
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">
                     {item.bankReference ?? item.paymentReference ?? "—"}
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono">
-                    {isInbound ? "—" : <span className="text-destructive">{fmt(item.paymentAmount)}</span>}
+                    {isInbound ? "—" : <span className="text-destructive">{fmtCurrency(item.paymentAmount)}</span>}
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono">
-                    {isInbound ? <span className="text-success">{fmt(item.paymentAmount)}</span> : "—"}
+                    {isInbound ? <span className="text-success">{fmtCurrency(item.paymentAmount)}</span> : "—"}
                   </td>
                   <td className={cn("py-1.5 px-3 text-right font-mono font-medium",
                     item.runningBalance >= 0 ? "text-success" : "text-destructive")}>
-                    {fmt(Math.abs(item.runningBalance))}{item.runningBalance < 0 ? " DR" : ""}
+                    {fmtCurrency(Math.abs(item.runningBalance))}{item.runningBalance < 0 ? " DR" : ""}
                   </td>
-                  <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
+                  <td className="py-1.5 px-3 text-muted-foreground text-doc-support">
                     {isCleared ? fmtDate(item.clearedDate) : "—"}
                   </td>
                   <td className="py-1.5 px-3 capitalize text-muted-foreground">{item.status}</td>
@@ -178,14 +170,14 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-4">
-        <div className="text-[10px] text-muted-foreground">
+        <div className="text-doc-support text-muted-foreground">
           {data?.count ?? 0} unreconciled item{data?.count !== 1 ? "s" : ""}
         </div>
         <div className={cn(
           "text-xs font-mono font-medium",
           unreconTotal >= 0 ? "text-warning" : "text-destructive",
         )}>
-          Net: {fmt(Math.abs(unreconTotal))}{unreconTotal < 0 ? " DR" : ""}
+          Net: {fmtCurrency(Math.abs(unreconTotal))}{unreconTotal < 0 ? " DR" : ""}
         </div>
         {selected.size > 0 && (
           <button
@@ -198,7 +190,7 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
           </button>
         )}
         {reconcile.isSuccess && selected.size === 0 && (
-          <span className="ml-auto text-[10px] text-success">
+          <span className="ml-auto text-doc-support text-success">
             {reconcile.data?.cleared} payment{reconcile.data?.cleared !== 1 ? "s" : ""} cleared
           </span>
         )}
@@ -249,10 +241,10 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
                   />
                 </td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">{item.paymentNumber}</td>
+                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{item.paymentNumber}</td>
                 <td className="py-1.5 px-3">
                   <span className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                    "px-1.5 py-0.5 rounded text-doc-support font-medium border",
                     resolveSemanticColors(paymentDirectionIntent(item.paymentDirection)).subtleBadge,
                   )}>
                     {item.paymentDirection}
@@ -261,14 +253,14 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
                 <td className="py-1.5 px-3">{item.counterpartyName ?? "—"}</td>
                 <td className="py-1.5 px-3 text-right font-mono font-medium">
                   {item.paymentDirection === "INBOUND"
-                    ? <span className="text-success">{fmt(item.paymentAmount)}</span>
-                    : <span>{fmt(item.paymentAmount)}</span>
+                    ? <span className="text-success">{fmtCurrency(item.paymentAmount)}</span>
+                    : <span>{fmtCurrency(item.paymentAmount)}</span>
                   }
                 </td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">
+                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">
                   {item.bankReference ?? "—"}
                 </td>
-                <td className="py-1.5 px-3 text-muted-foreground text-[10px]">
+                <td className="py-1.5 px-3 text-muted-foreground text-doc-support">
                   {item.clearedDate ? fmtDate(item.clearedDate) : "—"}
                 </td>
                 <td className="py-1.5 px-3 capitalize text-warning font-medium">{item.status}</td>
@@ -323,7 +315,7 @@ export function BankReconciliationView({ scope }: BankReconciliationViewProps) {
     <div className="space-y-3">
       {/* Account selector */}
       <div>
-        <div className="text-[9px] text-muted-foreground uppercase mb-1.5">House Bank Accounts</div>
+        <div className="text-doc-label text-muted-foreground uppercase mb-1.5">House Bank Accounts</div>
         {accountsLoading
           ? <div className="text-xs text-muted-foreground animate-pulse">Loading accounts…</div>
           : <AccountSelector

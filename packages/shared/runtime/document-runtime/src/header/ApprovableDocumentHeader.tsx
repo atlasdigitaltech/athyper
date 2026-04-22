@@ -145,7 +145,7 @@ function AuditMetaBar({ audit }: { audit: ApprovableAudit }) {
   if (parts.length === 0) return null;
   return (
     <div className="border-t border-dashed border-border/40 px-4 py-[7px] sm:px-5 lg:px-[22px]">
-      <p className="text-[10px] text-muted-foreground/55 leading-none tracking-[0.01em]">
+      <p className="text-2xs text-muted-foreground/55 leading-none tracking-[0.01em]">
         {parts.join("   ·   ")}
       </p>
     </div>
@@ -526,7 +526,7 @@ export function ApprovableDocumentHeader({
               {tab.label}
               {tab.count != null && (
                 <span className={cn(
-                  "ml-1.5 text-[10px] px-1 py-0.5 rounded font-semibold tabular-nums",
+                  "ml-1.5 text-2xs px-1 py-0.5 rounded font-semibold tabular-nums",
                   tab.countIntent === "attention"
                     ? "bg-info/10 text-info"
                     : "bg-muted text-muted-foreground",

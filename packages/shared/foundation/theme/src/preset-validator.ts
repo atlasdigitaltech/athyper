@@ -95,9 +95,6 @@ export function validatePresetCSS(css: string, presetName: string): PresetValida
   if (dark.length === 0) {
     warnings.push("No .dark: block found — dark mode will inherit light values.");
   }
-  if (!lightVars.has("--radius")) {
-    warnings.push("Missing --radius — border radius will fall back to browser default.");
-  }
 
   return {
     valid: missingLight.length === 0,

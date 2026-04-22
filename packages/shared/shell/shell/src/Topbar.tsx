@@ -21,6 +21,7 @@
 import { type ReactNode } from "react";
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@athyper/ui/primitives";
+import { NavBadge } from "./NavBadge";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -132,12 +133,12 @@ export function Topbar({
       {/* ── Center-right: launcher trigger ─────────────────── */}
       <button
         onClick={onSearchClick}
-        className="hidden items-center gap-2 rounded-lg border bg-muted/30 px-3 py-1.5 text-[11.5px] text-muted-foreground transition-colors hover:bg-muted/60 sm:flex"
-        style={{ minWidth: "240px", maxWidth: "360px" }}
+        aria-label="Open launcher"
+        className="hidden min-w-60 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 sm:flex"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left">Search or do anything…</span>
-        <kbd className="hidden items-center gap-0.5 rounded border bg-background px-1 py-0.5 font-mono text-[9.5px] text-muted-foreground lg:flex">
+        <kbd className="hidden items-center gap-0.5 rounded border bg-background px-1 py-0.5 font-mono text-xs text-muted-foreground lg:flex">
           <span>⌘</span><span>K</span>
         </kbd>
       </button>
@@ -165,17 +166,13 @@ export function Topbar({
           aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
         >
           <Bell className="h-4 w-4" />
-          {notificationCount > 0 && (
-            <span className="absolute right-0.5 top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-destructive px-0.5 text-[9px] font-bold leading-none text-white">
-              {notificationCount > 99 ? "99+" : notificationCount}
-            </span>
-          )}
+          <NavBadge count={notificationCount} variant="overlay" />
         </Button>
 
         {/* Avatar / user menu */}
         {userSlot ?? (
           initials && (
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {initials}
             </div>
           )

@@ -30,6 +30,7 @@
 import { useState, type ReactNode } from "react";
 import { type LucideIcon, X, Search } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { NavBadge } from "./NavBadge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ export interface ContextPanelProps {
   /** Page links shown inline below the active module. */
   pages?: PanelPage[];
   activeModuleCode?: string | null;
-  /** True when showing Platform modules (violet tint). */
+  /** True when showing Platform modules (accent tint). */
   isPlatform?: boolean;
   /**
    * Workbench accent hex (e.g. "#0d9668").
@@ -87,7 +88,7 @@ export interface ContextPanelProps {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="px-2 pb-1 pt-2 text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground">
+    <p className="section-label px-2 pb-1 pt-2">
       {children}
     </p>
   );
@@ -119,7 +120,7 @@ function ModuleItem({
       <button
         onClick={onClick}
         className={cn(
-          "relative flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors",
+          "relative flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
           active && !isPlatform && "font-semibold",
           active && isPlatform && "bg-accent/10 font-semibold text-accent-foreground",
           !active && "text-foreground/70 hover:bg-accent hover:text-foreground",
@@ -127,9 +128,7 @@ function ModuleItem({
         style={
           active && !isPlatform && accentColor
             ? { backgroundColor: accentColor + "18", color: accentColor }
-            : active && !isPlatform
-              ? undefined
-              : undefined
+            : undefined
         }
       >
         {/* Active left bar */}
@@ -137,7 +136,7 @@ function ModuleItem({
           <span
             aria-hidden
             className={cn(
-              "absolute left-0 top-0.5 bottom-0.5 w-0.5 rounded-r-full",
+              "absolute bottom-0.5 left-0 top-0.5 w-0.5 rounded-r-full",
               !accentColor && "bg-sidebar-primary",
             )}
             style={accentColor ? { backgroundColor: accentColor } : undefined}
@@ -155,27 +154,23 @@ function ModuleItem({
               key={page.key}
               href={page.href}
               className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1 text-[11.5px] transition-colors",
+                "flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors",
                 page.active
                   ? "font-medium"
-                  : "text-foreground/55 hover:bg-accent hover:text-foreground",
+                  : "text-foreground/50 hover:bg-accent hover:text-foreground",
               )}
-              style={
-                page.active && accentColor
-                  ? { color: accentColor }
-                  : undefined
-              }
+              style={page.active && accentColor ? { color: accentColor } : undefined}
             >
               <span
                 className={cn(
                   "h-1 w-1 shrink-0 rounded-full",
-                  page.active ? "opacity-100" : "opacity-30 bg-current",
+                  page.active ? "opacity-100" : "bg-current opacity-30",
                 )}
                 style={page.active && accentColor ? { backgroundColor: accentColor } : undefined}
               />
               <span className="flex-1 truncate">{page.label}</span>
               {page.count != null && (
-                <span className="text-[10px] tabular-nums text-muted-foreground">
+                <span className="text-xs tabular-nums text-muted-foreground">
                   {page.count}
                 </span>
               )}
@@ -184,6 +179,14 @@ function ModuleItem({
         </div>
       )}
     </div>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="px-3 py-6 text-center text-xs text-muted-foreground">{message}</p>
   );
 }
 
@@ -227,7 +230,7 @@ export function ContextPanel({
         <div>
           <p
             className={cn(
-              "text-[13px] font-semibold",
+              "text-sm font-semibold",
               isPlatform && "text-accent-foreground",
             )}
             style={!isPlatform && accentColor ? { color: accentColor } : undefined}
@@ -235,7 +238,7 @@ export function ContextPanel({
             {title}
           </p>
           {subtitle && (
-            <p className="mt-0.5 text-[10.5px] text-muted-foreground">{subtitle}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
           )}
         </div>
         {onClose && (
@@ -256,7 +259,9 @@ export function ContextPanel({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter…"
-          className="w-full bg-transparent text-[11.5px] outline-none placeholder:text-muted-foreground"
+          maxLength={60}
+          autoComplete="off"
+          className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
         />
       </div>
 
@@ -271,15 +276,11 @@ export function ContextPanel({
               <button
                 key={item.key}
                 onClick={item.onClick}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
               >
                 <item.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate">{item.label}</span>
-                {item.badge != null && item.badge > 0 && (
-                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-none text-white">
-                    {item.badge > 99 ? "99+" : item.badge}
-                  </span>
-                )}
+                <NavBadge count={item.badge ?? 0} variant="inline" />
               </button>
             ))}
             <Divider />
@@ -313,7 +314,8 @@ export function ContextPanel({
               );
             })
           : /* Workspace: accordion module list with inline pages */
-            filteredModules.length > 0 && (
+            filteredModules.length > 0
+            ? (
               <section className="relative px-2">
                 <SectionLabel>Modules</SectionLabel>
                 {filteredModules.map((mod) => (
@@ -327,7 +329,12 @@ export function ContextPanel({
                   />
                 ))}
               </section>
-            )}
+            )
+            : filter
+              ? <EmptyState message={`No modules match "${filter}"`} />
+              : modules.length === 0
+                ? <EmptyState message="No modules available" />
+                : null}
       </div>
     </div>
   );

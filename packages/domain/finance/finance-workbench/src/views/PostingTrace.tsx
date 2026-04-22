@@ -15,18 +15,7 @@ import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Badge, Skeleton } from "@athyper/ui/primitives";
 import { usePostingTrace } from "../hooks/usePostingTrace";
 import type { PostingTraceLine } from "../hooks/usePostingTrace";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtDate(d: string | null): string {
-  if (!d) return "—";
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString();
-}
+import { fmtCurrency, fmtDate } from "../components/format";
 
 function statusBadge(status: string) {
   const s = status.toLowerCase();
@@ -42,8 +31,8 @@ function DimCell({ code, name }: { code: string | null; name: string | null }) {
   if (!code) return <span className="text-muted-foreground/50">—</span>;
   return (
     <span className="inline-flex flex-col leading-tight">
-      <span className="font-mono text-[10px]">{code}</span>
-      {name && <span className="text-[10px] text-muted-foreground">{name}</span>}
+      <span className="font-mono text-doc-support">{code}</span>
+      {name && <span className="text-doc-support text-muted-foreground">{name}</span>}
     </span>
   );
 }
@@ -59,16 +48,16 @@ function TraceRow({ line }: { line: PostingTraceLine }) {
         <span className="ml-2 text-xs text-muted-foreground">{line.accountName}</span>
       </td>
       <td className="px-3 py-2 text-center">
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{line.accountClass}</Badge>
+        <Badge variant="outline" className="text-doc-support px-1.5 py-0">{line.accountClass}</Badge>
       </td>
       <td className="px-3 py-2"><DimCell code={line.costCenterCode}   name={line.costCenterName} /></td>
       <td className="px-3 py-2"><DimCell code={line.profitCenterCode} name={line.profitCenterName} /></td>
       <td className="px-3 py-2"><DimCell code={line.projectCode}      name={line.projectName} /></td>
       <td className="px-3 py-2 text-right tabular-nums font-medium text-success">
-        {line.debitAmount  > 0 ? fmt(line.debitAmount)  : ""}
+        {line.debitAmount  > 0 ? fmtCurrency(line.debitAmount)  : ""}
       </td>
       <td className="px-3 py-2 text-right tabular-nums font-medium text-destructive">
-        {line.creditAmount > 0 ? fmt(line.creditAmount) : ""}
+        {line.creditAmount > 0 ? fmtCurrency(line.creditAmount) : ""}
       </td>
       <td className="px-3 py-2 text-xs text-muted-foreground">{line.itemText ?? line.assignment ?? "—"}</td>
     </tr>
@@ -118,7 +107,7 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
               <span className="font-mono text-sm font-semibold">{je.jeNumber}</span>
               {statusBadge(je.status)}
               {je.reversalOf && (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-doc-support">
                   <RefreshCw className="mr-1 h-3 w-3" />Reversal
                 </Badge>
               )}
@@ -146,13 +135,13 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
           <div>
             <p className="text-xs text-muted-foreground">Total Debit</p>
             <p className="tabular-nums font-semibold text-success">
-              {je.currencyCode} {fmt(je.totalDebit)}
+              {je.currencyCode} {fmtCurrency(je.totalDebit)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total Credit</p>
             <p className="tabular-nums font-semibold text-destructive">
-              {je.currencyCode} {fmt(je.totalCredit)}
+              {je.currencyCode} {fmtCurrency(je.totalCredit)}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-1.5 text-xs">
@@ -190,10 +179,10 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
                 {lines.length} line{lines.length !== 1 ? "s" : ""}
               </td>
               <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-success">
-                {fmt(totalDebit)}
+                {fmtCurrency(totalDebit)}
               </td>
               <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-destructive">
-                {fmt(totalCredit)}
+                {fmtCurrency(totalCredit)}
               </td>
               <td />
             </tr>

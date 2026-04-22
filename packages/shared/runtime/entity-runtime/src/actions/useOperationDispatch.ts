@@ -117,7 +117,7 @@ export function useOperationDispatch({
       setIsSubmitting(true);
       try {
         const res = await fetch(
-          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/operations/${encodeURIComponent(activeOpCode)}`,
+          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/action/${encodeURIComponent(activeOpCode)}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

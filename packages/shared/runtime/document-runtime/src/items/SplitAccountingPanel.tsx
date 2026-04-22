@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, X, XCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
+import { fmtAmount } from "../_shared/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,12 +41,7 @@ export interface SplitAccountingPanelProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtAmt(v: number, cc?: string): string {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(v) + (cc ? ` ${cc}` : "");
-}
+const fmtAmt = fmtAmount;
 
 function distToRow(d: AccountingDistribution): SplitRow {
   return {
@@ -155,6 +151,7 @@ export function SplitAccountingPanel({
 
   const [rows, setRows] = useState<SplitRow[]>(() => distributions.map(distToRow));
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [activeBasis, setActiveBasis] = useState<DistBasis>(
     distributions[0]?.distribution_basis ?? "PERCENT",
   );
@@ -197,6 +194,7 @@ export function SplitAccountingPanel({
     if (!row || !row._dirty) return;
     const key = row.id ?? `new-${idx}`;
     setSaving((s) => ({ ...s, [key]: true }));
+    setMutationError(null);
 
     try {
       const payload = {
@@ -212,25 +210,20 @@ export function SplitAccountingPanel({
         description:         row.description || null,
       };
 
-      let url: string;
-      let method: string;
-
-      if (row._isNew || !row.id) {
-        url    = `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions`;
-        method = "POST";
-      } else {
-        url    = `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions/${encodeURIComponent(row.id)}`;
-        method = "PATCH";
-      }
+      const isNew = row._isNew || !row.id;
+      const url = isNew
+        ? `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions`
+        : `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions/${encodeURIComponent(row.id!)}`;
 
       const res = await fetch(url, {
-        method,
+        method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        console.error("Failed to save distribution", await res.text());
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setMutationError(errBody.error ?? `Save failed (${res.status})`);
         return;
       }
 
@@ -241,6 +234,8 @@ export function SplitAccountingPanel({
         return next;
       });
       onMutated?.();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : "Network error — please retry");
     } finally {
       setSaving((s) => {
         const n = { ...s };
@@ -261,13 +256,21 @@ export function SplitAccountingPanel({
 
     const key = row.id;
     setSaving((s) => ({ ...s, [key]: true }));
+    setMutationError(null);
     try {
-      await fetch(
+      const res = await fetch(
         `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/distributions/${encodeURIComponent(row.id)}`,
         { method: "DELETE" },
       );
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setMutationError(errBody.error ?? `Delete failed (${res.status})`);
+        return;
+      }
       setRows((prev) => prev.filter((_, i) => i !== idx));
       onMutated?.();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : "Network error — please retry");
     } finally {
       setSaving((s) => {
         const n = { ...s };
@@ -400,7 +403,7 @@ export function SplitAccountingPanel({
                   <button
                     onClick={() => void saveRow(idx)}
                     disabled={isSaving}
-                    className="h-5 px-1.5 text-[9px] font-semibold rounded bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
+                    className="h-5 px-1.5 text-2xs font-semibold rounded bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
                   >
                     {isSaving ? "…" : "Save"}
                   </button>
@@ -417,6 +420,17 @@ export function SplitAccountingPanel({
           );
         })}
       </div>
+
+      {/* Mutation error banner */}
+      {mutationError && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 min-w-0">{mutationError}</span>
+          <button onClick={() => setMutationError(null)} className="shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss error">
+            <XCircle className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Footer: add + remaining indicator */}
       <div className="flex items-center justify-between pt-1 border-t border-border/40">

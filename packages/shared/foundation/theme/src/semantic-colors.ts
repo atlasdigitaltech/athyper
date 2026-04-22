@@ -104,7 +104,7 @@ const semanticColorMap: Record<SemanticIntent, SemanticColorSet> = {
     border: "border-accent",
     dot: "bg-accent",
     badge: "bg-accent text-accent-foreground",
-    subtleBadge: "bg-accent/10 text-accent-foreground border-accent/30",
+    subtleBadge: "bg-accent/10 text-accent border-accent/30",
   },
   muted: {
     bg: "bg-muted",

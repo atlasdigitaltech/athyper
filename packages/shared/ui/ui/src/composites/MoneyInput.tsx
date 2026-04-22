@@ -75,38 +75,42 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
     );
 
     return (
-      <div className={cn("relative flex items-center", className)}>
-        {currencyCode && (
-          <span
-            className="pointer-events-none absolute left-3 text-xs font-medium text-muted-foreground"
-            aria-hidden
-          >
-            {currencyCode}
-          </span>
-        )}
-        <input
-          ref={ref}
-          id={id}
-          type="number"
-          value={value ?? ""}
-          onChange={handleChange}
-          step={step}
-          placeholder={placeholder}
-          disabled={disabled}
-          readOnly={readOnly}
-          aria-invalid={!!error}
-          className={cn(
-            "h-9 w-full rounded-md border border-input bg-background py-1 pr-3 text-right text-sm tabular-nums",
-            currencyCode ? "pl-12" : "pl-3",
-            "placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            "read-only:bg-muted",
-            error && "border-destructive ring-1 ring-destructive",
+      <div className={className}>
+        <div className="relative flex items-center">
+          {currencyCode && (
+            <span
+              className="pointer-events-none absolute left-3 text-xs font-medium text-muted-foreground"
+              aria-hidden
+            >
+              {currencyCode}
+            </span>
           )}
-        />
+          <input
+            ref={ref}
+            id={id}
+            type="number"
+            value={value ?? ""}
+            onChange={handleChange}
+            step={step}
+            placeholder={placeholder}
+            disabled={disabled}
+            readOnly={readOnly}
+            aria-invalid={!!error}
+            className={cn(
+              "h-9 w-full rounded-md border border-input bg-background py-1 pr-3 text-right text-sm tabular-nums",
+              currencyCode ? "pl-12" : "pl-3",
+              "placeholder:text-muted-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              "read-only:bg-muted",
+              error && "border-destructive ring-1 ring-destructive",
+            )}
+          />
+        </div>
         {error && (
-          <p className="mt-1 text-xs text-destructive">{error}</p>
+          <p className="mt-1 text-xs text-destructive" role="alert">
+            {error}
+          </p>
         )}
       </div>
     );

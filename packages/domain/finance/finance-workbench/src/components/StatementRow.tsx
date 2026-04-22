@@ -45,13 +45,13 @@ export function StatementRow({
       style={{ paddingLeft: `${indent * 16 + 8}px` }}
     >
       <span className={cn(
-        "font-mono text-[9px] text-muted-foreground w-16 shrink-0",
+        "font-mono text-doc-label text-muted-foreground w-16 shrink-0",
         (row.isTotal || row.isSubtotal) && "text-foreground",
       )}>
         {!row.isTotal ? row.accountCode : ""}
       </span>
       <span className={cn(
-        "text-[11px] flex-1 truncate",
+        "text-doc-subtitle flex-1 truncate",
         row.isTotal && "text-xs",
       )}>
         {row.accountName}
@@ -59,7 +59,7 @@ export function StatementRow({
 
       <div className="flex items-center gap-6 pr-0">
         <span className={cn(
-          "font-mono text-[11px] w-28 text-right",
+          "font-mono text-doc-subtitle w-28 text-right",
           row.isTotal && "text-xs font-bold",
           row.current < 0 && "text-destructive",
         )}>
@@ -67,12 +67,12 @@ export function StatementRow({
         </span>
         {showComparative && (
           <>
-            <span className="font-mono text-[11px] w-28 text-right text-muted-foreground">
+            <span className="font-mono text-doc-subtitle w-28 text-right text-muted-foreground">
               {row.prior !== undefined ? fmtCompact(row.prior) : "—"}
             </span>
             <span
               className={cn(
-                "font-mono text-[11px] w-20 text-right",
+                "font-mono text-doc-subtitle w-20 text-right",
                 variance !== null && variance > 0
                   ? "text-success"
                   : variance !== null && variance < 0

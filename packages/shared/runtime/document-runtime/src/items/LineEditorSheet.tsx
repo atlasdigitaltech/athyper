@@ -10,13 +10,14 @@
 import React, { useState, useMemo, useRef } from "react";
 import {
   Plus, Trash2, Sparkles, ChevronsUpDown,
-  Pencil, Copy, Download, Upload,
+  Pencil, Copy, Download, Upload, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
+import { fmtAmount } from "../_shared/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,12 +74,8 @@ export interface LineEditorSheetProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtAmt(v: number, cc?: string): string {
-  return (
-    new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) +
-    (cc ? ` ${cc}` : "")
-  );
-}
+/** Alias so call-sites don't need to change. */
+const fmtAmt = fmtAmount;
 
 function distToRow(d: AccountingDistribution): SplitRow {
   return {
@@ -108,6 +105,20 @@ function lineUrl(e: string, r: string, l: string) { return `/api/relay/api/recor
 function distUrl(e: string, r: string, l: string, d?: string) { const base = `${lineUrl(e, r, l)}/distributions`; return d ? `${base}/${encodeURIComponent(d)}` : base; }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
+
+function InlineError({ message, onDismiss }: { message: string; onDismiss?: () => void }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+      <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span className="flex-1 min-w-0">{message}</span>
+      {onDismiss && (
+        <button onClick={onDismiss} className="shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss error">
+          <XCircle className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Field({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) {
   return (
@@ -245,14 +256,24 @@ function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
   const [unitPrice, setUnitPrice] = useState(line.unit_price  != null ? String(line.unit_price) : "");
   const [saving,    setSaving]    = useState(false);
   const [dirty,     setDirty]     = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
   const netAmt = (Number(qty) || 0) * (Number(unitPrice) || 0);
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { description: desc || null, item_code: itemCode || null, quantity: Number(qty) || null, unit_code: unitCode || null, unit_price: Number(unitPrice) || null, line_amount: netAmt || null };
       const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.ok) { setDirty(false); onSaved?.(patch); }
+      if (res.ok) {
+        setDirty(false);
+        onSaved?.(patch);
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving(false); }
   }
   return (
@@ -270,6 +291,7 @@ function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
           <span className="text-sm font-semibold tabular-nums">{fmtAmt(netAmt, currencyCode)}</span>
         </div>
       )}
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
@@ -292,6 +314,8 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
   const [sIsCapex,    setSIsCapex]    = useState(single?.is_capex       ?? false);
   const [sSaving,     setSSaving]     = useState(false);
   const [sDirty,      setSDirty]      = useState(false);
+  const [sError,      setSError]      = useState<string | null>(null);
+  const [rowError,    setRowError]    = useState<string | null>(null);
   const [basis, setBasis] = useState<DistBasis>(distributions[0]?.distribution_basis ?? "PERCENT");
   const [rows,  setRows]  = useState<SplitRow[]>(() => distributions.map(distToRow));
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -317,11 +341,20 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
   async function saveSingle() {
     setSSaving(true);
+    setSError(null);
     try {
       const payload = { distribution_basis: "PERCENT", split_pct: 100, distributed_amount: lineAmount, currency_code: cc, account_source: sAccount ? "FIXED" : "FROM_CATEGORY", account_code: sAccount || null, cost_center_id: sCostCenter || null, project_id: sProject || null, is_capex: sIsCapex };
       const url = single?.id ? distUrl(entityCode, recordId, line.id, single.id) : distUrl(entityCode, recordId, line.id);
       const res = await fetch(url, { method: single?.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (res.ok) { setSDirty(false); onMutated?.(); }
+      if (res.ok) {
+        setSDirty(false);
+        onMutated?.();
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSSaving(false); }
   }
 
@@ -329,14 +362,21 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
     const row = rows[idx]; if (!row?._dirty) return;
     const key = row.id ?? `new-${idx}`;
     setSaving((s) => ({ ...s, [key]: true }));
+    setRowError(null);
     try {
       const payload = { distribution_basis: row.distribution_basis, split_pct: row.distribution_basis === "PERCENT" ? row.split_pct : null, split_amount: row.distribution_basis === "AMOUNT" ? row.split_amount : null, split_quantity: row.distribution_basis === "QUANTITY" ? row.split_quantity : null, distributed_amount: row.distributed_amount, currency_code: row.currency_code || cc, account_source: row.account_source, account_code: row.account_code || null, cost_center_id: row.cost_center_id || null, project_id: row.project_id || null, is_capex: row.is_capex, description: row.description || null };
       const url = row._isNew || !row.id ? distUrl(entityCode, recordId, line.id) : distUrl(entityCode, recordId, line.id, row.id);
       const res = await fetch(url, { method: row._isNew || !row.id ? "POST" : "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setRowError(body.error ?? `Save failed (${res.status})`);
+        return;
+      }
       const body = (await res.json()) as { data: AccountingDistribution };
       setRows((p) => { const n = [...p]; n[idx] = { ...distToRow(body.data), _expanded: row._expanded }; return n; });
       onMutated?.();
+    } catch (err) {
+      setRowError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving((s) => { const n = { ...s }; delete n[key]; return n; }); }
   }
 
@@ -383,6 +423,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
               <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform", sIsCapex ? "translate-x-5" : "translate-x-0.5")} />
             </button>
           </div>
+          {sError && <InlineError message={sError} onDismiss={() => setSError(null)} />}
           {sDirty && <SaveBtn saving={sSaving} onClick={() => void saveSingle()} />}
         </div>
       )}
@@ -491,6 +532,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
             })}
           </div>
 
+          {rowError && <InlineError message={rowError} onDismiss={() => setRowError(null)} />}
           {rows.length > 0 && <RemainingBar allocated={allocTarget} target={maxTarget} basis={basis} currency={cc} />}
 
           <button onClick={() => { const nextNo = (rows[rows.length - 1]?.distribution_no ?? 0) + 1; setRows((p) => [...p, blankRow(cc, nextNo)]); }}
@@ -553,7 +595,9 @@ function DiscountTab({ line, currencyCode, entityCode, recordId, onSaved }: {
 }) {
   const netAmt = (Number(line.quantity) || 0) * (Number(line.unit_price) || 0) || Number(line.line_amount) || 0;
   const [discountPct, setDiscountPct] = useState(line.discount_pct != null ? String(line.discount_pct) : "");
-  const [saving, setSaving] = useState(false); const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const discPct = Math.min(Math.max(Number(discountPct) || 0, 0), 100);
   const discountAmt = Math.round(netAmt * discPct * 100) / 10000;
   const afterDisc   = netAmt - discountAmt;
@@ -563,10 +607,19 @@ function DiscountTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   }, [discPct, netAmt, discountAmt, afterDisc]);
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { discount_pct: discPct > 0 ? discPct : null, discount_amount: discPct > 0 ? discountAmt : null };
       const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.ok) { setDirty(false); onSaved?.(patch); }
+      if (res.ok) {
+        setDirty(false);
+        onSaved?.(patch);
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving(false); }
   }
   return (
@@ -579,6 +632,7 @@ function DiscountTab({ line, currencyCode, entityCode, recordId, onSaved }: {
       </Field>
       {netAmt > 0 && <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">Base net: <span className="font-semibold tabular-nums text-foreground">{fmtAmt(netAmt, currencyCode)}</span></div>}
       {waterfallRows.length > 0 ? <AmountWaterfall rows={waterfallRows} currency={currencyCode} /> : <p className="text-xs text-muted-foreground/60 text-center py-4">Enter a discount percentage to see the deduction preview.</p>}
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
@@ -600,6 +654,7 @@ function ChargesTab({ line, currencyCode, entityCode, recordId, onMutated }: {
     : [];
   const [charges, setCharges] = useState<ChargeRow[]>(existing);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   function updateCharge(id: string, patch: Partial<ChargeRow>) {
     setCharges((p) => p.map((c) => c.id === id ? { ...c, ...patch, _dirty: true } : c));
   }
@@ -607,11 +662,20 @@ function ChargesTab({ line, currencyCode, entityCode, recordId, onMutated }: {
   const totalCharge = charges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
       const payload = charges.map(({ id, charge_type, charge_code, description, amount }) => ({ id, charge_type, charge_code: charge_code || null, description: description || null, amount: Number(amount) || 0, currency_code: currencyCode }));
       const patch = { data: { ...((line.data as Record<string, unknown>) ?? {}), charges: payload } };
       const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.ok) { setCharges((p) => p.map((c) => ({ ...c, _dirty: false, _isNew: false }))); onMutated?.(); }
+      if (res.ok) {
+        setCharges((p) => p.map((c) => ({ ...c, _dirty: false, _isNew: false })));
+        onMutated?.();
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving(false); }
   }
   return (
@@ -646,6 +710,7 @@ function ChargesTab({ line, currencyCode, entityCode, recordId, onMutated }: {
         </div>
       )}
       <button onClick={() => setCharges((p) => [...p, { id: uid(), charge_type: "FREIGHT", charge_code: "", description: "", amount: "", _dirty: true, _isNew: true }])} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"><Plus className="h-3.5 w-3.5" /> Add charge</button>
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {isDirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
@@ -662,7 +727,9 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   const [taxAmt,  setTaxAmt]  = useState(line.tax_amount             != null ? String(line.tax_amount)             : "");
   const [whtCode, setWhtCode] = useState(String(lineData.wht_code    ?? ""));
   const [whtAmt,  setWhtAmt]  = useState(line.withholding_tax_amount != null ? String(line.withholding_tax_amount) : "");
-  const [saving,  setSaving]  = useState(false); const [dirty, setDirty] = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
   const taxAmtNum = Number(taxAmt) || 0; const whtAmtNum = Number(whtAmt) || 0;
   const waterfallRows = useMemo((): WaterfallRow[] => {
@@ -675,10 +742,19 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   }, [netAmt, taxAmtNum, whtAmtNum, taxCode, whtCode]);
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { tax_code: taxCode || null, tax_amount: taxAmtNum > 0 ? taxAmtNum : null, withholding_tax_amount: whtAmtNum > 0 ? whtAmtNum : null };
       const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.ok) { setDirty(false); onSaved?.(patch); }
+      if (res.ok) {
+        setDirty(false);
+        onSaved?.(patch);
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving(false); }
   }
   return (
@@ -698,6 +774,7 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
         </div>
       </div>
       {waterfallRows.length > 0 && <AmountWaterfall rows={waterfallRows} currency={currencyCode} />}
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
@@ -712,7 +789,9 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   const lineData = (line.data as Record<string, unknown> | null) ?? {};
   const [retentionPct, setRetentionPct] = useState(line.retention_pct != null ? String(line.retention_pct) : "");
   const [releaseTerms, setReleaseTerms] = useState(String(lineData.retention_release_terms ?? ""));
-  const [saving, setSaving] = useState(false); const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
   const retPct     = Math.min(Math.max(Number(retentionPct) || 0, 0), 100);
   const retAmt     = Math.round(baseAmt * retPct * 100) / 10000;
@@ -723,10 +802,19 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   }, [retPct, baseAmt, retAmt, netPayable]);
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
       const patch: Partial<DocumentLine> = { retention_pct: retPct > 0 ? retPct : null, retention_amount: retPct > 0 ? retAmt : null, data: { ...lineData, retention_release_terms: releaseTerms || null } };
       const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-      if (res.ok) { setDirty(false); onSaved?.(patch); }
+      if (res.ok) {
+        setDirty(false);
+        onSaved?.(patch);
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Save failed (${res.status})`);
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error — please retry");
     } finally { setSaving(false); }
   }
   return (
@@ -745,6 +833,7 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
           className={cn("w-full px-3 py-2 text-xs border border-border/60 rounded-lg bg-transparent resize-none", "focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors placeholder:text-muted-foreground/40")}
         />
       </Field>
+      {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
     </div>
   );
@@ -759,6 +848,7 @@ export function LineEditorSheet({
   const cc         = currencyCode ?? "USD";
   const lineAmount = Number(line.line_amount) || 0;
   const [tab, setTab] = useState<TabId>(initialTab ?? "details");
+  const [headerError, setHeaderError] = useState<string | null>(null);
   const importRef   = useRef<HTMLInputElement>(null);
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
@@ -772,16 +862,39 @@ export function LineEditorSheet({
   ];
 
   async function handleCopy() {
-    await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ item_code: line.item_code, description: line.description, quantity: line.quantity, unit_code: line.unit_code, unit_price: line.unit_price, line_amount: line.line_amount, tax_code: line.tax_code, tax_amount: line.tax_amount, data: line.data }),
-    });
-    onLineCopied?.(); onMutated?.();
+    setHeaderError(null);
+    try {
+      const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_code: line.item_code, description: line.description, quantity: line.quantity, unit_code: line.unit_code, unit_price: line.unit_price, line_amount: line.line_amount, tax_code: line.tax_code, tax_amount: line.tax_amount, data: line.data }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setHeaderError(body.error ?? `Copy failed (${res.status})`);
+        return;
+      }
+      onLineCopied?.();
+      onMutated?.();
+    } catch (err) {
+      setHeaderError(err instanceof Error ? err.message : "Network error — please retry");
+    }
   }
 
   async function handleDelete() {
-    await fetch(lineUrl(entityCode, recordId, line.id), { method: "DELETE" });
-    onLineDeleted?.(); onMutated?.(); onOpenChange(false);
+    setHeaderError(null);
+    try {
+      const res = await fetch(lineUrl(entityCode, recordId, line.id), { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setHeaderError(body.error ?? `Delete failed (${res.status})`);
+        return;
+      }
+      onLineDeleted?.();
+      onMutated?.();
+      onOpenChange(false);
+    } catch (err) {
+      setHeaderError(err instanceof Error ? err.message : "Network error — please retry");
+    }
   }
 
   function handleExport() {
@@ -821,6 +934,13 @@ export function LineEditorSheet({
           onImport={() => importRef.current?.click()}
           onExport={handleExport}
         />
+
+        {/* Header-level error (copy / delete failures) */}
+        {headerError && (
+          <div className="shrink-0 px-5 pt-2">
+            <InlineError message={headerError} onDismiss={() => setHeaderError(null)} />
+          </div>
+        )}
 
         {/* Tab bar */}
         <div className="shrink-0 flex overflow-x-auto scrollbar-none border-b border-border/50 px-5">

@@ -57,7 +57,7 @@ export function ExceptionStack({ exceptions, className, initialVisible = 3 }: Ex
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 {exc.is_blocking && (
-                  <Badge variant={config.badgeVariant} className="text-[10px]">{config.label}</Badge>
+                  <Badge variant={config.badgeVariant} className="text-2xs">{config.label}</Badge>
                 )}
                 <span className="text-xs text-muted-foreground">{SCOPE_LABELS[exc.scope] ?? exc.scope}</span>
                 {exc.line_number != null && (

@@ -39,12 +39,12 @@ export function AccountExplorerView({ chart, onBack }: AccountExplorerViewProps)
           </button>
           <TierBadge tier={chart.tier} />
           <span className="text-xs font-medium">{chart.code}</span>
-          <span className="text-[10px] text-muted-foreground truncate">— {chart.name}</span>
+          <span className="text-doc-support text-muted-foreground truncate">— {chart.name}</span>
           <span className="flex-1" />
           {chart.country && (
-            <Badge variant="muted" className="text-[9px] py-0">{chart.country}</Badge>
+            <Badge variant="muted" className="text-doc-label py-0">{chart.country}</Badge>
           )}
-          <Badge variant="muted" className="text-[9px] py-0">{chart.framework}</Badge>
+          <Badge variant="muted" className="text-doc-label py-0">{chart.framework}</Badge>
         </div>
 
         {/* Search */}
@@ -55,7 +55,7 @@ export function AccountExplorerView({ chart, onBack }: AccountExplorerViewProps)
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search accounts..."
-              className="h-7 pl-7 text-[11px]"
+              className="h-7 pl-7 text-doc-subtitle"
             />
           </div>
         </div>
@@ -79,7 +79,7 @@ export function AccountExplorerView({ chart, onBack }: AccountExplorerViewProps)
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-1.5 border-t text-[10px] text-muted-foreground">
+        <div className="px-4 py-1.5 border-t text-doc-support text-muted-foreground">
           {postingCount !== null ? `${postingCount} posting accounts` : "Loading…"}
         </div>
       </div>

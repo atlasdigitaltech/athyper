@@ -242,13 +242,13 @@ function MapStep({
                     value={m.fieldName ?? "__skip"}
                     onValueChange={(v) => update(i, { fieldName: v === "__skip" ? null : v })}
                   >
-                    <SelectTrigger className="h-7 text-[11px] min-w-[160px]">
+                    <SelectTrigger className="h-7 text-xs min-w-[160px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__skip" className="text-[11px] text-muted-foreground">— skip —</SelectItem>
+                      <SelectItem value="__skip" className="text-xs text-muted-foreground">— skip —</SelectItem>
                       {allFields.map((f) => (
-                        <SelectItem key={f.name} value={f.name} className="text-[11px]">
+                        <SelectItem key={f.name} value={f.name} className="text-xs">
                           {f.label}
                           {requiredFields.includes(f.name) && <span className="ml-1 text-destructive">*</span>}
                         </SelectItem>
@@ -261,7 +261,7 @@ function MapStep({
                     value={m.constant !== undefined ? String(m.constant) : ""}
                     onChange={(e) => update(i, { constant: e.target.value || undefined })}
                     placeholder="Override value…"
-                    className="h-7 text-[11px]"
+                    className="h-7 text-xs"
                   />
                 </td>
               </tr>

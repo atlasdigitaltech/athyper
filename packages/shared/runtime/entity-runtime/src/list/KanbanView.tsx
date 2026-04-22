@@ -74,7 +74,7 @@ function MoveDropdown({
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         disabled={busy}
-        className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40"
+        className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-2xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40"
       >
         {busy
           ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -133,7 +133,7 @@ function KanbanCard({
 
   const moveMut = useMutation({
     mutationFn: async (next: string) => {
-      const res = await fetch(`/api/relay/records/${entityCode}/${id}`, {
+      const res = await fetch(`/api/relay/api/records/${entityCode}/${id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ [groupField.name]: next }),
@@ -162,7 +162,7 @@ function KanbanCard({
 
       <div className="flex items-center justify-between gap-1 pt-0.5">
         {id ? (
-          <span className="font-mono text-[9px] text-muted-foreground/50">
+          <span className="font-mono text-2xs text-muted-foreground/50">
             {id.slice(0, 8)}
           </span>
         ) : (
@@ -229,7 +229,7 @@ export function KanbanView({
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Grouped by <span className="font-medium">{groupField.label ?? groupField.name}</span>
         {" · "}
         <span className="tabular-nums">{rows.length}</span> records
@@ -248,7 +248,7 @@ export function KanbanView({
               </span>
               <Badge
                 variant="secondary"
-                className="text-[10px] px-1.5 py-0.5 bg-white/50 dark:bg-black/20 border-0"
+                className="text-2xs px-1.5 py-0.5 bg-white/50 dark:bg-black/20 border-0"
               >
                 {items.length}
               </Badge>

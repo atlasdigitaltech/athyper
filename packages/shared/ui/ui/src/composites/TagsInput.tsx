@@ -164,7 +164,7 @@ export const TagsInput = forwardRef<HTMLInputElement, TagsInputProps>(
 
         {/* Suggestions dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
-          <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
+          <div className="absolute z-50 mt-1 max-h-40 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
             {filteredSuggestions.map((s) => (
               <button
                 key={s}
@@ -182,7 +182,7 @@ export const TagsInput = forwardRef<HTMLInputElement, TagsInputProps>(
         )}
 
         {error && (
-          <p className="mt-1 text-xs text-destructive">{error}</p>
+          <p className="mt-1 text-xs text-destructive" role="alert">{error}</p>
         )}
       </div>
     );

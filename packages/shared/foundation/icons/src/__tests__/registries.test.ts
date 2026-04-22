@@ -61,8 +61,8 @@ describe("getModuleIcon", () => {
     expect(hasModuleIcon("UNKNOWN")).toBe(false);
   });
 
-  it(`covers all 40 module codes (got ${ALL_MODULE_CODES.length})`, () => {
-    expect(ALL_MODULE_CODES).toHaveLength(40);
+  it(`covers all 39 module codes (got ${ALL_MODULE_CODES.length})`, () => {
+    expect(ALL_MODULE_CODES).toHaveLength(39);
   });
 });
 

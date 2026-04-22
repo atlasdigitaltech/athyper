@@ -184,7 +184,7 @@ function getReferenceEntityCode(field: FieldRendererProps["field"]): string | nu
 
 /**
  * Wrapper that wires EntityRefPicker to the relay-backed record search.
- * Calls GET /api/relay/records/{entityCode}?q={query}&limit=20
+ * Calls GET /api/relay/api/records/{entityCode}?q={query}&limit=20
  * so the BFF injects auth and tenant headers transparently.
  */
 function ReferencePickerField({
@@ -202,7 +202,7 @@ function ReferencePickerField({
     async (query: string): Promise<EntityRefOption[]> => {
       if (!entityCode) return [];
       const params = new URLSearchParams({ q: query, limit: "20" });
-      const res = await fetch(`/api/relay/records/${encodeURIComponent(entityCode)}?${params}`);
+      const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`);
       if (!res.ok) return [];
       const body = await res.json() as { data?: Record<string, unknown>[] };
       return (body.data ?? []).map((row) => ({

@@ -16,3 +16,41 @@ export function fmtFull(value: number): string {
     maximumFractionDigits: 2,
   });
 }
+
+/**
+ * Format a number as a decimal amount (2 dp).
+ * When `currency` is provided, renders the full currency symbol (e.g. "$1,000.00").
+ */
+export function fmtCurrency(value: number, currency?: string): string {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    style: currency ? "currency" : "decimal",
+    currency,
+  }).format(value);
+}
+
+/** Format an ISO date string as "21 Apr 2026". Returns "—" for null/undefined. */
+export function fmtDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** Format an ISO datetime string as "21 Apr 2026 14:22". Returns "—" for null/undefined. */
+export function fmtDateTime(d: string | null | undefined): string {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? d : dt.toLocaleString("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}

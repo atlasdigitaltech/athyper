@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, cloneElement, isValidElement, type ReactNode, type HTMLAttributes, type MouseEvent } from "react";
+import React, { createContext, useContext, useState, cloneElement, isValidElement, type ReactNode, type HTMLAttributes, type MouseEvent, type ReactElement } from "react";
 
 interface CollapsibleCtx {
   open: boolean;
@@ -37,8 +37,7 @@ function Collapsible({ open: controlledOpen, defaultOpen = false, onOpenChange, 
 function CollapsibleTrigger({ children, asChild, ...props }: HTMLAttributes<HTMLButtonElement> & { children?: ReactNode; asChild?: boolean }) {
   const { toggle } = useContext(CollapsibleContext);
   if (asChild && isValidElement(children)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const child = children as React.ReactElement<any>;
+    const child = children as ReactElement<{ onClick?: (e: MouseEvent) => void }>;
     return cloneElement(child, {
       onClick: (e: MouseEvent) => {
         toggle();

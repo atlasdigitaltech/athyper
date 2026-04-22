@@ -35,7 +35,6 @@ import { useEntityFlow } from "@athyper/query";
 import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
-
 /**
  * Alternate flow codes available per entity. Keyed by entity_code (underscore).
  * Populated here because the metadata API only exposes the *default* flow via
@@ -49,6 +48,7 @@ const ALTERNATE_FLOWS: Record<string, { flow_code: string; label: string }[]> = 
     { flow_code: "create_proforma", label: "Create Pro-forma instead" },
   ],
 };
+
 
 export default function AppEntityNewRoute({
   params,

@@ -47,7 +47,7 @@ export function MappingWorkbenchView() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">Source: master.coa_account_mapping · Effective-dated, versioned</span>
+        <span className="text-doc-support text-muted-foreground">Source: master.coa_account_mapping · Effective-dated, versioned</span>
         <Button size="sm" className="h-7 gap-1 text-xs">
           <Plus size={12} />
           New mapping
@@ -57,7 +57,7 @@ export function MappingWorkbenchView() {
       {/* Source → Target selector */}
       <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border">
         <div className="flex-1">
-          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Source chart</div>
+          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Source chart</div>
           <Select value={source} onValueChange={setSource}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
@@ -73,7 +73,7 @@ export function MappingWorkbenchView() {
         </div>
         <ArrowRight size={18} className="text-muted-foreground mt-3 shrink-0" />
         <div className="flex-1">
-          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Target (group)</div>
+          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Target (group)</div>
           <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-xs font-mono">
             COA-IFRS-GROUP
           </div>
@@ -87,7 +87,7 @@ export function MappingWorkbenchView() {
             key={t}
             variant={typeFilter === t ? "primary" : "outline"}
             size="sm"
-            className="h-7 text-[10px] px-2.5"
+            className="h-7 text-doc-support px-2.5"
             onClick={() => setTypeFilter(t)}
           >
             {t === "all" ? "All" : t}
@@ -96,13 +96,13 @@ export function MappingWorkbenchView() {
         <Button
           variant={showExpired ? "primary" : "outline"}
           size="sm"
-          className="h-7 text-[10px] px-2.5"
+          className="h-7 text-doc-support px-2.5"
           onClick={() => setShowExpired(!showExpired)}
         >
           Show expired
         </Button>
         <span className="flex-1" />
-        <span className="text-[10px] text-muted-foreground">{filtered.length} mappings</span>
+        <span className="text-doc-support text-muted-foreground">{filtered.length} mappings</span>
       </div>
 
       {/* Split validation warnings */}
@@ -121,7 +121,7 @@ export function MappingWorkbenchView() {
 
       {/* Mapping table */}
       <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-[10px]">
+        <table className="w-full text-doc-support">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-2 text-left font-medium text-muted-foreground">Source account</th>
@@ -149,7 +149,7 @@ export function MappingWorkbenchView() {
                 <td className="py-1.5 px-2 font-mono">{m.sourceAccount}</td>
                 <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[140px]">{m.sourceName}</td>
                 <td className="py-1.5 px-2 text-center">
-                  <Badge variant="outline" className={cn("text-[10px] py-0", TYPE_STYLE[m.mappingType])}>
+                  <Badge variant="outline" className={cn("text-doc-support py-0", TYPE_STYLE[m.mappingType])}>
                     {m.mappingType}
                   </Badge>
                 </td>
@@ -159,12 +159,12 @@ export function MappingWorkbenchView() {
                 </td>
                 <td className="py-1.5 px-2 font-mono">{m.targetAccount}</td>
                 <td className="py-1.5 px-2 text-muted-foreground">{m.targetName}</td>
-                <td className="py-1.5 px-2 text-muted-foreground font-mono text-[9px]">
+                <td className="py-1.5 px-2 text-muted-foreground font-mono text-doc-label">
                   {m.effectiveFrom}{m.effectiveTo ? ` → ${m.effectiveTo}` : ""}
                 </td>
                 <td className="py-1.5 px-2 text-center text-muted-foreground">v{m.version}</td>
                 <td className="py-1.5 px-2">
-                  <Badge variant="outline" className={cn("text-[10px] py-0", STATUS_STYLE[m.status])}>
+                  <Badge variant="outline" className={cn("text-doc-support py-0", STATUS_STYLE[m.status])}>
                     {m.status}
                   </Badge>
                 </td>
@@ -176,7 +176,7 @@ export function MappingWorkbenchView() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-4 text-doc-support text-muted-foreground">
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" />direct: 1:1</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-info" />merge: N:1 rollup</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" />split: 1:N with % (must sum to 100%)</span>

@@ -67,7 +67,7 @@ export function ProfitLossView({ scope, onDrillDown }: ProfitLossViewProps) {
       {/* Revenue */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Revenue</span>
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Revenue</span>
         </div>
         {data.revenue.map((sec) => (
           <StatementSection
@@ -104,7 +104,7 @@ export function ProfitLossView({ scope, onDrillDown }: ProfitLossViewProps) {
       {data.operatingExpenses.length > 0 && (
         <div className="border-b">
           <div className="px-2 py-1 bg-muted/10">
-            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Operating Expenses</span>
+            <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Operating Expenses</span>
           </div>
           {data.operatingExpenses.map((sec) => (
             <StatementSection

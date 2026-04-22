@@ -2,8 +2,14 @@
 
 import { Fragment, useState, useCallback } from "react";
 import { ChevronDown, ChevronRight, PlusCircle, Receipt } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Skeleton,
+} from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
+import { statusTextClass } from "../lib/statusColors";
+import { fmtCurrency, fmtDate, fmtFull, fmtCompact } from "../components/format";
 import {
   useArAging,
   useArReceipts,
@@ -15,27 +21,8 @@ import {
   type ArInvoice,
   type ArPaymentMethod,
 } from "../hooks/useApWorkbench";
-import { fmtFull, fmtCompact } from "../components/format";
 
 type ArTab = "invoices" | "receipts" | "aging";
-
-function fmt(n: number): string {
-  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-}
-
-function fmtDate(d: string | null): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  draft:     "text-muted-foreground",
-  submitted: "text-primary",
-  approved:  "text-success",
-  posted:    "text-success font-medium",
-  paid:      "text-success",
-  overdue:   "text-destructive font-medium",
-};
 
 // ── AR Aging tab ──────────────────────────────────────────────────────────────
 
@@ -51,8 +38,8 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
   const { data, isLoading, isError } = useArAging(scope);
 
   if (!scope.scopeId) return <EmptyState message="Select a scope to view AR aging." />;
-  if (isLoading) return <LoadingState />;
-  if (isError || !data) return <ErrorState />;
+  if (isLoading) return <TableSkeleton cols={7} />;
+  if (isError || !data) return <ErrorState message="Failed to load AR aging data." />;
 
   const rows = data.rows;
   const totals = BUCKETS.reduce<Record<string, number>>((acc, b) => {
@@ -63,7 +50,7 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between text-doc-support text-muted-foreground">
         <span>As at {data.asAt ? fmtDate(data.asAt) : "period end"} · {rows.length} customer{rows.length !== 1 ? "s" : ""}</span>
         <span>Total outstanding: <span className="font-semibold text-foreground">{fmtCompact(grandTotal)}</span></span>
       </div>
@@ -75,11 +62,11 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
           const pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
           return (
             <div key={b.key} className="rounded-lg border p-2.5 space-y-1">
-              <div className="text-[10px] text-muted-foreground">{b.label}</div>
+              <div className="text-doc-support text-muted-foreground">{b.label}</div>
               <div className={cn("text-sm font-semibold font-mono", b.key !== "current" && val > 0 ? "text-warning" : "")}>
                 {fmtCompact(val)}
               </div>
-              <div className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</div>
+              <div className="text-doc-support text-muted-foreground">{pct.toFixed(1)}%</div>
             </div>
           );
         })}
@@ -146,8 +133,8 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
   const { data, isLoading, isError } = useArInvoices(scope, { page, limit: 50 });
 
   if (!scope.scopeId) return <EmptyState message="Select a scope to view AR invoices." />;
-  if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState />;
+  if (isLoading) return <TableSkeleton cols={7} />;
+  if (isError) return <ErrorState message="Failed to load AR invoices." />;
 
   // Sales module not yet activated — show informative empty state
   if (data?._inactive || (data?.items.length === 0 && data?.total === 0)) {
@@ -168,7 +155,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-muted-foreground text-right">
+      <div className="text-doc-support text-muted-foreground text-right">
         {data?.total ?? 0} invoice{data?.total !== 1 ? "s" : ""}
       </div>
       <div className="rounded-xl border overflow-hidden">
@@ -194,12 +181,12 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
                 <td className="py-1.5 px-3">{inv.customerName ?? "—"}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.invoiceDate)}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.dueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{fmt(inv.totalAmount)}</td>
+                <td className="py-1.5 px-3 text-right font-mono">{fmtCurrency(inv.totalAmount)}</td>
                 <td className={cn("py-1.5 px-3 text-right font-mono font-medium",
                   inv.outstandingAmount > 0 ? "text-warning" : "text-success")}>
-                  {fmt(inv.outstandingAmount)}
+                  {fmtCurrency(inv.outstandingAmount)}
                 </td>
-                <td className={cn("py-1.5 px-3 capitalize", STATUS_COLORS[inv.status] ?? "")}>{inv.status}</td>
+                <td className={cn("py-1.5 px-3 capitalize", statusTextClass(inv.status))}>{inv.status}</td>
               </tr>
             ))}
           </tbody>
@@ -266,20 +253,15 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
   }, [methodId, amount, currency, counterparty, valueDate, reference, notes, createReceipt, onSuccess]);
 
   return (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Record Receipt</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Create a draft inbound payment entry for a cash receipt.
-          </p>
-        </div>
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Record Receipt</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-xs text-muted-foreground -mt-2">
+          Create a draft inbound payment entry for a cash receipt.
+        </p>
 
         <div className="space-y-3">
           {/* Payment method */}
@@ -349,7 +331,9 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
 
           {/* Reference */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Payment Reference <span className="text-[10px]">(optional)</span></label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Payment Reference <span className="text-doc-support font-normal">(optional)</span>
+            </label>
             <input
               type="text"
               value={reference}
@@ -361,7 +345,9 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Notes <span className="text-[10px]">(optional)</span></label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Notes <span className="text-doc-support font-normal">(optional)</span>
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -370,10 +356,12 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
             />
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && (
+            <p className="text-xs text-destructive rounded-md bg-destructive/10 px-2 py-1.5">{error}</p>
+          )}
         </div>
 
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <button
             type="button"
             onClick={onClose}
@@ -390,9 +378,9 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
             <PlusCircle className="size-3.5" />
             {createReceipt.isPending ? "Recording…" : "Record Receipt"}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -404,13 +392,13 @@ function ReceiptsTab({ scope, onRecordReceipt }: { scope: FinanceScope; onRecord
   const { data, isLoading, isError } = useArReceipts(scope, { page, limit: 50 });
 
   if (!scope.scopeId) return <EmptyState message="Select a scope to view receipts." />;
-  if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState />;
+  if (isLoading) return <TableSkeleton cols={7} />;
+  if (isError) return <ErrorState message="Failed to load receipts." />;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] text-muted-foreground">
+        <div className="text-doc-support text-muted-foreground">
           {data?.total ?? 0} receipt{data?.total !== 1 ? "s" : ""}
         </div>
         <button
@@ -458,9 +446,9 @@ function ReceiptsTab({ scope, onRecordReceipt }: { scope: FinanceScope; onRecord
                     <td className="py-1.5 px-3 font-mono text-muted-foreground">{r.paymentNumber}</td>
                     <td className="py-1.5 px-3">{r.counterpartyName ?? "—"}</td>
                     <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(r.valueDate)}</td>
-                    <td className="py-1.5 px-3 text-right font-mono text-success font-medium">{fmt(r.paymentAmount)}</td>
-                    <td className="py-1.5 px-3 font-mono text-muted-foreground text-[10px]">{r.paymentReference ?? "—"}</td>
-                    <td className={cn("py-1.5 px-3 capitalize", STATUS_COLORS[r.status] ?? "")}>{r.status}</td>
+                    <td className="py-1.5 px-3 text-right font-mono text-success font-medium">{fmtCurrency(r.paymentAmount)}</td>
+                    <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{r.paymentReference ?? "—"}</td>
+                    <td className={cn("py-1.5 px-3 capitalize", statusTextClass(r.status))}>{r.status}</td>
                   </tr>
                   {isExpanded && (
                     <tr className="border-b bg-muted/10">
@@ -494,46 +482,46 @@ function ReceiptDetailPanel({ receipt: r }: { receipt: ArReceipt }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs">
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Receipt #</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Receipt #</div>
         <div className="font-mono mt-0.5">{r.paymentNumber}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Payment Type</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Payment Type</div>
         <div className="capitalize mt-0.5">{r.paymentType ?? "Standard"}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Value Date</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Value Date</div>
         <div className="mt-0.5">{fmtDate(r.valueDate)}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Posting Date</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Posting Date</div>
         <div className="mt-0.5">{fmtDate(r.postingDate)}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Counterparty</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Counterparty</div>
         <div className="mt-0.5">{r.counterpartyName ?? "—"}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Currency</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Currency</div>
         <div className="font-mono mt-0.5">{r.currencyCode}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Amount</div>
-        <div className="font-mono font-semibold text-success mt-0.5">{fmt(r.paymentAmount)}</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Amount</div>
+        <div className="font-mono font-semibold text-success mt-0.5">{fmtCurrency(r.paymentAmount)}</div>
       </div>
       <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Status</div>
-        <div className={cn("capitalize mt-0.5", STATUS_COLORS[r.status] ?? "")}>{r.status}</div>
+        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Status</div>
+        <div className={cn("capitalize mt-0.5", statusTextClass(r.status))}>{r.status}</div>
       </div>
       {r.paymentReference && (
         <div className="col-span-2">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Payment Reference</div>
+          <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Payment Reference</div>
           <div className="font-mono mt-0.5">{r.paymentReference}</div>
         </div>
       )}
       {r.isPosted && (
         <div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Posted</div>
+          <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Posted</div>
           <div className="text-success mt-0.5">Yes</div>
         </div>
       )}
@@ -546,11 +534,30 @@ function ReceiptDetailPanel({ receipt: r }: { receipt: ArReceipt }) {
 function EmptyState({ message }: { message: string }) {
   return <div className="flex items-center justify-center h-32 text-xs text-muted-foreground">{message}</div>;
 }
-function LoadingState() {
-  return <div className="flex items-center justify-center h-32 text-xs text-muted-foreground animate-pulse">Loading…</div>;
+
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="rounded-xl border overflow-hidden">
+        <div className="bg-muted/50 border-b px-3 py-2">
+          <Skeleton className="h-4 w-full" />
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="border-b px-3 py-2 last:border-0">
+            <Skeleton className="h-4" style={{ width: `${60 + (i % 4) * 10}%` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
-function ErrorState() {
-  return <div className="flex items-center justify-center h-32 text-xs text-destructive">Failed to load data.</div>;
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center h-32 text-xs text-destructive rounded-xl border border-destructive/20 bg-destructive/5">
+      {message}
+    </div>
+  );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -597,7 +604,7 @@ export function ArWorkbenchView({ scope }: ArWorkbenchViewProps) {
         <ReceivePaymentDialog
           scope={scope}
           onClose={() => setShowReceiveDialog(false)}
-          onSuccess={() => setShowReceiveDialog(false)}
+          onSuccess={() => { setShowReceiveDialog(false); }}
         />
       )}
     </div>

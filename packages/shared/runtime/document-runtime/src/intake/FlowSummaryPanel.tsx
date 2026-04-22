@@ -79,7 +79,7 @@ export function FlowSummaryPanel({
                   {ROLE_PREFIX[line.summary_role] ?? ""}
                   {line.label}
                   {line.is_override && (
-                    <span className="ml-1 text-[9px] text-warning uppercase tracking-wider">
+                    <span className="ml-1 text-2xs text-warning uppercase tracking-wider">
                       override
                     </span>
                   )}
@@ -90,7 +90,7 @@ export function FlowSummaryPanel({
                 )}>
                   {fmt(line.value)}
                   {currencyCode && (
-                    <span className="ml-1 text-[9px] text-muted-foreground font-mono">
+                    <span className="ml-1 text-2xs text-muted-foreground font-mono">
                       {currencyCode}
                     </span>
                   )}
@@ -111,10 +111,10 @@ export function FlowSummaryPanel({
                   line.is_override && "border-warning/40 bg-warning/5",
                 )}
               >
-                <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {line.label}
                 </span>
-                <span className="text-[10px] font-medium text-foreground">
+                <span className="text-2xs font-medium text-foreground">
                   {String(line.value ?? "—")}
                 </span>
               </div>

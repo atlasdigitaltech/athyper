@@ -74,7 +74,7 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
                     )}
                   </div>
                   {node.fulfilled_pct != null && (
-                    <span className="mt-0.5 text-[10px] text-muted-foreground">{node.fulfilled_pct}%</span>
+                    <span className="mt-0.5 text-2xs text-muted-foreground">{node.fulfilled_pct}%</span>
                   )}
                 </div>
               )}
@@ -99,11 +99,11 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
                   <span className={cn("h-2 w-2 rounded-full", colors.dot)} />
                   <span className="text-xs font-semibold">{NODE_SHORT[node.node_type]}</span>
                   {node.count > 1 && (
-                    <Badge variant="outline" className="h-4 px-1 text-[10px]">×{node.count}</Badge>
+                    <Badge variant="outline" className="h-4 px-1 text-2xs">×{node.count}</Badge>
                   )}
                 </div>
 
-                <span className="mt-1 text-[11px] text-muted-foreground truncate max-w-[80px]">
+                <span className="mt-1 text-xs text-muted-foreground truncate max-w-[80px]">
                   {node.document_number ?? "—"}
                 </span>
 
@@ -112,13 +112,13 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
                     <MoneySummary
                       amount={node.amount.amount}
                       currencyCode={node.amount.currency_code}
-                      className="text-[10px]"
+                      className="text-2xs"
                     />
                   </span>
                 )}
 
                 {node.has_exceptions && (
-                  <span className="mt-0.5 text-[10px] text-destructive font-medium">⚠</span>
+                  <span className="mt-0.5 text-2xs text-destructive font-medium">⚠</span>
                 )}
               </button>
             </div>

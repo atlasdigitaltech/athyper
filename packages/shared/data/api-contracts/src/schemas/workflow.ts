@@ -27,11 +27,13 @@ export const WorkItemSchema = z.object({
   workflow_request_id: UuidSchema,
   stage_id: UuidSchema,
   assignee_id: UuidSchema,
+  assignee_name: z.string().nullable(),
   assignee_type: z.enum(["principal", "group", "role"]),
   status: z.enum(["pending", "approved", "rejected", "delegated", "timed_out"]),
   decision_at: z.string().datetime().nullable(),
   remarks: z.string().nullable(),
   delegated_to: UuidSchema.nullable(),
+  delegated_to_name: z.string().nullable(),
 }).merge(AuditSchema);
 
 export type WorkItem = z.infer<typeof WorkItemSchema>;
@@ -119,6 +121,7 @@ export type ApprovalContext = z.infer<typeof ApprovalContextSchema>;
 
 export const WorkflowEventSchema = z.object({
   id: UuidSchema,
+  stage_id: UuidSchema.nullable(),
   event_type: z.string(),
   from_status: z.string().nullable(),
   to_status: z.string().nullable(),

@@ -73,7 +73,7 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance", allowC
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-xl border flex-wrap">
         {/* Scope selector */}
         <div>
-          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Scope</div>
+          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Scope</div>
           <ScopeSelector
             value={scope}
             onChange={handleScopeChange}
@@ -86,7 +86,7 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance", allowC
 
         {/* Period selector */}
         <div>
-          <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Period</div>
+          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Period</div>
           <PeriodSelector
             fiscalYear={scope.fiscalYear}
             period={scope.period}
@@ -99,11 +99,11 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance", allowC
         {/* Comparative toggle */}
         {allowComparative && (
           <div>
-            <div className="text-[9px] text-muted-foreground uppercase mb-0.5">Compare</div>
+            <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Compare</div>
             <Button
               variant={scope.comparative ? "primary" : "outline"}
               size="sm"
-              className="h-7 text-[10px] px-2.5"
+              className="h-7 text-doc-support px-2.5"
               onClick={() => setScope((prev) => ({ ...prev, comparative: !prev.comparative }))}
             >
               vs. prior year
@@ -158,7 +158,7 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance", allowC
             {tab === "gl-detail" && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="text-[10px] text-muted-foreground">Account:</div>
+                  <div className="text-doc-support text-muted-foreground">Account:</div>
                   <input
                     type="text"
                     value={glAccountCode}

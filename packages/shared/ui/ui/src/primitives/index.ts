@@ -30,3 +30,8 @@ export {
 } from "./AlertDialog";
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./Collapsible";
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./Tooltip";
+export {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup,
+  DropdownMenuPortal, DropdownMenuSub, DropdownMenuRadioGroup,
+} from "./DropdownMenu";

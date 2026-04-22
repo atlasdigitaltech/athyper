@@ -13,6 +13,7 @@
 
 import React from "react";
 import { cn } from "@athyper/theme/utils";
+import { getCurrencySymbol, splitDecimal } from "../_shared/format";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -80,26 +81,6 @@ const INTENT_BADGE_CLS: Record<string, string> = {
   neutral: "bg-muted text-muted-foreground border-border",
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function splitDecimal(s: string): [string, string] {
-  const i = s.lastIndexOf(".");
-  return i === -1 ? [s, ""] : [s.slice(0, i), s.slice(i)];
-}
-
-function getCurrencySymbol(code: string): string {
-  try {
-    const parts = new Intl.NumberFormat("en-US", {
-      style: "currency", currency: code,
-      minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).formatToParts(0);
-    const sym = parts.find((p) => p.type === "currency")?.value ?? code;
-    return sym === code ? "" : sym;   // if Intl returns the code itself, suppress (show code in pill)
-  } catch {
-    return "";
-  }
-}
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
@@ -135,7 +116,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
 
               {cell.badge && (
                 <span className={cn(
-                  "inline-flex items-center h-[17px] px-[6px] rounded-[4px] text-[9.5px] font-semibold border leading-none whitespace-nowrap shrink-0",
+                  "inline-flex items-center h-[17px] px-[6px] rounded-[4px] text-2xs font-semibold border leading-none whitespace-nowrap shrink-0",
                   INTENT_BADGE_CLS[cell.badgeIntent ?? "neutral"],
                 )}>
                   {cell.badge}
@@ -159,7 +140,7 @@ export function DocumentKpiStrip({ cells, className }: DocumentKpiStripProps) {
                   {cell.value}
                 </span>
                 {cell.currency && (
-                  <span className="text-[9.5px] text-muted-foreground font-mono">
+                  <span className="text-2xs text-muted-foreground font-mono">
                     {cell.currency}
                   </span>
                 )}

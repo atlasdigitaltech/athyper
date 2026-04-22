@@ -127,7 +127,7 @@ function FlowInlineRefPicker({
       if (!entityCode) return [];
       try {
         const params = new URLSearchParams({ q: query, limit: "20" });
-        const res = await fetch(`/api/relay/records/${encodeURIComponent(entityCode)}?${params}`);
+        const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`);
         if (!res.ok) return [];
         const body = await res.json() as { data?: Record<string, unknown>[] };
         const results = (body.data ?? []).map((row) => ({
@@ -180,6 +180,7 @@ function FlowInlineRefPicker({
       displayLabel={displayLabel}
       onChange={handleChange}
       search={searchFn}
+      loadOnOpen
       placeholder={placeholder ?? "Search…"}
       disabled={disabled}
       error={error}
@@ -441,7 +442,7 @@ function FieldLabel({
         {required && <span className="ml-0.5 text-destructive">*</span>}
       </label>
       {helpText && (
-        <span className="text-[10px] text-muted-foreground/60 truncate" title={helpText}>
+        <span className="text-2xs text-muted-foreground/60 truncate" title={helpText}>
           {helpText}
         </span>
       )}

@@ -7,7 +7,7 @@
  * Gated by feature_flags.version_control (tab only appears when true;
  * direct URL access shows a graceful not-supported state).
  *
- * API: GET /api/relay/records/:entity/:id/versions
+ * API: GET /api/relay/api/records/:entity/:id/versions
  *   → { data: RecordVersionSummary[]; current_version_no: number }
  *
  * [id] = canonical business key (NOT UUID).

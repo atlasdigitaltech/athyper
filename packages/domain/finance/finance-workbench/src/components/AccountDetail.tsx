@@ -25,7 +25,7 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
           <AccountClassBadge cls={node.accountClass} />
           <NodeTypeBadge type={node.nodeType} />
           {node.subledgerType && (
-            <Badge variant="info" className="text-[10px] py-0">
+            <Badge variant="info" className="text-doc-support py-0">
               SL: {node.subledgerType}
             </Badge>
           )}
@@ -38,19 +38,19 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
         <div className="grid grid-cols-3 gap-3">
           <Card className="border-0 bg-muted/50 shadow-none">
             <CardContent className="p-3">
-              <div className="text-[10px] text-muted-foreground uppercase mb-1">Debit</div>
+              <div className="text-doc-support text-muted-foreground uppercase mb-1">Debit</div>
               <div className="text-sm font-semibold font-mono">{fmtFull(node.closingDebit)}</div>
             </CardContent>
           </Card>
           <Card className="border-0 bg-muted/50 shadow-none">
             <CardContent className="p-3">
-              <div className="text-[10px] text-muted-foreground uppercase mb-1">Credit</div>
+              <div className="text-doc-support text-muted-foreground uppercase mb-1">Credit</div>
               <div className="text-sm font-semibold font-mono">{fmtFull(node.closingCredit)}</div>
             </CardContent>
           </Card>
           <Card className={cn("border-0 shadow-none", net >= 0 ? "bg-success/10" : "bg-destructive/5")}>
             <CardContent className="p-3">
-              <div className="text-[10px] text-muted-foreground uppercase mb-1">Net</div>
+              <div className="text-doc-support text-muted-foreground uppercase mb-1">Net</div>
               <div className={cn("text-sm font-semibold font-mono", net >= 0 ? "text-success" : "text-destructive")}>
                 {fmtFull(Math.abs(net))}
               </div>
@@ -61,7 +61,7 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
 
       {/* Properties */}
       <div>
-        <h3 className="text-[10px] text-muted-foreground uppercase mb-2">Properties</h3>
+        <h3 className="text-doc-support text-muted-foreground uppercase mb-2">Properties</h3>
         <div className="space-y-1.5">
           {[
             ["Normal balance", node.normalBalance],
@@ -81,7 +81,7 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
       {node.children && node.children.length > 0 && (
         <div>
           <Separator className="mb-3" />
-          <h3 className="text-[10px] text-muted-foreground uppercase mb-2">
+          <h3 className="text-doc-support text-muted-foreground uppercase mb-2">
             Children ({node.children.length})
           </h3>
           <div className="space-y-0.5">
@@ -92,7 +92,7 @@ export function AccountDetail({ node, chartCode, onSelectChild }: AccountDetailP
                 className="flex items-center gap-2 py-1 px-1 rounded-md text-xs cursor-pointer hover:bg-muted/50 transition-colors"
               >
                 <AccountClassDot cls={child.accountClass} />
-                <span className="font-mono text-[10px] text-muted-foreground w-28">
+                <span className="font-mono text-doc-support text-muted-foreground w-28">
                   {child.code}
                 </span>
                 <span className="flex-1 text-foreground/80">{child.name}</span>

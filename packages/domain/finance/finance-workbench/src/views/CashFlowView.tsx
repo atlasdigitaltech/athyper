@@ -76,7 +76,7 @@ export function CashFlowView({ scope }: CashFlowViewProps) {
       {/* Operating Activities */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
             Operating Activities
           </span>
         </div>
@@ -103,7 +103,7 @@ export function CashFlowView({ scope }: CashFlowViewProps) {
       {/* Investing Activities */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
             Investing Activities
           </span>
         </div>
@@ -130,7 +130,7 @@ export function CashFlowView({ scope }: CashFlowViewProps) {
       {/* Financing Activities */}
       <div>
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
             Financing Activities
           </span>
         </div>

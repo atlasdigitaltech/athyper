@@ -10,9 +10,9 @@
  * ┌─────────────────────────────────────────────────────────────────┐
  * │ BUNDLE NOTE                                                     │
  * │                                                                 │
- * │ Importing this registry statically imports all 40 Lucide icon  │
+ * │ Importing this registry statically imports all 39 Lucide icon  │
  * │ components. Lucide icons are lightweight (~200 bytes each after │
- * │ gzip), so the full registry adds roughly 8 KB gzipped.         │
+ * │ gzip), so the full registry adds roughly 7.8 KB gzipped.       │
  * │                                                                 │
  * │ Do not assume per-tenant icon elimination from tree-shaking:   │
  * │ the registry pattern keeps all icons reachable by the bundler. │

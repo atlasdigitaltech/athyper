@@ -10,7 +10,7 @@
  *   from  — baseline version number (older)
  *   to    — target version number (newer); defaults to current
  *
- * API: GET /api/relay/records/:entity/:id/versions/:versionNo
+ * API: GET /api/relay/api/records/:entity/:id/versions/:versionNo
  *   → { data: RecordVersionDetail }
  *
  * [id] = canonical business key (NOT UUID).
@@ -88,7 +88,7 @@ function useVersionDetail(entityCode: string, entityId: string, versionNo: numbe
     queryKey: ["record-version-detail", entityCode, entityId, versionNo],
     queryFn: () =>
       bffFetch<VersionDetailResponse>(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/versions/${versionNo}`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}/versions/${versionNo}`,
       ),
     enabled: versionNo !== null,
     staleTime: 5 * 60 * 1000,

@@ -24,13 +24,13 @@ export function PeriodStatusBar({
     : `FY ${fiscalYear}`;
 
   return (
-    <div className={cn("flex items-center gap-1.5 text-[10px]", className)}>
+    <div className={cn("flex items-center gap-1.5 text-doc-support", className)}>
       {companyCode && (
         <span className="font-mono text-muted-foreground">{companyCode}</span>
       )}
       <span className="text-muted-foreground">{label}</span>
       {status && (
-        <span className={cn("px-1.5 py-0 rounded border text-[9px] font-medium", periodStatusColor(status))}>
+        <span className={cn("px-1.5 py-0 rounded border text-doc-label font-medium", periodStatusColor(status))}>
           {periodStatusLabel(status)}
         </span>
       )}

@@ -46,14 +46,19 @@ export function createMetadataClient(fetch: ApiFetch) {
       return fetch(`/api/metadata/entities/${entityName}/capabilities`);
     },
 
-    /** Fetch the active intake flow bundle for an entity + trigger context */
+    /** Fetch an intake flow bundle for an entity.
+     *  Pass `flowCode` to fetch a specific non-default flow (e.g. create_proforma).
+     *  Omit `flowCode` to receive the default flow for the given trigger context. */
     async getEntityFlow(
       entityCode: string,
       trigger: string = "new",
+      flowCode?: string,
     ): Promise<FlowBundle | null> {
       try {
+        const params = new URLSearchParams({ trigger });
+        if (flowCode) params.set("flow_code", flowCode);
         return await fetch(
-          `/api/metadata/entities/${encodeURIComponent(entityCode)}/flow?trigger=${encodeURIComponent(trigger)}`,
+          `/api/metadata/entities/${encodeURIComponent(entityCode)}/flow?${params.toString()}`,
         );
       } catch {
         return null;

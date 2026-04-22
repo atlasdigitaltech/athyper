@@ -71,7 +71,7 @@ export function BalanceSheetView({ scope, onDrillDown }: BalanceSheetViewProps) 
             borderTop
           />
           <div className={cn(
-            "text-[9px] px-2 py-0.5 text-right",
+            "text-doc-label px-2 py-0.5 text-right",
             Math.abs(data.totalAssets - data.totalLiabilitiesAndEquity) < 0.01
               ? "text-success"
               : "text-destructive",
@@ -86,7 +86,7 @@ export function BalanceSheetView({ scope, onDrillDown }: BalanceSheetViewProps) 
       {/* Assets */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Assets</span>
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Assets</span>
         </div>
         {assetSections.map((sec) => (
           <StatementSection
@@ -111,7 +111,7 @@ export function BalanceSheetView({ scope, onDrillDown }: BalanceSheetViewProps) 
       {/* Liabilities */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Liabilities</span>
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Liabilities</span>
         </div>
         {liabilitySections.map((sec) => (
           <StatementSection
@@ -136,7 +136,7 @@ export function BalanceSheetView({ scope, onDrillDown }: BalanceSheetViewProps) 
       {/* Equity */}
       <div>
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Equity</span>
+          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Equity</span>
         </div>
         {equitySections.map((sec) => (
           <StatementSection

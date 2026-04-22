@@ -263,3 +263,31 @@ const GL_SCHEMA_INTENT: Record<string, SemanticIntent> = {
 export function glSchemaIntent(schema: string): SemanticIntent {
   return GL_SCHEMA_INTENT[schema.toLowerCase()] ?? "neutral";
 }
+
+// ── WFL: workflow item / approval item status ────────────────────────────────
+// Covers the richer status set emitted by the workflow engine, which includes
+// states that kanbanStatusIntent does not handle (escalated, delegated, recalled).
+
+const WORKFLOW_ITEM_STATUS_INTENT: Record<string, SemanticIntent> = {
+  // Waiting states
+  pending:          "neutral",
+  pending_approval: "warning",
+  awaiting:         "warning",
+  // In-flight states
+  in_progress:  "info",
+  escalated:    "error",
+  delegated:    "info",
+  // Terminal — positive
+  approved:  "success",
+  completed: "success",
+  // Terminal — negative
+  rejected:  "error",
+  recalled:  "warning",
+  cancelled: "muted",
+  voided:    "muted",
+};
+
+/** Map a WFL workflow item / approval item status to a SemanticIntent. */
+export function workflowItemStatusIntent(status: string): SemanticIntent {
+  return WORKFLOW_ITEM_STATUS_INTENT[status.toLowerCase()] ?? "neutral";
+}

@@ -22,6 +22,7 @@ export interface ExcelViewProps {
   visibleColumns?:   string[];
   presentationConfig?: { columns: ColumnPresentation[] };
   onRowClick?:       (row: Record<string, unknown>) => void;
+  onRowContextMenu?: (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
   aggregations?:     Record<string, number | null>;
   loading?:          boolean;
 }
@@ -32,6 +33,7 @@ export function ExcelView({
   visibleColumns,
   presentationConfig,
   onRowClick,
+  onRowContextMenu,
   aggregations,
   loading = false,
 }: ExcelViewProps) {
@@ -79,7 +81,7 @@ export function ExcelView({
         <thead className="sticky top-0 z-10 bg-muted">
           <tr>
             {/* Row-number column */}
-            <th className="sticky left-0 z-20 w-9 border-b border-r bg-muted px-2 py-1 text-right text-[10px] text-muted-foreground/60 select-none">
+            <th className="sticky left-0 z-20 w-9 border-b border-r bg-muted px-2 py-1 text-right text-2xs text-muted-foreground/60 select-none">
               #
             </th>
             {orderedFields.map((field, idx) => (
@@ -116,9 +118,10 @@ export function ExcelView({
                   onRowClick && "cursor-pointer",
                 )}
                 onClick={() => onRowClick?.(row)}
+                onContextMenu={(e) => onRowContextMenu?.(row, e)}
               >
                 {/* Row number */}
-                <td className="sticky left-0 z-10 w-9 border-r bg-background px-2 py-0.5 text-right text-[10px] text-muted-foreground/50 select-none">
+                <td className="sticky left-0 z-10 w-9 border-r bg-background px-2 py-0.5 text-right text-2xs text-muted-foreground/50 select-none">
                   {rowIdx + 1}
                 </td>
                 {orderedFields.map((field, idx) => (
@@ -143,7 +146,7 @@ export function ExcelView({
         {hasAgg && (
           <tfoot className="sticky bottom-0 z-10 border-t-2 bg-muted font-semibold">
             <tr>
-              <td className="sticky left-0 z-20 w-9 border-r bg-muted px-2 py-1 text-right text-[10px] text-muted-foreground/60">
+              <td className="sticky left-0 z-20 w-9 border-r bg-muted px-2 py-1 text-right text-2xs text-muted-foreground/60">
                 Σ
               </td>
               {orderedFields.map((field, idx) => {

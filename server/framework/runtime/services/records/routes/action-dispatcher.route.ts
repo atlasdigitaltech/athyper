@@ -42,6 +42,7 @@ import {
   resolvePrincipalIdOrNull,
   extractOrgHeaders,
 } from "@athyper/svc-shared";
+import { handlePromoteProforma } from "../../business/ap/promote-proforma.handler.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -346,6 +347,29 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
 
         logger?.info(`action_dispatch_${target}`, { entity: entityCode, tenantId, recordId, newId: newRecord["id"] });
         res.status(201).json({ ok: true, newRecord: { id: newRecord["id"] } });
+        return;
+      }
+
+      // ── Dispatch: MODAL flow handlers (handler_target = 'flow:<code>') ────────
+      if (target.startsWith("flow:")) {
+        const flowCode = target.slice("flow:".length);
+
+        if (flowCode === "promote_proforma") {
+          const { status, body: respBody } = await handlePromoteProforma(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 200) {
+            logger?.info("action_dispatch_promote_proforma", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        logger?.warn("action_dispatch_unknown_flow_handler", { entity: entityCode, code, flowCode });
+        res.status(400).json({
+          error:   "UNKNOWN_FLOW_HANDLER",
+          message: `No server handler registered for flow operation '${flowCode}'`,
+        });
         return;
       }
 

@@ -24,33 +24,9 @@ import type {
   ActionBundleGroup,
   ValidationNotice,
 } from "@athyper/api-contracts/documents";
+import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent, type StatusIntent } from "../_shared/status";
 
-// ── Status intent heuristics ────────────────────────────────────────────────
-
-const POSITIVE = new Set([
-  "approved", "posted", "paid", "fully_paid", "completed", "cleared",
-  "active", "closed", "settled", "matched", "fully_matched",
-]);
-const IN_FLIGHT = new Set([
-  "pending", "submitted", "in_review", "pending_approval", "partially_paid",
-  "partially_matched", "partially_cleared", "open", "in_progress",
-]);
-const NEGATIVE = new Set([
-  "rejected", "cancelled", "reversed", "voided", "overdue", "failed",
-  "on_hold", "blocked", "suspended",
-]);
-
-type Intent = "success" | "warning" | "error" | "info" | "neutral" | "primary" | "accent" | "muted";
-
-function statusToIntent(raw: unknown): Intent {
-  if (typeof raw !== "string") return "neutral";
-  const key = raw.toLowerCase().replace(/[\s-]/g, "_");
-  if (POSITIVE.has(key)) return "success";
-  if (IN_FLIGHT.has(key)) return "warning";
-  if (NEGATIVE.has(key)) return "error";
-  if (key === "draft") return "neutral";
-  return "info";
-}
+type Intent = StatusIntent | "primary" | "accent" | "muted";
 
 function formatLabel(code: string): string {
   return code

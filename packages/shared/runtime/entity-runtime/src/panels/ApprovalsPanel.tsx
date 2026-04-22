@@ -30,7 +30,7 @@ export function ApprovalsPanel({ entityCode, recordId }: ApprovalsPanelProps) {
     queryKey: ["record-approvals", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/approvals`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/approvals`,
         { signal },
       );
       if (!res.ok) return null;

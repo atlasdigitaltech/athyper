@@ -31,7 +31,7 @@ export function WatchersPanel({ entityCode, recordId }: WatchersPanelProps) {
     queryKey: ["record-watchers", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/watchers`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/watchers`,
         { signal },
       );
       if (!res.ok) return { data: [] };

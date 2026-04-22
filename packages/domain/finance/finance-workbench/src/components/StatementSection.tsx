@@ -45,20 +45,20 @@ export function StatementSection({
         ) : (
           <ChevronRight size={11} className="text-muted-foreground shrink-0" />
         )}
-        <span className="text-[11px] font-semibold flex-1">{title}</span>
+        <span className="text-doc-subtitle font-semibold flex-1">{title}</span>
 
         <div className="flex items-center gap-6 pr-0">
-          <span className="font-mono text-[11px] w-28 text-right font-medium">
+          <span className="font-mono text-doc-subtitle w-28 text-right font-medium">
             {fmtCompact(total)}
           </span>
           {showComparative && (
             <>
-              <span className="font-mono text-[11px] w-28 text-right text-muted-foreground">
+              <span className="font-mono text-doc-subtitle w-28 text-right text-muted-foreground">
                 {priorTotal !== undefined ? fmtCompact(priorTotal) : "—"}
               </span>
               <span
                 className={cn(
-                  "font-mono text-[11px] w-20 text-right",
+                  "font-mono text-doc-subtitle w-20 text-right",
                   variance !== null && variance > 0
                     ? "text-success"
                     : variance !== null && variance < 0
@@ -90,19 +90,19 @@ export function StatementSection({
               className="flex items-center py-[4px] bg-muted/20"
               style={{ paddingLeft: `${(indent + 1) * 16 + 8}px` }}
             >
-              <span className="text-[10px] text-muted-foreground flex-1 italic">
+              <span className="text-doc-support text-muted-foreground flex-1 italic">
                 {totalLabel ?? `Total ${title}`}
               </span>
               <div className="flex items-center gap-6 pr-0">
-                <span className="font-mono text-[10px] w-28 text-right font-medium">
+                <span className="font-mono text-doc-support w-28 text-right font-medium">
                   {fmtCompact(total)}
                 </span>
                 {showComparative && (
                   <>
-                    <span className="font-mono text-[10px] w-28 text-right text-muted-foreground">
+                    <span className="font-mono text-doc-support w-28 text-right text-muted-foreground">
                       {priorTotal !== undefined ? fmtCompact(priorTotal) : "—"}
                     </span>
-                    <span className="font-mono text-[10px] w-20 text-right text-muted-foreground">
+                    <span className="font-mono text-doc-support w-20 text-right text-muted-foreground">
                       {variance !== null ? fmtCompact(variance) : "—"}
                     </span>
                   </>

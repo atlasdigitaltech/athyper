@@ -49,7 +49,7 @@ export function EmptyState({
         <p
           className={cn(
             "text-muted-foreground/70",
-            size === "default" ? "max-w-xs text-xs" : "text-[10px]",
+            size === "default" ? "max-w-xs text-xs" : "text-2xs",
           )}
         >
           {description}

@@ -54,6 +54,10 @@ import {
   MoreHorizontal,
   TableProperties,
   AlignJustify,
+  ExternalLink,
+  AppWindow,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useSaveView, useUpdateView } from "@athyper/query";
 import { resolveActionsForSurface } from "@athyper/metadata-client/operation-reader";
@@ -116,7 +120,7 @@ function StatusBadge({ value, resolverName }: { value: string; resolverName?: st
   const intent = resolverFn ? resolverFn(value) : kanbanStatusIntent(value);
   const colors = resolveSemanticColors(intent);
   return (
-    <span className={cn("rounded-full border px-2 py-0.5 text-[10px] capitalize", colors.subtleBadge)}>
+    <span className={cn("rounded-full border px-2 py-0.5 text-2xs capitalize", colors.subtleBadge)}>
       {value.replace(/_/g, " ")}
     </span>
   );
@@ -133,6 +137,7 @@ function CompactView({
   titleKey,
   entityCode,
   onRowClick,
+  onRowContextMenu,
   statusResolverName,
   compactColumns,
 }: {
@@ -140,6 +145,7 @@ function CompactView({
   titleKey:           string;
   entityCode:         string;
   onRowClick?:        (row: Record<string, unknown>) => void;
+  onRowContextMenu?:  (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
   statusResolverName?: string;
   /** Presentation-config columns filtered to compactVisible !== false. Max 4 shown. */
   compactColumns:     import("@athyper/api-contracts/entity-list").ColumnPresentation[];
@@ -166,6 +172,7 @@ function CompactView({
           <div
             key={id}
             onClick={() => onRowClick?.(row)}
+            onContextMenu={(e) => onRowContextMenu?.(row, e)}
             className={cn(
               "flex flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
               onRowClick && "cursor-pointer",
@@ -174,7 +181,7 @@ function CompactView({
             {/* Title row */}
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-medium leading-snug">{title}</p>
-              <Badge variant="outline" className="shrink-0 text-[9px] px-1.5 py-0.5 font-mono">
+              <Badge variant="outline" className="shrink-0 text-2xs px-1.5 py-0.5 font-mono">
                 {entityCode}
               </Badge>
             </div>
@@ -185,7 +192,7 @@ function CompactView({
                 <StatusBadge value={status} resolverName={statusResolverName} />
               )}
               {id && (
-                <span className="font-mono text-[9px] text-muted-foreground/50">
+                <span className="font-mono text-2xs text-muted-foreground/50">
                   {id.slice(0, 8)}
                 </span>
               )}
@@ -199,10 +206,10 @@ function CompactView({
                   if (val === undefined || val === null || val === "") return null;
                   return (
                     <div key={col.fieldName} className="contents">
-                      <dt className="text-[10px] text-muted-foreground truncate">
+                      <dt className="text-2xs text-muted-foreground truncate">
                         {col.label ?? col.fieldName}
                       </dt>
-                      <dd className="text-[10px] font-medium truncate">
+                      <dd className="text-2xs font-medium truncate">
                         {String(val)}
                       </dd>
                     </div>
@@ -646,7 +653,7 @@ function BulkActionDialog({
                           const pa = rec.policyAction;
                           const paPill = pa && pa !== "allow" ? (
                             <span className={cn(
-                              "rounded px-1.5 py-0.5 text-[9px] font-medium",
+                              "rounded px-1.5 py-0.5 text-2xs font-medium",
                               pa === "deny"             ? resolveSemanticColors("error").subtleBadge :
                               pa === "warn"             ? resolveSemanticColors("warning").subtleBadge :
                               pa === "require_workflow" ? resolveSemanticColors("info").subtleBadge :
@@ -661,7 +668,7 @@ function BulkActionDialog({
                                                        "text-muted-foreground";
                           return (
                             <li key={rec.id} className="flex items-center gap-2 text-xs">
-                              <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                              <span className="font-mono text-2xs text-muted-foreground shrink-0">
                                 {rec.id.slice(0, 8)}
                               </span>
                               <span className={cn("shrink-0 capitalize", statusColor)}>
@@ -1021,7 +1028,7 @@ function ColumnPickerButton({
           {/* Backdrop */}
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-lg border bg-popover p-2 shadow-md">
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 px-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               Columns
             </p>
             {allColumns.map(({ name, label }) => {
@@ -1229,6 +1236,55 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     [presentationConfig],
   );
 
+  // ── Right-click context menu state (must be before any early return) ────────
+
+  const [rowCtxMenu, setRowCtxMenu] = useState<{ row: Record<string, unknown>; x: number; y: number } | null>(null);
+  const [ctxCopied, setCtxCopied] = useState<string | null>(null);
+
+  const handleRowContextMenu = useCallback((row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => {
+    e.preventDefault();
+    setCtxCopied(null);
+    setRowCtxMenu({ row, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleCtxCopy = useCallback((fieldKey: string, value: string) => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setCtxCopied(fieldKey);
+      setTimeout(() => {
+        setCtxCopied(null);
+        setRowCtxMenu(null);
+      }, 1200);
+    });
+  }, []);
+
+  // Build per-field copy items — self-contained so it can live before the early returns.
+  // Uses entity + state.columns directly rather than the post-guard allDescriptorColumns.
+  const ctxCopyItems = useMemo(() => {
+    if (!rowCtxMenu || !entity) return [];
+    const fmt = (raw: unknown): string => {
+      if (raw == null) return "";
+      if (typeof raw === "boolean") return raw ? "Yes" : "No";
+      if (typeof raw === "number") return raw.toLocaleString();
+      const s = String(raw);
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return d.toLocaleDateString();
+      }
+      return s;
+    };
+    const listCfg    = resolveListConfig(entity);
+    const allCols    = listCfg.columns;
+    const visCols    = state.columns ?? [];
+    const visFields  = allCols.filter((f) => visCols.length === 0 || visCols.includes(f.name));
+    return visFields.flatMap((field) => {
+      const pres  = presentationConfig?.columns.find((c) => c.fieldName === field.name);
+      const label = pres?.label ?? field.label ?? field.name;
+      const raw   = rowCtxMenu.row[field.name];
+      if (raw == null || raw === "") return [];
+      return [{ key: field.name, label, value: fmt(raw) }];
+    });
+  }, [rowCtxMenu, entity, state.columns, presentationConfig]);
+
   // ── Error / loading ──────────────────────────────────────────────────────────
 
   if (metaError) {
@@ -1353,7 +1409,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             <Tag className="h-3.5 w-3.5" />
             Filter
             {hasActiveFilters && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-2xs font-bold text-primary-foreground">
                 {Object.keys(activeFilters).length}
               </span>
             )}
@@ -1560,6 +1616,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               onRowSelectionChange={setRowSelection}
               pageSize={state.pageSize ?? presentationConfig?.defaultPageSize ?? 25}
               onRowClick={handleRowClick}
+              onRowContextMenu={(row, e) => handleRowContextMenu(row as Record<string, unknown>, e)}
               sortingState={tableSortingState}
               onSortingChange={handleSortChange}
               density={state.density ?? "comfortable"}
@@ -1598,6 +1655,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               titleKey={titleKey}
               entityCode={entityCode}
               onRowClick={handleRowClick}
+              onRowContextMenu={handleRowContextMenu}
               statusResolverName={statusResolverName}
               compactColumns={compactColumns}
             />
@@ -1617,12 +1675,81 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               visibleColumns={visibleColumnNames.length > 0 ? visibleColumnNames : undefined}
               presentationConfig={presentationConfig ?? undefined}
               onRowClick={handleRowClick}
+              onRowContextMenu={handleRowContextMenu}
               aggregations={aggregations}
               loading={dataLoading}
             />
           )}
         </div>
       </div>
+
+      {/* Right-click context menu */}
+      {rowCtxMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setRowCtxMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setRowCtxMenu(null); }}
+          />
+          <div
+            className="fixed z-50 min-w-[260px] max-w-[320px] rounded-lg border bg-popover py-1 shadow-md"
+            style={{ top: rowCtxMenu.y, left: rowCtxMenu.x }}
+          >
+            {/* Navigation */}
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => {
+                window.open(`/app/${entityCode}/${String(rowCtxMenu.row.id ?? "")}`, "_blank", "noopener,noreferrer");
+                setRowCtxMenu(null);
+              }}
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              Open in new tab
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => {
+                window.open(`/app/${entityCode}/${String(rowCtxMenu.row.id ?? "")}`, "_blank", "noopener,noreferrer,width=1280,height=800");
+                setRowCtxMenu(null);
+              }}
+            >
+              <AppWindow className="h-3.5 w-3.5 shrink-0" />
+              Open in new window
+            </button>
+
+            {/* Per-field copy section */}
+            {ctxCopyItems.length > 0 && (
+              <>
+                <div className="my-1 h-px bg-border" />
+                <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                  Copy field
+                </div>
+                <div className="max-h-[220px] overflow-y-auto">
+                  {ctxCopyItems.map((item) => (
+                    <button
+                      key={item.key}
+                      className="flex w-full items-center gap-2 px-3 py-1 text-left hover:bg-muted transition-colors"
+                      onClick={() => handleCtxCopy(item.key, item.value)}
+                    >
+                      <span className="w-[90px] shrink-0 truncate text-xs text-muted-foreground">{item.label}</span>
+                      {ctxCopied === item.key ? (
+                        <span className="flex items-center gap-1 text-xs text-green-500">
+                          <Check className="h-3 w-3" />Copied!
+                        </span>
+                      ) : (
+                        <span className="flex-1 truncate text-xs font-medium">{item.value}</span>
+                      )}
+                      {ctxCopied !== item.key && (
+                        <Copy className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </PageFrame>
   );
 }

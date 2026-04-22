@@ -8,7 +8,7 @@
  *
  *   1. Global   — Home · Inbox (badge) · Search
  *   2. Spaces   — one icon per workspace (from shared.workspace)
- *   3. Core — ⚙ icon, purple tint, visible only when hasPlatform = true
+ *   3. Core     — ⚙ icon, accent tint, visible only when hasPlatform = true
  *   4. Utilities — Favorites · Recent · Settings (anchored at bottom)
  *
  * Active workspace is indicated by:
@@ -20,6 +20,7 @@
 
 import { type LucideIcon, Home, Inbox, Search, Settings, Star, Clock, Server } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { NavBadge } from "./NavBadge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ interface RailIconProps {
   label: string;
   active?: boolean;
   badge?: number;
-  /** Platform icon gets a distinct violet tint instead of the primary color. */
+  /** Platform icon gets a distinct accent tint instead of the primary color. */
   isPlatform?: boolean;
   /** Workbench accent hex for the active left-bar indicator. */
   accentColor?: string;
@@ -100,24 +101,16 @@ function RailIcon({
         <span
           aria-hidden
           className={cn(
-            "absolute -left-px top-2 bottom-2 w-0.5 rounded-r-full",
+            "absolute -left-px bottom-2 top-2 w-0.5 rounded-r-full",
             !accentColor && "bg-sidebar-primary",
           )}
           style={accentColor ? { backgroundColor: accentColor } : undefined}
         />
       )}
 
-      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <Icon className="h-4.5 w-4.5 shrink-0" />
 
-      {/* Badge */}
-      {badge != null && badge > 0 && (
-        <span
-          aria-label={`${badge} unread`}
-          className="absolute right-0.5 top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-destructive px-0.5 text-[9px] font-bold leading-none text-white"
-        >
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
+      <NavBadge count={badge ?? 0} variant="overlay" />
     </>
   );
 
@@ -181,7 +174,7 @@ export function NavRail({
       {workspaces.length > 0 && (
         <>
           <ZoneSep />
-          <span className="py-0.5 text-[8px] font-bold uppercase tracking-[0.8px] text-sidebar-foreground/30">
+          <span className="py-0.5 text-xs font-bold uppercase tracking-widest text-sidebar-foreground/30">
             Spaces
           </span>
           {workspaces.map((ws) => (

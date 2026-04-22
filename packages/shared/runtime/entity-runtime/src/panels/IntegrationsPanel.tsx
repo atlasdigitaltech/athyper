@@ -38,7 +38,7 @@ export function IntegrationsPanel({ entityCode, recordId }: IntegrationsPanelPro
     queryKey: ["record-integration-events", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/integration-events`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/integration-events`,
         { signal },
       );
       if (!res.ok) return { data: [] };
@@ -66,7 +66,7 @@ export function IntegrationsPanel({ entityCode, recordId }: IntegrationsPanelPro
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{evt.provider_name}</span>
-              <Badge variant={STATUS_VARIANT[evt.status]} className="text-[10px]">
+              <Badge variant={STATUS_VARIANT[evt.status]} className="text-2xs">
                 {evt.status}
               </Badge>
               <span className="font-mono text-xs text-muted-foreground">{evt.event_type}</span>

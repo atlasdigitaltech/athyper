@@ -5,6 +5,8 @@ import { cn } from "@athyper/theme/utils";
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+  /** Stable key for React rendering; falls back to href then label. */
+  id?: string;
 }
 
 export interface BreadcrumbsProps {
@@ -13,13 +15,17 @@ export interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+  if (items.length === 0) return null;
+
   return (
     <nav aria-label="Breadcrumb" className={cn("flex items-center gap-1 text-sm", className)}>
       {items.map((item, i) => (
-        <Fragment key={i}>
-          {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        <Fragment key={item.id ?? item.href ?? item.label}>
+          {i > 0 && (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          )}
           {item.href ? (
-            <a href={item.href} className="text-muted-foreground hover:text-foreground transition-colors">
+            <a href={item.href} className="text-muted-foreground transition-colors hover:text-foreground">
               {item.label}
             </a>
           ) : (

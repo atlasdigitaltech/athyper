@@ -73,13 +73,13 @@ function cellValue(line: DocumentLine, col: ItemsGridColumn, lineDists?: Account
         const d = lineDists[0];
         const label = d!.account_code ?? (d!.cost_center_id ? "CC" : d!.spend_category_id ? "CAT" : "DIST");
         return (
-          <span className="inline-flex items-center h-[18px] px-[6px] rounded-[4px] text-[10px] font-mono font-semibold bg-muted border border-border/60 text-muted-foreground leading-none">
+          <span className="inline-flex items-center h-[18px] px-[6px] rounded-[4px] text-2xs font-mono font-semibold bg-muted border border-border/60 text-muted-foreground leading-none">
             {label}
           </span>
         );
       }
       return (
-        <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-[10px] font-semibold bg-info/10 border border-info/20 text-info leading-none">
+        <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-2xs font-semibold bg-info/10 border border-info/20 text-info leading-none">
           <SplitSquareHorizontal className="h-[10px] w-[10px]" />
           {lineDists.length} splits
         </span>

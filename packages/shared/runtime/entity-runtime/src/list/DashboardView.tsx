@@ -82,7 +82,7 @@ function StatTile({
     <div className={`rounded-lg border p-4 space-y-1 ${TILE_ACCENT[accent]}`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+      {sub && <p className="text-2xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }

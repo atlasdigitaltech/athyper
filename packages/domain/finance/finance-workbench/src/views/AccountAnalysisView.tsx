@@ -63,25 +63,25 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
       <div className="flex items-center gap-3 rounded-lg border bg-muted/20 px-4 py-2.5">
         <span className="font-mono text-xs text-muted-foreground">{data.accountCode}</span>
         <span className="font-semibold text-sm">{data.accountName}</span>
-        <span className="text-[10px] rounded border bg-background px-1.5 py-0.5 uppercase font-medium text-muted-foreground">
+        <span className="text-doc-support rounded border bg-background px-1.5 py-0.5 uppercase font-medium text-muted-foreground">
           {data.accountClass}
         </span>
-        <span className="text-[10px] rounded border bg-background px-1.5 py-0.5 text-muted-foreground">
+        <span className="text-doc-support rounded border bg-background px-1.5 py-0.5 text-muted-foreground">
           Normal: {data.normalBalance}
         </span>
         {data.isLive && (
-          <span className="text-[10px] rounded border bg-info/10 border-info/30 px-1.5 py-0.5 text-info font-medium">
+          <span className="text-doc-support rounded border bg-info/10 border-info/30 px-1.5 py-0.5 text-info font-medium">
             Live
           </span>
         )}
         <div className="flex-1" />
         <div className="flex gap-6 text-xs text-muted-foreground">
           <div className="text-right">
-            <div className="text-[9px] uppercase mb-0.5">Year Opening</div>
+            <div className="text-doc-label uppercase mb-0.5">Year Opening</div>
             <span className="font-mono font-medium text-foreground">{fmtCompact(data.yearOpeningBalance)}</span>
           </div>
           <div className="text-right">
-            <div className="text-[9px] uppercase mb-0.5">Year Closing</div>
+            <div className="text-doc-label uppercase mb-0.5">Year Closing</div>
             <span className="font-mono font-medium text-foreground">{fmtCompact(data.yearClosingBalance)}</span>
           </div>
         </div>

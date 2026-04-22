@@ -65,7 +65,7 @@ export function DerivedChip({
   if (editing) {
     return (
       <div className={cn("flex items-center gap-1.5", className)}>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
+        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
           {label}
         </span>
         <input
@@ -121,7 +121,7 @@ export function DerivedChip({
         <Lock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
       )}
 
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
 

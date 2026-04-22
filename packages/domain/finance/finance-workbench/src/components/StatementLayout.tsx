@@ -44,27 +44,27 @@ export function StatementLayout({
           companyCode={companyCode}
         />
         {isLive && (
-          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-info/10 text-info border-info/30">
+          <span className="text-doc-label font-medium px-1.5 py-0 rounded border bg-info/10 text-info border-info/30">
             Live
           </span>
         )}
         <div className="flex-1" />
         {showComparative && (
           <div className="flex items-center gap-6 pr-2">
-            <span className="text-[10px] font-medium text-muted-foreground w-24 text-right">
+            <span className="text-doc-support font-medium text-muted-foreground w-24 text-right">
               {currentLabel ?? "Current"}
             </span>
-            <span className="text-[10px] font-medium text-muted-foreground w-24 text-right">
+            <span className="text-doc-support font-medium text-muted-foreground w-24 text-right">
               {priorLabel ?? "Prior year"}
             </span>
-            <span className="text-[10px] font-medium text-muted-foreground w-20 text-right">
+            <span className="text-doc-support font-medium text-muted-foreground w-20 text-right">
               Variance
             </span>
           </div>
         )}
         {!showComparative && (
           <div className="pr-2">
-            <span className="text-[10px] font-medium text-muted-foreground w-28 text-right block">
+            <span className="text-doc-support font-medium text-muted-foreground w-28 text-right block">
               {currentLabel ?? "Balance"}
             </span>
           </div>

@@ -125,7 +125,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
               aria-label={mode === "datetime" ? "Select date and time" : "Select date"}
             />
             {error && (
-              <p className="mt-1.5 text-xs text-destructive">{error}</p>
+              <p className="mt-1.5 text-xs text-destructive" role="alert">{error}</p>
             )}
           </Popover.Content>
         </Popover.Portal>

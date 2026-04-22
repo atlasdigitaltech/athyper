@@ -65,12 +65,12 @@ export function DocumentHeader({
 
             {versions && (
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="muted" className="text-[10px]">Doc Rev: {versions.doc_rev}</Badge>
+                <Badge variant="muted" className="text-2xs">Doc Rev: {versions.doc_rev}</Badge>
                 {versions.wf_snapshot_version != null && (
-                  <Badge variant="muted" className="text-[10px]">WF Snapshot: v{versions.wf_snapshot_version}</Badge>
+                  <Badge variant="muted" className="text-2xs">WF Snapshot: v{versions.wf_snapshot_version}</Badge>
                 )}
                 {versions.lifecycle_version != null && (
-                  <Badge variant="muted" className="text-[10px]">Lifecycle: v{versions.lifecycle_version}</Badge>
+                  <Badge variant="muted" className="text-2xs">Lifecycle: v{versions.lifecycle_version}</Badge>
                 )}
               </div>
             )}

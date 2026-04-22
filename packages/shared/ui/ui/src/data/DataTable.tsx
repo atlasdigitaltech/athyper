@@ -15,6 +15,7 @@ import {
   type SortingState,
   type RowSelectionState,
 } from "@tanstack/react-table";
+import type React from "react";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -71,6 +72,11 @@ export interface DataTableProps<TData> {
    */
   rowActions?: (row: TData) => ReactNode;
   /**
+   * Fired when the user right-clicks a row.
+   * Use this to render a custom context menu positioned at the mouse cursor.
+   */
+  onRowContextMenu?: (row: TData, event: React.MouseEvent<HTMLTableRowElement>) => void;
+  /**
    * Aggregation footer values keyed by column accessorKey.
    * When provided and non-empty, renders a sticky tfoot row with formatted totals.
    * Pass null for a column to render an empty cell (column is aggregatable but has no value).
@@ -107,6 +113,7 @@ export function DataTable<TData>({
   density = "comfortable",
   aggregations,
   pinnedColumns,
+  onRowContextMenu,
 }: DataTableProps<TData>) {
   // Row density maps
   const CELL_PAD: Record<string, string> = {
@@ -246,11 +253,11 @@ export function DataTable<TData>({
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getIsSorted() === "asc"  ? (
-                          <ArrowUp   className="h-3.5 w-3.5 text-primary" />
+                          <ArrowUp   className="size-3.5 text-primary" />
                         ) : header.column.getIsSorted() === "desc" ? (
-                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                          <ArrowDown className="size-3.5 text-primary" />
                         ) : (
-                          <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+                          <ArrowUpDown className="size-3.5 opacity-40" />
                         )}
                       </button>
                     ) : (
@@ -285,6 +292,7 @@ export function DataTable<TData>({
                     onRowClick && "cursor-pointer",
                   )}
                   onClick={() => onRowClick?.(row.original)}
+                  onContextMenu={(e) => onRowContextMenu?.(row.original, e)}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => {
@@ -354,7 +362,7 @@ export function DataTable<TData>({
               onClick={() => onPageChange!(currentPage! - 1)}
               disabled={currentPage! <= 1}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
               Previous
             </Button>
             <span className="text-sm text-muted-foreground">
@@ -367,7 +375,7 @@ export function DataTable<TData>({
               disabled={currentPage! >= totalPages!}
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>
@@ -388,7 +396,7 @@ export function DataTable<TData>({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
               Previous
             </Button>
             <span className="text-sm text-muted-foreground">
@@ -401,7 +409,7 @@ export function DataTable<TData>({
               disabled={!table.getCanNextPage()}
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>

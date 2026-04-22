@@ -25,18 +25,9 @@ import { useReverseJournal } from "../hooks/useReverseJournal";
 import { useCompanyList } from "../hooks/useCharts";
 import { PostingTrace } from "./PostingTrace";
 import type { FinanceScope } from "../lib/scope";
+import { fmtCurrency, fmtDate } from "../components/format";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtDate(d: string | null): string {
-  if (!d) return "—";
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString();
-}
 
 function statusVariant(status: string): "success" | "destructive" | "muted" | "secondary" {
   const s = status.toLowerCase();
@@ -86,10 +77,10 @@ function JeRow({
           {je.description ?? "—"}
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums text-xs font-medium text-success">
-          {fmt(je.totalDebit)}
+          {fmtCurrency(je.totalDebit)}
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums text-xs font-medium text-destructive">
-          {fmt(je.totalCredit)}
+          {fmtCurrency(je.totalCredit)}
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums text-xs text-muted-foreground">
           {je.lineCount}
@@ -207,7 +198,7 @@ function NewJournalDialog({
       return;
     }
     if (!balanced) {
-      setError(`Entry is unbalanced: debit ${fmt(totalDebit)} ≠ credit ${fmt(totalCredit)}`);
+      setError(`Entry is unbalanced: debit ${fmtCurrency(totalDebit)} ≠ credit ${fmtCurrency(totalCredit)}`);
       return;
     }
 
@@ -372,17 +363,17 @@ function NewJournalDialog({
                   </Button>
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums font-medium text-success">
-                  {fmt(totalDebit)}
+                  {fmtCurrency(totalDebit)}
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums font-medium text-destructive">
-                  {fmt(totalCredit)}
+                  {fmtCurrency(totalCredit)}
                 </td>
                 <td colSpan={2} className="px-2 py-2 text-right text-xs text-muted-foreground">
                   {balanced ? (
                     <span className="text-success font-medium">Balanced</span>
                   ) : totalDebit > 0 || totalCredit > 0 ? (
                     <span className="text-destructive">
-                      Diff: {fmt(Math.abs(totalDebit - totalCredit))}
+                      Diff: {fmtCurrency(Math.abs(totalDebit - totalCredit))}
                     </span>
                   ) : null}
                 </td>

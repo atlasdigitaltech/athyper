@@ -48,7 +48,7 @@ export function WorkflowSummaryPanel({ entityCode, recordId }: WorkflowSummaryPa
     queryKey: ["record-workflow", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/workflow`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/workflow`,
         { signal },
       );
       if (!res.ok) return {};
@@ -96,7 +96,7 @@ export function WorkflowSummaryPanel({ entityCode, recordId }: WorkflowSummaryPa
                 {new Date(stage.completed_at).toLocaleDateString()}
               </span>
             )}
-            <Badge variant={STATUS_VARIANT[stage.status]} className="text-[10px]">
+            <Badge variant={STATUS_VARIANT[stage.status]} className="text-2xs">
               {stage.status}
             </Badge>
           </div>

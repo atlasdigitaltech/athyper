@@ -72,6 +72,7 @@ export {
   closeTaskStatusIntent,
   apArStatusIntent,
   glSchemaIntent,
+  workflowItemStatusIntent,
 } from "./domain-intents";
 export type { AdminStatus } from "./domain-intents";
 

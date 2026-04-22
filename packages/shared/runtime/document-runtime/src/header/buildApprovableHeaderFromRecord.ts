@@ -14,40 +14,7 @@
  */
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage } from "./types";
-
-// ── Simple status → intent mapping ───────────────────────────────────────────
-
-const STATUS_INTENT_MAP: Record<string, "success" | "warning" | "error" | "info" | "neutral"> = {
-  // Positive / terminal
-  approved: "success",
-  paid: "success",
-  posted: "success",
-  completed: "success",
-  cleared: "success",
-  active: "success",
-  // In-flight
-  pending: "warning",
-  draft: "info",
-  submitted: "info",
-  in_review: "warning",
-  partially_paid: "warning",
-  partially_cleared: "warning",
-  // Negative
-  rejected: "error",
-  cancelled: "error",
-  void: "error",
-  overdue: "error",
-  // Default
-  unknown: "neutral",
-};
-
-function statusToIntent(
-  raw: unknown,
-): "success" | "warning" | "error" | "info" | "neutral" {
-  if (typeof raw !== "string") return "neutral";
-  const key = raw.toLowerCase().replace(/[\s-]/g, "_");
-  return STATUS_INTENT_MAP[key] ?? "neutral";
-}
+import { statusToIntent } from "../_shared/status";
 
 // ── Date / number formatters ──────────────────────────────────────────────────
 

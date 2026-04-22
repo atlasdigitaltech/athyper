@@ -28,7 +28,7 @@ export function BalanceCard({ label, value, variant = "neutral", compact = false
 
   return (
     <div className={cn("rounded-md px-2.5 py-2", bg)}>
-      <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
+      <div className="text-doc-label font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
         {label}
       </div>
       <span className={cn("text-base font-semibold font-mono", textColor)}>

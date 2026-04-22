@@ -80,7 +80,7 @@ function ReportPlaceholderTile({ code }: { code: ReportCode }) {
       <div className="space-y-1">
         <p className="text-sm font-medium">{meta.label}</p>
         <p className="text-xs text-muted-foreground">{meta.description}</p>
-        <Badge variant="outline" className="mt-2 text-[10px]">Coming soon</Badge>
+        <Badge variant="outline" className="mt-2 text-doc-support">Coming soon</Badge>
       </div>
     </div>
   );
@@ -209,7 +209,7 @@ export function FinancialReportsWorkbench({ scope, report }: FinancialReportsWor
               >
                 <div className="text-xs font-medium">{m.label}</div>
                 {m.status === "placeholder" && (
-                  <div className="text-[10px] text-muted-foreground/60">Coming soon</div>
+                  <div className="text-doc-support text-muted-foreground/60">Coming soon</div>
                 )}
               </button>
             );

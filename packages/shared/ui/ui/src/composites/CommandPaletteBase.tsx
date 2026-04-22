@@ -163,7 +163,7 @@ export function CommandPaletteBase({
                       {TAB_LABELS[tab]}
                     </button>
                   ))}
-                  <kbd className="ml-1 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  <kbd className="ml-1 rounded border bg-background px-1.5 py-0.5 font-mono text-2xs text-muted-foreground">
                     ESC
                   </kbd>
                 </div>
@@ -194,7 +194,7 @@ function PaletteGroup({ heading, className, children }: CommandGroupProps) {
       className={cn(
         "px-2 py-1",
         "[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:pb-1 [&>[cmdk-group-heading]]:pt-2",
-        "[&>[cmdk-group-heading]]:text-[11px] [&>[cmdk-group-heading]]:font-semibold [&>[cmdk-group-heading]]:uppercase",
+        "[&>[cmdk-group-heading]]:text-xs [&>[cmdk-group-heading]]:font-semibold [&>[cmdk-group-heading]]:uppercase",
         "[&>[cmdk-group-heading]]:tracking-wide [&>[cmdk-group-heading]]:text-muted-foreground",
         className,
       )}
@@ -245,7 +245,7 @@ function PaletteBadge({
   return (
     <span
       className={cn(
-        "shrink-0 rounded border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground",
+        "shrink-0 rounded border bg-muted/60 px-1.5 py-0.5 font-mono text-2xs uppercase text-muted-foreground",
         className,
       )}
     >

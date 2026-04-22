@@ -55,13 +55,13 @@ export function GlWorkbench() {
               key={value}
               value={value}
               className={cn(
-                "rounded-none border-b-2 border-transparent px-2.5 py-2 text-[11px] gap-1",
+                "rounded-none border-b-2 border-transparent px-2.5 py-2 text-doc-subtitle gap-1",
                 "data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none",
               )}
             >
               <Icon size={12} />
               {label}
-              <span className={cn("text-[7px] font-mono px-1 py-px rounded leading-none", SCHEMA_STYLE[schema])}>
+              <span className={cn("text-doc-label font-mono px-1 py-px rounded leading-none", SCHEMA_STYLE[schema])}>
                 {schema}
               </span>
             </TabsTrigger>

@@ -43,9 +43,9 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
     <div className="flex flex-col gap-2 min-w-0">
       {/* Header */}
       <div className="flex items-center gap-3 px-0 py-1.5 border-b">
-        <span className="font-mono text-[11px] text-muted-foreground">{data.accountCode}</span>
+        <span className="font-mono text-doc-subtitle text-muted-foreground">{data.accountCode}</span>
         <span className="text-xs font-semibold">{data.accountName}</span>
-        <span className="text-[9px] px-1.5 py-0 rounded border bg-muted text-muted-foreground uppercase font-medium">
+        <span className="text-doc-label px-1.5 py-0 rounded border bg-muted text-muted-foreground uppercase font-medium">
           {data.accountClass}
         </span>
         <PeriodStatusBar
@@ -54,18 +54,18 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
           status={null}
         />
         {data.isLive && (
-          <span className="text-[9px] font-medium px-1.5 py-0 rounded border bg-primary/10 text-primary border-primary/30">
+          <span className="text-doc-label font-medium px-1.5 py-0 rounded border bg-primary/10 text-primary border-primary/30">
             Live
           </span>
         )}
         <div className="flex-1" />
-        <div className="flex items-center gap-4 text-[10px] text-muted-foreground pr-1">
+        <div className="flex items-center gap-4 text-doc-support text-muted-foreground pr-1">
           <div className="text-right">
-            <div className="text-[9px] uppercase">Opening</div>
+            <div className="text-doc-label uppercase">Opening</div>
             <AmountCell value={data.openingBalance} compact colorize />
           </div>
           <div className="text-right">
-            <div className="text-[9px] uppercase">Closing</div>
+            <div className="text-doc-label uppercase">Closing</div>
             <AmountCell value={data.closingBalance} compact colorize />
           </div>
         </div>
@@ -80,7 +80,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
         <div className="rounded-lg border overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-muted/50 border-b text-[10px] text-muted-foreground">
+              <tr className="bg-muted/50 border-b text-doc-support text-muted-foreground">
                 <th className="py-1.5 px-2 text-left font-medium">Date</th>
                 <th className="py-1.5 px-2 text-left font-medium">Ref</th>
                 <th className="py-1.5 px-2 text-left font-medium">Description</th>
@@ -91,7 +91,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
             </thead>
             <tbody>
               {/* Opening row */}
-              <tr className="border-b bg-muted/20 text-[10px]">
+              <tr className="border-b bg-muted/20 text-doc-support">
                 <td className="py-1 px-2 text-muted-foreground">—</td>
                 <td className="py-1 px-2 text-muted-foreground italic" colSpan={2}>Opening balance</td>
                 <td className="py-1 px-2" />
@@ -105,12 +105,12 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
               {data.lines.map((line) => (
                 <tr
                   key={line.journalLineId as string}
-                  className="border-b last:border-0 hover:bg-muted/20 text-[10px]"
+                  className="border-b last:border-0 hover:bg-muted/20 text-doc-support"
                 >
                   <td className="py-1 px-2 font-mono text-muted-foreground whitespace-nowrap">
                     {String(line.postingDate).slice(0, 10)}
                   </td>
-                  <td className="py-1 px-2 font-mono text-[9px] text-muted-foreground whitespace-nowrap">
+                  <td className="py-1 px-2 font-mono text-doc-label text-muted-foreground whitespace-nowrap">
                     {String(line.entryNumber)}
                   </td>
                   <td className="py-1 px-2 truncate max-w-xs">
@@ -140,7 +140,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
               ))}
 
               {/* Closing row */}
-              <tr className="border-t bg-muted/30 text-[10px] font-semibold">
+              <tr className="border-t bg-muted/30 text-doc-support font-semibold">
                 <td className="py-1.5 px-2 text-muted-foreground">—</td>
                 <td className="py-1.5 px-2 italic text-muted-foreground" colSpan={2}>Closing balance</td>
                 <td className="py-1.5 px-2" />

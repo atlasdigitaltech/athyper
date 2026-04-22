@@ -7,7 +7,7 @@ export {
   OwnerBadge, NodeTypeBadge, ReconBadge,
 } from "./ChartBadge";
 export { CheckIcon, BlockIcon, PostIcon } from "./StatusIcons";
-export { fmtCompact, fmtFull } from "./format";
+export { fmtCompact, fmtFull, fmtCurrency, fmtDate, fmtDateTime } from "./format";
 export { AmountCell } from "./AmountCell";
 export { PeriodStatusBar } from "./PeriodStatusBar";
 export { ScopeSelector } from "./ScopeSelector";

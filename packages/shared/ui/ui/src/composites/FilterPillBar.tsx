@@ -18,7 +18,7 @@ export interface FilterPillBarProps<T extends string = string> {
    */
   allItem?: { label: string };
   /**
-   * compact=true uses h-6 text-[10px] pills (default: h-7 text-xs).
+   * compact=true uses h-6 text-2xs pills (default: h-7 text-xs).
    * Use inside dense toolbars or secondary filter rows.
    */
   compact?: boolean;
@@ -49,7 +49,7 @@ export function FilterPillBar<T extends string = string>({
   className,
 }: FilterPillBarProps<T>) {
   const allValue = "" as T;
-  const pillClass = compact ? "h-6 text-[10px]" : "h-7 text-xs";
+  const pillClass = compact ? "h-6 text-2xs" : "h-7 text-xs";
 
   return (
     <div className={cn("flex flex-wrap gap-1.5", className)}>

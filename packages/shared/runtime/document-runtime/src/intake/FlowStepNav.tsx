@@ -74,7 +74,7 @@ export function FlowStepNav({
               {/* Label */}
               <span
                 className={cn(
-                  "max-w-[80px] truncate text-center text-[10px] font-medium leading-tight",
+                  "max-w-[80px] truncate text-center text-2xs font-medium leading-tight",
                   isActive
                     ? "text-primary"
                     : isCompleted

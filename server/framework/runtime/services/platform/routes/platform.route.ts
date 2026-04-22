@@ -1477,6 +1477,47 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .where("tp.left_at" as never, "is", null)
         .execute() as Record<string, unknown>[];
 
+      // Accessible company codes — direct principal assignment + via group membership
+      const [directCC, groupCC] = await Promise.all([
+        db.selectFrom("master.company_code_access as cca")
+          .innerJoin("master.company_code as cc", "cc.id", "cca.company_code_id")
+          .leftJoin("master.legal_entity as le", "le.id", "cc.legal_entity_id")
+          .select([
+            "cc.code as company_code",
+            "cc.name as company_name",
+            "le.code as legal_entity_code",
+            "le.name as legal_entity_name",
+          ])
+          .where("cca.tenant_id", "=", tenantId)
+          .where("cca.entity_type", "=", "principal")
+          .where("cca.entity_id", "=", principalId)
+          .where("cc.is_active", "=", true)
+          .execute() as Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>,
+        groupIds.length > 0
+          ? db.selectFrom("master.company_code_access as cca")
+              .innerJoin("master.company_code as cc", "cc.id", "cca.company_code_id")
+              .leftJoin("master.legal_entity as le", "le.id", "cc.legal_entity_id")
+              .select([
+                "cc.code as company_code",
+                "cc.name as company_name",
+                "le.code as legal_entity_code",
+                "le.name as legal_entity_name",
+              ])
+              .where("cca.tenant_id", "=", tenantId)
+              .where("cca.entity_type", "=", "auth_group")
+              .where("cca.entity_id", "in", groupIds)
+              .where("cc.is_active", "=", true)
+              .execute() as Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>
+          : Promise.resolve([]),
+      ]);
+
+      const seenCC = new Set<string>();
+      const accessible_companies = [...directCC, ...groupCC].filter((r) => {
+        if (seenCC.has(r.company_code)) return false;
+        seenCC.add(r.company_code);
+        return true;
+      });
+
       // Delegations — include counterparty names for display
       const now = new Date();
       const [delegationsReceived, delegationsGiven] = await Promise.all([
@@ -1511,6 +1552,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         teams:                 teams               as Record<string, unknown>[],
         delegations_received:  delegationsReceived as Record<string, unknown>[],
         delegations_given:     delegationsGiven    as Record<string, unknown>[],
+        accessible_companies,
       });
     } catch (err) {
       logger?.error("platform_identity_get_error", { err: String(err) });

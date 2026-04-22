@@ -58,7 +58,7 @@ export function CompanyControlsView() {
           </SelectContent>
         </Select>
         <span className="flex-1" />
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-doc-support text-muted-foreground">
           {isLoading ? "Loading…" : `${stats.total} controls · ${stats.blocked} blocked`}
         </span>
       </div>
@@ -66,7 +66,7 @@ export function CompanyControlsView() {
       {/* Filters inline */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={filterClass} onValueChange={setFilterClass}>
-          <SelectTrigger className="h-6 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-6 w-28 text-doc-support"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All classes</SelectItem>
             {(["asset","liability","equity","income","expense"] as AccountClass[]).map((c) => (
@@ -75,7 +75,7 @@ export function CompanyControlsView() {
           </SelectContent>
         </Select>
         <Select value={filterOwner} onValueChange={setFilterOwner}>
-          <SelectTrigger className="h-6 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-6 w-28 text-doc-support"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All owners</SelectItem>
             {(["customer","supplier","employee","internal"] as OwnerType[]).map((o) => (
@@ -84,7 +84,7 @@ export function CompanyControlsView() {
           </SelectContent>
         </Select>
         <Select value={filterDim} onValueChange={setFilterDim}>
-          <SelectTrigger className="h-6 w-32 text-[10px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-6 w-32 text-doc-support"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All dimensions</SelectItem>
             <SelectItem value="cc">Requires CC</SelectItem>
@@ -92,16 +92,16 @@ export function CompanyControlsView() {
             <SelectItem value="proj">Requires Project</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-[10px] text-primary">{stats.customer} customer</span>
-        <span className="text-[10px] text-accent-foreground">{stats.supplier} supplier</span>
-        <span className="text-[10px] text-warning">{stats.employee} employee</span>
+        <span className="text-doc-support text-primary">{stats.customer} customer</span>
+        <span className="text-doc-support text-accent-foreground">{stats.supplier} supplier</span>
+        <span className="text-doc-support text-warning">{stats.employee} employee</span>
         <span className="flex-1" />
-        <span className="text-[10px] text-muted-foreground">{rows.length} of {allRows.length} shown</span>
+        <span className="text-doc-support text-muted-foreground">{rows.length} of {allRows.length} shown</span>
       </div>
 
       {/* Table */}
       <div className="rounded-xl border overflow-x-auto">
-        <table className="w-full text-[10px]">
+        <table className="w-full text-doc-support">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-2 text-left font-medium text-muted-foreground sticky left-0 bg-muted/50 z-10">Account</th>
@@ -136,18 +136,18 @@ export function CompanyControlsView() {
                 <td className="py-1.5 px-2 text-center"><CheckIcon value={r.requiresCostCenter} /></td>
                 <td className="py-1.5 px-2 text-center"><CheckIcon value={r.requiresProfitCenter} /></td>
                 <td className="py-1.5 px-2 text-center"><CheckIcon value={r.requiresProject} /></td>
-                <td className="py-1.5 px-2 font-mono text-[9px] text-muted-foreground">{r.defaultCostCenter ?? "—"}</td>
-                <td className="py-1.5 px-2 font-mono text-[9px] text-muted-foreground">{r.defaultProfitCenter ?? "—"}</td>
+                <td className="py-1.5 px-2 font-mono text-doc-label text-muted-foreground">{r.defaultCostCenter ?? "—"}</td>
+                <td className="py-1.5 px-2 font-mono text-doc-label text-muted-foreground">{r.defaultProfitCenter ?? "—"}</td>
                 <td className="py-1.5 px-2"><ReconBadge value={r.reconciliation} /></td>
                 <td className="py-1.5 px-2">
                   {r.taxTreatment
-                    ? <Badge variant="warning" className="text-[10px] py-0">{r.taxTreatment}</Badge>
+                    ? <Badge variant="warning" className="text-doc-support py-0">{r.taxTreatment}</Badge>
                     : <span className="text-muted-foreground/30">—</span>}
                 </td>
                 <td className="py-1.5 px-2 text-center"><CheckIcon value={r.openItemManaged} /></td>
                 <td className="py-1.5 px-2">
                   {r.subledgerType
-                    ? <Badge variant="info" className="text-[10px] py-0">{r.subledgerType}</Badge>
+                    ? <Badge variant="info" className="text-doc-support py-0">{r.subledgerType}</Badge>
                     : <span className="text-muted-foreground/30">—</span>}
                 </td>
                 <td className="py-1.5 px-2 text-center"><CheckIcon value={r.lineItemDisplay} /></td>

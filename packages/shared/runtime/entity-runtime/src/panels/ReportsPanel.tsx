@@ -31,7 +31,7 @@ export function ReportsPanel({ entityCode, recordId }: ReportsPanelProps) {
     queryKey: ["record-reports", entityCode, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/reports`,
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/reports`,
         { signal },
       );
       if (!res.ok) return { data: [] };

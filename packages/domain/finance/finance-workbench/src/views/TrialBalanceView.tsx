@@ -71,7 +71,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
     <div className="space-y-3">
       {/* Header bar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-doc-support text-muted-foreground">
           Source: ledger.gl_balance
           {data.asAt && ` · As at ${new Date(data.asAt).toLocaleString()}`}
           {data.isLive && (
@@ -85,7 +85,7 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                 key={v}
                 variant={viewMode === v ? "primary" : "outline"}
                 size="sm"
-                className="h-7 text-[10px] px-2.5 capitalize"
+                className="h-7 text-doc-support px-2.5 capitalize"
                 onClick={() => setViewMode(v)}
               >
                 {v}

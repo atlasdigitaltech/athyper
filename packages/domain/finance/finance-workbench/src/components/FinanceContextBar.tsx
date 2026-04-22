@@ -284,7 +284,7 @@ export function FinanceContextBar() {
       <button
         onClick={() => pushScope({ ...scope, comparative: !scope.comparative })}
         className={cn(
-          "rounded px-2 py-0.5 text-[10px] font-medium transition-colors",
+          "rounded px-2 py-0.5 text-doc-support font-medium transition-colors",
           scope.comparative
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -297,7 +297,7 @@ export function FinanceContextBar() {
       {fiscalYearStartMonth !== 1 && (
         <>
           <span className="mx-2 text-border">|</span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-doc-support text-muted-foreground">
             FY starts {MONTH_NAMES[fiscalYearStartMonth]}
           </span>
         </>
