@@ -296,6 +296,55 @@ services:
 
 ---
 
+## Server Account Reference
+
+### Account responsibilities
+
+| Account | Used for | Sudo | Login method |
+|---|---|---|---|
+| `root` | VNC console recovery only — never for day-to-day work | — (is root) | VNC tty (`5.189.174.159:63128`) |
+| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 1.6); VNC tty as fallback |
+
+**Rule**: never SSH as `root`. The sshd config (Phase 1.6) enforces `PermitRootLogin no`. All `root`-level operations in this runbook are prefixed with `sudo` and run as `athyper`.
+
+### Initial credentials
+
+| Account | Initial password | Rotated in |
+|---|---|---|
+| `root` | Set by Contabo at VPS provisioning — retrieve from the Contabo control panel | Not changed in this runbook (SSH root login is disabled) |
+| `athyper` | `Atlas1144` | Phase 1.1 (mandatory — rotate before any other step) |
+
+> **Security note**: `Atlas1144` is the Contabo-provisioned default. It is valid on the local VNC tty even after SSH password auth is disabled. Store the rotated password in your vault; never write it to any file on the server.
+
+### Creating the `athyper` account (run once from root if the account does not yet exist)
+
+A fresh Contabo VPS ships with only the `root` account. Run the following from the VNC console or an initial root SSH session to create `athyper` before this runbook starts.
+
+```bash
+# [SERVER — as root via VNC or initial root SSH]
+
+# Create the user with home directory:
+adduser --gecos "Athyper Deploy" athyper
+# You will be prompted for a password — enter: Atlas1144
+# All other GECOS fields (Full Name, Room, etc.) can be left blank (press Enter)
+
+# Grant sudo access:
+usermod -aG sudo athyper
+
+# Verify membership:
+id athyper
+# Expected: uid=1000(athyper) gid=1000(athyper) groups=1000(athyper),27(sudo)
+
+# Confirm SSH password auth is still enabled (Contabo default) so Phase 0.4 can connect:
+grep -E '^PasswordAuthentication' /etc/ssh/sshd_config
+# If the line says "no", temporarily re-enable it: sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && systemctl restart sshd
+# Phase 1.6 will disable it again after the SSH key is installed.
+```
+
+After this, continue with Phase 0 using `ssh athyper@62.169.31.9` (password `Atlas1144`).
+
+---
+
 ## Phase 0 — DNS and Pre-flight
 
 ### 0.1 Critical DNS `[WORKSTATION]`
@@ -816,7 +865,7 @@ KEYCLOAK_ADMIN_PASSWORD=<same as IAM_ADMIN_PASSWORD>
 PLATFORM_IAM_ISSUER_URL=https://iam-stg.athyper.com/realms/platform-control
 ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET=<same as IAM_CLIENT_SECRET>
 
-# ── SMTP — NOT IN staging.env.example — add explicitly ───────────────────────
+# ── SMTP (in template — fill the placeholders) ───────────────────────────────
 KC_SMTP_HOST=smtp.yourmailprovider.com
 KC_SMTP_PORT=587
 KC_SMTP_FROM=noreply@athyper.com
@@ -836,7 +885,7 @@ RENDERER_INTERNAL_TOKEN=<from secrets>
 INFISICAL_ENCRYPTION_KEY=<from secrets>
 INFISICAL_AUTH_SECRET=<from secrets>
 
-# ── Gateway — NOT IN staging.env.example — add explicitly ────────────────────
+# ── Gateway (in template — fill the placeholders) ────────────────────────────
 GATEWAY_DASHBOARD_HTPASSWD=<from secrets>
 ACME_EMAIL=ops@atlasdigitaltech.com
 
@@ -1087,13 +1136,15 @@ fi
 
 ### 8.2 Explicit presence gate — catches entirely-absent keys
 
-`ACME_EMAIL`, `KC_SMTP_USERNAME`, and `KC_SMTP_PASSWORD` are not in `staging.env.example`. The placeholder grep cannot catch a missing line — only a blank one. An empty `ACME_EMAIL` causes Traefik ACME email to be blank, which causes Let's Encrypt to refuse registration. Empty SMTP credentials cause every Keycloak auth email to silently fail.
+`ACME_EMAIL` is not in `staging.env.example`. The placeholder grep cannot catch a missing line — only a blank one. An empty `ACME_EMAIL` causes Traefik ACME email to be blank, which causes Let's Encrypt to refuse registration.
+
+`KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`, and `GATEWAY_DASHBOARD_HTPASSWD` are in the template but are self-referential `${VAR}` placeholders — Phase 8.1 catches those if unfilled. This gate only checks for vars entirely absent from the file.
 
 ```bash
 cd /opt/athyper/app
 
 missing=0
-for required in ACME_EMAIL KC_SMTP_USERNAME KC_SMTP_PASSWORD; do
+for required in ACME_EMAIL SENTRY_DSN; do
   if grep -q "^${required}=" stack/env/.env; then
     val=$(grep "^${required}=" stack/env/.env | cut -d= -f2-)
     if [ -z "${val}" ]; then
@@ -1493,10 +1544,10 @@ In browser:
 
 ```bash
 nano /opt/athyper/app/stack/env/.env
-# All three vars get the SAME DSN value:
-# GLITCHTIP_DSN=https://<key>@errors-stg.athyper.com/1
-# SENTRY_DSN=https://<key>@errors-stg.athyper.com/1
-# NEXT_PUBLIC_SENTRY_DSN=https://<key>@errors-stg.athyper.com/1
+# All three vars get the SAME DSN value (GlitchTip is Sentry-compatible):
+GLITCHTIP_DSN=https://<key>@errors-stg.athyper.com/1
+SENTRY_DSN=https://<key>@errors-stg.athyper.com/1
+NEXT_PUBLIC_SENTRY_DSN=https://<key>@errors-stg.athyper.com/1
 ```
 
 ### 15.4 Recreate apps and verify error reporting `[SERVER]`
@@ -1714,20 +1765,9 @@ Once merged, Phase 4.3 can be removed from future runbooks.
 Upstream PR: ______________________________    Merged: __________
 ```
 
-### 20.2 Add missing vars to `staging.env.example` — **1 week**
+### 20.2 ~~Add missing vars to `staging.env.example`~~ — **Done (merged)**
 
-Add these as empty placeholders in `stack/env/staging.env.example`:
-
-```bash
-# Gateway
-ACME_EMAIL=
-
-# SMTP credentials for Keycloak
-KC_SMTP_USERNAME=
-KC_SMTP_PASSWORD=
-```
-
-Without this, every future operator hits the same trap Phase 8.2 now catches. Same PR as 20.1 or separate.
+`ACME_EMAIL`, `SENTRY_DSN`, `KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`, and `GATEWAY_DASHBOARD_HTPASSWD` are all now present in `staging.env.example`. No further action required.
 
 ```
 Env-template PR: __________________________    Merged: __________
@@ -1903,9 +1943,10 @@ For database-only issues: prefer restore (Phase 18.2) over code rollback.
 | `GOTENBERG_BASE_URL` | Not in shared env fragment | Default `http://gotenberg:3000` works — compose service name matches |
 | `TIKA_URL` | Not in shared env fragment | Default `http://tika:9998` works |
 | `CLAMD_ON_UNAVAILABLE` | Not in shared env fragment | Built-in fallback active |
-| `ACME_EMAIL` | Not in `staging.env.example` | Phase 8.2 gate catches if missing; Phase 20.2 adds to template |
-| `KC_SMTP_USERNAME` | Not in `staging.env.example` | Phase 8.2 gate catches if missing; Phase 20.2 adds to template |
-| `KC_SMTP_PASSWORD` | Not in `staging.env.example` | Phase 8.2 gate catches if missing; Phase 20.2 adds to template |
+| `ACME_EMAIL` | Now in `staging.env.example` | Phase 8.2 gate catches if left empty |
+| `SENTRY_DSN` | Now in `staging.env.example` | Phase 8.2 gate catches if left empty; same value as `GLITCHTIP_DSN` |
+| `KC_SMTP_USERNAME` | In `staging.env.example` as `${VAR}` placeholder | Phase 8.1 gate catches if unfilled |
+| `KC_SMTP_PASSWORD` | In `staging.env.example` as `${VAR}` placeholder | Phase 8.1 gate catches if unfilled |
 
 ## Appendix E — Runtime Version and Image Base Notes
 
