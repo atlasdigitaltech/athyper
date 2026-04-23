@@ -4,12 +4,15 @@ export {
   useCompiledEntity,
   useEntityOperations,
   useLookupDomain,
+  useStatusRoute,
   useEntityFlow,
   // Records
   useEntityList,
   useEntityDetail,
   useCreateEntity,
   useUpdateEntity,
+  useDeleteEntity,
+  useEntityCapabilities,
   // Documents
   useDocumentList,
   useDocumentDetail,
@@ -29,6 +32,10 @@ export {
   useSaveView,
   useUpdateView,
 } from "./hooks";
+
+export { useRecordBookmarks } from "./hooks/useRecordBookmarks";
+export { useCommentCounts } from "./hooks/useCommentCounts";
+export { useFilterPresets, type FilterPreset } from "./hooks/useFilterPresets";
 
 export {
   // Collab

@@ -41,7 +41,7 @@ import {
   LayoutGrid,
   Trash2,
   Download,
-  Tag,
+  Filter as FilterIcon,
   Kanban,
   BarChart2,
   AlertCircle,
@@ -53,17 +53,23 @@ import {
   ChevronRight,
   MoreHorizontal,
   TableProperties,
-  AlignJustify,
   ExternalLink,
   AppWindow,
   Copy,
   Check,
+  ArrowUpDown,
+  Layers,
+  Columns3,
+  X as XIcon,
+  AlignJustify,
+  Zap,
+  Shield,
+  ScrollText,
 } from "lucide-react";
-import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useSaveView, useUpdateView } from "@athyper/query";
-import { resolveActionsForSurface } from "@athyper/metadata-client/operation-reader";
-import type { ResolvedAction } from "@athyper/metadata-client/operation-reader";
+import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useSaveView, useUpdateView, useStatusRoute, useLookupDomain, useRecordBookmarks, useCommentCounts } from "@athyper/query";
+import { resolveActionsForSurface, type ResolvedAction } from "@athyper/metadata-client/operation-reader";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
-import { FilterPillBar } from "@athyper/ui/composites";
+import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { resolveListConfig, resolvePresentationConfig } from "@athyper/metadata-client/compiled-reader";
 import { DataTable, type ColumnDef, type RowSelectionState, type SortingState } from "@athyper/ui/data";
 import { PageFrame } from "@athyper/ui/layout";
@@ -71,10 +77,8 @@ import {
   Button, Badge, Skeleton, Input, Label,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@athyper/ui/primitives";
-import { SearchInput } from "@athyper/ui/composites";
 import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
-import type { SemanticIntent } from "@athyper/theme/semantic-colors";
+import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
 import {
   kanbanStatusIntent,
   apArStatusIntent,
@@ -82,10 +86,12 @@ import {
   closeTaskStatusIntent,
   adminStatusIntent,
 } from "@athyper/theme/domain-intents";
-import { stateToApiParams } from "@athyper/api-contracts/entity-list";
+import { stateToApiParams, getFilterStringValues, describeFilterEntry } from "@athyper/api-contracts/entity-list";
 import type {
   EntityListQueryState,
   EntityListFilters,
+  EntityListSortEntry,
+  FilterEntry,
   BulkPreflightResult,
   BulkActionResult,
 } from "@athyper/api-contracts/entity-list";
@@ -95,6 +101,15 @@ import { KanbanView, findKanbanGroupField } from "./KanbanView";
 import { DashboardView } from "./DashboardView";
 import { ExcelView } from "./ExcelView";
 import { useEntityListUrl } from "./useEntityListUrl";
+import { FilterDrawer } from "./FilterDrawer";
+import { SortDrawer } from "./SortDrawer";
+import { GroupDrawer } from "./GroupDrawer";
+import { ColumnDrawer } from "./ColumnDrawer";
+import { GroupedListView } from "./GroupedListView";
+import { RowMetaStrip } from "./RowMetaStrip";
+import { ColumnFilterHeader } from "./ColumnFilterHeader";
+import { MyWorkDropdown } from "./MyWorkDropdown";
+import { describeVirtualFilter, isVirtualFilter } from "./virtualFilterLabels";
 
 export interface EntityListPageProps {
   entityCode: string;
@@ -132,6 +147,33 @@ function getStatusValue(row: Record<string, unknown>): string {
 
 // ── Compact card grid ─────────────────────────────────────────────────────────
 
+const COMPACT_DENSITY = {
+  compact: {
+    grid:       "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    card:       "flex flex-col gap-1.5 rounded-xl border bg-card p-3 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "text-xs font-medium leading-snug",
+    metaGap:    "flex items-center gap-1.5",
+    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-0.5 border-t pt-1.5",
+    fieldText:  "text-2xs",
+  },
+  comfortable: {
+    grid:       "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    card:       "flex flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "text-sm font-medium leading-snug",
+    metaGap:    "flex items-center gap-2",
+    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-0.5 border-t pt-2",
+    fieldText:  "text-2xs",
+  },
+  spacious: {
+    grid:       "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    card:       "flex flex-col gap-2.5 rounded-xl border bg-card p-5 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "text-sm font-medium leading-snug",
+    metaGap:    "flex items-center gap-2",
+    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-1 border-t pt-2.5",
+    fieldText:  "text-xs",
+  },
+} as const;
+
 function CompactView({
   rows,
   titleKey,
@@ -140,6 +182,7 @@ function CompactView({
   onRowContextMenu,
   statusResolverName,
   compactColumns,
+  density = "comfortable",
 }: {
   rows:               Record<string, unknown>[];
   titleKey:           string;
@@ -149,6 +192,7 @@ function CompactView({
   statusResolverName?: string;
   /** Presentation-config columns filtered to compactVisible !== false. Max 4 shown. */
   compactColumns:     import("@athyper/api-contracts/entity-list").ColumnPresentation[];
+  density?:           "compact" | "comfortable" | "spacious";
 }) {
   if (rows.length === 0) {
     return (
@@ -156,38 +200,36 @@ function CompactView({
     );
   }
 
-  // Extra fields to show on the card body — skip the title key and status fields to avoid duplication
+  const d = COMPACT_DENSITY[density] ?? COMPACT_DENSITY.comfortable;
+
   const STATUS_KEYS = new Set(["status", "record_status", "state", "lifecycle_state"]);
   const extraFields = compactColumns
     .filter((c) => c.fieldName !== titleKey && !STATUS_KEYS.has(c.fieldName))
     .slice(0, 4);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className={d.grid}>
       {rows.map((row) => {
-        const id    = String(row.id ?? "");
-        const title = String(row[titleKey] ?? row.name ?? row.code ?? id);
+        const id     = String(row.id ?? "");
+        const title  = String(row[titleKey] ?? row.name ?? row.code ?? id);
         const status = getStatusValue(row);
         return (
           <div
             key={id}
             onClick={() => onRowClick?.(row)}
             onContextMenu={(e) => onRowContextMenu?.(row, e)}
-            className={cn(
-              "flex flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
-              onRowClick && "cursor-pointer",
-            )}
+            className={cn(d.card, onRowClick && "cursor-pointer")}
           >
             {/* Title row */}
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-medium leading-snug">{title}</p>
+              <p className={d.title}>{title}</p>
               <Badge variant="outline" className="shrink-0 text-2xs px-1.5 py-0.5 font-mono">
                 {entityCode}
               </Badge>
             </div>
 
             {/* Status + id */}
-            <div className="flex items-center gap-2">
+            <div className={d.metaGap}>
               {status && (
                 <StatusBadge value={status} resolverName={statusResolverName} />
               )}
@@ -200,16 +242,16 @@ function CompactView({
 
             {/* Extra fields from compactVisible config */}
             {extraFields.length > 0 && (
-              <dl className="grid grid-cols-2 gap-x-2 gap-y-0.5 border-t pt-2">
+              <dl className={d.fieldsPt}>
                 {extraFields.map((col) => {
                   const val = row[col.fieldName];
                   if (val === undefined || val === null || val === "") return null;
                   return (
                     <div key={col.fieldName} className="contents">
-                      <dt className="text-2xs text-muted-foreground truncate">
+                      <dt className={cn(d.fieldText, "text-muted-foreground truncate")}>
                         {col.label ?? col.fieldName}
                       </dt>
-                      <dd className="text-2xs font-medium truncate">
+                      <dd className={cn(d.fieldText, "font-medium truncate")}>
                         {String(val)}
                       </dd>
                     </div>
@@ -224,47 +266,263 @@ function CompactView({
   );
 }
 
-// ── View mode switcher ────────────────────────────────────────────────────────
+// ── Organize segmented control ────────────────────────────────────────────────
+//
+// Segmented pill: Filter | Sort | Group | Columns
+// Each segment opens its drawer directly. Active state indicated by primary tint.
 
-function ViewModeSwitcher({
-  mode,
-  onChange,
-  hasGroupable,
-}: {
-  mode:         ViewMode;
-  onChange:     (m: ViewMode) => void;
-  hasGroupable: boolean;
-}) {
-  type Option = { value: ViewMode; Icon: typeof LayoutList; label: string; gated?: boolean };
+interface OrganizeControlProps {
+  activeDrawer:     string | null;
+  onOpen:           (d: "filter" | "sort" | "group" | "columns") => void;
+  hasActiveFilters: boolean;
+  filterCount:      number;
+  sortCount:        number;
+  groupField?:      string;
+  visibleColumns:   number;
+  totalColumns:     number;
+  showColumns:      boolean;
+}
 
-  const options: Option[] = [
+function OrganizeControl({
+  activeDrawer, onOpen,
+  hasActiveFilters, filterCount,
+  sortCount, groupField, visibleColumns, totalColumns, showColumns,
+}: OrganizeControlProps) {
+  const anyOrganize = hasActiveFilters || sortCount > 0 || !!groupField || visibleColumns > 0;
+
+  const seg = "relative flex items-center justify-center gap-1 px-2 py-1.5 text-xs transition-colors";
+  const segCls = (name: "filter" | "sort" | "group" | "columns", dataActive: boolean) =>
+    cn(seg,
+      activeDrawer === name
+        ? "text-primary bg-primary/15"
+        : dataActive
+        ? "text-primary bg-primary/8"
+        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    );
+
+  return (
+    <div className="flex h-8 items-center rounded-md border border-input bg-background shadow-sm overflow-hidden [&>*+*]:border-l [&>*+*]:border-input">
+      <span className="select-none px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+        Organize
+      </span>
+
+      <button
+        onClick={() => onOpen("filter")}
+        className={segCls("filter", hasActiveFilters)}
+        title={hasActiveFilters ? `${filterCount} active filter${filterCount !== 1 ? "s" : ""}` : "Filter"}
+      >
+        <FilterIcon className="h-3.5 w-3.5 shrink-0" />
+        {hasActiveFilters && (
+          <span className="rounded-full bg-primary px-1 py-px text-2xs font-bold text-primary-foreground leading-none">
+            {filterCount}
+          </span>
+        )}
+      </button>
+
+      <button
+        onClick={() => onOpen("sort")}
+        className={segCls("sort", sortCount > 0)}
+        title={sortCount > 0 ? `${sortCount} sort${sortCount !== 1 ? "s" : ""} active` : "Sort"}
+      >
+        <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
+        {sortCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+      </button>
+
+      <button
+        onClick={() => onOpen("group")}
+        className={segCls("group", !!groupField)}
+        title={groupField ? `Grouped by ${groupField.replace(/_/g, " ")}` : "Group"}
+      >
+        <Layers className="h-3.5 w-3.5 shrink-0" />
+      </button>
+
+      {showColumns && (
+        <button
+          onClick={() => onOpen("columns")}
+          className={segCls("columns", visibleColumns > 0)}
+          title={visibleColumns > 0 ? `${visibleColumns} of ${totalColumns} columns` : "Columns"}
+        >
+          <Columns3 className="h-3.5 w-3.5 shrink-0" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── View launcher button ──────────────────────────────────────────────────────
+//
+// "View: List ▾" dropdown — mode + density selection.
+
+interface ViewLauncherButtonProps {
+  mode:            ViewMode;
+  density?:        "compact" | "comfortable" | "spacious";
+  hasGroupable:    boolean;
+  onChangeMode:    (m: ViewMode) => void;
+  onChangeDensity: (d: "compact" | "comfortable" | "spacious" | undefined) => void;
+}
+
+function ViewLauncherButton({
+  mode, density, hasGroupable, onChangeMode, onChangeDensity,
+}: ViewLauncherButtonProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  type ModeOption = { value: ViewMode; Icon: typeof LayoutList; label: string; gated?: boolean };
+  const modeOptions: ModeOption[] = [
     { value: "list",      Icon: LayoutList,      label: "List" },
-    { value: "board",     Icon: Kanban,          label: "Board",     gated: !hasGroupable },
+    { value: "board",     Icon: Kanban,          label: "Board",      gated: !hasGroupable },
     { value: "compact",   Icon: LayoutGrid,      label: "Compact" },
     { value: "dashboard", Icon: BarChart2,       label: "Dashboard" },
     { value: "excel",     Icon: TableProperties, label: "Spreadsheet" },
   ];
 
+  const currentLabel = modeOptions.find((o) => o.value === mode)?.label ?? "List";
+  const CurrentIcon  = modeOptions.find((o) => o.value === mode)?.Icon  ?? LayoutList;
+
+  const row    = "flex w-full items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors hover:bg-muted/60";
+  const rowAct = (active: boolean) => cn(row, active ? "text-primary font-medium" : "text-foreground");
+  const hdg    = "px-3 pt-2.5 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground select-none";
+
   return (
-    <div className="flex rounded-md border overflow-hidden">
-      {options
-        .filter((o) => !o.gated)
-        .map(({ value, Icon, label }) => (
-          <button
-            key={value}
-            onClick={() => onChange(value)}
-            title={label}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors",
-              mode === value
-                ? "bg-muted text-foreground font-medium"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{label}</span>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-8 items-center gap-1.5 rounded-md border border-input bg-background shadow-sm px-2.5 text-xs font-medium transition-colors",
+          open ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        )}
+      >
+        <CurrentIcon className="h-3.5 w-3.5 shrink-0" />
+        <span>View: {currentLabel}</span>
+        <ChevronRight className="h-3 w-3 shrink-0 rotate-90 opacity-50" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-48 rounded-lg border bg-popover shadow-lg overflow-hidden">
+          <div className="absolute -top-[5px] right-3 h-2.5 w-2.5 rotate-45 rounded-sm border-l border-t bg-popover" />
+
+          <p className={hdg}>View</p>
+          {modeOptions.filter((o) => !o.gated).map(({ value, Icon, label }) => (
+            <button key={value} onClick={() => { onChangeMode(value); setOpen(false); }} className={rowAct(mode === value)}>
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", mode !== value && "text-muted-foreground")} />
+              <span className="flex-1">{label}</span>
+              {mode === value && <Check className="h-3 w-3 text-primary" />}
+            </button>
+          ))}
+
+          <div className="my-1 h-px bg-border/60" />
+
+          <p className={hdg}>Density</p>
+          {(["compact", "comfortable", "spacious"] as const).map((d) => (
+            <button key={d} onClick={() => { onChangeDensity(d); setOpen(false); }} className={cn(rowAct((density ?? "comfortable") === d), "pb-0.5")}>
+              <span className="flex-1 capitalize">{d}</span>
+              {(density ?? "comfortable") === d && <Check className="h-3 w-3 text-primary" />}
+            </button>
+          ))}
+          <div className="pb-1" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Slim settings menu ────────────────────────────────────────────────────────
+//
+// ≡ dropdown: Save view as default | Manage Access | Permission Log
+
+interface ListSettingsMenuProps {
+  entityCode: string;
+  mode:       ViewMode;
+  density?:   "compact" | "comfortable" | "spacious";
+}
+
+function ListSettingsMenu({ entityCode, mode, density }: ListSettingsMenuProps) {
+  const [open,   setOpen]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const ref    = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const nav = (path: string) => { setOpen(false); router.push(path); };
+
+  const saveAsDefault = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: {
+            [`${entityCode}.list.defaultView`]:    mode,
+            [`${entityCode}.list.defaultDensity`]: density ?? "comfortable",
+          },
+        }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch { /* ignore */ }
+    setSaving(false);
+  };
+
+  const row = "flex w-full items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors hover:bg-muted/60 text-muted-foreground hover:text-foreground";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        title="Settings"
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background shadow-sm transition-colors",
+          open ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        )}
+      >
+        <AlignJustify className="h-3.5 w-3.5" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-lg border bg-popover shadow-lg overflow-hidden">
+          <div className="absolute -top-[5px] right-2.5 h-2.5 w-2.5 rotate-45 rounded-sm border-l border-t bg-popover" />
+
+          <button onClick={saveAsDefault} disabled={saving} className={cn(row, "pt-2.5 disabled:opacity-50")}>
+            {saved
+              ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+              : saving
+              ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+              : <Save className="h-3.5 w-3.5 shrink-0" />}
+            <span>{saved ? "Saved!" : "Save view as default"}</span>
           </button>
-        ))}
+
+          <div className="my-1 h-px bg-border/60" />
+
+          <button onClick={() => nav(`/setup/policies?entity=${entityCode}`)} className={row}>
+            <Shield className="h-3.5 w-3.5 shrink-0" />
+            <span>Manage Access</span>
+          </button>
+
+          <button onClick={() => nav(`/setup/audit/events?entity=${entityCode}`)} className={cn(row, "pb-2")}>
+            <ScrollText className="h-3.5 w-3.5 shrink-0" />
+            <span>Permission Log</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -784,7 +1042,7 @@ function QuickStatusBar({
   const values = facets[statusField];
   if (!values || values.length === 0) return null;
 
-  const activeStatus = filters[statusField]?.[0] ?? "";
+  const activeStatus = getFilterStringValues(filters[statusField])[0] ?? "";
 
   const items = values.map(({ value, count }) => ({
     value,
@@ -894,18 +1152,21 @@ function ActiveFilterChips({
   onRemoveField:  (field: string) => void;
   onClearAll:     () => void;
 }) {
-  const entries = Object.entries(filters).filter(([, vals]) => vals.length > 0);
+  const entries = Object.entries(filters).filter(([, entry]) => {
+    const vals = getFilterStringValues(entry as FilterEntry);
+    return Array.isArray(entry) ? vals.length > 0 : true;
+  });
   if (entries.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {entries.map(([field, values]) => (
+      {entries.map(([field, entry]) => (
         <span
           key={field}
           className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/8 px-2.5 py-0.5 text-xs font-medium text-foreground"
         >
           <span className="text-muted-foreground">{fieldLabels[field] ?? field}:</span>
-          {values.join(", ")}
+          {describeFilterEntry(entry as FilterEntry)}
           <button
             onClick={() => onRemoveField(field)}
             className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors"
@@ -927,148 +1188,23 @@ function ActiveFilterChips({
   );
 }
 
-// ── Facet filter panel ────────────────────────────────────────────────────────
+// ── Organize compound control ─────────────────────────────────────────────────
 //
-// A toggleable side panel that renders per-field checkboxes populated from
-// ?facets=cheap API data. Opens/closes via the Filter button in the toolbar.
-
-function FacetFilterPanel({
-  facets,
-  filters,
-  fieldLabels,
-  onToggleValue,
-}: {
-  facets:        Record<string, { value: string; count: number }[]>;
-  filters:       EntityListFilters;
-  fieldLabels:   Record<string, string>;
-  onToggleValue: (field: string, value: string, checked: boolean) => void;
-}) {
-  const fields = Object.keys(facets);
-  if (fields.length === 0) {
-    return (
-      <div className="py-8 text-center text-xs text-muted-foreground">
-        No filterable fields
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4 text-sm">
-      {fields.map((field) => {
-        const values  = facets[field] ?? [];
-        const active  = filters[field] ?? [];
-        const label   = fieldLabels[field] ?? field;
-        return (
-          <div key={field} className="space-y-1.5">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {label}
-            </p>
-            {values.map(({ value, count }) => {
-              const checked = active.includes(value);
-              return (
-                <label
-                  key={value}
-                  className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 hover:bg-muted/50 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-border accent-primary"
-                    checked={checked}
-                    onChange={(e) => onToggleValue(field, value, e.target.checked)}
-                  />
-                  <span className="flex-1 capitalize">{value.replace(/_/g, " ")}</span>
-                  <span className="tabular-nums text-muted-foreground">{count}</span>
-                </label>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Column picker ─────────────────────────────────────────────────────────────
-//
-// A popover-style dropdown listing available columns with checkboxes.
-// Writes selections to URL ?cols= via onChangeColumns.
-
-function ColumnPickerButton({
-  allColumns,
-  visibleColumns,
-  onChangeColumns,
-}: {
-  allColumns:      { name: string; label: string }[];
-  visibleColumns:  string[];
-  onChangeColumns: (cols: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const toggle = (name: string, checked: boolean) => {
-    const next = checked
-      ? [...visibleColumns, name]
-      : visibleColumns.filter((c) => c !== name);
-    onChangeColumns(next.length > 0 ? next : allColumns.map((c) => c.name));
-  };
-
-  return (
-    <div className="relative">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 gap-1.5 text-xs"
-        onClick={() => setOpen((o) => !o)}
-        title="Choose columns"
-      >
-        <LayoutList className="h-3.5 w-3.5" />
-        Columns
-      </Button>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-lg border bg-popover p-2 shadow-md">
-            <p className="mb-2 px-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Columns
-            </p>
-            {allColumns.map(({ name, label }) => {
-              const visible = visibleColumns.length === 0 || visibleColumns.includes(name);
-              return (
-                <label
-                  key={name}
-                  className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 hover:bg-muted/50 transition-colors text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-border accent-primary"
-                    checked={visible}
-                    onChange={(e) => toggle(name, e.target.checked)}
-                  />
-                  {label}
-                </label>
-              );
-            })}
-            {visibleColumns.length > 0 && (
-              <button
-                onClick={() => { onChangeColumns([]); setOpen(false); }}
-                className="mt-2 w-full rounded-sm px-1 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
-              >
-                Reset to default
-              </button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+// Segmented pill merging Sort / Group / Columns into a single container.
+// "Organize" prefix labels the zone; each icon segment is a direct drawer entry.
+// A 6px primary dot in the top-right corner signals non-default configuration.
+// Active drawer = primary-tinted fill on that segment only.
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function EntityListPage({ entityCode }: EntityListPageProps) {
   const router = useRouter();
-  const [rowSelection,   setRowSelection]   = useState<RowSelectionState>({});
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [rowSelection,  setRowSelection]  = useState<RowSelectionState>({});
+  const [activeDrawer,  setActiveDrawer]  = useState<"filter" | "sort" | "group" | "columns" | null>(null);
+  const [drawerWidth,   setDrawerWidth]   = useState<number | undefined>(undefined);
+
+  const openDrawer  = useCallback((d: "filter" | "sort" | "group" | "columns") => setActiveDrawer(d), []);
+  const closeDrawer = useCallback(() => setActiveDrawer(null), []);
 
   // URL is the single source of truth for list state
   const {
@@ -1081,6 +1217,9 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     setColumns,
     setViewMode,
     setDensity,
+    setSearchMode,
+    setFacets,
+    setPinnedCols,
     loadSavedView,
     reset,
     isModified,
@@ -1093,6 +1232,22 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const { data: operations }                                            = useEntityOperations(entityCode);
   const { data: savedViews = [] }                                       = useSavedViews(entityCode);
 
+  // A1 — Kanban column order: lifecycle state order takes priority; enum sort_order is fallback.
+  // Both hooks are unconditional (Rules of Hooks); enabled guards prevent unnecessary fetches.
+  const kanbanGroupField   = entity ? findKanbanGroupField(entity) : undefined;
+  const kanbanDomainCode   = kanbanGroupField?.enum_domain_code ?? null;
+  const { data: statusRoute } = useStatusRoute(entityCode);
+  const { data: kanbanLookup } = useLookupDomain(kanbanDomainCode ?? "", { enabled: !!kanbanDomainCode });
+  const kanbanColumnOrder = useMemo(() => {
+    if (statusRoute?.all_states?.length) return statusRoute.all_states;
+    if (kanbanLookup?.values?.length) {
+      return [...kanbanLookup.values]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((v) => v.code);
+    }
+    return undefined;
+  }, [statusRoute, kanbanLookup]);
+
   // Derive presentation config from metadata (memoized — entity rarely changes)
   const presentationConfig = useMemo(
     () => entity ? resolvePresentationConfig(entity) : undefined,
@@ -1100,32 +1255,33 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   );
 
   // Resolve active sort: URL state → metadata default → undefined
-  const activeSort = state.sort ?? presentationConfig?.defaultSort;
+  const activeSort = (state.sort && state.sort.length > 0) ? state.sort : presentationConfig?.defaultSort;
 
   // Build server request params from canonical URL state.
-  // Always request cheap facets (used for quick-status bar + filter panel).
+  // client searchMode: strip q from server request — rows are filtered in-browser instead.
+  // facets: honour state.facets (user may upgrade to "all" via Load all button); default "cheap".
   const apiParams = useMemo(() => {
-    const base = stateToApiParams({ ...state, sort: activeSort });
-    base.facets = "cheap";
-    // Convert EntityListFilters (string[]) to Record<string, unknown> for the API client
-    if (base.filters) {
-      const flatFilters: Record<string, unknown> = {};
-      for (const [field, values] of Object.entries(base.filters)) {
-        if (Array.isArray(values)) {
-          if (values.length === 1) flatFilters[field] = values[0];
-          else if (values.length > 1) flatFilters[field] = values;
-        }
+    const effectiveState = state.searchMode === "client"
+      ? { ...state, search: undefined }
+      : state;
+    const base = stateToApiParams({ ...effectiveState, sort: activeSort });
+    base.facets = state.facets ?? "cheap";
+    // When grouping in list mode, prepend an implicit group-field sort so rows
+    // of the same group are contiguous across pages (visual grouping works correctly).
+    if (state.group && viewMode === "list") {
+      const alreadyFirst = base.sort?.[0]?.key === state.group;
+      if (!alreadyFirst) {
+        base.sort = [{ key: state.group, dir: "asc" }, ...(base.sort ?? [])];
       }
-      return { ...base, filters: flatFilters };
     }
     return base;
-  }, [state, activeSort]);
+  }, [state, activeSort, viewMode]);
 
   const { data: listData, isLoading: dataLoading } = useEntityList(entityCode, apiParams);
 
-  // Controlled sort state for DataTable (server-side sort)
+  // Controlled sort state for DataTable (server-side sort — shows primary sort in headers)
   const tableSortingState = useMemo<SortingState>(
-    () => activeSort ? [{ id: activeSort.key, desc: activeSort.dir === "desc" }] : [],
+    () => activeSort?.map((s) => ({ id: s.key, desc: s.dir === "desc" })) ?? [],
     [activeSort],
   );
 
@@ -1133,7 +1289,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     (sorting: SortingState) => {
       if (sorting.length > 0) {
         const { id, desc } = sorting[0]!;
-        setSort({ key: id, dir: desc ? "desc" : "asc" });
+        setSort([{ key: id, dir: desc ? "desc" : "asc" }]);
       } else {
         setSort(undefined);
       }
@@ -1164,19 +1320,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     (c) => c.semanticResolver,
   )?.fieldName;
 
-  // Handlers for filter panel
-  const handleToggleFacetValue = useCallback(
-    (field: string, value: string, checked: boolean) => {
-      const current = state.filters?.[field] ?? [];
-      const next    = checked ? [...current, value] : current.filter((v) => v !== value);
-      const updated = { ...(state.filters ?? {}), [field]: next };
-      // Remove field entirely if no values selected
-      if (next.length === 0) delete updated[field];
-      setFilters(Object.keys(updated).length > 0 ? updated : undefined);
-    },
-    [state.filters, setFilters],
-  );
-
   const handleRemoveFilterField = useCallback(
     (field: string) => {
       const updated = { ...(state.filters ?? {}) };
@@ -1203,7 +1346,33 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   // ── Hooks that MUST appear before any early return ───────────────────────────
   // (Rules of Hooks: hooks must be called unconditionally on every render)
 
-  const allRows = (listData?.data ?? []) as Record<string, unknown>[];
+  const rawRows = (listData?.data ?? []) as Record<string, unknown>[];
+
+  // Client search mode: filter the current page of rows in-browser.
+  // Server search mode (default): server already applied the ?q= filter.
+  const allRows = useMemo(() => {
+    if (state.searchMode !== "client" || !state.search?.trim()) return rawRows;
+    const q = state.search.toLowerCase();
+    const searchableCols = entity?.fields.filter((f) => f.is_searchable).map((f) => f.name) ?? [];
+    if (searchableCols.length === 0) return rawRows;
+    return rawRows.filter((row) =>
+      searchableCols.some((col) => String(row[col] ?? "").toLowerCase().includes(q)),
+    );
+  }, [rawRows, state.searchMode, state.search, entity?.fields]);
+
+  // ── Social signals — batch-fetched for all visible rows (S1.A/S1.B) ─────────
+  // Called unconditionally before any early return (Rules of Hooks).
+  // IDs are derived from rawRows so they're stable per-page-load.
+  const visibleRowIds = useMemo(
+    () => rawRows.map((r) => String(r.id ?? "")).filter(Boolean),
+    [rawRows],
+  );
+
+  const { bookmarkedIds, toggle: toggleBookmark, isPending: bookmarkPending } =
+    useRecordBookmarks(entityCode, visibleRowIds);
+
+  const { counts: commentCountMap } = useCommentCounts(entityCode, visibleRowIds);
+
 
   // Compact view columns — filtered to compactVisible !== false.
   const compactColumns = useMemo(
@@ -1336,22 +1505,51 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   // Facets from API response — populated when filterPanelOpen = true and facets=cheap
   const facetData = (listData?.facets ?? {}) as Record<string, { value: string; count: number }[]>;
 
+  // Server-provided group counts (total per group value across all pages)
+  const groupCounts = (listData as { group_counts?: Record<string, number> } | undefined)?.group_counts;
+
   // Column visibility: if URL ?cols= is set, only show those fields
   const visibleColumnNames = state.columns ?? [];
   const allDescriptorColumns = listConfig.columns;
 
-  // Build TanStack Table columns from descriptor fields
-  const columns: ColumnDef<Record<string, unknown>>[] = allDescriptorColumns
-    .filter((f) => visibleColumnNames.length === 0 || visibleColumnNames.includes(f.name))
-    .map((field) => {
-    const colPres = presentationConfig?.columns.find((c) => c.fieldName === field.name);
+  // Filtered EntityField[] for GroupedListView (same visibility logic as DataTable columns)
+  const visibleDescriptorFields = allDescriptorColumns.filter(
+    (f) => visibleColumnNames.length === 0 || visibleColumnNames.includes(f.name),
+  );
+
+  const activeFilters = state.filters ?? {};
+  const hasActiveFilters = Object.values(activeFilters).some((v) =>
+    Array.isArray(v) ? v.length > 0 : true,
+  );
+
+  // Build TanStack Table columns.
+  // When visibleColumnNames is empty: render all listConfig columns in default order.
+  // When set: honour the exact order and support extra entity fields beyond the list-config set.
+  const buildDescriptorCol = (field: typeof allDescriptorColumns[0]) => {
+    const colPres  = presentationConfig?.columns.find((c) => c.fieldName === field.name);
+    const isFiltered = field.is_filterable && !!activeFilters[field.name];
     return {
       accessorKey:   field.name,
-      header:        field.label ?? field.name,
       enableSorting: field.is_sortable,
-      cell: ({ getValue }) => {
+      meta:          { filtered: isFiltered },
+      header: field.is_filterable
+        ? () => (
+            <ColumnFilterHeader
+              label={field.label ?? field.name}
+              field={field}
+              entry={activeFilters[field.name] as FilterEntry | undefined}
+              facetValues={facetData[field.name] ?? []}
+              onApply={(next) => {
+                const updated = { ...activeFilters };
+                if (next === undefined) { delete updated[field.name]; }
+                else { updated[field.name] = next; }
+                setFilters(Object.keys(updated).length > 0 ? updated : undefined);
+              }}
+            />
+          )
+        : (field.label ?? field.name),
+      cell: ({ getValue }: { getValue: () => unknown }) => {
         const value = getValue();
-        // If this field has a semantic resolver, render as a status badge
         if (colPres?.semanticResolver && typeof value === "string" && value) {
           return <StatusBadge value={value} resolverName={colPres.semanticResolver} />;
         }
@@ -1359,7 +1557,27 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         return <Renderer value={value} field={field} mode="view" />;
       },
     };
-  });
+  };
+
+  const columns: ColumnDef<Record<string, unknown>>[] = visibleColumnNames.length === 0
+    ? allDescriptorColumns.map(buildDescriptorCol)
+    : visibleColumnNames.flatMap((name) => {
+        const listCol = allDescriptorColumns.find((f) => f.name === name);
+        if (listCol) return [buildDescriptorCol(listCol)];
+        // Extra field added from the full entity.fields pool via ColumnDrawer
+        const ef = entity.fields.find((f) => f.name === name && !f.is_computed);
+        if (!ef) return [];
+        const Renderer = resolveFieldRenderer(ef);
+        return [{
+          accessorKey:   ef.name,
+          header:        ef.label ?? ef.name,
+          enableSorting: ef.is_sortable,
+          meta:          { filtered: false },
+          cell: ({ getValue }: { getValue: () => unknown }) => (
+            <Renderer value={getValue()} field={ef} mode="view" />
+          ),
+        }];
+      });
 
   const handleRowClick = (row: Record<string, unknown>) => {
     const id = row.id as string;
@@ -1381,9 +1599,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     }
   };
 
-  const activeFilters = state.filters ?? {};
-  const hasActiveFilters = Object.values(activeFilters).some((v) => v.length > 0);
-
   return (
     <PageFrame
       title={entity.entity_name}
@@ -1393,85 +1608,68 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             placeholder={`Search ${entity.entity_name}…`}
             value={state.search ?? ""}
             onSearch={setSearch}
-            loading={dataLoading && !!state.search}
+            loading={dataLoading && !!state.search && state.searchMode !== "client"}
             className="w-48 sm:w-64"
             onKeyDown={(e: React.KeyboardEvent) => {
               if (e.key === "Escape") setSearch("");
             }}
+            modeToggle={entity.fields.some((f) => f.is_searchable) ? {
+              active:         state.searchMode === "client",
+              onToggle:       () => setSearchMode(state.searchMode === "client" ? undefined : "client"),
+              activeLabel:    "In view",
+              inactiveLabel:  "All",
+              icon:           <Zap className="size-3" />,
+              title:          state.searchMode === "client"
+                ? "Instant search: filtering this page only — click to switch to server search (all records)"
+                : "Server search: querying all records — click to switch to instant page filter",
+            } : undefined}
           />
-          {/* Filter toggle button — badge when filters active */}
-          <Button
-            variant={filterPanelOpen || hasActiveFilters ? "secondary" : "outline"}
-            size="sm"
-            className="relative h-8 gap-1.5 text-xs"
-            onClick={() => setFilterPanelOpen((o) => !o)}
-          >
-            <Tag className="h-3.5 w-3.5" />
-            Filter
-            {hasActiveFilters && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-2xs font-bold text-primary-foreground">
-                {Object.keys(activeFilters).length}
-              </span>
-            )}
-          </Button>
-          {/* Column picker — list and excel modes */}
-          {(viewMode === "list" || viewMode === "excel") && (
-            <ColumnPickerButton
-              allColumns={allDescriptorColumns.map((f) => ({ name: f.name, label: f.label ?? f.name }))}
-              visibleColumns={visibleColumnNames}
-              onChangeColumns={setColumns}
-            />
-          )}
-          {/* Density picker — list mode only */}
-          {viewMode === "list" && (
-            <div className="flex rounded-md border overflow-hidden" title="Row density">
-              {(["compact", "comfortable", "spacious"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDensity(state.density === d ? undefined : d)}
-                  title={d.charAt(0).toUpperCase() + d.slice(1)}
-                  className={cn(
-                    "flex items-center px-2 py-1.5 text-xs transition-colors",
-                    (state.density ?? "comfortable") === d
-                      ? "bg-muted text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                  )}
-                >
-                  <AlignJustify className={cn(
-                    "h-3.5 w-3.5",
-                    d === "compact"   && "scale-y-75",
-                    d === "spacious"  && "scale-y-125",
-                  )} />
-                </button>
-              ))}
-            </div>
-          )}
-          {/* Group-by picker — board mode only; restricted to enum/low-cardinality fields */}
-          {viewMode === "board" && entity && (() => {
-            const groupableFields = entity.fields.filter(
-              (f) => f.is_groupable && (f.data_type === "enum" || !!f.enum_domain_code),
-            );
-            if (groupableFields.length < 2) return null;
-            return (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Group</span>
-                <select
-                  value={state.group ?? ""}
-                  onChange={(e) => setGroup(e.target.value || undefined)}
-                  className="h-8 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  {groupableFields.map((f) => (
-                    <option key={f.name} value={f.name}>{f.label ?? f.name}</option>
-                  ))}
-                </select>
-              </div>
-            );
-          })()}
-          <ViewModeSwitcher
+
+          {/* My Work quick-scope dropdown */}
+          <MyWorkDropdown
+            entity={entity}
+            activeFilters={activeFilters}
+            onSetFilters={(f) => setFilters(Object.keys(f).length > 0 ? f : undefined)}
+          />
+
+          {/* Organize: Filter | Sort | Group | Columns */}
+          <OrganizeControl
+            activeDrawer={activeDrawer}
+            onOpen={openDrawer}
+            hasActiveFilters={hasActiveFilters}
+            filterCount={Object.keys(activeFilters).length}
+            sortCount={activeSort?.length ?? 0}
+            groupField={state.group ?? undefined}
+            visibleColumns={visibleColumnNames.length}
+            totalColumns={allDescriptorColumns.length}
+            showColumns={viewMode === "list" || viewMode === "excel"}
+          />
+
+          {/* View: mode + density */}
+          <ViewLauncherButton
             mode={viewMode}
-            onChange={setViewMode}
+            density={state.density}
             hasGroupable={hasGroupable}
+            onChangeMode={setViewMode}
+            onChangeDensity={(d) => setDensity(d)}
           />
+
+          {/* Create */}
+          {operations ? (
+            <ActionBar
+              operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
+              surface="LIST"
+              entityCode={entityCode}
+            />
+          ) : null}
+
+          {/* Settings: save as default + admin navigation */}
+          <ListSettingsMenu
+            entityCode={entityCode}
+            mode={viewMode}
+            density={state.density}
+          />
+
           {(hasActiveQuery || isModified) && (
             <SaveViewBar
               entityCode={entityCode}
@@ -1481,48 +1679,71 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               baseName={baseSavedView?.name}
             />
           )}
-          {operations ? (
-            <ActionBar operations={operations} surface="LIST" entityCode={entityCode} />
-          ) : null}
         </div>
       }
     >
-      {/* Main layout: optional filter panel sidebar + content */}
-      <div className={cn("flex gap-4", filterPanelOpen ? "items-start" : "")}>
+      {/* Drawers — one open at a time; all rendered for CSS transitions */}
+      <FilterDrawer
+        open={activeDrawer === "filter"}
+        onClose={closeDrawer}
+        entity={entity}
+        facets={facetData}
+        appliedFilters={activeFilters}
+        onApply={(filters) => {
+          setFilters(filters && Object.keys(filters).length > 0 ? filters : undefined);
+          closeDrawer();
+        }}
+        facetStatus={(listData as { facet_status?: string } | undefined)?.facet_status as "complete" | "truncated" | "timeout" | undefined}
+        facetScope={state.facets === "all" ? "all" : "cheap"}
+        onRequestAllFacets={() => setFacets("all")}
+        width={drawerWidth}
+        onWidthChange={setDrawerWidth}
+      />
+      <SortDrawer
+        open={activeDrawer === "sort"}
+        onClose={closeDrawer}
+        entity={entity}
+        appliedSort={state.sort}
+        defaultSort={presentationConfig?.defaultSort}
+        onApply={(sort) => {
+          setSort(sort && sort.length > 0 ? sort : undefined);
+          closeDrawer();
+        }}
+        width={drawerWidth}
+        onWidthChange={setDrawerWidth}
+      />
+      <GroupDrawer
+        open={activeDrawer === "group"}
+        onClose={closeDrawer}
+        entity={entity}
+        appliedGroup={state.group}
+        onApply={(group) => {
+          setGroup(group);
+          closeDrawer();
+        }}
+        width={drawerWidth}
+        onWidthChange={setDrawerWidth}
+      />
+      <ColumnDrawer
+        open={activeDrawer === "columns"}
+        onClose={closeDrawer}
+        entity={entity}
+        appliedColumns={visibleColumnNames}
+        defaultColumns={presentationConfig?.columns.map((c) => c.fieldName) ?? allDescriptorColumns.map((c) => c.name)}
+        availableFields={entity.fields
+          .filter((f) => !f.is_computed)
+          .map((f) => ({ name: f.name, label: f.label }))}
+        viewLabel={viewMode === "excel" ? "Spreadsheet" : "List"}
+        onApply={(cols) => {
+          setColumns(cols);
+          closeDrawer();
+        }}
+        width={drawerWidth}
+        onWidthChange={setDrawerWidth}
+      />
 
-        {/* Filter panel — left sidebar */}
-        {filterPanelOpen && (
-          <div className="w-56 shrink-0 rounded-lg border bg-card p-3 shadow-xs">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Filters
-              </span>
-              <button
-                onClick={() => setFilterPanelOpen(false)}
-                className="rounded p-0.5 hover:bg-muted transition-colors"
-              >
-                <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-            {dataLoading && Object.keys(facetData).length === 0 ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ) : (
-              <FacetFilterPanel
-                facets={facetData}
-                filters={activeFilters}
-                fieldLabels={fieldLabelMap}
-                onToggleValue={handleToggleFacetValue}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Content area */}
-        <div className="min-w-0 flex-1 space-y-3">
+      {/* Content area */}
+      <div className="space-y-3">
           {/* Saved views tabs */}
           {savedViews.length > 0 && (
             <div className="flex gap-1 border-b pb-0">
@@ -1564,14 +1785,116 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             />
           )}
 
-          {/* Active filter chips */}
-          {hasActiveFilters && (
-            <ActiveFilterChips
-              filters={activeFilters}
-              fieldLabels={fieldLabelMap}
-              onRemoveField={handleRemoveFilterField}
-              onClearAll={() => setFilters(undefined)}
-            />
+          {/* State bar — single row: count · filter chips · sort · group · columns */}
+          {(serverTotal !== undefined || activeSort || state.group || visibleColumnNames.length > 0 || hasActiveFilters) && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+
+              {/* Record count */}
+              {serverTotal !== undefined && (
+                <span className="shrink-0">
+                  Showing <strong className="text-foreground">{allRows.length}</strong>
+                  {" of "}
+                  <strong className="text-foreground">{serverTotal.toLocaleString()}</strong>
+                  {" "}{entity.entity_name.toLowerCase()}
+                </span>
+              )}
+
+              {/* Virtual filter labels */}
+              {Object.entries(activeFilters)
+                .filter(([k]) => isVirtualFilter(k))
+                .map(([k, v]) => {
+                  const value = Array.isArray(v)
+                    ? String(v[0] ?? "")
+                    : (v && typeof v === "object" && "value" in v)
+                      ? String((v as { value: unknown }).value)
+                      : "";
+                  return (
+                    <span key={k} className="inline-flex items-center gap-0.5">
+                      <span className="text-muted-foreground/30">·</span>
+                      <span className="font-medium text-foreground/70">{describeVirtualFilter(k, value)}</span>
+                    </span>
+                  );
+                })}
+
+              {/* Active filter chips — inline after count */}
+              {Object.entries(activeFilters)
+                .filter(([k]) => !isVirtualFilter(k))
+                .filter(([, entry]) => Array.isArray(entry) ? (entry as unknown[]).length > 0 : true)
+                .map(([field, entry]) => (
+                  <span key={field} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs text-foreground">
+                    <span className="text-muted-foreground">{fieldLabelMap[field] ?? field}:</span>
+                    <span className="font-medium">{describeFilterEntry(entry as FilterEntry)}</span>
+                    <button
+                      onClick={() => handleRemoveFilterField(field)}
+                      className="ml-0.5 rounded-full p-px text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={`Remove filter for ${field}`}
+                    >
+                      <XCircle className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+              {/* Clear all filters */}
+              {hasActiveFilters && Object.keys(activeFilters).filter(k => !isVirtualFilter(k)).length > 1 && (
+                <button
+                  onClick={() => setFilters(undefined)}
+                  className="text-muted-foreground/70 underline-offset-2 hover:underline hover:text-foreground transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+
+              {/* Sort */}
+              {activeSort && activeSort.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/30">·</span>
+                  <button
+                    onClick={() => openDrawer("sort")}
+                    className="inline-flex items-center gap-0.5 rounded-full border border-transparent px-2 py-0.5 text-muted-foreground hover:border-input hover:bg-muted/50 hover:text-foreground transition-colors"
+                    title="Edit sort"
+                  >
+                    <ArrowUpDown className="h-3 w-3 mr-0.5" />
+                    {activeSort.map((s, i) => (
+                      <span key={s.key}>
+                        {i > 0 && <span className="mx-0.5 opacity-50">,</span>}
+                        {s.key === "__most_used" ? "Most used" : (fieldLabelMap[s.key] ?? s.key)}
+                        {" "}{s.dir === "desc" ? "↓" : "↑"}
+                      </span>
+                    ))}
+                  </button>
+                </>
+              )}
+
+              {/* Group */}
+              {state.group && (
+                <>
+                  <span className="text-muted-foreground/30">·</span>
+                  <button
+                    onClick={() => openDrawer("group")}
+                    className="inline-flex items-center gap-0.5 rounded-full border border-transparent px-2 py-0.5 text-muted-foreground hover:border-input hover:bg-muted/50 hover:text-foreground transition-colors"
+                    title="Edit grouping"
+                  >
+                    <Layers className="h-3 w-3 mr-0.5" />
+                    {fieldLabelMap[state.group] ?? state.group}
+                  </button>
+                </>
+              )}
+
+              {/* Columns */}
+              {visibleColumnNames.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/30">·</span>
+                  <button
+                    onClick={() => openDrawer("columns")}
+                    className="inline-flex items-center gap-0.5 rounded-full border border-transparent px-2 py-0.5 text-muted-foreground hover:border-input hover:bg-muted/50 hover:text-foreground transition-colors"
+                    title="Edit columns"
+                  >
+                    <Columns3 className="h-3 w-3 mr-0.5" />
+                    {visibleColumnNames.length}/{allDescriptorColumns.length} columns
+                  </button>
+                </>
+              )}
+            </div>
           )}
 
           {/* Modified indicator */}
@@ -1604,8 +1927,19 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             />
           )}
 
+          {/* Search-unsupported banner — shown when the server returned empty because
+              no fields on this entity are marked is_searchable */}
+          {!!state.search && !dataLoading && allRows.length === 0 &&
+            !!(listData as { reasons?: Record<string, unknown> } | undefined)?.reasons?.search_unsupported && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              Search is not configured for this entity — no fields are marked as searchable.
+              Use the <strong>Filter</strong> button to narrow results by specific fields.
+            </div>
+          )}
+
           {/* ── Views ── */}
-          {viewMode === "list" && (
+          {viewMode === "list" && !state.group && (
             <DataTable
               columns={columns}
               data={allRows}
@@ -1626,10 +1960,42 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               currentPage={serverPage}
               totalPages={serverTotalPgs}
               onPageChange={setPage}
+              rowActions={(row) => {
+                const r   = row as Record<string, unknown>;
+                const rid = String(r.id ?? "");
+                return (
+                  <RowMetaStrip
+                    row={r}
+                    entityCode={entityCode}
+                    visibleColumnNames={visibleColumnNames}
+                    bookmarked={bookmarkedIds.has(rid)}
+                    commentCount={commentCountMap[rid]?.total ?? 0}
+                    commentHasOpen={commentCountMap[rid]?.hasOpen ?? false}
+                    onBookmarkToggle={toggleBookmark}
+                    bookmarkPending={bookmarkPending}
+                  />
+                );
+              }}
+            />
+          )}
+
+          {viewMode === "list" && state.group && (
+            <GroupedListView
+              rows={allRows}
+              groupFieldName={state.group}
+              entity={entity}
+              visibleDescriptorFields={visibleDescriptorFields}
+              presentationConfig={presentationConfig}
+              groupCounts={groupCounts}
+              columnOrder={kanbanColumnOrder}
+              loading={dataLoading}
+              density={state.density ?? "comfortable"}
+              onRowClick={handleRowClick}
+              onRowContextMenu={(row, e) => handleRowContextMenu(row, e)}
               rowActions={operations && operations.length > 0
                 ? (row) => (
                     <RowActionMenu
-                      row={row as Record<string, unknown>}
+                      row={row}
                       entityCode={entityCode}
                       operations={operations}
                     />
@@ -1646,6 +2012,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               entityCode={entityCode}
               onRowClick={handleRowClick}
               groupFieldOverride={state.group ?? undefined}
+              columnOrder={kanbanColumnOrder}
+              groupCounts={groupCounts}
             />
           )}
 
@@ -1658,6 +2026,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               onRowContextMenu={handleRowContextMenu}
               statusResolverName={statusResolverName}
               compactColumns={compactColumns}
+              density={state.density ?? "comfortable"}
             />
           )}
 
@@ -1672,15 +2041,20 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             <ExcelView
               rows={allRows}
               entity={entity}
-              visibleColumns={visibleColumnNames.length > 0 ? visibleColumnNames : undefined}
+              visibleColumns={
+                visibleColumnNames.length > 0
+                  ? visibleColumnNames
+                  : (presentationConfig?.columns.map((c) => c.fieldName) ?? allDescriptorColumns.map((c) => c.name))
+              }
               presentationConfig={presentationConfig ?? undefined}
               onRowClick={handleRowClick}
               onRowContextMenu={handleRowContextMenu}
               aggregations={aggregations}
               loading={dataLoading}
+              pinnedCols={state.pinnedCols ?? []}
+              onPinnedColsChange={setPinnedCols}
             />
           )}
-        </div>
       </div>
 
       {/* Right-click context menu */}

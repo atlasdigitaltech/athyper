@@ -4,8 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { fmtCompact } from "./format";
-import { StatementRow } from "./StatementRow";
-import type { StatementLineItem } from "./StatementRow";
+import { StatementRow, type StatementLineItem } from "./StatementRow";
 
 interface StatementSectionProps {
   title: string;

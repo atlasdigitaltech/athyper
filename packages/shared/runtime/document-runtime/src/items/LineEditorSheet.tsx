@@ -7,10 +7,10 @@
  * Actions: Edit (active) · Delete
  */
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus, Trash2, ChevronsUpDown,
-  Pencil, XCircle, Maximize2, Minimize2,
+  XCircle, Maximize2, Minimize2,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
@@ -314,29 +314,6 @@ function AmountWaterfall({ rows, currency }: { rows: WaterfallRow[]; currency: s
   );
 }
 
-// ── Sheet action bar ──────────────────────────────────────────────────────────
-
-function SheetActionBar({ onDelete }: { onDelete: () => void }) {
-  return (
-    <div className="flex items-center gap-1 px-5 py-2 border-b border-border/40 bg-muted/20">
-      <span className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-semibold rounded-md bg-foreground text-background select-none">
-        <Pencil className="h-3 w-3" /> Edit
-      </span>
-      <span className="w-px h-4 bg-border/60 mx-1" />
-      <ABtn icon={<Trash2 className="h-3.5 w-3.5" />} label="Delete" onClick={onDelete} danger />
-    </div>
-  );
-}
-
-function ABtn({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
-  return (
-    <button onClick={onClick} title={label}
-      className={cn("inline-flex items-center gap-1 h-7 px-2 text-xs rounded-md transition-colors",
-        danger ? "text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-      )}
-    >{icon}{label}</button>
-  );
-}
 
 // ── ITEM DETAILS TAB ──────────────────────────────────────────────────────────
 
@@ -418,22 +395,25 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
   const [rows,  setRows]  = useState<SplitRow[]>(() => distributions.map(distToRow));
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
+  // Whether state has been hydrated from real distribution data (vs. header defaults).
+  const distributionHydrated = useRef(distributions.length > 0);
+
+  async function resolveLabel(id: string, entity: string, setLabel: (v: string) => void) {
+    if (!id) return;
+    try {
+      const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      const d = await r.json() as { data?: Record<string, unknown> };
+      if (d.data) {
+        const code = String(d.data.code ?? "");
+        const name = String(d.data.name ?? "");
+        setLabel(code ? `${code} · ${name}` : name);
+      }
+    } catch { /* ignore */ }
+  }
+
   // On mount: resolve existing UUIDs to labels, or auto-derive from document header.
   useEffect(() => {
-    const resolve = async (id: string, entity: string, setLabel: (v: string) => void) => {
-      if (!id) return;
-      try {
-        const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
-        if (!r.ok) return;
-        const d = await r.json() as { data?: Record<string, unknown> };
-        if (d.data) {
-          const code = String(d.data.code ?? "");
-          const name = String(d.data.name ?? "");
-          setLabel(code ? `${code} · ${name}` : name);
-        }
-      } catch { /* ignore */ }
-    };
-
     if (distributions.length === 0 && record) {
       // Auto-derive cost centre + project from the document header when no
       // distributions exist yet and the invoice is not sourced from a PO/contract
@@ -445,20 +425,38 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
         const headerProjId = String(record.project_id     ?? "");
         if (headerCcId) {
           setSCostCenterId(headerCcId);
-          void resolve(headerCcId, "cost_center", setSCostCenterLabel);
+          void resolveLabel(headerCcId, "cost_center", setSCostCenterLabel);
         }
         if (headerProjId) {
           setSProjectId(headerProjId);
-          void resolve(headerProjId, "project", setSProjectLabel);
+          void resolveLabel(headerProjId, "project", setSProjectLabel);
         }
         if (headerCcId || headerProjId) setSDirty(true);
       }
     } else {
-      void resolve(sCostCenterId, "cost_center", setSCostCenterLabel);
-      void resolve(sProjectId,    "project",     setSProjectLabel);
+      void resolveLabel(sCostCenterId, "cost_center", setSCostCenterLabel);
+      void resolveLabel(sProjectId,    "project",     setSProjectLabel);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When distributions arrive after mount (async query resolves after sheet opens),
+  // hydrate all accounting state from the real distribution data exactly once.
+  useEffect(() => {
+    if (distributionHydrated.current || distributions.length === 0) return;
+    distributionHydrated.current = true;
+    const s = distributions[0]!;
+    setAccMode(distributions.length > 1 ? "split" : "single");
+    setSAccount(s.account_code   ?? "");
+    setSIsCapex(s.is_capex       ?? false);
+    setSCostCenterId(s.cost_center_id ?? "");
+    setSProjectId(s.project_id   ?? "");
+    setBasis(s.distribution_basis ?? "PERCENT");
+    setRows(distributions.map(distToRow));
+    if (s.cost_center_id) void resolveLabel(s.cost_center_id, "cost_center", setSCostCenterLabel);
+    if (s.project_id)     void resolveLabel(s.project_id,     "project",     setSProjectLabel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [distributions]);
 
   function recompute(r: SplitRow, b: DistBasis): SplitRow {
     let amt = 0;
@@ -1018,8 +1016,37 @@ export function LineEditorSheet({
   const cc         = currencyCode ?? "USD";
   const lineAmount = Number(line.line_amount) || 0;
   const [tab, setTab] = useState<TabId>(initialTab ?? "details");
-  const [headerError, setHeaderError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  const [dragWidth, setDragWidth] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      const v = localStorage.getItem("lineEditorSheetWidth");
+      return v ? Number(v) : null;
+    }
+    return null;
+  });
+
+  const effectiveWidth = dragWidth ?? (expanded ? 860 : 520);
+
+  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startW = effectiveWidth;
+    function onMove(ev: PointerEvent) {
+      const newW = Math.round(Math.max(380, Math.min(startW + (startX - ev.clientX), window.innerWidth * 0.92)));
+      setDragWidth(newW);
+    }
+    function onUp(ev: PointerEvent) {
+      const finalW = Math.round(Math.max(380, Math.min(startW + (startX - ev.clientX), window.innerWidth * 0.92)));
+      localStorage.setItem("lineEditorSheetWidth", String(finalW));
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+    }
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+  }
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
@@ -1031,29 +1058,20 @@ export function LineEditorSheet({
     { id: "retention",  label: "Retention", badge: line.retention_pct  ? `${line.retention_pct}%` : undefined },
   ];
 
-  async function handleDelete() {
-    setHeaderError(null);
-    try {
-      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "DELETE" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        setHeaderError(body.error ?? `Delete failed (${res.status})`);
-        return;
-      }
-      onLineDeleted?.();
-      onMutated?.();
-      onOpenChange(false);
-    } catch (err) {
-      setHeaderError(err instanceof Error ? err.message : "Network error — please retry");
-    }
-  }
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn("max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden transition-[width] duration-200", expanded ? "w-[860px]" : "w-[520px]")}>
-        {/* Expand toggle — positioned just left of the built-in close button */}
+      <SheetContent side="right" className="max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden" style={{ width: effectiveWidth }} aria-describedby={undefined}>
+        {/* Drag-resize handle on the left edge */}
+        <div
+          onPointerDown={startDrag}
+          title="Drag to resize"
+          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-20 group"
+        >
+          <div className="absolute left-0.5 top-0 bottom-0 w-px bg-transparent group-hover:bg-border/60 transition-colors" />
+        </div>
+        {/* Expand/collapse preset toggle — positioned just left of the built-in close button */}
         <button
-          onClick={() => setExpanded((v) => !v)}
+          onClick={() => { setExpanded((v) => !v); setDragWidth(null); localStorage.removeItem("lineEditorSheetWidth"); }}
           aria-label={expanded ? "Collapse panel" : "Expand panel"}
           className="absolute top-4 right-10 z-10 inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
         >
@@ -1077,16 +1095,6 @@ export function LineEditorSheet({
             </div>
           </div>
         </SheetHeader>
-
-        {/* Action bar */}
-        <SheetActionBar onDelete={() => void handleDelete()} />
-
-        {/* Header-level error (copy / delete failures) */}
-        {headerError && (
-          <div className="shrink-0 px-5 pt-2">
-            <InlineError message={headerError} onDismiss={() => setHeaderError(null)} />
-          </div>
-        )}
 
         {/* Tab bar */}
         <div className="shrink-0 flex overflow-x-auto scrollbar-none border-b border-border/50 px-5">

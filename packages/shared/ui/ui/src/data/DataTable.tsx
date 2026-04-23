@@ -15,7 +15,6 @@ import {
   type SortingState,
   type RowSelectionState,
 } from "@tanstack/react-table";
-import type React from "react";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -243,6 +242,7 @@ export function DataTable<TData>({
                       headerH,
                       "px-3 text-left align-middle font-medium text-muted-foreground",
                       pinStyle && "border-r shadow-[1px_0_0_0_hsl(var(--border))]",
+                      (header.column.columnDef.meta as { filtered?: boolean } | undefined)?.filtered && "bg-primary/5",
                     )}
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined, ...pinStyle }}
                   >

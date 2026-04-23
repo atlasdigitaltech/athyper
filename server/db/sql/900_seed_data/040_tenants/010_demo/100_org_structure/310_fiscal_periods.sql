@@ -6,7 +6,7 @@
 --   Period 1-12: normal monthly
 --   Period 13: year-end adjustment (single day = FY end)
 -- FY start months: Jan(11 cos), Mar(1 co — ZA), Apr(3 cos — QA×2,IN,GB,JP)
--- Status: FY2025 = 'open', FY2026 = 'future'
+-- Status: FY2025-FY2026 = 'open', FY2027+ = 'future'
 -- Depends: 199 (company_codes with fiscal_year_start_month)
 -- ============================================================================
 
@@ -52,8 +52,8 @@ BEGIN
             );
             v_fy_end := (v_fy_start + interval '12 months' - interval '1 day')::date;
 
-            -- FY2025 periods = open (demo), FY2026 = future
-            v_status := CASE WHEN v_fy = 2025 THEN 'open' ELSE 'future' END;
+            -- FY2025-FY2026 = open (demo), FY2027+ = future
+            v_status := CASE WHEN v_fy <= 2026 THEN 'open' ELSE 'future' END;
 
             -- Period 0: opening balance (single day = FY start)
             INSERT INTO master.fiscal_period

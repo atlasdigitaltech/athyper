@@ -2456,8 +2456,8 @@ BEGIN
 
     -- Determine period scope from reset strategy
     v_period := CASE v_config.reset_strategy
-        WHEN 'MONTHLY' THEN p_period_number
-        ELSE 0  -- YEARLY and NONE both use period = 0
+        WHEN 'monthly' THEN p_period_number
+        ELSE 0  -- 'yearly' and 'none' both use period = 0
     END;
 
     -- Hot path: atomic increment on existing counter row

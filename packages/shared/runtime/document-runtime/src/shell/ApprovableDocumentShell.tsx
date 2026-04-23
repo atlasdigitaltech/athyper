@@ -49,7 +49,7 @@ export interface ApprovableDocumentShellProps {
   initialMode?: HeaderMode;
 
   onModeChange?: (mode: HeaderMode) => void;
-  onAction?: (action: string) => void;
+  onAction?: (action: string, remarks?: string) => void | Promise<void>;
 
   // ── Tabs ───────────────────────────────────────────────────────
   tabs: ApprovableDocumentHeaderTab[];

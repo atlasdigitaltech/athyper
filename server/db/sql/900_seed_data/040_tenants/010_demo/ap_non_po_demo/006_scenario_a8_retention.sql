@@ -56,7 +56,7 @@ BEGIN
         subtotal_amount, tax_amount, withholding_tax_amount,
         total_amount, retention_amount, retention_pct,
         advance_deduction_amount,
-        description, status, created_by,
+        description, status, tax_mode, tax_mode_source, created_by,
         fiscal_year, period_number
     ) VALUES (
         v_invoice_id,
@@ -70,7 +70,7 @@ BEGIN
         10000.00, 1000.00, 10.00,
         0.00,
         'Scenario A8: Non-PO with 10% retention withheld',
-        'draft', v_sys,
+        'draft', 'no_tax', 'user_override', v_sys,
         extract(year FROM CURRENT_DATE)::smallint,
         extract(month FROM CURRENT_DATE)::smallint
     );

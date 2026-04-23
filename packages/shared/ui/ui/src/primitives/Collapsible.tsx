@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, cloneElement, isValidElement, type ReactNode, type HTMLAttributes, type MouseEvent, type ReactElement } from "react";
+import { createContext, useContext, useState, cloneElement, isValidElement, type ReactNode, type HTMLAttributes, type MouseEvent, type ReactElement } from "react";
 
 interface CollapsibleCtx {
   open: boolean;

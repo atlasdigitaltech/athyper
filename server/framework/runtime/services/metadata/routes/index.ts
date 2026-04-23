@@ -2,10 +2,11 @@
  * Metadata Routes — registration entry point
  *
  * Routes registered:
- *   GET /api/metadata/entities/:entity/compiled    — compiled entity descriptor
- *   GET /api/metadata/entities/:entity/flow        — active intake flow bundle
- *   GET /api/metadata/entities/:entity/operations  — entity action operations
- *   GET /api/metadata/lookups/:domain              — lookup domain bundle (values)
+ *   GET /api/metadata/entities/:entity/compiled     — compiled entity descriptor
+ *   GET /api/metadata/entities/:entity/flow         — active intake flow bundle
+ *   GET /api/metadata/entities/:entity/operations   — entity action operations
+ *   GET /api/metadata/entities/:entity/status-route — compiled status transition map
+ *   GET /api/metadata/lookups/:domain               — lookup domain bundle (values)
  *   POST/PATCH /api/metadata/lookups/:domain/values — tenant value mutations
  *
  *   Admin CRUD (setup pages):
@@ -27,6 +28,7 @@ import { createCompiledEntityRoute } from "./compiled-entity.route.js";
 import { createEntityFlowRoute } from "./entity-flow.route.js";
 import { createLookupRoute } from "./lookup.route.js";
 import { createEntityOperationsRoute } from "./entity-operations.route.js";
+import { createStatusRouteRoute } from "./status-route.route.js";
 import { createMetadataAdminRoutes } from "./metadata-admin.route.js";
 
 export interface MetadataRoutesDeps {
@@ -48,6 +50,7 @@ export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps)
   createEntityFlowRoute(router, deps);
   createLookupRoute(router, deps);
   createEntityOperationsRoute(router, deps);
+  createStatusRouteRoute(router, deps);
   createMetadataAdminRoutes(router, deps);
   return router;
 }

@@ -2,18 +2,20 @@ import { type ApiFetch } from "../base";
 import { type MasterRecord, type MasterRecordWrite } from "@athyper/api-contracts/records";
 import { type PaginationRequest } from "@athyper/api-contracts/common";
 import {
-  type EntityListSort,
+  type EntityListSortEntry,
   type EntityListFilters,
   type FacetScope,
   type BulkPreflightResult,
   type BulkActionResult,
+  serializeFilterEntry,
 } from "@athyper/api-contracts/entity-list";
 
 // Canonical list request params — matches EntityListQueryState server-request subset.
 export interface EntityListParams {
   q?:        string;
-  filters?:  EntityListFilters | Record<string, unknown>;
-  sort?:     EntityListSort;
+  filters?:  EntityListFilters;
+  sort?:     EntityListSortEntry[];
+  group?:    string;
   page?:     number;
   pageSize?: number;
   facets?:   FacetScope;
@@ -26,25 +28,34 @@ export function createRecordsClient(fetch: ApiFetch) {
       params?: EntityListParams & Partial<PaginationRequest>,
     ) {
       const query = params ? (() => {
-        const { filters, q, sort, pageSize, page, facets } = params;
+        const { filters, q, sort, group, pageSize, page, facets } = params;
         const sp = new URLSearchParams();
 
         if (q)        sp.set("q",         q);
         if (page)     sp.set("page",      String(page));
         if (pageSize) sp.set("page_size", String(pageSize));
-        if (sort)     sp.set("sort",      `${sort.key}:${sort.dir}`);
+        if (sort?.length) sp.set("sort", sort.map((s) => s.nulls === "first" ? `${s.key}:${s.dir}:nfirst` : `${s.key}:${s.dir}`).join(","));
+        if (group)    sp.set("group",     group);
         if (facets)   sp.set("facets",    facets);
 
-        if (filters && Object.keys(filters).length > 0) {
-          sp.set("filters", JSON.stringify(filters));
+        // Encode filters as per-field sigil params: filter.<field>=<sigil>
+        if (filters) {
+          for (const [field, entry] of Object.entries(filters)) {
+            const sigil = serializeFilterEntry(entry);
+            if (sigil) sp.set(`filter.${field}`, sigil);
+          }
         }
 
         const qs = sp.toString();
         return qs ? `?${qs}` : "";
       })() : "";
-      return fetch<{ data: MasterRecord[]; pagination: unknown; facets?: Record<string, { value: string; count: number }[]> }>(
-        `/api/records/${entityCode}${query}`,
-      );
+      return fetch<{
+        data:         MasterRecord[];
+        pagination:   unknown;
+        facets?:      Record<string, { value: string; count: number }[]>;
+        group_counts?: Record<string, number>;
+        reasons?:     Record<string, unknown>;
+      }>(`/api/records/${entityCode}${query}`);
     },
 
     async get(entityCode: string, id: string): Promise<MasterRecord> {

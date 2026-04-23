@@ -1083,11 +1083,13 @@
       ],
       "clientRoles": {
         "neon-web": [
-          "WB_USER"
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
         ]
       },
       "groups": [
-        "/grp:workbench:user"
+        "/grp:workbench:admin"
       ],
       "attributes": {},
       "notBefore": 0
@@ -1112,11 +1114,13 @@
       ],
       "clientRoles": {
         "neon-web": [
-          "WB_USER"
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
         ]
       },
       "groups": [
-        "/grp:workbench:user"
+        "/grp:workbench:admin"
       ],
       "attributes": {},
       "notBefore": 0
@@ -1125,7 +1129,7 @@
       "id": "cc001000-0000-0000-0000-000000000003",
       "username": "ssk.admin",
       "firstName": "SSK",
-      "lastName": "Admin",
+      "lastName": "Saudi Admin",
       "email": "ssk.admin@technostat.demo",
       "emailVerified": true,
       "enabled": true,
@@ -1141,11 +1145,13 @@
       ],
       "clientRoles": {
         "neon-web": [
-          "WB_USER"
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
         ]
       },
       "groups": [
-        "/grp:workbench:user"
+        "/grp:workbench:admin"
       ],
       "attributes": {},
       "notBefore": 0
@@ -1170,11 +1176,13 @@
       ],
       "clientRoles": {
         "neon-web": [
-          "WB_USER"
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
         ]
       },
       "groups": [
-        "/grp:workbench:user"
+        "/grp:workbench:admin"
       ],
       "attributes": {},
       "notBefore": 0
@@ -1199,11 +1207,13 @@
       ],
       "clientRoles": {
         "neon-web": [
-          "WB_USER"
+          "WB_ADMIN",
+          "WB_USER",
+          "WB_PARTNER"
         ]
       },
       "groups": [
-        "/grp:workbench:user"
+        "/grp:workbench:admin"
       ],
       "attributes": {},
       "notBefore": 0

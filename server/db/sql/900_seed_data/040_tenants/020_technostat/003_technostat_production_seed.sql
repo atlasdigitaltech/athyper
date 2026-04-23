@@ -978,54 +978,113 @@ BEGIN
         principal_source, metadata, status, created_by)
     VALUES
     ('cc001000-0000-0000-0000-000000000001', v_tid,
-     'tksa.owner', 'Technostat Group Owner', 'tksa.owner@technostat.net',
-     'user', false, false, 'oidc_jit', v_meta, 'active', v_su),
+     'tksa.owner', 'Technostat Group Owner', 'tksa.owner@technostat.demo',
+     'user', false, false, 'internal', v_meta, 'active', v_su),
 
     ('cc001000-0000-0000-0000-000000000002', v_tid,
-     'tksa.admin', 'Technostat Group Admin', 'tksa.admin@technostat.net',
-     'user', false, false, 'oidc_jit', v_meta, 'active', v_su),
+     'tksa.admin', 'Technostat Group Admin', 'tksa.admin@technostat.demo',
+     'user', false, false, 'internal', v_meta, 'active', v_su),
 
     ('cc001000-0000-0000-0000-000000000003', v_tid,
-     'ssk.admin', 'SSK Saudi Admin', 'ssk.admin@technostat.net',
-     'user', false, false, 'oidc_jit', v_meta, 'active', v_su),
+     'ssk.admin', 'SSK Saudi Admin', 'ssk.admin@technostat.demo',
+     'user', false, false, 'internal', v_meta, 'active', v_su),
 
     ('cc001000-0000-0000-0000-000000000004', v_tid,
-     'tegy.admin', 'Technostat Egypt Admin', 'tegy.admin@technostat.net',
-     'user', false, false, 'oidc_jit', v_meta, 'active', v_su),
+     'tegy.admin', 'Technostat Egypt Admin', 'tegy.admin@technostat.demo',
+     'user', false, false, 'internal', v_meta, 'active', v_su),
 
     ('cc001000-0000-0000-0000-000000000005', v_tid,
-     'sdtx.admin', 'Satellites DT Admin', 'sdtx.admin@technostat.net',
-     'user', false, false, 'oidc_jit', v_meta, 'active', v_su)
+     'sdtx.admin', 'Satellites DT Admin', 'sdtx.admin@technostat.demo',
+     'user', false, false, 'internal', v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, code) DO NOTHING;
 
     -- STAGE B: master.principal_profile
+    -- Lift the keycloak_* column guard so the seed can write KC metadata directly.
+    -- The guard exists to prevent accidental overwrites at runtime; seed files are
+    -- the authorised source for pre-provisioned principals.
+    PERFORM set_config('app.iam_profile_kc_frozen', 'false', true);
+
+    -- Supply the system-user UUID so that shared.trg_set_updated_at() resolves
+    -- updated_by correctly on the ON CONFLICT UPDATE path.  Without this the
+    -- trigger overwrites updated_by with NULL (GUC unset in migration context),
+    -- violating principal_profile_audit_pair_chk.
+    PERFORM set_config('app.current_principal_id', v_su::text, true);
+
     INSERT INTO master.principal_profile (
         tenant_id, principal_id,
         given_name, family_name, display_name,
+        locale, timezone,
         keycloak_id, keycloak_username, keycloak_sync_status,
+        keycloak_created_at_millis, keycloak_required_actions,
+        default_company_code_id,
+        default_cost_center_id,
+        default_profit_center_id,
         created_by)
     VALUES
     (v_tid, 'cc001000-0000-0000-0000-000000000001',
      'Technostat', 'Group Owner', 'Technostat Group Owner',
-     'cc001000-0000-0000-0000-000000000001', 'tksa.owner', 'synced', v_su),
+     'ar', 'Asia/Riyadh',
+     'cc001000-0000-0000-0000-000000000001', 'tksa.owner', 'synced',
+     1745280000000, ARRAY['UPDATE_PASSWORD'],
+     (SELECT id FROM master.company_code  WHERE tenant_id = v_tid AND code = 'TKSA'),
+     (SELECT id FROM master.cost_center   WHERE tenant_id = v_tid AND code = 'CC-TKSA-EXEC'),
+     (SELECT id FROM master.profit_center WHERE tenant_id = v_tid AND code = 'PC-TKSA-CORP'),
+     v_su),
     (v_tid, 'cc001000-0000-0000-0000-000000000002',
      'Technostat', 'Group Admin', 'Technostat Group Admin',
-     'cc001000-0000-0000-0000-000000000002', 'tksa.admin', 'synced', v_su),
+     'ar', 'Asia/Riyadh',
+     'cc001000-0000-0000-0000-000000000002', 'tksa.admin', 'synced',
+     1745280000000, ARRAY['UPDATE_PASSWORD'],
+     (SELECT id FROM master.company_code  WHERE tenant_id = v_tid AND code = 'TKSA'),
+     (SELECT id FROM master.cost_center   WHERE tenant_id = v_tid AND code = 'CC-TKSA-FIN'),
+     (SELECT id FROM master.profit_center WHERE tenant_id = v_tid AND code = 'PC-TKSA-CORP'),
+     v_su),
     (v_tid, 'cc001000-0000-0000-0000-000000000003',
-     'SSK', 'Admin', 'SSK Saudi Admin',
-     'cc001000-0000-0000-0000-000000000003', 'ssk.admin',  'synced', v_su),
+     'SSK', 'Saudi Admin', 'SSK Saudi Admin',
+     'ar', 'Asia/Riyadh',
+     'cc001000-0000-0000-0000-000000000003', 'ssk.admin',  'synced',
+     1745280000000, ARRAY['UPDATE_PASSWORD'],
+     (SELECT id FROM master.company_code  WHERE tenant_id = v_tid AND code = 'SSK'),
+     (SELECT id FROM master.cost_center   WHERE tenant_id = v_tid AND code = 'CC-SSK-ADM'),
+     (SELECT id FROM master.profit_center WHERE tenant_id = v_tid AND code = 'PC-SSK-PROJ'),
+     v_su),
     (v_tid, 'cc001000-0000-0000-0000-000000000004',
      'Technostat', 'Egypt Admin', 'Technostat Egypt Admin',
-     'cc001000-0000-0000-0000-000000000004', 'tegy.admin', 'synced', v_su),
+     'ar', 'Africa/Cairo',
+     'cc001000-0000-0000-0000-000000000004', 'tegy.admin', 'synced',
+     1745280000000, ARRAY['UPDATE_PASSWORD'],
+     (SELECT id FROM master.company_code  WHERE tenant_id = v_tid AND code = 'TEGY'),
+     (SELECT id FROM master.cost_center   WHERE tenant_id = v_tid AND code = 'CC-TEGY-ADM'),
+     (SELECT id FROM master.profit_center WHERE tenant_id = v_tid AND code = 'PC-TEGY-TRAD'),
+     v_su),
     (v_tid, 'cc001000-0000-0000-0000-000000000005',
      'Satellites', 'DT Admin', 'Satellites DT Admin',
-     'cc001000-0000-0000-0000-000000000005', 'sdtx.admin', 'synced', v_su)
+     'ar', 'Africa/Cairo',
+     'cc001000-0000-0000-0000-000000000005', 'sdtx.admin', 'synced',
+     1745280000000, ARRAY['UPDATE_PASSWORD'],
+     (SELECT id FROM master.company_code  WHERE tenant_id = v_tid AND code = 'SDTX'),
+     (SELECT id FROM master.cost_center   WHERE tenant_id = v_tid AND code = 'CC-SDTX-ADM'),
+     (SELECT id FROM master.profit_center WHERE tenant_id = v_tid AND code = 'PC-SDTX-PROJ'),
+     v_su)
     ON CONFLICT (tenant_id, principal_id) DO UPDATE SET
-        keycloak_id          = EXCLUDED.keycloak_id,
-        keycloak_sync_status = EXCLUDED.keycloak_sync_status,
-        given_name           = EXCLUDED.given_name,
-        family_name          = EXCLUDED.family_name,
-        display_name         = EXCLUDED.display_name;
+        keycloak_id                = EXCLUDED.keycloak_id,
+        keycloak_sync_status       = EXCLUDED.keycloak_sync_status,
+        keycloak_created_at_millis = EXCLUDED.keycloak_created_at_millis,
+        keycloak_required_actions  = EXCLUDED.keycloak_required_actions,
+        given_name                 = EXCLUDED.given_name,
+        family_name                = EXCLUDED.family_name,
+        display_name               = EXCLUDED.display_name,
+        locale                     = EXCLUDED.locale,
+        timezone                   = EXCLUDED.timezone,
+        default_company_code_id    = EXCLUDED.default_company_code_id,
+        default_cost_center_id     = EXCLUDED.default_cost_center_id,
+        default_profit_center_id   = EXCLUDED.default_profit_center_id,
+        updated_at                 = now(),
+        updated_by                 = v_su;
+
+    -- Restore the keycloak_* column guard and clear the principal-id GUC.
+    PERFORM set_config('app.iam_profile_kc_frozen', 'true', true);
+    PERFORM set_config('app.current_principal_id', '', true);
 
     -- STAGE C: master.principal_identity_binding
     INSERT INTO master.principal_identity_binding (
@@ -1189,6 +1248,7 @@ BEGIN
         now(), v_su, v_su
     FROM (VALUES
         ('tksa.owner', 'TECHNOSTAT-OWNER'),
+        ('tksa.owner', 'TKSA-OWNER'),
         ('tksa.admin', 'TECHNOSTAT-ADMIN'),
         ('tksa.admin', 'TKSA-ADMIN'),
         ('ssk.admin',  'SSK-ADMIN'),
@@ -1199,7 +1259,7 @@ BEGIN
     JOIN master.auth_group pg ON pg.tenant_id = v_tid AND pg.code = v.group_code
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
 
-    RAISE NOTICE '[P20] 6 group memberships seeded for Technostat principals';
+    RAISE NOTICE '[P20] 7 group memberships seeded for Technostat principals';
 END $p20$;
 
 
@@ -1211,7 +1271,8 @@ DO $p22$
 DECLARE
     v_tid    uuid;
     v_les    int; v_ccs    int; v_fps  int;
-    v_princs int; v_binds  int; v_grps int;
+    v_princs int; v_binds  int; v_grps int; v_mems int;
+    v_defaults_ok int;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     IF v_tid IS NULL THEN RAISE EXCEPTION '[P22] technostat tenant missing'; END IF;
@@ -1230,21 +1291,48 @@ BEGIN
     SELECT count(*) INTO v_binds FROM master.principal_identity_binding pib
         JOIN master.principal p ON p.id = pib.principal_id
         WHERE p.tenant_id = v_tid AND pib.provider_code = 'keycloak';
-    SELECT count(*) INTO v_grps  FROM master.auth_group  WHERE tenant_id = v_tid;
+    SELECT count(*) INTO v_grps  FROM master.auth_group   WHERE tenant_id = v_tid;
+    SELECT count(*) INTO v_mems  FROM master.auth_group_member agm
+        JOIN master.principal p ON p.id = agm.principal_id
+        WHERE p.tenant_id = v_tid
+          AND p.id IN (
+            'cc001000-0000-0000-0000-000000000001'::uuid,
+            'cc001000-0000-0000-0000-000000000002'::uuid,
+            'cc001000-0000-0000-0000-000000000003'::uuid,
+            'cc001000-0000-0000-0000-000000000004'::uuid,
+            'cc001000-0000-0000-0000-000000000005'::uuid
+          );
+    -- All 5 principals must have default_company_code_id set
+    SELECT count(*) INTO v_defaults_ok FROM master.principal_profile pp
+        JOIN master.principal p ON p.id = pp.principal_id
+        WHERE p.tenant_id = v_tid
+          AND p.id IN (
+            'cc001000-0000-0000-0000-000000000001'::uuid,
+            'cc001000-0000-0000-0000-000000000002'::uuid,
+            'cc001000-0000-0000-0000-000000000003'::uuid,
+            'cc001000-0000-0000-0000-000000000004'::uuid,
+            'cc001000-0000-0000-0000-000000000005'::uuid
+          )
+          AND pp.default_company_code_id IS NOT NULL
+          AND pp.default_cost_center_id  IS NOT NULL;
 
-    IF v_les   <  4 THEN RAISE EXCEPTION '[P22] Expected ≥4 legal entities, got %', v_les; END IF;
-    IF v_ccs   <  4 THEN RAISE EXCEPTION '[P22] Expected ≥4 company codes, got %',  v_ccs; END IF;
-    IF v_fps   < 56 THEN RAISE EXCEPTION '[P22] Expected ≥56 fiscal periods (4 CCs × 14), got %', v_fps; END IF;
-    IF v_princs < 5 THEN RAISE EXCEPTION '[P22] Expected 5 KC-compatible principals, got %', v_princs; END IF;
-    IF v_binds  < 5 THEN RAISE EXCEPTION '[P22] Expected 5 KC identity bindings, got %', v_binds; END IF;
-    IF v_grps  < 10 THEN RAISE EXCEPTION '[P22] Expected ≥10 RBAC groups, got %', v_grps; END IF;
+    IF v_les         <  4 THEN RAISE EXCEPTION '[P22] Expected ≥4 legal entities, got %', v_les; END IF;
+    IF v_ccs         <  4 THEN RAISE EXCEPTION '[P22] Expected ≥4 company codes, got %',  v_ccs; END IF;
+    IF v_fps         < 56 THEN RAISE EXCEPTION '[P22] Expected ≥56 fiscal periods (4 CCs × 14), got %', v_fps; END IF;
+    IF v_princs      <  5 THEN RAISE EXCEPTION '[P22] Expected 5 KC-compatible principals, got %', v_princs; END IF;
+    IF v_binds       <  5 THEN RAISE EXCEPTION '[P22] Expected 5 KC identity bindings, got %', v_binds; END IF;
+    IF v_grps        < 10 THEN RAISE EXCEPTION '[P22] Expected ≥10 RBAC groups, got %', v_grps; END IF;
+    IF v_mems        <  7 THEN RAISE EXCEPTION '[P22] Expected ≥7 group memberships (P20), got %', v_mems; END IF;
+    IF v_defaults_ok <  5 THEN RAISE EXCEPTION '[P22] Expected 5 principals with default CC + cost centre, got %', v_defaults_ok; END IF;
 
     RAISE NOTICE '=== [P22] Technostat Production Seed Validated ===';
-    RAISE NOTICE '  Legal entities:   %', v_les;
-    RAISE NOTICE '  Company codes:    %', v_ccs;
-    RAISE NOTICE '  Fiscal periods:   %', v_fps;
-    RAISE NOTICE '  KC principals:    %', v_princs;
-    RAISE NOTICE '  KC auth bindings: %', v_binds;
-    RAISE NOTICE '  RBAC groups:      %', v_grps;
-    RAISE NOTICE '  Tenant ID:        %', v_tid;
+    RAISE NOTICE '  Legal entities:     %', v_les;
+    RAISE NOTICE '  Company codes:      %', v_ccs;
+    RAISE NOTICE '  Fiscal periods:     %', v_fps;
+    RAISE NOTICE '  KC principals:      %', v_princs;
+    RAISE NOTICE '  KC auth bindings:   %', v_binds;
+    RAISE NOTICE '  RBAC groups:        %', v_grps;
+    RAISE NOTICE '  Group memberships:  %', v_mems;
+    RAISE NOTICE '  Profiles w/defaults:%', v_defaults_ok;
+    RAISE NOTICE '  Tenant ID:          %', v_tid;
 END $p22$;

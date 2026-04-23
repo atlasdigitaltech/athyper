@@ -7,6 +7,34 @@ INSERT INTO control.lookup_value
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
+    -- document domain
+    ('document.created',     'Document Created',          'log.activity_type', 'Document record created in draft state.',                            1),
+    ('document.updated',     'Document Updated',          'log.activity_type', 'Document header or line fields updated.',                            2),
+    ('document.submitted',   'Document Submitted',        'log.activity_type', 'Document submitted for approval or processing.',                     3),
+    ('document.approved',    'Document Approved',         'log.activity_type', 'Document approved and advanced to next state.',                      4),
+    ('document.rejected',    'Document Rejected',         'log.activity_type', 'Document rejected; returned to submitter.',                          5),
+    ('document.cancelled',   'Document Cancelled',        'log.activity_type', 'Document cancelled and closed from further processing.',             6),
+    ('document.reopened',    'Document Reopened',         'log.activity_type', 'Cancelled or rejected document reopened for editing.',               7),
+    ('document.amended',     'Document Amended',          'log.activity_type', 'New amendment version created from an approved document.',           8),
+    -- workflow domain
+    ('workflow.initiated',   'Workflow Initiated',        'log.activity_type', 'Approval workflow routing initiated for the document.',              9),
+    ('workflow.approved',    'Workflow Approved',         'log.activity_type', 'Approver approved the workflow step.',                               10),
+    ('workflow.rejected',    'Workflow Rejected',         'log.activity_type', 'Approver rejected the workflow step.',                               11),
+    ('workflow.delegated',   'Workflow Delegated',        'log.activity_type', 'Approval task delegated to another principal.',                      12),
+    ('workflow.escalated',   'Workflow Escalated',        'log.activity_type', 'Approval task auto-escalated due to SLA breach.',                   13),
+    ('workflow.recalled',    'Workflow Recalled',         'log.activity_type', 'Submitted workflow recalled by the originator.',                     14),
+    -- accounting domain
+    ('accounting.posted',    'Journal Posted',            'log.activity_type', 'Accounting journal entry posted to the ledger.',                     15),
+    ('accounting.reversed',  'Journal Reversed',          'log.activity_type', 'Posted journal entry reversed.',                                     16),
+    ('accounting.revalued',  'Currency Revalued',         'log.activity_type', 'Document revalued at a new exchange rate.',                          17),
+    -- payment domain
+    ('payment.initiated',    'Payment Initiated',         'log.activity_type', 'Payment run initiated for the document.',                            18),
+    ('payment.cleared',      'Payment Cleared',           'log.activity_type', 'Payment confirmed cleared by bank.',                                 19),
+    ('payment.reversed',     'Payment Reversed',          'log.activity_type', 'Payment reversed or recalled.',                                      20),
+    -- system domain
+    ('system.import',        'Record Imported',           'log.activity_type', 'Record created via bulk import.',                                    21),
+    ('system.migration',     'Record Migrated',           'log.activity_type', 'Record migrated from a legacy system.',                              22),
+    ('system.auto_action',   'Automated Action',          'log.activity_type', 'Background automation applied an action to the record.',             23),
     -- kpi domain
     ('kpi.calculation',      'KPI Calculation',        'log.activity_type', 'KPI value calculated for a period.',                        10),
     ('kpi.threshold_breach', 'KPI Threshold Breach',   'log.activity_type', 'KPI value breached a defined threshold.',                   20),

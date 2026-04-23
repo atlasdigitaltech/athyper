@@ -1366,8 +1366,159 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     }
   };
 
+  // ── POST /api/collab/bookmarks — toggle bookmark for current principal ────────
+
+  const toggleBookmarkHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const body       = req.body as { entity_code?: string; record_id?: string } | undefined;
+      const entityCode = (body?.entity_code ?? "").trim();
+      const recordId   = (body?.record_id   ?? "").trim();
+      if (!entityCode || !recordId) {
+        res.status(400).json({ error: "entity_code and record_id are required" });
+        return;
+      }
+
+      const tenantId = await resolveTenant(req, res, db);
+      if (!tenantId) return;
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : SYSTEM_PRINCIPAL_UUID;
+
+      const existing = await (db
+        .selectFrom("master.record_bookmark as rb" as never)
+        .select("rb.id" as never)
+        .where("rb.tenant_id"    as never, "=", tenantId    as never)
+        .where("rb.principal_id" as never, "=", principalId as never)
+        .where("rb.entity_code"  as never, "=", entityCode  as never)
+        .where("rb.record_id"    as never, "=", recordId    as never)
+        .executeTakeFirst() as Promise<{ id: string } | undefined>);
+
+      if (existing) {
+        await (db
+          .deleteFrom("master.record_bookmark" as never)
+          .where("id" as never, "=", existing.id as never)
+          .execute() as Promise<unknown>);
+        res.json({ bookmarked: false });
+      } else {
+        await (db
+          .insertInto("master.record_bookmark" as never)
+          .values({
+            tenant_id:    tenantId,
+            principal_id: principalId,
+            entity_code:  entityCode,
+            record_id:    recordId,
+            created_at:   new Date().toISOString(),
+          } as never)
+          .execute() as Promise<unknown>);
+        res.json({ bookmarked: true });
+      }
+    } catch (err) {
+      logger?.error("collab_bookmark_toggle_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /api/collab/bookmarks/batch — batch membership check ─────────────────
+
+  const batchBookmarksHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = ((req.query["entity_code"] as string) ?? "").trim();
+      const idsRaw     = ((req.query["ids"]        as string) ?? "").trim();
+      if (!entityCode || !idsRaw) { res.json({ bookmarked_ids: [] }); return; }
+
+      const recordIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      if (recordIds.length > 100) {
+        res.status(400).json({ error: "MAX_100_IDS", max: 100 });
+        return;
+      }
+
+      const tenantId = await resolveTenant(req, res, db);
+      if (!tenantId) { res.json({ bookmarked_ids: [] }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : SYSTEM_PRINCIPAL_UUID;
+
+      const rows = await (db
+        .selectFrom("master.record_bookmark as rb" as never)
+        .select("rb.record_id" as never)
+        .where("rb.tenant_id"    as never, "=",  tenantId    as never)
+        .where("rb.principal_id" as never, "=",  principalId as never)
+        .where("rb.entity_code"  as never, "=",  entityCode  as never)
+        .where("rb.record_id"    as never, "in", recordIds   as never)
+        .execute() as Promise<{ record_id: string }[]>);
+
+      res.json({ bookmarked_ids: rows.map((r) => r.record_id) });
+    } catch (err) {
+      logger?.error("collab_bookmark_batch_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /api/collab/comments/batch-count — per-record comment counts ──────────
+
+  const batchCommentCountHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = ((req.query["entity_type"] as string) ?? "").trim();
+      const idsRaw     = ((req.query["ids"]        as string) ?? "").trim();
+      if (!entityCode || !idsRaw) { res.json({ counts: {} }); return; }
+
+      const recordIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      if (recordIds.length > 100) {
+        res.status(400).json({ error: "MAX_100_IDS", max: 100 });
+        return;
+      }
+
+      const tenantId = await resolveTenant(req, res, db);
+      if (!tenantId) { res.json({ counts: {} }); return; }
+
+      type CountRow = { record_id: string; total: unknown; open_count: unknown };
+      const rows = await (db
+        .selectFrom("master.comment as c" as never)
+        .select([
+          "c.entity_id as record_id" as never,
+          sql`count(*)`.as("total"),
+          sql`count(*) filter (where c.status = 'open')`.as("open_count"),
+        ])
+        .where("c.tenant_id"   as never, "=",  tenantId   as never)
+        .where("c.entity_type" as never, "=",  entityCode  as never)
+        .where("c.entity_id"   as never, "in", recordIds   as never)
+        .where("c.deleted_at"  as never, "is", null        as never)
+        .groupBy("c.entity_id" as never)
+        .execute() as Promise<CountRow[]>);
+
+      const counts: Record<string, { total: number; hasOpen: boolean }> = {};
+      for (const row of rows) {
+        counts[row.record_id] = {
+          total:   Number(row.total),
+          hasOpen: Number(row.open_count) > 0,
+        };
+      }
+
+      res.json({ counts });
+    } catch (err) {
+      logger?.error("collab_comment_batch_count_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── Register routes ───────────────────────────────────────────────────────
   // Static paths must come before the :commentId param routes.
+  router.post("/collab/bookmarks",           toggleBookmarkHandler);
+  router.get("/collab/bookmarks/batch",      batchBookmarksHandler);
+  router.get("/collab/comments/batch-count", batchCommentCountHandler);
   router.get("/collab/comments/unread-count",           unreadCountHandler);
   router.post("/collab/comments/mark-all-read",         markAllReadHandler);
   router.get("/collab/comments",                         listCommentsHandler);

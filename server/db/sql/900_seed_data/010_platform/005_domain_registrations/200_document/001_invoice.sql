@@ -83,7 +83,7 @@ CROSS JOIN (VALUES
     ('outstanding_amount',       'outstanding_amount',      'Outstanding',        'decimal',        'one',         NULL::text,                                   false, true,  '{"min":0}'::jsonb,                    104),
     -- ── D: Source, References & Terms ────────────────────────────────────────
     ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
-    ('vendor_invoice_ref',       'supplier_invoice_number', 'Vendor Ref',         'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
+    ('vendor_invoice_ref',       'supplier_invoice_number', 'Vendor Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
     ('description',              'description',             'Description',        'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":500}'::jsonb,            130),
     ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_terms"}'::jsonb,140),
     -- ── E: Matching & Hold ────────────────────────────────────────────────────
@@ -173,6 +173,18 @@ WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.origin = 'system';
+
+-- ── Mark searchable fields (idempotent) ───────────────────────────────────────
+-- document_no (invoice number like INV-A1-0001), vendor_invoice_ref, description
+-- are the natural free-text search targets for the invoice list.
+UPDATE control.entity_field ef
+SET is_searchable = true
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+  AND ef.name IN ('document_no', 'vendor_invoice_ref', 'description');
 
 -- ── 4. display_config — detail renderer + document_header field map ───────────
 -- Applied only when the column still holds the default empty object so that
@@ -386,3 +398,14 @@ CROSS JOIN (VALUES
 WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
+
+-- ── Patch: rename 'Vendor Ref' → 'Vendor Invoice No.' on already-seeded rows ──
+UPDATE control.entity_field ef
+   SET label = 'Vendor Invoice No.'
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
+   AND e.tenant_id IS NULL AND ev.version_no = 1
+   AND ef.name = 'vendor_invoice_ref'
+   AND ef.label = 'Vendor Ref';

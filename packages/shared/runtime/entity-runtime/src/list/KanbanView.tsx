@@ -7,6 +7,10 @@
  *
  * Subtitle field: driven by entity.display_config.subtitle_field.
  * Column header colors: keyed by canonical status names.
+ *
+ * F3: columnOrder prop controls column sequence (lifecycle/enum sort_order).
+ * F4: count badge labelled "on this page" to communicate it is page-scoped.
+ * F6: NULL/empty group values collected into a trailing "Unassigned" column.
  */
 "use client";
 
@@ -27,6 +31,7 @@ function colColor(status: string): string {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_NAMES = ["status", "record_status", "state", "lifecycle_state"];
+const UNASSIGNED   = "__unassigned__";
 
 export function findKanbanGroupField(entity: CompiledEntity): EntityField | undefined {
   return (
@@ -36,7 +41,10 @@ export function findKanbanGroupField(entity: CompiledEntity): EntityField | unde
 }
 
 function fieldVal(row: Record<string, unknown>, field: EntityField): string {
-  return String(row[field.name] ?? row[field.column_name] ?? "—");
+  const v = row[field.name] ?? row[field.column_name];
+  // F6: null/undefined/empty → sentinel for Unassigned column
+  if (v === null || v === undefined || v === "") return UNASSIGNED;
+  return String(v);
 }
 
 function groupRows(
@@ -52,6 +60,34 @@ function groupRows(
   return map;
 }
 
+/**
+ * Order columns: honour columnOrder (from lifecycle/enum sort_order), then
+ * append any remaining columns not in the list, with Unassigned always last.
+ */
+function orderColumns(
+  groups: Map<string, Record<string, unknown>[]>,
+  columnOrder: string[] | undefined,
+): [string, Record<string, unknown>[]][] {
+  const all      = Array.from(groups.entries());
+  const assigned = all.filter(([k]) => k !== UNASSIGNED);
+  const unassigned = all.filter(([k]) => k === UNASSIGNED);
+
+  if (!columnOrder || columnOrder.length === 0) {
+    return [...assigned, ...unassigned];
+  }
+
+  const ordered: [string, Record<string, unknown>[]][] = [];
+  for (const key of columnOrder) {
+    const entry = groups.get(key);
+    if (entry) ordered.push([key, entry]);
+  }
+  // Append any values not in the explicit order (future states etc.)
+  for (const [key, rows] of assigned) {
+    if (!columnOrder.includes(key)) ordered.push([key, rows]);
+  }
+  return [...ordered, ...unassigned];
+}
+
 // ── Status-transition dropdown ────────────────────────────────────────────────
 
 function MoveDropdown({
@@ -60,13 +96,13 @@ function MoveDropdown({
   onSelect,
   busy,
 }: {
-  current: string;
+  current:    string;
   allOptions: string[];
-  onSelect: (next: string) => void;
-  busy: boolean;
+  onSelect:   (next: string) => void;
+  busy:       boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const others = allOptions.filter((o) => o !== current);
+  const others = allOptions.filter((o) => o !== current && o !== UNASSIGNED);
   if (others.length === 0) return null;
 
   return (
@@ -193,6 +229,18 @@ export interface KanbanViewProps {
    * Falls back to findKanbanGroupField(entity) when absent or invalid.
    */
   groupFieldOverride?: string;
+  /**
+   * F3: Explicit column order from lifecycle/enum sort_order metadata.
+   * Columns in this list appear first, in order. Any values not in the list
+   * are appended after. Unassigned (null group value) is always last.
+   */
+  columnOrder?: string[];
+  /**
+   * Server-provided total record count per group value.
+   * When present, column headers show the true total instead of page-fragment count.
+   * Key matches group field value (or "__unassigned__" for null values).
+   */
+  groupCounts?: Record<string, number>;
 }
 
 export function KanbanView({
@@ -202,12 +250,13 @@ export function KanbanView({
   entityCode,
   onRowClick,
   groupFieldOverride,
+  columnOrder,
+  groupCounts,
 }: KanbanViewProps) {
-  // Resolve group field: explicit override → metadata default
   const groupField = groupFieldOverride
     ? (entity.fields.find((f) => f.name === groupFieldOverride && f.is_groupable) ?? findKanbanGroupField(entity))
     : findKanbanGroupField(entity);
-  const subtitleKey  = entity.display_config?.subtitle_field;
+  const subtitleKey = entity.display_config?.subtitle_field;
 
   if (!groupField) {
     return (
@@ -217,9 +266,10 @@ export function KanbanView({
     );
   }
 
-  const groups     = groupRows(rows, groupField);
-  const columns    = Array.from(groups.entries());
-  const allStatuses = columns.map(([s]) => s);
+  const groups  = groupRows(rows, groupField);
+  const columns = orderColumns(groups, columnOrder);
+  // All valid status options for the Move dropdown (exclude the sentinel)
+  const allStatuses = Array.from(groups.keys()).filter((k) => k !== UNASSIGNED);
 
   if (columns.length === 0) {
     return (
@@ -227,48 +277,64 @@ export function KanbanView({
     );
   }
 
+  const totalCount = groupCounts
+    ? Object.values(groupCounts).reduce((a, b) => a + b, 0)
+    : rows.length;
+
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
         Grouped by <span className="font-medium">{groupField.label ?? groupField.name}</span>
         {" · "}
-        <span className="tabular-nums">{rows.length}</span> records
+        <span className="tabular-nums">{totalCount.toLocaleString()}</span>
+        {groupCounts ? " total" : " on this page"}
       </p>
 
       <div className="flex gap-3 overflow-x-auto pb-3">
-        {columns.map(([status, items]) => (
-          <div key={status} className="min-w-[230px] max-w-[270px] flex-shrink-0 space-y-2">
-            {/* Column header */}
-            <div className={cn(
-              "flex items-center gap-2 rounded-md border px-2.5 py-1.5",
-              colColor(status),
-            )}>
-              <span className="text-xs font-semibold capitalize flex-1">
-                {status.replace(/_/g, " ")}
-              </span>
-              <Badge
-                variant="secondary"
-                className="text-2xs px-1.5 py-0.5 bg-white/50 dark:bg-black/20 border-0"
-              >
-                {items.length}
-              </Badge>
-            </div>
+        {columns.map(([status, items]) => {
+          const isUnassigned  = status === UNASSIGNED;
+          const displayLabel  = isUnassigned ? "Unassigned" : status.replace(/_/g, " ");
+          const serverTotal   = groupCounts?.[status];
+          const displayCount  = serverTotal ?? items.length;
+          const countTooltip  = serverTotal !== undefined
+            ? `${serverTotal.toLocaleString()} total · ${items.length} on this page`
+            : `${items.length} on this page`;
 
-            {/* Cards */}
-            {items.map((row) => (
-              <KanbanCard
-                key={String(row.id ?? Math.random())}
-                row={row}
-                titleKey={titleKey}
-                subtitleKey={subtitleKey}
-                allStatuses={allStatuses}
-                groupField={groupField}
-                entityCode={entityCode}
-                onRowClick={onRowClick}
-              />
-            ))}
-          </div>
-        ))}
+          return (
+            <div key={status} className="min-w-[230px] max-w-[270px] flex-shrink-0 space-y-2">
+              {/* Column header */}
+              <div className={cn(
+                "flex items-center gap-2 rounded-md border px-2.5 py-1.5",
+                isUnassigned ? "bg-muted/30 text-muted-foreground" : colColor(status),
+              )}>
+                <span className="text-xs font-semibold capitalize flex-1">
+                  {displayLabel}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="text-2xs px-1.5 py-0.5 bg-background/50 border-0"
+                  title={countTooltip}
+                >
+                  {displayCount.toLocaleString()}
+                </Badge>
+              </div>
+
+              {/* Cards */}
+              {items.map((row) => (
+                <KanbanCard
+                  key={String(row.id ?? Math.random())}
+                  row={row}
+                  titleKey={titleKey}
+                  subtitleKey={subtitleKey}
+                  allStatuses={allStatuses}
+                  groupField={groupField}
+                  entityCode={entityCode}
+                  onRowClick={onRowClick}
+                />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

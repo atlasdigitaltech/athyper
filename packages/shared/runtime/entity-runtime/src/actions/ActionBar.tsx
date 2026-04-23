@@ -19,7 +19,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, MoreHorizontal, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, MoreHorizontal, Settings2, XCircle } from "lucide-react";
 import {
   Button,
   Sheet,
@@ -28,6 +28,10 @@ import {
   SheetTitle,
   SheetFooter,
   Textarea,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@athyper/ui/primitives";
 import { getActionIcon } from "@athyper/icons/actions";
 import { cn } from "@athyper/theme/utils";
@@ -138,11 +142,8 @@ export function ActionBar({ operations, surface, entityCode, recordId, className
         const body = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(body.error ?? res.statusText);
       }
-      // Invalidate both list and detail caches
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
-      if (recordId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, recordId) });
-      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, recordId) });
       setFeedback({ status: "success", message: `${action.label} completed` });
     } catch (err) {
       setFeedback({
@@ -226,26 +227,57 @@ export function ActionBar({ operations, surface, entityCode, recordId, className
           );
         })}
 
-        {toolbar.map((action) => {
-          const Icon = getActionIcon(action.icon ?? action.permissionCode.split(".").pop() ?? "edit");
-          return (
-            <Button
-              key={action.permissionCode}
-              variant="outline"
-              size="sm"
-              onClick={() => handleAction(action)}
-              disabled={apiLoading}
-            >
-              <Icon size={14} />
-              {action.label}
-            </Button>
-          );
-        })}
+        {toolbar.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label="More options"
+                disabled={apiLoading}
+              >
+                <Settings2 size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {toolbar.map((action) => {
+                const Icon = getActionIcon(action.icon ?? action.permissionCode.split(".").pop() ?? "edit");
+                return (
+                  <DropdownMenuItem
+                    key={action.permissionCode}
+                    disabled={apiLoading}
+                    onClick={() => handleAction(action)}
+                    className="gap-2.5"
+                  >
+                    <Icon size={14} className="shrink-0 text-muted-foreground" />
+                    {action.label}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {overflow.length > 0 && (
-          <Button variant="ghost" size="icon" aria-label="More actions">
-            <MoreHorizontal size={16} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="More actions">
+                <MoreHorizontal size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {overflow.map((action) => (
+                <DropdownMenuItem
+                  key={action.permissionCode}
+                  disabled={apiLoading}
+                  onClick={() => handleAction(action)}
+                >
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 

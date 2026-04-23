@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
 import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/notifications/stream
  *
@@ -32,8 +34,6 @@ export async function GET(req: NextRequest) {
         Accept: "text/event-stream",
         "Cache-Control": "no-cache",
       },
-      // @ts-expect-error — Next.js fetch supports duplex for streaming
-      duplex: "half",
       signal: req.signal,
     });
   } catch {

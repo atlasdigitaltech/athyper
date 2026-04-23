@@ -1467,6 +1467,9 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!/^[A-Za-z0-9+/\r\n]*={0,2}$/.test(body.data_base64.replace(/[\r\n]/g, ""))) {
         res.status(400).json({ error: "INVALID_BASE64", message: "data_base64 must be valid base64" }); return;
       }
+      // Capture validated fields as consts so TypeScript preserves the non-null
+      // narrowing across the async transaction callback boundary.
+      const filename = body.filename;
 
       const fileBuffer = Buffer.from(body.data_base64.replace(/[\r\n]/g, ""), "base64");
       if (fileBuffer.length > maxUploadBytes) {
@@ -1493,7 +1496,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const contentType     = (body.content_type ?? "application/octet-stream").slice(0, 200);
       const sha256          = createHash("sha256").update(fileBuffer).digest("hex");
 
-      const safeFileName = body.filename.replace(/[/\\]/g, "_").replace(/[^\w.\-]/g, "_").slice(0, 200);
+      const safeFileName = filename.replace(/[/\\]/g, "_").replace(/[^\w.\-]/g, "_").slice(0, 200);
       const storageKey   = `${tCodeVer}/${cCodeVer}/content/content_item/${itemId}/${newAttachmentId}/v${nextVersionNo}/${safeFileName}`;
 
       // Step 1: upload bytes to S3
@@ -1508,8 +1511,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
             .values({
               id:                           newAttachmentId,
               tenant_id:                    c.tenantId,
-              file_name:                    body.filename!.slice(0, 500),
-              original_filename:            body.filename!.slice(0, 500),
+              file_name:                    filename.slice(0, 500),
+              original_filename:            filename.slice(0, 500),
               content_type:                 contentType,
               size_bytes:                   body.size_bytes ?? fileBuffer.length,
               sha256,

@@ -30,16 +30,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
 
+function getCsrfToken(): string {
+  const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]!) : "";
+}
+
 export interface UseOperationDispatchOptions {
   entityCode: string;
   /** Canonical business-key from the URL (NOT a UUID). */
   recordId: string;
+  /** Actual UUID of the record — required for direct action API calls. */
+  recordUuid?: string;
   /** User permissions used to gate the MODAL flow overrides. */
   userPermissions?: string[];
 }
 
 export interface UseOperationDispatchReturn {
-  dispatch: (actionCode: string, operations: EntityOperation[]) => void;
+  dispatch: (actionCode: string, operations: EntityOperation[], opts?: { remarks?: string }) => Promise<void> | void;
   activeBundle: FlowBundle | null;
   activeOpCode: string | null;
   isModalOpen: boolean;
@@ -58,6 +65,7 @@ function extractFlowCode(handlerTarget: string | null | undefined): string | nul
 export function useOperationDispatch({
   entityCode,
   recordId,
+  recordUuid,
   userPermissions = [],
 }: UseOperationDispatchOptions): UseOperationDispatchReturn {
   const qc = useQueryClient();
@@ -75,40 +83,68 @@ export function useOperationDispatch({
   }, [isSubmitting]);
 
   const dispatch = useCallback(
-    (actionCode: string, operations: EntityOperation[]) => {
+    (actionCode: string, operations: EntityOperation[], opts?: { remarks?: string }): Promise<void> | void => {
       const op = operations.find((o) => o.permission_code === actionCode);
       if (!op || op.handler_type !== "MODAL") return;
 
       const flowCode = extractFlowCode(op.handler_target);
-      if (!flowCode) return;
 
-      // Fetch the flow bundle for this specific flow_code + entity
-      setActiveOpCode(actionCode);
-      setIsModalOpen(true);
-
-      fetch(
-        `/api/relay/api/meta/flow?entity=${encodeURIComponent(entityCode)}&flow_code=${encodeURIComponent(flowCode)}`,
-      )
-        .then(async (res) => {
-          if (!res.ok) throw new Error(`Failed to fetch flow bundle: ${res.status}`);
-          const json = (await res.json()) as { bundle: FlowBundle } | FlowBundle;
-          // Support both { bundle: FlowBundle } and FlowBundle directly
-          const bundle = "bundle" in json ? json.bundle : json;
-          // Merge the caller's permissions into the bundle
-          setActiveBundle({
-            ...bundle,
-            user_permissions: [
-              ...new Set([...(bundle.user_permissions ?? []), ...userPermissions]),
-            ],
+      if (flowCode) {
+        // Complex flow modal — fetch bundle and open modal (non-blocking)
+        setActiveOpCode(actionCode);
+        setIsModalOpen(true);
+        fetch(
+          `/api/relay/api/meta/flow?entity=${encodeURIComponent(entityCode)}&flow_code=${encodeURIComponent(flowCode)}`,
+        )
+          .then(async (res) => {
+            if (!res.ok) throw new Error(`Failed to fetch flow bundle: ${res.status}`);
+            const json = (await res.json()) as { bundle: FlowBundle } | FlowBundle;
+            const bundle = "bundle" in json ? json.bundle : json;
+            setActiveBundle({
+              ...bundle,
+              user_permissions: [
+                ...new Set([...(bundle.user_permissions ?? []), ...userPermissions]),
+              ],
+            });
+          })
+          .catch(() => {
+            setIsModalOpen(false);
+            setActiveOpCode(null);
           });
-        })
-        .catch(() => {
-          // If we can't fetch the flow, close gracefully
-          setIsModalOpen(false);
-          setActiveOpCode(null);
-        });
+        return;
+      }
+
+      // Direct status transition (handler_target = 'submit'/'approve'/etc.) —
+      // POST to the action endpoint immediately and await the result.
+      const uuid = recordUuid;
+      if (!uuid) return;
+
+      return (async () => {
+        setIsSubmitting(true);
+        try {
+          const res = await fetch(
+            `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(uuid)}/action/${encodeURIComponent(actionCode)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+              body: JSON.stringify({ remarks: opts?.remarks }),
+            },
+          );
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+            const msg = typeof body["message"] === "string" ? body["message"] : `Action failed (${res.status})`;
+            throw new Error(msg);
+          }
+          await qc.invalidateQueries({
+            queryKey: ["record", entityCode, recordId],
+            exact: false,
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      })();
     },
-    [entityCode, userPermissions],
+    [entityCode, recordId, recordUuid, userPermissions, qc],
   );
 
   const submitModal = useCallback(
@@ -116,11 +152,12 @@ export function useOperationDispatch({
       if (!activeOpCode) return;
       setIsSubmitting(true);
       try {
+        const targetId = recordUuid ?? recordId;
         const res = await fetch(
-          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/action/${encodeURIComponent(activeOpCode)}`,
+          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(targetId)}/action/${encodeURIComponent(activeOpCode)}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
             body: JSON.stringify(draft),
           },
         );

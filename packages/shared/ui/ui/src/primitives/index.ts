@@ -35,3 +35,4 @@ export {
   DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup,
   DropdownMenuPortal, DropdownMenuSub, DropdownMenuRadioGroup,
 } from "./DropdownMenu";
+export { RelativeTimeCell, type RelativeTimeCellProps } from "./RelativeTimeCell";

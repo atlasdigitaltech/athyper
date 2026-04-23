@@ -19,7 +19,7 @@
  *   slugify         — convert label to lowercase_slug
  */
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import {
   useQuery, useMutation, useQueryClient,
   type UseQueryOptions,
@@ -27,7 +27,6 @@ import {
 } from "@tanstack/react-query";
 import { getCsrfToken } from "@/lib/bff-fetch";
 import { Search, X, AlertTriangle, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,

@@ -26,8 +26,7 @@ import {
   parseReportCode,
   type ReportCode,
 } from "../lib/reportRegistry";
-import { scopeToParams } from "../lib/scope";
-import type { FinanceScope } from "../lib/scope";
+import { scopeToParams, type FinanceScope } from "../lib/scope";
 import { BalanceSheetView } from "./BalanceSheetView";
 import { ProfitLossView } from "./ProfitLossView";
 import { TrialBalanceView } from "./TrialBalanceView";

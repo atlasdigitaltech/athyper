@@ -889,6 +889,19 @@ export type attachment_comment = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type attachment_folder = {
+    id: Generated<string>;
+    tenant_id: string;
+    entity_type: string;
+    entity_id: string;
+    name: string;
+    parent_id: string | null;
+    display_order: Generated<number>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Generated<Timestamp>;
+    updated_by: string | null;
+};
 export type audit_dlq = {
     id: Generated<string>;
     tenant_id: string;
@@ -2230,6 +2243,7 @@ export type company_code_supplier_profile = {
     bank_swift_code: string | null;
     bank_country_code: string | null;
     default_accounting_profile_id: string | null;
+    payment_term_id: string | null;
     payment_method_id: string | null;
     preferred_remittance_bank_link_id: string | null;
     tax_group_id: string | null;
@@ -2247,7 +2261,6 @@ export type company_code_supplier_profile = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    payment_term_id: string | null;
 };
 export type connector_instance = {
     id: Generated<string>;
@@ -3461,6 +3474,7 @@ export type entity_document_link = {
     metadata: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
+    folder_id: string | null;
 };
 export type entity_field = {
     id: Generated<string>;
@@ -3567,6 +3581,26 @@ export type entity_flow_field = {
     help_text: string | null;
     placeholder: string | null;
     sort_order: Generated<number>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+    section_key: string | null;
+    display_size: string | null;
+};
+export type entity_flow_section = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    flow_step_id: string;
+    section_key: string;
+    label: string;
+    description: string | null;
+    sort_order: Generated<number>;
+    collapse_default: Generated<boolean>;
+    visible_when: unknown | null;
+    reveal_behavior: Generated<string>;
+    icon_key: string | null;
+    help_text: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -3808,6 +3842,19 @@ export type field_security_policy = {
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type filter_preset = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    entity_code: string;
+    name: string;
+    filters: Generated<unknown>;
+    is_shared: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    updated_at: Timestamp | null;
+    created_by: string;
     updated_by: string | null;
 };
 export type fiscal_period = {
@@ -6871,8 +6918,8 @@ export type purchase_invoice = {
     invoice_type: Generated<string>;
     description: string | null;
     supplier_id: string | null;
-    supplier_invoice_number: string;
-    supplier_invoice_date: Timestamp;
+    supplier_invoice_number: string | null;
+    supplier_invoice_date: Timestamp | null;
     commitment_id: string | null;
     document_date: Generated<Timestamp>;
     posting_date: Generated<Timestamp>;
@@ -6933,6 +6980,8 @@ export type purchase_invoice = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    tax_mode: string | null;
+    tax_mode_source: string | null;
 };
 export type purchase_invoice_line = {
     id: Generated<string>;
@@ -7125,6 +7174,14 @@ export type push_subscription = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+};
+export type record_bookmark = {
+    id: Generated<string>;
+    tenant_id: string;
+    principal_id: string;
+    entity_code: string;
+    record_id: string;
+    created_at: Generated<Timestamp>;
 };
 export type render_dlq = {
     id: Generated<string>;
@@ -8503,6 +8560,7 @@ export type DB = {
     "control.entity_field": entity_field;
     "control.entity_flow": entity_flow;
     "control.entity_flow_field": entity_flow_field;
+    "control.entity_flow_section": entity_flow_section;
     "control.entity_flow_step": entity_flow_step;
     "control.entity_lifecycle": entity_lifecycle;
     "control.entity_operation": entity_operation;
@@ -8706,6 +8764,7 @@ export type DB = {
     "master.attachment": attachment;
     "master.attachment_acl": attachment_acl;
     "master.attachment_comment": attachment_comment;
+    "master.attachment_folder": attachment_folder;
     "master.auth_group": auth_group;
     "master.auth_group_member": auth_group_member;
     "master.auth_group_role": auth_group_role;
@@ -8754,6 +8813,7 @@ export type DB = {
     "master.document": document;
     "master.employee": employee;
     "master.entity_document_link": entity_document_link;
+    "master.filter_preset": filter_preset;
     "master.fiscal_period": fiscal_period;
     "master.fx_rate": fx_rate;
     "master.gl_account": gl_account;
@@ -8789,6 +8849,7 @@ export type DB = {
     "master.profit_center": profit_center;
     "master.project": project;
     "master.project_item": project_item;
+    "master.record_bookmark": record_bookmark;
     "master.saved_view": saved_view;
     "master.site": site;
     "master.spend_category": spend_category;

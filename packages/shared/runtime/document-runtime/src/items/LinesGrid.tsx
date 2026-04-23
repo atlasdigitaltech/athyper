@@ -11,7 +11,7 @@
  * Financial footer always shows Net · Tax · WHT · Gross (spec §7 decision #22).
  */
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { cn } from "@athyper/theme/utils";
 import { Skeleton } from "@athyper/ui/primitives";
 import {
@@ -778,18 +778,21 @@ export function LinesGrid({
   }
 
   async function handleDuplicateLine(line: DocumentLine) {
+    const nextNo = lines.reduce((m, l) => Math.max(m, Number(l.line_number) || 0), 0) + 1;
     await relayMutate(
       `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
       {
         method: "POST",
         body: JSON.stringify({
-          description: line.description,
-          item_code:   line.item_code,
-          quantity:    line.quantity,
-          unit_code:   line.unit_code,
-          unit_price:  line.unit_price,
-          tax_code:    line.tax_code,
-          data:        line.data,
+          line_number:  nextNo,
+          description:  line.description,
+          item_code:    line.item_code,
+          quantity:     line.quantity,
+          unit_code:    line.unit_code,
+          unit_price:   line.unit_price,
+          line_amount:  line.line_amount,
+          tax_code:     line.tax_code,
+          data:         line.data,
         }),
       },
     );
@@ -820,26 +823,29 @@ export function LinesGrid({
   }
 
   async function handleBulkCopy() {
-    const selected = lines.filter((l) => selectedIds.has(l.id));
-    await Promise.all(
-      selected.map((l) =>
-        relayMutate(
-          `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              description: l.description,
-              item_code:   l.item_code,
-              quantity:    l.quantity,
-              unit_code:   l.unit_code,
-              unit_price:  l.unit_price,
-              tax_code:    l.tax_code,
-              data:        l.data,
-            }),
-          },
-        ),
-      ),
-    );
+    const selected  = lines.filter((l) => selectedIds.has(l.id));
+    // Compute starting line_no from current lines to avoid server-side MAX race on sequential inserts
+    let nextLineNo  = lines.reduce((m, l) => Math.max(m, Number(l.line_number) || 0), 0);
+    for (const l of selected) {
+      nextLineNo += 1;
+      await relayMutate(
+        `/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            line_number:  nextLineNo,
+            description:  l.description,
+            item_code:    l.item_code,
+            quantity:     l.quantity,
+            unit_code:    l.unit_code,
+            unit_price:   l.unit_price,
+            line_amount:  l.line_amount,
+            tax_code:     l.tax_code,
+            data:         l.data,
+          }),
+        },
+      );
+    }
     onRefresh?.();
   }
 

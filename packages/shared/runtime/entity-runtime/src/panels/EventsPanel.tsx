@@ -8,13 +8,17 @@ import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 export interface EventsPanelProps {
   entityCode: string;
   recordId: string;
+  /** UUID of the record — required by the activity API (/api/activity/:entity/:id validates UUID).
+   *  When omitted, recordId is used as-is (only safe if recordId already is a UUID). */
+  recordUuid?: string;
 }
 
-export function EventsPanel({ entityCode, recordId }: EventsPanelProps) {
+export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelProps) {
+  const apiId = recordUuid ?? recordId;
   const { data, isLoading } = useQuery<{ data: ActivityEntry[] }>({
-    queryKey: ["activity", entityCode, recordId],
+    queryKey: ["activity", entityCode, apiId],
     queryFn: async ({ signal }) => {
-      const res = await fetch(`/api/relay/api/activity/${entityCode}/${recordId}`, { signal });
+      const res = await fetch(`/api/relay/api/activity/${entityCode}/${apiId}`, { signal });
       if (!res.ok) return { data: [] };
       return res.json() as Promise<{ data: ActivityEntry[] }>;
     },

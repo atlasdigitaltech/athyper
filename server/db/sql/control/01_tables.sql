@@ -3632,7 +3632,7 @@ CREATE TABLE IF NOT EXISTS control.document_sequence_config (
     -- NULL = default pattern: prefix + sep + year + sep + padded_seq
 
     -- Reset strategy
-    reset_strategy      text        NOT NULL DEFAULT 'YEARLY',
+    reset_strategy      text        NOT NULL DEFAULT 'yearly',
     -- NONE = continuous; YEARLY = reset per fiscal year; MONTHLY = per period
 
     -- Metadata
@@ -3656,8 +3656,12 @@ CREATE TABLE IF NOT EXISTS control.document_sequence_config (
     CONSTRAINT dsc_prefix_chk       CHECK (btrim(prefix) <> ''),
     CONSTRAINT dsc_doc_type_chk     CHECK (btrim(doc_type) <> ''),
     CONSTRAINT dsc_pad_width_chk    CHECK (pad_width BETWEEN 3 AND 10),
-    CONSTRAINT dsc_reset_chk        CHECK (reset_strategy IN ('NONE','YEARLY','MONTHLY'))
+    CONSTRAINT dsc_reset_chk        CHECK (reset_strategy IN ('none','yearly','monthly'))
 );
+-- Reconcile CHECK constraint with lookup domain codes (lowercase). Drop+add is idempotent.
+ALTER TABLE control.document_sequence_config DROP CONSTRAINT IF EXISTS dsc_reset_chk;
+ALTER TABLE control.document_sequence_config ADD CONSTRAINT dsc_reset_chk
+    CHECK (reset_strategy IN ('none','yearly','monthly'));
 
 COMMENT ON TABLE control.document_sequence_config IS
     'ARCHETYPE=B;SCOPE=T. Document numbering configuration. Cold table — rarely modified. '

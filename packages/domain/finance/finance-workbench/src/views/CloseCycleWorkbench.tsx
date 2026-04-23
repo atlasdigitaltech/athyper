@@ -35,8 +35,7 @@ import {
   useSignOffPhase,
   useStartCloseRun,
 } from "../hooks/usePeriodCloseMutations";
-import { scopeToParams } from "../lib/scope";
-import type { FinanceScope } from "../lib/scope";
+import { scopeToParams, type FinanceScope } from "../lib/scope";
 import { fmtDate } from "../components/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

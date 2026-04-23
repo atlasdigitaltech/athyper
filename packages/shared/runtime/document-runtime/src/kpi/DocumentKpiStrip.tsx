@@ -11,7 +11,6 @@
  */
 "use client";
 
-import React from "react";
 import { cn } from "@athyper/theme/utils";
 import { getCurrencySymbol, splitDecimal } from "../_shared/format";
 

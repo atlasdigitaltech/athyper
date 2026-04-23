@@ -1489,7 +1489,7 @@ CREATE TABLE IF NOT EXISTS master.bank_account (
     bank_country_override   character(2),
 
     -- Account nature (fintech / digital wallet support)
-    account_nature          text            NOT NULL DEFAULT 'DIRECT',
+    account_nature          text            NOT NULL DEFAULT 'direct',
     provider_account_ref    text,
     correspondent_bank_party_id uuid,
 

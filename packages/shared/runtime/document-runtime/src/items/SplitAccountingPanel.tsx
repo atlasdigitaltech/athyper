@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Trash2, X, XCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";

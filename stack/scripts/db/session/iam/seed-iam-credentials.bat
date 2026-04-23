@@ -106,12 +106,12 @@ REM User lists — must stay in sync with seed-iam-credentials.sh and:
 REM   stack\config\iam\realm-demosetup.json
 REM   stack\config\iam\realm-platform-control.json
 REM ---------------------------------------------------------------------------
-set "ATHYPER_USERS=athq.viewer athq.reporter athq.requester athq.agent athq.manager athq.owner athq.admin aqtu.manager asac.manager auic.manager asgf.manager athq.cfo partner.viewer partner.agent partner.manager partner.owner karim.dual"
+set "ATHYPER_USERS=athq.viewer athq.reporter athq.requester athq.agent athq.manager athq.owner athq.admin aqtu.manager asac.manager auic.manager asgf.manager athq.cfo partner.viewer partner.agent partner.manager partner.owner karim.dual tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin"
 set "PCC_USERS=product.admin tenant.manager support.admin"
 
 echo.
 echo === Seeding IAM credentials ===
-echo   realm athyper:          17 users
+echo   realm athyper:          22 users
 echo   realm platform-control: 3 users
 echo.
 

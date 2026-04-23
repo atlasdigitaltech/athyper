@@ -68,7 +68,7 @@ export function SatelliteDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <SheetContent side="right" className={cn("w-full sm:max-w-lg", className)}>
+      <SheetContent side="right" className={cn("w-full sm:max-w-lg", className)} aria-describedby={undefined}>
         <SheetHeader>
           <div className="flex items-center justify-between">
             <SheetTitle>{card.title}</SheetTitle>

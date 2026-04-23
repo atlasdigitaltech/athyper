@@ -17,10 +17,8 @@ import {
   Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Skeleton,
 } from "@athyper/ui/primitives";
-import { useJournalList } from "../hooks/useJournalList";
-import type { JournalEntry } from "../hooks/useJournalList";
-import { useCreateJournal } from "../hooks/useCreateJournal";
-import type { CreateJournalLine } from "../hooks/useCreateJournal";
+import { useJournalList, type JournalEntry } from "../hooks/useJournalList";
+import { useCreateJournal, type CreateJournalLine } from "../hooks/useCreateJournal";
 import { useReverseJournal } from "../hooks/useReverseJournal";
 import { useCompanyList } from "../hooks/useCharts";
 import { PostingTrace } from "./PostingTrace";

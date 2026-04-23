@@ -104,7 +104,7 @@ function ViewRow({
           {[
             filterCount > 0 ? `${filterCount} filter${filterCount !== 1 ? "s" : ""}` : null,
             columnCount > 0 ? `${columnCount} column${columnCount !== 1 ? "s" : ""}` : null,
-            view.config.sort ? `sorted by ${view.config.sort.key} ${view.config.sort.dir}` : null,
+            view.config.sort?.[0] ? `sorted by ${view.config.sort[0].key} ${view.config.sort[0].dir}` : null,
             view.config.pageSize ? `${view.config.pageSize} per page` : null,
           ].filter(Boolean).join(" · ") || "No configuration"}
           {" · "}

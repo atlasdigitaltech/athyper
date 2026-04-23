@@ -101,7 +101,7 @@ BEGIN
             currency_code, base_currency_code, exchange_rate,
             subtotal_amount, tax_amount, withholding_tax_amount,
             total_amount, retention_amount, advance_deduction_amount,
-            description, status, created_by,
+            description, status, tax_mode, tax_mode_source, created_by,
             fiscal_year, period_number
         ) VALUES (
             v_invoice_id,
@@ -114,7 +114,7 @@ BEGIN
             1000.00, 0.00, 0.00,
             1000.00, 0.00, 500.00,  -- advance_deduction_amount = 500
             'Scenario A7 — Step 2: Invoice recovering USD 500 advance',
-            'draft', v_sys,
+            'draft', 'no_tax', 'user_override', v_sys,
             extract(year FROM CURRENT_DATE)::smallint,
             extract(month FROM CURRENT_DATE)::smallint
         );

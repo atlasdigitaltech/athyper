@@ -415,9 +415,14 @@ export function useFlowEngine(
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [currentStep.fields, ruleCtx]);
 
-  // Advance-rule readiness
+  // Advance-rule readiness — only gate on fields that have a binding in this step.
+  // If a binding is missing due to a seed/config issue, the user cannot fill the
+  // field and must not be permanently blocked.
   const canAdvance = useMemo(() => {
-    const required = currentStep.advance_rule.required_fields ?? [];
+    const boundFieldNames = new Set(currentStep.fields.map((f) => f.field_name));
+    const required = (currentStep.advance_rule.required_fields ?? []).filter((fn) =>
+      boundFieldNames.has(fn),
+    );
     const allFilled = required.every((fieldName) => {
       const v = state.draft[fieldName];
       return v !== null && v !== undefined && v !== "";

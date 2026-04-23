@@ -13,8 +13,21 @@
  * the badge without pulling in the full semantic-colors palette at build time.
  */
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
-import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage } from "./types";
+import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage, SlaStatus } from "./types";
 import { statusToIntent } from "../_shared/status";
+
+// ── Label formatter ───────────────────────────────────────────────────────────
+
+function formatLabel(code: string): string {
+  return code.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ── Stage key normaliser — maps DB status codes to progress rail stage keys ──
+
+function toStageKey(statusKey: string): string {
+  if (statusKey === "fully_paid" || statusKey === "partially_paid") return "paid";
+  return statusKey;
+}
 
 // ── Date / number formatters ──────────────────────────────────────────────────
 
@@ -39,6 +52,46 @@ const fmtAmount = (val: unknown): string | undefined => {
     maximumFractionDigits: 2,
   }).format(n);
 };
+
+// ── Duration + SLA helpers ────────────────────────────────────────────────────
+
+/**
+ * Returns a compact human-readable duration between two ISO timestamps.
+ * If toIso is omitted, uses now().
+ * Examples: "45m", "2h 30m", "3d 4h"
+ */
+function calcDurationLabel(fromIso: unknown, toIso?: unknown): string | undefined {
+  if (!fromIso || typeof fromIso !== "string") return undefined;
+  const from = new Date(fromIso);
+  if (isNaN(from.getTime())) return undefined;
+  const to = toIso && typeof toIso === "string" ? new Date(toIso) : new Date();
+  if (isNaN(to.getTime())) return undefined;
+  const diffMs = to.getTime() - from.getTime();
+  if (diffMs < 0) return undefined;
+  const totalMinutes = Math.floor(diffMs / 60_000);
+  const days  = Math.floor(totalMinutes / 1_440);
+  const hours = Math.floor((totalMinutes % 1_440) / 60);
+  const mins  = totalMinutes % 60;
+  if (days  > 0) return hours > 0 ? `${days}d ${hours}h`  : `${days}d`;
+  if (hours > 0) return mins  > 0 ? `${hours}h ${mins}m`  : `${hours}h`;
+  return `${mins}m`;
+}
+
+/**
+ * Derives SLA compliance status given elapsed hours and the target SLA hours.
+ * For completed stages, pass the actual elapsed; isActive=false.
+ */
+function deriveSlaStatus(
+  elapsedHours: number,
+  targetHours: number,
+  isActive: boolean,
+): SlaStatus {
+  const ratio = elapsedHours / targetHours;
+  if (!isActive) return ratio <= 1 ? "completed_ok" : "completed_late";
+  if (ratio > 1)    return "breached";
+  if (ratio >= 0.75) return "at_risk";
+  return "on_track";
+}
 
 // ── Due meta helper ───────────────────────────────────────────────────────────
 
@@ -65,19 +118,19 @@ function calcDueMeta(
 // ── Progress rail constants ───────────────────────────────────────────────────
 
 const APPROVABLE_STAGES: ProgressStage[] = [
-  { key: "draft",     label: "Draft" },
-  { key: "submitted", label: "Submitted" },
-  { key: "approved",  label: "Approved" },
-  { key: "posted",    label: "Posted" },
-  { key: "paid",      label: "Paid" },
+  { key: "draft",            label: "Draft" },
+  { key: "pending_approval", label: "Submitted" },
+  { key: "approved",         label: "Approved" },
+  { key: "posted",           label: "Posted" },
+  { key: "paid",             label: "Paid" },
 ];
 
 const NEXT_ACTION_COPY: Record<string, string> = {
-  draft:     "Submit for approval — it will be routed to your approver",
-  submitted: "Awaiting review from Finance Manager",
-  approved:  "Ready to post — create accounting entries",
-  posted:    "Mark as paid when settlement is confirmed",
-  paid:      "Invoice is settled — no further action needed",
+  draft:            "Submit for approval — it will be routed to your approver",
+  pending_approval: "Awaiting review from Finance Manager",
+  approved:         "Ready to post — create accounting entries",
+  posted:           "Mark as paid when settlement is confirmed",
+  paid:             "Invoice is settled — no further action needed",
 };
 
 // ── Initials helper ───────────────────────────────────────────────────────────
@@ -110,7 +163,7 @@ export function buildApprovableHeaderFromRecord(
   // ── Identity ────────────────────────────────────────────────────────────────
   const numberVal = dh?.number_field ? String(data[dh.number_field] ?? entity.entity_code) : entity.entity_code;
   const statusRaw = dh?.status_field ? data[dh.status_field] : undefined;
-  const statusLabel = statusRaw ? String(statusRaw) : "Unknown";
+  const statusLabel = statusRaw ? formatLabel(String(statusRaw)) : "Unknown";
 
   const titleVal = dh?.title_field && data[dh.title_field]
     ? String(data[dh.title_field])
@@ -196,18 +249,84 @@ export function buildApprovableHeaderFromRecord(
   const statusKey = typeof statusRaw === "string"
     ? statusRaw.toLowerCase().replace(/[\s-]/g, "_")
     : "draft";
-  const stepIndex = APPROVABLE_STAGES.findIndex((s) => s.key === statusKey);
+  const stageKey = toStageKey(statusKey);
+  const stepIndex = APPROVABLE_STAGES.findIndex((s) => s.key === stageKey);
   const effectiveIndex = stepIndex === -1 ? 0 : stepIndex;
-  const currentKey = stepIndex === -1 ? "draft" : statusKey;
+  const currentKey = stepIndex === -1 ? "draft" : stageKey;
+
+  // ── Per-stage timestamps (raw ISO for duration math) ──────────────────────
+  const createdAtIso       = dh?.created_at_field         ? (data[dh.created_at_field]         as string | undefined) : undefined;
+  const statusChangedAtIso = dh?.status_changed_at_field  ? (data[dh.status_changed_at_field]  as string | undefined) : undefined;
+
+  const createdAtFormatted       = createdAtIso       ? fmtDate(createdAtIso)       : undefined;
+  const statusChangedAtFormatted = statusChangedAtIso ? fmtDate(statusChangedAtIso) : undefined;
+
+  function stageReachedAt(i: number): string | undefined {
+    if (i > effectiveIndex)   return undefined;
+    if (i === 0)              return createdAtFormatted ?? docDateFormatted;
+    if (i === effectiveIndex) return statusChangedAtFormatted ?? docDateFormatted;
+    return statusChangedAtFormatted ?? docDateFormatted;
+  }
+
+  // ── Duration + SLA per stage ───────────────────────────────────────────────
+  // Draft:         created_at  → status_changed_at  (or now if still draft)
+  // Current stage: status_changed_at → now()
+  // Past stages between Draft and current: best-effort (status_changed_at used as boundary)
+  // Future stages: no duration
+
+  function stageDurationLabel(i: number): string | undefined {
+    if (i > effectiveIndex) return undefined;
+    if (i === 0) {
+      // Draft: from created_at to status_changed_at (or now if still draft)
+      return calcDurationLabel(createdAtIso, effectiveIndex > 0 ? statusChangedAtIso : undefined);
+    }
+    if (i === effectiveIndex) {
+      // Current active stage: from status_changed_at to now
+      return calcDurationLabel(statusChangedAtIso);
+    }
+    // Intermediate completed stages — elapsed within same status_changed_at window
+    return undefined;
+  }
+
+  // SLA target hours per stage — seeded as 24 h for standard AP.
+  // Extracted from entity feature_flags if available; falls back to 24 h default.
+  const defaultSlaHours: number = (flags["sla_target_hours"] as number | undefined) ?? 24;
+
+  function stageSlaStatus(i: number, durationLbl: string | undefined): SlaStatus | undefined {
+    if (!durationLbl || i > effectiveIndex) return undefined;
+    const rawMs = (() => {
+      if (i === 0) {
+        const from = createdAtIso ? new Date(createdAtIso).getTime() : NaN;
+        const to   = effectiveIndex > 0 && statusChangedAtIso
+          ? new Date(statusChangedAtIso).getTime()
+          : Date.now();
+        return isNaN(from) ? NaN : to - from;
+      }
+      if (i === effectiveIndex) {
+        const from = statusChangedAtIso ? new Date(statusChangedAtIso).getTime() : NaN;
+        return isNaN(from) ? NaN : Date.now() - from;
+      }
+      return NaN;
+    })();
+    if (isNaN(rawMs)) return undefined;
+    const elapsedHours = rawMs / 3_600_000;
+    const isActive     = i === effectiveIndex;
+    return deriveSlaStatus(elapsedHours, defaultSlaHours, isActive);
+  }
 
   dto.progressRail = {
-    stages: APPROVABLE_STAGES.map((stage, i) => ({
-      ...stage,
-      reachedAt: i === effectiveIndex && docDateFormatted ? docDateFormatted : undefined,
-      targetAt: stage.key === "paid" && i > effectiveIndex && dto.dates?.dueDate
-        ? dto.dates.dueDate
-        : undefined,
-    })),
+    stages: APPROVABLE_STAGES.map((stage, i) => {
+      const durationLabel = stageDurationLabel(i);
+      return {
+        ...stage,
+        reachedAt:      stageReachedAt(i),
+        targetAt:       stage.key === "paid" && i > effectiveIndex && dto.dates?.dueDate
+          ? dto.dates.dueDate : undefined,
+        durationLabel,
+        slaTargetHours: i <= effectiveIndex ? defaultSlaHours : undefined,
+        slaStatus:      stageSlaStatus(i, durationLabel),
+      };
+    }),
     currentKey,
     stepIndex: effectiveIndex,
     nextActionCopy: NEXT_ACTION_COPY[currentKey],

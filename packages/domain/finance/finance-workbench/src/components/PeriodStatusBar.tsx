@@ -1,8 +1,7 @@
 "use client";
 
 import { cn } from "@athyper/theme/utils";
-import { periodLabel, periodStatusColor, periodStatusLabel } from "../lib/period";
-import type { FiscalPeriodStatus } from "../lib/period";
+import { periodLabel, periodStatusColor, periodStatusLabel, type FiscalPeriodStatus } from "../lib/period";
 
 interface PeriodStatusBarProps {
   fiscalYear: number;

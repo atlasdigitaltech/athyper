@@ -7,6 +7,28 @@ INSERT INTO control.lookup_value
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
+    -- Document lifecycle domains
+    ('document',  'Document',
+     'log.activity_domain',
+     'Document lifecycle events: create, update, submit, approve, cancel, reopen.',
+     5),
+    ('workflow',  'Workflow',
+     'log.activity_domain',
+     'Workflow routing events: submission, approvals, rejections, delegations, escalations.',
+     6),
+    ('accounting','Accounting',
+     'log.activity_domain',
+     'Accounting events: journal posting, reversal, revaluation, period assignment.',
+     7),
+    ('payment',   'Payment',
+     'log.activity_domain',
+     'Payment processing events: payment run, clearance, remittance, bank confirmation.',
+     8),
+    ('system',    'System',
+     'log.activity_domain',
+     'System-generated events: imports, migrations, automated background processing.',
+     9),
+    -- Analytics / BI domains
     ('kpi',       'KPI',
      'log.activity_domain',
      'KPI calculation, threshold breach, and execution activities.',

@@ -130,12 +130,25 @@ export interface ApprovableFlowStep {
 
 // ── Progress rail ───────────────────────────────────────────────────────────
 
+export type SlaStatus =
+  | "on_track"          // elapsed < 75% of target
+  | "at_risk"           // elapsed 75–100% of target
+  | "breached"          // elapsed > 100% of target, stage still active
+  | "completed_ok"      // completed within SLA target
+  | "completed_late";   // completed after SLA target
+
 export interface ProgressStage {
   key: string;
   label: string;
   reachedAt?: string;
   actor?: string;
   targetAt?: string;
+  /** Human-readable duration this stage took / has been running, e.g. "2h 30m" */
+  durationLabel?: string;
+  /** SLA compliance status — only present when slaTargetHours is known */
+  slaStatus?: SlaStatus;
+  /** SLA target in hours from the bound workflow_sla_policy */
+  slaTargetHours?: number;
 }
 
 export interface ProgressRail {

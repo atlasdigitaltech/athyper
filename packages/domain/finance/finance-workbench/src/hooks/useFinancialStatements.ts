@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { FinanceScope } from "../lib/scope";
-import { scopeCacheKey, scopeToParams } from "../lib/scope";
+import { scopeCacheKey, scopeToParams, type FinanceScope } from "../lib/scope";
 import type { StatementLineItem } from "../components/StatementRow";
 
 export interface StatementSection {

@@ -11,7 +11,6 @@
  *      payment_term, fiscal_year, period_number)
  */
 
-import React from "react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import type { SummaryLine } from "./useFlowEngine";

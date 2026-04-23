@@ -29,10 +29,8 @@ import { ChevronDown, CalendarDays } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { useScopeOptions } from "../hooks/useScopeOptions";
 import { useFiscalPeriods } from "../hooks/useFiscalPeriods";
-import { parseFinanceScope, scopeToParams } from "../lib/scope";
-import { periodLabel } from "../lib/period";
-import type { FinanceScope, ScopeType } from "../lib/scope";
-import type { FiscalPeriodStatus } from "../lib/period";
+import { parseFinanceScope, scopeToParams, type FinanceScope, type ScopeType } from "../lib/scope";
+import { periodLabel, type FiscalPeriodStatus } from "../lib/period";
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 

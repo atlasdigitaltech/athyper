@@ -22,7 +22,7 @@
  *   />
  */
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, Send, Loader2 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {

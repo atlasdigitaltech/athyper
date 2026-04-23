@@ -558,18 +558,25 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
           return;
         }
       }
+      // Capture validated required fields — TypeScript can't narrow optional
+      // properties after a loop check, so we assert here after the runtime guard.
+      const code            = body.code as string;
+      const name            = body.name as string;
+      const handler_type    = body.handler_type as string;
+      const cron_expression = body.cron_expression as string;
+      const target_queue    = body.target_queue as string;
 
       const schedule = await db
         .insertInto("control.cron_schedule")
         .values({
           tenant_id:        body.is_platform_global ? null : tenantId,
-          code:             body.code!.trim(),
-          name:             body.name!.trim(),
+          code:             code.trim(),
+          name:             name.trim(),
           description:      body.description?.trim() ?? null,
-          handler_type:     body.handler_type!.trim(),
-          cron_expression:  body.cron_expression!.trim(),
+          handler_type:     handler_type.trim(),
+          cron_expression:  cron_expression.trim(),
           timezone:         (body.timezone ?? "UTC").trim(),
-          target_queue:     body.target_queue!.trim(),
+          target_queue:     target_queue.trim(),
           payload_template: JSON.stringify(body.payload_template ?? {}),
           priority:         body.priority ?? 0,
           max_retries:      body.max_retries ?? 3,

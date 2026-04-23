@@ -8,8 +8,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { FinanceScope } from "../lib/scope";
-import { scopeCacheKey } from "../lib/scope";
+import { scopeCacheKey, type FinanceScope } from "../lib/scope";
 
 // ── Task action ───────────────────────────────────────────────────────────────
 

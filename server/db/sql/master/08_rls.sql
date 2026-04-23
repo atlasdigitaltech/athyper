@@ -1878,3 +1878,96 @@ CREATE POLICY tenant_delete ON master.dashboard_widget
 
 CREATE POLICY admin_read  ON master.dashboard_widget FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.dashboard_widget FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.record_bookmark
+-- ════════════════════════════════════════════════════════════════════════════
+-- Purely personal: a principal can only see/create/delete their own bookmarks.
+ALTER TABLE master.record_bookmark ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.record_bookmark FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON master.record_bookmark;
+DROP POLICY IF EXISTS tenant_insert ON master.record_bookmark;
+DROP POLICY IF EXISTS tenant_delete ON master.record_bookmark;
+DROP POLICY IF EXISTS admin_read    ON master.record_bookmark;
+DROP POLICY IF EXISTS admin_write   ON master.record_bookmark;
+
+CREATE POLICY tenant_read ON master.record_bookmark
+    FOR SELECT USING (
+        tenant_id    = shared.current_tenant_id_soft()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+CREATE POLICY tenant_insert ON master.record_bookmark
+    FOR INSERT WITH CHECK (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+CREATE POLICY tenant_delete ON master.record_bookmark
+    FOR DELETE USING (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+CREATE POLICY admin_read  ON master.record_bookmark FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.record_bookmark FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- master.filter_preset
+-- ════════════════════════════════════════════════════════════════════════════
+-- Personal by default; is_shared = true exposes the preset to all principals
+-- in the same tenant (read-only for non-owners).
+ALTER TABLE master.filter_preset ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.filter_preset FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read_own    ON master.filter_preset;
+DROP POLICY IF EXISTS tenant_read_shared ON master.filter_preset;
+DROP POLICY IF EXISTS tenant_insert      ON master.filter_preset;
+DROP POLICY IF EXISTS tenant_update      ON master.filter_preset;
+DROP POLICY IF EXISTS tenant_delete      ON master.filter_preset;
+DROP POLICY IF EXISTS admin_read         ON master.filter_preset;
+DROP POLICY IF EXISTS admin_write        ON master.filter_preset;
+
+-- Own presets: always visible to the creator
+CREATE POLICY tenant_read_own ON master.filter_preset
+    FOR SELECT USING (
+        tenant_id    = shared.current_tenant_id_soft()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+-- Shared presets: visible to all principals in the tenant
+CREATE POLICY tenant_read_shared ON master.filter_preset
+    FOR SELECT USING (
+        tenant_id = shared.current_tenant_id_soft()
+        AND is_shared = true
+    );
+
+CREATE POLICY tenant_insert ON master.filter_preset
+    FOR INSERT WITH CHECK (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+-- Only the owner can update or delete their preset
+CREATE POLICY tenant_update ON master.filter_preset
+    FOR UPDATE
+    USING (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    )
+    WITH CHECK (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+CREATE POLICY tenant_delete ON master.filter_preset
+    FOR DELETE USING (
+        tenant_id    = shared.current_tenant_id()
+        AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
+    );
+
+CREATE POLICY admin_read  ON master.filter_preset FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.filter_preset FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

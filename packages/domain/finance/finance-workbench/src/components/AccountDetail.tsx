@@ -1,11 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, Separator } from "@athyper/ui/primitives";
+import { Card, CardContent, CardHeader, CardTitle, Separator, Badge } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import type { GlAccountNode } from "../data/types";
 import { AccountClassBadge, AccountClassDot, NodeTypeBadge } from "./ChartBadge";
 import { fmtFull } from "./format";
-import { Badge } from "@athyper/ui/primitives";
 
 interface AccountDetailProps {
   node: GlAccountNode;

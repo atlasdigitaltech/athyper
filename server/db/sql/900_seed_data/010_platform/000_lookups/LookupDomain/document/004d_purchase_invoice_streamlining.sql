@@ -16,8 +16,40 @@
 BEGIN;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- §S1  Backfill document.purchase_invoice
+-- §S3-PRE  Drop old CHECK constraints FIRST so backfill UPDATEs are not blocked.
+--          Idempotent: both IFs guard against missing constraints.
 -- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+           AND constraint_type = 'CHECK' AND constraint_name = 'pi_type_chk'
+    ) THEN
+        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_type_chk;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+           AND constraint_type = 'CHECK' AND constraint_name = 'pi_invoice_type_chk'
+    ) THEN
+        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_invoice_type_chk;
+    END IF;
+END $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §S1  Backfill document.purchase_invoice
+--      Normalize to lowercase first (handles any rows that may have been
+--      inserted with uppercase values from prior route code), then rename
+--      deprecated codes.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Normalize to canonical lowercase codes (no-op if already lowercase)
+UPDATE document.purchase_invoice
+   SET invoice_type = LOWER(invoice_type)
+ WHERE invoice_type <> LOWER(invoice_type);
 
 -- down_payment → advance (consolidated into the unified Advance type)
 UPDATE document.purchase_invoice
@@ -68,29 +100,8 @@ UPDATE control.lookup_value
 -- ─────────────────────────────────────────────────────────────────────────────
 -- §S3  Rebuild the invoice_type CHECK constraint
 --      New allowed set: 7 values (5 primary + 2 advanced)
+--      Both old constraints were already dropped at the top of this migration.
 -- ─────────────────────────────────────────────────────────────────────────────
-
-DO $$
-BEGIN
-    -- Drop the original DDL constraint (pi_type_chk — 9 values, name does not match
-    -- the '%invoice_type%' pattern so it was never dropped by the old code).
-    IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints
-         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
-           AND constraint_type = 'CHECK' AND constraint_name = 'pi_type_chk'
-    ) THEN
-        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_type_chk;
-    END IF;
-
-    -- Drop any prior pi_invoice_type_chk (idempotent re-run guard)
-    IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints
-         WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
-           AND constraint_type = 'CHECK' AND constraint_name = 'pi_invoice_type_chk'
-    ) THEN
-        ALTER TABLE document.purchase_invoice DROP CONSTRAINT pi_invoice_type_chk;
-    END IF;
-END $$;
 
 ALTER TABLE document.purchase_invoice
     ADD CONSTRAINT pi_invoice_type_chk CHECK (

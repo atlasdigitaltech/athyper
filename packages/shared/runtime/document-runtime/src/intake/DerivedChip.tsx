@@ -11,7 +11,7 @@
  * When the user submits the override a small "overridden" badge appears.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Pencil, Lock, Check, X, RotateCcw } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 

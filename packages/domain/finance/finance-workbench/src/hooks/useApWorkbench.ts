@@ -1,8 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FinanceScope } from "../lib/scope";
-import { scopeCacheKey, scopeToParams } from "../lib/scope";
+import { scopeCacheKey, scopeToParams, type FinanceScope } from "../lib/scope";
 
 
 function buildPageParams(scope: FinanceScope, opts?: { page?: number; limit?: number }): URLSearchParams {

@@ -8,7 +8,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./activity": "./src/activity/index.ts",
-    "./comments": "./src/comments/index.ts"
+    "./comments": "./src/comments/index.ts",
+    "./bookmarks": "./src/bookmarks/index.ts",
+    "./badges": "./src/badges/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

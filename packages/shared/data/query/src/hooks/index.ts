@@ -14,9 +14,8 @@ import { type CompiledEntity, type LookupDomainBundle, type EntityOperation, typ
 import { type MasterRecord } from "@athyper/api-contracts/records";
 import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent } from "@athyper/api-contracts/workflow";
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
-import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient } from "@athyper/api-client";
-import { type DocumentDetail, type FlowBundle } from "@athyper/api-contracts/documents";
-import { type StatusTransitionRequest } from "@athyper/api-contracts/documents";
+import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient, type EntityListParams } from "@athyper/api-client";
+import { type DocumentDetail, type FlowBundle, type StatusTransitionRequest } from "@athyper/api-contracts/documents";
 
 // ── Client singletons ───────────────────────────────────────────
 // Initialized once at app boot via setClients().
@@ -84,11 +83,12 @@ export function useEntityOperations(entityName: string) {
   });
 }
 
-export function useLookupDomain(domainCode: string) {
+export function useLookupDomain(domainCode: string, opts?: { enabled?: boolean }) {
   return useQuery<LookupDomainBundle>({
     queryKey: queryKeys.lookupDomain.byCode(domainCode),
     queryFn: () => meta().getLookupDomainBundle(domainCode),
-    staleTime: 10 * 60 * 1000, // lookups are very stable
+    staleTime: 10 * 60 * 1000,
+    enabled: opts?.enabled ?? true,
   });
 }
 
@@ -119,8 +119,6 @@ export function useEntityFlow(entityCode: string, trigger: string = "new") {
 
 // ── Records Hooks ───────────────────────────────────────────────
 
-import type { EntityListParams } from "@athyper/api-client";
-
 export function useEntityList(
   entityCode: string,
   params?: EntityListParams,
@@ -129,7 +127,7 @@ export function useEntityList(
   // Sort, filters, search, page, pageSize, and facets all determine unique data.
   const cacheKey = params ? {
     ...(params.q        ? { _q:      params.q                    } : {}),
-    ...(params.sort     ? { _sort:   `${params.sort.key}:${params.sort.dir}` } : {}),
+    ...(params.sort?.length ? { _sort: params.sort.map((s) => `${s.key}:${s.dir}`).join(",") } : {}),
     ...(params.page     ? { _page:   params.page                 } : {}),
     ...(params.pageSize ? { _size:   params.pageSize             } : {}),
     ...(params.facets   ? { _facets: params.facets               } : {}),

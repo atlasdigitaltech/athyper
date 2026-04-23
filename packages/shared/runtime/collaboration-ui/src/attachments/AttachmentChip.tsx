@@ -10,8 +10,7 @@
 
 import { X, Paperclip, FileText, Image, FileSpreadsheet, File, AlertCircle, RotateCcw } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import type { StagedAttachment } from "../hooks/attachments";
-import type { CommentAttachmentItem } from "../hooks/attachments";
+import type { StagedAttachment, CommentAttachmentItem } from "../hooks/attachments";
 
 // ── File icon resolver ────────────────────────────────────────────────────────
 

@@ -281,7 +281,7 @@ export function resolvePresentationConfig(entity: CompiledEntity): EntityListPre
     defaultViewMode:  "list",
     defaultPageSize:  25,
     defaultSort: display_config.default_sort_field
-      ? { key: display_config.default_sort_field, dir: display_config.default_sort_order ?? "asc" }
+      ? [{ key: display_config.default_sort_field, dir: display_config.default_sort_order ?? "asc" }]
       : undefined,
   };
 }

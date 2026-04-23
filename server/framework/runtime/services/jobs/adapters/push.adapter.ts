@@ -97,7 +97,7 @@ function rawEcKeyToPkcs8Pem(rawKey: Buffer): string {
   }
   const der = Buffer.concat([EC_P256_PKCS8_HEADER, rawKey]);
   const b64 = der.toString("base64");
-  const lines = b64.match(/.{1,64}/g)!.join("\n");
+  const lines = (b64.match(/.{1,64}/g) ?? [b64]).join("\n");
   return `-----BEGIN PRIVATE KEY-----\n${lines}\n-----END PRIVATE KEY-----\n`;
 }
 

@@ -39,7 +39,6 @@
  *   entityLabel      — display name shown in the page header
  */
 
-import React from "react";
 import { ChevronLeft, ChevronRight, Send, X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Skeleton, Separator } from "@athyper/ui/primitives";

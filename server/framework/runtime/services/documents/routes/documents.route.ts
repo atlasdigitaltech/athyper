@@ -419,20 +419,17 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         }
       }
 
-      // invoice_source — default to NON_PO so pi_commitment_req constraint is satisfied
-      // (PO_BASED / CONTRACT_BASED require a commitment_id which the form doesn't capture)
-      // Coerce to UPPERCASE to match pi_source_chk constraint regardless of lookup domain code case.
+      // invoice_source — default to non_po; normalise to lowercase (all DB check constraints
+      // and lookup domain codes use lowercase: 'po_based', 'contract_based', 'non_po', etc.)
       if (!mappedData.invoice_source) {
-        mappedData.invoice_source = "NON_PO";
+        mappedData.invoice_source = "non_po";
       } else {
-        mappedData.invoice_source = String(mappedData.invoice_source).toUpperCase();
+        mappedData.invoice_source = String(mappedData.invoice_source).toLowerCase();
       }
 
-      // invoice_type — coerce to UPPERCASE to match pi_type_chk constraint.
-      // Lookup domain codes may be lowercase (e.g. 'credit_note') but the column
-      // CHECK constraint requires uppercase ('CREDIT_NOTE').
+      // invoice_type — normalize to lowercase to match pi_invoice_type_chk constraint.
       if (mappedData.invoice_type) {
-        mappedData.invoice_type = String(mappedData.invoice_type).toUpperCase();
+        mappedData.invoice_type = String(mappedData.invoice_type).toLowerCase();
       }
 
       // supplier_invoice_date — default to document_date if not provided
@@ -440,9 +437,17 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         mappedData.supplier_invoice_date = mappedData.document_date ?? new Date().toISOString().slice(0, 10);
       }
 
-      // supplier_invoice_number — default to invoice_number if not provided
-      if (!mappedData.supplier_invoice_number) {
-        mappedData.supplier_invoice_number = mappedData.invoice_number ?? "";
+      // supplier_invoice_number — required for non-proforma invoices.
+      // Return 422 instead of letting the DB constraint bubble up as a raw error.
+      if (!mappedData.supplier_invoice_number || String(mappedData.supplier_invoice_number).trim() === "") {
+        if (mappedData.status !== "proforma") {
+          res.status(422).json({
+            error: "VALIDATION_ERROR",
+            errors: [{ field: "supplier_invoice_number", message: "Vendor Invoice Number is required" }],
+          });
+          return;
+        }
+        delete mappedData.supplier_invoice_number;
       }
 
       // fiscal_year + period_number — derived from document_date

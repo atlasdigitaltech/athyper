@@ -1081,14 +1081,14 @@ model entity {
   field_security_policy  field_security_policy[]
   overlay                overlay[]
 
+  @@unique([tenant_id, entity_code], map: "entity_code_uq")
   @@unique([table_schema, table_name], map: "entity_physical_uq")
   @@unique([tenant_id, id], map: "entity_tenant_id_uq")
-  @@unique([tenant_id, entity_code], map: "entity_code_uq")
+  @@index([entity_code], map: "entity_code_idx")
   @@index([module_id, entity_class], map: "entity_module_idx")
   @@index([tenant_id, entity_class, status], map: "entity_tenant_class_idx", where: raw("(status = 'ACTIVE'::text)"))
-  @@index([tenant_id], map: "entity_tenant_unprovisioned_pidx", where: raw("((ownership_model = 'tenant'::text) AND (provisioned_at IS NULL))"))
-  @@index([entity_code], map: "entity_code_idx")
   @@index([tenant_id, entity_code], map: "entity_tenant_code_idx")
+  @@index([tenant_id], map: "entity_tenant_unprovisioned_pidx", where: raw("((ownership_model = 'tenant'::text) AND (provisioned_at IS NULL))"))
   @@schema("control")
 }
 
@@ -1191,6 +1191,133 @@ model entity_field {
   @@index([entity_version_id], map: "ef_filterable_pidx", where: raw("(is_filterable = true)"))
   @@index([entity_version_id], map: "ef_searchable_pidx", where: raw("(is_searchable = true)"))
   @@index([entity_version_id, sort_order], map: "ef_version_sort_idx", where: raw("(entity_version_id IS NOT NULL)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model entity_flow {
+  id                 String             @id(map: "eflow_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id          String?            @db.Uuid
+  entity_version_id  String             @db.Uuid
+  flow_code          String
+  label              String
+  description        String?
+  icon_key           String?
+  trigger_context    String
+  is_default         Boolean            @default(false)
+  config             Json               @default("{}")
+  version_no         Int                @default(1)
+  status             String             @default("draft")
+  effective_from     DateTime?          @db.Timestamptz(6)
+  effective_to       DateTime?          @db.Timestamptz(6)
+  supersedes_flow_id String?            @db.Uuid
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  created_by         String             @db.Uuid
+  updated_at         DateTime?          @db.Timestamptz(6)
+  updated_by         String?            @db.Uuid
+  entity_version     entity_version     @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eflow_entity_version_fk")
+  entity_flow        entity_flow?       @relation("entity_flowToentity_flow", fields: [supersedes_flow_id], references: [id], onUpdate: NoAction, map: "eflow_supersedes_fk")
+  other_entity_flow  entity_flow[]      @relation("entity_flowToentity_flow")
+  entity_flow_step   entity_flow_step[]
+
+  @@unique([tenant_id, id], map: "eflow_tenant_id_uq")
+  @@unique([tenant_id, entity_version_id, flow_code, version_no], map: "eflow_version_uq")
+  @@index([entity_version_id, status], map: "eflow_entity_version_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entity_flow_field {
+  id                     String           @id(map: "eff_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String?          @db.Uuid
+  flow_step_id           String           @db.Uuid
+  entity_field_id        String           @db.Uuid
+  mode                   String
+  derivation_mode        String?
+  visible_when           Json?
+  required_when          Json?
+  default_source         String?
+  derive_expression      String?
+  override_permission    String?
+  override_requires_note Boolean          @default(false)
+  summary_role           String?
+  ui_variant             String?
+  format                 String?
+  span                   Int              @default(1) @db.SmallInt
+  help_text              String?
+  placeholder            String?
+  sort_order             Int              @default(0) @db.SmallInt
+  created_at             DateTime         @default(now()) @db.Timestamptz(6)
+  created_by             String           @db.Uuid
+  updated_at             DateTime?        @db.Timestamptz(6)
+  updated_by             String?          @db.Uuid
+  section_key            String?
+  display_size           String?
+  entity_field           entity_field     @relation(fields: [entity_field_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eff_field_fk")
+  entity_flow_step       entity_flow_step @relation(fields: [flow_step_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eff_step_fk")
+
+  @@unique([flow_step_id, entity_field_id], map: "eff_step_field_uq")
+  @@unique([tenant_id, id], map: "eff_tenant_id_uq")
+  @@index([entity_field_id], map: "eff_field_idx")
+  @@index([flow_step_id, mode, sort_order], map: "eff_mode_step_idx")
+  @@index([flow_step_id, sort_order], map: "eff_step_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entity_flow_section {
+  id               String    @id(map: "efsec_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id        String?   @db.Uuid
+  flow_step_id     String    @db.Uuid
+  section_key      String
+  label            String
+  description      String?
+  sort_order       Int       @default(0) @db.SmallInt
+  collapse_default Boolean   @default(false)
+  visible_when     Json?
+  reveal_behavior  String    @default("honor_default")
+  icon_key         String?
+  help_text        String?
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  created_by       String    @db.Uuid
+  updated_at       DateTime? @db.Timestamptz(6)
+  updated_by       String?   @db.Uuid
+
+  @@unique([flow_step_id, section_key], map: "efsec_step_key_uq")
+  @@unique([flow_step_id, sort_order], map: "efsec_step_order_uq")
+  @@unique([tenant_id, id], map: "efsec_tenant_id_uq")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entity_flow_step {
+  id                String              @id(map: "efs_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String?             @db.Uuid
+  flow_id           String              @db.Uuid
+  step_key          String
+  label             String
+  description       String?
+  icon_key          String?
+  sort_order        Int                 @db.SmallInt
+  skip_when         Json?
+  advance_rule      Json                @default("{}")
+  layout_hint       String              @default("two_column")
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  created_by        String              @db.Uuid
+  updated_at        DateTime?           @db.Timestamptz(6)
+  updated_by        String?             @db.Uuid
+  entity_flow_field entity_flow_field[]
+  entity_flow       entity_flow         @relation(fields: [flow_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "efs_flow_fk")
+
+  @@unique([flow_id, sort_order], map: "efs_flow_order_uq")
+  @@unique([flow_id, step_key], map: "efs_flow_step_uq")
+  @@unique([tenant_id, id], map: "efs_tenant_id_uq")
+  @@index([flow_id, sort_order], map: "efs_flow_idx")
   @@schema("control")
 }
 
@@ -1531,10 +1658,10 @@ model forecast_line {
   @@unique([tenant_id, scenario_id, line_no], map: "fl_scenario_line_uq")
   @@index([gl_account_id, fiscal_year], map: "idx_fl_account", where: raw("(gl_account_id IS NOT NULL)"))
   @@index([budget_allocation_id], map: "idx_fl_allocation", where: raw("(budget_allocation_id IS NOT NULL)"))
+  @@index([company_code_id], map: "idx_fl_company_code", where: raw("(company_code_id IS NOT NULL)"))
   @@index([cost_center_id], map: "idx_fl_cost_center", where: raw("(cost_center_id IS NOT NULL)"))
   @@index([driver_id], map: "idx_fl_driver", where: raw("(driver_id IS NOT NULL)"))
   @@index([scenario_id], map: "idx_fl_scenario")
-  @@index([company_code_id], map: "idx_fl_company_code", where: raw("(company_code_id IS NOT NULL)"))
   @@schema("control")
 }
 
@@ -2375,10 +2502,10 @@ model planning_driver_assumption {
   forecast_scenario forecast_scenario? @relation(fields: [tenant_id, scenario_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_da_scenario")
 
   @@index([driver_id, status], map: "idx_da_active", where: raw("(status = 'active'::text)"))
+  @@index([company_code_id], map: "idx_da_company_code", where: raw("(company_code_id IS NOT NULL)"))
   @@index([driver_id], map: "idx_da_driver")
   @@index([driver_id, fiscal_year], map: "idx_da_fiscal")
   @@index([scenario_id], map: "idx_da_scenario", where: raw("(scenario_id IS NOT NULL)"))
-  @@index([company_code_id], map: "idx_da_company_code", where: raw("(company_code_id IS NOT NULL)"))
   @@schema("control")
 }
 
@@ -3055,17 +3182,17 @@ model asset_transaction {
   created_by                                                                                        String                      @db.Uuid
   updated_at                                                                                        DateTime?                   @db.Timestamptz(6)
   updated_by                                                                                        String?                     @db.Uuid
-  asset_book                                                                                        asset_book?                 @relation(fields: [tenant_id, asset_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_book_fk")
-  asset                                                                                             asset                       @relation(fields: [tenant_id, asset_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_asset_fk")
-  company_code                                                                                      company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_company_fk")
-  principal                                                                                         principal                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "atx_created_by_fk")
-  depreciation_run                                                                                  depreciation_run?           @relation(fields: [tenant_id, depreciation_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_depr_run_fk")
-  depreciation_run_line_asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line depreciation_run_line?      @relation("asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line", fields: [tenant_id, depreciation_run_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_depr_run_line_fk")
+  asset_book                                                                                        asset_book?                 @relation(fields: [tenant_id, asset_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_asset_book_fk")
+  asset                                                                                             asset                       @relation(fields: [tenant_id, asset_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_asset_fk")
+  company_code                                                                                      company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_company_fk")
+  principal_asset_transaction_created_byToprincipal                                                 principal                   @relation("asset_transaction_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_created_by_fk")
+  depreciation_run                                                                                  depreciation_run?           @relation(fields: [tenant_id, depreciation_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_depr_run_fk")
+  depreciation_run_line_asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line depreciation_run_line?      @relation("asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line", fields: [tenant_id, depreciation_run_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_depr_run_line_fk")
   journal_entry                                                                                     journal_entry?              @relation(fields: [reference_je_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_je_fk")
   principal_asset_transaction_performed_byToprincipal                                               principal                   @relation("asset_transaction_performed_byToprincipal", fields: [performed_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_performed_by_fk")
-  asset_transaction                                                                                 asset_transaction?          @relation("asset_transactionToasset_transaction", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "atx_reversal_fk")
+  asset_transaction                                                                                 asset_transaction?          @relation("asset_transactionToasset_transaction", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_txn_reversal_of_fk")
   other_asset_transaction                                                                           asset_transaction[]         @relation("asset_transactionToasset_transaction")
-  tenant                                                                                            tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "atx_tenant_fk")
+  tenant                                                                                            tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "asset_txn_tenant_fk")
   depreciation_run_line_depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction     depreciation_run_line[]     @relation("depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction")
   asset_revaluation_reserve                                                                         asset_revaluation_reserve[]
 
@@ -3158,7 +3285,7 @@ model commitment {
   payment_term                                                                                            payment_term?                   @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cmt_payment_term_fk")
   commitment                                                                                              commitment?                     @relation("commitmentTocommitment", fields: [tenant_id, renewed_from_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cmt_renewed_from_fk")
   other_commitment                                                                                        commitment[]                    @relation("commitmentTocommitment")
-  tenant                                                                                                  tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_cmt_tenant")
+  tenant                                                                                                  tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cmt_tenant_fk")
   workflow_request                                                                                        workflow_request?               @relation(fields: [workflow_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cmt_workflow_fk")
   commitment_address_snapshot                                                                             commitment_address_snapshot[]
   commitment_line                                                                                         commitment_line[]
@@ -3195,6 +3322,7 @@ model commitment {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model commitment_address_snapshot {
   id             String     @id(map: "cas_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id      String     @db.Uuid
@@ -3298,6 +3426,7 @@ model commitment_line {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model commitment_party_snapshot {
   id                  String     @id(map: "cps_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String     @db.Uuid
@@ -3407,6 +3536,7 @@ model commitment_release_allocation {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model delivery_note {
   id                      String               @id(map: "dn_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id               String               @db.Uuid
@@ -3457,6 +3587,7 @@ model delivery_note {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model delivery_note_line {
   id                 String               @id(map: "dnl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id          String               @db.Uuid
@@ -3498,48 +3629,48 @@ model delivery_note_line {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model depreciation_run {
-  id                                           String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                    String                  @db.Uuid
-  code                                         String                  @default("")
-  name                                         String                  @default("")
-  company_code_id                              String                  @db.Uuid
-  book_type                                    String
-  book_id                                      String?                 @db.Uuid
-  fiscal_year                                  Int                     @db.SmallInt
-  period_number                                Int                     @db.SmallInt
-  asset_count                                  Int                     @default(0)
-  total_amount                                 Decimal                 @default(0) @db.Decimal(18, 4)
-  currency_code                                String                  @default("USD") @db.Char(3)
-  error_count                                  Int                     @default(0)
-  error_log                                    Json?
-  started_at                                   DateTime?               @db.Timestamptz(6)
-  completed_at                                 DateTime?               @db.Timestamptz(6)
-  reference_je_id                              String?                 @db.Uuid
-  reversal_of_id                               String?                 @db.Uuid
-  is_reversal                                  Boolean                 @default(false)
-  run_by                                       String                  @db.Uuid
-  idempotency_key                              String?
-  posted_at                                    DateTime?               @db.Timestamptz(6)
-  posted_by                                    String?                 @db.Uuid
-  metadata                                     Json                    @default("{}")
-  status                                       String                  @default("planned")
-  is_active                                    Boolean?                @default(dbgenerated("(status = ANY (ARRAY['planned'::text, 'running'::text]))"))
-  status_changed_at                            DateTime?               @db.Timestamptz(6)
-  status_changed_by                            String?                 @db.Uuid
-  created_at                                   DateTime                @default(now()) @db.Timestamptz(6)
-  created_by                                   String                  @db.Uuid
-  updated_at                                   DateTime?               @db.Timestamptz(6)
-  updated_by                                   String?                 @db.Uuid
-  asset_transaction                            asset_transaction[]
-  ledger_book                                  ledger_book?            @relation(fields: [tenant_id, book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "dr_book_fk")
-  company_code                                 company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "dr_company_fk")
-  principal                                    principal               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "dr_created_by_fk")
-  journal_entry                                journal_entry?          @relation(fields: [reference_je_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_je_fk")
-  depreciation_run                             depreciation_run?       @relation("depreciation_runTodepreciation_run", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "dr_reversal_fk")
-  other_depreciation_run                       depreciation_run[]      @relation("depreciation_runTodepreciation_run")
-  principal_depreciation_run_run_byToprincipal principal               @relation("depreciation_run_run_byToprincipal", fields: [run_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_run_by_fk")
-  tenant                                       tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "dr_tenant_fk")
-  depreciation_run_line                        depreciation_run_line[]
+  id                                               String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                        String                  @db.Uuid
+  code                                             String                  @default("")
+  name                                             String                  @default("")
+  company_code_id                                  String                  @db.Uuid
+  book_type                                        String
+  book_id                                          String?                 @db.Uuid
+  fiscal_year                                      Int                     @db.SmallInt
+  period_number                                    Int                     @db.SmallInt
+  asset_count                                      Int                     @default(0)
+  total_amount                                     Decimal                 @default(0) @db.Decimal(18, 4)
+  currency_code                                    String                  @default("USD") @db.Char(3)
+  error_count                                      Int                     @default(0)
+  error_log                                        Json?
+  started_at                                       DateTime?               @db.Timestamptz(6)
+  completed_at                                     DateTime?               @db.Timestamptz(6)
+  reference_je_id                                  String?                 @db.Uuid
+  reversal_of_id                                   String?                 @db.Uuid
+  is_reversal                                      Boolean                 @default(false)
+  run_by                                           String                  @db.Uuid
+  idempotency_key                                  String?
+  posted_at                                        DateTime?               @db.Timestamptz(6)
+  posted_by                                        String?                 @db.Uuid
+  metadata                                         Json                    @default("{}")
+  status                                           String                  @default("planned")
+  is_active                                        Boolean?                @default(dbgenerated("(status = ANY (ARRAY['planned'::text, 'running'::text]))"))
+  status_changed_at                                DateTime?               @db.Timestamptz(6)
+  status_changed_by                                String?                 @db.Uuid
+  created_at                                       DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                                       String                  @db.Uuid
+  updated_at                                       DateTime?               @db.Timestamptz(6)
+  updated_by                                       String?                 @db.Uuid
+  asset_transaction                                asset_transaction[]
+  ledger_book                                      ledger_book?            @relation(fields: [tenant_id, book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_book_fk")
+  company_code                                     company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_company_fk")
+  principal_depreciation_run_created_byToprincipal principal               @relation("depreciation_run_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_created_by_fk")
+  journal_entry                                    journal_entry?          @relation(fields: [reference_je_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_je_fk")
+  depreciation_run                                 depreciation_run?       @relation("depreciation_runTodepreciation_run", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_reversal_of_fk")
+  other_depreciation_run                           depreciation_run[]      @relation("depreciation_runTodepreciation_run")
+  principal_depreciation_run_run_byToprincipal     principal               @relation("depreciation_run_run_byToprincipal", fields: [run_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_run_by_fk")
+  tenant                                           tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "depreciation_run_tenant_fk")
+  depreciation_run_line                            depreciation_run_line[]
 
   @@unique([tenant_id, company_code_id, book_type, fiscal_year, period_number, is_reversal], map: "depreciation_run_period_book_uq")
   @@unique([tenant_id, id], map: "depreciation_run_tenant_id_uq")
@@ -3574,11 +3705,11 @@ model depreciation_run_line {
   created_at                                                                                    DateTime                @default(now()) @db.Timestamptz(6)
   created_by                                                                                    String                  @db.Uuid
   asset_transaction_asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line asset_transaction[]     @relation("asset_transaction_tenant_id_depreciation_run_line_idTodepreciation_run_line")
-  asset_book                                                                                    asset_book              @relation(fields: [tenant_id, asset_book_id, asset_id], references: [tenant_id, id, asset_id], onDelete: NoAction, onUpdate: NoAction, map: "drl_book_asset_fk")
-  asset_transaction_depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction     asset_transaction?      @relation("depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction", fields: [tenant_id, asset_transaction_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "drl_txn_fk")
-  principal                                                                                     principal               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "drl_created_by_fk")
-  depreciation_run                                                                              depreciation_run        @relation(fields: [tenant_id, run_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "drl_run_fk")
-  tenant                                                                                        tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "drl_tenant_fk")
+  asset_book                                                                                    asset_book              @relation(fields: [tenant_id, asset_book_id, asset_id], references: [tenant_id, id, asset_id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_line_asset_book_fk")
+  asset_transaction_depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction     asset_transaction?      @relation("depreciation_run_line_tenant_id_asset_transaction_idToasset_transaction", fields: [tenant_id, asset_transaction_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_line_asset_txn_fk")
+  principal                                                                                     principal               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_run_line_created_by_fk")
+  depreciation_run                                                                              depreciation_run        @relation(fields: [tenant_id, run_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "depreciation_run_line_run_fk")
+  tenant                                                                                        tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "depreciation_run_line_tenant_fk")
   depreciation_schedule                                                                         depreciation_schedule[]
 
   @@unique([run_id, asset_book_id], map: "depreciation_run_line_run_asset_uq")
@@ -3614,10 +3745,10 @@ model depreciation_schedule {
   created_by            String                 @db.Uuid
   updated_at            DateTime?              @db.Timestamptz(6)
   updated_by            String?                @db.Uuid
-  asset_book            asset_book             @relation(fields: [tenant_id, asset_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ds_book_fk")
-  principal             principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ds_created_by_fk")
-  depreciation_run_line depreciation_run_line? @relation(fields: [tenant_id, actual_run_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ds_run_line_fk")
-  tenant                tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ds_tenant_fk")
+  asset_book            asset_book             @relation(fields: [tenant_id, asset_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_schedule_asset_book_fk")
+  principal             principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_schedule_created_by_fk")
+  depreciation_run_line depreciation_run_line? @relation(fields: [tenant_id, actual_run_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "depreciation_schedule_run_line_fk")
+  tenant                tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "depreciation_schedule_tenant_fk")
 
   @@unique([asset_book_id, schedule_version, fiscal_year, period_number], map: "depreciation_schedule_book_ver_period_uq")
   @@unique([tenant_id, id], map: "depreciation_schedule_tenant_id_uq")
@@ -3697,8 +3828,8 @@ model forecast_scenario {
   other_forecast_scenario    forecast_scenario[]          @relation("forecast_scenarioToforecast_scenario")
   company_code               company_code                 @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fs_company_fk")
   principal                  principal                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fs_created_by_fk")
-  planning_model             planning_model?              @relation(fields: [tenant_id, planning_model_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fs_planning_model")
-  tenant                     tenant                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_fs_tenant")
+  planning_model             planning_model?              @relation(fields: [tenant_id, planning_model_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fs_planning_model_fk")
+  tenant                     tenant                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fs_tenant_fk")
 
   @@unique([tenant_id, company_code_id, code, version], map: "fs_tenant_code_ver_uq")
   @@unique([tenant_id, id], map: "fs_tenant_id_uq")
@@ -3822,6 +3953,7 @@ model goods_receipt {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model goods_receipt_line {
   id                     String                  @id(map: "grl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id              String                  @db.Uuid
@@ -3940,7 +4072,65 @@ model ic_elimination {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model import_request {
+  id                   String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id            String                 @db.Uuid
+  entity_name          String
+  file_ref             String
+  file_name            String
+  file_size_bytes      BigInt?
+  file_format          String                 @default("csv")
+  mapping_config       Json                   @default("[]")
+  import_mode          String                 @default("create")
+  options              Json                   @default("{}")
+  total_rows           Int?
+  processed_rows       Int                    @default(0)
+  success_count        Int                    @default(0)
+  error_count          Int                    @default(0)
+  status               String                 @default("uploaded")
+  error_summary        Json?
+  started_at           DateTime?              @db.Timestamptz(6)
+  completed_at         DateTime?              @db.Timestamptz(6)
+  submitted_by         String                 @db.Uuid
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  created_by           String                 @db.Uuid
+  updated_at           DateTime?              @db.Timestamptz(6)
+  updated_by           String?                @db.Uuid
+  import_request_chunk import_request_chunk[]
+
+  @@unique([tenant_id, id], map: "import_request_tenant_uq")
+  @@index([tenant_id, entity_name, created_at(sort: Desc)], map: "import_request_tenant_entity_idx")
+  @@index([tenant_id, status, created_at(sort: Desc)], map: "import_request_tenant_status_idx")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model import_request_chunk {
+  id                String         @id(map: "import_chunk_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String         @db.Uuid
+  import_request_id String         @db.Uuid
+  chunk_index       Int            @db.SmallInt
+  row_start         Int
+  row_end           Int
+  status            String         @default("pending")
+  success_count     Int            @default(0)
+  error_count       Int            @default(0)
+  errors_json       Json           @default("[]")
+  job_id            String?
+  attempt_no        Int            @default(1) @db.SmallInt
+  started_at        DateTime?      @db.Timestamptz(6)
+  completed_at      DateTime?      @db.Timestamptz(6)
+  duration_ms       Int?
+  import_request    import_request @relation(fields: [import_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "import_chunk_request_fk")
+
+  @@index([import_request_id, chunk_index], map: "import_chunk_request_idx")
+  @@index([import_request_id, status], map: "import_chunk_status_idx", where: raw("(status = ANY (ARRAY['pending'::text, 'processing'::text]))"))
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model intercompany_agreement {
   id                                                                                 String                     @id(map: "ica_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                          String                     @db.Uuid
@@ -4080,6 +4270,7 @@ model intercompany_transaction {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_address_snapshot {
   id                  String           @id(map: "ias_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String           @db.Uuid
@@ -4102,6 +4293,7 @@ model invoice_address_snapshot {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_bank_snapshot {
   id                  String           @id(map: "ibs_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String           @db.Uuid
@@ -4125,6 +4317,7 @@ model invoice_bank_snapshot {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_match_case {
   id                      String            @id(map: "imc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id               String            @db.Uuid
@@ -4158,6 +4351,7 @@ model invoice_match_case {
   @@schema("document")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_party_snapshot {
   id                  String           @id(map: "ips_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String           @db.Uuid
@@ -4656,6 +4850,7 @@ model payment_entry {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model payment_entry_allocation {
   id                          String                    @id(map: "pea_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                   String                    @db.Uuid
@@ -4696,6 +4891,7 @@ model payment_entry_allocation {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model payment_remittance_output {
   id                String         @id(map: "pro_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id         String         @db.Uuid
@@ -4846,8 +5042,8 @@ model purchase_invoice {
   invoice_type             String                     @default("standard")
   description              String?
   supplier_id              String?                    @db.Uuid
-  supplier_invoice_number  String
-  supplier_invoice_date    DateTime                   @db.Date
+  supplier_invoice_number  String?
+  supplier_invoice_date    DateTime?                  @db.Date
   commitment_id            String?                    @db.Uuid
   document_date            DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
   posting_date             DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
@@ -4908,6 +5104,8 @@ model purchase_invoice {
   created_by               String                     @db.Uuid
   updated_at               DateTime?                  @db.Timestamptz(6)
   updated_by               String?                    @db.Uuid
+  tax_mode                 String?
+  tax_mode_source          String?
   invoice_address_snapshot invoice_address_snapshot[]
   invoice_bank_snapshot    invoice_bank_snapshot?
   invoice_match_case       invoice_match_case?
@@ -4936,12 +5134,13 @@ model purchase_invoice {
   @@index([tenant_id, company_code_id], map: "pi_pending_approval_idx", where: raw("(status = 'pending_approval'::text)"))
   @@index([tenant_id, company_code_id, posting_date(sort: Desc)], map: "pi_posting_date_idx")
   @@index([tenant_id, supplier_id], map: "pi_supplier_idx")
-  @@index([tenant_id, supplier_id, supplier_invoice_number, supplier_invoice_date], map: "pi_supplier_invoice_dedup_idx", where: raw("((supplier_id IS NOT NULL) AND (status <> ALL (ARRAY['cancelled'::text, 'rejected'::text])))"))
+  @@index([tenant_id, supplier_id, supplier_invoice_number, supplier_invoice_date], map: "pi_supplier_invoice_dedup_idx", where: raw("((supplier_id IS NOT NULL) AND (status <> ALL (ARRAY['cancelled'::text, 'rejected'::text, 'proforma'::text])))"))
   @@index([workflow_request_id], map: "pi_workflow_idx", where: raw("(workflow_request_id IS NOT NULL)"))
   @@schema("document")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_invoice_line {
   id                       String                    @id(map: "pil_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                String                    @db.Uuid
@@ -5044,6 +5243,7 @@ model purchase_order_confirmation {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_order_confirmation_line {
   id                          String                      @id(map: "pocl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                   String                      @db.Uuid
@@ -5140,6 +5340,7 @@ model purchase_requisition {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_requisition_line {
   id                      String               @id(map: "prl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id               String               @db.Uuid
@@ -5334,6 +5535,7 @@ model service_entry_sheet {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model service_entry_sheet_line {
   id                     String                  @id(map: "sesl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id              String                  @db.Uuid
@@ -5422,33 +5624,33 @@ model stocktake {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model stocktake_line {
-  id                                             String    @id(map: "stl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                      String    @db.Uuid
-  stocktake_id                                   String    @db.Uuid
-  line_no                                        Int       @db.SmallInt
-  item_id                                        String    @db.Uuid
-  warehouse_id                                   String    @db.Uuid
-  lot_number                                     String?
-  serial_number                                  String?
-  system_qty                                     Decimal   @db.Decimal(18, 4)
-  counted_qty                                    Decimal   @db.Decimal(18, 4)
-  variance_qty                                   Decimal?  @default(dbgenerated("(counted_qty - system_qty)")) @db.Decimal(18, 4)
-  unit_cost                                      Decimal   @db.Decimal(18, 4)
-  variance_value                                 Decimal?  @default(dbgenerated("((counted_qty - system_qty) * unit_cost)")) @db.Decimal(18, 4)
-  currency_code                                  String    @db.Char(3)
-  posted_at                                      DateTime? @db.Timestamptz(6)
-  posted_by                                      String?   @db.Uuid
-  metadata                                       Json      @default("{}")
-  created_at                                     DateTime  @default(now()) @db.Timestamptz(6)
-  created_by                                     String    @db.Uuid
-  updated_at                                     DateTime? @db.Timestamptz(6)
-  updated_by                                     String?   @db.Uuid
-  principal_stocktake_line_created_byToprincipal principal @relation("stocktake_line_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "stl_created_by_fk")
-  currency                                       currency  @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "stl_currency_fk")
-  item                                           item      @relation(fields: [tenant_id, item_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "stl_item_fk")
-  stocktake                                      stocktake @relation(fields: [tenant_id, stocktake_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "stl_stocktake_fk")
-  tenant                                         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "stl_tenant_fk")
-  warehouse                                      warehouse @relation(fields: [tenant_id, warehouse_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "stl_warehouse_fk")
+  id             String    @id(map: "stl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  stocktake_id   String    @db.Uuid
+  line_no        Int       @db.SmallInt
+  item_id        String    @db.Uuid
+  warehouse_id   String    @db.Uuid
+  lot_number     String?
+  serial_number  String?
+  system_qty     Decimal   @db.Decimal(18, 4)
+  counted_qty    Decimal   @db.Decimal(18, 4)
+  variance_qty   Decimal?  @default(dbgenerated("(counted_qty - system_qty)")) @db.Decimal(18, 4)
+  unit_cost      Decimal   @db.Decimal(18, 4)
+  variance_value Decimal?  @default(dbgenerated("((counted_qty - system_qty) * unit_cost)")) @db.Decimal(18, 4)
+  currency_code  String    @db.Char(3)
+  posted_at      DateTime? @db.Timestamptz(6)
+  posted_by      String?   @db.Uuid
+  metadata       Json      @default("{}")
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  created_by     String    @db.Uuid
+  updated_at     DateTime? @db.Timestamptz(6)
+  updated_by     String?   @db.Uuid
+  principal      principal @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "stl_created_by_fk")
+  currency       currency  @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "stl_currency_fk")
+  item           item      @relation(fields: [tenant_id, item_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "stl_item_fk")
+  stocktake      stocktake @relation(fields: [tenant_id, stocktake_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "stl_stocktake_fk")
+  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "stl_tenant_fk")
+  warehouse      warehouse @relation(fields: [tenant_id, warehouse_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "stl_warehouse_fk")
 
   @@unique([stocktake_id, line_no], map: "stl_line_uq")
   @@unique([tenant_id, id], map: "stl_tenant_id_uq")
@@ -5602,8 +5804,8 @@ model workflow_request {
   cycle_certification                                cycle_certification[]
   cycle_deviation                                    cycle_deviation[]
 
-  @@unique([tenant_id, id], map: "wreq_tenant_id_uq")
   @@unique([tenant_id, entity_type, entity_id], map: "wreq_one_pending_per_entity_uix", where: raw("(status = 'pending'::text)"))
+  @@unique([tenant_id, id], map: "wreq_tenant_id_uq")
   @@index([entity_type, entity_id, created_at(sort: Desc)], map: "wreq_entity_idx")
   @@index([tenant_id, requested_by, created_at(sort: Desc)], map: "wreq_requester_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "wreq_tenant_pending_idx", where: raw("(status = 'pending'::text)"))
@@ -5672,6 +5874,35 @@ model comment_flag {
   @@index([tenant_id, context_type, comment_id, created_at(sort: Desc)], map: "cf_comment_idx")
   @@index([tenant_id, flagged_by, created_at(sort: Desc)], map: "cf_flagged_by_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "cf_pending_idx", where: raw("(status = 'pending'::text)"))
+  @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model connector_instance {
+  id                   String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id            String         @db.Uuid
+  connector_type_id    String         @db.Uuid
+  code                 String
+  name                 String
+  description          String?
+  config               Json           @default("{}")
+  status               String         @default("active")
+  health_status        String         @default("unknown")
+  last_health_check_at DateTime?      @db.Timestamptz(6)
+  last_error_message   String?
+  is_active            Boolean        @default(true)
+  created_at           DateTime       @default(now()) @db.Timestamptz(6)
+  created_by           String         @db.Uuid
+  updated_at           DateTime?      @db.Timestamptz(6)
+  updated_by           String?        @db.Uuid
+  connector_type       connector_type @relation(fields: [connector_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant               tenant         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, code], map: "connector_instance_code_uq")
+  @@index([tenant_id, health_status], map: "idx_connector_instance_health", where: raw("(health_status = ANY (ARRAY['degraded'::text, 'down'::text]))"))
+  @@index([tenant_id, is_active, created_at(sort: Desc)], map: "idx_connector_instance_tenant")
+  @@index([connector_type_id, tenant_id], map: "idx_connector_instance_type")
   @@schema("event")
 }
 
@@ -5858,6 +6089,63 @@ model notification_message {
   @@index([tenant_id, entity_type, entity_id], map: "nmsg_entity_pidx", where: raw("(entity_id IS NOT NULL)"))
   @@index([tenant_id, event_code, created_at(sort: Desc)], map: "nmsg_event_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "nmsg_tenant_created_idx")
+  @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model orchestration_node {
+  id                String            @id(map: "orch_node_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String            @db.Uuid
+  run_id            String            @db.Uuid
+  node_code         String
+  node_type         String
+  depends_on        String[]          @default([])
+  status            String            @default("pending")
+  job_id            String?
+  input             Json?
+  output            Json?
+  error             String?
+  retry_count       Int               @default(0)
+  started_at        DateTime?         @db.Timestamptz(6)
+  completed_at      DateTime?         @db.Timestamptz(6)
+  duration_ms       Int?
+  orchestration_run orchestration_run @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenant            tenant            @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([run_id, node_code], map: "orch_node_run_code")
+  @@index([tenant_id, status], map: "idx_orch_node_active", where: raw("(status = ANY (ARRAY['pending'::text, 'running'::text]))"))
+  @@index([job_id], map: "idx_orch_node_job_id", where: raw("(job_id IS NOT NULL)"))
+  @@index([run_id], map: "idx_orch_node_run_id")
+  @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model orchestration_run {
+  id                 String               @id(map: "orch_run_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id          String               @db.Uuid
+  dag_id             String
+  trigger_type       String               @default("manual")
+  trigger_ref        String?
+  correlation_id     String?
+  status             String               @default("running")
+  total_nodes        Int                  @default(0)
+  completed_nodes    Int                  @default(0)
+  failed_nodes       Int                  @default(0)
+  skipped_nodes      Int                  @default(0)
+  started_at         DateTime             @default(now()) @db.Timestamptz(6)
+  completed_at       DateTime?            @db.Timestamptz(6)
+  timeout_at         DateTime?            @db.Timestamptz(6)
+  input              Json?
+  output             Json?
+  created_by         String?              @db.Uuid
+  orchestration_node orchestration_node[]
+  tenant             tenant               @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([correlation_id], map: "idx_orch_run_correlation", where: raw("(correlation_id IS NOT NULL)"))
+  @@index([tenant_id, dag_id, started_at(sort: Desc)], map: "idx_orch_run_dag")
+  @@index([tenant_id, status, started_at(sort: Desc)], map: "idx_orch_run_tenant_status")
   @@schema("event")
 }
 
@@ -7525,6 +7813,24 @@ model attachment_access_log {
   @@schema("log")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model audit_dlq {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  queue_name        String
+  job_name          String
+  payload           Json
+  error_message     String
+  retry_count       Int       @default(0) @db.SmallInt
+  last_attempted_at DateTime  @db.Timestamptz(6)
+  retried_at        DateTime? @db.Timestamptz(6)
+  retried_job_id    String?
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@schema("log")
+}
+
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -7554,14 +7860,13 @@ model audit_log {
 
   @@id([id, created_at])
   @@index([tenant_id, actor_id, created_at(sort: Desc)], map: "al_actor_idx", where: raw("(actor_id IS NOT NULL)"))
+  @@index([tenant_id, company_code_id, created_at(sort: Desc)], map: "al_cc_idx", where: raw("(company_code_id IS NOT NULL)"))
   @@index([correlation_id], map: "al_correlation_pidx", where: raw("(correlation_id IS NOT NULL)"))
   @@index([tenant_id, operation, created_at(sort: Desc)], map: "al_destructive_pidx", where: raw("(operation = ANY (ARRAY['delete'::text, 'bulk_delete'::text, 'purge'::text, 'archive'::text]))"))
   @@index([tenant_id, entity_type, entity_id], map: "al_entity_idx")
-  @@index([tenant_id, company_code_id, created_at(sort: Desc)], map: "al_cc_idx", where: raw("(company_code_id IS NOT NULL)"))
   @@schema("log")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model close_activity_log {
@@ -7586,9 +7891,9 @@ model close_activity_log {
   company_code    company_code? @relation(fields: [company_code_id], references: [id], onUpdate: NoAction, map: "cal_cc_fk")
   tenant          tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cal_tenant_fk")
 
+  @@index([tenant_id, company_code_id, fiscal_year, period_number, activity_type], map: "cal_company_period_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "cal_release_pidx", where: raw("(activity_type = 'release_decision'::text)"))
   @@index([tenant_id, activity_type, created_at(sort: Desc)], map: "cal_type_idx")
-  @@index([tenant_id, company_code_id, fiscal_year, period_number, activity_type], map: "cal_company_period_idx")
   @@schema("log")
 }
 
@@ -7924,6 +8229,24 @@ model notification_delivery_attempt {
   @@index([delivery_id, created_at(sort: Desc)], map: "nda_delivery_idx", where: raw("(delivery_id IS NOT NULL)"))
   @@index([tenant_id, created_at(sort: Desc)], map: "nda_failed_pidx", where: raw("(is_success = false)"))
   @@index([purge_after], map: "nda_purge_pidx", where: raw("(purge_after IS NOT NULL)"))
+  @@schema("log")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notification_dlq {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  queue_name        String
+  job_name          String
+  payload           Json
+  error_message     String
+  retry_count       Int       @default(0) @db.SmallInt
+  last_attempted_at DateTime  @db.Timestamptz(6)
+  retried_at        DateTime? @db.Timestamptz(6)
+  retried_job_id    String?
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+
   @@schema("log")
 }
 
@@ -8348,6 +8671,41 @@ model access_grant {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model accounting_profile {
+  id                                                 String     @id(map: "ap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                          String     @db.Uuid
+  code                                               String
+  name                                               String
+  description                                        String?
+  direction                                          String     @default("INBOUND")
+  subledger_type                                     String     @default("AP")
+  domain_hint                                        String?
+  icon_key                                           String?
+  color_token                                        String?
+  sort_order                                         Int        @default(0) @db.SmallInt
+  metadata                                           Json       @default("{}")
+  status                                             String     @default("active")
+  is_active                                          Boolean?   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                  DateTime?  @db.Timestamptz(6)
+  status_changed_by                                  String?    @db.Uuid
+  created_at                                         DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                         String     @db.Uuid
+  updated_at                                         DateTime?  @db.Timestamptz(6)
+  updated_by                                         String?    @db.Uuid
+  principal_accounting_profile_created_byToprincipal principal  @relation("accounting_profile_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_created_by_fk")
+  tenant                                             tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ap_tenant_fk")
+  principal_accounting_profile_updated_byToprincipal principal? @relation("accounting_profile_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_updated_by_fk")
+
+  @@unique([tenant_id, code], map: "ap_tenant_code_uq")
+  @@unique([tenant_id, id], map: "ap_tenant_id_uq")
+  @@index([tenant_id, subledger_type, direction], map: "ap_subledger_idx", where: raw("(is_active = true)"))
+  @@index([tenant_id, status], map: "ap_tenant_status_idx", where: raw("(is_active = true)"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model address {
   id                String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id         String         @db.Uuid
@@ -8466,7 +8824,7 @@ model asset {
   updated_by                                                          String?                     @db.Uuid
   asset_transaction                                                   asset_transaction[]
   asset_revaluation_reserve                                           asset_revaluation_reserve[]
-  company_code                                                        company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_company_fk")
+  company_code                                                        company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_cc_fk")
   asset_class                                                         asset_class                 @relation(fields: [tenant_id, asset_class_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_class_fk")
   cost_center                                                         cost_center?                @relation(fields: [tenant_id, cost_center_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_cost_center_fk")
   principal                                                           principal                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asset_created_by_fk")
@@ -8770,10 +9128,10 @@ model attachment {
   @@unique([tenant_id, id], map: "attachment_tenant_id_uq")
   @@index([expires_at], map: "att_expiry_pidx", where: raw("((expires_at IS NOT NULL) AND (is_auto_delete_on_expiry = true))"))
   @@index([tenant_id, parent_attachment_id], map: "att_parent_idx", where: raw("(parent_attachment_id IS NOT NULL)"))
+  @@index([tenant_id, pii_scanned_at(sort: Desc)], map: "att_pii_detected_pidx", where: raw("(pii_detected = true)"))
   @@index([tenant_id, created_at], map: "att_preview_pending_pidx", where: raw("((is_virus_scanned = true) AND (preview_key IS NULL) AND (is_preview_generation_failed = false) AND (is_active = true))"))
   @@index([tenant_id, sha256], map: "att_sha256_idx", where: raw("(sha256 IS NOT NULL)"))
   @@index([tenant_id, created_at(sort: Desc)], map: "att_tenant_active_idx", where: raw("((is_active = true) AND (is_current = true))"))
-  @@index([tenant_id, pii_scanned_at(sort: Desc)], map: "att_pii_detected_pidx", where: raw("(pii_detected = true)"))
   @@index([tenant_id, created_at], map: "att_text_extraction_pending_pidx", where: raw("((text_extraction_status IS NULL) AND (is_active = true) AND (status = 'active'::text))"))
   @@schema("master")
 }
@@ -8834,6 +9192,27 @@ model attachment_comment {
   @@unique([tenant_id, id], map: "att_comment_tenant_id_uq")
   @@index([tenant_id, attachment_id], map: "att_comment_attachment_idx", where: raw("(deleted_at IS NULL)"))
   @@index([tenant_id, author_id], map: "att_comment_author_idx", where: raw("(deleted_at IS NULL)"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model attachment_folder {
+  id                      String                 @id(map: "af_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id               String                 @db.Uuid
+  entity_type             String
+  entity_id               String
+  name                    String
+  parent_id               String?                @db.Uuid
+  display_order           Int                    @default(0)
+  created_at              DateTime               @default(now()) @db.Timestamptz(6)
+  created_by              String                 @db.Uuid
+  updated_at              DateTime               @default(now()) @db.Timestamptz(6)
+  updated_by              String?                @db.Uuid
+  attachment_folder       attachment_folder?     @relation("attachment_folderToattachment_folder", fields: [parent_id], references: [id], onUpdate: NoAction)
+  other_attachment_folder attachment_folder[]    @relation("attachment_folderToattachment_folder")
+  entity_document_link    entity_document_link[]
+
   @@schema("master")
 }
 
@@ -9638,7 +10017,7 @@ model company_code {
   holiday_calendar                                                                                   holiday_calendar[]
   item                                                                                               item[]
   letterhead                                                                                         letterhead[]
-  principal_profile                                                                                  principal_profile[]
+  principal_profile_principal_profile_tenant_id_default_company_code_idTocompany_code                principal_profile[]                 @relation("principal_profile_tenant_id_default_company_code_idTocompany_code")
   principal_profile_principal_profile_default_company_code_idTocompany_code                          principal_profile[]                 @relation("principal_profile_default_company_code_idTocompany_code")
   principal_ui_profile                                                                               principal_ui_profile[]
   profit_center                                                                                      profit_center[]
@@ -9655,6 +10034,7 @@ model company_code {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model company_code_access {
   id              String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id       String       @db.Uuid
@@ -9981,6 +10361,7 @@ model company_code_supplier_profile {
   bank_swift_code                                                                       String?
   bank_country_code                                                                     String?            @db.Char(2)
   default_accounting_profile_id                                                         String?            @db.Uuid
+  payment_term_id                                                                       String?            @db.Uuid
   payment_method_id                                                                     String?            @db.Uuid
   preferred_remittance_bank_link_id                                                     String?            @db.Uuid
   tax_group_id                                                                          String?            @db.Uuid
@@ -9998,7 +10379,6 @@ model company_code_supplier_profile {
   created_by                                                                            String             @db.Uuid
   updated_at                                                                            DateTime?          @db.Timestamptz(6)
   updated_by                                                                            String?            @db.Uuid
-  payment_term_id                                                                       String?            @db.Uuid
   gl_account                                                                            gl_account?        @relation(fields: [tenant_id, ap_gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_ap_gl_fk")
   company_code                                                                          company_code       @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_company_fk")
   principal                                                                             principal          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "scp_created_by_fk")
@@ -10733,22 +11113,45 @@ model employee {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_document_link {
-  id            String     @id(map: "edl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id     String     @db.Uuid
-  entity_type   String
-  entity_id     String
-  attachment_id String     @db.Uuid
-  link_kind     String     @default("related")
-  display_order Int        @default(0)
-  metadata      Json       @default("{}")
-  created_at    DateTime   @default(now()) @db.Timestamptz(6)
-  created_by    String     @db.Uuid
-  attachment    attachment @relation(fields: [tenant_id, attachment_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "edl_attachment_fk")
-  principal     principal  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "edl_created_by_fk")
-  tenant        tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "edl_tenant_fk")
+  id                String             @id(map: "edl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String             @db.Uuid
+  entity_type       String
+  entity_id         String
+  attachment_id     String             @db.Uuid
+  link_kind         String             @default("related")
+  display_order     Int                @default(0)
+  metadata          Json               @default("{}")
+  created_at        DateTime           @default(now()) @db.Timestamptz(6)
+  created_by        String             @db.Uuid
+  folder_id         String?            @db.Uuid
+  attachment        attachment         @relation(fields: [tenant_id, attachment_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "edl_attachment_fk")
+  principal         principal          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "edl_created_by_fk")
+  tenant            tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "edl_tenant_fk")
+  attachment_folder attachment_folder? @relation(fields: [folder_id], references: [id], onUpdate: NoAction)
 
   @@index([tenant_id, attachment_id], map: "edl_attachment_idx")
   @@index([tenant_id, entity_type, entity_id], map: "edl_entity_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model filter_preset {
+  id           String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  principal_id String    @db.Uuid
+  entity_code  String
+  name         String
+  filters      Json      @default("{}")
+  is_shared    Boolean   @default(false)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @db.Timestamptz(6)
+  created_by   String    @db.Uuid
+  updated_by   String?   @db.Uuid
+
+  @@unique([tenant_id, principal_id, entity_code, name], map: "filter_preset_name_unique")
+  @@index([tenant_id, entity_code], map: "filter_preset_entity_idx", where: raw("(is_shared = true)"))
+  @@index([tenant_id, principal_id, entity_code], map: "filter_preset_principal_idx")
   @@schema("master")
 }
 
@@ -11721,12 +12124,12 @@ model principal {
   workflow_template                                                                                     workflow_template[]
   workflow_template_rule                                                                                workflow_template_rule[]
   workflow_template_stage                                                                               workflow_template_stage[]
-  asset_transaction                                                                                     asset_transaction[]
+  asset_transaction_asset_transaction_created_byToprincipal                                             asset_transaction[]                 @relation("asset_transaction_created_byToprincipal")
   asset_transaction_asset_transaction_performed_byToprincipal                                           asset_transaction[]                 @relation("asset_transaction_performed_byToprincipal")
   commitment                                                                                            commitment[]
   commitment_line                                                                                       commitment_line[]
   commitment_release_allocation                                                                         commitment_release_allocation[]
-  depreciation_run                                                                                      depreciation_run[]
+  depreciation_run_depreciation_run_created_byToprincipal                                               depreciation_run[]                  @relation("depreciation_run_created_byToprincipal")
   depreciation_run_depreciation_run_run_byToprincipal                                                   depreciation_run[]                  @relation("depreciation_run_run_byToprincipal")
   depreciation_run_line                                                                                 depreciation_run_line[]
   depreciation_schedule                                                                                 depreciation_schedule[]
@@ -11749,7 +12152,7 @@ model principal {
   render_output                                                                                         render_output[]
   stocktake_stocktake_completed_byToprincipal                                                           stocktake[]                         @relation("stocktake_completed_byToprincipal")
   stocktake_stocktake_created_byToprincipal                                                             stocktake[]                         @relation("stocktake_created_byToprincipal")
-  stocktake_line_stocktake_line_created_byToprincipal                                                   stocktake_line[]                    @relation("stocktake_line_created_byToprincipal")
+  stocktake_line                                                                                        stocktake_line[]
   user_profile_update_request_user_profile_update_request_principal_idToprincipal                       user_profile_update_request[]       @relation("user_profile_update_request_principal_idToprincipal")
   user_profile_update_request_user_profile_update_request_requested_byToprincipal                       user_profile_update_request[]       @relation("user_profile_update_request_requested_byToprincipal")
   user_profile_update_request_user_profile_update_request_status_changed_byToprincipal                  user_profile_update_request[]       @relation("user_profile_update_request_status_changed_byToprincipal")
@@ -12032,6 +12435,36 @@ model principal_identity_binding {
   @@schema("master")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model principal_notification_preference {
+  id                                                                            String     @id(map: "pnp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                     String     @db.Uuid
+  principal_id                                                                  String     @db.Uuid
+  event_code                                                                    String
+  channel                                                                       String
+  is_enabled                                                                    Boolean?
+  frequency_code                                                                String?
+  metadata                                                                      Json       @default("{}")
+  status                                                                        String     @default("active")
+  is_active                                                                     Boolean?   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                             DateTime?  @db.Timestamptz(6)
+  status_changed_by                                                             String?    @db.Uuid
+  created_at                                                                    DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                                                    String     @db.Uuid
+  updated_at                                                                    DateTime?  @db.Timestamptz(6)
+  updated_by                                                                    String?    @db.Uuid
+  principal_principal_notification_preference_created_byToprincipal             principal  @relation("principal_notification_preference_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "pnp_created_by_fk")
+  principal_principal_notification_preference_tenant_id_principal_idToprincipal principal  @relation("principal_notification_preference_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pnp_principal_fk")
+  tenant                                                                        tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pnp_tenant_fk")
+  principal_principal_notification_preference_updated_byToprincipal             principal? @relation("principal_notification_preference_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "pnp_updated_by_fk")
+
+  @@unique([tenant_id, principal_id, event_code, channel], map: "pnp_natural_key_uq")
+  @@unique([tenant_id, id], map: "pnp_tenant_id_uq")
+  @@index([tenant_id, principal_id], map: "pnp_principal_idx", where: raw("(is_active = true)"))
+  @@schema("master")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_persona {
@@ -12056,53 +12489,53 @@ model principal_persona {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_profile {
-  id                                                                   String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                            String         @db.Uuid
-  principal_id                                                         String         @db.Uuid
-  given_name                                                           String?
-  family_name                                                          String?
-  preferred_name                                                       String?
-  display_name                                                         String?
-  avatar_url                                                           String?
-  locale                                                               String?
-  timezone                                                             String?
-  keycloak_id                                                          String?        @unique(map: "principal_profile_keycloak_uq")
-  keycloak_username                                                    String?
-  keycloak_created_at_millis                                           BigInt?
-  keycloak_federation_link                                             String?
-  keycloak_not_before                                                  BigInt?
-  keycloak_required_actions                                            String[]       @default([])
-  keycloak_service_client_id                                           String?
-  keycloak_synced_at                                                   DateTime?      @db.Timestamptz(6)
-  keycloak_sync_status                                                 String         @default("pending")
-  enabled_date                                                         DateTime?      @db.Timestamptz(6)
-  disabled_date                                                        DateTime?      @db.Timestamptz(6)
-  idp_snapshot                                                         Json?
-  attributes                                                           Json?
-  default_company_code_id                                              String?        @db.Uuid
-  default_cost_center_id                                               String?        @db.Uuid
-  default_profit_center_id                                             String?        @db.Uuid
-  default_project_id                                                   String?        @db.Uuid
-  default_dimension_set_id                                             String?        @db.Uuid
-  default_budget_allocation_id                                         String?        @db.Uuid
-  employee_id                                                          String?        @db.Uuid
-  metadata                                                             Json           @default("{}")
-  created_at                                                           DateTime       @default(now()) @db.Timestamptz(6)
-  created_by                                                           String         @db.Uuid
-  updated_at                                                           DateTime?      @db.Timestamptz(6)
-  updated_by                                                           String?        @db.Uuid
-  supervisor_id                                                        String?        @db.Uuid
-  supervisor_source                                                    String?
-  company_code                                                         company_code?  @relation(fields: [tenant_id, default_company_code_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_company_fk")
-  cost_center                                                          cost_center?   @relation(fields: [tenant_id, default_cost_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_cost_center_fk")
-  dimension_set                                                        dimension_set? @relation(fields: [tenant_id, default_dimension_set_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_dimension_set_fk")
-  profit_center                                                        profit_center? @relation(fields: [tenant_id, default_profit_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_profit_center_fk")
-  project                                                              project?       @relation(fields: [tenant_id, default_project_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_project_fk")
-  employee                                                             employee?      @relation(fields: [tenant_id, employee_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_employee_fk")
-  company_code_principal_profile_default_company_code_idTocompany_code company_code?  @relation("principal_profile_default_company_code_idTocompany_code", fields: [default_company_code_id], references: [id], onUpdate: NoAction, map: "principal_profile_cc_fk")
-  principal_principal_profile_tenant_id_principal_idToprincipal        principal      @relation("principal_profile_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_principal_fk")
-  principal_principal_profile_supervisor_idToprincipal                 principal?     @relation("principal_profile_supervisor_idToprincipal", fields: [supervisor_id], references: [id], onUpdate: NoAction, map: "principal_profile_supervisor_fk")
-  tenant                                                               tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_tenant_fk")
+  id                                                                             String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                      String         @db.Uuid
+  principal_id                                                                   String         @db.Uuid
+  given_name                                                                     String?
+  family_name                                                                    String?
+  preferred_name                                                                 String?
+  display_name                                                                   String?
+  avatar_url                                                                     String?
+  locale                                                                         String?
+  timezone                                                                       String?
+  keycloak_id                                                                    String?        @unique(map: "principal_profile_keycloak_uq")
+  keycloak_username                                                              String?
+  keycloak_created_at_millis                                                     BigInt?
+  keycloak_federation_link                                                       String?
+  keycloak_not_before                                                            BigInt?
+  keycloak_required_actions                                                      String[]       @default([])
+  keycloak_service_client_id                                                     String?
+  keycloak_synced_at                                                             DateTime?      @db.Timestamptz(6)
+  keycloak_sync_status                                                           String         @default("pending")
+  enabled_date                                                                   DateTime?      @db.Timestamptz(6)
+  disabled_date                                                                  DateTime?      @db.Timestamptz(6)
+  idp_snapshot                                                                   Json?
+  attributes                                                                     Json?
+  default_company_code_id                                                        String?        @db.Uuid
+  default_cost_center_id                                                         String?        @db.Uuid
+  default_profit_center_id                                                       String?        @db.Uuid
+  default_project_id                                                             String?        @db.Uuid
+  default_dimension_set_id                                                       String?        @db.Uuid
+  default_budget_allocation_id                                                   String?        @db.Uuid
+  employee_id                                                                    String?        @db.Uuid
+  metadata                                                                       Json           @default("{}")
+  created_at                                                                     DateTime       @default(now()) @db.Timestamptz(6)
+  created_by                                                                     String         @db.Uuid
+  updated_at                                                                     DateTime?      @db.Timestamptz(6)
+  updated_by                                                                     String?        @db.Uuid
+  supervisor_id                                                                  String?        @db.Uuid
+  supervisor_source                                                              String?
+  company_code_principal_profile_tenant_id_default_company_code_idTocompany_code company_code?  @relation("principal_profile_tenant_id_default_company_code_idTocompany_code", fields: [tenant_id, default_company_code_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_company_fk")
+  cost_center                                                                    cost_center?   @relation(fields: [tenant_id, default_cost_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_cost_center_fk")
+  dimension_set                                                                  dimension_set? @relation(fields: [tenant_id, default_dimension_set_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_dimension_set_fk")
+  profit_center                                                                  profit_center? @relation(fields: [tenant_id, default_profit_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_profit_center_fk")
+  project                                                                        project?       @relation(fields: [tenant_id, default_project_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_default_project_fk")
+  employee                                                                       employee?      @relation(fields: [tenant_id, employee_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pp_employee_fk")
+  company_code_principal_profile_default_company_code_idTocompany_code           company_code?  @relation("principal_profile_default_company_code_idTocompany_code", fields: [default_company_code_id], references: [id], onUpdate: NoAction, map: "principal_profile_cc_fk")
+  principal_principal_profile_tenant_id_principal_idToprincipal                  principal      @relation("principal_profile_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_principal_fk")
+  principal_principal_profile_supervisor_idToprincipal                           principal?     @relation("principal_profile_supervisor_idToprincipal", fields: [supervisor_id], references: [id], onUpdate: NoAction, map: "principal_profile_supervisor_fk")
+  tenant                                                                         tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_tenant_fk")
 
   @@unique([tenant_id, principal_id], map: "principal_profile_principal_uq")
   @@index([tenant_id, default_company_code_id], map: "pp_default_company_idx", where: raw("(default_company_code_id IS NOT NULL)"))
@@ -12445,6 +12878,22 @@ model project_item {
   @@index([tenant_id, parent_item_id], map: "pi_parent_idx", where: raw("(parent_item_id IS NOT NULL)"))
   @@index([tenant_id, project_id], map: "pi_project_idx")
   @@index([tenant_id, project_id, item_type], map: "pi_type_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_bookmark {
+  id           String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  principal_id String   @db.Uuid
+  entity_code  String
+  record_id    String   @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([tenant_id, principal_id, entity_code, record_id], map: "record_bookmark_unique")
+  @@index([tenant_id, principal_id, entity_code, record_id], map: "record_bookmark_lookup_idx")
+  @@index([tenant_id, principal_id, entity_code], map: "record_bookmark_principal_entity_idx")
   @@schema("master")
 }
 
@@ -13341,7 +13790,6 @@ model warehouse {
   @@schema("master")
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model schema_provisions {
   id          Int      @id @default(autoincrement())
   file_name   String   @unique
@@ -14228,349 +14676,4 @@ model template_version {
   @@unique([tenant_id, template_id, checksum], map: "template_version_checksum_uq")
   @@unique([tenant_id, id], map: "template_version_tenant_id_uq")
   @@schema("snapshot")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
-model entity_flow {
-  id                 String             @id(map: "eflow_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id          String?            @db.Uuid
-  entity_version_id  String             @db.Uuid
-  flow_code          String
-  label              String
-  description        String?
-  icon_key           String?
-  trigger_context    String
-  is_default         Boolean            @default(false)
-  config             Json               @default("{}")
-  version_no         Int                @default(1)
-  status             String             @default("draft")
-  effective_from     DateTime?          @db.Timestamptz(6)
-  effective_to       DateTime?          @db.Timestamptz(6)
-  supersedes_flow_id String?            @db.Uuid
-  created_at         DateTime           @default(now()) @db.Timestamptz(6)
-  created_by         String             @db.Uuid
-  updated_at         DateTime?          @db.Timestamptz(6)
-  updated_by         String?            @db.Uuid
-  entity_version     entity_version     @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eflow_entity_version_fk")
-  entity_flow        entity_flow?       @relation("entity_flowToentity_flow", fields: [supersedes_flow_id], references: [id], onUpdate: NoAction, map: "eflow_supersedes_fk")
-  other_entity_flow  entity_flow[]      @relation("entity_flowToentity_flow")
-  entity_flow_step   entity_flow_step[]
-
-  @@unique([tenant_id, id], map: "eflow_tenant_id_uq")
-  @@unique([tenant_id, entity_version_id, flow_code, version_no], map: "eflow_version_uq")
-  @@index([entity_version_id, status], map: "eflow_entity_version_idx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model entity_flow_field {
-  id                     String           @id(map: "eff_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id              String?          @db.Uuid
-  flow_step_id           String           @db.Uuid
-  entity_field_id        String           @db.Uuid
-  mode                   String
-  derivation_mode        String?
-  visible_when           Json?
-  required_when          Json?
-  default_source         String?
-  derive_expression      String?
-  override_permission    String?
-  override_requires_note Boolean          @default(false)
-  summary_role           String?
-  ui_variant             String?
-  format                 String?
-  span                   Int              @default(1) @db.SmallInt
-  help_text              String?
-  placeholder            String?
-  sort_order             Int              @default(0) @db.SmallInt
-  created_at             DateTime         @default(now()) @db.Timestamptz(6)
-  created_by             String           @db.Uuid
-  updated_at             DateTime?        @db.Timestamptz(6)
-  updated_by             String?          @db.Uuid
-  entity_field           entity_field     @relation(fields: [entity_field_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eff_field_fk")
-  entity_flow_step       entity_flow_step @relation(fields: [flow_step_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "eff_step_fk")
-
-  @@unique([flow_step_id, entity_field_id], map: "eff_step_field_uq")
-  @@unique([tenant_id, id], map: "eff_tenant_id_uq")
-  @@index([entity_field_id], map: "eff_field_idx")
-  @@index([flow_step_id, mode, sort_order], map: "eff_mode_step_idx")
-  @@index([flow_step_id, sort_order], map: "eff_step_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model entity_flow_step {
-  id                String              @id(map: "efs_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String?             @db.Uuid
-  flow_id           String              @db.Uuid
-  step_key          String
-  label             String
-  description       String?
-  icon_key          String?
-  sort_order        Int                 @db.SmallInt
-  skip_when         Json?
-  advance_rule      Json                @default("{}")
-  layout_hint       String              @default("two_column")
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  created_by        String              @db.Uuid
-  updated_at        DateTime?           @db.Timestamptz(6)
-  updated_by        String?             @db.Uuid
-  entity_flow_field entity_flow_field[]
-  entity_flow       entity_flow         @relation(fields: [flow_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "efs_flow_fk")
-
-  @@unique([flow_id, sort_order], map: "efs_flow_order_uq")
-  @@unique([flow_id, step_key], map: "efs_flow_step_uq")
-  @@unique([tenant_id, id], map: "efs_tenant_id_uq")
-  @@index([flow_id, sort_order], map: "efs_flow_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model import_request {
-  id                   String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String                 @db.Uuid
-  entity_name          String
-  file_ref             String
-  file_name            String
-  file_size_bytes      BigInt?
-  file_format          String                 @default("csv")
-  mapping_config       Json                   @default("[]")
-  import_mode          String                 @default("create")
-  options              Json                   @default("{}")
-  total_rows           Int?
-  processed_rows       Int                    @default(0)
-  success_count        Int                    @default(0)
-  error_count          Int                    @default(0)
-  status               String                 @default("uploaded")
-  error_summary        Json?
-  started_at           DateTime?              @db.Timestamptz(6)
-  completed_at         DateTime?              @db.Timestamptz(6)
-  submitted_by         String                 @db.Uuid
-  created_at           DateTime               @default(now()) @db.Timestamptz(6)
-  created_by           String                 @db.Uuid
-  updated_at           DateTime?              @db.Timestamptz(6)
-  updated_by           String?                @db.Uuid
-  import_request_chunk import_request_chunk[]
-
-  @@unique([tenant_id, id], map: "import_request_tenant_uq")
-  @@index([tenant_id, entity_name, created_at(sort: Desc)], map: "import_request_tenant_entity_idx")
-  @@index([tenant_id, status, created_at(sort: Desc)], map: "import_request_tenant_status_idx")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model import_request_chunk {
-  id                String         @id(map: "import_chunk_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String         @db.Uuid
-  import_request_id String         @db.Uuid
-  chunk_index       Int            @db.SmallInt
-  row_start         Int
-  row_end           Int
-  status            String         @default("pending")
-  success_count     Int            @default(0)
-  error_count       Int            @default(0)
-  errors_json       Json           @default("[]")
-  job_id            String?
-  attempt_no        Int            @default(1) @db.SmallInt
-  started_at        DateTime?      @db.Timestamptz(6)
-  completed_at      DateTime?      @db.Timestamptz(6)
-  duration_ms       Int?
-  import_request    import_request @relation(fields: [import_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "import_chunk_request_fk")
-
-  @@index([import_request_id, chunk_index], map: "import_chunk_request_idx")
-  @@index([import_request_id, status], map: "import_chunk_status_idx", where: raw("(status = ANY (ARRAY['pending'::text, 'processing'::text]))"))
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model connector_instance {
-  id                   String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String         @db.Uuid
-  connector_type_id    String         @db.Uuid
-  code                 String
-  name                 String
-  description          String?
-  config               Json           @default("{}")
-  status               String         @default("active")
-  health_status        String         @default("unknown")
-  last_health_check_at DateTime?      @db.Timestamptz(6)
-  last_error_message   String?
-  is_active            Boolean        @default(true)
-  created_at           DateTime       @default(now()) @db.Timestamptz(6)
-  created_by           String         @db.Uuid
-  updated_at           DateTime?      @db.Timestamptz(6)
-  updated_by           String?        @db.Uuid
-  connector_type       connector_type @relation(fields: [connector_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenant               tenant         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([tenant_id, code], map: "connector_instance_code_uq")
-  @@index([tenant_id, health_status], map: "idx_connector_instance_health", where: raw("(health_status = ANY (ARRAY['degraded'::text, 'down'::text]))"))
-  @@index([tenant_id, is_active, created_at(sort: Desc)], map: "idx_connector_instance_tenant")
-  @@index([connector_type_id, tenant_id], map: "idx_connector_instance_type")
-  @@schema("event")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model orchestration_node {
-  id                String            @id(map: "orch_node_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String            @db.Uuid
-  run_id            String            @db.Uuid
-  node_code         String
-  node_type         String
-  depends_on        String[]          @default([])
-  status            String            @default("pending")
-  job_id            String?
-  input             Json?
-  output            Json?
-  error             String?
-  retry_count       Int               @default(0)
-  started_at        DateTime?         @db.Timestamptz(6)
-  completed_at      DateTime?         @db.Timestamptz(6)
-  duration_ms       Int?
-  orchestration_run orchestration_run @relation(fields: [run_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tenant            tenant            @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([run_id, node_code], map: "orch_node_run_code")
-  @@index([tenant_id, status], map: "idx_orch_node_active", where: raw("(status = ANY (ARRAY['pending'::text, 'running'::text]))"))
-  @@index([job_id], map: "idx_orch_node_job_id", where: raw("(job_id IS NOT NULL)"))
-  @@index([run_id], map: "idx_orch_node_run_id")
-  @@schema("event")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model orchestration_run {
-  id                 String               @id(map: "orch_run_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id          String               @db.Uuid
-  dag_id             String
-  trigger_type       String               @default("manual")
-  trigger_ref        String?
-  correlation_id     String?
-  status             String               @default("running")
-  total_nodes        Int                  @default(0)
-  completed_nodes    Int                  @default(0)
-  failed_nodes       Int                  @default(0)
-  skipped_nodes      Int                  @default(0)
-  started_at         DateTime             @default(now()) @db.Timestamptz(6)
-  completed_at       DateTime?            @db.Timestamptz(6)
-  timeout_at         DateTime?            @db.Timestamptz(6)
-  input              Json?
-  output             Json?
-  created_by         String?              @db.Uuid
-  orchestration_node orchestration_node[]
-  tenant             tenant               @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([correlation_id], map: "idx_orch_run_correlation", where: raw("(correlation_id IS NOT NULL)"))
-  @@index([tenant_id, dag_id, started_at(sort: Desc)], map: "idx_orch_run_dag")
-  @@index([tenant_id, status, started_at(sort: Desc)], map: "idx_orch_run_tenant_status")
-  @@schema("event")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model audit_dlq {
-  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String    @db.Uuid
-  queue_name        String
-  job_name          String
-  payload           Json
-  error_message     String
-  retry_count       Int       @default(0) @db.SmallInt
-  last_attempted_at DateTime  @db.Timestamptz(6)
-  retried_at        DateTime? @db.Timestamptz(6)
-  retried_job_id    String?
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-
-  @@schema("log")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model notification_dlq {
-  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String    @db.Uuid
-  queue_name        String
-  job_name          String
-  payload           Json
-  error_message     String
-  retry_count       Int       @default(0) @db.SmallInt
-  last_attempted_at DateTime  @db.Timestamptz(6)
-  retried_at        DateTime? @db.Timestamptz(6)
-  retried_job_id    String?
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-
-  @@schema("log")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model accounting_profile {
-  id                                                 String     @id(map: "ap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                          String     @db.Uuid
-  code                                               String
-  name                                               String
-  description                                        String?
-  direction                                          String     @default("INBOUND")
-  subledger_type                                     String     @default("AP")
-  domain_hint                                        String?
-  icon_key                                           String?
-  color_token                                        String?
-  sort_order                                         Int        @default(0) @db.SmallInt
-  metadata                                           Json       @default("{}")
-  status                                             String     @default("active")
-  is_active                                          Boolean?   @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                  DateTime?  @db.Timestamptz(6)
-  status_changed_by                                  String?    @db.Uuid
-  created_at                                         DateTime   @default(now()) @db.Timestamptz(6)
-  created_by                                         String     @db.Uuid
-  updated_at                                         DateTime?  @db.Timestamptz(6)
-  updated_by                                         String?    @db.Uuid
-  principal_accounting_profile_created_byToprincipal principal  @relation("accounting_profile_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_created_by_fk")
-  tenant                                             tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ap_tenant_fk")
-  principal_accounting_profile_updated_byToprincipal principal? @relation("accounting_profile_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_updated_by_fk")
-
-  @@unique([tenant_id, code], map: "ap_tenant_code_uq")
-  @@unique([tenant_id, id], map: "ap_tenant_id_uq")
-  @@index([tenant_id, subledger_type, direction], map: "ap_subledger_idx", where: raw("(is_active = true)"))
-  @@index([tenant_id, status], map: "ap_tenant_status_idx", where: raw("(is_active = true)"))
-  @@schema("master")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model principal_notification_preference {
-  id                                                                            String     @id(map: "pnp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                     String     @db.Uuid
-  principal_id                                                                  String     @db.Uuid
-  event_code                                                                    String
-  channel                                                                       String
-  is_enabled                                                                    Boolean?
-  frequency_code                                                                String?
-  metadata                                                                      Json       @default("{}")
-  status                                                                        String     @default("active")
-  is_active                                                                     Boolean?   @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                             DateTime?  @db.Timestamptz(6)
-  status_changed_by                                                             String?    @db.Uuid
-  created_at                                                                    DateTime   @default(now()) @db.Timestamptz(6)
-  created_by                                                                    String     @db.Uuid
-  updated_at                                                                    DateTime?  @db.Timestamptz(6)
-  updated_by                                                                    String?    @db.Uuid
-  principal_principal_notification_preference_created_byToprincipal             principal  @relation("principal_notification_preference_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "pnp_created_by_fk")
-  principal_principal_notification_preference_tenant_id_principal_idToprincipal principal  @relation("principal_notification_preference_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pnp_principal_fk")
-  tenant                                                                        tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pnp_tenant_fk")
-  principal_principal_notification_preference_updated_byToprincipal             principal? @relation("principal_notification_preference_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "pnp_updated_by_fk")
-
-  @@unique([tenant_id, principal_id, event_code, channel], map: "pnp_natural_key_uq")
-  @@unique([tenant_id, id], map: "pnp_tenant_id_uq")
-  @@index([tenant_id, principal_id], map: "pnp_principal_idx", where: raw("(is_active = true)"))
-  @@schema("master")
 }

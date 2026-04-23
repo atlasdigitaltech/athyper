@@ -10,15 +10,17 @@
  */
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, Pin } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import type {
   ApprovableAudit,
   ApprovableDocumentHeaderDTO,
   HeaderMode,
   ProgressRail,
   ProgressStage,
+  SlaStatus,
 } from "./types";
 import { DocumentActionBar } from "../actions/DocumentActionBar";
 import { DocumentIdentityCard, type IdentityAction, type IdentityDueMeta } from "../identity/DocumentIdentityCard";
@@ -42,7 +44,7 @@ export interface ApprovableDocumentHeaderProps {
   data: ApprovableDocumentHeaderDTO;
   initialMode?: HeaderMode;
   onModeChange?: (mode: HeaderMode) => void;
-  onAction?: (action: string) => void;
+  onAction?: (action: string, remarks?: string) => void | Promise<void>;
   tabs?: ApprovableDocumentHeaderTab[];
   activeTab?: string;
   onTabChange?: (tabId: string) => void;
@@ -152,6 +154,42 @@ function AuditMetaBar({ audit }: { audit: ApprovableAudit }) {
   );
 }
 
+// ── SLA badge ──────────────────────────────────────────────────────────────
+
+const SLA_INTENT: Record<SlaStatus, "success" | "warning" | "error" | "neutral"> = {
+  on_track:        "success",
+  at_risk:         "warning",
+  breached:        "error",
+  completed_ok:    "success",
+  completed_late:  "error",
+};
+
+const SLA_LABEL: Record<SlaStatus, string> = {
+  on_track:        "On track",
+  at_risk:         "At risk",
+  breached:        "Breached",
+  completed_ok:    "Within SLA",
+  completed_late:  "Late",
+};
+
+function SlaBadge({ status, targetHours }: { status: SlaStatus; targetHours?: number }) {
+  const intent  = SLA_INTENT[status];
+  const label   = SLA_LABEL[status];
+  const { subtleBadge } = resolveSemanticColors(intent);
+  const target  = targetHours ? `${targetHours}h SLA` : undefined;
+  return (
+    <span
+      title={target}
+      className={cn(
+        "inline-flex items-center rounded border px-1 py-px text-[9px] font-semibold leading-none",
+        subtleBadge,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
 // ── Progress rail — expanded grid only ────────────────────────────────────
 
 function ProgressRailGrid({ rail }: { rail: ProgressRail }) {
@@ -160,13 +198,14 @@ function ProgressRailGrid({ rail }: { rail: ProgressRail }) {
   return (
     <div
       className="overflow-x-auto pb-0.5"
-      style={{ display: "grid", gridTemplateColumns: `repeat(${rail.stages.length}, minmax(96px, 1fr))` }}
+      style={{ display: "grid", gridTemplateColumns: `repeat(${rail.stages.length}, minmax(112px, 1fr))` }}
     >
       {rail.stages.map((stage: ProgressStage, i: number) => {
         const isActive = i === activeIdx;
         const isPast   = i < activeIdx;
         return (
           <div key={stage.key} className="min-w-0 pr-2">
+            {/* Node + connector */}
             <div className="flex items-center">
               <div className="relative flex-none flex items-center justify-center w-[17px] h-[17px]">
                 {isActive && (
@@ -179,7 +218,7 @@ function ProgressRailGrid({ rail }: { rail: ProgressRail }) {
                   className={cn(
                     "w-[11px] h-[11px] rounded-full relative z-[1]",
                     isActive
-                      ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_rgba(11,11,10,0.07)]"
+                      ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_hsl(var(--foreground)/0.07)]"
                       : isPast
                       ? "bg-foreground border-[1.5px] border-foreground"
                       : "bg-card border-[1.5px] border-border",
@@ -195,21 +234,38 @@ function ProgressRailGrid({ rail }: { rail: ProgressRail }) {
               )}
             </div>
 
-            <div className="mt-2">
+            {/* Labels */}
+            <div className="mt-2 space-y-0.5">
               <div className={cn(
                 "text-xs leading-tight",
                 isActive || isPast ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
               )}>
                 {stage.label}
               </div>
+
+              {/* Date reached / target */}
               {stage.reachedAt ? (
-                <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                <div className="text-xs text-muted-foreground tabular-nums">
                   {stage.reachedAt}{stage.actor ? ` · ${stage.actor}` : ""}
                 </div>
               ) : stage.targetAt ? (
-                <div className="text-xs text-muted-foreground/50 mt-0.5">target {stage.targetAt}</div>
+                <div className="text-xs text-muted-foreground/50">target {stage.targetAt}</div>
               ) : (
-                <div className="text-xs text-muted-foreground/40 mt-0.5">—</div>
+                <div className="text-xs text-muted-foreground/40">—</div>
+              )}
+
+              {/* Duration + SLA badge */}
+              {(stage.durationLabel || stage.slaStatus) && (
+                <div className="flex items-center gap-1 pt-0.5 flex-wrap">
+                  {stage.durationLabel && (
+                    <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
+                      {isActive ? "⏱ " : ""}{stage.durationLabel}
+                    </span>
+                  )}
+                  {stage.slaStatus && (
+                    <SlaBadge status={stage.slaStatus} targetHours={stage.slaTargetHours} />
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -372,7 +428,7 @@ export function ApprovableDocumentHeader({
           <DocumentActionBar
             actions={actionBundle!}
             blockedReasons={blockedReasons}
-            onAction={(code) => onAction?.(code)}
+            onAction={(code, remarks) => onAction?.(code, remarks)}
           />
           <span className="w-px h-5 bg-border/60 self-center shrink-0" />
           {toggleBtns}

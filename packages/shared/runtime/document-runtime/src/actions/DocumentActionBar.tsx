@@ -98,13 +98,13 @@ function ConfirmSheet({
 
   return (
     <Sheet open={!!action} onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:max-w-md" aria-describedby={undefined}>
         <SheetHeader>
           <SheetTitle>{action.label}</SheetTitle>
         </SheetHeader>
         <div className="flex-1 space-y-4 px-1 py-4">
           <p className="text-sm text-muted-foreground">
-            {action.disabled_reason ?? `Confirm: ${action.label}`}
+            {`Confirm: ${action.label}`}
           </p>
           <div className="space-y-1.5">
             <label className="text-xs font-medium">Remarks (optional)</label>

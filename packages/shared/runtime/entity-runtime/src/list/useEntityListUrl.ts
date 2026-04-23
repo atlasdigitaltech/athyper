@@ -7,8 +7,10 @@
  *
  * URL serialization rules:
  *   search     → ?q=<term>
- *   sort       → ?sort=<key>:<dir>          e.g. ?sort=amount:desc
- *   filters    → ?filter.<field>=<v1>,<v2>  e.g. ?filter.status=posted,draft
+ *   sort       → ?sort=<key>:<dir>[:<nulls>]  e.g. ?sort=amount:desc,date:asc:nfirst
+ *   filters    → ?filter.<field>=<sigil>    e.g. ?filter.status=posted,draft
+ *                                                ?filter.amount=>50000
+ *                                                ?filter.invoice_date=@this_month
  *   group      → ?group=<field>
  *   page       → ?page=<n>   (omitted when page=1 for clean URLs)
  *   pageSize   → ?size=<n>
@@ -36,11 +38,12 @@ import { useCallback, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type {
   EntityListQueryState,
-  EntityListSort,
+  EntityListSortEntry,
   EntityListFilters,
   EntityListViewMode,
   FacetScope,
 } from "@athyper/api-contracts/entity-list";
+import { parseFilterSigil, serializeFilterEntry } from "@athyper/api-contracts/entity-list";
 
 // ─── URL param keys ────────────────────────────────────────────────────────────
 
@@ -48,7 +51,7 @@ const P = {
   SEARCH:       "q",
   SEARCH_MODE:  "search_mode", // omitted when "server" (the default)
   SORT:         "sort",        // "<key>:<dir>"
-  FILTER_PFX:   "filter.",     // "filter.<field>" = "<v1>,<v2>"
+  FILTER_PFX:   "filter.",     // "filter.<field>" = "<sigil>"
   GROUP:        "group",
   PAGE:         "page",
   PAGE_SIZE:    "size",
@@ -56,6 +59,7 @@ const P = {
   COLUMNS:      "cols",        // "<f1>,<f2>,..."
   DENSITY:      "density",
   FACETS:       "facets",
+  PINNED:       "pinned",      // "<f1>,<f2>,..." — pinned cols for excel view
   VIEW_ID:      "vid",         // savedViewId
   BASE_VIEW_ID: "bvid",        // baseSavedViewId
 } as const;
@@ -76,27 +80,28 @@ function parseState(
   const searchMode = searchParams.get(P.SEARCH_MODE);
   if (searchMode === "client" || searchMode === "server") state.searchMode = searchMode;
 
-  // sort: "key:dir"
+  // sort: "key:dir[,key:dir:nfirst,...]"  nfirst suffix = NULLS FIRST
   const sortRaw = searchParams.get(P.SORT);
   if (sortRaw) {
-    const colonIdx = sortRaw.lastIndexOf(":");
-    if (colonIdx > 0) {
-      const key = sortRaw.slice(0, colonIdx);
-      const dir = sortRaw.slice(colonIdx + 1);
-      if (key && (dir === "asc" || dir === "desc")) {
-        state.sort = { key, dir };
-      }
+    const entries: EntityListSortEntry[] = [];
+    for (const token of sortRaw.split(",")) {
+      const parts = token.trim().split(":");
+      if (parts.length < 2) continue;
+      const key  = parts[0]!;
+      const dir  = parts[1] === "desc" ? "desc" : "asc";
+      const nulls = parts[2] === "nfirst" ? "first" as const : undefined;
+      if (key) entries.push(nulls ? { key, dir, nulls } : { key, dir });
     }
+    if (entries.length > 0) state.sort = entries;
   }
 
-  // filters: one param per field, values comma-separated
+  // filters: one param per field, sigil-encoded value
   const filters: EntityListFilters = {};
   for (const [paramKey, paramValue] of searchParams.entries()) {
     if (paramKey.startsWith(P.FILTER_PFX)) {
       const field = paramKey.slice(P.FILTER_PFX.length);
-      if (field) {
-        const vals = paramValue.split(",").filter(Boolean);
-        if (vals.length > 0) filters[field] = vals;
+      if (field && paramValue) {
+        filters[field] = parseFilterSigil(paramValue);
       }
     }
   }
@@ -104,7 +109,7 @@ function parseState(
 
   // group
   const group = searchParams.get(P.GROUP);
-  if (group === "null") state.group = null;
+  if (group === "" || group === "null") state.group = null;
   else if (group) state.group = group;
 
   // page
@@ -138,6 +143,13 @@ function parseState(
   const facets = searchParams.get(P.FACETS) as FacetScope | null;
   if (facets === "cheap" || facets === "all") state.facets = facets;
 
+  // pinnedCols
+  const pinned = searchParams.get(P.PINNED);
+  if (pinned) {
+    const arr = pinned.split(",").filter(Boolean);
+    if (arr.length > 0) state.pinnedCols = arr;
+  }
+
   // savedViewId
   const vid = searchParams.get(P.VIEW_ID);
   if (vid) state.savedViewId = vid;
@@ -159,17 +171,20 @@ function stateToParams(s: EntityListQueryState): URLSearchParams {
   // Omit searchMode when "server" (the default — avoids URL noise)
   if (s.searchMode && s.searchMode !== "server") p.set(P.SEARCH_MODE, s.searchMode);
 
-  if (s.sort) p.set(P.SORT, `${s.sort.key}:${s.sort.dir}`);
+  if (s.sort?.length) {
+    p.set(P.SORT, s.sort.map((e) => e.nulls === "first" ? `${e.key}:${e.dir}:nfirst` : `${e.key}:${e.dir}`).join(","));
+  }
 
   if (s.filters) {
-    for (const [field, values] of Object.entries(s.filters)) {
-      const clean = values.filter(Boolean);
-      if (clean.length > 0) p.set(`${P.FILTER_PFX}${field}`, clean.join(","));
+    for (const [field, entry] of Object.entries(s.filters)) {
+      const sigil = serializeFilterEntry(entry);
+      if (sigil) p.set(`${P.FILTER_PFX}${field}`, sigil);
     }
   }
 
+  // "" = explicit no-group (clears view default); "null" is the legacy encoding
   if (s.group !== undefined && s.group !== null) p.set(P.GROUP, s.group);
-  if (s.group === null) p.set(P.GROUP, "null");
+  if (s.group === null) p.set(P.GROUP, "");
 
   // Omit page=1 — redundant and pollutes clean URLs
   if (s.page && s.page > 1) p.set(P.PAGE, String(s.page));
@@ -184,6 +199,8 @@ function stateToParams(s: EntityListQueryState): URLSearchParams {
   if (s.density) p.set(P.DENSITY, s.density);
 
   if (s.facets) p.set(P.FACETS, s.facets);
+
+  if (s.pinnedCols?.length) p.set(P.PINNED, s.pinnedCols.join(","));
 
   if (s.savedViewId)     p.set(P.VIEW_ID,      s.savedViewId);
   if (s.baseSavedViewId) p.set(P.BASE_VIEW_ID, s.baseSavedViewId);
@@ -222,7 +239,7 @@ export function useEntityListUrl(entityCode: string) {
   );
 
   const setSort = useCallback(
-    (sort: EntityListSort | undefined) => applyState({ ...state, sort, page: undefined }),
+    (sort: EntityListSortEntry[] | undefined) => applyState({ ...state, sort, page: undefined }),
     [state, applyState],
   );
 
@@ -254,6 +271,22 @@ export function useEntityListUrl(entityCode: string) {
   const setDensity = useCallback(
     (density: "compact" | "comfortable" | "spacious" | undefined) =>
       applyState({ ...state, density }),
+    [state, applyState],
+  );
+
+  const setSearchMode = useCallback(
+    (mode: "server" | "client" | undefined) =>
+      applyState({ ...state, searchMode: mode, page: undefined }),
+    [state, applyState],
+  );
+
+  const setFacets = useCallback(
+    (scope: "cheap" | "all" | undefined) => applyState({ ...state, facets: scope }),
+    [state, applyState],
+  );
+
+  const setPinnedCols = useCallback(
+    (cols: string[]) => applyState({ ...state, pinnedCols: cols.length > 0 ? cols : undefined }),
     [state, applyState],
   );
 
@@ -312,7 +345,7 @@ export function useEntityListUrl(entityCode: string) {
   const hasActiveQuery = !!(
     state.search ||
     (state.filters && Object.keys(state.filters).length > 0) ||
-    state.sort ||
+    (state.sort && state.sort.length > 0) ||
     state.group
   );
 
@@ -326,6 +359,9 @@ export function useEntityListUrl(entityCode: string) {
     setViewMode,
     setColumns,
     setDensity,
+    setSearchMode,
+    setFacets,
+    setPinnedCols,
     loadSavedView,
     markModified,
     reset,

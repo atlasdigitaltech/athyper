@@ -13,8 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Separator, Skeleton,
 } from "@athyper/ui/primitives";
-import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
-import type { AppearanceMode, DensityCode } from "@/stores/preferences/usePreferencesStore";
+import { usePreferencesStore, type AppearanceMode, type DensityCode } from "@/stores/preferences/usePreferencesStore";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { bffFetch } from "@/lib/bff-fetch";
 import {

@@ -11,15 +11,23 @@
  *       comments | approvals | tasks | watchers | rules | integrations |
  *       quality | reports | events | [field-group sections]
  *
- * Versions tab navigates to /app/:entity/:id/versions (does not render inline).
+ * Versions tab renders inline as a panel (same pattern as all other tabs).
  */
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  ArrowLeftRight, CheckCircle2, Clock,
+  FileClock, GitBranch, RotateCcw, XCircle,
+} from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Card, CardContent } from "@athyper/ui/primitives";
+import {
+  Badge, Button, Card, CardContent,
+  Skeleton, Tooltip, TooltipContent, TooltipTrigger,
+} from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
+import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import {
   ApprovableDocumentShell,
   buildOrchestratorFromRecord,
@@ -110,6 +118,266 @@ function LinesPanel({
       isLoading={linesQuery.isLoading}
       onRefresh={handleRefresh}
     />
+  );
+}
+
+// ── Versions panel ────────────────────────────────────────────────────────────
+
+interface VersionListResponse {
+  data: RecordVersionSummary[];
+  current_version_no: number;
+}
+
+function versionChangeTypeLabel(t: RecordVersionSummary["change_type"]): string {
+  const map: Record<string, string> = {
+    original: "Original", amendment: "Amendment",
+    reversal: "Reversal", correction: "Correction",
+  };
+  return map[t] ?? t;
+}
+
+function versionStatusVariant(
+  s: RecordVersionSummary["status"],
+): "success" | "muted" | "destructive" | "secondary" {
+  switch (s) {
+    case "approved":   return "success";
+    case "superseded": return "muted";
+    case "cancelled":  return "destructive";
+    default:           return "secondary";
+  }
+}
+
+function VersionChangeTypeIcon({ type }: { type: RecordVersionSummary["change_type"] }) {
+  switch (type) {
+    case "amendment":  return <GitBranch    className="h-3.5 w-3.5" />;
+    case "reversal":   return <RotateCcw    className="h-3.5 w-3.5" />;
+    case "original":   return <CheckCircle2 className="h-3.5 w-3.5" />;
+    default:           return <Clock        className="h-3.5 w-3.5" />;
+  }
+}
+
+function VersionCard({
+  version, isLast, pinnedVersion,
+  onSelectCompare, onNavigateCompare, onAmend, isAmending,
+}: {
+  version:           RecordVersionSummary;
+  isLast:            boolean;
+  pinnedVersion:     number | null;
+  onSelectCompare:   (vNo: number) => void;
+  onNavigateCompare: (from: number, to: number) => void;
+  onAmend:           () => void;
+  isAmending:        boolean;
+}) {
+  const isCurrentAmendTarget = version.is_current && version.status === "approved";
+  const isPinned     = pinnedVersion === version.version_no;
+  const canCompareWith = pinnedVersion !== null && !isPinned;
+
+  return (
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center">
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold tabular-nums",
+            version.is_current
+              ? "border-primary bg-primary text-primary-foreground"
+              : isPinned
+              ? "border-info bg-info/10 text-info"
+              : "border-border bg-background text-muted-foreground",
+          )}
+        >
+          {version.version_no}
+        </div>
+        {!isLast && <div className="mt-1 w-px flex-1 bg-border" />}
+      </div>
+
+      <div
+        className={cn(
+          "mb-4 flex-1 rounded-lg border p-4",
+          version.is_current
+            ? "border-primary/30 bg-primary/5"
+            : isPinned
+            ? "border-info/30 bg-info/5"
+            : "bg-card",
+        )}
+      >
+        <div className="flex flex-wrap items-start gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1 text-sm font-medium">
+              <VersionChangeTypeIcon type={version.change_type} />
+              {versionChangeTypeLabel(version.change_type)}
+            </span>
+            <Badge variant={versionStatusVariant(version.status)} className="capitalize text-[10px]">
+              {version.status}
+            </Badge>
+            {version.is_current && <Badge variant="info" className="text-[10px]">Current</Badge>}
+            {isPinned        && <Badge variant="secondary" className="text-[10px]">Selected</Badge>}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {canCompareWith ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => {
+                      const from = Math.min(pinnedVersion!, version.version_no);
+                      const to   = Math.max(pinnedVersion!, version.version_no);
+                      onNavigateCompare(from, to);
+                    }}
+                  >
+                    <ArrowLeftRight className="h-3 w-3" />
+                    Compare ↔ v{pinnedVersion}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open diff: v{pinnedVersion} → v{version.version_no}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={isPinned ? "secondary" : "ghost"} size="sm"
+                    className="h-7 gap-1 text-xs text-muted-foreground"
+                    onClick={() => onSelectCompare(version.version_no)}
+                  >
+                    <ArrowLeftRight className="h-3 w-3" />
+                    {isPinned ? "Deselect" : "Select"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isPinned
+                    ? "Deselect this version"
+                    : `Select v${version.version_no} as compare baseline`}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {isCurrentAmendTarget && (
+              <Button
+                variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                onClick={onAmend} disabled={isAmending}
+              >
+                <GitBranch className="h-3 w-3" />
+                Amend
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            {new Date(version.created_at).toLocaleString(undefined, {
+              year: "numeric", month: "short", day: "numeric",
+              hour: "2-digit", minute: "2-digit",
+            })}
+          </span>
+          {version.created_by_name && <span>by {version.created_by_name}</span>}
+          {version.change_reason   && <span className="italic">"{version.change_reason}"</span>}
+        </div>
+        <div className="mt-2 truncate font-mono text-[10px] text-muted-foreground/50">
+          {version.data_hash}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VersionsPanel({ entityCode, recordId }: { entityCode: string; recordId: string }) {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [pinnedVersion, setPinnedVersion] = useState<number | null>(null);
+
+  const { data, isLoading, isError } = useQuery<VersionListResponse>({
+    queryKey: ["record-versions", entityCode, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/versions`,
+        { signal },
+      );
+      if (!res.ok) return { data: [], current_version_no: 0 };
+      return res.json() as Promise<VersionListResponse>;
+    },
+    staleTime: 30_000,
+  });
+
+  const amendMutation = useMutation({
+    mutationFn: () =>
+      fetch(
+        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/amend`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+      ).then((r) => { if (!r.ok) throw new Error("Amend failed"); return r.json(); }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["record-versions", entityCode, recordId] });
+    },
+  });
+
+  const sorted = [...(data?.data ?? [])].sort((a, b) => a.version_no - b.version_no);
+
+  return (
+    <div className="space-y-1">
+      {pinnedVersion !== null && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-info/20 bg-info/5 px-4 py-2.5">
+          <span className="text-sm">
+            <span className="font-medium">v{pinnedVersion} selected.</span>{" "}
+            Click another version to open the diff view.
+          </span>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPinnedVersion(null)}>
+            <XCircle className="mr-1 h-3.5 w-3.5" />
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-4">
+              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+              <Skeleton className="h-24 flex-1 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <p className="text-sm text-destructive">Failed to load version history.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Version control may not be enabled for this entity.</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && sorted.length === 0 && (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-14 text-center">
+          <FileClock className="h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">No version history yet</p>
+          <p className="text-xs text-muted-foreground/70">
+            Versions appear here when this record is amended or reversed.
+          </p>
+        </div>
+      )}
+
+      {sorted.map((version, idx) => (
+        <VersionCard
+          key={version.version_no}
+          version={version}
+          isLast={idx === sorted.length - 1}
+          pinnedVersion={pinnedVersion}
+          onSelectCompare={(vNo) => setPinnedVersion((prev) => (prev === vNo ? null : vNo))}
+          onNavigateCompare={(from, to) =>
+            router.push(
+              `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/compare?from=${from}&to=${to}`,
+            )
+          }
+          onAmend={() => amendMutation.mutate()}
+          isAmending={amendMutation.isPending}
+        />
+      ))}
+
+      {amendMutation.isError && (
+        <p className="mt-2 text-xs text-destructive">
+          {amendMutation.error instanceof Error ? amendMutation.error.message : "Amend failed."}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -268,7 +536,6 @@ export function ApprovableDetailPage({
   operations,
   recordId,
 }: ApprovableDetailPageProps) {
-  const router  = useRouter();
   const data    = record.data;
 
   const detailConfig  = resolveDetailConfig(entity);
@@ -280,6 +547,7 @@ export function ApprovableDetailPage({
   const opDispatch = useOperationDispatch({
     entityCode: entity.entity_code,
     recordId,
+    recordUuid: record.id,
   });
 
   // Orchestrator
@@ -520,12 +788,6 @@ export function ApprovableDetailPage({
     : entity.entity_code;
 
   function handleTabChange(tabId: string) {
-    if (tabId === "__versions") {
-      router.push(
-        `/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/versions`,
-      );
-      return;
-    }
     setActiveTab(tabId);
   }
 
@@ -538,9 +800,9 @@ export function ApprovableDetailPage({
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        onAction={(action) => {
+        onAction={async (action, remarks) => {
           if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
-          opDispatch.dispatch(action, operations ?? []);
+          await opDispatch.dispatch(action, operations ?? [], { remarks });
         }}
       >
         {/* Overview — amount summary + grouped header fields */}
@@ -621,6 +883,15 @@ export function ApprovableDetailPage({
           </Card>
         )}
 
+        {/* Versions */}
+        {activeTab === "__versions" && (
+          <Card>
+            <CardContent className="pt-5">
+              <VersionsPanel entityCode={entity.entity_code} recordId={recordId} />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Approvals */}
         {activeTab === "__approvals" && (
           <Card>
@@ -697,7 +968,7 @@ export function ApprovableDetailPage({
         {activeTab === "__events" && (
           <Card>
             <CardContent className="pt-5">
-              <EventsPanel entityCode={entity.entity_code} recordId={recordId} />
+              <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
             </CardContent>
           </Card>
         )}

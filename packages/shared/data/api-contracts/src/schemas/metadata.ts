@@ -83,6 +83,7 @@ export const EntityFieldSchema = z.object({
   is_groupable: z.boolean(),
   is_aggregatable: z.boolean(),
   is_pii: z.boolean(),
+  is_computed: z.boolean().optional(),
 
   default_value: z.unknown().nullable(),
   validation_rules: z.record(z.string(), z.unknown()).nullable(),
@@ -273,6 +274,8 @@ export const CompiledEntitySchema = z.object({
     quality_checks: z.boolean().optional(),
     /** Record-scoped report links. */
     record_reports: z.boolean().optional(),
+    /** SLA target in hours for stage-level SLA tracking (default: 24). */
+    sla_target_hours: z.number().optional(),
   }),
 
   governance_level: z.string(),

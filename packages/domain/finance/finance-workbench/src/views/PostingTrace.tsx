@@ -13,8 +13,7 @@
 
 import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Badge, Skeleton } from "@athyper/ui/primitives";
-import { usePostingTrace } from "../hooks/usePostingTrace";
-import type { PostingTraceLine } from "../hooks/usePostingTrace";
+import { usePostingTrace, type PostingTraceLine } from "../hooks/usePostingTrace";
 import { fmtCurrency, fmtDate } from "../components/format";
 
 function statusBadge(status: string) {

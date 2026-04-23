@@ -60,16 +60,17 @@ export interface ActionDispatcherDeps {
 }
 
 // ─── handler_target → status value map ────────────────────────────────────────
+// Values must match control.lifecycle_state.code (lowercase snake_case).
 
 const TARGET_STATUS: Record<string, string> = {
-  submit:   "SUBMITTED",
-  approve:  "APPROVED",
-  deny:     "REJECTED",
-  post:     "POSTED",
-  cancel:   "CANCELLED",
-  void:     "VOID",
-  close:    "CLOSED",
-  archive:  "ARCHIVED",
+  submit:   "pending_approval",
+  approve:  "approved",
+  deny:     "rejected",
+  post:     "posted",
+  cancel:   "cancelled",
+  void:     "cancelled",
+  close:    "closed",
+  archive:  "archived",
 };
 
 // ─── Lifecycle helpers (inline — mirrors bulk-action.route.ts) ─────────────────
@@ -85,7 +86,7 @@ async function isTransitionAllowed(
   fromStatus:   string,
   targetStatus: string,
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // 1. snapshot.status_route
+  // 1. snapshot.status_route — O(1) compiled lookup (populated by compile_status_route())
   const routeRow = await db
     .selectFrom("snapshot.status_route as sr")
     .select(["sr.compiled_json"])
@@ -104,12 +105,12 @@ async function isTransitionAllowed(
     return { allowed: true };
   }
 
-  // 2. control.entity_lifecycle (fallback)
-  const binding = await db
+  // 2. Fallback: direct query against control.lifecycle_transition + lifecycle_state.
+  //    Used when the snapshot has not yet been compiled for this tenant/entity.
+  const hasBinding = await db
     .selectFrom("control.entity_lifecycle as el")
-    .innerJoin("master.lifecycle as lc", "lc.id", "el.lifecycle_id")
-    .select(["lc.status_graph"] as never[])
-    .where("el.entity_name", "=", entityName)
+    .select(["el.id"] as never[])
+    .where("el.entity_name" as never, "=", entityName as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .where((eb: any) =>
       eb.or([
@@ -117,22 +118,37 @@ async function isTransitionAllowed(
         eb("el.tenant_id" as never, "=", tenantId as never),
       ]),
     )
-    .orderBy("el.priority" as never, "asc")
     .limit(1)
-    .executeTakeFirst() as { status_graph: Record<string, unknown> | null } | undefined;
+    .executeTakeFirst() as { id: string } | undefined;
 
-  if (binding?.status_graph) {
-    const sg = binding.status_graph as Record<string, unknown>;
-    const map = sg["allowed_transitions"] as Record<string, string[]> | undefined;
-    if (map) {
-      const allowed = map[fromStatus] ?? [];
-      if (!allowed.includes(targetStatus)) {
-        return { allowed: false, reason: `Transition ${fromStatus}→${targetStatus} not in lifecycle` };
-      }
-    }
+  if (!hasBinding) {
+    // No lifecycle registered for this entity — treat as open
+    return { allowed: true };
   }
 
-  // 3. No lifecycle gate — open
+  const transition = await db
+    .selectFrom("control.entity_lifecycle as el")
+    .innerJoin("control.lifecycle_transition as lt", "lt.lifecycle_id" as never, "el.lifecycle_id" as never)
+    .innerJoin("control.lifecycle_state as fs",      "fs.id" as never,           "lt.from_state_id" as never)
+    .innerJoin("control.lifecycle_state as ts",      "ts.id" as never,           "lt.to_state_id" as never)
+    .select(["lt.id"] as never[])
+    .where("el.entity_name" as never, "=", entityName as never)
+    .where("fs.code" as never, "=", fromStatus as never)
+    .where("ts.code" as never, "=", targetStatus as never)
+    .where("lt.is_active" as never, "=", true as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .where((eb: any) =>
+      eb.or([
+        eb("el.tenant_id" as never, "is", null),
+        eb("el.tenant_id" as never, "=", tenantId as never),
+      ]),
+    )
+    .limit(1)
+    .executeTakeFirst() as { id: string } | undefined;
+
+  if (!transition) {
+    return { allowed: false, reason: `Transition ${fromStatus}→${targetStatus} not in lifecycle` };
+  }
   return { allowed: true };
 }
 
@@ -277,7 +293,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
             status_changed_by: principalId,
             updated_at:        now,
             updated_by:        principalId,
-            ...(remarks ? { last_remark: remarks } : {}),
+            ...(remarks ? { notes: remarks } : {}),
           })
           .where("id",        "=", recordId)
           .where("tenant_id", "=", tenantId)

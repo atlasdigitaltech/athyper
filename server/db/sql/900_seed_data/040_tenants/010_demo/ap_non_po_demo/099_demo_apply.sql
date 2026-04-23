@@ -17,6 +17,8 @@
 --     \i demo/005_scenario_a7_advance_recovery.sql
 --     \i demo/006_scenario_a8_retention.sql
 --     \i demo/007_scenario_vendor_advance.sql
+--     \i demo/008_scenario_a1_workflow_approvers.sql
+--     \i demo/009_activity_log.sql
 --     \i demo/099_demo_apply.sql
 -- ============================================================================
 
@@ -31,6 +33,7 @@ DECLARE
     v_tg_cnt       integer;
     v_inv_cnt      integer;
     v_adv_cnt      integer;
+    v_act_cnt      integer;
     v_rec          record;
 BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
@@ -74,6 +77,17 @@ BEGIN
      WHERE tenant_id = v_tenant_id
        AND payment_number IN ('ADV-A7-0001','ADV-VA-0001');
 
+    SELECT count(*) INTO v_act_cnt FROM log.activity_log
+     WHERE tenant_id = v_tenant_id
+       AND entity_type = 'purchase_invoice'
+       AND entity_id IN (
+           '00000001-0000-0000-0001-000000000001',
+           '00000001-0000-0000-0001-000000000003',
+           '00000001-0000-0000-0001-000000000004',
+           '00000001-0000-0000-0001-000000000007',
+           '00000001-0000-0000-0001-000000000008'
+       );
+
     -- ── Print summary ───────────────────────────────────────────────────────
     RAISE NOTICE '';
     RAISE NOTICE '════════════════════════════════════════════════════════════════';
@@ -90,6 +104,7 @@ BEGIN
     RAISE NOTICE '  Scenario documents:';
     RAISE NOTICE '    purchase_invoice (A1,A3,A4,A7,A8)  : % (of 5)', v_inv_cnt;
     RAISE NOTICE '    payment_entry (A7 advance, VA)     : % (of 2)', v_adv_cnt;
+    RAISE NOTICE '    activity_log (all invoices)        : % rows', v_act_cnt;
     RAISE NOTICE '';
 
     -- ── Per-scenario detail ─────────────────────────────────────────────────

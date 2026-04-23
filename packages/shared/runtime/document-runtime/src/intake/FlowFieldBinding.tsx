@@ -21,7 +21,7 @@
  * Span: 1=half-row, 2=full-row (2-col grid), 3=full-width.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { cn } from "@athyper/theme/utils";
 import { AlertCircle, Search } from "lucide-react";
 import type { FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-contracts/documents";
