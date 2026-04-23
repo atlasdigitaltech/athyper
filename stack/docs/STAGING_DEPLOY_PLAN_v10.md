@@ -7,7 +7,7 @@
 **OS:** Ubuntu 24.04
 **Current state:**
 - Access: `athyper@62.169.31.9` / initial password `Atlas1144` — **rotated in Phase 1.1**
-- Host runtime: Node 24.15.0, pnpm 10.33.0 (kept — see Appendix E)
+- Host runtime: Node 24.15.0, pnpm 10.33.0 — **not pre-installed on a fresh Contabo VPS; installed in Phase 1.2**
 - Docker: not yet installed (installed in Phase 2)
 
 **Console recovery:** VNC `5.189.174.159:63128`
@@ -391,8 +391,7 @@ ssh athyper@62.169.31.9      # password: Atlas1144 (rotated in Phase 1.1)
 free -h                       # ✓ ~24 GB
 df -h /                       # ✓ ~190 GB free
 nproc                         # ✓ 8
-node --version                # v24.15.0
-pnpm --version                # 10.33.0
+# node and pnpm are NOT pre-installed on a fresh Contabo VPS — installed in Phase 1.2
 
 sudo timedatectl set-ntp true
 timedatectl status | grep -i 'System clock synchronized'    # yes
@@ -403,13 +402,26 @@ timedatectl status | grep -i 'System clock synchronized'    # yes
 ## Phase 0.5 — Server Prep `[SERVER]`
 
 ```bash
-# — Swap (sudo required) —
-sudo fallocate -l 8G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+# — Swap (sudo required; idempotent — safe to run even if swap already exists) —
+if ! swapon --show | grep -q '/swapfile'; then
+  sudo fallocate -l 8G /swapfile
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile
+  sudo swapon /swapfile
+  echo "✓ swapfile created and activated"
+else
+  echo "✓ swapfile already active — skipping creation"
+fi
+
+# Add to fstab only if not already present:
+grep -q '/swapfile' /etc/fstab \
+  && echo "✓ /etc/fstab already has swapfile entry — skipping" \
+  || { echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab; echo "✓ added to fstab"; }
+
+# Add swappiness only if not already present:
+grep -q 'vm.swappiness' /etc/sysctl.conf \
+  && echo "✓ vm.swappiness already in sysctl.conf — skipping" \
+  || { echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf; }
 sudo sysctl -p
 
 # Verify swap is active:
@@ -470,6 +482,26 @@ jq --version          # required for Phase 12.1, 12.3, Prereq 3
 
 sudo timedatectl set-timezone UTC
 ```
+
+### 1.2a Install Node.js 24.x and pnpm 10.33.0 `[SERVER]`
+
+> A fresh Contabo VPS does not include Node.js or pnpm. Both are required on the host: pnpm for `pnpm install --frozen-lockfile` (Phase 7) and `tsx` for the database seed script (Phase 11).
+
+```bash
+# — Node.js 24.x via NodeSource —
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# — pnpm 10.33.0 via corepack (ships with Node) —
+sudo corepack enable
+corepack prepare pnpm@10.33.0 --activate
+
+# Verify — both must match exactly:
+node --version    # v24.x.x  (any 24.x is fine; plan targets v24.15.0)
+pnpm --version    # 10.33.0
+```
+
+> If `corepack prepare` fails with a network error, fall back to: `sudo npm install -g pnpm@10.33.0`
 
 ### 1.3 Install SSH public key `[WORKSTATION → SERVER]`
 
@@ -633,9 +665,9 @@ docker ps                                      # must succeed without sudo
 docker version | grep -E 'Version|API version'
 docker compose version                         # must be v2.x
 
-# Host runtime — all four must match expected values:
-node --version      # v24.15.0
-pnpm --version      # 10.33.0
+# Host runtime — installed in Phase 1.2 / 1.2a:
+node --version      # v24.x.x  (installed from NodeSource in Phase 1.2a)
+pnpm --version      # 10.33.0  (installed via corepack in Phase 1.2a)
 psql --version      # PostgreSQL client ≥ 16
 jq --version        # jq-1.x
 ```
