@@ -39,10 +39,7 @@
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
     </div>
-  </div>
-
-    </div>
-  </div>
+  </div><!-- /.kc-panel-left -->
 
   <!-- ── Right form panel ── -->
   <div class="kc-panel-right">
@@ -106,10 +103,12 @@
         <p><a href="${url.loginRestartFlowUrl}">Sign in as a different user</a></p>
       </div>
 
-    </div>
-  </div>
+    </div><!-- /.kc-form-card -->
+  </div><!-- /.kc-form-wrapper -->
 
-</div>
+  </div><!-- /.kc-panel-right -->
+
+</div><!-- /.kc-page -->
 <script>
 (function () {
   var slides = document.querySelectorAll('#kc-carousel .kc-slide');

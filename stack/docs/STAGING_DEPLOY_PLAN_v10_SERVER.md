@@ -38,11 +38,12 @@ There is no root login to the server at any point. All server operations are as 
 ### Server filesystem layout
 
 ```
-/home/athyper/
-├── .ssh/
-│   └── authorized_keys          ← Phase 2 (WORKSTATION doc)
-├── deploy-record.txt             ← Phase 5.2, 5.3  (chmod 600)
-└── secrets-staging.txt           ← Phase 6.3  (chmod 600, shred Phase 20.3)
+/home/products/
+└── athyper/
+    ├── .ssh/
+    │   └── authorized_keys          ← Phase 2 (WORKSTATION doc)
+    ├── deploy-record.txt             ← Phase 5.2, 5.3  (chmod 600)
+    └── secrets-staging.txt           ← Phase 6.3  (chmod 600, shred Phase 20.3)
 
 /opt/products/                    ← Phase 4  (sudo mkdir + chown athyper)
 └── athyper/                      ← Phase 5.1  (git clone target)
@@ -1472,7 +1473,7 @@ ExecStop=/bin/bash stack/scripts/stack-profile/down.sh all
 TimeoutStartSec=600
 User=athyper
 Group=athyper
-Environment=HOME=/home/athyper
+Environment=HOME=/home/products/athyper
 
 [Install]
 WantedBy=multi-user.target
