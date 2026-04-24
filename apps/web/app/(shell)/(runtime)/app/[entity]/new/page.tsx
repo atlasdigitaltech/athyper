@@ -89,17 +89,6 @@ export default function AppEntityNewRoute({
     };
   }, [profileData]);
 
-  // Guard — all hooks above; safe to return early from here
-  const { guardLoading, denied } = useSubrouteGuard(entity, "hasEdit");
-  if (guardLoading) return <GuardSkeleton />;
-  if (denied) return <FeatureUnavailablePage entityCode={entity} />;
-
-  async function handleSubmit(data: Record<string, unknown>) {
-    const created = await createMutation.mutateAsync(data);
-    const id = (created as Record<string, unknown>).id as string | undefined;
-    router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
-  }
-
   const switchToAlternateFlow = useCallback(async (flowCode: string) => {
     setAltLoading(true);
     try {
@@ -118,6 +107,17 @@ export default function AppEntityNewRoute({
   const switchToDefaultFlow = useCallback(() => {
     setActiveBundle(undefined);
   }, []);
+
+  // Guard — all hooks above; safe to return early from here
+  const { guardLoading, denied } = useSubrouteGuard(entity, "hasEdit");
+  if (guardLoading) return <GuardSkeleton />;
+  if (denied) return <FeatureUnavailablePage entityCode={entity} />;
+
+  async function handleSubmit(data: Record<string, unknown>) {
+    const created = await createMutation.mutateAsync(data);
+    const id = (created as Record<string, unknown>).id as string | undefined;
+    router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
+  }
 
   // Loading state
   if (flowLoading || altLoading) return <FlowWizardSkeleton />;
