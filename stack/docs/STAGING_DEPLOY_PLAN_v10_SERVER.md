@@ -1,4 +1,4 @@
-﻿# Athyper Staging Deployment Plan — v10 (Final · Execution Ready · Pending Prerequisites)
+# Athyper Staging Deployment — Server Execution Runbook
 
 **Server:** `athyper-staging` · Contabo Cloud VPS 30 NVMe
 **IPv4:** `62.169.31.9`
@@ -7,96 +7,29 @@
 **OS:** Ubuntu 24.04
 **Current state:**
 - Access: `athyper@62.169.31.9` / initial password `Atlas1144` — **rotated in Phase 1.1**
-- Host runtime: Node 24.15.0, pnpm 10.33.0 — **not pre-installed on a fresh Contabo VPS; installed in Phase 1.2**
-- Docker: not yet installed (installed in Phase 2)
+- Host runtime: Node 24.15.0, pnpm 10.33.0 — **not pre-installed on a fresh Contabo VPS; installed in Phase 1.3**
+- Docker: not yet installed (installed in Phase 3)
 
 **Console recovery:** VNC `5.189.174.159:63128`
-**Source:** `feature/finance-core` from `github.com/atlasdigitaltech/athyper`, pinned in Phase 4.
+**Source:** `feature/finance-core` from `github.com/atlasdigitaltech/athyper`, pinned in Phase 5.
+
+> **Prerequisite**: Complete **`STAGING_DEPLOY_PLAN_v10_WORKSTATION.md`** first:
+> - Phase 0 (DNS pre-flight + OPERATOR_IP capture)
+> - Phase 2 (SSH key installation + access lockdown)
+>
+> All SSH connections to this server use key auth:
+> `ssh -i ~/.ssh/id_ed25519 athyper@62.169.31.9`
 
 ---
 
 ## Annotation Key
 
-Every step is labelled with who runs it and where:
-
 | Label | Meaning |
 |---|---|
-| `[WORKSTATION]` | Run on your local machine before or during the deployment |
-| `[SERVER]` | Run in your SSH session as `athyper` user; `sudo` is prefixed where root access is needed |
+| `[WORKSTATION]` | Run on your local machine |
+| `[SERVER]` | Run in your SSH session as `athyper`; `sudo` prefixed where root access is needed |
 
 There is no root login to the server at any point. All server operations are as `athyper` using `sudo` for system-level commands.
-
----
-
-## ⚠ Before Execution — Three Standing Recommendations
-
-### 1. Do not start until the Runbook Prerequisites are complete.
-
-`BACKUP_RUN_CMD` must be filled, the restore-script signature must be confirmed, and the realm-JSON client discovery must be recorded. Until those blanks are closed, the runbook depends on tribal knowledge.
-
-### 2. Treat the host-side seed as a temporary workaround, not a pattern.
-
-Phase 12 exposes `127.0.0.1:5432` briefly, runs `seed-db.sh` on the host, then closes the port immediately. Acceptable for this run. The long-term target is a dedicated seed/admin image (Phase 21.3 follow-up).
-
-### 3. Keep the observability phase where it is.
-
-Apps first, minimal smoke first, then telemetry/monitoring/render/search. Resist starting observability in parallel — fault isolation is worth the extra 15 minutes.
-
----
-
-## Runbook Prerequisites — **Must Be Completed Before Execution**
-
-### Prereq 1. Backup on-demand command
-
-```bash
-# Find the backup command in the repo:
-find stack/ -name "*.sh" | xargs grep -l "backup" 2>/dev/null
-grep -r "backup-now\|run-now\|pg_dump" stack/scripts/ 2>/dev/null | head -20
-```
-
-Test against a dev instance before handoff.
-
-```
-BACKUP_RUN_CMD = __________________________________________________
-```
-
-### Prereq 2. Restore script signature confirmed
-
-```bash
-bash stack/scripts/db/restore/restore-db.sh --help 2>/dev/null || \
-  head -30 stack/scripts/db/restore/restore-db.sh
-```
-
-Verified present, signature matches `restore-db.sh <db_name> <backup_id>`: **☐ Yes  ☐ No**
-
-### Prereq 3. Realm JSON — client secret discovery
-
-```bash
-# 3a — does the template reference the env var at import time?
-grep -c 'IAM_CLIENT_SECRET' stack/config/iam/realm-demosetup.json
-```
-
-Result: `____` (≥ 1 = secret injected at import; `0` = must copy KC secret manually in Phase 14.3)
-
-```bash
-# 3b — which clientId carries the secret field used for backend auth?
-jq '.clients[]? | select(.clientId == "athyper-api" or .clientId == "athyper-api-runtime") \
-  | {clientId, clientAuthenticatorType, hasSecret: (has("secret"))}' \
-  stack/config/iam/realm-demosetup.json
-```
-
-```
-CLIENT_WITH_SECRET = _______________  (athyper-api  OR  athyper-api-runtime)
-```
-
-Phase 14.3 navigates to this exact client in the KC admin UI.
-
-### Sign-off
-
-```
-Prepared by:   _______________________    Date: __________
-Reviewed by:   _______________________    Date: __________
-```
 
 ---
 
@@ -107,12 +40,12 @@ Reviewed by:   _______________________    Date: __________
 ```
 /home/athyper/
 ├── .ssh/
-│   └── authorized_keys          ← Phase 1.3
-├── deploy-record.txt             ← Phase 4.2, 4.3  (chmod 600)
-└── secrets-staging.txt           ← Phase 7.3  (chmod 600, shred Phase 20.3)
+│   └── authorized_keys          ← Phase 2 (WORKSTATION doc)
+├── deploy-record.txt             ← Phase 5.2, 5.3  (chmod 600)
+└── secrets-staging.txt           ← Phase 6.3  (chmod 600, shred Phase 20.3)
 
-/opt/athyper/                     ← Phase 3  (sudo mkdir + chown athyper)
-└── app/                          ← Phase 4.1  (git clone target)
+/opt/athyper/                     ← Phase 4  (sudo mkdir + chown athyper)
+└── app/                          ← Phase 5.1  (git clone target)
     ├── server/
     │   ├── Dockerfile.prod       ← Phase 5.3  (sed patch: pnpm@latest → 10.33.0)
     │   └── db/seed/migrate.ts    ← called by seed-db.sh
@@ -120,12 +53,12 @@ Reviewed by:   _______________________    Date: __________
     └── stack/
         ├── compose/
         │   ├── compose.yml                          ← base compose
-        │   ├── athyper.override.staging.yml         ← Phase 8.4  (edited)
+        │   ├── athyper.override.staging.yml         ← Phase 7.4  (edited)
         │   └── apps/athyper-apps.yml                ← service definitions
         ├── config/
         │   ├── apps/
         │   │   ├── kernel.config.staging.parameter.json   ← source template
-        │   │   └── kernel.config.parameter.json           ← Phase 8.5 creates this
+        │   │   └── kernel.config.parameter.json           ← Phase 7.5 creates this
         │   ├── db/
         │   │   ├── local/dbpool/
         │   │   │   ├── pgbouncer-apps.ini     ← used (listen_addr=0.0.0.0)
@@ -135,15 +68,15 @@ Reviewed by:   _______________________    Date: __________
         │   │   ├── certs/
         │   │   │   ├── athyper.tls.local.crt  ← pre-existing dev cert (do not delete)
         │   │   │   ├── athyper.tls.local.key  ← pre-existing dev cert (do not delete)
-        │   │   │   └── acme.json              ← Phase 8.4d creates  (chmod 600)
+        │   │   │   └── acme.json              ← Phase 7.4d creates  (chmod 600)
         │   │   ├── dynamic/                   ← Traefik watches this directory
-        │   │   │   ├── athyper.workbench.yml  ← Phase 8.2 copies here
-        │   │   │   └── athyper.tls.yml        ← Phase 8.3 copies here
+        │   │   │   ├── athyper.workbench.yml  ← Phase 7.2 copies here
+        │   │   │   └── athyper.tls.yml        ← Phase 7.3 copies here
         │   │   └── environments/              ← source templates (do not edit directly)
         │   │       ├── neon-workbench-routes.staging.yml
         │   │       └── athyper.tls.staging.yml
         │   └── iam/
-        │       └── realm-demosetup.json       ← Phase 14.1 / 12.2
+        │       └── realm-demosetup.json       ← Phase 13.1 / 12.2
         ├── data/                              ← Phase 8 creates all subdirectories
         │   ├── db/
         │   ├── meilisearch/
@@ -159,37 +92,37 @@ Reviewed by:   _______________________    Date: __________
         │   └── uptime-kuma/
         ├── env/
         │   ├── staging.env.example            ← template source
-        │   └── .env                           ← Phase 6.2 creates, 5.4 populates
+        │   └── .env                           ← Phase 6.2 creates, 6.4 populates
         └── scripts/
             ├── lib/
             │   ├── compose.sh                 ← exports ATHYPER_CONFIG + ATHYPER_DATA
             │   └── constants.sh
             ├── setup/
             │   ├── setup-env.sh               ← Phase 6.2
-            │   ├── setup-config.sh            ← Phase 8.5
+            │   ├── setup-config.sh            ← Phase 7.5
             │   ├── data-dirs-create.sh        ← Phase 8
-            │   ├── validate-env.sh            ← Phase 10.3
+            │   ├── validate-env.sh            ← Phase 9.3
             │   ├── verify-objectstorage.sh    ← Phase 17
             │   └── verify-port-hardening.sh   ← Phase 17
             ├── stack-profile/
-            │   ├── up.sh                      ← Phase 11, 13, 15, 17, 19
+            │   ├── up.sh                      ← Phase 11, 14, 16, 17, 19
             │   └── down.sh                    ← Phase 18 (stop unit)
             └── db/
-                ├── transaction/neon/seed-db.sh  ← Phase 13.3
-                └── session/iam/reset-iam.sh     ← Phase 14.2
+                ├── transaction/neon/seed-db.sh  ← Phase 12.3
+                └── session/iam/reset-iam.sh     ← Phase 13.2
 
 /swapfile                                      ← Phase 0.5  (sudo)
-/usr/local/bin/disk-alert.sh                   ← Phase 0.5  (sudo, removed Phase 17.5)
-/etc/cron.d/disk-alert                         ← Phase 0.5  (sudo, removed Phase 17.5)
+/usr/local/bin/disk-alert.sh                   ← Phase 0.5  (sudo, removed Phase 16.5)
+/etc/cron.d/disk-alert                         ← Phase 0.5  (sudo, removed Phase 16.5)
 /etc/systemd/system/athyper-stack.service      ← Phase 18   (sudo)
-/etc/docker/daemon.json                        ← Phase 2.2  (sudo)
+/etc/docker/daemon.json                        ← Phase 3.2  (sudo)
 /etc/fail2ban/jail.local                       ← Phase 1.5  (sudo)
-/etc/ssh/sshd_config                           ← Phase 1.6  (sudo)
+/etc/ssh/sshd_config                           ← Phase 2.6  (WORKSTATION doc)
 ```
 
-### `athyper.override.staging.yml` — exact final state after Phase 8.4
+### `athyper.override.staging.yml` — exact final state after Phase 7.4
 
-The file currently has 7 service blocks. Phase 8.4 makes two changes: adds `environment:` to the existing `iam:` block, and appends a new `gateway:` block at the end.
+The file currently has 7 service blocks. Phase 7.4 makes two changes: adds `environment:` to the existing `iam:` block, and appends a new `gateway:` block at the end.
 
 ```yaml
 # ======= EXISTING — do not touch =======
@@ -296,109 +229,6 @@ services:
 
 ---
 
-## Server Account Reference
-
-### Account responsibilities
-
-| Account | Used for | Sudo | Login method |
-|---|---|---|---|
-| `root` | VNC console recovery only — never for day-to-day work | — (is root) | VNC tty (`5.189.174.159:63128`) |
-| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 1.6); VNC tty as fallback |
-
-**Rule**: never SSH as `root`. The sshd config (Phase 1.6) enforces `PermitRootLogin no`. All `root`-level operations in this runbook are prefixed with `sudo` and run as `athyper`.
-
-### Initial credentials
-
-| Account | Initial password | Rotated in |
-|---|---|---|
-| `root` | Set by Contabo at VPS provisioning — retrieve from the Contabo control panel | Not changed in this runbook (SSH root login is disabled) |
-| `athyper` | `Atlas1144` | Phase 1.1 (mandatory — rotate before any other step) |
-
-> **Security note**: `Atlas1144` is the Contabo-provisioned default. It is valid on the local VNC tty even after SSH password auth is disabled. Store the rotated password in your vault; never write it to any file on the server.
-
-### Creating the `athyper` account (run once from root if the account does not yet exist)
-
-A fresh Contabo VPS ships with only the `root` account. Run the following from the VNC console or an initial root SSH session to create `athyper` before this runbook starts.
-
-```bash
-# [SERVER — as root via VNC or initial root SSH]
-
-# Create the user with home directory:
-adduser --gecos "Athyper Deploy" athyper
-# You will be prompted for a password — enter: Atlas1144
-# All other GECOS fields (Full Name, Room, etc.) can be left blank (press Enter)
-
-# Grant sudo access:
-usermod -aG sudo athyper
-
-# Verify membership:
-id athyper
-# Expected: uid=1000(athyper) gid=1000(athyper) groups=1000(athyper),27(sudo)
-
-# Confirm SSH password auth is still enabled (Contabo default) so Phase 0.4 can connect:
-grep -E '^PasswordAuthentication' /etc/ssh/sshd_config
-# If the line says "no", temporarily re-enable it: sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && systemctl restart sshd
-# Phase 1.6 will disable it again after the SSH key is installed.
-```
-
-After this, continue with Phase 0 using `ssh athyper@62.169.31.9` (password `Atlas1144`).
-
----
-
-## Phase 0 — DNS and Pre-flight
-
-### 0.1 Critical DNS `[WORKSTATION]`
-
-All 6 A records must resolve to `62.169.31.9` before any stack work begins. Traefik issues ACME certificates at first startup — if DNS is not live, Let's Encrypt will fail and rate-limit the domain.
-
-```bash
-for host in api-stg neon-stg iam-stg gateway-stg objectstorage-stg \
-            objectstorage.console-stg; do
-  ip1=$(dig @1.1.1.1 +short "${host}.athyper.com" | tail -1)
-  ip2=$(dig @8.8.8.8 +short "${host}.athyper.com" | tail -1)
-  printf "%-40s 1.1.1.1=%-15s 8.8.8.8=%-15s\n" "${host}" "${ip1}" "${ip2}"
-done
-# Every line must show 62.169.31.9 on both resolvers.
-# Do not proceed if any line differs.
-```
-
-### 0.2 Secondary DNS `[WORKSTATION]`
-
-Verified before Phase 16 only (not blocking Phases 0–14):
-
-```
-telemetry-stg.athyper.com    metrics-stg.athyper.com
-traces-stg.athyper.com       logs-stg.athyper.com
-uptime-stg.athyper.com       healthchecks-stg.athyper.com
-errors-stg.athyper.com       meilisearch-stg.athyper.com
-```
-
-### 0.3 Capture OPERATOR_IP — **from your workstation, before connecting to server** `[WORKSTATION]`
-
-This IP is used in Phase 8.2 to whitelist `/admin` and `/ops` Traefik routes. If you run `curl` on the server it returns the server's own IP (`62.169.31.9`) which would block all real browser access.
-
-```bash
-# On YOUR local machine — not the server:
-curl -s ifconfig.me
-# Note this value as OPERATOR_IP (e.g. 203.0.113.42)
-```
-
-### 0.4 Capacity + NTP verification `[SERVER]`
-
-```bash
-ssh athyper@62.169.31.9      # password: Atlas1144 (rotated in Phase 1.1)
-
-free -h                       # ✓ ~24 GB
-df -h /                       # ✓ ~190 GB free
-nproc                         # ✓ 8
-# node and pnpm are NOT pre-installed on a fresh Contabo VPS — installed in Phase 1.2
-
-sudo timedatectl set-ntp true
-timedatectl status | grep -i 'System clock synchronized'    # yes
-```
-
----
-
 ## Phase 0.5 — Server Prep `[SERVER]`
 
 ```bash
@@ -434,7 +264,7 @@ sudo sed -i \
 sudo systemctl restart systemd-journald
 sudo journalctl --vacuum-size=500M
 
-# — Interim disk alert (sudo required; replaced by Prometheus in Phase 17.5) —
+# — Interim disk alert (sudo required; replaced by Prometheus in Phase 16.5) —
 sudo tee /usr/local/bin/disk-alert.sh > /dev/null << 'EOF'
 #!/bin/bash
 USAGE=$(df / | awk 'NR==2 {print $5}' | tr -d '%')
@@ -450,7 +280,7 @@ echo "*/15 * * * * root /usr/local/bin/disk-alert.sh" | sudo tee /etc/cron.d/dis
 
 ## Phase 1 — Server Preparation (Server-only) `[SERVER]`
 
-All steps in this phase run in a single server SSH session. No workstation actions. Phase 2 handles SSH key installation and lockdown separately.
+All steps in this phase run in a single server SSH session. No workstation actions. Phase 2 (WORKSTATION doc) handles SSH key installation and lockdown separately.
 
 ### 1.1 Rotate the `athyper` password immediately
 
@@ -534,96 +364,7 @@ sudo systemctl restart fail2ban
 sudo fail2ban-client status sshd    # verify jail is active
 ```
 
-Phase 1 is complete. Keep this server session open — Phase 2 uses it alongside a workstation terminal.
-
----
-
-## Phase 2 — SSH Key Installation and Access Lockdown
-
-> **This phase requires two terminals open simultaneously**: your existing Phase 1 server session (`[SERVER]`) and a terminal on your workstation (`[WORKSTATION]`). Do not close either until Step 2.7 passes. The lockdown in Step 2.6 is irreversible from outside — if key auth fails and you lock yourself out, VNC is the only recovery path.
-
-### 2.1 Check for or generate SSH key `[WORKSTATION]`
-
-Open a terminal on your workstation (keep the server session open).
-
-```bash
-ls ~/.ssh/id_ed25519.pub 2>/dev/null \
-  && echo "✓ key exists — skip keygen" \
-  || ssh-keygen -t ed25519 -C "athyper-staging-deploy" -f ~/.ssh/id_ed25519
-# Passphrase is optional; if set, ssh-agent must be running for non-interactive use
-```
-
-### 2.2 Print the public key `[WORKSTATION]`
-
-```bash
-cat ~/.ssh/id_ed25519.pub
-# Copy the entire output line (starts with ssh-ed25519 ...)
-```
-
-### 2.3 Install the public key `[SERVER]`
-
-In your existing server session:
-
-```bash
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-nano ~/.ssh/authorized_keys
-# Paste the public key — one line, no leading/trailing whitespace
-# Save: Ctrl+O, Enter, Ctrl+X
-chmod 600 ~/.ssh/authorized_keys
-cat ~/.ssh/authorized_keys    # verify exactly one line is present
-```
-
-### 2.4 Test key auth — before any lockdown `[WORKSTATION — new terminal]`
-
-Open a **third** terminal on your workstation. Keep both the server session and the workstation terminal from 2.1–2.2 open.
-
-```bash
-ssh -i ~/.ssh/id_ed25519 athyper@62.169.31.9 "whoami"
-# Must print exactly: athyper
-# If it prints anything else or hangs: fix authorized_keys (Step 2.3) before continuing
-# Do NOT proceed to 2.5 until this succeeds
-```
-
-### 2.5 Verify sudo works `[SERVER]`
-
-In your existing server session:
-
-```bash
-sudo -v          # refreshes sudo credential; password prompt is normal
-sudo whoami      # must print: root
-```
-
-> **Optional — avoid repeated sudo prompts for the rest of the runbook:**
-> ```bash
-> sudo visudo
-> # Add at the very end of the file:
-> athyper ALL=(ALL) NOPASSWD:ALL
-> ```
-> Re-test: `sudo -n whoami` must print `root` without a prompt. Only grant this if you accept the reduced privilege-separation; it can be removed after deployment.
-
-**DO NOT proceed to 2.6 until both 2.4 (key auth from workstation) and 2.5 (sudo on server) succeed.**
-
-### 2.6 Disable password and root SSH `[SERVER — sudo required]`
-
-```bash
-sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-
-# Validate config before reloading — catches syntax errors:
-sudo sshd -t && echo "✓ sshd config valid" || echo "✗ sshd config error — do NOT reload"
-
-sudo systemctl restart sshd
-```
-
-### 2.7 Confirm lockdown `[WORKSTATION]`
-
-```bash
-ssh root@62.169.31.9 2>&1 | head -3                    # must be refused
-ssh -i ~/.ssh/id_ed25519 athyper@62.169.31.9 "whoami"  # must print: athyper
-ssh -o PubkeyAuthentication=no athyper@62.169.31.9     # must be refused (password auth gone)
-```
-
-If the third command unexpectedly succeeds, password auth was not fully disabled. Use VNC (`5.189.174.159:63128`) to log in and re-run Step 2.6.
+Phase 1 is complete. Keep this server session open — Phase 2 (WORKSTATION doc) uses it alongside a workstation terminal.
 
 ---
 
@@ -639,54 +380,47 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
   | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt update
-sudo apt install -y \
-  docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Add athyper to docker group (takes effect on next login):
-sudo usermod -aG docker athyper
+sudo systemctl enable docker
+sudo systemctl start docker
 ```
 
-### 3.2 Docker log rotation `[SERVER — sudo required]`
+### 3.2 Configure Docker daemon `[SERVER — sudo required]`
 
 ```bash
 sudo tee /etc/docker/daemon.json > /dev/null << 'EOF'
-{ "log-driver": "json-file", "log-opts": { "max-size": "50m", "max-file": "5" } }
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "50m",
+    "max-file": "3"
+  }
+}
 EOF
 sudo systemctl restart docker
-sudo systemctl enable docker
 ```
 
-### 3.3 Verify Docker access — **reconnect first** `[WORKSTATION → SERVER]`
-
-Docker group membership only applies to new sessions.
+### 3.3 Add `athyper` to docker group `[SERVER — sudo required]`
 
 ```bash
-exit    # close current server session
+sudo usermod -aG docker athyper
+# Log out and back in for group change to take effect:
+exit
 ```
 
-```bash
-# From workstation:
-ssh athyper@62.169.31.9    # key auth — no password prompt
-```
+Reconnect (key auth):
 
 ```bash
-# [SERVER] — verify all tools in one block:
-id athyper | grep -q docker && echo "✓ docker group" || echo "✗ MISSING docker group"
-docker ps                                      # must succeed without sudo
-docker version | grep -E 'Version|API version'
-docker compose version                         # must be v2.x
-
-# Host runtime — installed in Phase 1.2 and 1.3:
-node --version      # v24.x.x  (installed from NodeSource in Phase 1.3)
-pnpm --version      # 10.33.0  (installed via corepack in Phase 1.3)
-psql --version      # PostgreSQL client ≥ 16
-jq --version        # jq-1.x
+ssh -i ~/.ssh/id_ed25519 athyper@62.169.31.9
+docker ps    # must work without sudo
 ```
 
 ---
@@ -853,7 +587,7 @@ wc -l ~/secrets-staging.txt    # ~30 lines expected
 nano /opt/athyper/app/stack/env/.env
 ```
 
-Use `~/secrets-staging.txt` in a split terminal as reference. Fill every `<...>` placeholder. Variables marked **NOT IN TEMPLATE** must be added as new lines — Phase 10.2 will verify their presence.
+Use `~/secrets-staging.txt` in a split terminal as reference. Fill every `<...>` placeholder. Variables marked **NOT IN TEMPLATE** must be added as new lines — Phase 9.2 will verify their presence.
 
 ```bash
 SERVICE_VERSION=1.0.0-stg
@@ -944,7 +678,7 @@ TELEMETRY_ADMIN_USER=admin
 TELEMETRY_ADMIN_PASSWORD=<from secrets>
 
 # ── Monitoring / Error tracking ───────────────────────────────────────────────
-# DSN values left blank — populated in Phase 17.3 with the same value
+# DSN values left blank — populated in Phase 16.3 with the same value
 HEALTHCHECKS_SECRET_KEY=<from secrets>
 GLITCHTIP_SECRET_KEY=<from secrets>
 GLITCHTIP_DSN=
@@ -996,7 +730,7 @@ DBPOOL_SESSION_CONFIG=db/local/dbpool/pgbouncer-session.ini
 
 ### 7.2 Workbench routes — whitelist OPERATOR_IP `[SERVER]`
 
-> The source template contains `"198.51.100.0/24"` (RFC 5737 TEST-NET, intentional fail-safe). `validate-env.sh` blocks startup if this CIDR is still present in the dynamic config. Replace it with the IP captured in Phase 0.3.
+> The source template contains `"198.51.100.0/24"` (RFC 5737 TEST-NET, intentional fail-safe). `validate-env.sh` blocks startup if this CIDR is still present in the dynamic config. Replace it with the IP captured in Phase 0.3 (WORKSTATION doc).
 
 ```bash
 cd /opt/athyper/app
@@ -1121,7 +855,7 @@ grep -E 'KC_SMTP_USERNAME|ACME_EMAIL' /tmp/merged-compose.yml | head -5
 # If "conflicting service keys" error → two iam: blocks exist — remove one and retry
 ```
 
-###$17.4d — Create ACME storage file `[SERVER]`
+### 7.4d — Create ACME storage file `[SERVER]`
 
 Traefik requires `acme.json` to exist at startup. Pre-creating it with mode 600 prevents Traefik from creating it world-readable.
 
@@ -1187,7 +921,7 @@ fi
 
 `ACME_EMAIL` is not in `staging.env.example`. The placeholder grep cannot catch a missing line — only a blank one. An empty `ACME_EMAIL` causes Traefik ACME email to be blank, which causes Let's Encrypt to refuse registration.
 
-`KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`, and `GATEWAY_DASHBOARD_HTPASSWD` are in the template but are self-referential `${VAR}` placeholders — Phase 10.1 catches those if unfilled. This gate only checks for vars entirely absent from the file.
+`KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`, and `GATEWAY_DASHBOARD_HTPASSWD` are in the template but are self-referential `${VAR}` placeholders — Phase 9.1 catches those if unfilled. This gate only checks for vars entirely absent from the file.
 
 ```bash
 cd /opt/athyper/app
@@ -1307,7 +1041,7 @@ Add `ports:` under the existing `db:` block (as a sibling of `volumes:` and `dep
 ```yaml
   db:
     ports:
-      - "127.0.0.1:5432:5432"    # TEMP — removed in 11.5
+      - "127.0.0.1:5432:5432"    # TEMP — removed in 12.5
     volumes:
       - athyper_db_data:/var/lib/postgresql/data
     deploy:
@@ -1452,7 +1186,7 @@ curl -s https://iam-stg.athyper.com/realms/athyper/.well-known/openid-configurat
 
 ### 13.3 Client secret wiring `[SERVER + WORKSTATION BROWSER]`
 
-`IAM_CLIENT_SECRET` must match the Keycloak client used for backend authentication. Use `CLIENT_WITH_SECRET` from Runbook Prerequisite 3b.
+`IAM_CLIENT_SECRET` must match the Keycloak client used for backend authentication. Use `CLIENT_WITH_SECRET` from Runbook Prerequisite 3b (WORKSTATION doc).
 
 ```bash
 cd /opt/athyper/app
@@ -1725,7 +1459,7 @@ sudo systemctl status athyper-stack    # enabled; inactive (not running yet — 
 
 ### 19.1 Run first backup `[SERVER]`
 
-Substitute `<BACKUP_RUN_CMD>` with the value from Runbook Prerequisite 1:
+Substitute `<BACKUP_RUN_CMD>` with the value from Runbook Prerequisite 1 (WORKSTATION doc):
 
 ```bash
 <BACKUP_RUN_CMD>
@@ -1781,7 +1515,7 @@ sudo reboot
 Wait 3 minutes, then reconnect from workstation:
 
 ```bash
-ssh athyper@62.169.31.9
+ssh -i ~/.ssh/id_ed25519 athyper@62.169.31.9
 
 # Check all containers restarted:
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -1829,12 +1563,12 @@ File a ticket: target is a dedicated seed/admin image containing `stack/` and `t
 ### 21.4 Capacity cleanups — **2 weeks**
 
 - Add Prometheus `node_exporter` filesystem alert rule (replaces the removed cron disk alert)
-- Confirm the Phase 20.4 external heartbeat has fired a live test page
+- Confirm the Phase 19.4 external heartbeat has fired a live test page
 - Review Loki and Tempo retention after 7 days of actual log volume
 
 ### 21.5 Dry-run from scratch — **1 month**
 
-After 20.1 and 20.2 merge, run the full runbook against a clean VM to confirm Phases 4.3 and 8.2 can be deleted. Produce v11 with those phases removed and the document status updated to "No Outstanding Drift".
+After 21.1 and 21.2 merge, run the full runbook against a clean VM to confirm Phases 5.3 and 7.4 can be deleted. Produce v11 with those phases removed and the document status updated to "No Outstanding Drift".
 
 ---
 
@@ -1855,30 +1589,14 @@ After 20.1 and 20.2 merge, run the full runbook against a clean VM to confirm Ph
 
 ## Pre-Handoff Checklist
 
-### Prerequisites (before any server work)
-
-- [ ] Runbook Prereq 1: `BACKUP_RUN_CMD` filled and tested on dev
-- [ ] Runbook Prereq 2: Restore script signature verified
-- [ ] Runbook Prereq 3a: Realm JSON `IAM_CLIENT_SECRET` grep result recorded
-- [ ] Runbook Prereq 3b: `CLIENT_WITH_SECRET` recorded from realm JSON
-- [ ] Sign-off block signed by both preparer and reviewer
-
-### Phase 0
-
-- [ ] All 6 critical DNS A records → `62.169.31.9` from both resolvers (1.1.1.1 and 8.8.8.8)
-- [ ] `OPERATOR_IP` captured from workstation; confirmed ≠ `62.169.31.9`
-
 ### Phase 1
 
 - [ ] `athyper` password rotated; new value in password vault (not on server filesystem)
 - [ ] `postgresql-client` and `jq` installed and verified
+- [ ] Node 24.x and pnpm 10.33.0 installed and verified (`node --version`, `pnpm --version`)
 - [ ] SSH key installed and tested; Phase 2.4 (key auth from workstation) passed
 - [ ] Phase 2.5 (sudo in server session) passed
-- [ ] Root SSH refused; password auth refused globally (Phase 2.7 confirmed from workstation)
-
-### Phase 2
-
-- [ ] Phase 2.4 key auth test passed; Phase 2.7 lockdown confirmed (root refused + password auth refused)
+- [ ] Root SSH refused; password auth refused globally (Phase 2.7 confirmed — see WORKSTATION doc)
 
 ### Phase 3
 
@@ -1892,7 +1610,7 @@ After 20.1 and 20.2 merge, run the full runbook against a clean VM to confirm Ph
 
 ### Phase 6–7
 
-- [ ] `.env` has `ACME_EMAIL`, `KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD` (not in template)
+- [ ] `.env` has `ACME_EMAIL`, `KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`
 - [ ] `DB_HOST=db` (not `db-stg.athyper.com`)
 - [ ] `DBPOOL_APPS_CONFIG=db/local/dbpool/pgbouncer-apps.ini`
 - [ ] `DBPOOL_SESSION_CONFIG=db/local/dbpool/pgbouncer-session.ini`
@@ -1924,7 +1642,7 @@ After 20.1 and 20.2 merge, run the full runbook against a clean VM to confirm Ph
 
 - [ ] Realm JSON passed all 3 sanity checks (empty arrays)
 - [ ] `reset-iam.sh` succeeded; OIDC issuer endpoint responds correctly
-- [ ] Phase 14.3 verified the **correct** client (per `CLIENT_WITH_SECRET`); secrets match `.env`
+- [ ] Phase 13.3 verified the **correct** client (per `CLIENT_WITH_SECRET`); secrets match `.env`
 
 ### Phase 14–15
 
@@ -1952,7 +1670,6 @@ After 20.1 and 20.2 merge, run the full runbook against a clean VM to confirm Ph
 ### Phase 21 (post-handoff — track with owners and deadlines)
 
 - [ ] Phase 21.1 PR opened: `Dockerfile.prod` pnpm pin
-- [ ] Phase 21.2 PR opened: `staging.env.example` missing vars
 - [ ] Tech-debt ticket filed: host-side seed workaround
 - [ ] All Phase 21 items have named owners and due dates in deploy record
 
@@ -1987,7 +1704,7 @@ docker image prune -af
 # Re-run from Phase 10
 ```
 
-For database-only issues: prefer restore (Phase 20.2) over code rollback.
+For database-only issues: prefer restore (Phase 19.2) over code rollback.
 
 ## Appendix D — Known Environment Gaps
 
@@ -1996,10 +1713,10 @@ For database-only issues: prefer restore (Phase 20.2) over code rollback.
 | `GOTENBERG_BASE_URL` | Not in shared env fragment | Default `http://gotenberg:3000` works — compose service name matches |
 | `TIKA_URL` | Not in shared env fragment | Default `http://tika:9998` works |
 | `CLAMD_ON_UNAVAILABLE` | Not in shared env fragment | Built-in fallback active |
-| `ACME_EMAIL` | Now in `staging.env.example` | Phase 10.2 gate catches if left empty |
-| `SENTRY_DSN` | Now in `staging.env.example` | Phase 10.2 gate catches if left empty; same value as `GLITCHTIP_DSN` |
-| `KC_SMTP_USERNAME` | In `staging.env.example` as `${VAR}` placeholder | Phase 10.1 gate catches if unfilled |
-| `KC_SMTP_PASSWORD` | In `staging.env.example` as `${VAR}` placeholder | Phase 10.1 gate catches if unfilled |
+| `ACME_EMAIL` | Now in `staging.env.example` | Phase 9.2 gate catches if left empty |
+| `SENTRY_DSN` | Now in `staging.env.example` | Phase 9.2 gate catches if left empty; same value as `GLITCHTIP_DSN` |
+| `KC_SMTP_USERNAME` | In `staging.env.example` as `${VAR}` placeholder | Phase 9.1 gate catches if unfilled |
+| `KC_SMTP_PASSWORD` | In `staging.env.example` as `${VAR}` placeholder | Phase 9.1 gate catches if unfilled |
 
 ## Appendix E — Runtime Version and Image Base Notes
 
@@ -2018,6 +1735,6 @@ For database-only issues: prefer restore (Phase 20.2) over code rollback.
 - Host pnpm `10.33.0` matches repo `packageManager` pin — `--frozen-lockfile` is always honored.
 - Phase 5.3 (temporary) pins **container** pnpm to `10.33.0`; Phase 21.1 commits this upstream.
 - Note: rolling back with `git checkout` restores `Dockerfile.prod` to `pnpm@latest` — Phase 5.3 must be re-applied after any rollback.
-- Smoke checks in Phases 14 and 16 use `wget` inside the API container, not `curl`.
+- Smoke checks in Phases 15 and 17 use `wget` inside the API container, not `curl`.
 
-**If the team later adds `curl` to the Alpine image** (`apk add --no-cache curl` in `server/Dockerfile.prod`): update the wget lines in Phases 14 and 16, update this appendix, and remove the `[BusyBox wget, NOT curl]` comments.
+**If the team later adds `curl` to the Alpine image** (`apk add --no-cache curl` in `server/Dockerfile.prod`): update the wget lines in Phases 15 and 17, update this appendix, and remove the `[BusyBox wget, NOT curl]` comments.
