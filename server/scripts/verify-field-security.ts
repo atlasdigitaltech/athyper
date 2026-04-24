@@ -148,9 +148,6 @@ async function checkSchemaTables() {
 
   for (const [schema, table] of tables) {
     try {
-      await sql`SELECT 1 FROM information_schema.tables
-                WHERE table_schema = ${schema} AND table_name = ${table}
-                LIMIT 1`;
       const rows = await sql`SELECT COUNT(*) AS n
                               FROM information_schema.tables
                               WHERE table_schema = ${schema} AND table_name = ${table}`;

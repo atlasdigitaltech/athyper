@@ -42,6 +42,7 @@ import { check, sleep } from 'k6';
 import { Trend, Counter, Rate } from 'k6/metrics';
 import { ENV }     from './shared/env.js';
 import { headersA, headersB } from './shared/headers.js';
+import { safeParseJson } from './shared/utils.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 
@@ -288,8 +289,3 @@ function runTenantIso() {
   sleep(0.1);
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-
-function safeParseJson(body) {
-  try { return JSON.parse(body); } catch { return null; }
-}

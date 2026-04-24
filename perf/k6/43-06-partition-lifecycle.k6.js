@@ -50,6 +50,7 @@ import { check, sleep } from 'k6';
 import { Trend, Counter, Gauge, Rate } from 'k6/metrics';
 import { ENV }      from './shared/env.js';
 import { headersA } from './shared/headers.js';
+import { safeParseJson } from './shared/utils.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 
@@ -291,10 +292,13 @@ function runLegalHoldGuard(data) {
   const body     = safeParseJson(manifestRes.body);
   const manifest = body?.manifest ?? body?.data?.manifest ?? [];
 
-  // Each manifest entry must be blocked (not detached)
+  // Each manifest entry must be blocked (not detached).
+  // Track violations with a local counter so we can reference the value in check().
+  let detachedCount = 0;
   for (const entry of manifest) {
     const isDetached = entry.status === 'detached' || entry.archived === true;
     if (isDetached) {
+      detachedCount++;
       legalHoldViolations.add(1);
       console.error(
         `[43-06 hold_guard] VIOLATION: partition ${entry.partition_name} was detached ` +
@@ -303,19 +307,15 @@ function runLegalHoldGuard(data) {
     }
   }
 
-  const allBlocked = manifest.every(
-    (e) => e.status === 'blocked' || e.status === 'pending' || e.status === undefined,
-  );
-
   check(manifestRes, {
     'hold manifest returned':                  (r) => r.status === 200,
-    'no hold-protected partitions detached':   () => legalHoldViolations.toString() === '0',
+    'no hold-protected partitions detached':   () => detachedCount === 0,
   });
 
   if (manifest.length > 0) {
     console.log(
       `[43-06 hold_guard] Hold ${data.holdId}: ${manifest.length} manifest entries, ` +
-      `allBlocked=${allBlocked}`,
+      `violations=${detachedCount}`,
     );
   } else {
     console.log(
@@ -390,7 +390,6 @@ export function teardown(data) {
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-/** Use ADMIN_TOKEN if set, otherwise fall back to tenant A credentials */
 function buildAdminHeaders() {
   const adminToken = __ENV.ADMIN_TOKEN || '';
   const adminOrg   = __ENV.ADMIN_ORG   || ENV.ORG_A;
@@ -407,6 +406,3 @@ function buildAdminHeaders() {
   return headersA(ENV);
 }
 
-function safeParseJson(body) {
-  try { return JSON.parse(body); } catch { return null; }
-}

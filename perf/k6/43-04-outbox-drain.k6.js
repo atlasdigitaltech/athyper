@@ -53,6 +53,7 @@ import { check, sleep } from 'k6';
 import { Counter, Gauge, Trend, Rate } from 'k6/metrics';
 import { ENV }         from './shared/env.js';
 import { headersA }    from './shared/headers.js';
+import { safeParseJson } from './shared/utils.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 
@@ -350,14 +351,7 @@ function runMonitorQueue() {
 
 // ── Teardown ──────────────────────────────────────────────────────────────────
 
-export function teardown(data) {
-  console.log(
-    `[43-04 teardown] Total events produced: ${outboxEventsProduced ? '[see summary]' : 'n/a'}`,
-  );
+export function teardown(_data) {
+  console.log('[43-04 teardown] Outbox drain test complete — see k6 summary for outbox_events_produced count.');
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-
-function safeParseJson(body) {
-  try { return JSON.parse(body); } catch { return null; }
-}

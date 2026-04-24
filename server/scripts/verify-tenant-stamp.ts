@@ -107,27 +107,6 @@ function fail(name: string, detail: string) {
   console.log(`          ${detail}`);
 }
 
-async function asAppRole<T>(fn: () => Promise<T>): Promise<T> {
-  // When RLS_APP_ROLE is set, emulate the non-superuser runtime by running
-  // each test in a block that SET LOCAL ROLE's down. We can't do SET ROLE on
-  // the pool connection because the stamp driver opens its own implicit tx,
-  // so the model is: run the SELECTs through the stamp driver (which manages
-  // tx), and rely on Postgres RLS + the connection role to enforce.
-  //
-  // Since the Pool is admin, queries execute as admin unless we explicitly
-  // SET ROLE. For this integration suite we rely on the admin connection
-  // being sufficient — the concurrency and no-op assertions don't need RLS
-  // to be enforced, they need the stamp to be observed correctly. If
-  // RLS_APP_ROLE is set AND we want full RLS enforcement, the test changes
-  // DATABASE_URL to athyperapp_test directly. See CI setup.
-  if (RLS_APP_ROLE !== null) {
-    // Not applied per-call — the intent is that CI sets DATABASE_URL to the
-    // non-superuser role directly and the admin seeding happens via a
-    // separate connection before this script runs.
-  }
-  return fn();
-}
-
 async function stampedOne<T extends { ok: boolean }>(
   sql: string,
 ): Promise<T | null> {
@@ -431,14 +410,12 @@ async function run(): Promise<void> {
   await setup();
 
   try {
-    await asAppRole(async () => {
-      await checkSelfStamp();
-      await checkNoOpWithoutContext();
-      await checkConcurrentInterleave();
-      await checkStampDuringConcurrent();
-      await checkNoOpInterleave();
-      await checkExplicitTxStampsOnce();
-    });
+    await checkSelfStamp();
+    await checkNoOpWithoutContext();
+    await checkConcurrentInterleave();
+    await checkStampDuringConcurrent();
+    await checkNoOpInterleave();
+    await checkExplicitTxStampsOnce();
 
     if (process.argv.includes("--bench")) {
       await runBench();

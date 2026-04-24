@@ -123,7 +123,7 @@ async function main() {
     if (!org) continue;
     const membR = await api('GET', `/admin/realms/${KC_REALM}/organizations/${org.id}/members?first=0&max=200`, null, token);
     for (const m of (membR.data||[])) {
-      const del = await api('DELETE', `/admin/realms/${KC_REALM}/organizations/${org.id}/members/${m.id}`, null, token);
+      await api('DELETE', `/admin/realms/${KC_REALM}/organizations/${org.id}/members/${m.id}`, null, token);
     }
   }
   console.log('  ✓ Cleared');

@@ -57,6 +57,7 @@ import { check, sleep } from 'k6';
 import { Trend, Counter, Rate, Gauge } from 'k6/metrics';
 import { ENV }      from './shared/env.js';
 import { headersA } from './shared/headers.js';
+import { safeParseJson } from './shared/utils.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 
@@ -344,10 +345,6 @@ function runSlaMonitor(data) {
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-/**
- * Build approver headers from APPROVER_TOKEN / APPROVER_ORG if set,
- * otherwise fall back to tenant A headers (for envs where submitter = approver).
- */
 function buildApproverHeaders() {
   const approverToken = __ENV.APPROVER_TOKEN || '';
   const approverOrg   = __ENV.APPROVER_ORG   || '';
@@ -364,6 +361,3 @@ function buildApproverHeaders() {
   return headersA(ENV);
 }
 
-function safeParseJson(body) {
-  try { return JSON.parse(body); } catch { return null; }
-}

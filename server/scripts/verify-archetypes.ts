@@ -133,6 +133,11 @@ interface Finding {
   error: string;
 }
 
+interface ScanResult {
+  findings:     Finding[];
+  commentCount: number;
+}
+
 /**
  * Extracts the content of the first single-quoted string in a multi-line
  * SQL string literal (concatenated with newline-adjacent quote pairs).
@@ -149,10 +154,11 @@ function extractFirstQuotedSegment(commentBlock: string): string | null {
   return m ? m[1] : null;
 }
 
-function scanFile(filePath: string): Finding[] {
+function scanFile(filePath: string): ScanResult {
   const raw = readFileSync(filePath, "utf8");
   const lines = raw.split("\n");
   const findings: Finding[] = [];
+  const commentCount = (raw.match(/^COMMENT ON TABLE\s/gim) ?? []).length;
   const relPath = filePath.replace(/\\/g, "/").split("/server/db/sql/")[1] ?? filePath;
 
   for (let i = 0; i < lines.length; i++) {
@@ -212,7 +218,7 @@ function scanFile(filePath: string): Finding[] {
     }
   }
 
-  return findings;
+  return { findings, commentCount };
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -242,16 +248,12 @@ function main() {
 
     for (const file of files) {
       totalFiles++;
-      const findings = scanFile(file);
-
-      // Count COMMENT ON TABLE in file for stats
-      const raw = readFileSync(file, "utf8");
-      const count = (raw.match(/^COMMENT ON TABLE\s/gim) ?? []).length;
-      totalComments += count;
+      const { findings, commentCount } = scanFile(file);
+      totalComments += commentCount;
 
       const relPath = file.replace(/\\/g, "/").split("/server/db/sql/")[1] ?? file;
       if (findings.length === 0) {
-        console.log(`  ✓ ${relPath} (${count} tables)`);
+        console.log(`  ✓ ${relPath} (${commentCount} tables)`);
       } else {
         for (const f of findings) {
           console.log(`  ✗ ${relPath}:${f.line}  ${f.table}  — ${f.error}`);

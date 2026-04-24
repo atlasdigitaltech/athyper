@@ -124,33 +124,14 @@ async function main() {
   const flowByAlias = {};
   for (const f of (flows2.data||[])) flowByAlias[f.alias] = f;
 
-  // ── Add authenticator configs ──────────────────────────────────────────────
-  console.log('\n── Authenticator configs ──');
-  const existingConfigs = await api('GET', `/admin/realms/${KC_REALM}/authentication/authenticator-providers`, null, token);
-
-  // Check existing authenticatorConfig (different endpoint)
-  // Use flows endpoint to see if configs exist
-  const authConfigs = [
-    { alias: 'neon broker login review profile config', config: { 'update.profile.on.first.login': 'missing' } },
-    { alias: 'neon broker login create unique user config', config: { 'require.password.update.after.registration': 'false' } },
-    { alias: 'neon broker login first-broker-login-conditional-credential', config: { credentials: 'webauthn-passwordless' } },
-  ];
-  // Authenticator configs are created inline with execution, so we'll skip separate creation
-
   // ── Add executions to flows ────────────────────────────────────────────────
   console.log('\n── Flow executions ──');
 
-  // Helper to add execution to a flow
-  async function addExecution(flowAlias, executionDef, configAlias) {
-    const r = await api('POST',
+  async function addExecution(flowAlias, executionDef) {
+    return api('POST',
       `/admin/realms/${KC_REALM}/authentication/flows/${encodeURIComponent(flowAlias)}/executions/execution`,
       executionDef, token
     );
-    if (r.status === 201) {
-      // If config needed, create it
-      // Get the newly created execution
-    }
-    return r;
   }
 
   async function addSubFlow(flowAlias, subFlowDef) {

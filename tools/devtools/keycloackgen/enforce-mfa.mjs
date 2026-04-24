@@ -10,53 +10,10 @@
  * Usage: node tools/devtools/keycloackgen/enforce-mfa.mjs
  */
 
+import { KC_URL, REALM, ADMIN_USER, ADMIN_PASS, sleep, getToken } from "./shared.mjs";
 import { MFA_REQUIRED_ORGS, requiresMfa } from "./mfa-config.mjs";
 
-const KC_URL = "https://iam.mesh.athyper.local";
-const REALM = "athyper";
-const ADMIN_USER = "athyperadmin";
-const ADMIN_PASS = "athyperadmin";
-
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-async function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function getToken(retries = 15, delayMs = 5000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(
-        `${KC_URL}/realms/master/protocol/openid-connect/token`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: "admin-cli",
-            username: ADMIN_USER,
-            password: ADMIN_PASS,
-            grant_type: "password",
-          }),
-        },
-      );
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("Non-JSON response (Keycloak not ready yet): " + text.slice(0, 120));
-      }
-      if (!data.access_token)
-        throw new Error("Failed to get token: " + JSON.stringify(data));
-      return data.access_token;
-    } catch (err) {
-      if (attempt === retries) throw err;
-      console.log(`  Keycloak not ready (attempt ${attempt}/${retries}): ${err.message}`);
-      console.log(`  Retrying in ${delayMs / 1000}s...`);
-      await sleep(delayMs);
-    }
-  }
-}
 
 async function getAllUsers(token) {
   const res = await fetch(`${KC_URL}/admin/realms/${REALM}/users?max=1000`, {
