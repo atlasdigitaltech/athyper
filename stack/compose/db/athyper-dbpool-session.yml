@@ -28,7 +28,6 @@ services:
       - sh
       - -c
       - |
-        mkdir -p /var/log/postgresql /var/run/postgresql
         printf '"%s" "%s"\n' "$$DBPOOL_SESSION_USER" "$$DBPOOL_SESSION_PASSWORD" > /etc/pgbouncer/userlist.txt
         sed -e "s/__DB_HOST__/$$DB_HOST/g" \
             -e "s/__DB_PORT__/$$DB_PORT/g" \
