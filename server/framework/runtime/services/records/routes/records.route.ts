@@ -30,6 +30,7 @@ import {
   emitOutboxEvent,
 } from "@athyper/svc-shared";
 import { applyFieldSecurityMask } from "../../policy/field-security.middleware.js";
+import { createCompanyCodeScopeService } from "../../../../../src/foundation/iam/company-code-scope.service.js";
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -374,6 +375,30 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId as never);
         countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
         if (groupCountQuery) groupCountQuery = groupCountQuery.where("tenant_id" as never, "=", tenantId as never);
+      }
+
+      // ── Company code scope filter ─────────────────────────────────────────────
+      // When listing company_code records, restrict to only the company codes the
+      // principal has been granted access to (via master.company_code_access).
+      // Tenants with no ACL rows configured are treated as unrestricted (backward
+      // compatible with simple single-company setups).
+      if (entityCode === "company_code" && tenantId) {
+        const sub = typeof claims.sub === "string" ? claims.sub : "";
+        const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+        if (principalId) {
+          const scope = await createCompanyCodeScopeService(db).resolveScope(principalId, tenantId);
+          if (!scope.isUnrestricted) {
+            if (scope.companyCodeIds.length === 0) {
+              listQuery  = listQuery.where(sql<boolean>`false` as never);
+              countQuery = countQuery.where(sql<boolean>`false` as never);
+              if (groupCountQuery) groupCountQuery = groupCountQuery.where(sql<boolean>`false` as never);
+            } else {
+              listQuery  = listQuery.where("id"  as never, "in", scope.companyCodeIds as never);
+              countQuery = countQuery.where("id" as never, "in", scope.companyCodeIds as never);
+              if (groupCountQuery) groupCountQuery = groupCountQuery.where("id" as never, "in", scope.companyCodeIds as never);
+            }
+          }
+        }
       }
 
       // ── Sigil-based filters ───────────────────────────────────────────────────
