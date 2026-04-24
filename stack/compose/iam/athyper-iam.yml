@@ -72,5 +72,6 @@ services:
       - traefik.http.routers.iam.priority=10
       - traefik.http.routers.iam.rule=Host(`${IAM_HOST}`)
       - traefik.http.routers.iam.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.iam.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.iam.tls=true
       - traefik.http.services.iam.loadbalancer.server.port=8080

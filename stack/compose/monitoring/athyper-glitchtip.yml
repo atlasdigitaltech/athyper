@@ -69,4 +69,5 @@ services:
       - traefik.http.routers.glitchtip.entrypoints=websecure
       - traefik.http.routers.glitchtip.tls=true
       - traefik.http.routers.glitchtip.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.glitchtip.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.glitchtip.loadbalancer.server.port=8000

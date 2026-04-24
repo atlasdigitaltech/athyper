@@ -57,5 +57,6 @@ services:
       - traefik.http.routers.pgweb.entrypoints=websecure
       - traefik.http.routers.pgweb.tls=true
       - traefik.http.routers.pgweb.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.pgweb.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.pgweb.loadbalancer.server.port=8081
       - traefik.http.routers.pgweb.middlewares=${DASHBOARD_AUTH_MW}

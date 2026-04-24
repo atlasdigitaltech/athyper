@@ -89,5 +89,6 @@ services:
       - traefik.http.routers.metabase.entrypoints=websecure
       - traefik.http.routers.metabase.tls=true
       - traefik.http.routers.metabase.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.metabase.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.metabase.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.services.metabase.loadbalancer.server.port=3000

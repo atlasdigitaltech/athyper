@@ -274,6 +274,7 @@ services:
       - traefik.http.routers.athyper-api.entrypoints=websecure
       - traefik.http.routers.athyper-api.rule=Host(`${APPS_ATHYPER_API_HOST}`)
       - traefik.http.routers.athyper-api.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.athyper-api.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.athyper-api.tls=true
       - traefik.http.services.athyper-api.loadbalancer.server.port=3000
 

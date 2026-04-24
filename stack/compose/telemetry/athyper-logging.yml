@@ -113,5 +113,6 @@ services:
       - traefik.http.routers.logging.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.routers.logging.rule=Host(`${LOGS_HOST}`)
       - traefik.http.routers.logging.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.logging.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.logging.tls=true
       - traefik.http.services.logging.loadbalancer.server.port=3100

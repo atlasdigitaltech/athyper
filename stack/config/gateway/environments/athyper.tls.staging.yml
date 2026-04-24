@@ -7,7 +7,8 @@
 #         on the staging host, replacing the local variant.
 #
 # Differences from local:
-#   - Certificates sourced from staging-specific paths
+#   - No static cert store — certs are issued and managed by Traefik ACME
+#     (letsencrypt-staging resolver). Routers reference certResolver directly.
 #   - TLS 1.2 minimum (same as local, broader tool compatibility)
 # =======================================================================
 
@@ -25,12 +26,13 @@ tls:
     athyper-tls-default:
       minVersion: VersionTLS12
 
-  stores:
-    default:
-      defaultCertificate:
-        certFile: /certs/athyper.tls.crt
-        keyFile: /certs/athyper.tls.key
-
-  certificates:
-    - certFile: /certs/athyper.tls.crt
-      keyFile: /certs/athyper.tls.key
+  # No static store or certificates block needed for ACME — Traefik manages
+  # the Let's Encrypt cert in acme.json and serves it per-router via certResolver.
+  # Routers in neon-workbench-routes.staging.yml all specify:
+  #   tls:
+  #     certResolver: letsencrypt-staging
+  #     options: athyper-tls-default@file
+  #
+  # The local variant (athyper.tls.yml) has a static stores:/certificates: block
+  # for mkcert-generated files. Do NOT copy that block here — ACME does not use it
+  # and a missing cert file will prevent Traefik from starting.

@@ -40,5 +40,6 @@ services:
       - traefik.http.routers.mailhog.entrypoints=websecure
       - traefik.http.routers.mailhog.tls=true
       - traefik.http.routers.mailhog.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.mailhog.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.mailhog.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.services.mailhog.loadbalancer.server.port=8025

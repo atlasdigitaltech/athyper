@@ -122,5 +122,6 @@ services:
       - traefik.http.routers.tracing.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.routers.tracing.rule=Host(`${TRACES_HOST}`)
       - traefik.http.routers.tracing.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.tracing.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.tracing.tls=true
       - traefik.http.services.tracing.loadbalancer.server.port=3200

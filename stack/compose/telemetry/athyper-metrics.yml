@@ -50,5 +50,6 @@ services:
       - traefik.http.routers.metrics.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.routers.metrics.rule=Host(`${METRICS_HOST}`)
       - traefik.http.routers.metrics.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.metrics.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.metrics.tls=true
       - traefik.http.services.metrics.loadbalancer.server.port=9090

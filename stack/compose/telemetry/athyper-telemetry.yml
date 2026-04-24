@@ -57,5 +57,6 @@ services:
       - traefik.http.routers.telemetry.middlewares=${DASHBOARD_AUTH_MW}
       - traefik.http.routers.telemetry.rule=Host(`${TELEMETRY_HOST}`)
       - traefik.http.routers.telemetry.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.telemetry.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.telemetry.tls=true
       - traefik.http.services.telemetry.loadbalancer.server.port=3000
