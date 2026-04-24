@@ -94,7 +94,7 @@ export function useOperationDispatch({
         setActiveOpCode(actionCode);
         setIsModalOpen(true);
         fetch(
-          `/api/relay/api/meta/flow?entity=${encodeURIComponent(entityCode)}&flow_code=${encodeURIComponent(flowCode)}`,
+          `/api/relay/api/metadata/entities/${encodeURIComponent(entityCode)}/flow?flow_code=${encodeURIComponent(flowCode)}`,
         )
           .then(async (res) => {
             if (!res.ok) throw new Error(`Failed to fetch flow bundle: ${res.status}`);

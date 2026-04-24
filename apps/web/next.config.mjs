@@ -11,6 +11,14 @@ const nextConfig = {
   // requests from origins other than localhost in development.
   allowedDevOrigins: ["neon.athyper.local"],
 
+  // Disable React StrictMode double-invoke in development.
+  // StrictMode intentionally mounts→unmounts→remounts every component, causing
+  // every useQuery/fetch to fire twice (first "canceled", then 200). This is
+  // development-only noise — production is unaffected — but it pollutes the
+  // network tab and confuses debugging. Re-enable temporarily if you need to
+  // audit for effects/ref cleanup bugs.
+  reactStrictMode: false,
+
   // F8 Phase 3 — standalone build for containerised staging/prod deploys.
   // Emits .next/standalone/ with a minimal server.js + only the node_modules
   // actually imported at runtime. Image size target: < 200 MB. Local `pnpm dev`

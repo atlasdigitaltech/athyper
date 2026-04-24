@@ -62,6 +62,7 @@ export interface UseFlowEngineReturn {
   setField: (name: string, value: unknown) => void;
   setOverride: (name: string, value: unknown) => void;
   setDerivedValue: (name: string, value: unknown) => void;
+  setDisplayLabel: (name: string, label: string | null) => void;
   goNext: () => void;
   goBack: () => void;
   goToStep: (index: number) => void;
@@ -491,6 +492,19 @@ export function useFlowEngine(
     });
   }, []);
 
+  const setDisplayLabel = useCallback((name: string, label: string | null) => {
+    setState((prev) => {
+      if (label === null) {
+        if (!(name in prev.displayLabels)) return prev;
+        const next = { ...prev.displayLabels };
+        delete next[name];
+        return { ...prev, displayLabels: next };
+      }
+      if (prev.displayLabels[name] === label) return prev;
+      return { ...prev, displayLabels: { ...prev.displayLabels, [name]: label } };
+    });
+  }, []);
+
   const validateStep = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     for (const f of visibleFields) {
@@ -542,6 +556,7 @@ export function useFlowEngine(
     setField,
     setOverride,
     setDerivedValue,
+    setDisplayLabel,
     goNext,
     goBack,
     goToStep,

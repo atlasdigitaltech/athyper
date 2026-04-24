@@ -108,7 +108,7 @@ export function ApprovableDocumentShell({
   };
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-2.5", className)}>
       {/* 1. Process Chain Ribbon */}
       {chain && chain.nodes.length > 0 && <ProcessChainRibbon chain={chain} />}
 

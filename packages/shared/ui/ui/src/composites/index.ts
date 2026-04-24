@@ -7,6 +7,7 @@
 
 export { SearchInput, type SearchInputProps } from "./SearchInput";
 export { DatePicker, type DatePickerProps, type DatePickerMode } from "./DatePicker";
+export { CalendarGrid, type CalendarGridProps } from "./CalendarGrid";
 export {
   MoneyInput,
   MoneyView,

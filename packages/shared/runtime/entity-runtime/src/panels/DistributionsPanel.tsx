@@ -34,10 +34,12 @@ export function DistributionsPanel({ entityCode, recordId }: DistributionsPanelP
         `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/distributions`,
         { signal },
       );
-      if (!res.ok) return { data: [] };
+      if (!res.ok) throw new Error(`distributions ${res.status}`);
       return res.json() as Promise<{ data: AccountingDistribution[] }>;
     },
     staleTime: 60 * 1000,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   if (isLoading) {

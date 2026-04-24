@@ -3,24 +3,11 @@
 /**
  * FlowWizard — metadata-driven multi-step intake wizard.
  *
- * Replaces the flat EntityForm for any entity that has an active flow defined
- * in control.entity_flow. Consumes a FlowBundle (from GET /meta/flow endpoint
- * or a statically supplied bundle) and renders:
+ * Layout (spec §1 three-region shell):
  *
- *   ┌────────────────────────────────────────────────────────┐
- *   │  [Step 1: Identify] → [Step 2: Commercial] → [Review]  │  ← FlowStepNav
- *   ├───────────────────────────────────────┬────────────────┤
- *   │  Fields for current step (2-col grid) │  Summary panel │
- *   │  ┌──────────┬──────────┐              │  (sticky)      │
- *   │  │ field    │ field    │              │                │
- *   │  └──────────┴──────────┘              │                │
- *   │  [derived chips row]                  │                │
- *   │                                       │                │
- *   │  [← Back]              [Continue →]   │                │
- *   └───────────────────────────────────────┴────────────────┘
- *
- * Chip fields are rendered in a dedicated row below the main grid so they
- * don't disrupt the layout rhythm of full-width inputs.
+ *   Region 1 · Header      — type-chip + "New" + "Draft" badge + cancel button
+ *   Region 2 · Context bar — FlowStepNav (the stepper)
+ *   Region 3 · Content     — [fields card | summary panel] 2-col grid + nav buttons
  *
  * Usage:
  *   <FlowWizard
@@ -29,24 +16,18 @@
  *     onSubmit={async (draft) => { await createDocument(draft); }}
  *     onCancel={() => router.back()}
  *   />
- *
- * Props:
- *   bundle           — resolved FlowBundle from /meta/flow API or static import
- *   userPermissions  — codes from the current user's permission set
- *   onSubmit         — called with the final draft when user submits last step
- *   onCancel         — called when user clicks Cancel
- *   submitting       — external loading state (e.g. from createMutation.isPending)
- *   entityLabel      — display name shown in the page header
  */
 
-import { ChevronLeft, ChevronRight, Send, X } from "lucide-react";
+import React from "react";
+import { ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Card, CardContent, Skeleton, Separator } from "@athyper/ui/primitives";
-import type { FlowBundle, FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-contracts/documents";
+import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
+import type { FlowBundle } from "@athyper/api-contracts/documents";
 import { FlowStepNav } from "./FlowStepNav";
 import { FlowSummaryPanel } from "./FlowSummaryPanel";
 import { FlowFieldBinding } from "./FlowFieldBinding";
 import { useFlowEngine } from "./useFlowEngine";
+import { PageShell, PageHeader, ModeBadge } from "@athyper/ui/layout";
 
 export interface FlowWizardProps {
   bundle: FlowBundle;
@@ -57,6 +38,8 @@ export interface FlowWizardProps {
   entityLabel?: string;
   /** User-context values seeded into derived fields (e.g. default_company_code). */
   userCtx?: Record<string, unknown>;
+  /** Rendered in the header row between the title and the cancel button (e.g. flow-type switcher). */
+  headerAction?: React.ReactNode;
 }
 
 export function FlowWizard({
@@ -67,6 +50,7 @@ export function FlowWizard({
   submitting = false,
   entityLabel,
   userCtx,
+  headerAction,
 }: FlowWizardProps) {
   const engine = useFlowEngine(bundle, userPermissions, userCtx);
   const {
@@ -79,6 +63,7 @@ export function FlowWizard({
     setField,
     setOverride,
     setDerivedValue,
+    setDisplayLabel,
     goNext,
     goBack,
     goToStep,
@@ -87,70 +72,69 @@ export function FlowWizard({
 
   const sortedSteps = [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order);
 
-  // Separate chip-mode fields from regular fields so chips render below the grid
-  const chipFields = visibleFields.filter((f) => f.mode === "chip");
-  const gridFields = visibleFields.filter((f) => f.mode !== "chip");
-
-  const hasSummaryPanel = summaryLines.length > 0;
+  const chipFields  = visibleFields.filter((f) => f.mode === "chip");
+  const gridFields  = visibleFields.filter((f) => f.mode !== "chip");
+  const hasSummary  = summaryLines.length > 0;
+  const currencyCode = String(state.draft.currency_code ?? state.draft.base_currency_code ?? "");
 
   async function handleSubmit() {
     if (!validateStep()) return;
     await onSubmit(state.draft);
   }
 
-  const currencyCode = String(state.draft.currency_code ?? state.draft.base_currency_code ?? "");
+  // ── Region 1: header ───────────────────────────────────────────────────────
+  const header = (
+    <PageHeader
+      typeChip={bundle.label}
+      title="New"
+      titleVariant="page"
+      statusSlot={<ModeBadge>Draft</ModeBadge>}
+      subtitle={
+        entityLabel
+          ? `${entityLabel} · Step ${state.currentStepIndex + 1} of ${sortedSteps.length} · ${currentStep.label}`
+          : `Step ${state.currentStepIndex + 1} of ${sortedSteps.length} · ${currentStep.label}`
+      }
+      actions={
+        <div className="flex items-center gap-2">
+          {headerAction}
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      }
+    />
+  );
+
+  // ── Region 2: stepper ──────────────────────────────────────────────────────
+  const context = (
+    <FlowStepNav
+      steps={sortedSteps}
+      currentStepIndex={state.currentStepIndex}
+      onStepClick={goToStep}
+    />
+  );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">
-            {bundle.label}
-            {entityLabel && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                — {entityLabel}
-              </span>
-            )}
-          </h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Step {state.currentStepIndex + 1} of {sortedSteps.length}
-            {" · "}{currentStep.label}
-          </p>
-        </div>
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            aria-label="Cancel"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <PageShell header={header} context={context}>
+      {/* 2-col: fields + summary panel */}
+      <div
+        className={cn(
+          "grid gap-4",
+          hasSummary ? "grid-cols-1 lg:grid-cols-[1fr_280px]" : "grid-cols-1",
         )}
-      </div>
-
-      {/* Step navigation */}
-      <FlowStepNav
-        steps={sortedSteps}
-        currentStepIndex={state.currentStepIndex}
-        onStepClick={goToStep}
-      />
-
-      <Separator />
-
-      {/* Main layout: fields + summary panel */}
-      <div className={cn(
-        "grid gap-6",
-        hasSummaryPanel ? "grid-cols-1 lg:grid-cols-[1fr_260px]" : "grid-cols-1",
-      )}>
+      >
         {/* Fields area */}
-        <div className="space-y-5">
+        <div className="flex flex-col gap-4">
           <Card>
-            <CardContent className="pt-6 space-y-5">
-              {/* Grid fields */}
+            <CardContent className="pt-5 space-y-4">
               {gridFields.length > 0 && (
-                <div className="grid grid-cols-2 gap-x-5 gap-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                   {gridFields.map((f) => (
                     <FlowFieldBinding
                       key={f.id}
@@ -163,15 +147,13 @@ export function FlowWizard({
                       draftCtx={state.draft}
                       onChange={(v) => setField(f.field_name, v)}
                       onOverride={(v) => setOverride(f.field_name, v)}
-                      onReset={() => {
-                        setDerivedValue(f.field_name, null);
-                      }}
+                      onReset={() => setDerivedValue(f.field_name, null)}
+                      onDisplayLabel={(label) => setDisplayLabel(f.field_name, label)}
                     />
                   ))}
                 </div>
               )}
 
-              {/* Chip row — derived contextual fields */}
               {chipFields.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {chipFields.map((f) => (
@@ -186,6 +168,7 @@ export function FlowWizard({
                       onChange={(v) => setField(f.field_name, v)}
                       onOverride={(v) => setOverride(f.field_name, v)}
                       onReset={() => setDerivedValue(f.field_name, null)}
+                      onDisplayLabel={(label) => setDisplayLabel(f.field_name, label)}
                     />
                   ))}
                 </div>
@@ -199,7 +182,7 @@ export function FlowWizard({
             </CardContent>
           </Card>
 
-          {/* Navigation buttons */}
+          {/* Navigation */}
           <div className="flex items-center justify-between">
             <button
               type="button"
@@ -264,15 +247,12 @@ export function FlowWizard({
           </div>
         </div>
 
-        {/* Summary panel (sticky right column) */}
-        {hasSummaryPanel && (
-          <FlowSummaryPanel
-            lines={summaryLines}
-            currencyCode={currencyCode}
-          />
+        {/* Summary panel — sticky right rail */}
+        {hasSummary && (
+          <FlowSummaryPanel lines={summaryLines} currencyCode={currencyCode} />
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
 
@@ -280,35 +260,57 @@ export function FlowWizard({
 
 export function FlowWizardSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      <Skeleton className="h-8 w-64" />
-      <div className="flex gap-4">
-        <Skeleton className="h-10 w-24 rounded-full" />
-        <Skeleton className="h-1 flex-1 self-center" />
-        <Skeleton className="h-10 w-24 rounded-full" />
-        <Skeleton className="h-1 flex-1 self-center" />
-        <Skeleton className="h-10 w-24 rounded-full" />
+    <div className="flex flex-col gap-2.5">
+      {/* Header region */}
+      <div className="rounded-xl border border-border bg-card px-4 py-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-[26px] w-20 rounded-md" />
+              <Skeleton className="h-7 w-12 rounded" />
+              <Skeleton className="h-[22px] w-14 rounded" />
+            </div>
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
       </div>
-      <Skeleton className="h-px w-full" />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-1.5">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-9 w-full" />
+      {/* Context region (stepper) */}
+      <div className="flex h-9 items-center rounded-xl border border-border bg-card px-4 gap-4">
+        <Skeleton className="h-7 w-20 rounded-full" />
+        <Skeleton className="h-1 flex-1" />
+        <Skeleton className="h-7 w-20 rounded-full" />
+        <Skeleton className="h-1 flex-1" />
+        <Skeleton className="h-7 w-20 rounded-full" />
+      </div>
+      {/* Content region */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border bg-card p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-9 w-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <Skeleton className="h-9 w-20 rounded-md" />
+              <Skeleton className="h-9 w-24 rounded-md" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-3 w-20" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex justify-between">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-16" />
               </div>
             ))}
           </div>
-        </div>
-        <div className="space-y-3">
-          <Skeleton className="h-3 w-20" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex justify-between">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
         </div>
       </div>
     </div>

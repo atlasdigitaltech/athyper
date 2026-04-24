@@ -43,6 +43,9 @@ import {
   extractOrgHeaders,
 } from "@athyper/svc-shared";
 import { handlePromoteProforma } from "../../business/ap/promote-proforma.handler.js";
+import { handleSubmitForApproval } from "../../business/ap/invoice-submit.handler.js";
+import { handlePostInvoice }      from "../../business/ap/invoice-posting.service.js";
+import { handleReverseInvoice }   from "../../business/ap/invoice-posting.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -376,6 +379,39 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           );
           if (status === 200) {
             logger?.info("action_dispatch_promote_proforma", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "submit_for_approval") {
+          const { status, body: respBody } = await handleSubmitForApproval(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 200) {
+            logger?.info("action_dispatch_submit_for_approval", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "post_invoice") {
+          const { status, body: respBody } = await handlePostInvoice(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 200) {
+            logger?.info("action_dispatch_post_invoice", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "reverse_invoice") {
+          const { status, body: respBody } = await handleReverseInvoice(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 201) {
+            logger?.info("action_dispatch_reverse_invoice", { entity: entityCode, tenantId, recordId });
           }
           res.status(status).json(respBody);
           return;

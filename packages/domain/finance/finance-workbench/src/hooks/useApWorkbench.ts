@@ -19,19 +19,56 @@ export interface ApInvoice {
   id: string;
   invoiceNumber: string;
   invoiceSource: string;
+  invoiceType: string;
   supplierId: string | null;
   supplierName: string | null;
+  supplierInvoiceNumber: string | null;
+  supplierInvoiceDate: string | null;
+  commitmentId: string | null;
   invoiceDate: string;
+  documentDate: string | null;
   dueDate: string | null;
+  baselineDate: string | null;
+  receivedDate: string | null;
   payableAmount: number;
   outstandingAmount: number;
+  subtotalAmount: number;
+  taxAmount: number;
+  withholdingTaxAmount: number;
+  totalAmount: number;
+  paidAmount: number;
   currencyCode: string;
+  baseCurrencyCode: string;
+  exchangeRate: number | null;
   status: string;
   fiscalYear: number;
   periodNumber: number;
   postingDate: string | null;
   isPosted: boolean;
   isVoided: boolean;
+  isReversal: boolean;
+  reversalOfId: string | null;
+  isCreditNote: boolean;
+  matchType: string;
+  matchStatus: string;
+  workflowRequestId: string | null;
+  apJeId: string | null;
+  isOnHold: boolean;
+  holdReason: string | null;
+  paymentTermId: string | null;
+  paymentMethodId: string | null;
+  budgetAllocationId: string | null;
+  budgetCheckResult: string | null;
+  costCenterId: string | null;
+  profitCenterId: string | null;
+  projectId: string | null;
+  lineCount: number;
+  notes: string | null;
+  tags: string[];
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  companyCodeId: string;
 }
 
 export interface ApInvoicesData {
@@ -44,11 +81,36 @@ export interface ApInvoicesData {
 export interface ApInvoiceLine {
   id: string;
   line_no: number;
+  item_id: string | null;
   item_description: string;
+  procurement_type: string;
+  uom_code: string;
   quantity: number;
   unit_price: number;
+  price_unit: number;
   net_amount: number;
+  discount_pct: number | null;
+  discount_amount: number | null;
+  tax_group_id: string | null;
   tax_amount: number;
+  withholding_tax_group_id: string | null;
+  withholding_tax_amount: number;
+  gross_amount: number;
+  spend_category_id: string | null;
+  business_intent_id: string | null;
+  cost_center_id: string | null;
+  profit_center_id: string | null;
+  project_id: string | null;
+  site_id: string | null;
+  is_asset: boolean;
+  asset_category_id: string | null;
+  commitment_line_id: string | null;
+  goods_receipt_line_id: string | null;
+  ses_line_id: string | null;
+  matched_quantity: number;
+  match_status: string;
+  notes: string | null;
+  status: string;
 }
 
 export interface ApInvoiceAllocation {
@@ -405,6 +467,226 @@ export function useCreateArReceipt(scope: FinanceScope) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["finance", "ar", "receipts"] });
       void queryClient.invalidateQueries({ queryKey: ["finance", "ar", "invoices"] });
+    },
+  });
+}
+
+// ── AP Invoice write mutations ─────────────────────────────────────────────────
+
+export interface CreateApInvoicePayload {
+  invoice_source:          string;
+  invoice_type?:           string;
+  company_code_id:         string;
+  supplier_id?:            string;
+  commitment_id?:          string;
+  document_date?:          string;
+  currency_code:           string;
+  payment_term_id?:        string;
+  payment_method_id?:      string;
+  notes?:                  string;
+  tags?:                   string[];
+  /** Set by BFF from X-Idempotency-Key header */
+  idempotency_key?:        string;
+}
+
+export interface CreateApInvoiceResult {
+  id:             string;
+  invoice_number: string;
+  status:         string;
+}
+
+export function useCreateApInvoice(scope: FinanceScope) {
+  const queryClient = useQueryClient();
+  const params = scopeToParams(scope);
+
+  return useMutation<CreateApInvoiceResult, Error, CreateApInvoicePayload>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`/api/finance/ap/invoices?${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to create invoice"));
+      }
+      return res.json() as Promise<CreateApInvoiceResult>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices"] });
+    },
+  });
+}
+
+export interface UpdateApInvoicePayload {
+  supplier_invoice_number?: string;
+  supplier_invoice_date?:   string;
+  document_date?:           string;
+  posting_date?:            string;
+  received_date?:           string;
+  payment_term_id?:         string;
+  payment_method_id?:       string;
+  commitment_id?:           string | null;
+  budget_allocation_id?:    string | null;
+  notes?:                   string;
+  tags?:                    string[];
+  tax_mode?:                string;
+  freight_amount?:          number;
+  misc_charges_amount?:     number;
+  discount_amount?:         number;
+  retention_pct?:           number | null;
+  cost_center_id?:          string | null;
+  profit_center_id?:        string | null;
+  project_id?:              string | null;
+}
+
+export function useUpdateApInvoice(invoiceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ ok: boolean; record: ApInvoiceDetail }, Error, UpdateApInvoicePayload>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`/api/finance/ap/invoices/${invoiceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to update invoice"));
+      }
+      return res.json() as Promise<{ ok: boolean; record: ApInvoiceDetail }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices", invoiceId] });
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices"] });
+    },
+  });
+}
+
+// ── AP Invoice line mutations ──────────────────────────────────────────────────
+
+export interface CreateApInvoiceLinePayload {
+  item_id?:                   string;
+  item_description:           string;
+  procurement_type?:          string;
+  uom_code:                   string;
+  quantity:                   number;
+  unit_price:                 number;
+  price_unit?:                number;
+  discount_pct?:              number;
+  tax_group_id?:              string;
+  withholding_tax_group_id?:  string;
+  spend_category_id?:         string;
+  business_intent_id?:        string;
+  cost_center_id?:            string;
+  profit_center_id?:          string;
+  project_id?:                string;
+  site_id?:                   string;
+  is_asset?:                  boolean;
+  asset_category_id?:         string;
+  commitment_line_id?:        string;
+  goods_receipt_line_id?:     string;
+  notes?:                     string;
+}
+
+export interface UpdateApInvoiceLinePayload extends Partial<CreateApInvoiceLinePayload> {
+  line_no?: number;
+}
+
+export function useCreateApInvoiceLine(invoiceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ ok: boolean; line: ApInvoiceLine }, Error, CreateApInvoiceLinePayload>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`/api/finance/ap/invoices/${invoiceId}/lines`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to add line"));
+      }
+      return res.json() as Promise<{ ok: boolean; line: ApInvoiceLine }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices", invoiceId] });
+    },
+  });
+}
+
+export function useUpdateApInvoiceLine(invoiceId: string, lineId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ ok: boolean; line: ApInvoiceLine }, Error, UpdateApInvoiceLinePayload>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`/api/finance/ap/invoices/${invoiceId}/lines/${lineId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to update line"));
+      }
+      return res.json() as Promise<{ ok: boolean; line: ApInvoiceLine }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices", invoiceId] });
+    },
+  });
+}
+
+export function useDeleteApInvoiceLine(invoiceId: string, lineId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ ok: boolean }, Error, void>({
+    mutationFn: async () => {
+      const res = await fetch(`/api/finance/ap/invoices/${invoiceId}/lines/${lineId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to delete line"));
+      }
+      return res.json() as Promise<{ ok: boolean }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices", invoiceId] });
+    },
+  });
+}
+
+// ── Promote proforma ───────────────────────────────────────────────────────────
+
+export interface PromoteProformaPayload {
+  supplier_invoice_number: string;
+  supplier_invoice_date:   string;
+  posting_date?:           string;
+  received_date?:          string;
+  commitment_id?:          string | null;
+  remarks?:                string;
+}
+
+export function usePromoteProforma(invoiceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ ok: boolean; record: ApInvoiceDetail }, Error, PromoteProformaPayload>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`/api/records/purchase_invoice/${invoiceId}/action/promote_proforma`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(String(err["message"] ?? err["error"] ?? "Failed to promote proforma"));
+      }
+      return res.json() as Promise<{ ok: boolean; record: ApInvoiceDetail }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices", invoiceId] });
+      void queryClient.invalidateQueries({ queryKey: ["finance", "ap", "invoices"] });
     },
   });
 }

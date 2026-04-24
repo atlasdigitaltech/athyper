@@ -1624,3 +1624,275 @@ BEGIN
     RETURN NULL;
 END;
 $$;
+
+
+-- ============================================================================
+-- §PI-FN  Purchase Invoice functions (Phase 1+2 AP write engine)
+-- ============================================================================
+
+
+-- ── fn_next_document_number ─────────────────────────────────────────────────
+-- Atomically increments master.numbering_series.last_number and returns the
+-- formatted document number string.  Uses SELECT FOR UPDATE to prevent races.
+-- Returns NULL if no active series exists (caller generates a UUID fallback).
+--
+-- Format: {prefix}-{fiscal_year}-{last_number zero-padded to padding}
+-- Example: 'PI-2026-00043'  (prefix='PI', fiscal_year=2026, padding=5)
+
+CREATE OR REPLACE FUNCTION master.fn_next_document_number(
+    p_tenant_id      uuid,
+    p_company_id     uuid,
+    p_document_type  text,
+    p_fiscal_year    smallint DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SET search_path = master, shared, pg_catalog
+AS $$
+DECLARE
+    v_series  master.numbering_series%ROWTYPE;
+    v_next    integer;
+    v_str     text;
+BEGIN
+    -- Lock the matching series row (most specific first: company+year > company+null > null)
+    SELECT * INTO v_series
+    FROM master.numbering_series
+    WHERE tenant_id      = p_tenant_id
+      AND company_code_id = p_company_id
+      AND document_type  = p_document_type
+      AND is_active      = true
+      AND (fiscal_year = p_fiscal_year OR (fiscal_year IS NULL AND p_fiscal_year IS NULL))
+    ORDER BY fiscal_year NULLS LAST
+    LIMIT 1
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN NULL;   -- caller falls back to auto-generated code
+    END IF;
+
+    v_next := v_series.last_number + 1;
+
+    UPDATE master.numbering_series
+       SET last_number = v_next,
+           updated_at  = now()
+     WHERE id = v_series.id;
+
+    -- Build: PREFIX-YEAR-NNNNN  or  PREFIX-NNNNN  (if no fiscal year)
+    IF v_series.prefix <> '' AND v_series.fiscal_year IS NOT NULL THEN
+        v_str := v_series.prefix || '-'
+              || v_series.fiscal_year::text || '-'
+              || lpad(v_next::text, v_series.padding, '0');
+    ELSIF v_series.prefix <> '' THEN
+        v_str := v_series.prefix || '-'
+              || lpad(v_next::text, v_series.padding, '0');
+    ELSE
+        v_str := lpad(v_next::text, v_series.padding, '0');
+    END IF;
+
+    RETURN v_str;
+END;
+$$;
+
+COMMENT ON FUNCTION master.fn_next_document_number(uuid, uuid, text, smallint) IS
+    'Atomic document-number generator using SELECT FOR UPDATE on master.numbering_series. '
+    'Returns formatted string (PREFIX-YEAR-NNNNN) or NULL if no series exists.';
+
+
+-- ── fn_refresh_purchase_invoice_totals ─────────────────────────────────────
+-- Callable aggregate sync: recomputes all writable numeric aggregates on the
+-- purchase_invoice header from its child lines.
+-- Called from the AFTER trigger on purchase_invoice_line.
+-- Also callable directly from application code after bulk line operations.
+
+CREATE OR REPLACE FUNCTION document.fn_refresh_purchase_invoice_totals(
+    p_invoice_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = document, pg_catalog
+AS $$
+DECLARE
+    v_row RECORD;
+BEGIN
+    SELECT
+        COUNT(*)::smallint                         AS line_count,
+        COALESCE(SUM(net_amount), 0)               AS subtotal_amount,
+        COALESCE(SUM(
+            net_amount
+            - COALESCE(discount_amount, 0)
+        ), 0)                                      AS subtotal_net,
+        COALESCE(SUM(tax_amount), 0)               AS tax_amount,
+        COALESCE(SUM(withholding_tax_amount), 0)   AS withholding_tax_amount
+    INTO v_row
+    FROM document.purchase_invoice_line
+    WHERE purchase_invoice_id = p_invoice_id;
+
+    UPDATE document.purchase_invoice
+       SET line_count             = v_row.line_count,
+           subtotal_amount        = v_row.subtotal_amount,
+           tax_amount             = v_row.tax_amount,
+           withholding_tax_amount = v_row.withholding_tax_amount,
+           -- total = subtotal (after line discounts) + tax + freight + misc − header discount
+           total_amount           = GREATEST(
+               v_row.subtotal_net
+               + v_row.tax_amount
+               + COALESCE((SELECT freight_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
+               + COALESCE((SELECT misc_charges_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
+               - COALESCE((SELECT discount_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0),
+               0
+           ),
+           updated_at             = now()
+     WHERE id = p_invoice_id;
+END;
+$$;
+
+COMMENT ON FUNCTION document.fn_refresh_purchase_invoice_totals(uuid) IS
+    'Recomputes line_count, subtotal_amount, tax_amount, withholding_tax_amount, total_amount '
+    'on purchase_invoice from its child lines. Called by trg_pil_sync_header trigger.';
+
+
+-- ── trg_pi_before_insert ────────────────────────────────────────────────────
+-- BEFORE INSERT on document.purchase_invoice:
+--   1. Sets created_by from session if not explicitly provided
+--   2. Auto-generates invoice_number from master.numbering_series if empty
+--   3. Sets code = invoice_number (display code)
+
+CREATE OR REPLACE FUNCTION document.trg_pi_before_insert()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, master, shared, pg_catalog AS $$
+DECLARE
+    v_actor    uuid;
+    v_fy       smallint;
+    v_num      text;
+BEGIN
+    -- 1. created_by from session GUC
+    v_actor := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    NEW.created_by := COALESCE(v_actor, NEW.created_by);
+
+    -- 2. Auto-generate invoice_number if blank
+    IF NEW.invoice_number IS NULL OR btrim(NEW.invoice_number) = '' THEN
+        -- Determine fiscal year for the number series
+        v_fy := EXTRACT(YEAR FROM COALESCE(NEW.posting_date, CURRENT_DATE))::smallint;
+
+        v_num := master.fn_next_document_number(
+            NEW.tenant_id,
+            NEW.company_code_id,
+            'purchase_invoice',
+            v_fy
+        );
+
+        -- Fallback if no numbering series exists yet
+        IF v_num IS NULL THEN
+            v_num := 'PI-' || to_char(now(), 'YYYY') || '-'
+                     || lpad(nextval('document.upupr_code_seq')::text, 6, '0');
+        END IF;
+
+        NEW.invoice_number := v_num;
+    END IF;
+
+    -- 3. code mirrors invoice_number for entity-engine display
+    NEW.code := NEW.invoice_number;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- ── trg_pil_sync_header ─────────────────────────────────────────────────────
+-- AFTER INSERT/UPDATE/DELETE on document.purchase_invoice_line:
+-- Calls fn_refresh_purchase_invoice_totals to keep header aggregates in sync.
+
+CREATE OR REPLACE FUNCTION document.trg_pil_sync_header()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+DECLARE
+    v_invoice_id uuid;
+BEGIN
+    v_invoice_id := COALESCE(NEW.purchase_invoice_id, OLD.purchase_invoice_id);
+    PERFORM document.fn_refresh_purchase_invoice_totals(v_invoice_id);
+    RETURN NULL;
+END;
+$$;
+
+
+-- ── trg_pi_immutability_guard ───────────────────────────────────────────────
+-- Blocks direct field edits on purchase_invoices in terminal or posted states.
+-- Application code should use the action-dispatcher flow handlers instead.
+
+CREATE OR REPLACE FUNCTION document.trg_pi_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    -- Allow status changes by the action dispatcher (status column only)
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        RETURN NEW;
+    END IF;
+    -- Block all other mutations once posted/reversed/cancelled/fully_paid
+    IF OLD.status IN ('posted','reversed','cancelled','fully_paid','rejected') THEN
+        RAISE EXCEPTION
+            'purchase_invoice % is in status ''%'' and cannot be modified directly. '
+            'Use an action operation to change its state.',
+            OLD.id, OLD.status
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+-- ── trg_pil_immutability_guard ──────────────────────────────────────────────
+-- Blocks line mutations when the parent invoice is in a non-editable state.
+
+CREATE OR REPLACE FUNCTION document.trg_pil_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+DECLARE
+    v_status text;
+BEGIN
+    SELECT status INTO v_status
+    FROM document.purchase_invoice
+    WHERE id = COALESCE(NEW.purchase_invoice_id, OLD.purchase_invoice_id);
+
+    IF v_status NOT IN ('draft', 'proforma') THEN
+        RAISE EXCEPTION
+            'Cannot modify lines of purchase_invoice in status ''%''. '
+            'Invoice must be in draft or proforma status.',
+            v_status
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+
+-- ── trg_pi_status_guard ─────────────────────────────────────────────────────
+-- Validates status transitions against the lifecycle engine.
+-- Prevents direct status assignments that bypass the action dispatcher.
+
+CREATE OR REPLACE FUNCTION document.trg_pi_status_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, control, pg_catalog AS $$
+DECLARE
+    v_allowed_transitions text[];
+BEGIN
+    IF OLD.status = NEW.status THEN RETURN NEW; END IF;
+
+    -- Fetch allowed transitions from compiled snapshot
+    SELECT ARRAY(
+        SELECT jsonb_array_elements_text(
+            compiled_json->'allowed_transitions'->OLD.status
+        )
+    )
+    INTO v_allowed_transitions
+    FROM snapshot.status_route
+    WHERE entity_name = 'purchase_invoice'
+    ORDER BY updated_at DESC
+    LIMIT 1;
+
+    -- If snapshot compiled, validate; otherwise allow (fallback path)
+    IF v_allowed_transitions IS NOT NULL
+       AND NEW.status <> ALL(v_allowed_transitions) THEN
+        RAISE EXCEPTION
+            'Status transition % → % is not permitted for purchase_invoice %',
+            OLD.status, NEW.status, OLD.id
+            USING ERRCODE = 'P0001';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;

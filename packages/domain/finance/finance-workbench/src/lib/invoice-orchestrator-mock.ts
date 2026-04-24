@@ -23,7 +23,10 @@ import type { ApInvoiceDetail } from "../hooks/useApWorkbench";
 
 // ── Status Dimensions ───────────────────────────────────────────────────────
 
-export function mockStatusDimensions(status: string): StatusDimension[] {
+export function mockStatusDimensions(
+  status: string,
+  invoice?: Pick<ApInvoiceDetail, "matchStatus" | "apJeId">,
+): StatusDimension[] {
   const s = status.toUpperCase();
 
   const lifecycle = (): StatusDimension => {
@@ -38,7 +41,7 @@ export function mockStatusDimensions(status: string): StatusDimension[] {
   };
 
   const accounting = (): StatusDimension => {
-    const isPosted = ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
+    const isPosted = !!invoice?.apJeId || ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
     return {
       dimension: "accounting",
       label: "Accounting",
@@ -57,6 +60,13 @@ export function mockStatusDimensions(status: string): StatusDimension[] {
   };
 
   const matching = (): StatusDimension => {
+    const ms = (invoice?.matchStatus ?? "").toLowerCase();
+    if (ms === "fully_matched")
+      return { dimension: "matching", label: "Reconciliation", status_code: "fully_matched", status_label: "Matched", intent: "success" };
+    if (ms === "partially_matched")
+      return { dimension: "matching", label: "Reconciliation", status_code: "partially_matched", status_label: "Partial Match", intent: "warning" };
+    if (ms === "match_exception")
+      return { dimension: "matching", label: "Reconciliation", status_code: "match_exception", status_label: "Exception", intent: "error" };
     if (["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s))
       return { dimension: "matching", label: "Reconciliation", status_code: "fully_matched", status_label: "Matched", intent: "success" };
     return { dimension: "matching", label: "Reconciliation", status_code: "unmatched", status_label: "Unmatched", intent: "neutral" };
@@ -67,10 +77,43 @@ export function mockStatusDimensions(status: string): StatusDimension[] {
 
 // ── Health Tiles ─────────────────────────────────────────────────────────────
 
-export function mockHealthTiles(status: string): ProcessHealthTile[] {
+export function mockHealthTiles(
+  status: string,
+  invoice?: Pick<ApInvoiceDetail, "matchStatus" | "apJeId" | "budgetCheckResult" | "paymentTermId" | "taxAmount" | "withholdingTaxAmount">,
+): ProcessHealthTile[] {
   const s = status.toUpperCase();
   const isApproved = ["APPROVED", "POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
-  const isPosted = ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
+  const isPosted   = !!invoice?.apJeId || ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
+
+  // Matching tile: use live matchStatus when available
+  const ms = (invoice?.matchStatus ?? "").toLowerCase();
+  const matchSeverity: "success" | "warning" | "error" | "neutral" =
+    ms === "fully_matched"     ? "success" :
+    ms === "partially_matched" ? "warning" :
+    ms === "match_exception"   ? "error"   :
+    isPosted                   ? "success" : "neutral";
+  const matchSummary =
+    ms === "fully_matched"     ? "3-way matched"     :
+    ms === "partially_matched" ? "Partially matched" :
+    ms === "match_exception"   ? "Match exception"   :
+    isPosted                   ? "Matched"           : "Awaiting match";
+
+  // Budget tile: use live budgetCheckResult when available
+  const bcr = (invoice?.budgetCheckResult ?? "").toLowerCase();
+  const budgetSeverity: "success" | "warning" | "error" | "neutral" =
+    bcr === "passed"  ? "success" :
+    bcr === "warning" ? "warning" :
+    bcr === "failed"  ? "error"   : "neutral";
+  const budgetSummary =
+    bcr === "passed"  ? "Check passed"  :
+    bcr === "warning" ? "Within buffer" :
+    bcr === "failed"  ? "Budget exceeded" : "Not checked";
+
+  // Payment terms tile
+  const hasTerms = !!invoice?.paymentTermId;
+
+  // Tax tile
+  const hasTax = (invoice?.taxAmount ?? 0) > 0 || (invoice?.withholdingTaxAmount ?? 0) > 0;
 
   return [
     {
@@ -83,15 +126,15 @@ export function mockHealthTiles(status: string): ProcessHealthTile[] {
     {
       dimension: "payment_terms",
       label: "Payment Terms",
-      severity: isApproved ? "success" : "neutral",
-      summary: isApproved ? "Net 30 evaluated" : "Pending evaluation",
+      severity: hasTerms ? "success" : isApproved ? "warning" : "neutral",
+      summary: hasTerms ? "Terms evaluated" : isApproved ? "Pending evaluation" : "Not configured",
       satellite_intent: "view_payment_terms",
     },
     {
       dimension: "matching",
       label: "Reconciliation",
-      severity: isPosted ? "success" : "neutral",
-      summary: isPosted ? "3-way matched" : "Awaiting match",
+      severity: matchSeverity,
+      summary: matchSummary,
       satellite_intent: "view_match_detail",
     },
     {
@@ -111,15 +154,15 @@ export function mockHealthTiles(status: string): ProcessHealthTile[] {
     {
       dimension: "tax_wht",
       label: "Tax & WHT",
-      severity: "success",
-      summary: "Calculated",
+      severity: hasTax ? "success" : "neutral",
+      summary: hasTax ? "Calculated" : "No tax",
       satellite_intent: "view_tax_detail",
     },
     {
       dimension: "budget",
       label: "Budget",
-      severity: "success",
-      summary: "Check passed",
+      severity: budgetSeverity,
+      summary: budgetSummary,
       satellite_intent: "view_budget_trace",
     },
   ];
@@ -131,6 +174,27 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
 
+  const s      = invoice.status.toUpperCase();
+  const isPosted = !!invoice.apJeId || ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(s);
+
+  // Payment terms
+  const hasTerms = !!invoice.paymentTermId;
+
+  // Budget check
+  const bcr = (invoice.budgetCheckResult ?? "").toLowerCase();
+  const budgetIntent: "success" | "warning" | "error" | "neutral" =
+    bcr === "passed" ? "success" : bcr === "warning" ? "warning" : bcr === "failed" ? "error" : "neutral";
+  const budgetSubtitle = bcr === "passed" ? "passed" : bcr === "warning" ? "within buffer" : bcr === "failed" ? "exceeded" : "not checked";
+
+  // Tax amounts
+  const taxAmt = invoice.taxAmount ?? 0;
+  const whtAmt = invoice.withholdingTaxAmount ?? 0;
+
+  // Settlement
+  const paid    = invoice.paidAmount ?? 0;
+  const payable = invoice.payableAmount ?? 0;
+  const outstanding = invoice.outstandingAmount ?? 0;
+
   return [
     {
       group_key: "commercial_controls",
@@ -140,13 +204,12 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           id: "sat_payment_terms",
           group: "commercial_controls",
           title: "Payment Terms",
-          subtitle: "evaluated",
-          intent: "success",
+          subtitle: hasTerms ? "evaluated" : "not configured",
+          intent: hasTerms ? "success" : "neutral",
           icon_key: "clock",
-          summary_lines: [
-            { label: "Base Terms", value: "Net 30" },
-            { label: "Clauses", value: "Applied" },
-          ],
+          summary_lines: hasTerms
+            ? [{ label: "Terms", value: "Applied" }]
+            : [{ label: "Terms", value: "—" }],
           has_detail: false,
           detail_data: null,
           primary_action_label: "View Applications",
@@ -154,7 +217,7 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
         },
       ],
     },
-    {
+    ...(invoice.commitmentId ? [{
       group_key: "commitment_trace",
       label: "Commitment Trace",
       cards: [
@@ -163,18 +226,16 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           group: "commitment_trace",
           title: "Purchase Order",
           subtitle: "linked",
-          intent: "info",
+          intent: "info" as const,
           icon_key: "document",
-          summary_lines: [
-            { label: "PO", value: "Linked" },
-          ],
+          summary_lines: [{ label: "Commitment", value: "Linked" }],
           has_detail: false,
           detail_data: null,
-          primary_action_label: "View PO",
-          primary_action_intent: "navigate_po",
+          primary_action_label: "View Commitment",
+          primary_action_intent: "navigate_commitment",
         },
       ],
-    },
+    }] : []),
     {
       group_key: "accounting",
       label: "Accounting",
@@ -183,12 +244,12 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           id: "sat_je",
           group: "accounting",
           title: "Accounting Entry",
-          subtitle: invoice.status.toUpperCase() === "POSTED" ? "posted" : "pending",
-          intent: ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(invoice.status.toUpperCase()) ? "success" : "neutral",
+          subtitle: isPosted ? "posted" : "pending",
+          intent: isPosted ? "success" : "neutral",
           icon_key: "document",
-          summary_lines: [
-            { label: "Status", value: ["POSTED", "PARTIALLY_PAID", "PAID", "FULLY_PAID"].includes(invoice.status.toUpperCase()) ? "Posted" : "Not posted" },
-          ],
+          summary_lines: invoice.apJeId
+            ? [{ label: "Journal Entry", value: invoice.apJeId }]
+            : [{ label: "Status", value: "Not posted" }],
           has_detail: false,
           detail_data: null,
           primary_action_label: "View Journal Entry",
@@ -198,12 +259,12 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           id: "sat_budget",
           group: "accounting",
           title: "Budget Impact",
-          subtitle: "passed",
-          intent: "success",
+          subtitle: budgetSubtitle,
+          intent: budgetIntent,
           icon_key: "chart_bar",
           summary_lines: [
-            { label: "Check", value: "PASSED" },
-            { label: "Amount", value: `${invoice.currencyCode} ${fmt(invoice.payableAmount)}` },
+            ...(bcr ? [{ label: "Check", value: bcr.toUpperCase() }] : []),
+            { label: "Amount", value: `${invoice.currencyCode} ${fmt(payable)}` },
           ],
           has_detail: false,
           detail_data: null,
@@ -220,11 +281,12 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           id: "sat_tax",
           group: "compliance_charges",
           title: "Tax Calculation",
-          subtitle: "calculated",
-          intent: "success",
+          subtitle: taxAmt > 0 ? "calculated" : "no tax",
+          intent: taxAmt > 0 ? "success" : "neutral",
           icon_key: "calculator",
           summary_lines: [
-            { label: "Tax", value: `${invoice.currencyCode} ${fmt(invoice.tax_amount)}` },
+            { label: "Tax", value: `${invoice.currencyCode} ${fmt(taxAmt)}` },
+            ...(whtAmt > 0 ? [{ label: "WHT", value: `${invoice.currencyCode} ${fmt(whtAmt)}` }] : []),
           ],
           has_detail: false,
           detail_data: null,
@@ -242,11 +304,12 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
           group: "settlement",
           title: "Payment Status",
           subtitle: invoice.status.toLowerCase().replace(/_/g, " "),
-          intent: invoice.outstandingAmount > 0 ? "warning" : "success",
+          intent: outstanding <= 0 ? "success" : outstanding < payable ? "warning" : "neutral",
           icon_key: "credit_card",
           summary_lines: [
-            { label: "Payable", value: `${invoice.currencyCode} ${fmt(invoice.payableAmount)}` },
-            { label: "Outstanding", value: `${invoice.currencyCode} ${fmt(invoice.outstandingAmount)}` },
+            { label: "Payable",     value: `${invoice.currencyCode} ${fmt(payable)}` },
+            ...(paid > 0 ? [{ label: "Paid",        value: `${invoice.currencyCode} ${fmt(paid)}` }] : []),
+            { label: "Outstanding", value: `${invoice.currencyCode} ${fmt(outstanding)}` },
           ],
           has_detail: false,
           detail_data: null,
@@ -261,13 +324,42 @@ export function mockSatelliteGroups(invoice: ApInvoiceDetail): SatelliteGroup[] 
 // ── Amount Breakdown ─────────────────────────────────────────────────────────
 
 export function mockAmountBreakdown(invoice: ApInvoiceDetail): AmountBreakdownLine[] {
-  const c = invoice.currencyCode;
-  return [
-    { label: "Subtotal", amount: invoice.payableAmount - invoice.tax_amount, currency_code: c, is_total: false, indent: 0 },
-    { label: "Tax", amount: invoice.tax_amount, currency_code: c, is_total: false, indent: 0 },
-    { label: "Total Payable", amount: invoice.payableAmount, currency_code: c, is_total: true, indent: 0 },
-    { label: "Outstanding", amount: invoice.outstandingAmount, currency_code: c, is_total: false, indent: 0, intent: invoice.outstandingAmount > 0 ? "warning" : "success" },
+  const c         = invoice.currencyCode;
+  const subtotal  = invoice.subtotalAmount ?? 0;
+  const tax       = invoice.taxAmount ?? 0;
+  const wht       = invoice.withholdingTaxAmount ?? 0;
+  const total     = invoice.totalAmount ?? 0;
+  const payable   = invoice.payableAmount ?? total;
+  const paid      = invoice.paidAmount ?? 0;
+  const outstanding = invoice.outstandingAmount ?? payable;
+
+  const lines: AmountBreakdownLine[] = [
+    { label: "Subtotal", amount: subtotal, currency_code: c, is_total: false, indent: 0 },
   ];
+  if (tax > 0) {
+    lines.push({ label: "Tax", amount: tax, currency_code: c, is_total: false, indent: 1 });
+  }
+  if (wht > 0) {
+    lines.push({ label: "Withholding Tax", amount: wht, currency_code: c, is_total: false, indent: 1 });
+  }
+  lines.push({ label: "Total", amount: total, currency_code: c, is_total: false, indent: 0 });
+  if (payable !== total) {
+    lines.push({ label: "Net Payable", amount: payable, currency_code: c, is_total: true, indent: 0 });
+  } else {
+    lines.push({ label: "Total Payable", amount: payable, currency_code: c, is_total: true, indent: 0 });
+  }
+  if (paid > 0) {
+    lines.push({ label: "Paid", amount: paid, currency_code: c, is_total: false, indent: 1 });
+  }
+  lines.push({
+    label: "Outstanding",
+    amount: outstanding,
+    currency_code: c,
+    is_total: false,
+    indent: 0,
+    intent: outstanding > 0 ? "warning" : "success",
+  } as AmountBreakdownLine);
+  return lines;
 }
 
 // ── Validation Notices ───────────────────────────────────────────────────────

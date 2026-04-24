@@ -72,7 +72,8 @@ import type { EntityOperation } from "@athyper/api-contracts/metadata";
 import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { resolveListConfig, resolvePresentationConfig } from "@athyper/metadata-client/compiled-reader";
 import { DataTable, type ColumnDef, type RowSelectionState, type SortingState } from "@athyper/ui/data";
-import { PageFrame } from "@athyper/ui/layout";
+import { PageShell } from "../shell/PageShell";
+import { PageHeader } from "../shell/PageHeader";
 import {
   Button, Badge, Skeleton, Input, Label,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -1458,24 +1459,32 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   if (metaError) {
     return (
-      <PageFrame title="Entity Not Found">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-          <p className="text-sm text-destructive">
-            Entity <code className="font-mono">{entityCode}</code> not found in compiled metadata.
-          </p>
+      <div className="flex flex-col gap-2.5">
+        <div className="rounded-xl border border-border bg-card px-4 py-3">
+          <span className="text-xl font-semibold text-foreground">Entity Not Found</span>
         </div>
-      </PageFrame>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
+            <p className="text-sm text-destructive">
+              Entity <code className="font-mono">{entityCode}</code> not found in compiled metadata.
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (metaLoading || !entity) {
     return (
-      <PageFrame>
-        <div className="space-y-3">
+      <div className="flex flex-col gap-2.5">
+        <div className="rounded-xl border border-border bg-card px-4 py-3">
+          <Skeleton className="h-7 w-40" />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </PageFrame>
+      </div>
     );
   }
 
@@ -1599,88 +1608,119 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     }
   };
 
-  return (
-    <PageFrame
-      title={entity.entity_name}
-      actions={
-        <div className="flex items-center gap-2">
-          <SearchInput
-            placeholder={`Search ${entity.entity_name}…`}
-            value={state.search ?? ""}
-            onSearch={setSearch}
-            loading={dataLoading && !!state.search && state.searchMode !== "client"}
-            className="w-48 sm:w-64"
-            onKeyDown={(e: React.KeyboardEvent) => {
-              if (e.key === "Escape") setSearch("");
-            }}
-            modeToggle={entity.fields.some((f) => f.is_searchable) ? {
-              active:         state.searchMode === "client",
-              onToggle:       () => setSearchMode(state.searchMode === "client" ? undefined : "client"),
-              activeLabel:    "In view",
-              inactiveLabel:  "All",
-              icon:           <Zap className="size-3" />,
-              title:          state.searchMode === "client"
-                ? "Instant search: filtering this page only — click to switch to server search (all records)"
-                : "Server search: querying all records — click to switch to instant page filter",
-            } : undefined}
-          />
-
-          {/* My Work quick-scope dropdown */}
-          <MyWorkDropdown
-            entity={entity}
-            activeFilters={activeFilters}
-            onSetFilters={(f) => setFilters(Object.keys(f).length > 0 ? f : undefined)}
-          />
-
-          {/* Organize: Filter | Sort | Group | Columns */}
-          <OrganizeControl
-            activeDrawer={activeDrawer}
-            onOpen={openDrawer}
-            hasActiveFilters={hasActiveFilters}
-            filterCount={Object.keys(activeFilters).length}
-            sortCount={activeSort?.length ?? 0}
-            groupField={state.group ?? undefined}
-            visibleColumns={visibleColumnNames.length}
-            totalColumns={allDescriptorColumns.length}
-            showColumns={viewMode === "list" || viewMode === "excel"}
-          />
-
-          {/* View: mode + density */}
-          <ViewLauncherButton
-            mode={viewMode}
-            density={state.density}
-            hasGroupable={hasGroupable}
-            onChangeMode={setViewMode}
-            onChangeDensity={(d) => setDensity(d)}
-          />
-
-          {/* Create */}
-          {operations ? (
-            <ActionBar
-              operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
-              surface="LIST"
-              entityCode={entityCode}
-            />
-          ) : null}
-
-          {/* Settings: save as default + admin navigation */}
-          <ListSettingsMenu
-            entityCode={entityCode}
-            mode={viewMode}
-            density={state.density}
-          />
-
-          {(hasActiveQuery || isModified) && (
-            <SaveViewBar
-              entityCode={entityCode}
-              state={state}
-              isModified={isModified}
-              baseSavedViewId={state.baseSavedViewId}
-              baseName={baseSavedView?.name}
-            />
+  // Saved views tab bar — becomes Region 2 (context bar) when views exist
+  const savedViewsContext = savedViews.length > 0 ? (
+    <div className="flex gap-1 overflow-x-auto">
+      <button
+        onClick={() => handleSavedViewClick("__all")}
+        className={cn(
+          "shrink-0 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
+          activeSavedViewId === "__all"
+            ? "border-primary text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground",
+        )}
+      >
+        All
+      </button>
+      {savedViews.map((view) => (
+        <button
+          key={view.id}
+          onClick={() => handleSavedViewClick(view.id)}
+          className={cn(
+            "shrink-0 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
+            activeSavedViewId === view.id
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
           )}
-        </div>
+        >
+          {view.name}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
+
+  return (
+    <PageShell
+      header={
+        <PageHeader
+          title={entity.entity_name}
+          actions={
+            <div className="flex items-center gap-2">
+              <SearchInput
+                placeholder={`Search ${entity.entity_name}…`}
+                value={state.search ?? ""}
+                onSearch={setSearch}
+                loading={dataLoading && !!state.search && state.searchMode !== "client"}
+                className="w-48 sm:w-64"
+                onKeyDown={(e: React.KeyboardEvent) => {
+                  if (e.key === "Escape") setSearch("");
+                }}
+                modeToggle={entity.fields.some((f) => f.is_searchable) ? {
+                  active:         state.searchMode === "client",
+                  onToggle:       () => setSearchMode(state.searchMode === "client" ? undefined : "client"),
+                  activeLabel:    "In view",
+                  inactiveLabel:  "All",
+                  icon:           <Zap className="size-3" />,
+                  title:          state.searchMode === "client"
+                    ? "Instant search: filtering this page only — click to switch to server search (all records)"
+                    : "Server search: querying all records — click to switch to instant page filter",
+                } : undefined}
+              />
+
+              <MyWorkDropdown
+                entity={entity}
+                activeFilters={activeFilters}
+                onSetFilters={(f) => setFilters(Object.keys(f).length > 0 ? f : undefined)}
+              />
+
+              <OrganizeControl
+                activeDrawer={activeDrawer}
+                onOpen={openDrawer}
+                hasActiveFilters={hasActiveFilters}
+                filterCount={Object.keys(activeFilters).length}
+                sortCount={activeSort?.length ?? 0}
+                groupField={state.group ?? undefined}
+                visibleColumns={visibleColumnNames.length}
+                totalColumns={allDescriptorColumns.length}
+                showColumns={viewMode === "list" || viewMode === "excel"}
+              />
+
+              <ViewLauncherButton
+                mode={viewMode}
+                density={state.density}
+                hasGroupable={hasGroupable}
+                onChangeMode={setViewMode}
+                onChangeDensity={(d) => setDensity(d)}
+              />
+
+              {operations ? (
+                <ActionBar
+                  operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
+                  surface="LIST"
+                  entityCode={entityCode}
+                />
+              ) : null}
+
+              <ListSettingsMenu
+                entityCode={entityCode}
+                mode={viewMode}
+                density={state.density}
+              />
+
+              {(hasActiveQuery || isModified) && (
+                <SaveViewBar
+                  entityCode={entityCode}
+                  state={state}
+                  isModified={isModified}
+                  baseSavedViewId={state.baseSavedViewId}
+                  baseName={baseSavedView?.name}
+                />
+              )}
+            </div>
+          }
+        />
       }
+      context={savedViewsContext}
     >
       {/* Drawers — one open at a time; all rendered for CSS transitions */}
       <FilterDrawer
@@ -1744,37 +1784,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
       {/* Content area */}
       <div className="space-y-3">
-          {/* Saved views tabs */}
-          {savedViews.length > 0 && (
-            <div className="flex gap-1 border-b pb-0">
-              <button
-                onClick={() => handleSavedViewClick("__all")}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
-                  activeSavedViewId === "__all"
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                All
-              </button>
-              {savedViews.map((view) => (
-                <button
-                  key={view.id}
-                  onClick={() => handleSavedViewClick(view.id)}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
-                    activeSavedViewId === view.id
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {view.name}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Quick status filter pills — shown when facets are loaded */}
           {statusFieldName && Object.keys(facetData).length > 0 && (
             <QuickStatusBar
@@ -2124,6 +2133,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
           </div>
         </>
       )}
-    </PageFrame>
+    </PageShell>
   );
 }

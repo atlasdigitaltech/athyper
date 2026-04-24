@@ -848,9 +848,20 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             mappedData["document_date"] = jePd;
           }
         }
-        // supplier_invoice_number is a purchase_invoice-specific NOT NULL column
-        if (entityCode === "purchase_invoice" && mappedData["supplier_invoice_number"] === undefined) {
-          mappedData["supplier_invoice_number"] = "";
+        // purchase_invoice-specific NOT NULL defaults
+        if (entityCode === "purchase_invoice") {
+          // currency_code is NOT NULL — fall back to the company's functional currency
+          if (!mappedData["currency_code"]) {
+            mappedData["currency_code"] = mappedData["base_currency_code"];
+          }
+          // tax_mode is required for non-proforma invoices (pi_tax_mode_req CHECK)
+          if (!mappedData["tax_mode"] && mappedData["status"] !== "proforma") {
+            mappedData["tax_mode"]        = "exclusive";
+            mappedData["tax_mode_source"] = "cannot_infer";
+          }
+          if (mappedData["supplier_invoice_number"] === undefined) {
+            mappedData["supplier_invoice_number"] = "";
+          }
         }
 
         // Auto-generate the system document number when the wizard doesn't supply one.

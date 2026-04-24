@@ -22,3 +22,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ items: [], total: 0 }, { status: 503 });
   }
 }
+
+export async function POST(req: Request) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json() as Record<string, unknown>;
+    const idempotencyKey = req.headers.get("X-Idempotency-Key");
+    if (idempotencyKey) body["idempotency_key"] = idempotencyKey;
+
+    const res = await fetch(`${RUNTIME_API_URL}/api/finance/ap/invoices`, {
+      method: "POST",
+      headers: { ...buildRuntimeHeaders(session), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json() as Record<string, unknown>;
+    return NextResponse.json(data, { status: res.status });
+  } catch (e) {
+    console.error("[api/finance/ap/invoices POST]", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  }
+}

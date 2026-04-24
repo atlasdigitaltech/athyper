@@ -555,3 +555,95 @@ CREATE INDEX IF NOT EXISTS whtc_company_party_idx
 CREATE INDEX IF NOT EXISTS whtc_active_period_pidx
     ON document.wht_certificate (tenant_id, company_code_id, period_from, period_to)
     WHERE status <> 'voided';
+
+
+-- ============================================================================
+-- §PI-IDX  purchase_invoice — Phase 1 missing indexes
+-- ============================================================================
+
+-- Supplier filter on the AP invoice list (most common query path)
+CREATE INDEX IF NOT EXISTS pi_supplier_status_idx
+    ON document.purchase_invoice (tenant_id, company_code_id, supplier_id, status, posting_date DESC)
+    WHERE is_active = true;
+
+-- Due date — payment planning queries
+CREATE INDEX IF NOT EXISTS pi_due_date_idx
+    ON document.purchase_invoice (tenant_id, company_code_id, due_date ASC)
+    WHERE status IN ('approved','posted','partially_paid');
+
+-- Budget allocation linkage
+CREATE INDEX IF NOT EXISTS pi_budget_allocation_idx
+    ON document.purchase_invoice (tenant_id, budget_allocation_id)
+    WHERE budget_allocation_id IS NOT NULL;
+
+-- Dimension indexes for reporting
+CREATE INDEX IF NOT EXISTS pi_cost_center_idx
+    ON document.purchase_invoice (tenant_id, cost_center_id)
+    WHERE cost_center_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS pi_project_idx
+    ON document.purchase_invoice (tenant_id, project_id)
+    WHERE project_id IS NOT NULL;
+
+-- Workflow request — one join per invoice detail page load
+CREATE INDEX IF NOT EXISTS pi_workflow_idx
+    ON document.purchase_invoice (workflow_request_id)
+    WHERE workflow_request_id IS NOT NULL;
+
+-- AP Journal entry link
+CREATE INDEX IF NOT EXISTS pi_ap_je_idx
+    ON document.purchase_invoice (ap_je_id)
+    WHERE ap_je_id IS NOT NULL;
+
+-- Fiscal period scope (Trial Balance + period close queries)
+CREATE INDEX IF NOT EXISTS pi_fiscal_period_idx
+    ON document.purchase_invoice (tenant_id, company_code_id, fiscal_year, period_number);
+
+
+-- ============================================================================
+-- §PIL-IDX  purchase_invoice_line — Phase 1 missing indexes
+-- ============================================================================
+
+-- Parent invoice lookups (line panel, totals refresh)
+CREATE INDEX IF NOT EXISTS pil_invoice_idx
+    ON document.purchase_invoice_line (tenant_id, purchase_invoice_id, line_no ASC);
+
+-- Spend category for analytics
+CREATE INDEX IF NOT EXISTS pil_spend_category_idx
+    ON document.purchase_invoice_line (tenant_id, spend_category_id)
+    WHERE spend_category_id IS NOT NULL;
+
+-- Business intent for budget allocation matching
+CREATE INDEX IF NOT EXISTS pil_business_intent_idx
+    ON document.purchase_invoice_line (tenant_id, business_intent_id)
+    WHERE business_intent_id IS NOT NULL;
+
+-- Asset lines (asset_transaction creation query)
+CREATE INDEX IF NOT EXISTS pil_asset_idx
+    ON document.purchase_invoice_line (tenant_id, asset_category_id)
+    WHERE is_asset = true;
+
+-- Matching status for the matching engine
+CREATE INDEX IF NOT EXISTS pil_match_status_idx
+    ON document.purchase_invoice_line (tenant_id, match_status)
+    WHERE match_status <> 'fully_matched';
+
+-- Source line links for three-way match
+CREATE INDEX IF NOT EXISTS pil_commitment_line_idx
+    ON document.purchase_invoice_line (tenant_id, commitment_line_id)
+    WHERE commitment_line_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS pil_gr_line_idx
+    ON document.purchase_invoice_line (tenant_id, goods_receipt_line_id)
+    WHERE goods_receipt_line_id IS NOT NULL;
+
+
+-- ============================================================================
+-- §CL-IDX  document.command_log — lookup index (already in table DDL)
+-- §NS-IDX  master.numbering_series — lookup index (already in table DDL)
+-- §MTC-IDX control.match_tolerance_config — resolution index
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS mtc_resolution_idx
+    ON control.match_tolerance_config (entity_name, match_type, tolerance_type, tenant_id NULLS LAST, company_code_id NULLS LAST)
+    WHERE is_active = true;

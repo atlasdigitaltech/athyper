@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
-import { EntityRefPicker, type EntityRefOption } from "@athyper/ui/composites";
+import { EntityRefPicker, DatePicker, type EntityRefOption } from "@athyper/ui/composites";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
 import { registerFieldRenderer, type FieldRendererProps } from "./registry";
@@ -75,10 +75,10 @@ function DateRenderer({ value, field, mode, onChange, error }: FieldRendererProp
     return <span className="text-sm">{formatted}</span>;
   }
   return (
-    <Input
-      type={field.data_type === "date" ? "date" : "datetime-local"}
-      value={String(value ?? "")}
-      onChange={(e) => onChange?.(e.target.value)}
+    <DatePicker
+      value={value != null ? String(value) : null}
+      mode={field.data_type === "date" ? "date" : "datetime"}
+      onChange={(v) => onChange?.(v)}
       error={error}
     />
   );

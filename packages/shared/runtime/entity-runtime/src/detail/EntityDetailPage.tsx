@@ -2,33 +2,39 @@
  * @athyper/entity-runtime — EntityDetailPage
  *
  * Renders a master record detail view with:
- *   - Header card (title, subtitle, status badge, key fields)
+ *   - PageShell (Region 1 header + Region 2 tabs + Region 3 content)
  *   - Tabbed sections from field_groups
- *   - Comments tab (when resolveTabs() includes "comments")
- *   - Events/activity tab (when resolveTabs() includes "events")
- *   - Related panels (address_link, contact_link)
- *   - Action bar from entity_operation
+ *   - Comments / Activity tabs when enabled by resolveTabs()
+ *   - editMode: when true (via ?mode=edit URL param), field values become
+ *     inputs via EntityForm rendered inline — same shell, no route change.
  *
- * For entities with detail_renderer = "approvable" the page delegates to
- * ApprovableDetailPage, which uses ApprovableDocumentShell with all
- * DetailTab slots resolved via resolveTabs().
+ * For entities with detail_renderer = "approvable" delegates to
+ * ApprovableDetailPage (which has its own rich shell via ApprovableDocumentShell).
  */
 "use client";
 
 import { useState } from "react";
-import { useCompiledEntity, useEntityDetail, useEntityOperations } from "@athyper/query";
+import { useRouter } from "next/navigation";
+import { cn } from "@athyper/theme/utils";
+import { useCompiledEntity, useEntityDetail, useEntityOperations, useUpdateEntity } from "@athyper/query";
 import { useQuery } from "@tanstack/react-query";
 import { resolveDetailConfig, resolveRendererFamily, resolveTabs } from "@athyper/metadata-client/compiled-reader";
-import { Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger, TabsContent, Skeleton, Badge } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import {
+  Card, CardContent,
+  Skeleton, Badge, Button,
+} from "@athyper/ui/primitives";
 import { CommentList } from "@athyper/collaboration-ui/comments";
 import { ActivityTimeline } from "@athyper/collaboration-ui/activity";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
+import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { ActionBar } from "../actions/ActionBar";
 import { ApprovableDetailPage } from "./ApprovableDetailPage";
+import { PageShell } from "../shell/PageShell";
+import { PageHeader, ModeBadge } from "../shell/PageHeader";
+import { EntityForm } from "../form/EntityForm";
 
-// ── Activity tab (fetches data via relay) ─────────────────────────────────────
+// ── Activity tab ───────────────────────────────────────────────────────────────
 
 function ActivityTab({ entityCode, recordId }: { entityCode: string; recordId: string }) {
   const { data, isLoading } = useQuery<{ data: ActivityEntry[] }>({
@@ -48,50 +54,210 @@ function ActivityTab({ entityCode, recordId }: { entityCode: string; recordId: s
       </div>
     );
   }
-
   return <ActivityTimeline entries={data?.data ?? []} />;
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// ── Props ──────────────────────────────────────────────────────────────────────
 
 export interface EntityDetailPageProps {
   entityCode: string;
   recordId: string;
+  /** When true (URL: ?mode=edit) renders EntityForm in-place in the same shell. */
+  editMode?: boolean;
 }
 
-export function EntityDetailPage({ entityCode, recordId }: EntityDetailPageProps) {
+// ── Generic read-mode view — owns tab state ────────────────────────────────
+
+interface GenericDetailReadViewProps {
+  entityCode:  string;
+  recordId:    string;
+  entity:      CompiledEntity;
+  record:      { id: string; data: Record<string, unknown>; status?: string };
+  operations:  EntityOperation[] | undefined;
+  onEditClick: () => void;
+}
+
+function GenericDetailReadView({
+  entityCode, recordId, entity, record, operations, onEditClick,
+}: GenericDetailReadViewProps) {
+  const detailConfig  = resolveDetailConfig(entity);
+  const data          = record.data;
+  const resolvedTabs  = resolveTabs(entity, null, []);
+  const hasComments   = resolvedTabs.includes("comments");
+  const hasActivity   = resolvedTabs.includes("events");
+
+  const title = detailConfig.titleField
+    ? String(data[detailConfig.titleField.name] ?? entityCode)
+    : entityCode;
+  const subtitle = detailConfig.subtitleField
+    ? String(data[detailConfig.subtitleField.name] ?? "")
+    : undefined;
+
+  const allTabKeys: { key: string; label: string }[] = [
+    ...detailConfig.sections.map((s) => ({ key: s.group.group_key, label: s.group.label })),
+    ...(hasComments ? [{ key: "__comments", label: "Comments" }] : []),
+    ...(hasActivity  ? [{ key: "__activity", label: "Activity"  }] : []),
+  ];
+
+  const defaultTabKey: string =
+    detailConfig.sections[0]?.group.group_key ??
+    (hasComments ? "__comments" : (hasActivity ? "__activity" : ""));
+
+  const [activeTab, setActiveTab] = useState(defaultTabKey);
+  const hasTabs = allTabKeys.length > 0;
+
+  const header = (
+    <PageHeader
+      typeChip={entity.entity_name}
+      title={title}
+      titleVariant="doc"
+      statusSlot={record.status ? <Badge variant="outline">{record.status}</Badge> : undefined}
+      subtitle={subtitle}
+      actions={
+        <div className="flex items-center gap-1.5">
+          {operations && (
+            <ActionBar
+              operations={operations}
+              surface="DETAIL"
+              entityCode={entityCode}
+              recordId={recordId}
+            />
+          )}
+          <Button variant="outline" size="sm" onClick={onEditClick}>
+            Edit
+          </Button>
+        </div>
+      }
+    />
+  );
+
+  // Region 2 — interactive tab bar (state lives in this component)
+  const context = hasTabs ? (
+    <div className="flex items-center gap-0.5">
+      {allTabKeys.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => setActiveTab(key)}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            activeTab === key
+              ? "bg-muted text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
+
+  return (
+    <PageShell header={header} context={context}>
+      {/* Header card — key identifying fields */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+            {detailConfig.headerFields.map((field) => {
+              const Renderer = resolveFieldRenderer(field);
+              return (
+                <div key={field.name}>
+                  <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                    {field.label ?? field.name}
+                  </dt>
+                  <dd className="text-sm font-normal text-foreground leading-snug">
+                    <Renderer value={data[field.name]} field={field} mode="view" />
+                  </dd>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {hasTabs && (
+        <div className="mt-2.5 space-y-2">
+          {detailConfig.sections.map((section) =>
+            activeTab === section.group.group_key ? (
+              <Card key={section.group.group_key}>
+                <CardContent className="pt-5">
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+                    {section.fields.map((field) => {
+                      const Renderer = resolveFieldRenderer(field);
+                      return (
+                        <div key={field.name}>
+                          <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                            {field.label ?? field.name}
+                          </dt>
+                          <dd className="text-sm font-normal text-foreground leading-snug">
+                            <Renderer value={data[field.name]} field={field} mode="view" />
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null,
+          )}
+
+          {activeTab === "__comments" && hasComments && (
+            <Card>
+              <CardContent className="pt-5">
+                <CommentList entityType={entityCode} entityId={recordId} />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "__activity" && hasActivity && (
+            <Card>
+              <CardContent className="pt-5">
+                <ActivityTab entityCode={entityCode} recordId={recordId} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </PageShell>
+  );
+}
+
+// ── Main dispatcher ────────────────────────────────────────────────────────────
+
+export function EntityDetailPage({ entityCode, recordId, editMode = false }: EntityDetailPageProps) {
+  const router = useRouter();
   const { data: entity, isLoading: metaLoading } = useCompiledEntity(entityCode);
   const { data: record, isLoading: recordLoading } = useEntityDetail(entityCode, recordId);
   const { data: operations } = useEntityOperations(entityCode);
+  const updateMutation = useUpdateEntity(entityCode, recordId);
 
   if (metaLoading || recordLoading || !entity) {
     return (
-      <PageFrame>
-        <div className="space-y-3">
-          <Skeleton className="h-8 w-64" />
+      <div className="flex flex-col gap-2.5">
+        <div className="rounded-xl border border-border bg-card px-4 py-3">
+          <Skeleton className="h-7 w-56" />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </PageFrame>
+      </div>
     );
   }
 
   if (!record) {
     return (
-      <PageFrame title="Record Not Found">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-          <p className="text-sm text-destructive">
-            Record <code className="font-mono">{recordId}</code> not found
-            in <code className="font-mono">{entityCode}</code>.
-          </p>
-        </div>
-      </PageFrame>
+      <div className="rounded-xl border border-destructive/50 bg-destructive/5 p-6 text-center">
+        <p className="text-sm text-destructive">
+          Record <code className="font-mono">{recordId}</code> not found
+          in <code className="font-mono">{entityCode}</code>.
+        </p>
+      </div>
     );
   }
 
-  // ── Renderer dispatch ─────────────────────────────────────────────────────
+  // Delegate approvable documents — they have their own rich shell
   const renderer = resolveRendererFamily(entity);
-
   if (renderer === "approvable") {
     return (
       <ApprovableDetailPage
@@ -103,116 +269,63 @@ export function EntityDetailPage({ entityCode, recordId }: EntityDetailPageProps
     );
   }
 
-  // ── Generic renderer ──────────────────────────────────────────────────────
+  // ── Generic master record renderer ─────────────────────────────────────────
   const detailConfig = resolveDetailConfig(entity);
   const data = record.data as Record<string, unknown>;
-  const resolvedTabs = resolveTabs(entity, null, []);
-  const hasComments = resolvedTabs.includes("comments");
-  const hasActivity = resolvedTabs.includes("events");
 
   const title = detailConfig.titleField
     ? String(data[detailConfig.titleField.name] ?? entityCode)
     : entityCode;
-
   const subtitle = detailConfig.subtitleField
     ? String(data[detailConfig.subtitleField.name] ?? "")
     : undefined;
 
+  // ── Edit mode — same shell, EntityForm in Region 3 ────────────────────────
+  if (editMode) {
+    const header = (
+      <PageHeader
+        typeChip={entity.entity_name}
+        title={title}
+        titleVariant="doc"
+        statusSlot={<ModeBadge>Editing</ModeBadge>}
+        subtitle={subtitle}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/app/${entityCode}/${recordId}`)}
+          >
+            Cancel
+          </Button>
+        }
+      />
+    );
+
+    return (
+      <PageShell header={header}>
+        <EntityForm
+          entityCode={entityCode}
+          initialData={data}
+          onSubmit={async (formData) => {
+            await updateMutation.mutateAsync(formData);
+            router.push(`/app/${entityCode}/${recordId}`);
+          }}
+          onCancel={() => router.push(`/app/${entityCode}/${recordId}`)}
+          submitting={updateMutation.isPending}
+        />
+      </PageShell>
+    );
+  }
+
+  // ── Read mode — delegate to sub-component (owns tab useState) ─────────────
   return (
-    <PageFrame
-      title={title}
-      description={subtitle}
-      actions={
-        operations ? <ActionBar operations={operations} surface="DETAIL" entityCode={entityCode} recordId={recordId} /> : null
-      }
-    >
-      {/* Header Card — key identifying fields */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <CardTitle>{title}</CardTitle>
-            {record.status && <Badge variant="outline">{record.status}</Badge>}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {detailConfig.headerFields.map((field) => {
-              const Renderer = resolveFieldRenderer(field);
-              return (
-                <div key={field.name}>
-                  <dt className="text-xs font-medium text-muted-foreground">{field.label ?? field.name}</dt>
-                  <dd className="mt-1">
-                    <Renderer value={data[field.name]} field={field} mode="view" />
-                  </dd>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabbed Sections — field groups + conditional Comments/Activity */}
-      {(detailConfig.sections.length > 0 || hasComments || hasActivity) && (
-        <Tabs defaultValue={detailConfig.sections[0]?.group.group_key ?? (hasComments ? "__comments" : "__activity")}>
-          <TabsList>
-            {detailConfig.sections.map((section) => (
-              <TabsTrigger key={section.group.group_key} value={section.group.group_key}>
-                {section.group.label}
-              </TabsTrigger>
-            ))}
-            {hasComments && (
-              <TabsTrigger value="__comments">Comments</TabsTrigger>
-            )}
-            {hasActivity && (
-              <TabsTrigger value="__activity">Activity</TabsTrigger>
-            )}
-          </TabsList>
-
-          {detailConfig.sections.map((section) => (
-            <TabsContent key={section.group.group_key} value={section.group.group_key}>
-              <Card>
-                <CardContent className="pt-5">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {section.fields.map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      return (
-                        <div key={field.name}>
-                          <dt className="text-xs font-medium text-muted-foreground">
-                            {field.label ?? field.name}
-                          </dt>
-                          <dd className="mt-1">
-                            <Renderer value={data[field.name]} field={field} mode="view" />
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
-
-          {hasComments && (
-            <TabsContent value="__comments">
-              <Card>
-                <CardContent className="pt-5">
-                  <CommentList entityType={entityCode} entityId={recordId} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-
-          {hasActivity && (
-            <TabsContent value="__activity">
-              <Card>
-                <CardContent className="pt-5">
-                  <ActivityTab entityCode={entityCode} recordId={recordId} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
-      )}
-    </PageFrame>
+    <GenericDetailReadView
+      entityCode={entityCode}
+      recordId={recordId}
+      entity={entity}
+      record={record}
+      operations={operations}
+      onEditClick={() => router.push(`/app/${entityCode}/${recordId}?mode=edit`)}
+    />
   );
 }

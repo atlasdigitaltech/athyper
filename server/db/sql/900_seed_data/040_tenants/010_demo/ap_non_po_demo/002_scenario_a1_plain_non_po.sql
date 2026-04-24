@@ -81,7 +81,7 @@ BEGIN
         (v_tenant_id, v_invoice_id, 1,
          'Q2 2026 Consulting Services', 'services',
          v_sc_opex_id, v_bi_opex_id,
-         'HR', 5, 120.00, 0.00, 0.00, 600.00, v_sys),
+         'HUR', 5, 120.00, 0.00, 0.00, 600.00, v_sys),
         -- Line 2: technical documentation, 2 days × USD 150
         (v_tenant_id, v_invoice_id, 2,
          'Technical Documentation & Deliverables', 'services',

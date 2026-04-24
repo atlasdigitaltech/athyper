@@ -82,3 +82,7 @@ export type { PresetValidationResult } from "./preset-validator";
 
 // Utilities
 export { cn } from "./utils";
+
+// Typography scale
+export { t } from "./typography";
+export type { TypographyToken } from "./typography";

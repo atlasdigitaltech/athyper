@@ -28,6 +28,7 @@
 
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { evaluatePaymentTerm } from "./invoice-payment-term.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -152,32 +153,29 @@ export async function handlePromoteProforma(
         periodNumber = fpResult.rows[0].period_number;
       }
 
-      // Step 6: Payment term → baseline_date + due_date
+      // Step 6: Payment term → full clause evaluation + PTA rows
       let baselineDate: Date | null = null;
       let dueDate: Date | null = null;
+      let termSnapshot: Record<string, unknown> | null = null;
 
       const paymentTermId = invoice["payment_term_id"] as string | null | undefined;
       if (paymentTermId) {
-        const ptResult = await sql<{ net_days: number; baseline_type: string }>`
-          SELECT net_days, baseline_type
-          FROM   master.payment_term
-          WHERE  id = ${paymentTermId}
-          LIMIT  1
-        `.execute(trx);
+        const ptaResult = await evaluatePaymentTerm(
+          trx,
+          tenantId,
+          paymentTermId,
+          recordId,
+          invoiceDate,
+          postingDate,
+          Number(invoice["total_amount"] ?? 0),
+          principalId,
+          received_date ? new Date(received_date) : undefined,
+        );
 
-        const term = ptResult.rows[0];
-        if (term) {
-          let base: Date;
-          if (term.baseline_type === "posting_date") {
-            base = postingDate;
-          } else if (term.baseline_type === "received_date" && received_date) {
-            base = new Date(received_date);
-          } else {
-            base = invoiceDate;
-          }
-          baselineDate = base;
-          dueDate = new Date(base);
-          dueDate.setDate(dueDate.getDate() + (Number(term.net_days) || 0));
+        if (ptaResult) {
+          baselineDate  = ptaResult.baseline_date;
+          dueDate       = ptaResult.due_date;
+          termSnapshot  = ptaResult.term_snapshot;
         }
       }
 
@@ -193,12 +191,13 @@ export async function handlePromoteProforma(
         updated_by:              principalId,
       };
 
-      if (received_date)               setClause["received_date"]  = new Date(received_date);
+      if (received_date)                setClause["received_date"]  = new Date(received_date);
       if (commitment_id !== undefined)  setClause["commitment_id"]  = commitment_id;
       if (fiscalYear   !== null)        setClause["fiscal_year"]    = fiscalYear;
       if (periodNumber !== null)        setClause["period_number"]  = periodNumber;
       if (baselineDate !== null)        setClause["baseline_date"]  = baselineDate;
       if (dueDate      !== null)        setClause["due_date"]       = dueDate;
+      if (termSnapshot !== null)        setClause["term_snapshot"]  = JSON.stringify(termSnapshot);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updated = await (trx.updateTable("document.purchase_invoice" as any) as any)

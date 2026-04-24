@@ -58,7 +58,8 @@ BEGIN
     total := total + cnt;
 
     -- ── Pass 3a: code — MASTER + REFERENCE + DIMENSION entities ─────────────
-    -- Business code / slug; unique per tenant
+    -- Business code / slug; unique per tenant.
+    -- Guard: only apply when the backing table actually has a 'code' column.
     INSERT INTO control.entity_field (
         entity_version_id, name, column_name, label, data_type, ui_type,
         cardinality, origin, is_required, is_unique, is_filterable, is_sortable,
@@ -72,12 +73,21 @@ BEGIN
     WHERE e.table_schema = 'master'
       AND e.ownership_model = 'system'
       AND e.entity_class = ANY(ARRAY['MASTER','REFERENCE','DIMENSION'])
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns ic
+        WHERE ic.table_schema = e.table_schema
+          AND ic.table_name   = e.table_name
+          AND ic.column_name  = 'code'
+      )
     ON CONFLICT DO NOTHING;
 
     GET DIAGNOSTICS cnt = ROW_COUNT;
     total := total + cnt;
 
     -- ── Pass 3b: name — MASTER + REFERENCE + DIMENSION entities ─────────────
+    -- Guard: only apply when the backing table actually has a 'name' column.
+    -- Profile/junction tables (e.g. company_code_supplier_profile) are MASTER
+    -- class but lack 'name' — omitting them prevents ORDER BY "name" 500 errors.
     INSERT INTO control.entity_field (
         entity_version_id, name, column_name, label, data_type, ui_type,
         cardinality, origin, is_required, is_filterable, is_sortable, is_searchable,
@@ -91,12 +101,19 @@ BEGIN
     WHERE e.table_schema = 'master'
       AND e.ownership_model = 'system'
       AND e.entity_class = ANY(ARRAY['MASTER','REFERENCE','DIMENSION'])
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns ic
+        WHERE ic.table_schema = e.table_schema
+          AND ic.table_name   = e.table_name
+          AND ic.column_name  = 'name'
+      )
     ON CONFLICT DO NOTHING;
 
     GET DIAGNOSTICS cnt = ROW_COUNT;
     total := total + cnt;
 
     -- ── Pass 3c: description — MASTER + CONTROL + REFERENCE + DIMENSION ─────
+    -- Guard: only apply when the backing table actually has a 'description' column.
     INSERT INTO control.entity_field (
         entity_version_id, name, column_name, label, data_type, ui_type,
         cardinality, origin, is_required, is_filterable, is_sortable, is_searchable,
@@ -110,6 +127,12 @@ BEGIN
     WHERE e.table_schema = 'master'
       AND e.ownership_model = 'system'
       AND e.entity_class = ANY(ARRAY['MASTER','CONTROL','REFERENCE','DIMENSION'])
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns ic
+        WHERE ic.table_schema = e.table_schema
+          AND ic.table_name   = e.table_name
+          AND ic.column_name  = 'description'
+      )
     ON CONFLICT DO NOTHING;
 
     GET DIAGNOSTICS cnt = ROW_COUNT;

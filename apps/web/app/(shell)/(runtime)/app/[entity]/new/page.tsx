@@ -93,7 +93,7 @@ export default function AppEntityNewRoute({
     setAltLoading(true);
     try {
       const res = await fetch(
-        `/api/relay/api/meta/flow?entity=${encodeURIComponent(entity)}&flow_code=${encodeURIComponent(flowCode)}`,
+        `/api/relay/api/metadata/entities/${encodeURIComponent(entity)}/flow?flow_code=${encodeURIComponent(flowCode)}`,
       );
       if (!res.ok) return;
       const json = await res.json() as { bundle: FlowBundle } | FlowBundle;
@@ -116,6 +116,10 @@ export default function AppEntityNewRoute({
   async function handleSubmit(data: Record<string, unknown>) {
     const created = await createMutation.mutateAsync(data);
     const id = (created as Record<string, unknown>).id as string | undefined;
+    // Brief pause — backend needs ~500ms after the POST before the record is
+    // reliably served by GET (Traefik upstream timing). Without this the detail
+    // page fires immediately and gets 502s on the main record + lines + distributions.
+    await new Promise((resolve) => setTimeout(resolve, 700));
     router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
   }
 
@@ -127,55 +131,48 @@ export default function AppEntityNewRoute({
   const isAlternate = activeBundle !== undefined && activeBundle !== null;
 
   if (bundle) {
-    return (
-      <div className="space-y-0">
-        {/* Flow mode switcher — [Invoice | Pro-forma] peer segmented control.
-            Placed above the wizard so both entry points feel equal, not
-            "correct path vs. fallback". is_default=true is 'Invoice';
-            alternate flows are peer options, not secondary actions. */}
-        {alternates.length > 0 && (
-          <div className="flex justify-end px-4 pt-4">
-            <div className="flex items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={switchToDefaultFlow}
-                className={cn(
-                  "rounded-md px-3 py-1.5 font-semibold transition-colors",
-                  !isAlternate
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Invoice
-              </button>
-              {alternates.map((alt) => (
-                <button
-                  key={alt.flow_code}
-                  type="button"
-                  onClick={!isAlternate ? () => void switchToAlternateFlow(alt.flow_code) : undefined}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 font-semibold transition-colors",
-                    isAlternate
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Pro-forma
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <FlowWizard
-          bundle={bundle}
-          userPermissions={bundle.user_permissions}
-          userCtx={userCtx}
-          onSubmit={handleSubmit}
-          onCancel={() => router.back()}
-          submitting={createMutation.isPending}
-        />
+    const flowSwitcher = alternates.length > 0 ? (
+      <div className="flex items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5 text-xs">
+        <button
+          type="button"
+          onClick={switchToDefaultFlow}
+          className={cn(
+            "rounded-md px-3 py-1.5 font-semibold transition-colors",
+            !isAlternate
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Invoice
+        </button>
+        {alternates.map((alt) => (
+          <button
+            key={alt.flow_code}
+            type="button"
+            onClick={!isAlternate ? () => void switchToAlternateFlow(alt.flow_code) : undefined}
+            className={cn(
+              "rounded-md px-3 py-1.5 font-semibold transition-colors",
+              isAlternate
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Pro-forma
+          </button>
+        ))}
       </div>
+    ) : undefined;
+
+    return (
+      <FlowWizard
+        bundle={bundle}
+        userPermissions={bundle.user_permissions}
+        userCtx={userCtx}
+        onSubmit={handleSubmit}
+        onCancel={() => router.back()}
+        submitting={createMutation.isPending}
+        headerAction={flowSwitcher}
+      />
     );
   }
 
