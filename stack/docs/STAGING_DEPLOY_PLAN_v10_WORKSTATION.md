@@ -99,7 +99,7 @@ Reviewed by:   _______________________    Date: __________
 | Account | Used for | Sudo | Login method |
 |---|---|---|---|
 | `root` | VNC console recovery only — never for day-to-day work | — (is root) | VNC tty (`5.189.174.159:63128`) |
-| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/app/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 2.6); VNC tty as fallback |
+| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/products/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 2.6); VNC tty as fallback |
 
 **Rule**: never SSH as `root`. The sshd config (Phase 2.6) enforces `PermitRootLogin no`. All `root`-level operations in this runbook are prefixed with `sudo` and run as `athyper`.
 
