@@ -44,8 +44,8 @@ There is no root login to the server at any point. All server operations are as 
 ├── deploy-record.txt             ← Phase 5.2, 5.3  (chmod 600)
 └── secrets-staging.txt           ← Phase 6.3  (chmod 600, shred Phase 20.3)
 
-/opt/athyper/                     ← Phase 4  (sudo mkdir + chown athyper)
-└── app/                          ← Phase 5.1  (git clone target)
+/opt/app/                         ← Phase 4  (sudo mkdir + chown athyper)
+└── athyper/                      ← Phase 5.1  (git clone target)
     ├── server/
     │   ├── Dockerfile.prod       ← Phase 5.3  (sed patch: pnpm@latest → 10.33.0)
     │   └── db/seed/migrate.ts    ← called by seed-db.sh
@@ -278,6 +278,36 @@ echo "*/15 * * * * root /usr/local/bin/disk-alert.sh" | sudo tee /etc/cron.d/dis
 
 ---
 
+### Creating the `athyper` account (run once from root if the account does not yet exist)
+
+A fresh Contabo VPS ships with only the `root` account. Run the following from the VNC console or an initial root SSH session to create `athyper` before this runbook starts.
+
+```bash
+# [SERVER — as root via VNC or initial root SSH]
+
+# Create the user with home directory:
+adduser --gecos "Athyper Administrator" athyper
+# You will be prompted for a password — enter: Atlas1144
+# All other GECOS fields (Full Name, Room, etc.) can be left blank (press Enter)
+
+# Grant sudo access:
+usermod -aG sudo athyper
+
+# Verify membership:
+id athyper
+# Expected: uid=1000(athyper) gid=1000(athyper) groups=1000(athyper),27(sudo)
+
+# Confirm SSH password auth is still enabled (Contabo default) so Phase 0.4 (WORKSTATION doc) can connect:
+grep -E '^PasswordAuthentication' /etc/ssh/sshd_config
+# If the line says "no", temporarily re-enable it:
+# sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && systemctl restart sshd
+# Phase 2 (WORKSTATION doc) will disable it again after the SSH key is installed.
+```
+
+After this, continue with Phase 0 of the WORKSTATION doc using `ssh athyper@62.169.31.9` (password `Atlas1144`).
+
+---
+
 ## Phase 1 — Server Preparation (Server-only) `[SERVER]`
 
 All steps in this phase run in a single server SSH session. No workstation actions. Phase 2 (WORKSTATION doc) handles SSH key installation and lockdown separately.
@@ -428,9 +458,9 @@ docker ps    # must work without sudo
 ## Phase 4 — Working Directory `[SERVER — sudo required]`
 
 ```bash
-sudo mkdir -p /opt/athyper
-sudo chown athyper:athyper /opt/athyper
-ls -la /opt/athyper    # must show: drwxr-xr-x athyper athyper
+sudo mkdir -p /opt/app
+sudo chown athyper:athyper /opt/app
+ls -la /opt/app    # must show: drwxr-xr-x athyper athyper
 ```
 
 ---
@@ -442,9 +472,9 @@ ls -la /opt/athyper    # must show: drwxr-xr-x athyper athyper
 **Public repository:**
 
 ```bash
-cd /opt/athyper
+cd /opt/app
 git clone --branch feature/finance-core \
-  https://github.com/atlasdigitaltech/athyper.git app
+  https://github.com/atlasdigitaltech/athyper.git
 ```
 
 **Private repository (one-shot PAT — credentials never stored in shell history):**
@@ -453,10 +483,10 @@ git clone --branch feature/finance-core \
 unset HISTFILE
 set +o history
 read -s -p "GitHub PAT: " GH_PAT; echo
-cd /opt/athyper
+cd /opt/app
 git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${GH_PAT}"; }; f' \
   clone --branch feature/finance-core \
-  https://github.com/atlasdigitaltech/athyper.git app
+  https://github.com/atlasdigitaltech/athyper.git
 unset GH_PAT
 set -o history
 ```
@@ -464,14 +494,14 @@ set -o history
 Verify:
 
 ```bash
-ls /opt/athyper/app/stack/compose/compose.yml    # must exist
-ls /opt/athyper/app/server/Dockerfile.prod       # must exist
+ls /opt/app/athyper/stack/compose/compose.yml    # must exist
+ls /opt/app/athyper/server/Dockerfile.prod       # must exist
 ```
 
 ### 5.2 Pin deployment SHA and create tag `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 DEPLOY_SHA=$(git rev-parse HEAD)
 DEPLOY_TAG="staging-deploy-$(date +%Y%m%d-%H%M)-${DEPLOY_SHA:0:7}"
 
@@ -501,7 +531,7 @@ git log --oneline -1
 > **This is a server-side source mutation** — it creates drift between the server and the repo. The next clean clone will not have this patch. Phase 21.1 requires an upstream PR to commit the fix permanently.
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 sed -i 's/corepack prepare pnpm@latest/corepack prepare pnpm@10.33.0/' \
   server/Dockerfile.prod
 
@@ -530,7 +560,7 @@ set +o history
 ### 6.2 Copy staging env template `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 bash stack/scripts/setup/setup-env.sh staging all
 # Creates stack/env/.env from staging.env.example
 ls -la stack/env/.env    # must exist
@@ -584,7 +614,7 @@ wc -l ~/secrets-staging.txt    # ~30 lines expected
 ### 6.4 Edit `stack/env/.env` `[SERVER]`
 
 ```bash
-nano /opt/athyper/app/stack/env/.env
+nano /opt/app/athyper/stack/env/.env
 ```
 
 Use `~/secrets-staging.txt` in a split terminal as reference. Fill every `<...>` placeholder. Variables marked **NOT IN TEMPLATE** must be added as new lines — Phase 9.2 will verify their presence.
@@ -694,7 +724,7 @@ MEILI_MASTER_KEY=<from secrets>
 ```
 
 ```bash
-chmod 600 /opt/athyper/app/stack/env/.env
+chmod 600 /opt/app/athyper/stack/env/.env
 ```
 
 ### 6.5 Re-enable shell history `[SERVER]`
@@ -713,7 +743,7 @@ export HISTFILE=~/.bash_history
 > `staging.env.example` points to `db/staging/dbpool/` configs which have `listen_addr = 127.0.0.1` (Docker containers cannot connect) and require TLS/mTLS to an external managed PostgreSQL. The `db/local/dbpool/` configs have `listen_addr = 0.0.0.0` and no TLS requirement — correct for self-hosted Docker.
 
 ```bash
-nano /opt/athyper/app/stack/env/.env
+nano /opt/app/athyper/stack/env/.env
 ```
 
 Change these two lines:
@@ -733,7 +763,7 @@ DBPOOL_SESSION_CONFIG=db/local/dbpool/pgbouncer-session.ini
 > The source template contains `"198.51.100.0/24"` (RFC 5737 TEST-NET, intentional fail-safe). `validate-env.sh` blocks startup if this CIDR is still present in the dynamic config. Replace it with the IP captured in Phase 0.3 (WORKSTATION doc).
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Copy template to the live dynamic directory:
 cp stack/config/gateway/environments/neon-workbench-routes.staging.yml \
@@ -767,7 +797,7 @@ cp stack/config/gateway/environments/athyper.tls.staging.yml \
 ### 7.4 Edit `athyper.override.staging.yml` — ACME + SMTP `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 nano stack/compose/athyper.override.staging.yml
 ```
 
@@ -833,7 +863,7 @@ Save and exit the editor.
 **Validate the merged compose** — covers YAML parse, key deduplication, and variable expansion:
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 docker compose \
   --project-directory stack/compose \
@@ -860,9 +890,9 @@ grep -E 'KC_SMTP_USERNAME|ACME_EMAIL' /tmp/merged-compose.yml | head -5
 Traefik requires `acme.json` to exist at startup. Pre-creating it with mode 600 prevents Traefik from creating it world-readable.
 
 ```bash
-touch /opt/athyper/app/stack/config/gateway/certs/acme.json
-chmod 600 /opt/athyper/app/stack/config/gateway/certs/acme.json
-ls -la /opt/athyper/app/stack/config/gateway/certs/
+touch /opt/app/athyper/stack/config/gateway/certs/acme.json
+chmod 600 /opt/app/athyper/stack/config/gateway/certs/acme.json
+ls -la /opt/app/athyper/stack/config/gateway/certs/
 # acme.json must show: -rw------- athyper athyper 0 ...
 ```
 
@@ -871,7 +901,7 @@ ls -la /opt/athyper/app/stack/config/gateway/certs/
 Copies `kernel.config.staging.parameter.json` to the runtime-loaded `kernel.config.parameter.json`. Backs up any existing config automatically.
 
 ```bash
-bash /opt/athyper/app/stack/scripts/setup/setup-config.sh staging
+bash /opt/app/athyper/stack/scripts/setup/setup-config.sh staging
 # Output confirms: Environment: staging, Target: .../kernel.config.parameter.json
 ```
 
@@ -880,7 +910,7 @@ bash /opt/athyper/app/stack/scripts/setup/setup-config.sh staging
 ## Phase 8 — Data Directories and Host Dependencies `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Create all Docker volume bind-mount directories (idempotent):
 bash stack/scripts/setup/data-dirs-create.sh
@@ -907,7 +937,7 @@ Three gates must all pass before building images.
 ### 9.1 Placeholder gate — catches unfilled `=${VAR}` patterns
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 if grep -nE '=\$\{[A-Z_]+\}' stack/env/.env; then
   echo "✗ UNFILLED PLACEHOLDERS — fix above before continuing"
@@ -924,7 +954,7 @@ fi
 `KC_SMTP_USERNAME`, `KC_SMTP_PASSWORD`, and `GATEWAY_DASHBOARD_HTPASSWD` are in the template but are self-referential `${VAR}` placeholders — Phase 9.1 catches those if unfilled. This gate only checks for vars entirely absent from the file.
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 missing=0
 for required in ACME_EMAIL SENTRY_DSN; do
@@ -959,7 +989,7 @@ bash stack/scripts/setup/validate-env.sh stack/env/.env
 ## Phase 10 — Build All Four Application Images `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Build all four images explicitly so any error surfaces now, not in Phase 14:
 docker compose \
@@ -980,7 +1010,7 @@ docker images | grep athyper
 ## Phase 11 — Start Core Profile `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Starts: db, dbpool-apps, dbpool-session, gateway, iam,
 #         memorycache, objectstorage, objectstorage-init, clamav
@@ -1033,7 +1063,7 @@ docker exec athyper-stack-staging-db-1 \
 ### 12.2 Temporarily expose PostgreSQL port `[SERVER]`
 
 ```bash
-nano /opt/athyper/app/stack/compose/athyper.override.staging.yml
+nano /opt/app/athyper/stack/compose/athyper.override.staging.yml
 ```
 
 Add `ports:` under the existing `db:` block (as a sibling of `volumes:` and `deploy:`):
@@ -1055,7 +1085,7 @@ Add `ports:` under the existing `db:` block (as a sibling of `volumes:` and `dep
 Validate and apply:
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Confirm port binding appears in merged config:
 docker compose \
@@ -1084,7 +1114,7 @@ psql "postgresql://athyperadmin:${DB_ADMIN_PASSWORD}@localhost:5432/athyper_neon
 ### 12.3 Run seed from host `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 set -a; . stack/env/.env; set +a
 
 # seed-db.sh auto-rewrites "@db:" → "@localhost:" in the URL.
@@ -1111,7 +1141,7 @@ docker exec athyper-stack-staging-db-1 \
 ### 12.5 Remove temporary port exposure `[SERVER]`
 
 ```bash
-nano /opt/athyper/app/stack/compose/athyper.override.staging.yml
+nano /opt/app/athyper/stack/compose/athyper.override.staging.yml
 # Remove the entire ports: block from under db:
 # The db: block should go back to only volumes: and deploy:
 ```
@@ -1119,7 +1149,7 @@ nano /opt/athyper/app/stack/compose/athyper.override.staging.yml
 Validate removal and re-apply:
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Confirm no port binding in merged config:
 docker compose \
@@ -1151,7 +1181,7 @@ ss -tln | grep ':5432' && echo "✗ 5432 still bound on host!" || echo "✓ 5432
 Three known Keycloak import-breakers — all must return `[]` before running reset:
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # 1. Duplicate authenticatorConfig UUIDs:
 jq '[.authenticatorConfig[]?.id] | group_by(.) | map(select(length>1))' \
@@ -1189,7 +1219,7 @@ curl -s https://iam-stg.athyper.com/realms/athyper/.well-known/openid-configurat
 `IAM_CLIENT_SECRET` must match the Keycloak client used for backend authentication. Use `CLIENT_WITH_SECRET` from Runbook Prerequisite 3b (WORKSTATION doc).
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 # Rediscover after reset (in case reset-iam.sh regenerated the realm):
 jq '.clients[]? | select(.clientId == "athyper-api" or .clientId == "athyper-api-runtime") \
@@ -1212,7 +1242,7 @@ In your browser:
 **If different** (KC regenerated on import):
 
 ```bash
-nano /opt/athyper/app/stack/env/.env
+nano /opt/app/athyper/stack/env/.env
 # IAM_CLIENT_SECRET=<copied from KC admin>
 # ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET=<same value>
 ```
@@ -1222,7 +1252,7 @@ nano /opt/athyper/app/stack/env/.env
 ## Phase 14 — Start Application Services `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 
 bash stack/scripts/stack-profile/up.sh apps
 
@@ -1248,7 +1278,7 @@ docker compose \
 Stop and diagnose any failure before starting observability.
 
 ```bash
-set -a; . /opt/athyper/app/stack/env/.env; set +a
+set -a; . /opt/app/athyper/stack/env/.env; set +a
 
 echo "── App endpoints ──────────────────────────────"
 curl -sf https://api-stg.athyper.com/livez      && echo "✓ api /livez"   || echo "✗ api /livez"
@@ -1300,7 +1330,7 @@ done
 ### 16.2 Start secondary profiles `[SERVER]`
 
 ```bash
-cd /opt/athyper/app
+cd /opt/app/athyper
 bash stack/scripts/stack-profile/up.sh telemetry    # loki, promtail, prometheus, tempo, grafana
 bash stack/scripts/stack-profile/up.sh monitoring   # glitchtip, healthchecks, uptime-kuma
 bash stack/scripts/stack-profile/up.sh render       # gotenberg, tika
@@ -1326,7 +1356,7 @@ In browser:
 3. Create organization → project named `athyper-runtime` → copy the DSN
 
 ```bash
-nano /opt/athyper/app/stack/env/.env
+nano /opt/app/athyper/stack/env/.env
 # All three vars get the SAME DSN value (GlitchTip is Sentry-compatible):
 GLITCHTIP_DSN=https://<key>@errors-stg.athyper.com/1
 SENTRY_DSN=https://<key>@errors-stg.athyper.com/1
@@ -1358,7 +1388,7 @@ sudo rm /etc/cron.d/disk-alert
 
 ```bash
 # Write the smoke script:
-cat > /opt/athyper/app/stack/scripts/smoke-staging.sh << 'SMOKE'
+cat > /opt/app/athyper/stack/scripts/smoke-staging.sh << 'SMOKE'
 #!/usr/bin/env bash
 set -u
 fail=0
@@ -1403,15 +1433,15 @@ else
   echo "✗ ${fail} check(s) failed"; exit 1
 fi
 SMOKE
-chmod +x /opt/athyper/app/stack/scripts/smoke-staging.sh
+chmod +x /opt/app/athyper/stack/scripts/smoke-staging.sh
 
 # Run smoke test:
-set -a; . /opt/athyper/app/stack/env/.env; set +a
-/opt/athyper/app/stack/scripts/smoke-staging.sh
+set -a; . /opt/app/athyper/stack/env/.env; set +a
+/opt/app/athyper/stack/scripts/smoke-staging.sh
 
 # Additional verification:
-bash /opt/athyper/app/stack/scripts/setup/verify-objectstorage.sh
-bash /opt/athyper/app/stack/scripts/setup/verify-port-hardening.sh
+bash /opt/app/athyper/stack/scripts/setup/verify-objectstorage.sh
+bash /opt/app/athyper/stack/scripts/setup/verify-port-hardening.sh
 
 # All containers healthy:
 docker compose \
@@ -1435,7 +1465,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/athyper/app
+WorkingDirectory=/opt/app/athyper
 ExecStartPre=/bin/sleep 15
 ExecStart=/bin/bash stack/scripts/stack-profile/up.sh all
 ExecStop=/bin/bash stack/scripts/stack-profile/down.sh all
@@ -1522,8 +1552,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 # All must show "Up X minutes" — none showing "Exited" or "Restarting"
 
 # Run smoke test:
-set -a; . /opt/athyper/app/stack/env/.env; set +a
-/opt/athyper/app/stack/scripts/smoke-staging.sh
+set -a; . /opt/app/athyper/stack/env/.env; set +a
+/opt/app/athyper/stack/scripts/smoke-staging.sh
 # Must exit 0 within 10 minutes of reboot
 ```
 
@@ -1576,9 +1606,9 @@ After 21.1 and 21.2 merge, run the full runbook against a clean VM to confirm Ph
 
 | Task | User | Command |
 |---|---|---|
-| Start full stack | `[SERVER]` | `cd /opt/athyper/app && bash stack/scripts/stack-profile/up.sh all` |
+| Start full stack | `[SERVER]` | `cd /opt/app/athyper && bash stack/scripts/stack-profile/up.sh all` |
 | Stop stack | `[SERVER]` | `bash stack/scripts/stack-profile/down.sh all` |
-| Smoke test | `[SERVER]` | `set -a; . stack/env/.env; set +a && /opt/athyper/app/stack/scripts/smoke-staging.sh` |
+| Smoke test | `[SERVER]` | `set -a; . stack/env/.env; set +a && /opt/app/athyper/stack/scripts/smoke-staging.sh` |
 | Validate compose merge | `[SERVER]` | `docker compose --project-directory stack/compose --env-file stack/env/.env -f stack/compose/compose.yml -f stack/compose/athyper.override.staging.yml config` |
 | Validate env | `[SERVER]` | `bash stack/scripts/setup/validate-env.sh stack/env/.env` |
 | Force-recreate apps | `[SERVER]` | `docker compose --project-directory stack/compose --env-file stack/env/.env up -d --force-recreate athyper-api athyper-worker athyper-scheduler athyper-neon-web` |
@@ -1604,7 +1634,7 @@ After 21.1 and 21.2 merge, run the full runbook against a clean VM to confirm Ph
 
 ### Phase 4–5
 
-- [ ] `/opt/athyper` owned by `athyper:athyper`
+- [ ] `/opt/app` owned by `athyper:athyper`
 - [ ] Deployment SHA recorded and tagged in `~/deploy-record.txt`
 - [ ] `server/Dockerfile.prod` patched: `pnpm@latest` → `pnpm@10.33.0` (verify with grep)
 
@@ -1692,7 +1722,7 @@ If SSH becomes unreachable:
 
 ```bash
 # [SERVER]
-cd /opt/athyper/app
+cd /opt/app/athyper
 git tag --list 'staging-deploy-*' | sort | tail -5
 
 bash stack/scripts/stack-profile/down.sh all

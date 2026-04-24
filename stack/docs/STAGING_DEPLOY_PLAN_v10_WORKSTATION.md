@@ -99,7 +99,7 @@ Reviewed by:   _______________________    Date: __________
 | Account | Used for | Sudo | Login method |
 |---|---|---|---|
 | `root` | VNC console recovery only — never for day-to-day work | — (is root) | VNC tty (`5.189.174.159:63128`) |
-| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 2.6); VNC tty as fallback |
+| `athyper` | All deployment steps in this runbook; runs the systemd service; owns `/opt/app/athyper/` and `stack/data/` | Yes (via `sudo`) | SSH key (after Phase 2.6); VNC tty as fallback |
 
 **Rule**: never SSH as `root`. The sshd config (Phase 2.6) enforces `PermitRootLogin no`. All `root`-level operations in this runbook are prefixed with `sudo` and run as `athyper`.
 
@@ -112,33 +112,7 @@ Reviewed by:   _______________________    Date: __________
 
 > **Security note**: `Atlas1144` is the Contabo-provisioned default. It is valid on the local VNC tty even after SSH password auth is disabled. Store the rotated password in your vault; never write it to any file on the server.
 
-### Creating the `athyper` account (run once from root if the account does not yet exist)
-
-A fresh Contabo VPS ships with only the `root` account. Run the following from the VNC console or an initial root SSH session to create `athyper` before this runbook starts.
-
-```bash
-# [SERVER — as root via VNC or initial root SSH]
-
-# Create the user with home directory:
-adduser --gecos "Athyper Deploy" athyper
-# You will be prompted for a password — enter: Atlas1144
-# All other GECOS fields (Full Name, Room, etc.) can be left blank (press Enter)
-
-# Grant sudo access:
-usermod -aG sudo athyper
-
-# Verify membership:
-id athyper
-# Expected: uid=1000(athyper) gid=1000(athyper) groups=1000(athyper),27(sudo)
-
-# Confirm SSH password auth is still enabled (Contabo default) so Phase 0.4 can connect:
-grep -E '^PasswordAuthentication' /etc/ssh/sshd_config
-# If the line says "no", temporarily re-enable it:
-# sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && systemctl restart sshd
-# Phase 2.6 will disable it again after the SSH key is installed.
-```
-
-After this, continue with Phase 0 below using `ssh athyper@62.169.31.9` (password `Atlas1144`).
+> **If the `athyper` account does not yet exist** on the server (fresh VPS with only `root`): follow the "Creating the `athyper` account" section in `STAGING_DEPLOY_PLAN_v10_SERVER.md` before continuing here.
 
 ---
 
