@@ -762,13 +762,69 @@ passwd root       # enter and confirm new password
 
 | Step | Command | Verify |
 |---|---|---|
-| 2.1 | `groupadd --force --gid 9001 athyper-config` | `getent group athyper-config` |
-| 2.2 | `groupadd --force --gid 9002 athyper-data` | `getent group athyper-data` |
-| 2.3 | `useradd --system --uid 9000 --gid 9000 --create-home --home-dir /home/athyper --shell /usr/sbin/nologin athyper` | `id athyper` shows uid=9000 |
-| 2.4 | `passwd --lock athyper` | `passwd -S athyper` shows L |
-| 2.5 | `usermod -aG docker,athyper-config,athyper-data athyper` | `groups athyper` shows all |
-| 2.6 | Per developer: `adduser --gecos "Name" devname` + `usermod -aG docker,athyper-config devname` | `id devname` |
-| 2.7 | Install developer SSH public keys to `/home/devname/.ssh/authorized_keys` (700/600) | SSH key login works |
+| 2.1 | `groupadd --force --gid 9000 athyper` | `getent group athyper` |
+| 2.2 | `groupadd --force --gid 9001 athyper-config` | `getent group athyper-config` |
+| 2.3 | `groupadd --force --gid 9002 athyper-data` | `getent group athyper-data` |
+| 2.4 | `useradd --system --uid 9000 --gid 9000 --create-home --home-dir /home/athyper --shell /usr/sbin/nologin athyper` | `id athyper` shows uid=9000 |
+| 2.5 | `passwd --lock athyper` | `passwd -S athyper` shows L |
+| 2.6 | `usermod -aG docker,athyper-config,athyper-data athyper` | `groups athyper` shows all |
+| 2.7 | Per developer: `adduser --gecos "Name" devname` + `usermod -aG docker,athyper-config devname` | `id devname` |
+| 2.8 | Install developer SSH public keys (see detail below) | `cat /home/devname/.ssh/authorized_keys` is non-empty |
+
+**Step 2.8 detail — SSH key install (example: `nchandravel-atlas`)**
+
+Run on the **local machine (Windows)** to get the public key:
+
+```powershell
+# PowerShell or Git Bash
+type $env:USERPROFILE\.ssh\id_ed25519.pub
+# or in Git Bash:
+cat ~/.ssh/id_ed25519.pub
+# prints something like: ssh-ed25519 AAAA... user@host
+```
+
+If no key exists yet, generate one first:
+
+```powershell
+ssh-keygen -t ed25519 -C "nchandravel@atlasdigitaltech.com"
+# accept default path; set a passphrase when prompted
+type $env:USERPROFILE\.ssh\id_ed25519.pub
+```
+
+Run on the **server as root**:
+
+```bash
+# 1. Create .ssh directory with correct permissions
+mkdir -p /home/nchandravel-atlas/.ssh
+chmod 700 /home/nchandravel-atlas/.ssh
+
+# 2. Create authorized_keys file and install the public key
+touch /home/nchandravel-atlas/.ssh/authorized_keys
+chmod 600 /home/nchandravel-atlas/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA...paste-full-key-here..." >> /home/nchandravel-atlas/.ssh/authorized_keys
+
+# 3. Fix ownership
+chown -R nchandravel-atlas:nchandravel-atlas /home/nchandravel-atlas/.ssh
+```
+
+Verify on the **server**:
+
+```bash
+cat /home/nchandravel-atlas/.ssh/authorized_keys
+# must show the full public key on one line
+
+ls -la /home/nchandravel-atlas/.ssh/
+# .ssh dir: drwx------ (700)  authorized_keys: -rw------- (600)  owner: nchandravel-atlas
+```
+
+Test SSH login from the **local machine** before closing the root session:
+
+```bash
+ssh nchandravel-atlas@<server-ip>
+# expect shell prompt — not a password prompt
+```
+
+> Repeat steps 2.7–2.8 for each additional developer, substituting their username and public key.
 
 ---
 
