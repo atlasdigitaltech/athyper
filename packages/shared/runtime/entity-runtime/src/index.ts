@@ -50,6 +50,10 @@ export type { ActionPolicy } from "./adapters";
 export { EntityHeader, type EntityHeaderProps } from "./header";
 export { useEntityHeaderController } from "./header";
 export { ENTITY_HEADER_EVENTS } from "./header";
+// ── Edit workspace (dirty-state guard, navigation modal, keyboard shortcuts) ─
+export { EntityWorkspaceShell, type EntityWorkspaceShellProps } from "./edit";
+export { useEntityEdit } from "./edit";
+export { EditGuardContext, type EditGuardContextValue } from "./edit";
 export {
   DEFAULT_DISPLAY_CONFIG,
   resolvePresentationConfig,

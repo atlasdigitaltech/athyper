@@ -16,7 +16,8 @@
     "./import": "./src/import/index.ts",
     "./panels": "./src/panels/index.ts",
     "./metadata": "./src/metadata/index.ts",
-    "./header": "./src/header/index.ts"
+    "./header": "./src/header/index.ts",
+    "./edit": "./src/edit/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
