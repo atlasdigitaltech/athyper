@@ -207,8 +207,10 @@ echo "MODE     = ${MODE:-first-deploy}"
 echo ""
 
 # ── Write-access pre-flight (server mode) ─────────────────────────────────────
-# config/ is root:athyper-config 750 by the ownership model — only root can write.
-# Files are 644 so container processes (which are not in athyper-config) can read them.
+# config/ is root:athyper-config; dirs 755, files 644.
+# 755/644 so container processes (not in athyper-config) can traverse dirs and
+# read :ro bind-mounted files. Only root can write (root-owned). This script
+# applies ownership and modes automatically at the end of each write run.
 # Abort here with a clear message rather than a cryptic "Permission denied" on the
 # first cp.  Skipped for --diff (read-only) and for local dev (LIVE_CFG == REPO_CFG).
 if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
@@ -216,7 +218,7 @@ if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
     echo ""
     echo "ERROR: No write access to LIVE_CFG=$LIVE_CFG"
     echo ""
-    echo "  On servers, config/ is owned by root:athyper-config 750."
+    echo "  On servers, config/ is root-owned (dirs 755, files 644) — only root can write."
     echo "  Run this script as root:"
     echo ""
     echo "    sudo ATHYPER_CONFIG_ROOT=\"$LIVE_CFG\" ATHYPER_SECRETS_ROOT=\"${ATHYPER_SECRETS_ROOT:-}\" \\"

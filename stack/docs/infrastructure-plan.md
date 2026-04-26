@@ -108,7 +108,7 @@ If you host a second product on this server in future:
     docs/                                   This file lives here
 
 /opt/stack/athyper/                         Runtime root — git cannot reach any of this
-  config/             ← operator config     root:athyper-config  750 dirs / 640 files
+  config/             ← operator config     root:athyper-config  755 dirs / 644 files  (containers need +r/:ro mounts)
     apps/
       kernel.config.parameter.json          Deployed from repo template by setup-config.sh
     gateway/
@@ -244,9 +244,10 @@ Only `gateway/certs` moves from `${ATHYPER_CONFIG}` to `${ATHYPER_SECRETS_ROOT}`
 | `/home/athyper/.ssh/*` | athyper | athyper | 600 | All key files |
 | `/opt/products/athyper/` | athyper | athyper | 755 | Git checkout root |
 | `/opt/stack/athyper/` | athyper | athyper | 755 | Stack runtime root |
-| `/opt/stack/athyper/config/` | root | athyper-config | 750 | Config tree root |
-| `/opt/stack/athyper/config/**/` (dirs) | root | athyper-config | 750 | |
-| `/opt/stack/athyper/config/**` (files) | root | athyper-config | 640 | Operator-readable |
+| `/opt/stack/athyper/config/` | root | athyper-config | 755 | Config tree root; 755 so container processes can traverse |
+| `/opt/stack/athyper/config/**/` (dirs) | root | athyper-config | 755 | Containers need +x to traverse bind-mount paths |
+| `/opt/stack/athyper/config/**` (files) | root | athyper-config | 644 | Container-readable (:ro mounts); root-owned so immutable |
+| `/opt/stack/athyper/config/memorycache/redis-acl.conf` | **athyper** | athyper-config | 644 | Exception: validate-env.sh (runs as athyper) overwrites this on every stack start to render password hashes |
 | `/opt/stack/athyper/secrets/` | root | athyper | 750 | Secrets root |
 | `/opt/stack/athyper/secrets/.env` | athyper | athyper | **600** | Secrets file |
 | `/opt/stack/athyper/secrets/gateway/certs/acme.json` | root | root | **600** | Traefik writes as container-root |
@@ -592,15 +593,51 @@ echo "  MANIFEST written: $MANIFEST"
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
 > Access: initial root SSH provided by Contabo panel, or VNC console `5.189.174.159:63128`
 
-| Step | Action | Gate |
-|---|---|---|
-| 0.1 | `free -h` — 24 GB RAM | ✓ |
-| 0.2 | `df -h /` — 190+ GB free | ✓ |
-| 0.3 | `nproc` — 8 cores | ✓ |
-| 0.4 | `timedatectl set-ntp true` + `System clock synchronized: yes` | ✓ |
-| 0.5 | `fallocate -l 8G /swapfile; chmod 600; mkswap; swapon` | ✓ |
-| 0.6 | Add `/swapfile none swap sw 0 0` to `/etc/fstab` | ✓ |
-| 0.7 | `sysctl vm.swappiness=10`; persist in `/etc/sysctl.d/99-athyper.conf` | ✓ |
+```bash
+# ── 0.1 Hardware checks ──────────────────────────────────────────────────────
+free -h          # Mem: row — confirm 24 GB+
+df -h /          # Avail column — confirm 190 GB+
+nproc            # confirm 8 cores
+
+# ── 0.2 Clock sync ───────────────────────────────────────────────────────────
+timedatectl set-ntp true
+timedatectl      # confirm: NTP service: active
+                 #          System clock synchronized: yes
+
+# ── 0.3 Swap (8 GB) ──────────────────────────────────────────────────────────
+fallocate -l 8G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+swapon --show    # confirm: /swapfile  file  8G  0B   -2
+
+# Persist swap across reboots
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+grep swapfile /etc/fstab   # confirm line is present
+
+# ── 0.4 Kernel tuning ────────────────────────────────────────────────────────
+# vm.swappiness     — prefer RAM over swap; defer swap until memory pressure
+# vm.overcommit_memory=1 — required by Redis: prevents background save failures
+#   under low memory. Without this Redis logs a WARNING on every start.
+cat > /etc/sysctl.d/99-athyper.conf << 'EOF'
+vm.swappiness=10
+vm.overcommit_memory=1
+EOF
+
+sysctl --system  # confirm: Applying /etc/sysctl.d/99-athyper.conf ...
+                 # confirm: vm.swappiness = 10
+                 # confirm: vm.overcommit_memory = 1
+
+# Verify final values
+sysctl vm.swappiness vm.overcommit_memory
+```
+
+| Step | Gate |
+|---|---|
+| 0.1 | `free -h` Mem row ≥ 24G; `df -h /` Avail ≥ 190G; `nproc` = 8 |
+| 0.2 | `timedatectl` shows `System clock synchronized: yes` |
+| 0.3 | `swapon --show` shows `/swapfile file 8G`; `grep swapfile /etc/fstab` returns line |
+| 0.4 | `sysctl vm.swappiness vm.overcommit_memory` returns `10` and `1` |
 
 ---
 
@@ -817,9 +854,17 @@ chown athyper:athyper /opt/stack/athyper/logs
 chown athyper:athyper /opt/stack/athyper/backups
 chmod 750 /opt/stack/athyper/logs /opt/stack/athyper/backups
 
-# Verification — must return nothing
-find /opt/stack/athyper/config -perm /o+r -ls
+# Verification
+# Config dirs are 755 and files are 644 (world-readable by design — containers need
+# +r to read :ro bind mounts). Only the secrets tree must have nothing world-readable.
 find /opt/stack/athyper/secrets -perm /o+r -ls
+# Must return nothing (empty output)
+
+# Confirm config tree modes
+find /opt/stack/athyper/config -type d ! -perm 755 -ls
+# Must return nothing — all config dirs should be 755
+find /opt/stack/athyper/config -type f ! -perm 644 -ls
+# Must return nothing at Phase 3 (no files exist yet; setup-config.sh in Phase 7 populates them)
 ```
 
 ---
@@ -879,18 +924,70 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 ## Phase 7: Config Deploy
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
-> `config/` is owned `root:athyper-config 750` — only root can write.  Run this phase as root, **not** as athyper.  After the copy, re-lock file permissions (step 7.5) so the athyper service account is read-only on config.
+> `config/` is owned `root:athyper-config` — only root can write. Run this phase as root.
+> `setup-config.sh` applies ownership and permissions automatically at the end of each run — no separate chmod step is needed.
 
-| Step | Action | Verify |
-|---|---|---|
-| 7.1 | Pull images; verify container UIDs against S6 table: `docker run --rm <image> id` for each data-writing service | All match table |
-| 7.2 | If any UID differs: update `data-dirs-create.sh` chown block before Phase 10 | |
-| 7.3 | `export ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets` | |
-| 7.4 | `cd /opt/products/athyper && sudo bash stack/scripts/setup/setup-config.sh staging` | All files COPIED; permissions locked (dirs 755, files 644, owner root:athyper-config); MANIFEST written |
-| 7.5 | Verify staging CIDR patch: `grep "0.0.0.0/0" /opt/stack/athyper/config/gateway/dynamic/athyper.workbench.yml` | ✓ |
-| 7.6 | Verify acme.json untouched: `stat /opt/stack/athyper/secrets/gateway/certs/acme.json` | root:root 600 |
-| 7.7 | Verify secrets not world-readable: `find /opt/stack/athyper/secrets -perm /o+r -ls` | Empty (config files are intentionally 644 for container read access; secrets remain 600/750) |
-| 7.8 | Verify MANIFEST: `cat /opt/stack/athyper/MANIFEST` | All fields populated |
+### 7.1 — Verify container UIDs match the S6 table
+
+Run this **before** Phase 10. If any UID differs, update the chown block in `data-dirs-create.sh` first.
+
+```bash
+docker run --rm redis:7.4.8-alpine id              # uid=999(redis) gid=1000(redis)
+docker run --rm minio/minio id                     # uid=1000(minio) gid=1001(minio)
+docker run --rm grafana/loki id                    # uid=10001(loki) gid=10001(loki)
+docker run --rm grafana/tempo id                   # uid=10001(tempo) gid=10001(tempo)
+docker run --rm prom/prometheus id                 # uid=65534(nobody) gid=65534(nobody)
+docker run --rm grafana/grafana id                 # uid=472(grafana) gid=472(grafana)
+docker run --rm postgres:16.13-bookworm id         # uid=999(postgres) gid=999(postgres)
+```
+
+### 7.2 — Deploy config files
+
+```bash
+cd /opt/products/athyper
+
+sudo ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
+     ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets \
+  bash stack/scripts/setup/setup-config.sh staging
+```
+
+Expected output (last lines):
+```
+  COPIED  memorycache/redis-acl.conf
+  COPIED  memorycache/cache.conf
+  ...
+Locking config tree permissions...
+  owner: root:athyper-config  dirs: 755  files: 644
+  owner: athyper:athyper-config  /opt/stack/athyper/config/memorycache/redis-acl.conf  (validate-env.sh write exception)
+
+MANIFEST updated: /opt/stack/athyper/MANIFEST
+
+Done. Run with --diff to check for future drift.
+```
+
+> **Why `redis-acl.conf` gets a different owner:** `validate-env.sh` (which runs as `athyper`, not root) overwrites this file before every stack start to render SHA-256 password hashes from the `.env`. Giving `athyper` ownership of this one file lets it do so while everything else stays `root`-owned.
+
+### 7.3 — Verify
+
+```bash
+# Staging CIDR patch applied
+grep "0.0.0.0/0" /opt/stack/athyper/config/gateway/dynamic/athyper.workbench.yml
+
+# acme.json untouched
+stat -c "%U:%G %a" /opt/stack/athyper/secrets/gateway/certs/acme.json
+# expect: root:root 600
+
+# Secrets not world-readable
+find /opt/stack/athyper/secrets -perm /o+r -ls
+# expect: (empty — no output)
+
+# redis-acl.conf has correct owner
+stat -c "%U:%G %a" /opt/stack/athyper/config/memorycache/redis-acl.conf
+# expect: athyper:athyper-config 644
+
+# MANIFEST written
+cat /opt/stack/athyper/MANIFEST
+```
 
 ---
 
@@ -926,11 +1023,27 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
 > Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
-| Step | Action | Gate |
-|---|---|---|
-| 9.1 | `grep -c "<fill\|__________\|from secrets" /opt/stack/athyper/secrets/.env` | Must return 0 |
-| 9.2 | `bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/stack/athyper/secrets/.env` | Exit 0 |
-| 9.3 | `docker compose --env-file /opt/stack/athyper/secrets/.env ... config` | Exit 0, no errors |
+> `validate-env.sh` does more than validate — it also **renders** `redis-acl.conf` in-place by substituting all `__*_HASH__` tokens with SHA-256 hashes computed from the password vars in `.env`. This must run before the stack starts. The rendered file is owned by `athyper` (set in Phase 7) and is set to `644` so the memorycache container can read it via its `:ro` bind mount.
+
+```bash
+# 9.1 — Confirm no unfilled placeholders remain in .env
+grep -cE '<fill|__________|from secrets' /opt/stack/athyper/secrets/.env
+# Must return 0
+
+# 9.2 — Run validation (renders redis-acl.conf as a side-effect)
+bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/stack/athyper/secrets/.env
+# Must exit 0, final line: RESULT: PASSED — all checks OK
+
+# 9.3 — Confirm redis-acl.conf was rendered (no template tokens remain)
+grep -E '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' \
+  /opt/stack/athyper/config/memorycache/redis-acl.conf
+# Must return (empty — no output)
+
+# 9.4 — Confirm redis-acl.conf is readable by containers
+stat -c "%U:%G %a" /opt/stack/athyper/config/memorycache/redis-acl.conf
+# expect: athyper:athyper-config 644
+```
 
 ---
 
@@ -938,15 +1051,66 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
 > Exit the athyper shell (`exit` twice) back to root, or open a new root session.
-> ⚠️ `ATHYPER_DATA_ROOT` **must be exported before running the script** (step 10.1).  Without it the script aborts with an error — it refuses to fall back to `$STACK_DIR/data` on a server path because that would create data dirs inside the git checkout.  Two-liner idiom: `export ATHYPER_DATA_ROOT=... && sudo -E bash .../data-dirs-create.sh` if you prefer a single command.
 
-| Step | Action | Verify |
-|---|---|---|
-| 10.1 | `export ATHYPER_DATA_ROOT=/opt/stack/athyper/data` | `echo $ATHYPER_DATA_ROOT` → correct path |
-| 10.2 | `bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh` | Output shows "Setting per-service data dir ownership (server mode)..." |
-| 10.3 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/observability` | 472:472 750 |
-| 10.4 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/metrics` | 65534:65534 750 |
-| 10.5 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/memorycache` | 999:1000 750 |
+> ⚠️ **Critical:** The script's chown block only executes when **both** conditions are true:
+> 1. It is run as `root` (`id -u == 0`)
+> 2. `ATHYPER_DATA_ROOT` starts with `/opt/`
+>
+> If either is missing the script still exits 0 but silently skips ownership — data dirs stay owned by whoever ran the script, and every container that needs to write to a bind-mounted data dir will fail with `permission denied` at startup.
+
+```bash
+# Run as root with ATHYPER_DATA_ROOT inline — single command, no export needed
+sudo ATHYPER_DATA_ROOT=/opt/stack/athyper/data \
+  bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh
+```
+
+Expected output (confirms chown block ran):
+```
+Setting per-service data dir ownership (server mode)...
+Per-service ownership set. Verify with: ls -lan /opt/stack/athyper/data
+Recheck UID matrix before every major image version bump.
+```
+
+If you do NOT see "Setting per-service data dir ownership" — you are not running as root. Re-run with `sudo`.
+
+```bash
+# ── Full verification ────────────────────────────────────────────────────────
+ls -lan /opt/stack/athyper/data/
+ls -lan /opt/stack/athyper/data/telemetry/
+
+# Expected ownership per service:
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/memorycache
+# 999:1000 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/memorycache-jobs
+# 999:1000 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/objectstorage
+# 1000:1001 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/meilisearch
+# 1000:1000 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/uptime-kuma
+# 1000:1000 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/metabase
+# 1000:1000 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/logging
+# 10001:10001 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/tracing
+# 10001:10001 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/metrics
+# 65534:65534 750
+
+stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/observability
+# 472:472 750
+```
+
+> ⚠️ **Never run `chown -R` on the data tree after containers have started.** Each service writes files inside its data dir as its own UID. A recursive chown would change ownership of those files, breaking the service on next restart. The script only chowns the leaf dirs themselves (not `-R`), which is safe even after first start.
 
 ---
 
