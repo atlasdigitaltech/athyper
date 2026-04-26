@@ -772,10 +772,10 @@ chmod 755 /opt/products/athyper
 chown athyper:athyper /opt/stack/athyper
 chmod 755 /opt/stack/athyper
 
-# Config tree — root owns, athyper-config reads
+# Config tree — root owns; 644 so container processes (UID 999 etc.) can read mounts
 chown -R root:athyper-config /opt/stack/athyper/config
 find /opt/stack/athyper/config -type d -exec chmod 750 {} \;
-find /opt/stack/athyper/config -type f -exec chmod 640 {} \;
+find /opt/stack/athyper/config -type f -exec chmod 644 {} \;
 
 # Secrets tree — root owns, athyper (primary group) traverses
 chown -R root:athyper /opt/stack/athyper/secrets
@@ -886,10 +886,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 | 7.2 | If any UID differs: update `data-dirs-create.sh` chown block before Phase 10 | |
 | 7.3 | `export ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets` | |
 | 7.4 | `cd /opt/products/athyper && bash stack/scripts/setup/setup-config.sh staging` | All files COPIED; MANIFEST written |
-| 7.5 | Lock config permissions: `chown -R root:athyper-config /opt/stack/athyper/config && find /opt/stack/athyper/config -type d -exec chmod 750 {} \; && find /opt/stack/athyper/config -type f -exec chmod 640 {} \;` | |
+| 7.5 | Lock config permissions: `chown -R root:athyper-config /opt/stack/athyper/config && find /opt/stack/athyper/config -type d -exec chmod 750 {} \; && find /opt/stack/athyper/config -type f -exec chmod 644 {} \;` | |
 | 7.6 | Verify staging CIDR patch: `grep "0.0.0.0/0" /opt/stack/athyper/config/gateway/dynamic/athyper.workbench.yml` | ✓ |
 | 7.7 | Verify acme.json untouched: `stat /opt/stack/athyper/secrets/gateway/certs/acme.json` | root:root 600 |
-| 7.8 | Verify no world-readable: `find /opt/stack/athyper/config -perm /o+r -ls` && `find /opt/stack/athyper/secrets -perm /o+r -ls` | Both empty |
+| 7.8 | Verify secrets not world-readable: `find /opt/stack/athyper/secrets -perm /o+r -ls` | Empty (config files are intentionally 644 for container read access; secrets remain 600/750) |
 | 7.9 | Verify MANIFEST: `cat /opt/stack/athyper/MANIFEST` | All fields populated |
 
 ---

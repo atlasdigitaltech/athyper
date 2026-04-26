@@ -562,10 +562,10 @@ sudo ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
      ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets \
   bash stack/scripts/setup/setup-config.sh staging
 
-# Re-lock after copy
+# Re-lock after copy (644 so container processes can read mounted config files)
 sudo chown -R root:athyper-config /opt/stack/athyper/config
 sudo find /opt/stack/athyper/config -type d -exec chmod 750 {} \;
-sudo find /opt/stack/athyper/config -type f -exec chmod 640 {} \;
+sudo find /opt/stack/athyper/config -type f -exec chmod 644 {} \;
 ```
 
 ### setup/validate-env
