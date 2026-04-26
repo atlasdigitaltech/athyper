@@ -222,10 +222,8 @@ if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
     echo "    sudo ATHYPER_CONFIG_ROOT=\"$LIVE_CFG\" ATHYPER_SECRETS_ROOT=\"${ATHYPER_SECRETS_ROOT:-}\" \\"
     echo "      bash $0 $ENV_NAME"
     echo ""
-    echo "  After setup-config completes, lock down file permissions:"
-    echo "    sudo chown -R root:athyper-config $LIVE_CFG"
-    echo "    sudo find $LIVE_CFG -type d -exec chmod 750 {} \\;"
-    echo "    sudo find $LIVE_CFG -type f -exec chmod 644 {} \\;"
+    echo "  On servers, config/ is owned by root:athyper-config."
+    echo "  Permissions (755/644) are applied automatically at the end of this script."
     echo ""
     echo "  See stack/docs/infrastructure-plan.md Phase 7 for the full procedure."
     exit 1
@@ -318,6 +316,24 @@ schema_version=11
 EOF
   echo ""
   echo "MANIFEST updated: $MANIFEST_FILE"
+fi
+
+# ── Config tree permissions (server mode) ─────────────────────────────────────
+# Applied after every write run so re-runs after manual edits always leave the
+# tree in the correct state.  Skipped for --diff and local dev.
+#
+# dirs 755: container processes (UID 999 etc.) need +x to traverse bind-mount
+#           paths even when they are not in the athyper-config group.
+# files 644: container processes need +r to read mounted :ro config files.
+# Secrets tree (/opt/stack/athyper/secrets) is never touched here — it stays
+# at 750 dirs / 600 files.
+if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
+  echo ""
+  echo "Locking config tree permissions..."
+  chown -R root:athyper-config "$LIVE_CFG"
+  find "$LIVE_CFG" -type d -exec chmod 755 {} \;
+  find "$LIVE_CFG" -type f -exec chmod 644 {} \;
+  echo "  owner: root:athyper-config  dirs: 755  files: 644"
 fi
 
 echo ""

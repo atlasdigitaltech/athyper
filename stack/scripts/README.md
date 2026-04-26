@@ -555,17 +555,15 @@ setup-config.bat [environment]
 
 Copies all config templates from `stack/config/` into the live config root. Backs up existing files in `--update` mode.
 
-**Server requirement:** `config/` is owned `root:athyper-config 750` — run as `root` with `ATHYPER_CONFIG_ROOT` and `ATHYPER_SECRETS_ROOT` exported. The script aborts with a clear message if the live config dir is not writable. After copying, lock down file permissions (see `infrastructure-plan.md` Phase 7, step 7.5):
+**Server requirement:** `config/` is owned `root:athyper-config` — run as `root` with `ATHYPER_CONFIG_ROOT` and `ATHYPER_SECRETS_ROOT` exported. The script aborts with a clear message if the live config dir is not writable.
+
+Permissions are applied automatically at the end of every write run (dirs `755`, files `644`, owner `root:athyper-config`). The `755`/`644` model is intentional: config files are root-owned and mounted `:ro`, so world-readable is safe; container processes (UID 999 etc.) need directory `+x` to traverse mount paths and file `+r` to read them.
 
 ```bash
 sudo ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
      ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets \
   bash stack/scripts/setup/setup-config.sh staging
-
-# Re-lock after copy (644 so container processes can read mounted config files)
-sudo chown -R root:athyper-config /opt/stack/athyper/config
-sudo find /opt/stack/athyper/config -type d -exec chmod 750 {} \;
-sudo find /opt/stack/athyper/config -type f -exec chmod 644 {} \;
+# Permissions locked automatically — no separate chmod step needed.
 ```
 
 ### setup/validate-env
