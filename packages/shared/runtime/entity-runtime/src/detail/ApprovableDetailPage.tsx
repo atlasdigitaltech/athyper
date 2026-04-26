@@ -29,13 +29,13 @@ import {
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import {
-  ApprovableDocumentShell,
   buildOrchestratorFromRecord,
-  buildApprovableHeaderFromRecord,
+  mapDocumentHeaderModel,
   AmountSummaryCard,
   FlowModal,
-  type ApprovableReference,
+  ValidationBanner,
 } from "@athyper/document-runtime";
+import { EntityHeader } from "../header";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
 import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
@@ -368,31 +368,6 @@ function VersionsPanel({ entityCode, recordId }: { entityCode: string; recordId:
   );
 }
 
-// ── Field-schema → rendering hint ────────────────────────────────────────────
-// Maps entity field data_type to ApprovableReference.valueType so the KPI
-// strip can render values correctly without guessing from the label string.
-
-function resolveRefMeta(
-  entity: CompiledEntity,
-  fieldName: string,
-  fallbackLabel: string,
-): { label: string; valueType: ApprovableReference["valueType"] } {
-  const field = entity.fields.find(
-    (f) => f.name === fieldName || f.column_name === fieldName,
-  );
-  const label = field?.label ?? fallbackLabel;
-  let valueType: ApprovableReference["valueType"] = "text";
-  if (field) {
-    const dt = field.data_type;
-    if (dt === "uuid" || dt === "reference")                             valueType = "code";
-    else if (dt === "date" || dt === "datetime" || dt === "timestamptz") valueType = "date";
-    else if (dt === "decimal" || dt === "numeric" || dt === "money")     valueType = "amount";
-    else if (dt === "enum")                                              valueType = "enum";
-    // integer/bigint are counts, years, sequence numbers — plain text
-  }
-  return { label, valueType };
-}
-
 // ── Field-groups panel ────────────────────────────────────────────────────────
 // Groups entity fields by sort_order bands — matches the band conventions used
 // across the entity engine seed files (A:0-39, B:40-69, C:70-119, D:120-149,
@@ -656,73 +631,8 @@ export function ApprovableDetailPage({
     };
   }, [companyCodeRecord]);
 
-  // ── Header DTO ─────────────────────────────────────────────────────────────
-  const headerData = buildApprovableHeaderFromRecord(entity, data);
-
-  // Resolve party name (replaces raw UUID shown before async fetch completes)
-  if (resolvedPartyName && headerData.party) {
-    const words = resolvedPartyName.split(/\s+/);
-    const initials =
-      words.length === 1
-        ? (words[0] ?? "").slice(0, 2).toUpperCase()
-        : ((words[0]?.[0] ?? "") + (words[words.length - 1]?.[0] ?? "")).toUpperCase();
-    const partyCode = partyRecord?.data?.["code"];
-    const subtitle  = partyCode && typeof partyCode === "string" ? partyCode.trim() : undefined;
-    headerData.party = { ...headerData.party, name: resolvedPartyName, initials, subtitle };
-  }
-
-  // Add key reference fields to the metadata row.
-  // Label and valueType are derived from the entity field schema — no label guessing.
-  const refs: ApprovableReference[] = [];
-  const vendorRef = data["vendor_invoice_ref"] ?? data["supplier_invoice_number"];
-  if (vendorRef && typeof vendorRef === "string" && vendorRef.trim()) {
-    const { label, valueType } = resolveRefMeta(entity, "vendor_invoice_ref", "Vendor Ref");
-    refs.push({ label, value: vendorRef.trim(), valueType });
-  }
-  // Company code — resolved from company_code_id UUID via master.company_code.
-  // Shows "CC-001 · Acme Corp" when resolved; falls back to fiscal year context.
-  if (resolvedCompanyCode) {
-    refs.push({
-      label:     "Company Code",
-      value:     resolvedCompanyCode.name,
-      subValue:  resolvedCompanyCode.code,
-      valueType: "text",
-    });
-  } else {
-    const fiscalYear = data["fiscal_year"];
-    const periodNo   = data["period_number"];
-    if (fiscalYear != null) {
-      const { label } = resolveRefMeta(entity, "fiscal_year", "Fiscal Year");
-      const value = periodNo != null ? `FY${fiscalYear} / P${periodNo}` : `FY${fiscalYear}`;
-      refs.push({ label, value, valueType: "text" });
-    }
-  }
-  const invoiceSource = data["invoice_source"];
-  if (invoiceSource && typeof invoiceSource === "string") {
-    const { label, valueType } = resolveRefMeta(entity, "invoice_source", "Source");
-    refs.push({
-      label,
-      value: invoiceSource.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      valueType,
-    });
-  }
-  const description = data["description"];
-  if (description && typeof description === "string" && description.trim()) {
-    refs.push({ label: "Description", value: description.trim(), valueType: "text" });
-    if (!headerData.identity.title) {
-      headerData.identity.title = description.trim();
-    }
-  }
-  if (refs.length > 0) headerData.references = refs;
-
-  // Remove the lifecycle dimension — it's already shown as the status badge
-  // in the identity bar (identity.statusLabel). The strip should show only
-  // the supplementary dimensions (accounting, settlement, matching).
-  headerData.statusDimensions = (orchestrator.statusDimensions ?? []).filter(
-    (d) => d.dimension !== "lifecycle",
-  );
-  headerData.actionBundle   = orchestrator.actionBundle;
-  headerData.blockedReasons = orchestrator.blockedReasons;
+  // partyCode is used below when building the header model after tabs are assembled
+  const partyCode = partyRecord?.data?.["code"];
 
   // ── Resolved refs map — UUID → display name for all known references ────────
   // Built from the generic refQueries batch (covers all reference fields) plus
@@ -774,6 +684,19 @@ export function ApprovableDetailPage({
     ...(resolvedTabs.includes("comments")      ? [{ id: "__comments",      label: "Comments" }]      : []),
     ...(resolvedTabs.includes("events")        ? [{ id: "__events",        label: "Activity" }]      : []),
   ];
+
+  // ── Header model (Phase 5 — EntityHeader contract) ────────────────────────
+  const headerModel = mapDocumentHeaderModel(entity, data, {
+    statusDimensions:    orchestrator.statusDimensions ?? [],
+    actionBundle:        orchestrator.actionBundle,
+    resolvedPartyName:   resolvedPartyName ?? undefined,
+    resolvedPartyCode:   partyCode && typeof partyCode === "string" ? partyCode.trim() : undefined,
+    resolvedCompanyCode: resolvedCompanyCode ?? undefined,
+    tabs,
+    description:         typeof data["description"] === "string" && (data["description"] as string).trim()
+      ? (data["description"] as string).trim()
+      : undefined,
+  });
 
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
 
@@ -829,25 +752,16 @@ export function ApprovableDetailPage({
 
   return (
     <>
-    <ApprovableDocumentShell
-        data={headerData}
-        persistMode
+      <EntityHeader
+        model={headerModel}
         onBack={() => router.back()}
-        validationNotices={orchestrator.validationNotices}
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        onAction={async (action, remarks) => {
+        onAction={async (action) => {
           if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
-
-          // view_je — navigate to the posted JE using the UUID on the record
           if (action === "view_je") {
             const jeId = record.data["ap_je_id"] as string | null | undefined;
             if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
             return;
           }
-
-          // NAVIGATE operations — substitute {id} and push client-side
           const op = (operations ?? []).find((o) => o.permission_code === action);
           if (op?.handler_type === "NAVIGATE" && op.handler_target) {
             const url = op.handler_target
@@ -856,17 +770,17 @@ export function ApprovableDetailPage({
             router.push(url);
             return;
           }
-
-          // MODAL operations whose handler_target has no server handler yet —
-          // guard here to avoid a 400 from the action dispatcher
           if (action === "allocate_payment") {
             router.push(`/finance/ap?invoice=${record.id}`);
             return;
           }
-
-          await opDispatch.dispatch(action, operations ?? [], { remarks });
+          await opDispatch.dispatch(action, operations ?? []);
         }}
-      >
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+      <ValidationBanner notices={orchestrator.validationNotices ?? []} />
+      <div className="flex flex-col gap-2.5">
         {/* Overview — amount summary + grouped header fields */}
         {activeTab === "__overview" && (
           <div className="space-y-5">
@@ -1039,9 +953,9 @@ export function ApprovableDetailPage({
             </CardContent>
           </Card>
         )}
-      </ApprovableDocumentShell>
+      </div>
 
-      {/* MODAL-type operation overlay — rendered outside the shell so it sits
+      {/* MODAL-type operation overlay — rendered outside the layout div so it sits
           at the top of the stacking context, not inside the header scroll. */}
       {opDispatch.isModalOpen && opDispatch.activeBundle && (
         <FlowModal

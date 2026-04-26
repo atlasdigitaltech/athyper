@@ -21,6 +21,8 @@ export {
   type ApprovableAction,
   type HeaderMode,
   buildApprovableHeaderFromRecord,
+  mapDocumentHeaderModel,
+  type MapDocumentHeaderModelOpts,
 } from "./header";
 export { StatusLanes, type StatusLanesProps } from "./status";
 export { StatusBadgeStrip, type StatusBadgeStripProps } from "./status";
@@ -96,3 +98,17 @@ export {
 // ── Boot-time renderer registration ──────────────────────────────────────────
 // Call registerDocumentRenderers() once at app startup (root layout).
 export { registerDocumentRenderers } from "./register";
+
+// ── Entity view descriptors + registry ──────────────────────────────────────
+// Types and registry for optional descriptor overrides.
+// The generic edit runtime derives config from CompiledEntity metadata by default.
+export {
+  registerEntityDescriptor,
+  getEntityDescriptor,
+  type EntityViewDescriptor,
+  type EntityFactDescriptor,
+  type EntityStatusDescriptor,
+  type EntityAuditDescriptor,
+  type EntityEditFieldDescriptor,
+  type EntityDescriptorEditConfig,
+} from "./descriptors";

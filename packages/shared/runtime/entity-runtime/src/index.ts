@@ -54,6 +54,21 @@ export { ENTITY_HEADER_EVENTS } from "./header";
 export { EntityWorkspaceShell, type EntityWorkspaceShellProps } from "./edit";
 export { useEntityEdit } from "./edit";
 export { EditGuardContext, type EditGuardContextValue } from "./edit";
+// Phase 6.0 — Generic meta-edit runtime
+export { useEntityEditState, type UseEntityEditStateOptions, type EntityEditStateResult } from "./edit";
+export { GenericMetaEditPage, type GenericMetaEditPageProps } from "./edit";
+export { GenericMetaEditForm, type GenericMetaEditFormProps } from "./edit";
+export {
+  registerEntityEditAdapter,
+  getEntityEditAdapter,
+  type EntityEditAdapter,
+  type EntityEditableField,
+  type EntityEditPolicy,
+  type ValidationResult,
+  type FieldRenderer,
+  type SectionRenderer,
+  type EntityEditAdapterContext,
+} from "./edit";
 export {
   DEFAULT_DISPLAY_CONFIG,
   resolvePresentationConfig,

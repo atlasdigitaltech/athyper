@@ -1,17 +1,19 @@
-import { redirect } from "next/navigation";
+import { GenericMetaEditPage } from "@athyper/entity-runtime/edit";
 
 /**
- * /app/[entity]/[id]/edit — permanent redirect to ?mode=edit
+ * /app/[entity]/[id]/edit — generic Tier 1 edit surface.
  *
- * The edit surface was collapsed into the detail route via a mode flag
- * (spec §5: Edit is a mode of Read, not a separate page). Any bookmarked
- * or linked /edit URLs are transparently redirected.
+ * Static-segment routes (e.g. purchase_invoice/[id]/edit) take Next.js priority
+ * over this dynamic route, so Tier 2 adapters are unaffected.
+ *
+ * Tier 1 entities (supplier, company_code, cost_center, etc.) need no custom
+ * route, hook, or form — the descriptor registry drives the entire edit surface.
  */
-export default async function AppEntityEditRedirect({
+export default async function AppEntityEditPage({
   params,
 }: {
   params: Promise<{ entity: string; id: string }>;
 }) {
   const { entity, id } = await params;
-  redirect(`/app/${entity}/${id}?mode=edit`);
+  return <GenericMetaEditPage entityCode={entity} recordId={id} />;
 }

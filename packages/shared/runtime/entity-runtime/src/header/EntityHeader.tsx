@@ -38,6 +38,11 @@ export interface EntityHeaderProps {
   onModeChange?: (mode: HeaderMode) => void;
   onAction?: (id: string) => void;
   onBack?: () => void;
+  /**
+   * When provided, the type chip renders as a button calling this handler
+   * instead of a Link. Wire through guardNavigate on edit pages.
+   */
+  onTypeClick?: () => void;
   activeTab?: string;
   onTabChange?: (id: string) => void;
   /** Arbitrary content rendered below the identity bar — visible in all modes. */
@@ -102,6 +107,7 @@ export function EntityHeader({
   onModeChange,
   onAction,
   onBack,
+  onTypeClick,
   activeTab,
   onTabChange,
   extensionSlot,
@@ -135,7 +141,7 @@ export function EntityHeader({
         "sticky top-0 z-30 overflow-hidden rounded-xl border bg-card shadow-sm",
         className,
       )}>
-        <EntityIdentityBar identity={model.identity} onBack={onBack} actionsSlot={actionsSlot} />
+        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} />
         {extensionSlot && (
           <div className="border-t border-border/60 px-4 py-2 sm:px-5 lg:px-[22px]">
             {extensionSlot}

@@ -14,6 +14,11 @@ export interface EntityIdentityBarProps {
   /** Pre-composed action cluster + mode-toggle buttons. */
   actionsSlot?: ReactNode;
   onBack?: () => void;
+  /**
+   * When provided, the type chip renders as a button that calls this handler
+   * instead of a Link. Used by edit pages to route the click through guardNavigate.
+   */
+  onTypeClick?: () => void;
   className?: string;
 }
 
@@ -21,6 +26,7 @@ export function EntityIdentityBar({
   identity,
   actionsSlot,
   onBack,
+  onTypeClick,
   className,
 }: EntityIdentityBarProps) {
   const { subtleBadge } = resolveSemanticColors(identity.status.intent);
@@ -55,7 +61,15 @@ export function EntityIdentityBar({
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            {identity.typeHref ? (
+            {onTypeClick ? (
+              <button
+                type="button"
+                onClick={onTypeClick}
+                className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
+              >
+                {identity.typeLabel}
+              </button>
+            ) : identity.typeHref ? (
               <Link
                 href={identity.typeHref}
                 className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
@@ -68,6 +82,10 @@ export function EntityIdentityBar({
               </span>
             )}
           </div>
+        ) : onTypeClick ? (
+          <button type="button" onClick={onTypeClick} className="shrink-0">
+            <TypeChip>{identity.typeLabel}</TypeChip>
+          </button>
         ) : identity.typeHref ? (
           <Link href={identity.typeHref} className="shrink-0">
             <TypeChip>{identity.typeLabel}</TypeChip>
