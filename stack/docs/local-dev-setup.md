@@ -108,12 +108,18 @@ cd stack/scripts/setup
 
 This copies **only** `stack/env/.env.example` → `stack/env/.env`.
 
-Server and web env files are **not needed for local dev** — `api-up.bat` /
-`api-up.sh` and `web-up.bat` / `web-up.sh` read `stack/env/.env` directly
-and apply hostname translations in-process before starting each service.
-
 **After copying, open `stack/env/.env` and review.** The defaults work out of
 the box for a clean Windows dev machine at `D:\Stack\athyper\`.
+
+You also need two additional env files that `stack/env/.env` cannot replace:
+
+- **`server/.env`** — the API and worker processes are launched via `pnpm`,
+  which re-shells each command and does not inherit `setlocal` env vars set
+  earlier in the batch script. Copy `server/.env.example` → `server/.env`.
+- **`apps/web/.env.local`** — Next.js reads this at startup. Without it the
+  web app connects to Redis without credentials (`NOAUTH` error) and cannot
+  reach the local API. Copy `apps/web/.env.example` → `apps/web/.env.local`
+  and set `REDIS_URL=redis://app:<password>@127.0.0.1:6379/0`.
 
 ---
 
@@ -403,5 +409,4 @@ objects). The `data-dirs-reset.bat` wipes the bind-mounted paths under
 |----------|---------|
 | [`infrastructure-plan.md`](infrastructure-plan.md) | Two-root architecture, permission model, server deployment |
 | [`secrets-management.md`](secrets-management.md) | How secrets flow across environments |
-| [`staging-deploy-runbook.md`](staging-deploy-runbook.md) | Phase-by-phase staging deployment guide |
 | [`../scripts/README.md`](../scripts/README.md) | Full script reference |
