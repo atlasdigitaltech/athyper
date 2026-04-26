@@ -877,8 +877,8 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ## Phase 7: Config Deploy
 
-> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
-> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> `config/` is owned `root:athyper-config 750` — only root can write.  Run this phase as root, **not** as athyper.  After the copy, re-lock file permissions (step 7.5) so the athyper service account is read-only on config.
 
 | Step | Action | Verify |
 |---|---|---|
@@ -886,10 +886,11 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 | 7.2 | If any UID differs: update `data-dirs-create.sh` chown block before Phase 10 | |
 | 7.3 | `export ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets` | |
 | 7.4 | `cd /opt/products/athyper && bash stack/scripts/setup/setup-config.sh staging` | All files COPIED; MANIFEST written |
-| 7.5 | Verify staging CIDR patch: `grep "0.0.0.0/0" /opt/stack/athyper/config/gateway/dynamic/athyper.workbench.yml` | ✓ |
-| 7.6 | Verify acme.json untouched: `stat /opt/stack/athyper/secrets/gateway/certs/acme.json` | root:root 600 |
-| 7.7 | Verify no world-readable: `find /opt/stack/athyper/config -perm /o+r -ls` && `find /opt/stack/athyper/secrets -perm /o+r -ls` | Both empty |
-| 7.8 | Verify MANIFEST: `cat /opt/stack/athyper/MANIFEST` | All fields populated |
+| 7.5 | Lock config permissions: `chown -R root:athyper-config /opt/stack/athyper/config && find /opt/stack/athyper/config -type d -exec chmod 750 {} \; && find /opt/stack/athyper/config -type f -exec chmod 640 {} \;` | |
+| 7.6 | Verify staging CIDR patch: `grep "0.0.0.0/0" /opt/stack/athyper/config/gateway/dynamic/athyper.workbench.yml` | ✓ |
+| 7.7 | Verify acme.json untouched: `stat /opt/stack/athyper/secrets/gateway/certs/acme.json` | root:root 600 |
+| 7.8 | Verify no world-readable: `find /opt/stack/athyper/config -perm /o+r -ls` && `find /opt/stack/athyper/secrets -perm /o+r -ls` | Both empty |
+| 7.9 | Verify MANIFEST: `cat /opt/stack/athyper/MANIFEST` | All fields populated |
 
 ---
 
@@ -937,11 +938,12 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
 > Exit the athyper shell (`exit` twice) back to root, or open a new root session.
+> ⚠️ `ATHYPER_DATA_ROOT` **must be exported before running the script** (step 10.1).  Without it the script aborts with an error — it refuses to fall back to `$STACK_DIR/data` on a server path because that would create data dirs inside the git checkout.  Two-liner idiom: `export ATHYPER_DATA_ROOT=... && sudo -E bash .../data-dirs-create.sh` if you prefer a single command.
 
 | Step | Action | Verify |
 |---|---|---|
-| 10.1 | `export ATHYPER_DATA_ROOT=/opt/stack/athyper/data` | |
-| 10.2 | `bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh` | Per-service chown block runs |
+| 10.1 | `export ATHYPER_DATA_ROOT=/opt/stack/athyper/data` | `echo $ATHYPER_DATA_ROOT` → correct path |
+| 10.2 | `bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh` | Output shows "Setting per-service data dir ownership (server mode)..." |
 | 10.3 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/observability` | 472:472 750 |
 | 10.4 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/metrics` | 65534:65534 750 |
 | 10.5 | Spot-check: `stat -c "%U:%G %a %n" /opt/stack/athyper/data/memorycache` | 999:1000 750 |

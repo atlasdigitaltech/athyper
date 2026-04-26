@@ -174,6 +174,8 @@ Validation covers six sections:
 
 ### Step 4 — Data directories
 
+**Local dev** (default: `stack/data/` inside the repo):
+
 ```bash
 # Git Bash / WSL — safe, idempotent
 bash stack/scripts/setup/data-dirs-create.sh
@@ -183,9 +185,22 @@ bash stack/scripts/setup/data-dirs-create.sh
 stack\scripts\setup\data-dirs-create.bat
 ```
 
+**Server (staging / production)** — must run as **root** with `ATHYPER_DATA_ROOT` exported first.
+The script aborts if it detects a server path (`/opt/…`) without this variable set, to prevent
+data dirs being created inside the git checkout by mistake:
+
+```bash
+export ATHYPER_DATA_ROOT=/opt/stack/athyper/data
+sudo bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh
+```
+
 Creates the directory tree under `ATHYPER_DATA` (default: `stack/data/`):
 `db`, `meilisearch`, `memorycache`, `memorycache-jobs`, `metabase`, `objectstorage`,
 `telemetry/logging`, `telemetry/metrics`, `telemetry/observability`, `telemetry/tracing`, `uptime-kuma`
+
+On server runs (root + `/opt/…` path), the script also sets per-container ownership on each leaf dir
+(Redis 999, MinIO 1000, Loki/Tempo 10001, Prometheus 65534, Grafana 472). See `infrastructure-plan.md`
+S6 for the full UID matrix.
 
 ### Step 5 — Local TLS certificates (local environment only)
 
@@ -536,9 +551,22 @@ setup-config.bat [environment]
 
 | Parameter | Values | Default | Description |
 |-----------|--------|---------|-------------|
-| `environment` | `local` \| `staging` \| `production` | prompted | Selects the kernel config template |
+| `environment` | `local` \| `staging` \| `production` | prompted | Selects env-variant config templates |
 
-Copies `stack/config/apps/kernel.config.{env}.parameter.json` → `stack/config/apps/kernel.config.parameter.json`. Backs up any existing file to `.bak`.
+Copies all config templates from `stack/config/` into the live config root. Backs up existing files in `--update` mode.
+
+**Server requirement:** `config/` is owned `root:athyper-config 750` — run as `root` with `ATHYPER_CONFIG_ROOT` and `ATHYPER_SECRETS_ROOT` exported. The script aborts with a clear message if the live config dir is not writable. After copying, lock down file permissions (see `infrastructure-plan.md` Phase 7, step 7.5):
+
+```bash
+sudo ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
+     ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets \
+  bash stack/scripts/setup/setup-config.sh staging
+
+# Re-lock after copy
+sudo chown -R root:athyper-config /opt/stack/athyper/config
+sudo find /opt/stack/athyper/config -type d -exec chmod 750 {} \;
+sudo find /opt/stack/athyper/config -type f -exec chmod 640 {} \;
+```
 
 ### setup/validate-env
 
@@ -560,7 +588,9 @@ data-dirs-create.sh
 data-dirs-create.bat
 ```
 
-No parameters. Reads `ATHYPER_DATA` from `stack/env/.env` or falls back to `stack/data/`. Safe to re-run (idempotent).
+No parameters. Reads `ATHYPER_DATA_ROOT` (server) or `ATHYPER_DATA` (legacy), falls back to `stack/data/` for local dev. Safe to re-run (idempotent).
+
+**Server requirement:** export `ATHYPER_DATA_ROOT` before running, and run as `root`. The script aborts if it detects an `/opt/…` path without `ATHYPER_DATA_ROOT` set. When both conditions are met (root + `ATHYPER_DATA_ROOT=/opt/…`), the per-service ownership block runs automatically to set the correct UID on each data directory leaf.
 
 ### setup/data-dirs-reset
 

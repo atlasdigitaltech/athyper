@@ -206,6 +206,31 @@ echo "LIVE_CFG = $LIVE_CFG"
 echo "MODE     = ${MODE:-first-deploy}"
 echo ""
 
+# ── Write-access pre-flight (server mode) ─────────────────────────────────────
+# config/ is root:athyper-config 750 by the ownership model — only root can write.
+# Abort here with a clear message rather than a cryptic "Permission denied" on the
+# first cp.  Skipped for --diff (read-only) and for local dev (LIVE_CFG == REPO_CFG).
+if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
+  if [[ ! -w "$LIVE_CFG" ]]; then
+    echo ""
+    echo "ERROR: No write access to LIVE_CFG=$LIVE_CFG"
+    echo ""
+    echo "  On servers, config/ is owned by root:athyper-config 750."
+    echo "  Run this script as root:"
+    echo ""
+    echo "    sudo ATHYPER_CONFIG_ROOT=\"$LIVE_CFG\" ATHYPER_SECRETS_ROOT=\"${ATHYPER_SECRETS_ROOT:-}\" \\"
+    echo "      bash $0 $ENV_NAME"
+    echo ""
+    echo "  After setup-config completes, lock down file permissions:"
+    echo "    sudo chown -R root:athyper-config $LIVE_CFG"
+    echo "    sudo find $LIVE_CFG -type d -exec chmod 750 {} \\;"
+    echo "    sudo find $LIVE_CFG -type f -exec chmod 640 {} \\;"
+    echo ""
+    echo "  See stack/docs/infrastructure-plan.md Phase 7 for the full procedure."
+    exit 1
+  fi
+fi
+
 for src_rel in "${!FILE_MAP[@]}"; do
   dst_rel="${FILE_MAP[$src_rel]}"
   src="$REPO_CFG/$src_rel"

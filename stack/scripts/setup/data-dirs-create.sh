@@ -34,6 +34,27 @@ else
   ATHYPER_DATA="$STACK_DIR/data"
 fi
 
+# ── Server-path guard ──────────────────────────────────────────────────────────
+# When STACK_DIR is under /opt, the fallback ($STACK_DIR/data) lands inside the
+# git checkout — wrong location on a server.  Require ATHYPER_DATA_ROOT to be
+# exported explicitly before proceeding.  On local dev, STACK_DIR is never
+# under /opt, so this check is harmless.
+if [[ "$STACK_DIR" == /opt/* ]] && [[ -z "${ATHYPER_DATA_ROOT:-}" ]]; then
+  echo ""
+  echo "ERROR: Detected server path (STACK_DIR=$STACK_DIR) but ATHYPER_DATA_ROOT is not set."
+  echo ""
+  echo "  Without it this script falls back to \$STACK_DIR/data, which puts data"
+  echo "  directories inside the git checkout — the wrong location on a server."
+  echo ""
+  echo "  Export the runtime data path first, then re-run as root:"
+  echo ""
+  echo "    export ATHYPER_DATA_ROOT=/opt/stack/athyper/data"
+  echo "    sudo bash $0"
+  echo ""
+  echo "  See stack/docs/infrastructure-plan.md Phase 10 for the full procedure."
+  exit 1
+fi
+
 echo ""
 echo "=========================="
 echo "STACK_DIR  = $STACK_DIR"
@@ -82,7 +103,7 @@ echo ""
 # that would break Grafana (472), Prometheus (65534), Loki/Tempo (10001), Redis (999).
 # Only chown individual leaf dirs before a service's very first start.
 # ----------------------------
-if [[ "${ATHYPER_DATA:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
+if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
   echo "Setting per-service data dir ownership (server mode)..."
 
   # Redis (redis:7.4.8-alpine) — UID 999 / GID 1000
