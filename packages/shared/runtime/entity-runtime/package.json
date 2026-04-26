@@ -15,7 +15,8 @@
     "./bulk": "./src/bulk/index.ts",
     "./import": "./src/import/index.ts",
     "./panels": "./src/panels/index.ts",
-    "./metadata": "./src/metadata/index.ts"
+    "./metadata": "./src/metadata/index.ts",
+    "./header": "./src/header/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

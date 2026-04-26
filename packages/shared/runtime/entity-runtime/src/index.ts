@@ -24,6 +24,29 @@ export {
   registerFieldRenderer, resolveFieldRenderer, registerDefaults,
   type FieldRendererProps,
 } from "./field-renderers";
+// ── EntityHeader (types + component + atoms + hooks) ─────────────────────
+export type {
+  HeaderMode,
+  HeaderIdentity,
+  HeaderAction,
+  HeaderException,
+  HeaderFact,
+  HeaderStatusDimension,
+  HeaderProgressStage,
+  HeaderProgress,
+  HeaderTab,
+  HeaderAuditMeta,
+  EntityHeaderModel,
+  EntityHeaderController,
+  EntityEditSaveResult,
+  EntityEditState,
+  HeaderAdapterContext,
+  EntityHeaderAdapter,
+  SlaStatus,
+} from "./header";
+export { EntityHeader, type EntityHeaderProps } from "./header";
+export { useEntityHeaderController } from "./header";
+export { ENTITY_HEADER_EVENTS } from "./header";
 export {
   DEFAULT_DISPLAY_CONFIG,
   resolvePresentationConfig,

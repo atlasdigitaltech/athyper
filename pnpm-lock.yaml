@@ -429,6 +429,9 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../foundation/config
+      '@athyper/entity-runtime':
+        specifier: workspace:*
+        version: link:../entity-runtime
       '@athyper/icons':
         specifier: workspace:*
         version: link:../../foundation/icons

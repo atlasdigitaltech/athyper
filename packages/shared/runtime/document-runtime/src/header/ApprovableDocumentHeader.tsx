@@ -10,7 +10,7 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Pin } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
@@ -22,9 +22,11 @@ import type {
   ProgressStage,
   SlaStatus,
 } from "./types";
+import { type DocumentException } from "@athyper/api-contracts/documents";
 import { DocumentActionBar } from "../actions/DocumentActionBar";
 import { DocumentIdentityCard, type IdentityAction, type IdentityDueMeta } from "../identity/DocumentIdentityCard";
 import { DocumentKpiStrip, type KpiStripCell } from "../kpi/DocumentKpiStrip";
+import { ExceptionStack } from "../exceptions/ExceptionStack";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,6 +52,8 @@ export interface ApprovableDocumentHeaderProps {
   tabs?: ApprovableDocumentHeaderTab[];
   activeTab?: string;
   onTabChange?: (tabId: string) => void;
+  /** P1.5 — rendered directly below identity, always visible, never collapses. */
+  exceptions?: DocumentException[];
   className?: string;
 }
 
@@ -401,14 +405,24 @@ export function ApprovableDocumentHeader({
   tabs,
   activeTab,
   onTabChange,
+  exceptions,
   className,
 }: ApprovableDocumentHeaderProps) {
-  const [mode, setMode]           = useState<HeaderMode>(initialMode);
-  const [railExpanded, setRailExpanded] = useState(false);
+  const [mode, setMode] = useState<HeaderMode>(initialMode);
   const handleMode = (m: HeaderMode) => { setMode(m); onModeChange?.(m); };
-  const isExpanded = mode !== "collapsed";
 
   const { identity, statusDimensions, actionBundle, blockedReasons, progressRail } = data;
+
+  // Rail state — guarded so async progressRail arrival still triggers auto-open.
+  const userTouchedRail = useRef(false);
+  const shouldAutoOpen =
+    !!progressRail && progressRail.stepIndex <= 1 && progressRail.stages.length >= 4;
+  const [railExpanded, setRailExpanded] = useState(shouldAutoOpen);
+  useEffect(() => {
+    if (!userTouchedRail.current && shouldAutoOpen) setRailExpanded(true);
+  }, [shouldAutoOpen]);
+  const toggleRail = () => { userTouchedRail.current = true; setRailExpanded(v => !v); };
+  const isExpanded = mode !== "collapsed";
 
   const useActionBundle = (actionBundle?.length ?? 0) > 0;
   const tier2Dims       = (statusDimensions ?? []).filter((d) => d.dimension !== "workflow");
@@ -485,6 +499,13 @@ export function ApprovableDocumentHeader({
         onBack={onBack}
       />
 
+      {/* ── P1.5: EXCEPTIONS — always visible when present, never collapses ── */}
+      {exceptions && exceptions.length > 0 && (
+        <div className="border-t border-border/60 px-4 py-3 sm:px-5 lg:px-[22px]">
+          <ExceptionStack exceptions={exceptions} initialVisible={2} />
+        </div>
+      )}
+
       {/* ── KPI STRIP — expanded only ────────────────────────────────── */}
       {isExpanded && kpiCells.length > 0 && (
         <DocumentKpiStrip cells={kpiCells} />
@@ -543,7 +564,7 @@ export function ApprovableDocumentHeader({
               {/* Timeline toggle — pushed to far right */}
               {progressRail && (
                 <button
-                  onClick={() => setRailExpanded((v) => !v)}
+                  onClick={toggleRail}
                   className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
                 >
                   <span className="font-medium">{railExpanded ? "Less" : "Timeline"}</span>

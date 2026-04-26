@@ -8,5 +8,7 @@ export { FlowFieldBinding } from "./FlowFieldBinding";
 export { DerivedChip } from "./DerivedChip";
 export { useFlowEngine, canOverride } from "./useFlowEngine";
 export type { UseFlowEngineReturn, SummaryLine } from "./useFlowEngine";
+export { mapFlowHeaderModel } from "./mapFlowHeaderModel";
+export type { MapFlowHeaderOptions } from "./mapFlowHeaderModel";
 export { evaluateRule, isTruthy } from "./evaluateRule";
 export type { RuleContext } from "./evaluateRule";

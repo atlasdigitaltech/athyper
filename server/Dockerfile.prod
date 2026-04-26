@@ -4,7 +4,7 @@
 # Usage:
 #   docker compose --project-directory stack/compose build athyper-api
 # =============================================================================
- 
+
 # syntax=docker/dockerfile:1.7
 
 FROM node:24-alpine AS base
@@ -16,13 +16,13 @@ RUN apk add --no-cache postgresql-client
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
- 
+
 # ─── Dependency install ───────────────────────────────────────────────────────
 # Copy workspace manifests first for layer caching
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY tooling/tsconfig/ ./tooling/tsconfig/
 COPY server/package.json ./server/
- 
+
 # Copy all server workspace package.json files (adapters + services)
 COPY server/framework/adapters/auth/package.json ./server/framework/adapters/auth/
 COPY server/framework/adapters/db/package.json ./server/framework/adapters/db/
@@ -39,13 +39,13 @@ COPY server/framework/runtime/services/platform/package.json ./server/framework/
 COPY server/framework/runtime/services/records/package.json ./server/framework/runtime/services/records/
 COPY server/framework/runtime/services/shared/package.json ./server/framework/runtime/services/shared/
 COPY server/framework/runtime/services/search/package.json ./server/framework/runtime/services/search/
- 
+
 # Copy ALL workspace package.json files so that `pnpm prune --prod` can enumerate
 # the full workspace graph.  pnpm 10 walks every entry in pnpm-workspace.yaml
 # during prune and fails with exit 1 if any package directory is missing, even
 # when those packages were never installed (because pnpm install ran with --filter).
 # Source files are NOT needed here — package.json manifests only.
- 
+
 # packages/shared/foundation
 COPY packages/shared/foundation/core/package.json ./packages/shared/foundation/core/
 COPY packages/shared/foundation/config/package.json ./packages/shared/foundation/config/
@@ -53,63 +53,63 @@ COPY packages/shared/foundation/brand/package.json ./packages/shared/foundation/
 COPY packages/shared/foundation/i18n/package.json ./packages/shared/foundation/i18n/
 COPY packages/shared/foundation/icons/package.json ./packages/shared/foundation/icons/
 COPY packages/shared/foundation/theme/package.json ./packages/shared/foundation/theme/
- 
+
 # packages/shared/data
 COPY packages/shared/data/api-client/package.json ./packages/shared/data/api-client/
 COPY packages/shared/data/api-contracts/package.json ./packages/shared/data/api-contracts/
 COPY packages/shared/data/auth/package.json ./packages/shared/data/auth/
 COPY packages/shared/data/metadata-client/package.json ./packages/shared/data/metadata-client/
 COPY packages/shared/data/query/package.json ./packages/shared/data/query/
- 
+
 # packages/shared/runtime
 COPY packages/shared/runtime/collaboration-ui/package.json ./packages/shared/runtime/collaboration-ui/
 COPY packages/shared/runtime/document-runtime/package.json ./packages/shared/runtime/document-runtime/
 COPY packages/shared/runtime/entity-runtime/package.json ./packages/shared/runtime/entity-runtime/
 COPY packages/shared/runtime/runtime-shared/package.json ./packages/shared/runtime/runtime-shared/
 COPY packages/shared/runtime/workflow-ui/package.json ./packages/shared/runtime/workflow-ui/
- 
+
 # packages/shared/shell
 COPY packages/shared/shell/navigation/package.json ./packages/shared/shell/navigation/
 COPY packages/shared/shell/shell/package.json ./packages/shared/shell/shell/
- 
+
 # packages/shared/ui
 COPY packages/shared/ui/content-ui/package.json ./packages/shared/ui/content-ui/
 COPY packages/shared/ui/domain-widgets/package.json ./packages/shared/ui/domain-widgets/
 COPY packages/shared/ui/ui/package.json ./packages/shared/ui/ui/
- 
+
 # packages/domain
 COPY packages/domain/finance/finance-workbench/package.json ./packages/domain/finance/finance-workbench/
- 
+
 # apps
 COPY apps/web/package.json ./apps/web/
- 
+
 RUN pnpm install --frozen-lockfile \
       --filter "@athyper/runtime-server..." \
       --filter "@athyper/adapter-*"
- 
+
 # ─── Source ───────────────────────────────────────────────────────────────────
 COPY server/ ./server/
 COPY packages/shared/foundation/core/ ./packages/shared/foundation/core/
 COPY packages/shared/foundation/config/ ./packages/shared/foundation/config/
- 
+
 # ─── Build ────────────────────────────────────────────────────────────────────
 # Compile adapters and services first (server imports from their dist/index.js).
 # Then compile the server itself. pnpm respects the workspace graph so order
 # within each filter pass is dependency-driven.
 RUN pnpm --filter "@athyper/adapter-*" --filter "@athyper/svc-*" run build
 RUN pnpm --filter "@athyper/runtime-server" run build
- 
+
 # Strip devDependencies (tsx, typescript, vitest, pino-pretty, etc.) from the
 # installed tree. Compiled dist/ artifacts are already on disk; only runtime
 # deps remain. This runs in-place — no separate stage needed.
-RUN pnpm prune --prod
- 
+RUN CI=true pnpm prune --prod
+
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 # Non-root for hardened runtime (mirrors apps/web/Dockerfile pattern).
 USER node
 WORKDIR /app/server
- 
+
 EXPOSE 3000
- 
+
 # Prod: compiled JS, no tsx/hot-reload overhead.
 CMD ["node", "dist/src/app.js"]

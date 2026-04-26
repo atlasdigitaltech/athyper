@@ -2,11 +2,15 @@
  * @athyper/document-runtime — Approvable Document Shell
  *
  * Full page wrapper for approvable documents.
- * Layout order (same as DocumentShell):
+ * Layout order:
  *   1. Process Chain Ribbon (optional)
- *   2. ApprovableDocumentHeader  ← replaces DocumentHeader
- *   3. Exception Stack (optional)
- *   4. Tab content / children
+ *   2. ApprovableDocumentHeader — identity + P1.5 exceptions + KPI + process + tabs
+ *   3. Process Health Strip (optional)
+ *   4. Validation Banner (optional)
+ *   5. Tab content / children
+ *
+ * Exceptions are promoted to P1.5 inside the header card (between identity
+ * and KPI strip) so blocking errors are always visible without scrolling.
  *
  * Adds `persistMode` prop: when true the header's display mode is
  * automatically read from / written to localStorage per document type
@@ -23,7 +27,6 @@ import {
   type ValidationNotice,
 } from "@athyper/api-contracts/documents";
 import { ProcessChainRibbon } from "../chain";
-import { ExceptionStack } from "../exceptions";
 import { ProcessHealthStrip } from "../health";
 import { ValidationBanner } from "../validation";
 import {
@@ -115,7 +118,7 @@ export function ApprovableDocumentShell({
       {/* 1. Process Chain Ribbon */}
       {chain && chain.nodes.length > 0 && <ProcessChainRibbon chain={chain} />}
 
-      {/* 2. Approvable Document Header (with tabs embedded) */}
+      {/* 2. Approvable Document Header (with P1.5 exceptions + tabs embedded) */}
       <ApprovableDocumentHeader
         data={data}
         initialMode={effectiveInitialMode}
@@ -125,6 +128,7 @@ export function ApprovableDocumentShell({
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={onTabChange}
+        exceptions={exceptions}
       />
 
       {/* 3. Process Health Strip */}
@@ -143,12 +147,7 @@ export function ApprovableDocumentShell({
         />
       )}
 
-      {/* 5. Exception Stack */}
-      {exceptions && exceptions.length > 0 && (
-        <ExceptionStack exceptions={exceptions} />
-      )}
-
-      {/* 6. Tab content */}
+      {/* 5. Tab content */}
       {children}
     </div>
   );
