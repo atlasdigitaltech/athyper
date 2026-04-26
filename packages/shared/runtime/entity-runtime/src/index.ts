@@ -11,6 +11,8 @@
  *   import { registerDefaults } from "@athyper/entity-runtime/field-renderers";
  *   import { ActionBar } from "@athyper/entity-runtime/actions";
  */
+export { PageShell, type PageShellProps } from "./shell";
+export { PageHeader, TypeChip, ModeBadge, type PageHeaderProps } from "./shell";
 export { EntityListPage, type EntityListPageProps } from "./list";
 export { KanbanView, type KanbanViewProps, findKanbanGroupField } from "./list";
 export { DashboardView, type DashboardViewProps } from "./list";
@@ -22,3 +24,19 @@ export {
   registerFieldRenderer, resolveFieldRenderer, registerDefaults,
   type FieldRendererProps,
 } from "./field-renderers";
+export {
+  DEFAULT_DISPLAY_CONFIG,
+  resolvePresentationConfig,
+  detailRendererMap,
+  listRendererMap,
+  registerLinesRenderer,
+  resolveLinesRenderer,
+  type ResolvedDisplayConfig,
+  type DetailRenderer,
+  type ListRenderer,
+  type ViewMode,
+  type LinesRenderer,
+  type LinesRendererProps,
+  type DetailRendererKey,
+  type ListRendererKey,
+} from "./metadata";

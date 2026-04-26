@@ -12,7 +12,7 @@
  * ── ROUTING INVARIANT (RUNTIME_ROUTING_SPEC §2) ───────────────────────────────
  * Route and render decisions MUST use:
  *   entity_class → resolveRuntimeFamily()        (list-page family: master/document/ledger)
- *   display_config.detail_renderer → resolveDetailRenderer()  (detail renderer)
+ *   display_config.detail_renderer → resolveRendererFamily()  (detail renderer)
  *
  * NEVER use entity.kind as a routing discriminant.
  *   • entity.kind is a meta-category on the control.entity row itself

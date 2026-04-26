@@ -301,7 +301,27 @@ CREATE TRIGGER trg_oh_status_changed
 
 -- =============================================================================
 -- §PI  document.purchase_invoice
+-- Trigger ordering (alphabetical — PostgreSQL fires BEFORE triggers by name):
+--   trg_pi_before_insert       ← number generation + created_by (INSERT only)
+--   trg_pi_immutability_guard  ← blocks edits on terminal/posted invoices
+--   trg_pi_status_changed      ← sets status_changed_at/by
+--   trg_pi_status_guard        ← validates state-machine transitions
+--   trg_pi_updated_at          ← sets updated_at
 -- =============================================================================
+
+-- B1: Invoice number auto-generation + code sync
+DROP TRIGGER IF EXISTS trg_pi_before_insert ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_before_insert
+    BEFORE INSERT ON document.purchase_invoice
+    FOR EACH ROW EXECUTE FUNCTION document.trg_pi_before_insert();
+
+-- G1: Immutability guard — blocks direct field edits on posted/terminal invoices
+DROP TRIGGER IF EXISTS trg_pi_immutability_guard ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_immutability_guard
+    BEFORE UPDATE ON document.purchase_invoice
+    FOR EACH ROW
+    WHEN (OLD.status IN ('posted','reversed','cancelled','fully_paid','rejected'))
+    EXECUTE FUNCTION document.trg_pi_immutability_guard();
 
 DROP TRIGGER IF EXISTS trg_pi_updated_at ON document.purchase_invoice;
 CREATE TRIGGER trg_pi_updated_at BEFORE UPDATE ON document.purchase_invoice
@@ -311,14 +331,47 @@ DROP TRIGGER IF EXISTS trg_pi_status_changed ON document.purchase_invoice;
 CREATE TRIGGER trg_pi_status_changed BEFORE UPDATE ON document.purchase_invoice
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+-- G2: Status transition guard — validates state machine via snapshot.status_route
+DROP TRIGGER IF EXISTS trg_pi_status_guard ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_status_guard
+    BEFORE UPDATE OF status ON document.purchase_invoice
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION document.trg_pi_status_guard();
+
+COMMENT ON TRIGGER trg_pi_status_guard ON document.purchase_invoice IS
+    'Validates status transitions against snapshot.status_route compiled_json. '
+    'Falls through to allow if no compiled snapshot exists (lifecycle not yet seeded).';
+
 
 -- =============================================================================
 -- §PIL  document.purchase_invoice_line
+-- Trigger ordering:
+--   trg_pil_immutability_guard ← blocks line mutations on non-draft invoices
+--   trg_pil_updated_at         ← sets updated_at
+-- + AFTER trigger:
+--   trg_pil_sync_header        ← recomputes invoice header totals
 -- =============================================================================
+
+-- G1: Line immutability — block mutations when invoice is not draft/proforma
+DROP TRIGGER IF EXISTS trg_pil_immutability_guard ON document.purchase_invoice_line;
+CREATE TRIGGER trg_pil_immutability_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON document.purchase_invoice_line
+    FOR EACH ROW EXECUTE FUNCTION document.trg_pil_immutability_guard();
 
 DROP TRIGGER IF EXISTS trg_pil_updated_at ON document.purchase_invoice_line;
 CREATE TRIGGER trg_pil_updated_at BEFORE UPDATE ON document.purchase_invoice_line
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- G2: Header totals sync — AFTER trigger keeps line_count + amounts in sync
+DROP TRIGGER IF EXISTS trg_pil_sync_header ON document.purchase_invoice_line;
+CREATE TRIGGER trg_pil_sync_header
+    AFTER INSERT OR UPDATE OR DELETE ON document.purchase_invoice_line
+    FOR EACH ROW EXECUTE FUNCTION document.trg_pil_sync_header();
+
+COMMENT ON TRIGGER trg_pil_sync_header ON document.purchase_invoice_line IS
+    'Calls fn_refresh_purchase_invoice_totals after every line change. '
+    'Keeps line_count, subtotal_amount, tax_amount, total_amount in sync on the header.';
 
 
 -- =============================================================================

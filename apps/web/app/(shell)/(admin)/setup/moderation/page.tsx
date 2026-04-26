@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Flag, RefreshCw, CheckCircle2, XCircle, ShieldAlert } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { RowCard } from "@athyper/ui/data";
 import {
   Button, Badge, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,

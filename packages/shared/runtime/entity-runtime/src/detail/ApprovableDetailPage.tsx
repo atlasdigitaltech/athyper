@@ -26,17 +26,18 @@ import {
   Badge, Button, Card, CardContent,
   Skeleton, Tooltip, TooltipContent, TooltipTrigger,
 } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
+import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import {
   ApprovableDocumentShell,
   buildOrchestratorFromRecord,
   buildApprovableHeaderFromRecord,
   AmountSummaryCard,
-  LinesGrid,
   FlowModal,
   type ApprovableReference,
 } from "@athyper/document-runtime";
+import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
+import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
@@ -68,55 +69,41 @@ export interface ApprovableDetailPageProps {
 
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
+// LinesPanel is a pure display component — queries are lifted to ApprovableDetailPage
+// so data is prefetched on page load, not on first tab click.
+// Renderer is resolved from display_config.lines_renderer via the runtime-shared
+// registry — no entity-code branching here.
 function LinesPanel({
   entityCode, recordId, companyCodeId, record,
+  lines, distributions, isLoading, onRefresh, linesRenderer,
 }: {
   entityCode: string; recordId: string;
   companyCodeId?: string; record?: Record<string, unknown>;
+  lines: DocumentLine[];
+  distributions: AccountingDistribution[];
+  isLoading: boolean;
+  onRefresh: () => void;
+  linesRenderer: string;
 }) {
-  const qc = useQueryClient();
+  const RendererComponent = resolveLinesRenderer(linesRenderer);
+  if (!RendererComponent) return null;
 
-  const linesQuery = useQuery<{ data: import("@athyper/api-contracts/documents").DocumentLine[] }>({
-    queryKey: ["record-lines", entityCode, recordId],
-    queryFn: async ({ signal }) => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/lines`,
-        { signal },
-      );
-      if (!res.ok) return { data: [] };
-      return res.json() as Promise<{ data: import("@athyper/api-contracts/documents").DocumentLine[] }>;
-    },
-    staleTime: 60_000,
-  });
-
-  const distQuery = useQuery<{ data: import("@athyper/api-contracts/documents").AccountingDistribution[] }>({
-    queryKey: ["record-distributions", entityCode, recordId],
-    queryFn: async ({ signal }) => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/distributions`,
-        { signal },
-      );
-      if (!res.ok) return { data: [] };
-      return res.json() as Promise<{ data: import("@athyper/api-contracts/documents").AccountingDistribution[] }>;
-    },
-    staleTime: 60_000,
-  });
-
-  function handleRefresh() {
-    void qc.invalidateQueries({ queryKey: ["record-lines",         entityCode, recordId] });
-    void qc.invalidateQueries({ queryKey: ["record-distributions", entityCode, recordId] });
-  }
+  const currencyCode =
+    typeof record?.["transaction_currency"] === "string" ? record["transaction_currency"]
+    : typeof record?.["currency_code"]       === "string" ? record["currency_code"]
+    : "USD";
 
   return (
-    <LinesGrid
+    <RendererComponent
       entityCode={entityCode}
       recordId={recordId}
       companyCodeId={companyCodeId}
       record={record}
-      lines={linesQuery.data?.data ?? []}
-      distributions={distQuery.data?.data ?? []}
-      isLoading={linesQuery.isLoading}
-      onRefresh={handleRefresh}
+      lines={lines}
+      distributions={distributions}
+      isLoading={isLoading}
+      onRefresh={onRefresh}
+      currencyCode={currencyCode}
     />
   );
 }
@@ -502,19 +489,19 @@ function DocumentFieldsPanel({
       {grouped.map((group) => (
         <Card key={group.key}>
           <CardContent className="pt-5">
-            <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h4 className="mb-3 text-xs font-medium text-muted-foreground">
               {group.label}
             </h4>
-            <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
               {group.fields.map((field) => {
                 const raw = data[field.name] ?? data[field.column_name ?? ""];
                 const { text } = fmtFieldValue(raw, field.data_type, resolvedRefs);
                 return (
                   <div key={field.name}>
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-1.5">
+                    <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
                       {field.label ?? field.name}
                     </dt>
-                    <dd className="text-sm font-semibold text-foreground leading-snug">
+                    <dd className="text-sm font-normal text-foreground leading-snug">
                       {text}
                     </dd>
                   </div>
@@ -536,10 +523,17 @@ export function ApprovableDetailPage({
   operations,
   recordId,
 }: ApprovableDetailPageProps) {
+  const router  = useRouter();
   const data    = record.data;
 
   const detailConfig  = resolveDetailConfig(entity);
   const resolvedTabs  = resolveTabs(entity, null, []);
+
+  // display_config v2 — lines_renderer drives which tab/renderer is active.
+  // null means this entity has no line items (master / non-document entities).
+  const resolvedDisplayConfig = resolveDisplayConfig(entity.display_config as Record<string, unknown>);
+  const linesRenderer   = resolvedDisplayConfig.lines_renderer;
+  const hasLinesSection = linesRenderer !== null;
 
   // ── MODAL operation dispatch ───────────────────────────────────────────────
   // Handles entity_operation rows where handler_type='MODAL'. Fetches the
@@ -765,7 +759,7 @@ export function ApprovableDetailPage({
   const tabs = [
     { id: "__overview", label: "Overview" },
     ...sectionTabs,
-    ...(resolvedTabs.includes("lines")         ? [{ id: "__lines",         label: "Lines" }]         : []),
+    ...(hasLinesSection                         ? [{ id: "__lines",         label: "Lines" }]         : []),
     ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Distributions" }] : []),
     ...(resolvedTabs.includes("workflow")      ? [{ id: "__workflow",      label: "Workflow" }]      : []),
     ...(resolvedTabs.includes("attachments")   ? [{ id: "__attachments",   label: "Attachments" }]   : []),
@@ -783,6 +777,48 @@ export function ApprovableDetailPage({
 
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
 
+  // ── Lifted queries — prefetched on page load so tab switches are instant ───
+  // Both queries share the same staleTime; onLinesRefresh invalidates both so
+  // editing a line immediately refreshes the Distributions panel too.
+  const queryClient = useQueryClient();
+
+  const linesQuery = useQuery<{ data: DocumentLine[] }>({
+    queryKey: ["record-lines", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/lines`,
+        { signal },
+      );
+      if (!res.ok) throw new Error(`lines ${res.status}`);
+      return res.json() as Promise<{ data: DocumentLine[] }>;
+    },
+    enabled: hasLinesSection,
+    staleTime: 60_000,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  const distQuery = useQuery<{ data: AccountingDistribution[] }>({
+    queryKey: ["record-distributions", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/distributions`,
+        { signal },
+      );
+      if (!res.ok) throw new Error(`distributions ${res.status}`);
+      return res.json() as Promise<{ data: AccountingDistribution[] }>;
+    },
+    enabled: hasLinesSection || resolvedTabs.includes("distributions"),
+    staleTime: 60_000,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  function onLinesRefresh() {
+    void queryClient.invalidateQueries({ queryKey: ["record-lines", entity.entity_code, recordId] });
+    void queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, recordId] });
+  }
+
   const title = detailConfig.titleField
     ? String(data[detailConfig.titleField.name] ?? entity.entity_code)
     : entity.entity_code;
@@ -792,16 +828,42 @@ export function ApprovableDetailPage({
   }
 
   return (
-    <PageFrame title={title}>
-      <ApprovableDocumentShell
+    <>
+    <ApprovableDocumentShell
         data={headerData}
         persistMode
+        onBack={() => router.back()}
         validationNotices={orchestrator.validationNotices}
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onAction={async (action, remarks) => {
           if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
+
+          // view_je — navigate to the posted JE using the UUID on the record
+          if (action === "view_je") {
+            const jeId = record.data["ap_je_id"] as string | null | undefined;
+            if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
+            return;
+          }
+
+          // NAVIGATE operations — substitute {id} and push client-side
+          const op = (operations ?? []).find((o) => o.permission_code === action);
+          if (op?.handler_type === "NAVIGATE" && op.handler_target) {
+            const url = op.handler_target
+              .replace(/\{id\}/g, record.id)
+              .replace(/\{recordId\}/g, recordId);
+            router.push(url);
+            return;
+          }
+
+          // MODAL operations whose handler_target has no server handler yet —
+          // guard here to avoid a 400 from the action dispatcher
+          if (action === "allocate_payment") {
+            router.push(`/finance/ap?invoice=${record.id}`);
+            return;
+          }
+
           await opDispatch.dispatch(action, operations ?? [], { remarks });
         }}
       >
@@ -824,15 +886,15 @@ export function ApprovableDetailPage({
           activeTab === section.group.group_key && idx > 0 ? (
             <Card key={section.group.group_key}>
               <CardContent className="pt-5">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
                   {section.fields.map((field) => {
                     const Renderer = resolveFieldRenderer(field);
                     return (
                       <div key={field.name}>
-                        <dt className="text-xs font-medium text-muted-foreground">
+                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
                           {field.label ?? field.name}
                         </dt>
-                        <dd className="mt-1">
+                        <dd className="text-sm font-normal text-foreground leading-snug">
                           <Renderer value={data[field.name]} field={field} mode="view" />
                         </dd>
                       </div>
@@ -852,6 +914,11 @@ export function ApprovableDetailPage({
               recordId={recordId}
               companyCodeId={companyCodeId}
               record={data}
+              lines={linesQuery.data?.data ?? []}
+              distributions={distQuery.data?.data ?? []}
+              isLoading={linesQuery.isLoading}
+              onRefresh={onLinesRefresh}
+              linesRenderer={linesRenderer ?? "generic"}
             />
           </Card>
         )}
@@ -986,6 +1053,6 @@ export function ApprovableDetailPage({
           submitting={opDispatch.isSubmitting}
         />
       )}
-    </PageFrame>
+    </>
   );
 }

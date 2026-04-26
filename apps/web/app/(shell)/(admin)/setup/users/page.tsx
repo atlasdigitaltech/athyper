@@ -13,7 +13,7 @@ import {
   User, RefreshCw, Shield, Key, Users, Search, Lock, UserCheck,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { FilterPillBar } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, Skeleton,

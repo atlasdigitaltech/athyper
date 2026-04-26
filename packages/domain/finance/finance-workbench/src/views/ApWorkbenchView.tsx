@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ChevronDown, ChevronRight, CreditCard } from "lucide-react";
+import { ChevronDown, ChevronRight, CreditCard, Plus } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Skeleton,
@@ -13,6 +13,7 @@ import { fmtCurrency, fmtDate } from "../components/format";
 import {
   useApInvoices, useApPayments, useApAging, useArReceipts,
   useApInvoiceDetail, useApPaymentMethods, useCreateApPayment,
+  useCreateApInvoice,
 } from "../hooks/useApWorkbench";
 import type { ApInvoice } from "../hooks/useApWorkbench";
 
@@ -301,12 +302,128 @@ function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
   );
 }
 
+// ── New Invoice dialog ────────────────────────────────────────────────────────
+
+function NewInvoiceDialog({
+  scope,
+  open,
+  onOpenChange,
+}: {
+  scope: FinanceScope;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const createInvoice = useCreateApInvoice(scope);
+  const [source, setSource]     = useState<"non_po" | "po_based">("non_po");
+  const [currency, setCurrency] = useState("USD");
+  const [notes, setNotes]       = useState("");
+  const [error, setError]       = useState<string | null>(null);
+
+  function reset() {
+    setSource("non_po");
+    setCurrency("USD");
+    setNotes("");
+    setError(null);
+  }
+
+  async function handleSubmit() {
+    setError(null);
+    if (!scope.scopeId) { setError("No company selected in scope"); return; }
+    try {
+      await createInvoice.mutateAsync({
+        invoice_source:  source,
+        // Handler accepts either a UUID or a company code string
+        company_code_id: scope.scopeId,
+        currency_code:   currency.trim().toUpperCase() || "USD",
+        notes:           notes.trim() || undefined,
+      });
+      reset();
+      onOpenChange(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create invoice");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>New AP Invoice</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <div className="text-doc-support text-muted-foreground mb-1">Invoice Source</div>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value as "non_po" | "po_based")}
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            >
+              <option value="non_po">Non-PO (direct)</option>
+              <option value="po_based">PO-Based</option>
+              <option value="contract_based">Contract-Based</option>
+              <option value="one_time_vendor">One-Time Vendor</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="text-doc-support text-muted-foreground mb-1">Currency</div>
+            <input
+              type="text"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              placeholder="USD"
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background font-mono"
+            />
+          </div>
+
+          <div>
+            <div className="text-doc-support text-muted-foreground mb-1">Notes (optional)</div>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Brief description"
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-destructive rounded-md bg-destructive/10 px-2 py-1.5">{error}</p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs border rounded-md hover:bg-muted/40"
+            onClick={() => { reset(); onOpenChange(false); }}
+            disabled={createInvoice.isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+            onClick={() => void handleSubmit()}
+            disabled={createInvoice.isPending || !scope.scopeId}
+          >
+            {createInvoice.isPending ? "Creating…" : "Create Invoice"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── AP Invoices tab ───────────────────────────────────────────────────────────
 
 function InvoicesTab({ scope }: { scope: FinanceScope }) {
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [page, setPage] = useState(1);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter]   = useState<string>("");
+  const [page, setPage]                   = useState(1);
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
   const { data, isLoading, isError } = useApInvoices(scope, {
     status: statusFilter || undefined,
     page,
@@ -330,14 +447,24 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
           className="h-7 rounded-md border px-2 text-xs bg-background"
         >
           <option value="">All statuses</option>
-          {["draft","submitted","approved","posted","paid","overdue","voided"].map((s) => (
-            <option key={s} value={s}>{s}</option>
+          {["proforma","draft","pending_approval","approved","posted","partially_paid","fully_paid","rejected","cancelled","reversed"].map((s) => (
+            <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
           ))}
         </select>
         <span className="text-doc-support text-muted-foreground ml-auto">
           {data?.total ?? 0} invoice{data?.total !== 1 ? "s" : ""}
         </span>
+        <button
+          type="button"
+          className="flex items-center gap-1 px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          onClick={() => setNewDialogOpen(true)}
+        >
+          <Plus className="h-3 w-3" />
+          New Invoice
+        </button>
       </div>
+
+      <NewInvoiceDialog scope={scope} open={newDialogOpen} onOpenChange={setNewDialogOpen} />
 
       <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-xs">

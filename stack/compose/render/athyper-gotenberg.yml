@@ -58,6 +58,7 @@ services:
       resources:
         limits:
           memory: "${GOTENBERG_MEMORY_LIMIT}"
+          cpus: "${GOTENBERG_CPU_LIMIT:-1.0}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s

@@ -422,6 +422,9 @@ importers:
       '@athyper/metadata-client':
         specifier: workspace:*
         version: link:../../data/metadata-client
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -474,6 +477,9 @@ importers:
       '@athyper/query':
         specifier: workspace:*
         version: link:../../data/query
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
       '@athyper/workflow-ui':
         specifier: workspace:*
         version: link:../workflow-ui
@@ -499,6 +505,28 @@ importers:
       next:
         specifier: ^16.2.4
         version: 16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/runtime/runtime-shared:
+    dependencies:
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../foundation/theme
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../foundation/config
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui/ui
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
       react:
         specifier: ^19.2.5
         version: 19.2.5

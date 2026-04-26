@@ -43,6 +43,14 @@ import {
   extractOrgHeaders,
 } from "@athyper/svc-shared";
 import { handlePromoteProforma } from "../../business/ap/promote-proforma.handler.js";
+import { handleSubmitForApproval } from "../../business/ap/invoice-submit.handler.js";
+import { handlePostInvoice }      from "../../business/ap/invoice-posting.service.js";
+import { handleReverseInvoice }   from "../../business/ap/invoice-posting.service.js";
+import {
+  handlePostPayment,
+  handleSubmitPayment,
+  handleVoidPayment,
+} from "../../business/ap/payment-posting.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -265,6 +273,28 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       const target  = (operation.handler_target ?? code).toLowerCase();
       const now     = new Date();
 
+      // ── Dispatch: payment_entry lifecycle handlers (GL-aware) ─────────────────
+      if (entityCode === "payment_entry") {
+        if (target === "post") {
+          const { status, body: respBody } = await handlePostPayment(db, tenantId, recordId, principalId, logger);
+          if (status === 200) logger?.info("action_dispatch_post_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+        if (target === "submit") {
+          const { status, body: respBody } = await handleSubmitPayment(db, tenantId, recordId, principalId, logger);
+          if (status === 200) logger?.info("action_dispatch_submit_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+        if (target === "void") {
+          const { status, body: respBody } = await handleVoidPayment(db, tenantId, recordId, principalId, body, logger);
+          if (status === 200) logger?.info("action_dispatch_void_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+      }
+
       // ── Dispatch: status transition ───────────────────────────────────────────
       const targetStatus = TARGET_STATUS[target];
       if (targetStatus) {
@@ -376,6 +406,39 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           );
           if (status === 200) {
             logger?.info("action_dispatch_promote_proforma", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "submit_for_approval") {
+          const { status, body: respBody } = await handleSubmitForApproval(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 200) {
+            logger?.info("action_dispatch_submit_for_approval", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "post_invoice") {
+          const { status, body: respBody } = await handlePostInvoice(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 200) {
+            logger?.info("action_dispatch_post_invoice", { entity: entityCode, tenantId, recordId });
+          }
+          res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "reverse_invoice") {
+          const { status, body: respBody } = await handleReverseInvoice(
+            db, tenantId, recordId, principalId, body, logger,
+          );
+          if (status === 201) {
+            logger?.info("action_dispatch_reverse_invoice", { entity: entityCode, tenantId, recordId });
           }
           res.status(status).json(respBody);
           return;

@@ -14,7 +14,7 @@ import { cn } from "@athyper/theme/utils";
 import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import { type AmountBreakdownLine } from "@athyper/api-contracts/documents";
-import { getCurrencySymbol, fmtNum } from "../_shared/format";
+import { getCurrencySymbol, fmtNum } from "@athyper/runtime-shared/core";
 
 export interface AmountSummaryCardProps {
   lines: AmountBreakdownLine[];

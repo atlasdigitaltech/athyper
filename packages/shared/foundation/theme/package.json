@@ -10,7 +10,7 @@
     "./base.css": "./src/base.css",
     "./presets/*.css": "./src/presets/*.css",
     "./tailwind-preset": "./src/tailwind-preset.ts",
-    "./semantic-colors": "./src/semantic-colors.ts",
+    "./semantic-colors": "./src/semanticColors.ts",
     "./utils": "./src/utils.ts",
     "./contracts": "./src/theme-contract.ts",
     "./presets": "./src/presets/registry.ts",

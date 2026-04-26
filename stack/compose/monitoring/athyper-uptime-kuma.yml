@@ -50,5 +50,6 @@ services:
       - traefik.http.routers.uptime-kuma.entrypoints=websecure
       - traefik.http.routers.uptime-kuma.tls=true
       - traefik.http.routers.uptime-kuma.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.uptime-kuma.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
       - traefik.http.routers.uptime-kuma.middlewares=${DASHBOARD_AUTH_MW}

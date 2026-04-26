@@ -10,7 +10,6 @@
     "./primitives": "./src/primitives/index.ts",
     "./composites": "./src/composites/index.ts",
     "./data": "./src/data/index.ts",
-    "./feedback": "./src/feedback/index.ts",
     "./layout": "./src/layout/index.ts"
   },
   "scripts": {

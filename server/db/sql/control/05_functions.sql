@@ -3056,3 +3056,306 @@ COMMENT ON FUNCTION control.trg_fn_validate_target_entity() IS
     'Validates entity_relation.target_entity against control.entity.entity_code. '
     'Platform-global: any registered entity (including tenant-owned) may be targeted. '
     'Attached to entity_relation BEFORE INSERT OR UPDATE OF target_entity.';
+
+-- ============================================================================
+-- §RES  Procurement Line Intent Resolution Engine (Phase 1 — Intake Pipeline)
+--
+-- Three functions implement the 3-step resolution chain called by
+-- IntentResolutionService.ts:
+--
+--   Step 2 → control.resolve_spend_category_policy()
+--            Merges master.spend_category base attributes with
+--            master.company_code_spend_policy overrides.
+--
+--   Step 3 → control.resolve_classification_to_intent()
+--            Walks classification_to_intent_rule rows in priority order,
+--            evaluating condition_type against the transaction context.
+--            Returns first match or FAILED.
+--
+--   Step 4 → control.resolve_intent_to_profile()
+--            Checks intent_profile_override first (regulatory gate), then
+--            walks intent_to_accounting_profile_rule with NULL-wildcard
+--            predicate matching. Returns first match or FAILED.
+--
+-- All three functions return jsonb so a single SQL round-trip is sufficient.
+-- CREATE OR REPLACE — safe to re-run.
+-- ============================================================================
+
+-- ── Step 2: spend category policy ────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION control.resolve_spend_category_policy(
+    p_tenant_id         uuid,
+    p_spend_category_id uuid,
+    p_company_code_id   uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SET search_path = control, master
+AS $$
+DECLARE
+    v_sc     record;
+    v_policy record;
+BEGIN
+    SELECT sc.id, sc.code, sc.name, sc.procurement_type, sc.default_intent_id,
+           sc.is_classification_required, sc.is_hs_required,
+           sc.is_regulated, sc.visibility
+    INTO   v_sc
+    FROM   master.spend_category sc
+    WHERE  sc.id        = p_spend_category_id
+      AND  sc.tenant_id = p_tenant_id
+      AND  sc.is_active = true;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('error', 'CATEGORY_NOT_FOUND');
+    END IF;
+
+    SELECT csp.mapping_mode,
+           csp.default_intent_id,
+           csp.capex_screening_threshold,
+           csp.asset_class_id,
+           csp.override_visibility,
+           csp.override_is_classification_required,
+           csp.override_is_hs_required,
+           csp.override_is_regulated
+    INTO   v_policy
+    FROM   master.company_code_spend_policy csp
+    WHERE  csp.tenant_id        = p_tenant_id
+      AND  csp.company_code_id  = p_company_code_id
+      AND  csp.spend_category_id = p_spend_category_id
+      AND  csp.status           = 'active'
+    LIMIT  1;
+
+    RETURN jsonb_strip_nulls(jsonb_build_object(
+        'category_id',             p_spend_category_id,
+        'category_code',           v_sc.code,
+        'category_name',           v_sc.name,
+        'procurement_type',        v_sc.procurement_type,
+        'resolved_mapping_mode',   COALESCE(v_policy.mapping_mode, 'ALLOW'),
+        'default_intent_id',       COALESCE(v_policy.default_intent_id, v_sc.default_intent_id),
+        'capex_screening_threshold', v_policy.capex_screening_threshold,
+        'asset_class_id',          v_policy.asset_class_id,
+        'classification_required', COALESCE(v_policy.override_is_classification_required,
+                                            v_sc.is_classification_required),
+        'hs_required',             COALESCE(v_policy.override_is_hs_required,
+                                            v_sc.is_hs_required),
+        'is_regulated',            COALESCE(v_policy.override_is_regulated,
+                                            v_sc.is_regulated),
+        'visibility',              COALESCE(v_policy.override_visibility,
+                                            v_sc.visibility)
+    ));
+END;
+$$;
+
+COMMENT ON FUNCTION control.resolve_spend_category_policy(uuid, uuid, uuid) IS
+    'Step 2 of the procurement intake pipeline. Merges spend_category base attributes '
+    'with company_code_spend_policy overrides. Returns ALLOW/DENY mapping_mode, '
+    'effective intent, capex threshold, and classification/HS requirement flags. '
+    'Called by IntentResolutionService.ts.';
+
+-- ── Step 3: classification → business intent ──────────────────────────────────
+
+CREATE OR REPLACE FUNCTION control.resolve_classification_to_intent(
+    p_tenant_id             uuid,
+    p_classification_source text,
+    p_classification_id     uuid,
+    p_direction             text,
+    p_flow_code             text,
+    p_amount                numeric,
+    p_currency_code         text,
+    p_is_recurring          boolean,
+    p_is_cross_border       boolean,
+    p_is_intercompany       boolean,
+    p_company_code_id       uuid,
+    p_doc_type              text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SET search_path = control
+AS $$
+DECLARE
+    v_rule      record;
+    v_count     smallint := 0;
+    v_matched   boolean;
+    v_threshold numeric;
+    v_expl      text;
+BEGIN
+    FOR v_rule IN
+        SELECT r.id, r.condition_type, r.condition_config,
+               r.resolved_intent_id, r.resolved_domain,
+               r.explanation_template, r.confidence, r.priority
+        FROM   control.classification_to_intent_rule r
+        WHERE  r.tenant_id              = p_tenant_id
+          AND  r.classification_source  = p_classification_source
+          AND  r.classification_id      = p_classification_id
+          AND  r.is_active              = true
+          AND  (r.effective_from IS NULL OR r.effective_from <= CURRENT_DATE)
+          AND  (r.effective_to   IS NULL OR r.effective_to   >= CURRENT_DATE)
+          AND  (r.direction IS NULL OR r.direction = p_direction)
+          AND  (r.applies_to_flows IS NULL OR p_flow_code = ANY(r.applies_to_flows))
+        ORDER  BY r.priority ASC
+    LOOP
+        v_count   := v_count + 1;
+        v_matched := false;
+
+        CASE v_rule.condition_type
+        WHEN 'IS_RECURRING' THEN
+            v_matched := (p_is_recurring = true);
+
+        WHEN 'IS_ONE_TIME' THEN
+            v_matched := (p_is_recurring IS NULL OR p_is_recurring = false);
+
+        WHEN 'AMOUNT_ABOVE' THEN
+            v_threshold := (v_rule.condition_config->>'threshold')::numeric;
+            v_matched   := (p_amount IS NOT NULL AND p_amount > v_threshold);
+
+        WHEN 'AMOUNT_BELOW' THEN
+            v_threshold := (v_rule.condition_config->>'threshold')::numeric;
+            v_matched   := (p_amount IS NOT NULL AND p_amount < v_threshold);
+
+        WHEN 'CROSS_BORDER' THEN
+            v_matched := (p_is_cross_border = true);
+
+        WHEN 'COMPANY_MATCH' THEN
+            v_matched := (p_company_code_id::text = v_rule.condition_config->>'company_code_id');
+
+        WHEN 'DOC_TYPE_MATCH' THEN
+            v_matched := (p_doc_type = v_rule.condition_config->>'doc_type');
+
+        WHEN 'FLOW_MATCH' THEN
+            v_matched := (p_flow_code = v_rule.condition_config->>'flow_code');
+
+        WHEN 'FALLBACK' THEN
+            v_matched := true;
+
+        ELSE
+            v_matched := false;
+        END CASE;
+
+        CONTINUE WHEN NOT v_matched;
+
+        -- Build explanation, substituting template variables
+        v_expl := COALESCE(v_rule.explanation_template, 'Matched rule ' || v_rule.id);
+        v_expl := replace(v_expl, '{amount}',    COALESCE(p_amount::text, '0'));
+        v_expl := replace(v_expl, '{threshold}', COALESCE(v_rule.condition_config->>'threshold', ''));
+        v_expl := replace(v_expl, '{currency}',  COALESCE(p_currency_code, ''));
+
+        RETURN jsonb_build_object(
+            'matched',          true,
+            'intent_id',        v_rule.resolved_intent_id,
+            'domain',           v_rule.resolved_domain,
+            'method',           'RULE_MATCH',
+            'rule_id',          v_rule.id,
+            'confidence',       v_rule.confidence,
+            'explanation',      v_expl,
+            'rules_evaluated',  v_count
+        );
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'matched',         false,
+        'method',          'FAILED',
+        'confidence',      0,
+        'rules_evaluated', v_count
+    );
+END;
+$$;
+
+COMMENT ON FUNCTION control.resolve_classification_to_intent(
+    uuid, text, uuid, text, text, numeric, text, boolean, boolean, boolean, uuid, text
+) IS
+    'Step 3 of the procurement intake pipeline. Evaluates classification_to_intent_rule '
+    'rows for the given classification in priority order. Supports 16 condition types. '
+    'Returns first match with explanation, or FAILED. Called by IntentResolutionService.ts.';
+
+-- ── Step 4: business intent → accounting profile ──────────────────────────────
+
+CREATE OR REPLACE FUNCTION control.resolve_intent_to_profile(
+    p_tenant_id         uuid,
+    p_intent_id         uuid,
+    p_intent_domain     text,
+    p_direction         text,
+    p_flow_code         text,
+    p_company_code_id   uuid,
+    p_doc_type          text,
+    p_currency_code     text,
+    p_amount            numeric,
+    p_is_cross_border   boolean,
+    p_is_intercompany   boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SET search_path = control
+AS $$
+DECLARE
+    v_override record;
+    v_rule     record;
+BEGIN
+    -- Regulatory overrides take precedence (approved governance gate)
+    SELECT o.resolved_profile_config_id, o.reason
+    INTO   v_override
+    FROM   control.intent_profile_override o
+    WHERE  o.tenant_id  = p_tenant_id
+      AND  o.intent_id  = p_intent_id
+      AND  o.status     = 'active'
+      AND  (o.company_code_id IS NULL OR o.company_code_id = p_company_code_id)
+      AND  (o.direction       IS NULL OR o.direction       = p_direction)
+      AND  (o.flow_code       IS NULL OR o.flow_code       = p_flow_code)
+    LIMIT  1;
+
+    IF FOUND THEN
+        RETURN jsonb_build_object(
+            'matched',           true,
+            'profile_config_id', v_override.resolved_profile_config_id,
+            'method',            'OVERRIDE',
+            'confidence',        1.0,
+            'explanation',       COALESCE(v_override.reason, 'Regulatory override active')
+        );
+    END IF;
+
+    -- Walk rule table; NULL predicate = wildcard (matches any value)
+    SELECT r.resolved_profile_config_id, r.explanation_template,
+           r.confidence, r.id
+    INTO   v_rule
+    FROM   control.intent_to_accounting_profile_rule r
+    WHERE  r.tenant_id    = p_tenant_id
+      AND  r.is_active    = true
+      AND  (r.intent_id     IS NULL OR r.intent_id     = p_intent_id)
+      AND  (r.intent_domain IS NULL OR r.intent_domain = p_intent_domain)
+      AND  (r.direction     IS NULL OR r.direction     = p_direction)
+      AND  (r.flow_code     IS NULL OR r.flow_code     = p_flow_code)
+      AND  (r.company_code_id IS NULL OR r.company_code_id = p_company_code_id)
+      AND  (r.doc_type      IS NULL OR r.doc_type      = p_doc_type)
+      AND  (r.currency_code IS NULL OR r.currency_code = p_currency_code)
+      AND  (r.is_cross_border IS NULL OR r.is_cross_border = p_is_cross_border)
+      AND  (r.is_intercompany IS NULL OR r.is_intercompany = p_is_intercompany)
+      AND  (r.min_amount IS NULL OR p_amount IS NULL OR p_amount >= r.min_amount)
+      AND  (r.max_amount IS NULL OR p_amount IS NULL OR p_amount <= r.max_amount)
+      AND  (r.effective_from IS NULL OR r.effective_from <= CURRENT_DATE)
+      AND  (r.effective_to   IS NULL OR r.effective_to   >= CURRENT_DATE)
+    ORDER  BY r.priority ASC
+    LIMIT  1;
+
+    IF FOUND THEN
+        RETURN jsonb_build_object(
+            'matched',           true,
+            'profile_config_id', v_rule.resolved_profile_config_id,
+            'method',            'RULE_MATCH',
+            'rule_id',           v_rule.id,
+            'confidence',        v_rule.confidence,
+            'explanation',       v_rule.explanation_template
+        );
+    END IF;
+
+    RETURN jsonb_build_object('matched', false, 'method', 'FAILED', 'confidence', 0);
+END;
+$$;
+
+COMMENT ON FUNCTION control.resolve_intent_to_profile(
+    uuid, uuid, text, text, text, uuid, text, text, numeric, boolean, boolean
+) IS
+    'Step 4 of the procurement intake pipeline. Checks regulatory intent_profile_override '
+    'first, then walks intent_to_accounting_profile_rule with NULL-wildcard predicate '
+    'matching. Returns first match or FAILED. Called by IntentResolutionService.ts.';

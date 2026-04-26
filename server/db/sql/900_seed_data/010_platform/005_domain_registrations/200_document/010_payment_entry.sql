@@ -23,7 +23,7 @@ SELECT
     'Payment Entry', 'Payment Entries', 'banknote', 'emerald',
     true,
     '{"prefix":"PAY","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"payments","allow_on_behalf_of":false,"has_line_items":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -104,3 +104,10 @@ SET natural_key_fields = ARRAY['document_no']
 WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
   AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
+
+-- ── 6. Backfill: rename deprecated feature_flag key to canonical name ─────────
+UPDATE control.entity
+SET feature_flags = (feature_flags - 'has_line_items') || '{"has_lines":true}'::jsonb
+WHERE table_schema = 'document' AND table_name = 'payment_entry'
+  AND tenant_id IS NULL
+  AND feature_flags ? 'has_line_items';

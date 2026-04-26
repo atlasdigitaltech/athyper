@@ -24,11 +24,11 @@
 # point and the simple path is easier to maintain across workspace layout churn.
 
 # ── Base ──────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 # libc6-compat: some native deps (sharp, etc.) expect glibc symbols
 RUN apk add --no-cache libc6-compat
-# pnpm via corepack — version is pinned by packageManager in root package.json
-RUN corepack enable
+# pnpm via corepack — pinned to match packageManager in root package.json
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 # ── Stage: deps + build ──────────────────────────────────────────────────
 FROM base AS build
@@ -44,7 +44,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @athyper/web build
 
 # ── Stage: runner ─────────────────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 
 # wget for the compose healthcheck; libc6-compat mirrors the build stage so
 # native deps load at runtime too.

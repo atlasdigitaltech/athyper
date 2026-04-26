@@ -30,7 +30,8 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/domain-widgets": "workspace:*",
-    "@athyper/metadata-client": "workspace:*"
+    "@athyper/metadata-client": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*"
   },
   "peerDependencies": {
     "@athyper/icons": "workspace:*",

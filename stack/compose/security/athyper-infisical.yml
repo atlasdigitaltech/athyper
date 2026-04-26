@@ -95,4 +95,5 @@ services:
       - traefik.http.routers.infisical.entrypoints=websecure
       - traefik.http.routers.infisical.tls=true
       - traefik.http.routers.infisical.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.infisical.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.infisical.loadbalancer.server.port=8080

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { Plus, Trash2, X, XCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
-import { fmtAmount } from "../_shared/format";
+import { fmtAmount } from "@athyper/runtime-shared/core";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

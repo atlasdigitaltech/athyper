@@ -6,15 +6,15 @@
 # =============================================================================
  
 # syntax=docker/dockerfile:1.7
- 
+
 FROM node:24-alpine AS base
- 
+
 # pg_dump is required by the backup worker (jobs-backup queue).
 RUN apk add --no-cache postgresql-client
- 
+
 # Install pnpm (pinned to match packageManager field in root package.json)
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
- 
+
 WORKDIR /app
  
 # ─── Dependency install ───────────────────────────────────────────────────────

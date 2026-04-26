@@ -323,7 +323,7 @@ export function mapApInvoiceToHeader(
       documentDate: fmtDate(invoice.invoiceDate) ?? invoice.invoiceDate,
       dueDate: fmtDate(invoice.dueDate),
       dueMeta: calcDueMeta(invoice.dueDate),
-      createdAt: fmtDateTime(invoice.invoiceDate), // best proxy available
+      createdAt: fmtDateTime(invoice.created_at ?? invoice.invoiceDate),
     },
 
     references: references.length > 0 ? references : undefined,

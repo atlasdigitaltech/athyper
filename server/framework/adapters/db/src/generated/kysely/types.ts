@@ -1551,6 +1551,19 @@ export type close_override_log = {
     created_at: Generated<Timestamp>;
     created_by: string;
 };
+export type command_log = {
+    id: Generated<string>;
+    tenant_id: string;
+    operation: string;
+    idempotency_key: string;
+    status: Generated<string>;
+    result: unknown | null;
+    error_code: string | null;
+    error_message: string | null;
+    principal_id: string | null;
+    created_at: Generated<Timestamp>;
+    completed_at: Timestamp | null;
+};
 export type comment = {
     id: Generated<string>;
     tenant_id: string;
@@ -5334,6 +5347,20 @@ export type match_exception = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type match_tolerance_config = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    company_code_id: string | null;
+    entity_name: Generated<string>;
+    match_type: string;
+    tolerance_type: string;
+    tolerance_value: string;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: Generated<string>;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type metadata_change_application_log = {
     id: Generated<string>;
     tenant_id: string;
@@ -5644,6 +5671,21 @@ export type notification_template = {
     metadata: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type numbering_series = {
+    id: Generated<string>;
+    tenant_id: string;
+    company_code_id: string;
+    document_type: string;
+    prefix: Generated<string>;
+    fiscal_year: number | null;
+    last_number: Generated<number>;
+    padding: Generated<number>;
+    is_active: Generated<boolean>;
+    created_at: Generated<Timestamp>;
+    created_by: Generated<string>;
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
@@ -7026,6 +7068,7 @@ export type purchase_invoice_line = {
     updated_by: string | null;
     retention_pct: Generated<string | null>;
     retention_amount: Generated<string>;
+    classification_decision: Generated<unknown>;
 };
 export type purchase_order_confirmation = {
     id: Generated<string>;
@@ -7154,6 +7197,7 @@ export type purchase_requisition_line = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    classification_decision: Generated<unknown>;
 };
 export type push_subscription = {
     id: Generated<string>;
@@ -8586,6 +8630,7 @@ export type DB = {
     "control.lifecycle_transition_hook": lifecycle_transition_hook;
     "control.lookup_domain": lookup_domain;
     "control.lookup_value": lookup_value;
+    "control.match_tolerance_config": match_tolerance_config;
     "control.metadata_change_application_log": metadata_change_application_log;
     "control.metadata_change_request": metadata_change_request;
     "control.mfa_config": mfa_config;
@@ -8621,6 +8666,7 @@ export type DB = {
     "control.workflow_template_stage": workflow_template_stage;
     "document.accounting_distribution": accounting_distribution;
     "document.asset_transaction": asset_transaction;
+    "document.command_log": command_log;
     "document.commitment": commitment;
     "document.commitment_address_snapshot": commitment_address_snapshot;
     "document.commitment_line": commitment_line;
@@ -8830,6 +8876,7 @@ export type DB = {
     "master.lifecycle_instance": lifecycle_instance;
     "master.multipart_upload": multipart_upload;
     "master.notification": notification;
+    "master.numbering_series": numbering_series;
     "master.owner_type": owner_type;
     "master.payment_method": payment_method;
     "master.payment_term": payment_term;

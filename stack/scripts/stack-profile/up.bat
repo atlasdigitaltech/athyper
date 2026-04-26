@@ -38,13 +38,6 @@ set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
 
-REM Compute absolute paths for ATHYPER_CONFIG / ATHYPER_DATA and export them.
-REM Shell env vars take precedence over --env-file in Docker Compose, so these
-REM override the relative ../../config values in .env regardless of CWD or
-REM whether the caller uses compose.yml include: or individual -f flags.
-set "ATHYPER_CONFIG=%STACK_DIR:\=/%/config"
-set "ATHYPER_DATA=%STACK_DIR:\=/%/data"
-
 if not exist "%COMPOSE_DIR%" (
   echo ERROR: COMPOSE_DIR not found: "%COMPOSE_DIR%"
   pause
@@ -105,10 +98,16 @@ if not exist "%ENV_FILE%" (
 )
 
 REM ----------------------------
-REM Read ENVIRONMENT + STACK_PROFILE from .env (optional)
+REM Read ENVIRONMENT + STACK_PROFILE + six ATHYPER_*_ROOT vars from .env.
+REM Priority: existing shell env var > .env value > fallback below.
 REM ----------------------------
 set "ENVIRONMENT="
 set "STACK_PROFILE="
+set "_CR_FROM_ENV="
+set "_SR_FROM_ENV="
+set "_DR_FROM_ENV="
+set "_LR_FROM_ENV="
+set "_BR_FROM_ENV="
 
 for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
   set "K=%%A"
@@ -118,10 +117,50 @@ for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
     set "V=!V:"=!"
     for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
     for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-    if /I "!K!"=="ENVIRONMENT"     set "ENVIRONMENT=!V!"
-    if /I "!K!"=="STACK_PROFILE" set "STACK_PROFILE=!V!"
+    if /I "!K!"=="ENVIRONMENT"          set "ENVIRONMENT=!V!"
+    if /I "!K!"=="STACK_PROFILE"        set "STACK_PROFILE=!V!"
+    if /I "!K!"=="ATHYPER_CONFIG_ROOT"  if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+    if /I "!K!"=="ATHYPER_SECRETS_ROOT" if "!_SR_FROM_ENV!"=="" set "_SR_FROM_ENV=!V!"
+    if /I "!K!"=="ATHYPER_DATA_ROOT"    if "!_DR_FROM_ENV!"=="" set "_DR_FROM_ENV=!V!"
+    if /I "!K!"=="ATHYPER_LOG_ROOT"     if "!_LR_FROM_ENV!"=="" set "_LR_FROM_ENV=!V!"
+    if /I "!K!"=="ATHYPER_BACKUP_ROOT"  if "!_BR_FROM_ENV!"=="" set "_BR_FROM_ENV=!V!"
   )
 )
+
+REM Apply root var resolution: existing env var > .env value > repo-relative fallback
+if not "!ATHYPER_CONFIG_ROOT!"==""  goto :skip_cr
+if not "!_CR_FROM_ENV!"==""         (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & goto :skip_cr)
+set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
+:skip_cr
+
+if not "!ATHYPER_SECRETS_ROOT!"=="" goto :skip_sr
+if not "!_SR_FROM_ENV!"==""         (set "ATHYPER_SECRETS_ROOT=!_SR_FROM_ENV!" & goto :skip_sr)
+set "ATHYPER_SECRETS_ROOT=%STACK_DIR%\secrets"
+:skip_sr
+
+if not "!ATHYPER_DATA_ROOT!"==""    goto :skip_dr
+if not "!_DR_FROM_ENV!"==""         (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :skip_dr)
+set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+:skip_dr
+
+if not "!ATHYPER_LOG_ROOT!"==""     goto :skip_lr
+if not "!_LR_FROM_ENV!"==""         (set "ATHYPER_LOG_ROOT=!_LR_FROM_ENV!" & goto :skip_lr)
+set "ATHYPER_LOG_ROOT=%STACK_DIR%\logs"
+:skip_lr
+
+if not "!ATHYPER_BACKUP_ROOT!"==""  goto :skip_br
+if not "!_BR_FROM_ENV!"==""         (set "ATHYPER_BACKUP_ROOT=!_BR_FROM_ENV!" & goto :skip_br)
+set "ATHYPER_BACKUP_ROOT=%STACK_DIR%\backups"
+:skip_br
+
+REM Backwards-compat aliases (Docker Compose bind mounts use ATHYPER_CONFIG / ATHYPER_DATA).
+REM Convert backslashes to forward slashes — Docker requires forward slashes in bind mounts.
+set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!"
+set "ATHYPER_CONFIG=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!"
+set "ATHYPER_DATA=!_TMP!"
+set "_TMP=!ATHYPER_SECRETS_ROOT:\=/!"
+set "ATHYPER_SECRETS_ROOT=!_TMP!"
 
 REM If CLI arg not provided, use STACK_PROFILE from env, else default core
 if "!ACTIVE_PROFILE!"=="" (
@@ -156,33 +195,37 @@ if not exist "!OVERRIDE!" (
 
 echo.
 echo ==========================
-echo COMPOSE_DIR     = "%COMPOSE_DIR%"
-echo ATHYPER_CONFIG  = "%ATHYPER_CONFIG%"
-echo ATHYPER_DATA    = "%ATHYPER_DATA%"
-echo ENV_FILE        = "%ENV_FILE%"
-echo ENVIRONMENT     = "!ENVIRONMENT!"
-echo ACTIVE_PROFILE  = "!ACTIVE_PROFILE!"
-echo OVERRIDE        = "!OVERRIDE!"
+echo COMPOSE_DIR        = "%COMPOSE_DIR%"
+echo ATHYPER_CONFIG     = "!ATHYPER_CONFIG!"
+echo ATHYPER_SECRETS    = "!ATHYPER_SECRETS_ROOT!"
+echo ATHYPER_DATA       = "!ATHYPER_DATA!"
+echo ENV_FILE           = "%ENV_FILE%"
+echo ENVIRONMENT        = "!ENVIRONMENT!"
+echo ACTIVE_PROFILE     = "!ACTIVE_PROFILE!"
+echo OVERRIDE           = "!OVERRIDE!"
 echo ==========================
 echo.
 
 REM ----------------------------
 REM Validate environment variables
+REM Call must be at top level (not inside a compound block) so that
+REM call :label subroutine lookup inside validate-env.bat uses its own
+REM file context, not up.bat's — a known CMD compound-block scoping bug.
 REM ----------------------------
 set "VALIDATE_SCRIPT=%STACK_DIR%\scripts\setup\validate-env.bat"
-if exist "!VALIDATE_SCRIPT!" (
-  call "!VALIDATE_SCRIPT!" "%ENV_FILE%"
-  if errorlevel 1 (
-    if /I not "%SKIP_ENV_VALIDATION%"=="1" (
-      echo.
-      echo ERROR: Environment validation failed. Fix the errors above.
-      echo To skip ^(NOT recommended^): set SKIP_ENV_VALIDATION=1
-      pause
-      exit /b 1
-    )
-    echo WARNING: SKIP_ENV_VALIDATION=1 - proceeding despite validation errors.
+if not exist "!VALIDATE_SCRIPT!" goto :after_validate
+call "!VALIDATE_SCRIPT!" "%ENV_FILE%"
+if errorlevel 1 (
+  if /I not "%SKIP_ENV_VALIDATION%"=="1" (
+    echo.
+    echo ERROR: Environment validation failed. Fix the errors above.
+    echo To skip ^(NOT recommended^): set SKIP_ENV_VALIDATION=1
+    pause
+    exit /b 1
   )
+  echo WARNING: SKIP_ENV_VALIDATION=1 - proceeding despite validation errors.
 )
+:after_validate
 
 REM ----------------------------
 REM Optional: pre-flight check
@@ -207,6 +250,8 @@ if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMP
 if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                 set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
 if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""

@@ -25,7 +25,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { cn } from "@athyper/theme/utils";
 import { AlertCircle, Search } from "lucide-react";
 import type { FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-contracts/documents";
-import { EntityRefPicker, type EntityRefOption } from "@athyper/ui/composites";
+import { DatePicker } from "@athyper/ui/composites";
+import { EntityPicker, type EntityPickerOption } from "@athyper/runtime-shared/entity-search";
 import { DerivedChip } from "./DerivedChip";
 import { canOverride } from "./useFlowEngine";
 
@@ -40,6 +41,8 @@ export interface FlowFieldBindingProps {
   onChange: (value: unknown) => void;
   onOverride: (value: unknown) => void;
   onReset: () => void;
+  /** Persist a resolved display label into engine state so it survives step navigation. */
+  onDisplayLabel?: (label: string | null) => void;
   /** Full wizard draft — passed to pickers that need context filtering (e.g. company_code_id). */
   draftCtx?: Record<string, unknown>;
 }
@@ -114,6 +117,7 @@ function FlowInlineRefPicker({
   fieldName,
   value,
   onChange,
+  onDisplayLabel,
   placeholder,
   disabled,
   error,
@@ -123,6 +127,8 @@ function FlowInlineRefPicker({
   fieldName: string;
   value: unknown;
   onChange: (v: unknown) => void;
+  /** Persist a resolved display label into engine state so it survives step navigation. */
+  onDisplayLabel?: (label: string | null) => void;
   placeholder?: string;
   disabled?: boolean;
   error?: string;
@@ -140,8 +146,30 @@ function FlowInlineRefPicker({
   const draftCtxRef = useRef(draftCtx);
   useEffect(() => { draftCtxRef.current = draftCtx; }, [draftCtx]);
 
+  // Auto-resolve display label when remounting with a UUID but no label in state.
+  // This happens when the user navigates away from a step and returns.
+  const uuid = typeof value === "string" && value ? value : null;
+  const needsResolve = uuid && !externalDisplayLabel && !pickerLabel && entityCode;
+  useEffect(() => {
+    if (!needsResolve) return;
+    let cancelled = false;
+    void fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(uuid)}`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ data?: Record<string, unknown> }>) : null))
+      .then((body) => {
+        if (cancelled || !body?.data) return;
+        const label = getRowLabel(body.data);
+        labelCache.current.set(uuid, label);
+        setPickerLabel(label);
+        onDisplayLabel?.(label);
+      })
+      .catch(() => null);
+    return () => { cancelled = true; };
+  // Run when the uuid changes (new selection or remount with different value)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uuid, needsResolve]);
+
   const searchFn = useCallback(
-    async (query: string): Promise<EntityRefOption[]> => {
+    async (query: string): Promise<EntityPickerOption[]> => {
       if (!entityCode) return [];
       try {
         const params = new URLSearchParams({ q: query, limit: "20" });
@@ -172,10 +200,12 @@ function FlowInlineRefPicker({
 
   const handleChange = useCallback(
     (v: string | null) => {
-      setPickerLabel(v ? (labelCache.current.get(v) ?? null) : null);
+      const label = v ? (labelCache.current.get(v) ?? null) : null;
+      setPickerLabel(label);
+      onDisplayLabel?.(label);
       onChange(v);
     },
-    [onChange],
+    [onChange, onDisplayLabel],
   );
 
   // User-selected label takes precedence; fall back to engine-seeded label.
@@ -204,7 +234,7 @@ function FlowInlineRefPicker({
   }
 
   return (
-    <EntityRefPicker
+    <EntityPicker
       value={typeof value === "string" && value ? value : null}
       displayLabel={effectiveDisplayLabel}
       onChange={handleChange}
@@ -380,13 +410,11 @@ interface FieldOption { code: string; name: string; display_tier?: "primary" | "
 
 const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
   invoice_type: [
-    // Primary tier — always visible (min 5)
     { code: "standard",          name: "Standard",          display_tier: "primary"  },
     { code: "credit_note",       name: "Credit Note",       display_tier: "primary"  },
     { code: "debit_note",        name: "Debit Note",        display_tier: "primary"  },
     { code: "advance",           name: "Advance",           display_tier: "primary"  },
     { code: "retention_release", name: "Retention Release", display_tier: "primary"  },
-    // Advanced tier — behind "More types…"
     { code: "final",             name: "Final",             display_tier: "advanced" },
     { code: "self_billed",       name: "Self-Billed",       display_tier: "advanced" },
   ],
@@ -395,6 +423,23 @@ const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
     { code: "contract_based",  name: "Contract-Based"  },
     { code: "non_po",          name: "Non-PO"          },
     { code: "one_time_vendor", name: "One-Time Vendor" },
+  ],
+  payment_type: [
+    { code: "bank_transfer",   name: "Bank Transfer",   display_tier: "primary"  },
+    { code: "cheque",          name: "Cheque",           display_tier: "primary"  },
+    { code: "cash",            name: "Cash",             display_tier: "primary"  },
+    { code: "online_transfer", name: "Online Transfer",  display_tier: "primary"  },
+    { code: "card",            name: "Card",             display_tier: "advanced" },
+    { code: "direct_debit",    name: "Direct Debit",     display_tier: "advanced" },
+  ],
+  payment_direction: [
+    { code: "OUTBOUND", name: "Outbound (Payment)" },
+    { code: "INBOUND",  name: "Inbound (Receipt)"  },
+  ],
+  tax_mode: [
+    { code: "inclusive", name: "Inclusive", display_tier: "primary" },
+    { code: "exclusive", name: "Exclusive", display_tier: "primary" },
+    { code: "no_tax",    name: "No Tax",    display_tier: "primary" },
   ],
 };
 
@@ -410,6 +455,7 @@ export function FlowFieldBinding({
   onChange,
   onOverride,
   onReset,
+  onDisplayLabel,
   draftCtx,
 }: FlowFieldBindingProps) {
   const { mode, ui_variant, data_type, field_label, field_name, help_text, derivation_mode } = binding;
@@ -460,7 +506,7 @@ export function FlowFieldBinding({
         {ui_variant === "money_big" ? (
           <MoneyInput value={value} onChange={onChange} disabled={isDisabled} error={error} />
         ) : ui_variant === "inline_search" ? (
-          <FlowInlineRefPicker fieldName={field_name} value={value} onChange={onChange} externalDisplayLabel={displayLabel} draftCtx={draftCtx} placeholder={binding.placeholder ?? undefined} disabled={isDisabled} error={error} />
+          <FlowInlineRefPicker fieldName={field_name} value={value} onChange={onChange} onDisplayLabel={onDisplayLabel} externalDisplayLabel={displayLabel} draftCtx={draftCtx} placeholder={binding.placeholder ?? undefined} disabled={isDisabled} error={error} />
         ) : ui_variant === "radio_cards" && options ? (
           <RadioCards value={value} options={options} onChange={onChange} disabled={isDisabled} />
         ) : ui_variant === "segmented" && options ? (
@@ -468,7 +514,12 @@ export function FlowFieldBinding({
         ) : data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
           <TextareaInput value={value} onChange={onChange} disabled={isDisabled} placeholder={binding.placeholder ?? undefined} />
         ) : data_type === "date" ? (
-          <BaseInput type="date" value={value} onChange={onChange} disabled={isDisabled} error={error} />
+          <DatePicker
+            value={value != null ? String(value) : null}
+            onChange={(v) => onChange(v)}
+            disabled={isDisabled}
+            error={error}
+          />
         ) : data_type === "boolean" || field_name === "is_on_hold" ? (
           <div className="flex items-center gap-2">
             <input

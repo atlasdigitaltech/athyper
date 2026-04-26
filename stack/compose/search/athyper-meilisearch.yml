@@ -68,5 +68,6 @@ services:
       - traefik.http.routers.meilisearch.entrypoints=websecure
       - traefik.http.routers.meilisearch.tls=true
       - traefik.http.routers.meilisearch.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.meilisearch.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.meilisearch.loadbalancer.server.port=7700
       - traefik.http.routers.meilisearch.middlewares=${DASHBOARD_AUTH_MW}

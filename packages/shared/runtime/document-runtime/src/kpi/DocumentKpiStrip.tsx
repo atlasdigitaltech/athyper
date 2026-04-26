@@ -12,7 +12,7 @@
 "use client";
 
 import { cn } from "@athyper/theme/utils";
-import { getCurrencySymbol, splitDecimal } from "../_shared/format";
+import { getCurrencySymbol, splitDecimal } from "@athyper/runtime-shared/core";
 
 // ── Public types ───────────────────────────────────────────────────────────
 

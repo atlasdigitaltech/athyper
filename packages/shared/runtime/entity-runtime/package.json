@@ -14,7 +14,8 @@
     "./actions": "./src/actions/index.ts",
     "./bulk": "./src/bulk/index.ts",
     "./import": "./src/import/index.ts",
-    "./panels": "./src/panels/index.ts"
+    "./panels": "./src/panels/index.ts",
+    "./metadata": "./src/metadata/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -28,6 +29,7 @@
     "@athyper/domain-widgets": "workspace:*",
     "@athyper/metadata-client": "workspace:*",
     "@athyper/query": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
     "@athyper/workflow-ui": "workspace:*"
   },
   "peerDependencies": {

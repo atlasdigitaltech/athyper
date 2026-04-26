@@ -85,20 +85,22 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
 
       // ── Active flow for this entity version ───────────────────────────────
       // When flow_code is supplied, fetch that specific flow regardless of
-      // is_default. When absent, fall back to the tenant's default flow for
-      // the requested trigger context.
+      // is_default or trigger_context (flow_code already uniquely identifies
+      // the bundle — the trigger filter only applies to default-flow discovery).
+      // When absent, fall back to the tenant's default flow for the trigger context.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let flowQuery: any = db
         .selectFrom("control.entity_flow as ef")
         .select(["ef.id", "ef.flow_code", "ef.label", "ef.config"])
         .where("ef.entity_version_id", "=", entityRow.version_id as string)
-        .where("ef.trigger_context", "=", trigger)
         .where("ef.status", "=", "active");
 
       if (flowCodeParam) {
         flowQuery = flowQuery.where("ef.flow_code", "=", flowCodeParam);
       } else {
-        flowQuery = flowQuery.where("ef.is_default", "=", true);
+        flowQuery = flowQuery
+          .where("ef.trigger_context", "=", trigger)
+          .where("ef.is_default", "=", true);
       }
 
       if (tenantId) {

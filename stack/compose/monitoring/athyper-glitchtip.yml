@@ -31,7 +31,7 @@ services:
       DATABASE_URL: postgresql://${DB_ADMIN_USER}:${DB_ADMIN_PASSWORD}@dbpool-apps:6432/athyper_errors
       SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
       PORT: "8000"
-      REDIS_URL: redis://glitchtip:${REDIS_GLITCHTIP_PASSWORD}@memorycache:6379/${REDIS_GLITCHTIP_DB:-1}
+      REDIS_URL: redis://glitchtip:${REDIS_GLITCHTIP_PASSWORD}@memorycache:6379/${REDIS_GLITCHTIP_DB:-1}  # DB 1 — see cache.conf DB index assignments
       GLITCHTIP_DOMAIN: https://${GLITCHTIP_HOST}
       DEFAULT_FROM_EMAIL: ${KC_SMTP_FROM:-noreply@athyper.local}
       EMAIL_URL: smtp://${KC_SMTP_HOST:-mailhog}:${KC_SMTP_PORT:-1025}
@@ -69,4 +69,5 @@ services:
       - traefik.http.routers.glitchtip.entrypoints=websecure
       - traefik.http.routers.glitchtip.tls=true
       - traefik.http.routers.glitchtip.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.glitchtip.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.glitchtip.loadbalancer.server.port=8000

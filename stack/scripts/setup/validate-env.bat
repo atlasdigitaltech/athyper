@@ -19,6 +19,46 @@ REM   1 - fatal: missing required vars (stack will not start)
 REM   2 - warnings only (non-blocking, informational)
 REM ============================================================
 
+goto :main
+
+REM ----------------------------
+REM Subroutine: require_var
+REM ----------------------------
+:require_var
+set "_val=!ENV_%~1!"
+set "_rv_ok=1"
+if "!_val!"=="" (
+  echo   FAIL  %~1 is not set
+  set /a ERRORS+=1
+  set "_rv_ok=0"
+)
+if "!_rv_ok!"=="1" if "!_val:~0,2!"=="${" if "!_val:~-1!"=="}" (
+  echo   FAIL  %~1 = !_val! ^(placeholder not resolved - inject from secrets manager^)
+  set /a ERRORS+=1
+)
+goto :eof
+
+REM ----------------------------
+REM Subroutine: parse_env  %1=env-file-path
+REM Isolates nested for/f loop in its own call frame so that CMD's
+REM compound-block state does not bleed into subsequent call :label
+REM lookups in the main script body.
+REM ----------------------------
+:parse_env
+for /f "usebackq tokens=1,* delims==" %%A in ("%~1") do (
+  set "K=%%A"
+  set "V=%%B"
+  for /f "tokens=* delims= " %%K in ("!K!") do set "K=%%K"
+  if not "!K!"=="" if /I not "!K:~0,1!"=="#" (
+    set "V=!V:"=!"
+    for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
+    for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
+    set "ENV_!K!=!V!"
+  )
+)
+goto :eof
+
+:main
 REM ----------------------------
 REM Resolve paths
 REM ----------------------------
@@ -49,19 +89,12 @@ set "ERRORS=0"
 set "WARNINGS=0"
 set "ENVIRONMENT="
 
-for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
-  set "K=%%A"
-  set "V=%%B"
-  for /f "tokens=* delims= " %%K in ("!K!") do set "K=%%K"
-  if not "!K!"=="" if /I not "!K:~0,1!"=="#" (
-    set "V=!V:"=!"
-    for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
-    for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-    set "ENV_!K!=!V!"
-  )
-)
+call :parse_env "%ENV_FILE%"
 
 set "ENVIRONMENT=!ENV_ENVIRONMENT!"
+REM Strip trailing spaces from ENVIRONMENT (for /f trims leading only)
+:env_trim_loop
+if not "!ENVIRONMENT!"=="" if "!ENVIRONMENT:~-1!"==" " set "ENVIRONMENT=!ENVIRONMENT:~0,-1!" & goto :env_trim_loop
 
 echo.
 echo ==========================================
@@ -97,13 +130,14 @@ call :require_var ATHYPER_KERNEL_CONFIG_PATH
 REM ----------------------------
 REM 3. Non-local secrets (must not be missing or placeholders)
 REM ----------------------------
-if /I not "!ENVIRONMENT!"=="local" (
-  echo [3/6] Non-local secrets ^(must not be placeholders^)...
+echo [3/6] Secrets check...
+if /I "!ENVIRONMENT!"=="local" goto :sec3_local
+  echo   Checking non-local secrets ^(must not be missing or placeholders^)...
   call :require_var CREDENTIAL_MASTER_KEY
   call :require_var DB_ADMIN_PASSWORD
   call :require_var DB_HOST
   call :require_var DBPOOL_APPS_PASSWORD
-  call :require_var DBPOOL_AUTH_PASSWORD
+  call :require_var DBPOOL_SESSION_PASSWORD
   call :require_var IAM_ADMIN_PASSWORD
   call :require_var IAM_CLIENT_SECRET
   call :require_var MEMORYCACHE_PASSWORD
@@ -123,9 +157,10 @@ if /I not "!ENVIRONMENT!"=="local" (
   call :require_var APP_S3_SECRET_KEY
   call :require_var BACKUP_S3_ACCESS_KEY
   call :require_var BACKUP_S3_SECRET_KEY
-) else (
-  echo [3/6] Skipping non-local secrets check ^(ENVIRONMENT=local^)
-)
+  goto :sec3_done
+:sec3_local
+  echo   Skipping ^(ENVIRONMENT=local^)
+:sec3_done
 
 REM ----------------------------
 REM 4. Kernel config hostname parity
@@ -174,23 +209,13 @@ REM ----------------------------
 REM 5. Security checks (non-local only)
 REM ----------------------------
 echo [5/6] Security checks...
-if /I not "!ENVIRONMENT!"=="local" (
+if /I "!ENVIRONMENT!"=="local" goto :sec5_local
 
   REM CREDENTIAL_MASTER_KEY: length >= 32
   set "CMK=!ENV_CREDENTIAL_MASTER_KEY!"
-  if not "!CMK!"=="" (
-    set "CMK_LEN=0"
-    set "_CMK_TMP=!CMK!"
-    :cmk_len_loop
-    if not "!_CMK_TMP!"=="" (
-      set "_CMK_TMP=!_CMK_TMP:~1!"
-      set /a CMK_LEN+=1
-      goto :cmk_len_loop
-    )
-    if !CMK_LEN! LSS 32 (
-      echo   FAIL  CREDENTIAL_MASTER_KEY is too short ^(!CMK_LEN! chars, need ^>= 32^)
-      set /a ERRORS+=1
-    )
+  if not "!CMK!"=="" if "!CMK:~31!"=="" (
+    echo   FAIL  CREDENTIAL_MASTER_KEY is too short ^(need ^>= 32 chars^)
+    set /a ERRORS+=1
   )
 
   REM NODE_TLS_REJECT_UNAUTHORIZED must be 1 in non-local
@@ -256,39 +281,33 @@ if /I not "!ENVIRONMENT!"=="local" (
   )
 
   REM P2.10 - Tempo storage backend must be s3 outside local
-  if /I not "!ENV_TEMPO_STORAGE_BACKEND!"=="s3" (
+  if /I "!ENV_TEMPO_STORAGE_BACKEND!"=="s3" goto :tempo_s3_ok
     echo   FAIL  TEMPO_STORAGE_BACKEND=!ENV_TEMPO_STORAGE_BACKEND! in !ENVIRONMENT! ^(must be 's3' outside local^)
     set /a ERRORS+=1
-  ) else (
+    goto :tempo_done
+:tempo_s3_ok
     call :require_var TEMPO_S3_BUCKET
     call :require_var TEMPO_S3_ENDPOINT
     call :require_var TEMPO_S3_ACCESS_KEY
     call :require_var TEMPO_S3_SECRET_KEY
-  )
+:tempo_done
 
   REM I-21 - Infisical encryption key: format + default rejection
   set "IEK=!ENV_INFISICAL_ENCRYPTION_KEY!"
-  if not "!IEK!"=="" (
-    if "!IEK!"=="6c1fe4e49cb45b9115d42b127bc5db17" (
-      echo   FAIL  INFISICAL_ENCRYPTION_KEY = local default in !ENVIRONMENT!
-      echo         Rotate: openssl rand -hex 16
-      set /a ERRORS+=1
-    ) else (
-      REM Check it is a 32-char hex string (simple length + findstr check)
-      set "IEK_LEN=0"
-      set "_IEK_TMP=!IEK!"
-      :iek_len_loop
-      if not "!_IEK_TMP!"=="" (
-        set "_IEK_TMP=!_IEK_TMP:~1!"
-        set /a IEK_LEN+=1
-        goto :iek_len_loop
-      )
-      if not !IEK_LEN!==32 (
-        echo   FAIL  INFISICAL_ENCRYPTION_KEY is not a 32-char hex string ^(!IEK_LEN! chars^)
-        echo         Generate: openssl rand -hex 16
-        set /a ERRORS+=1
-      )
-    )
+  if "!IEK!"=="6c1fe4e49cb45b9115d42b127bc5db17" (
+    echo   FAIL  INFISICAL_ENCRYPTION_KEY = local default in !ENVIRONMENT!
+    echo         Rotate: openssl rand -hex 16
+    set /a ERRORS+=1
+  )
+  if not "!IEK!"=="6c1fe4e49cb45b9115d42b127bc5db17" if not "!IEK!"=="" if "!IEK:~31!"=="" (
+    echo   FAIL  INFISICAL_ENCRYPTION_KEY too short ^(need 32-char hex string^)
+    echo         Generate: openssl rand -hex 16
+    set /a ERRORS+=1
+  )
+  if not "!IEK!"=="6c1fe4e49cb45b9115d42b127bc5db17" if not "!IEK!"=="" if not "!IEK:~32!"=="" (
+    echo   FAIL  INFISICAL_ENCRYPTION_KEY too long ^(need 32-char hex string^)
+    echo         Generate: openssl rand -hex 16
+    set /a ERRORS+=1
   )
 
   REM I-21 - Infisical auth secret default rejection
@@ -364,9 +383,11 @@ if /I not "!ENVIRONMENT!"=="local" (
   )
 
   if !ERRORS! EQU 0 echo   OK
-) else (
+  goto :sec5_done
+
+:sec5_local
   echo   OK ^(local - skipping production security checks^)
-)
+:sec5_done
 
 REM ----------------------------
 REM 6. Recommendations
@@ -396,38 +417,21 @@ REM Summary
 REM ----------------------------
 echo.
 echo ==========================================
-if !ERRORS! GTR 0 (
-  echo   RESULT: FAILED - !ERRORS! error^(s^), !WARNINGS! warning^(s^)
-  echo   Fix the errors above before starting the stack.
+if !ERRORS! GTR 0 goto :summary_failed
+if !WARNINGS! GTR 0 goto :summary_warned
+  echo   RESULT: PASSED - all checks OK
   echo ==========================================
   echo.
-  exit /b 1
-) else if !WARNINGS! GTR 0 (
+  exit /b 0
+:summary_warned
   echo   RESULT: PASSED with !WARNINGS! warning^(s^)
   echo   Stack will start, but review the warnings above.
   echo ==========================================
   echo.
   exit /b 0
-) else (
-  echo   RESULT: PASSED - all checks OK
+:summary_failed
+  echo   RESULT: FAILED - !ERRORS! error^(s^), !WARNINGS! warning^(s^)
+  echo   Fix the errors above before starting the stack.
   echo ==========================================
   echo.
-  exit /b 0
-)
-
-REM ----------------------------
-REM Subroutine: require_var
-REM ----------------------------
-:require_var
-set "_val=!ENV_%~1!"
-if "!_val!"=="" (
-  echo   FAIL  %~1 is not set
-  set /a ERRORS+=1
-  goto :eof
-)
-REM Check for unresolved ${...} placeholders using string prefix/suffix test
-if "!_val:~0,2!"=="${" if "!_val:~-1!"=="}" (
-  echo   FAIL  %~1 = !_val! ^(placeholder not resolved - inject from secrets manager^)
-  set /a ERRORS+=1
-)
-goto :eof
+  exit /b 1

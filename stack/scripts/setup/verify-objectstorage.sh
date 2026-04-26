@@ -86,12 +86,26 @@ pass() {
 }
 
 # ----------------------------
+# Persistent mc config directory — shared across all mc_run invocations so
+# that an alias set in one call is visible in the next.  Each docker run is
+# a fresh container; without a host-mounted dir the writable layer is
+# discarded on exit and every alias set is lost.
+# ----------------------------
+_MC_CFG=$(mktemp -d 2>/dev/null || echo "/tmp/mc-verify-$$")
+mkdir -p "$_MC_CFG"
+# cygpath -m converts Git Bash /tmp/... paths to C:/... for Docker Desktop on
+# Windows; on Linux/macOS cygpath is absent so fall back to the raw path.
+_MC_CFG_MOUNT=$(cygpath -m "$_MC_CFG" 2>/dev/null || echo "$_MC_CFG")
+trap 'rm -rf "$_MC_CFG"' EXIT INT TERM
+
+# ----------------------------
 # Helper: run an mc command inside the Docker network
 # Usage: mc_run <mc args...>
 # ----------------------------
 mc_run() {
-  docker run --rm \
+  MSYS_NO_PATHCONV=1 docker run --rm \
     --network "$MC_NETWORK" \
+    -v "${_MC_CFG_MOUNT}:/tmp/.mc" \
     -e MC_CONFIG_DIR=/tmp/.mc \
     "$MC_IMAGE" \
     "$@" 2>/dev/null

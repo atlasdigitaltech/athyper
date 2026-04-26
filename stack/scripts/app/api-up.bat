@@ -9,10 +9,14 @@ REM   api-up.bat              -> default API mode
 REM   api-up.bat worker       -> BullMQ worker mode
 REM   api-up.bat scheduler    -> scheduler mode
 REM
-REM Behaviour (auto-detected from ENVIRONMENT in .env):
-REM   local      -> pnpm --filter @athyper/runtime-server dev[:<mode>]
+REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
+REM   local      -> load stack\env\.env, translate Docker hostnames to 127.0.0.1,
+REM                 then: pnpm --filter @athyper/runtime-server dev[:<mode>]
 REM   staging    -> docker compose up -d --no-deps athyper-api
 REM   production -> docker compose up -d --no-deps athyper-api
+REM
+REM Single source of truth: stack\env\.env is the only env file needed.
+REM server\.env is NOT required -- this script injects all vars directly.
 REM ============================================================
 
 set "SCRIPT_DIR=%~dp0"
@@ -29,32 +33,45 @@ popd >nul
 set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
-set "ATHYPER_CONFIG=%STACK_DIR:\=/%/config"
-set "ATHYPER_DATA=%STACK_DIR:\=/%/data"
-
 REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
 
 set "MODE=%~1"
 if "!MODE!"=="" set "MODE=api"
 
+REM ----------------------------
+REM Read all vars from stack .env into the current environment.
+REM Uses FOR variable expansion (%%A=%%B) to set values — this avoids delayed-
+REM expansion ! processing inside values (e.g. bcrypt hashes, auth secrets).
+REM Lines starting with # and blank lines are skipped.
+REM ----------------------------
 set "ENVIRONMENT=local"
 
 if exist "%ENV_FILE%" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
-    set "K=%%A"
-    set "V=%%B"
-    for /f "tokens=* delims= " %%K in ("!K!") do set "K=%%K"
-    if not "!K!"=="" if /I not "!K:~0,1!"=="#" (
-      set "V=!V:"=!"
-      for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
-      for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ENVIRONMENT" set "ENVIRONMENT=!V!"
+    set "_k=%%A"
+    for /f "tokens=* delims= " %%K in ("!_k!") do set "_k=%%K"
+    if not "!_k!"=="" if /I not "!_k:~0,1!"=="#" (
+      set "%%A=%%B"
     )
   )
 ) else (
-  echo WARNING: .env not found: "%ENV_FILE%" — defaulting to local mode.
+  echo WARNING: .env not found: "%ENV_FILE%" -- defaulting to local mode.
 )
+
+if "!ENVIRONMENT!"=="" set "ENVIRONMENT=local"
+
+REM ATHYPER_CONFIG_ROOT / ATHYPER_DATA_ROOT fallbacks (loaded from .env above;
+REM fallback only if the file didn't contain them)
+if not "!ATHYPER_CONFIG_ROOT!"=="" goto :app_skip_cr
+set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
+:app_skip_cr
+if not "!ATHYPER_DATA_ROOT!"==""   goto :app_skip_dr
+set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+:app_skip_dr
+
+set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!" & set "ATHYPER_CONFIG=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
 
 echo.
 echo ==========================
@@ -65,12 +82,41 @@ echo ==========================
 echo.
 
 REM ----------------------------
-REM Local: run pnpm dev (foreground)
+REM Local: translate Docker hostnames → 127.0.0.1, then run pnpm dev
 REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
   set "PNPM_SCRIPT=dev"
   if /I "!MODE!"=="worker"    set "PNPM_SCRIPT=dev:worker"
   if /I "!MODE!"=="scheduler" set "PNPM_SCRIPT=dev:scheduler"
+
+  REM Server always runs on port 4000 on the host (compose uses API_PORT=3000)
+  set "PORT=4000"
+
+  REM Translate Docker service names to 127.0.0.1.
+  REM Docker Desktop publishes these ports to the host; all reachable via 127.0.0.1.
+  set "DATABASE_URL=!DATABASE_URL:dbpool-apps=127.0.0.1!"
+  set "DATABASE_ADMIN_URL=!DATABASE_ADMIN_URL:@db:=@127.0.0.1:!"
+  set "REDIS_URL=!REDIS_URL:memorycache=127.0.0.1!"
+  set "S3_ENDPOINT=!S3_ENDPOINT:objectstorage=127.0.0.1!"
+
+  REM Gotenberg port 3000 conflicts with Next.js dev server -- clear it.
+  set "GOTENBERG_BASE_URL="
+  REM Tika 9998 is unique; no-ops gracefully if render profile not running.
+  set "TIKA_URL=!TIKA_URL:tika=127.0.0.1!"
+
+  REM OTel Tempo gRPC (4317); no-ops if telemetry profile not running.
+  set "OTEL_EXPORTER_OTLP_ENDPOINT=!OTEL_EXPORTER_OTLP_ENDPOINT:tracing=127.0.0.1!"
+  REM Alloy/logshipper HTTP OTLP not published to host by default.
+  set "OTLP_ENDPOINT="
+
+  REM Meilisearch (7700); no-ops if search profile not running.
+  set "MEILISEARCH_URL=!MEILISEARCH_URL:meilisearch=127.0.0.1!"
+
+  REM Healthchecks ping port not published to host by default.
+  set "HEALTHCHECKS_BASE_URL="
+
+  set "NODE_ENV=development"
+  set "NODE_TLS_REJECT_UNAUTHORIZED=0"
 
   echo Local mode: starting backend server
   echo   pnpm --filter @athyper/runtime-server !PNPM_SCRIPT!
@@ -106,6 +152,8 @@ if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMP
 if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
 if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""

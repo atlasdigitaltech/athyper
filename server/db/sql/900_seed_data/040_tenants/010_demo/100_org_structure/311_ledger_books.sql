@@ -136,6 +136,13 @@ BEGIN
         WHERE master.company_code_book_assignment.priority
            IS DISTINCT FROM EXCLUDED.priority;
 
+        -- Stamp default_ledger_book_id on the company for direct lookup
+        UPDATE master.company_code
+           SET default_ledger_book_id = v_book,
+               updated_at = now(), updated_by = v_su
+         WHERE id = v_cc.id AND tenant_id = v_tid
+           AND default_ledger_book_id IS NULL;
+
         -- Group management book assignment (priority 5)
         INSERT INTO master.company_code_book_assignment
             (tenant_id, company_code_id, book_id,

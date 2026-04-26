@@ -22,8 +22,8 @@
  *   />
  */
 
-import { useMemo } from "react";
-import { ChevronLeft, ChevronRight, Send, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Send, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Dialog,
@@ -66,6 +66,8 @@ export function FlowModal({
   title,
   description,
 }: FlowModalProps) {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const engine = useFlowEngine(bundle, userPermissions, userCtx);
   const {
     state,
@@ -94,7 +96,12 @@ export function FlowModal({
 
   async function handleSubmit() {
     if (!validateStep()) return;
-    await onSubmit(state.draft);
+    setSubmitError(null);
+    try {
+      await onSubmit(state.draft);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    }
   }
 
   return (
@@ -184,6 +191,13 @@ export function FlowModal({
             </p>
           )}
         </div>
+
+        {submitError && (
+          <div className="mx-6 mb-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/8 px-3 py-2.5 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
         <Separator />
 

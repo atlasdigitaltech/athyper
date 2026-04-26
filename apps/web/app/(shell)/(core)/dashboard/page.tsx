@@ -16,7 +16,7 @@
 import { Bell, Bookmark, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/ui/primitives";
 import { ActionLinkCard } from "@/components/home/ActionLinkCard";
 import { SectionLabel } from "@/components/home/SectionLabel";

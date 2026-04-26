@@ -76,7 +76,7 @@ http:
     neon-workbench-admin:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/admin`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: athyper-neon-web@docker
       priority: 110
       tls:
         certResolver: letsencrypt-staging
@@ -90,7 +90,7 @@ http:
     neon-workbench-ops:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: athyper-neon-web@docker
       priority: 110
       tls:
         certResolver: letsencrypt-staging
@@ -104,7 +104,7 @@ http:
     neon-workbench-user:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: athyper-neon-web@docker
       priority: 100
       tls:
         certResolver: letsencrypt-staging
@@ -117,7 +117,7 @@ http:
     neon-default:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: athyper-neon-web@docker
       priority: 1
       tls:
         certResolver: letsencrypt-staging
@@ -126,10 +126,7 @@ http:
         - workbench-forward-auth
         - workbench-headers-user
 
-  services:
-    athyper-neon-web:
-      loadBalancer:
-        servers:
-          # Env-driven — staging/prod should set APPS_ATHYPER_WEB_UPSTREAM_URL
-          # to http://athyper-neon-web:3000 (the in-network service name).
-          - url: "{{ env "APPS_ATHYPER_WEB_UPSTREAM_URL" }}"
+  # No file-provider service definition: athyper-neon-web@docker is auto-discovered
+  # from the container's Traefik labels (traefik.http.services.athyper-neon-web.
+  # loadbalancer.server.port=3000 in athyper-apps.yml). APPS_ATHYPER_WEB_UPSTREAM_URL
+  # is not used in staging/prod — the Docker provider resolves the container IP:port.

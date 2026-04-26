@@ -7,20 +7,20 @@ REM Location: stack\scripts\stack-service\start.bat
 REM Usage:
 REM   start.bat iam                  -> start by alias
 REM   start.bat db redis gateway     -> start multiple at once
-REM   start.bat athyper-stack-iam-1  -> raw container name passthrough
+REM   start.bat athyper-iam-1  -> raw container name passthrough
 REM
 REM Aliases (case-insensitive, also accepts raw container names):
-REM   iam            -> Keycloak          (athyper-stack-iam-1)
-REM   db             -> Postgres          (athyper-stack-db-1)
-REM   dbpool-session -> PgBouncer session (athyper-stack-dbpool-session-1)
-REM   dbpool-apps    -> PgBouncer apps    (athyper-stack-dbpool-apps-1)
-REM   gateway|traefik     -> Traefik ingress   (athyper-stack-gateway-1)
-REM   redis|cache|memorycache -> Redis cache   (athyper-stack-memorycache-1)
-REM   minio|storage  -> MinIO object store (athyper-stack-objectstorage-1)
-REM   mail|mailhog   -> Mailhog            (athyper-stack-mailhog-1)
-REM   web|frontend   -> Next.js frontend   (athyper-stack-athyper-neon-web-1)
-REM   api|backend    -> Backend API        (athyper-stack-athyper-api-1)
-REM   search|meilisearch -> Meilisearch    (athyper-stack-meilisearch-1)
+REM   iam            -> Keycloak          (athyper-iam-1)
+REM   db             -> Postgres          (athyper-db-1)
+REM   dbpool-session -> PgBouncer session (athyper-dbpool-session-1)
+REM   dbpool-apps    -> PgBouncer apps    (athyper-dbpool-apps-1)
+REM   gateway|traefik     -> Traefik ingress   (athyper-gateway-1)
+REM   redis|cache|memorycache -> Redis cache   (athyper-memorycache-1)
+REM   minio|storage  -> MinIO object store (athyper-objectstorage-1)
+REM   mail|mailhog   -> Mailhog            (athyper-mailhog-1)
+REM   web|frontend   -> Next.js frontend   (athyper-athyper-neon-web-1)
+REM   api|backend    -> Backend API        (athyper-athyper-api-1)
+REM   search|meilisearch -> Meilisearch    (athyper-meilisearch-1)
 REM ============================================================
 
 REM Derive STACK_DIR (script is at stack\scripts\stack-service\)
@@ -37,7 +37,7 @@ if not defined COMPOSE_PROJECT_NAME (
         set "COMPOSE_PROJECT_NAME=!COMPOSE_PROJECT_NAME:"=!"
     )
 )
-if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper-stack"
+if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper"
 
 REM Container name defaults (each overrideable via env var)
 if not defined DOCKER_CONTAINER_IAM           set "DOCKER_CONTAINER_IAM=!COMPOSE_PROJECT_NAME!-iam-1"

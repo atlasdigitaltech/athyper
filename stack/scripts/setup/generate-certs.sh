@@ -10,7 +10,8 @@
 # SANs covered:
 #   *.athyper.local, neon.athyper.local, gateway.athyper.local,
 #   api.athyper.local, iam.athyper.local, objectstorage.athyper.local
-# Output: stack/config/gateway/certs/athyper.tls.local.{crt,key}
+# Output: ATHYPER_CONFIG_ROOT/gateway/certs/athyper.tls.local.{crt,key}
+#         (read from stack/env/.env; defaults to stack/config)
 #
 # Requires: mkcert (https://github.com/FiloSottile/mkcert)
 #   macOS:  brew install mkcert
@@ -29,7 +30,23 @@ echo ""
 # Resolve directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CERT_DIR="$STACK_DIR/config/gateway/certs"
+ENV_FILE="$STACK_DIR/env/.env"
+
+# Read ATHYPER_CONFIG_ROOT from stack/env/.env
+if [[ -f "$ENV_FILE" ]]; then
+  while IFS= read -r _l || [[ -n "$_l" ]]; do
+    [[ "$_l" =~ ^[[:space:]]*# ]] && continue
+    [[ "$_l" =~ ^[[:space:]]*$ ]] && continue
+    _k="${_l%%=*}"; _k="${_k//[[:space:]]/}"
+    _v="${_l#*=}"; _v="${_v%%#*}"; _v="${_v%"${_v##*[![:space:]]}"}"
+    [[ "$_v" =~ ^\"(.*)\"$ ]] && _v="${BASH_REMATCH[1]}"
+    if [[ "$_k" == "ATHYPER_CONFIG_ROOT" && -z "${ATHYPER_CONFIG_ROOT:-}" ]]; then
+      export ATHYPER_CONFIG_ROOT="$_v"
+    fi
+  done < "$ENV_FILE"
+fi
+ATHYPER_CONFIG_ROOT="${ATHYPER_CONFIG_ROOT:-$STACK_DIR/config}"
+CERT_DIR="$ATHYPER_CONFIG_ROOT/gateway/certs"
 
 # Ensure mkcert exists
 if ! command -v mkcert &>/dev/null; then

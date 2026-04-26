@@ -29,12 +29,21 @@ services:
   # No --import-realm in production; realms managed via API/terraform
   iam:
     command: ["start"]
+    environment:
+      KC_SMTP_USERNAME: ${KC_SMTP_USERNAME}
+      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
+
+  # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder)
+  athyper-neon-web:
+    build:
+      context: ../..
 
   # API: 2 replicas behind Traefik load balancer.
   # Dockerfile.prod compiles TS → JS and strips devDeps; Dockerfile.dev is
   # local-only (tsx watch).
   athyper-api:
     build:
+      context: ../..
       dockerfile: server/Dockerfile.prod
     deploy:
       replicas: 2
@@ -49,6 +58,7 @@ services:
   # Worker: 2 replicas for job throughput
   athyper-worker:
     build:
+      context: ../..
       dockerfile: server/Dockerfile.prod
     deploy:
       replicas: 2
@@ -63,7 +73,14 @@ services:
   # Scheduler: uses the same compiled image as api/worker
   athyper-scheduler:
     build:
+      context: ../..
       dockerfile: server/Dockerfile.prod
+
+  # Grafana: strict provisioning — edits and deletions blocked in the UI.
+  # All dashboard changes must go through the JSON files in provisioning/dashboards/json/.
+  telemetry:
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.production.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
 
   # Database: guaranteed memory + named volume (I-08).
   # The named volume overrides the bind-mount from athyper-db.yml by target
@@ -86,3 +103,40 @@ services:
           memory: "${MEMORYCACHE_MEMORY_LIMIT}"
         reservations:
           memory: 256M
+
+  # Gateway: ACME cert resolver for production Let's Encrypt certificates.
+  # command: is a full replacement (Docker Compose scalar merge) — replicates
+  # all base flags from athyper-gateway.yml and appends the three ACME lines.
+  # volumes: merges by target path; /certs without :ro lets ACME write acme.json.
+  gateway:
+    command:
+      - --accesslog=${GATEWAY_ACCESSLOG:-true}
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.http.encodeQuerySemicolons=true
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.format=json
+      - --log.level=${GATEWAY_LOG_LEVEL:-INFO}
+      - --ping=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=athyper-edge
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.insecureSkipVerify=false
+      - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesResolvers.letsencrypt.acme.storage=/certs/acme.json
+      - --certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ATHYPER_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
+      - ${ATHYPER_CONFIG}/gateway/certs:/certs

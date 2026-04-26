@@ -14,7 +14,7 @@ import { useState } from "react";
 import { ChevronRight, Database, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import {
   Badge,
   Input,

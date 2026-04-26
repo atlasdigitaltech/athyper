@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, History } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { Button, Badge, Skeleton } from "@athyper/ui/primitives";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

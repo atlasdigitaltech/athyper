@@ -15,7 +15,7 @@ import {
   Users, Plus, RefreshCw, Shield, Trash2, UserPlus, Search, Lock, Settings,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { FilterPillBar } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, Skeleton,

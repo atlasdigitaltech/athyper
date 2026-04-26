@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Plug2, ChevronDown, ChevronRight } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { FilterPillBar } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle, Skeleton,

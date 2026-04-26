@@ -1,20 +1,28 @@
 /**
  * AP / AR Routes
  *
- * GET  /api/finance/ap/invoices             — paginated AP invoice list
- * GET  /api/finance/ap/invoices/:id         — single AP invoice with lines
- * GET  /api/finance/ap/payments             — payment_entry WHERE direction = OUTBOUND
- * POST /api/finance/ap/payments             — create draft payment entry for an AP invoice
- * GET  /api/finance/ap/payment-methods      — list active payment methods (OUTBOUND/BOTH)
- * GET  /api/finance/ap/aging                — AP aging buckets by supplier
- * GET  /api/finance/ar/invoices             — paginated AR invoice list (graceful when module inactive)
- * GET  /api/finance/ar/receipts             — payment_entry WHERE direction = INBOUND
- * POST /api/finance/ar/receipts             — create draft receipt (standalone INBOUND payment entry)
- * GET  /api/finance/ar/payment-methods      — list active payment methods (INBOUND/BOTH)
- * GET  /api/finance/ar/aging                — AR aging buckets by customer
+ * GET    /api/finance/ap/invoices               — paginated AP invoice list
+ * POST   /api/finance/ap/invoices               — create AP invoice (proforma or draft)
+ * GET    /api/finance/ap/invoices/:id           — single AP invoice with lines
+ * PATCH  /api/finance/ap/invoices/:id           — update AP invoice header fields (draft/proforma only)
+ * POST   /api/finance/ap/invoices/:id/lines          — add a line item
+ * PATCH  /api/finance/ap/invoices/:id/lines/:lid    — update a line item (auto-classifies when spend_category_id changes)
+ * DELETE /api/finance/ap/invoices/:id/lines/:lid    — remove a line item
+ * POST   /api/finance/ap/invoices/:id/lines/:lid/classify — explicit classify trigger (?mode=preview|save)
+ * GET    /api/finance/ap/invoices/:id/lines/suggest — spend-category text suggestions (?q=)
+ * GET    /api/finance/ap/payments               — payment_entry WHERE direction = OUTBOUND
+ * POST   /api/finance/ap/payments               — create draft payment entry for an AP invoice
+ * GET    /api/finance/ap/payment-methods        — list active payment methods (OUTBOUND/BOTH)
+ * GET    /api/finance/ap/aging                  — AP aging buckets by supplier
+ * GET    /api/finance/ar/invoices               — paginated AR invoice list (graceful when module inactive)
+ * GET    /api/finance/ar/receipts               — payment_entry WHERE direction = INBOUND
+ * POST   /api/finance/ar/receipts               — create draft receipt (standalone INBOUND payment entry)
+ * GET    /api/finance/ar/payment-methods        — list active payment methods (INBOUND/BOTH)
+ * GET    /api/finance/ar/aging                  — AR aging buckets by customer
  */
 
 import type { RequestHandler, Router } from "express";
+import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
   type FinanceRouteDeps,
@@ -23,6 +31,63 @@ import {
 } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, extractOrgHeaders } from "@athyper/svc-shared";
 import { randomUUID } from "node:crypto";
+import { handleCreateApInvoice } from "../../business/ap/invoice-create.handler.js";
+import { handleAddInvoiceLine, handleUpdateInvoiceLine, handleDeleteInvoiceLine } from "../../business/ap/invoice-lines.handler.js";
+import { handlePostPayment, handleSubmitPayment, handleVoidPayment } from "../../business/ap/payment-posting.service.js";
+import { resolveLineClassification } from "../../business/procurement-intake/IntentResolutionService.js";
+import { suggestSpendCategories } from "../../business/procurement-intake/SpendCategorySuggestService.js";
+
+// ── Payment status resolution ─────────────────────────────────────────────────
+// Recomputes paid_amount, outstanding_amount, and status after any allocation
+// is added or removed. Counts ALL allocations regardless of payment status so
+// that a draft payment immediately reflects on the invoice.  If the payable
+// amount is zero (no invoice found) the function returns silently.
+//
+// Call this inside the same transaction that mutates payment_entry_allocation.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveInvoicePaymentStatus(trx: Kysely<any>, tenantId: string, invoiceId: string): Promise<void> {
+  const invResult = await sql<{ payable_amount: string | null; total_amount: string; status: string }>`
+    SELECT payable_amount, total_amount, status
+    FROM   document.purchase_invoice
+    WHERE  id = ${invoiceId} AND tenant_id = ${tenantId}
+    LIMIT  1 FOR UPDATE
+  `.execute(trx);
+
+  const inv = invResult.rows[0];
+  if (!inv) return;
+
+  const payable = parseFloat(String(inv.payable_amount ?? inv.total_amount ?? "0"));
+  if (payable <= 0) return;
+
+  const sumResult = await sql<{ total: string }>`
+    SELECT COALESCE(SUM(pea.allocated_amount), 0) AS total
+    FROM   document.payment_entry_allocation pea
+    WHERE  pea.tenant_id           = ${tenantId}
+      AND  pea.purchase_invoice_id = ${invoiceId}
+  `.execute(trx);
+
+  const paid        = parseFloat(String(sumResult.rows[0]?.total ?? "0"));
+  const outstanding = Math.max(0, payable - paid);
+
+  let newStatus = inv.status;
+  if (paid >= payable) {
+    newStatus = "fully_paid";
+  } else if (paid > 0) {
+    newStatus = "partially_paid";
+  } else if (inv.status === "partially_paid" || inv.status === "fully_paid") {
+    newStatus = "posted";
+  }
+
+  await sql`
+    UPDATE document.purchase_invoice
+       SET paid_amount        = ${paid.toFixed(4)}::numeric,
+           outstanding_amount = ${outstanding.toFixed(4)}::numeric,
+           status             = ${newStatus},
+           updated_at         = now()
+     WHERE id = ${invoiceId} AND tenant_id = ${tenantId}
+  `.execute(trx);
+}
 
 // ── Route factory ─────────────────────────────────────────────────────────────
 
@@ -60,19 +125,28 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           jb.onRef("s.id", "=", "pi.supplier_id").on("s.tenant_id", "=", tenantId),
         )
         .select([
-          "pi.id", "pi.invoice_number", "pi.supplier_invoice_number",
+          "pi.id",
+          "pi.invoice_number as invoiceNumber",
+          "pi.invoice_source as invoiceSource",
+          "pi.supplier_invoice_number as supplierInvoiceNumber",
           "pi.supplier_invoice_date as supplierInvoiceDate",
           "pi.document_date as documentDate", "pi.posting_date as postingDate",
           "pi.due_date as dueDate", "pi.fiscal_year as fiscalYear",
           "pi.period_number as periodNumber",
+          "pi.invoice_date as invoiceDate",
           "pi.currency_code as currencyCode",
           "pi.total_amount as totalAmount",
+          "pi.subtotal_amount as subtotalAmount",
+          "pi.tax_amount as taxAmount",
+          "pi.withholding_tax_amount as withholdingTaxAmount",
           "pi.payable_amount as payableAmount",
           "pi.paid_amount as paidAmount",
           "pi.outstanding_amount as outstandingAmount",
           "pi.status", "pi.match_status as matchStatus",
           "pi.is_posted as isPosted", "pi.is_on_hold as isOnHold",
           "pi.is_credit_note as isCreditNote", "pi.is_reversal as isReversal",
+          "pi.line_count as lineCount",
+          "pi.company_code_id as companyCodeId",
           "s.code as supplierCode", "s.name as supplierName",
         ])
         .where("pi.tenant_id", "=", tenantId)
@@ -372,6 +446,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
             created_by:        principalId,
           } as never)
           .execute();
+
+        // Recompute invoice paid/outstanding/status after allocation
+        await resolveInvoicePaymentStatus(trx as unknown as Kysely<Record<string, unknown>>, tenantId, invoiceId);
       });
 
       logger?.info?.("finance_ap_payment_created", {
@@ -861,6 +938,332 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       logger?.error("finance_ar_payment_methods_error", { err: String(err) });
       next(err);
     }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/invoices ─────────────────────────────────────────
+  router.post("/finance/ap/invoices", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const { status, body: respBody } = await handleCreateApInvoice(
+        db, tenantId, principalId,
+        body as unknown as Parameters<typeof handleCreateApInvoice>[3],
+        logger,
+      );
+      res.status(status).json(respBody);
+    } catch (err) {
+      logger?.error("finance_ap_invoice_create_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── PATCH /api/finance/ap/invoices/:id ────────────────────────────────────
+  router.patch("/finance/ap/invoices/:id", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const invoiceId = String(req.params["id"] ?? "");
+      if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+
+      // Verify invoice exists + is editable
+      const invoice = await db
+        .selectFrom("document.purchase_invoice as pi")
+        .select(["pi.id", "pi.status"])
+        .where("pi.id",        "=", invoiceId)
+        .where("pi.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { id: string; status: string } | undefined;
+
+      if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+      if (!["draft", "proforma"].includes(invoice.status)) {
+        res.status(422).json({ error: "NOT_EDITABLE", message: `Invoice is in '${invoice.status}' and cannot be edited` });
+        return;
+      }
+
+      const body   = (req.body ?? {}) as Record<string, unknown>;
+      const now    = new Date();
+      const ALLOWED = [
+        "supplier_invoice_number", "supplier_invoice_date",
+        "document_date", "posting_date", "received_date",
+        "payment_term_id", "payment_method_id",
+        "commitment_id", "budget_allocation_id",
+        "notes", "tags", "tax_mode", "tax_mode_source",
+        "freight_amount", "misc_charges_amount", "discount_amount",
+        "retention_pct", "retention_amount",
+        "cost_center_id", "profit_center_id", "project_id", "site_id", "dimension_set_id",
+      ];
+      const updates: Record<string, unknown> = { updated_at: now, updated_by: principalId };
+      for (const key of ALLOWED) {
+        if (Object.prototype.hasOwnProperty.call(body, key)) {
+          updates[key] = body[key] ?? null;
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updated = await (db.updateTable("document.purchase_invoice" as any) as any)
+        .set(updates)
+        .where("id",        "=", invoiceId)
+        .where("tenant_id", "=", tenantId)
+        .returningAll()
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!updated) { res.status(409).json({ error: "CONFLICT" }); return; }
+      res.json({ ok: true, record: updated });
+    } catch (err) {
+      logger?.error("finance_ap_invoice_patch_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/invoices/:id/lines ───────────────────────────────
+  router.post("/finance/ap/invoices/:id/lines", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const invoiceId = String(req.params["id"] ?? "");
+      if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const { status, body: respBody } = await handleAddInvoiceLine(
+        db, tenantId, invoiceId, principalId,
+        body as unknown as Parameters<typeof handleAddInvoiceLine>[4],
+        logger,
+      );
+      res.status(status).json(respBody);
+    } catch (err) {
+      logger?.error("finance_ap_invoice_line_add_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── PATCH /api/finance/ap/invoices/:id/lines/:lid ─────────────────────────
+  router.patch("/finance/ap/invoices/:id/lines/:lid", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const invoiceId = String(req.params["id"]  ?? "");
+      const lineId    = String(req.params["lid"] ?? "");
+      if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const { status, body: respBody } = await handleUpdateInvoiceLine(
+        db, tenantId, invoiceId, lineId, principalId,
+        body as unknown as Parameters<typeof handleUpdateInvoiceLine>[5],
+        logger,
+      );
+
+      // Auto-classify when spend_category_id or business_intent_id is being set
+      if (status === 200 && principalId &&
+          (Object.prototype.hasOwnProperty.call(body, "spend_category_id") ||
+           Object.prototype.hasOwnProperty.call(body, "business_intent_id"))) {
+        try {
+          const decision = await resolveLineClassification(
+            { db, logger },
+            { tenantId, principalId, invoiceId, lineId, mode: "save" },
+          );
+          res.status(status).json({ ...respBody as object, classification: decision });
+          return;
+        } catch (e) {
+          logger?.error("auto_classify_error", { err: String(e), lineId });
+          // Fall through — return the update result without classification
+        }
+      }
+
+      res.status(status).json(respBody);
+    } catch (err) {
+      logger?.error("finance_ap_invoice_line_update_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── DELETE /api/finance/ap/invoices/:id/lines/:lid ────────────────────────
+  router.delete("/finance/ap/invoices/:id/lines/:lid", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const invoiceId = String(req.params["id"]  ?? "");
+      const lineId    = String(req.params["lid"] ?? "");
+      if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const { status, body: respBody } = await handleDeleteInvoiceLine(
+        db, tenantId, invoiceId, lineId, logger,
+      );
+      res.status(status).json(respBody);
+    } catch (err) {
+      logger?.error("finance_ap_invoice_line_delete_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/invoices/:id/lines/:lid/classify ────────────────
+  // Explicit classification trigger. Runs the intent resolution pipeline and
+  // persists classification_decision on the line.
+  // ?mode=preview  — run without persisting (default: save)
+  router.post("/finance/ap/invoices/:id/lines/:lid/classify", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const invoiceId = String(req.params["id"]  ?? "");
+      const lineId    = String(req.params["lid"] ?? "");
+      if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const modeParam = String(req.query["mode"] ?? "save");
+      const mode = modeParam === "preview" ? "preview" : "save";
+
+      let decision;
+      try {
+        decision = await resolveLineClassification(
+          { db, logger },
+          { tenantId, principalId, invoiceId, lineId, mode },
+        );
+      } catch (classifyErr: unknown) {
+        if (/Line .+ not found on invoice/.test(String(classifyErr))) {
+          res.status(404).json({ error: "LINE_NOT_FOUND" });
+          return;
+        }
+        throw classifyErr;
+      }
+
+      // Fire-and-forget activity log — best effort, non-blocking
+      if (mode === "save" && decision?.status) {
+        const d = decision as Record<string, unknown>;
+        const resolved = d["resolved"] as Record<string, unknown> | undefined;
+        sql`
+          INSERT INTO log.activity_log
+            (tenant_id, domain, activity_type, entity_type, entity_id, actor_id, detail, created_by)
+          VALUES (
+            ${tenantId}::uuid, 'procurement', 'line_classified',
+            'purchase_invoice_line', ${lineId}::uuid, ${principalId}::uuid,
+            ${JSON.stringify({
+              invoice_id:     invoiceId,
+              status:         d["status"],
+              intent_code:    (d["selected"] as Record<string, unknown> | undefined)?.["business_intent_id"] ?? null,
+              profile_id:     (d["selected"] as Record<string, unknown> | undefined)?.["profile_config_id"] ?? null,
+              confidence:     resolved?.["confidence"] ?? null,
+              pipeline_id:    d["pipeline_id"] ?? null,
+            })}::jsonb,
+            ${principalId}::uuid
+          )
+        `.execute(db).catch((e: unknown) => {
+          logger?.error("classify_activity_log_write_failed", { err: String(e), lineId });
+        });
+      }
+
+      res.json({ ok: true, classification: decision });
+    } catch (err) {
+      logger?.error("finance_ap_classify_line_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── GET /api/finance/ap/invoices/:id/lines/suggest ────────────────────────
+  // Returns up to 5 spend-category suggestions based on a text query.
+  // Query params: q (required), companyCodeId (optional, unused in Phase 1)
+  router.get("/finance/ap/invoices/:id/lines/suggest", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ suggestions: [] }); return; }
+
+      const q = String(req.query["q"] ?? "").trim();
+      if (!q) { res.json({ suggestions: [] }); return; }
+
+      const suggestions = await suggestSpendCategories(db, tenantId, q, 5);
+      res.json({ suggestions });
+    } catch (err) {
+      logger?.error("finance_ap_lines_suggest_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/payments/:id/submit — draft → pending_approval | approved ──
+  router.post("/finance/ap/payments/:id/submit", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handleSubmitPayment(db, tenantId, id, principalId);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_submit_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── POST /api/finance/ap/payments/:id/post — approved → posted (creates GL JE) ──
+  router.post("/finance/ap/payments/:id/post", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handlePostPayment(db, tenantId, id, principalId);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_post_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── POST /api/finance/ap/payments/:id/void — posted|approved|draft → voided ──
+  router.post("/finance/ap/payments/:id/void", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handleVoidPayment(db, tenantId, id, principalId, req.body as Record<string, unknown>);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_void_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   return router;

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, FileText, ChevronRight } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { FilterPillBar } from "@athyper/ui/composites";
 import { RowCard } from "@athyper/ui/data";
 import {

@@ -91,47 +91,6 @@ function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unk
     canonical["is_approvable"] = Boolean(raw["approval_workflow"]);
   }
 
-  // has_line_items → has_lines (canonical)
-  if (!("has_lines" in canonical) && ("has_line_items" in raw)) {
-    canonical["has_lines"] = Boolean(raw["has_line_items"]);
-  }
-  // keep legacy alias too
-  if (!("has_line_items" in canonical) && ("has_lines" in raw)) {
-    canonical["has_line_items"] = Boolean(raw["has_lines"]);
-  }
-
-  // has_accounting_entries → has_accounting_distribution (canonical)
-  if (!("has_accounting_distribution" in canonical) && ("has_accounting_entries" in raw)) {
-    canonical["has_accounting_distribution"] = Boolean(raw["has_accounting_entries"]);
-  }
-  if (!("has_accounting_entries" in canonical) && ("has_accounting_distribution" in raw)) {
-    canonical["has_accounting_entries"] = Boolean(raw["has_accounting_distribution"]);
-  }
-
-  // has_comments → comments_enabled (canonical)
-  if (!("comments_enabled" in canonical) && ("has_comments" in raw)) {
-    canonical["comments_enabled"] = Boolean(raw["has_comments"]);
-  }
-  if (!("has_comments" in canonical) && ("comments_enabled" in raw)) {
-    canonical["has_comments"] = Boolean(raw["comments_enabled"]);
-  }
-
-  // has_activity_log → event_history (canonical)
-  if (!("event_history" in canonical) && ("has_activity_log" in raw)) {
-    canonical["event_history"] = Boolean(raw["has_activity_log"]);
-  }
-  if (!("has_activity_log" in canonical) && ("event_history" in raw)) {
-    canonical["has_activity_log"] = Boolean(raw["event_history"]);
-  }
-
-  // has_versioning → version_control (canonical)
-  if (!("version_control" in canonical) && ("has_versioning" in raw)) {
-    canonical["version_control"] = Boolean(raw["has_versioning"]);
-  }
-  if (!("has_versioning" in canonical) && ("version_control" in raw)) {
-    canonical["has_versioning"] = Boolean(raw["version_control"]);
-  }
-
   // allow_attachments → has_attachments (canonical)
   if (!("has_attachments" in canonical) && ("allow_attachments" in raw)) {
     canonical["has_attachments"] = Boolean(raw["allow_attachments"]);

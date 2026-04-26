@@ -279,6 +279,7 @@ services:
       - traefik.http.routers.objectstorage-s3.service=objectstorage-s3
       - traefik.http.routers.objectstorage-s3.tls=true
       - traefik.http.routers.objectstorage-s3.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.objectstorage-s3.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.objectstorage-s3.middlewares=objectstorage-cors
       - traefik.http.services.objectstorage-s3.loadbalancer.server.port=9000
       # CORS middleware — allows browser presigned-URL uploads from the web app
@@ -292,4 +293,5 @@ services:
       - traefik.http.routers.objectstorage-console.service=objectstorage-console
       - traefik.http.routers.objectstorage-console.tls=true
       - traefik.http.routers.objectstorage-console.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.objectstorage-console.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.objectstorage-console.loadbalancer.server.port=9001

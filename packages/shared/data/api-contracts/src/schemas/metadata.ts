@@ -145,12 +145,42 @@ export const CompiledEntitySchema = z.object({
     search_fields: z.array(z.string()).optional(),
     /**
      * Selects the detail-page rendering strategy.
-     *   "generic"    — generic field-grid + tabs (default for MASTER/REFERENCE/CONTROL)
+     *   "standard"   — generic field-grid + tabs (MASTER / CONTROL / REFERENCE)
+     *   "master"     — same as standard, legacy alias
      *   "approvable" — ApprovableDocumentShell with rich financial header
      *   "ledger"     — read-only ledger / log viewer
-     * Falls back to structural heuristics when omitted.
+     *   "generic"    — deprecated alias for "standard"; kept for DB compat
      */
-    detail_renderer: z.enum(["generic", "approvable", "ledger"]).optional(),
+    detail_renderer: z.enum(["standard", "master", "approvable", "ledger", "generic"]).optional(),
+    /**
+     * Selects the list-view rendering strategy. Default: "table".
+     */
+    list_renderer: z.enum(["table", "kanban", "dashboard", "spreadsheet"]).optional(),
+    /**
+     * Which view modes the user may switch to. Subset of the four canonical modes.
+     * Default: ["table"].
+     */
+    view_modes: z.array(z.enum(["table", "kanban", "dashboard", "spreadsheet"])).optional(),
+    /**
+     * Key of the lines renderer registered via registerLinesRenderer().
+     * null  = entity has no line items (master records).
+     * "generic" = standard invoice lines (LinesGrid).
+     * "journal" = GL journal line view (JournalLinesGrid).
+     * "payment" = payment allocation view (PaymentAllocationLinesGrid).
+     */
+    lines_renderer: z.string().nullable().optional(),
+    /**
+     * Field names carrying the entity's primary lifecycle status.
+     * Drives statusToIntent() calls in orchestrator/header builders.
+     * Default: ["status"].
+     */
+    status_field_names: z.array(z.string()).optional(),
+    /**
+     * Alternate intake flow codes available for this entity.
+     * Each code maps to a flow definition in entity_flow.
+     * Default: [] (single default flow only).
+     */
+    alternate_flows: z.array(z.string()).optional(),
     /**
      * Field-name hints consumed by buildApprovableHeaderFromRecord().
      * Populated for every entity with detail_renderer = "approvable".
@@ -236,30 +266,20 @@ export const CompiledEntitySchema = z.object({
     document_category: z.string().optional(),
 
     // ── Spec-canonical tab-driving flags (RUNTIME_ROUTING_SPEC §4) ────────────
-    /** Threaded comments panel. Canonical name: comments_enabled. */
+    /** Threaded comments panel. */
     comments_enabled: z.boolean().optional(),
-    /** @deprecated Use comments_enabled. Kept for seed backward-compat. */
-    has_comments: z.boolean().optional(),
 
-    /** Domain event log / audit trail panel. Canonical name: event_history. */
+    /** Domain event log / audit trail panel. */
     event_history: z.boolean().optional(),
-    /** @deprecated Use event_history. Kept for seed backward-compat. */
-    has_activity_log: z.boolean().optional(),
 
-    /** Version chain + compare subroutes. Canonical name: version_control. */
+    /** Version chain + compare subroutes. */
     version_control: z.boolean().optional(),
-    /** @deprecated Use version_control. Kept for seed backward-compat. */
-    has_versioning: z.boolean().optional(),
 
-    /** Child line-item grid tab. Canonical name: has_lines. */
+    /** Child line-item grid tab. */
     has_lines: z.boolean().optional(),
-    /** @deprecated Use has_lines. Kept for seed backward-compat. */
-    has_line_items: z.boolean().optional(),
 
-    /** Accounting distribution grid tab. Canonical name: has_accounting_distribution. */
+    /** Accounting distribution grid tab. */
     has_accounting_distribution: z.boolean().optional(),
-    /** @deprecated Use has_accounting_distribution. Kept for seed backward-compat. */
-    has_accounting_entries: z.boolean().optional(),
 
     // ── New tab-driving flags (no legacy aliases) ─────────────────────────────
     /** Work items assigned to this record. */

@@ -158,6 +158,46 @@ else
 fi
 
 # ----------------------------
+# ACL Render: pre-compute Redis password hashes before container start.
+# Reads ATHYPER_CONFIG from .env, renders redis-acl.conf.tpl into the
+# config dir so the memorycache container mounts a hash-ready file —
+# no sed/sha256sum at container startup, no substitution race window.
+# ----------------------------
+ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-}"
+ACL_TPL="$STACK_DIR/config/memorycache/redis-acl.conf.tpl"
+if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
+  echo "  FAIL  ATHYPER_CONFIG not set — Redis ACL cannot be rendered (memorycache will refuse to start)"
+  ERRORS=$((ERRORS + 1))
+elif [[ ! -f "$ACL_TPL" ]]; then
+  echo "  FAIL  redis-acl.conf.tpl not found: $ACL_TPL"
+  ERRORS=$((ERRORS + 1))
+else
+  ACL_OUT="$ATHYPER_CONFIG_VAL/memorycache/redis-acl.conf"
+  APP_HASH=$(printf '%s' "${ENV_MAP[MEMORYCACHE_PASSWORD]:-}" | sha256sum | awk '{print $1}')
+  EXP_HASH=$(printf '%s' "${ENV_MAP[REDIS_EXPORTER_PASSWORD]:-}" | sha256sum | awk '{print $1}')
+  GT_HASH=$(printf '%s'  "${ENV_MAP[REDIS_GLITCHTIP_PASSWORD]:-}" | sha256sum | awk '{print $1}')
+  INF_HASH=$(printf '%s' "${ENV_MAP[REDIS_INFISICAL_PASSWORD]:-}" | sha256sum | awk '{print $1}')
+  ADM_HASH=$(printf '%s' "${ENV_MAP[REDIS_ADMIN_PASSWORD]:-}" | sha256sum | awk '{print $1}')
+  mkdir -p "$(dirname "$ACL_OUT")"
+  sed -e "s/__APP_HASH__/$APP_HASH/g" \
+      -e "s/__EXPORTER_HASH__/$EXP_HASH/g" \
+      -e "s/__GLITCHTIP_HASH__/$GT_HASH/g" \
+      -e "s/__INFISICAL_HASH__/$INF_HASH/g" \
+      -e "s/__ADMIN_HASH__/$ADM_HASH/g" \
+      "$ACL_TPL" > "$ACL_OUT"
+  chmod 600 "$ACL_OUT"
+  # Verify no tokens remain — catches silent sha256sum failures or missing variables.
+  if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT"; then
+    LEFTOVER=$(grep -oE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT" | sort -u | tr '\n' ' ')
+    echo "  FAIL  Redis ACL still contains unrendered tokens after render: $LEFTOVER"
+    echo "        Check that sha256sum is available and all Redis password vars are set."
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  [ACL] Redis ACL rendered → $ACL_OUT"
+  fi
+fi
+
+# ----------------------------
 # 4. Hostname parity: kernel config vs .env
 # ----------------------------
 echo "[4/6] Kernel config hostname parity..."
@@ -394,9 +434,78 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
       ERRORS=$((ERRORS + 1))
     fi
     require_var MB_DB_CONNECTION_URI
+    # L3 — Metabase must use the dedicated read-only account so that any DML
+    # (accidental or via a compromised dashboard query) hard-fails at the DB
+    # level. Provision athyper_analytics_ro with GRANT SELECT on relevant
+    # schemas and wire it into MB_DB_CONNECTION_URI before enabling analytics.
+    MBURI="${ENV_MAP[MB_DB_CONNECTION_URI]:-}"
+    if [[ -n "$MBURI" ]] && ! echo "$MBURI" | grep -qiE '(://|:)[^:@/]*analytics_ro[^:@/]*@'; then
+      echo "  FAIL  MB_DB_CONNECTION_URI does not reference the 'analytics_ro' account"
+      echo "        Provision athyper_analytics_ro (GRANT SELECT on relevant schemas),"
+      echo "        add it to PgBouncer's userlist, and update MB_DB_CONNECTION_URI."
+      ERRORS=$((ERRORS + 1))
+    fi
   fi
 else
-  echo "  OK (local — skipping production security checks)"
+  # L7 — In local dev the API server runs on the host, not inside a container.
+  # Pointing APPS_ATHYPER_API_UPSTREAM_URL at a Traefik hostname (e.g.
+  # https://api.athyper.local) causes Traefik to route BFF calls back to the
+  # container network where the API doesn't exist → 404 on every session/stream
+  # request. The value must resolve to the host-side port.
+  API_UPSTREAM="${ENV_MAP[APPS_ATHYPER_API_UPSTREAM_URL]:-}"
+  if [[ -n "$API_UPSTREAM" ]]; then
+    if [[ "$API_UPSTREAM" != http://localhost* && "$API_UPSTREAM" != http://host.docker.internal* ]]; then
+      echo "  FAIL  APPS_ATHYPER_API_UPSTREAM_URL=$API_UPSTREAM in local"
+      echo "        Must start with http://localhost or http://host.docker.internal"
+      echo "        (e.g. http://localhost:4000) — Traefik hostnames loop through"
+      echo "        the container network and produce 404s in local dev."
+      ERRORS=$((ERRORS + 1))
+    fi
+  fi
+  echo "  OK (local — production security checks skipped)"
+fi
+
+# ----------------------------
+# 5b. PgBouncer INI template sanity check
+# ----------------------------
+# Staging/production ini files use __DB_HOST__ / __DB_PORT__ tokens substituted
+# at container start. Validate that no tokens are left unrendered and that
+# required PgBouncer keys are present. No Docker dependency needed.
+# ----------------------------
+echo "[5b] PgBouncer template check..."
+
+DBPOOL_APPS_CONFIG_VAL="${ENV_MAP[DBPOOL_APPS_CONFIG]:-}"
+if [[ -n "$DBPOOL_APPS_CONFIG_VAL" ]]; then
+  DBPOOL_TPL="$STACK_DIR/config/$DBPOOL_APPS_CONFIG_VAL"
+  if [[ -f "$DBPOOL_TPL" ]]; then
+    RENDERED=$(sed \
+      -e "s/__DB_HOST__/pghost-validate/g" \
+      -e "s/__DB_PORT__/5432/g" \
+      "$DBPOOL_TPL" 2>/dev/null || true)
+    PGBOUNCER_ERRORS=0
+    for required_key in listen_addr listen_port auth_type pool_mode; do
+      if ! echo "$RENDERED" | grep -qE "^${required_key}[[:space:]]*="; then
+        echo "  FAIL  PgBouncer template missing required key: $required_key ($DBPOOL_TPL)"
+        ERRORS=$((ERRORS + 1))
+        PGBOUNCER_ERRORS=$((PGBOUNCER_ERRORS + 1))
+      fi
+    done
+    if echo "$RENDERED" | grep -qE '__[A-Z_]+__'; then
+      LEFTOVER=$(echo "$RENDERED" | grep -oE '__[A-Z_]+__' | sort -u | tr '\n' ' ')
+      echo "  FAIL  PgBouncer template has unsubstituted tokens: $LEFTOVER ($DBPOOL_TPL)"
+      ERRORS=$((ERRORS + 1))
+      PGBOUNCER_ERRORS=$((PGBOUNCER_ERRORS + 1))
+    fi
+    if [[ $PGBOUNCER_ERRORS -eq 0 ]]; then
+      echo "  OK"
+    fi
+  else
+    echo "  WARN  PgBouncer template not found: $DBPOOL_TPL (DBPOOL_APPS_CONFIG=$DBPOOL_APPS_CONFIG_VAL)"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+else
+  echo "  WARN  DBPOOL_APPS_CONFIG not set — skipping PgBouncer template check"
+  WARNINGS=$((WARNINGS + 1))
 fi
 
 # ----------------------------
@@ -422,6 +531,24 @@ if [[ "$ENVIRONMENT" == "local" ]]; then
     echo "        To enable: set S3_ENDPOINT=http://objectstorage:9000 and S3_ACCESS_KEY/S3_SECRET_KEY."
     WARNINGS=$((WARNINGS + 1))
   fi
+fi
+
+# L6 — Alloy (logshipper) config syntax pre-flight.
+# If alloy.alloy has a parse error, logshipper enters an immediate crash
+# loop on start. This dry-run catches syntax errors before the stack comes
+# up. Requires Docker; skipped silently when Docker is unavailable.
+ALLOY_CONFIG_PATH="${ATHYPER_CONFIG_VAL}/telemetry/logging/alloy.alloy"
+if [[ -f "$ALLOY_CONFIG_PATH" ]] && command -v docker &>/dev/null; then
+  ALLOY_ERR_FILE=$(mktemp)
+  if ! MSYS_NO_PATHCONV=1 docker run --rm \
+      -v "${ALLOY_CONFIG_PATH}:/etc/alloy/config.alloy:ro" \
+      grafana/alloy:v1.15.1 validate /etc/alloy/config.alloy >"$ALLOY_ERR_FILE" 2>&1; then
+    echo "  WARN  Alloy config has syntax errors — logshipper will crash-loop on start"
+    echo "        Config: $ALLOY_CONFIG_PATH"
+    sed 's/^/        /' "$ALLOY_ERR_FILE"
+    WARNINGS=$((WARNINGS + 1))
+  fi
+  rm -f "$ALLOY_ERR_FILE"
 fi
 
 # Certificate expiry check (all environments)

@@ -52,8 +52,8 @@ export {
 export type { ThemePresetMeta } from "./presets/registry";
 
 // Semantic colors
-export { resolveSemanticColors, SEMANTIC_INTENTS } from "./semantic-colors";
-export type { SemanticIntent, SemanticColorSet } from "./semantic-colors";
+export { resolveSemanticColors, SEMANTIC_INTENTS } from "./semanticColors";
+export type { SemanticIntent, SemanticColorSet } from "./semanticColors";
 
 // Domain intent mappings (business status/class → SemanticIntent)
 export {
@@ -82,3 +82,7 @@ export type { PresetValidationResult } from "./preset-validator";
 
 // Utilities
 export { cn } from "./utils";
+
+// Typography scale
+export { t } from "./typography";
+export type { TypographyToken } from "./typography";

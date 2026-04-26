@@ -62,6 +62,7 @@ export interface UseFlowEngineReturn {
   setField: (name: string, value: unknown) => void;
   setOverride: (name: string, value: unknown) => void;
   setDerivedValue: (name: string, value: unknown) => void;
+  setDisplayLabel: (name: string, label: string | null) => void;
   goNext: () => void;
   goBack: () => void;
   goToStep: (index: number) => void;
@@ -138,12 +139,17 @@ function evalSyncDerivation(
 function buildInitialDraft(
   steps: FlowStep[],
   userCtx?: Record<string, unknown>,
+  initialValues?: Record<string, unknown>,
 ): Record<string, unknown> {
-  const draft: Record<string, unknown> = {};
+  // Start with caller-supplied initial values (e.g. pre-filled from a source document)
+  const draft: Record<string, unknown> = { ...(initialValues ?? {}) };
 
   // First pass: handle patterns that don't depend on other fields
+  // Skip fields already seeded by initialValues so they aren't overwritten
   for (const step of steps) {
     for (const f of step.fields) {
+      if (draft[f.field_name] !== undefined) continue; // already set by initialValues
+
       if (f.default_source?.startsWith("const:")) {
         const raw = f.default_source.slice(6);
         draft[f.field_name] =
@@ -152,7 +158,6 @@ function buildInitialDraft(
       } else if (f.default_source === "today()") {
         draft[f.field_name] = new Date().toISOString().slice(0, 10);
       } else if (f.default_source?.startsWith("lookup.")) {
-        // lookup.{schema}.{domain}.{code} → seed with the code string
         const lastDot = f.default_source.lastIndexOf(".");
         if (lastDot > 7) {
           draft[f.field_name] = f.default_source.slice(lastDot + 1);
@@ -170,9 +175,9 @@ function buildInitialDraft(
   // Second pass: field.* defaults — depends on other fields being seeded first
   for (const step of steps) {
     for (const f of step.fields) {
-      if (f.default_source?.startsWith("field.")) {
+      if (f.default_source?.startsWith("field.") && draft[f.field_name] === undefined) {
         const sourceField = f.default_source.slice(6);
-        if (draft[sourceField] !== undefined && draft[f.field_name] === undefined) {
+        if (draft[sourceField] !== undefined) {
           draft[f.field_name] = draft[sourceField];
         }
       }
@@ -186,6 +191,7 @@ export function useFlowEngine(
   bundle: FlowBundle,
   userPermissions: string[],
   userCtx?: Record<string, unknown>,
+  initialValues?: Record<string, unknown>,
 ): UseFlowEngineReturn {
   const sortedSteps = useMemo(
     () => [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order),
@@ -194,7 +200,7 @@ export function useFlowEngine(
 
   const [state, setState] = useState<FlowEngineState>(() => ({
     currentStepIndex: 0,
-    draft: buildInitialDraft(sortedSteps, userCtx),
+    draft: buildInitialDraft(sortedSteps, userCtx, initialValues),
     errors: {},
     overrides: new Set(),
     displayLabels: {},
@@ -491,6 +497,19 @@ export function useFlowEngine(
     });
   }, []);
 
+  const setDisplayLabel = useCallback((name: string, label: string | null) => {
+    setState((prev) => {
+      if (label === null) {
+        if (!(name in prev.displayLabels)) return prev;
+        const next = { ...prev.displayLabels };
+        delete next[name];
+        return { ...prev, displayLabels: next };
+      }
+      if (prev.displayLabels[name] === label) return prev;
+      return { ...prev, displayLabels: { ...prev.displayLabels, [name]: label } };
+    });
+  }, []);
+
   const validateStep = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     for (const f of visibleFields) {
@@ -542,6 +561,7 @@ export function useFlowEngine(
     setField,
     setOverride,
     setDerivedValue,
+    setDisplayLabel,
     goNext,
     goBack,
     goToStep,

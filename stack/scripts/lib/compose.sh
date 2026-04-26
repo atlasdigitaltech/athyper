@@ -35,11 +35,53 @@ _ATHYPER_COMPOSE_LOADED=1
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_DIR="$STACK_DIR/compose"
 ENV_DIR="$STACK_DIR/env"
-ENV_FILE="$ENV_DIR/.env"
 
-# Export absolute paths so Docker Compose never relies on relative ../../ in .env
-export ATHYPER_CONFIG="$STACK_DIR/config"
-export ATHYPER_DATA="$STACK_DIR/data"
+# Pre-read stack/env/.env for ATHYPER_*_ROOT overrides BEFORE applying fallbacks.
+# Local dev: .env sets paths like D:/Stack/athyper/config so the six-var model
+#   works on Windows without changing this lib file.
+# Server: systemd Environment= lines are already in the shell environment, so
+#   ${VAR:-} is non-empty → pre-read is a no-op, systemd values win.
+_prereq_read_root_var() {
+  local _var="$1" _line _val
+  _line="$(grep -m1 "^${_var}=" "$ENV_DIR/.env" 2>/dev/null || true)"
+  [[ -z "$_line" ]] && return 0
+  _val="${_line#*=}"
+  _val="${_val%%#*}"         # strip inline comment
+  _val="${_val//\"/}"        # strip double-quotes
+  _val="${_val//\'/}"        # strip single-quotes
+  _val="${_val#"${_val%%[![:space:]]*}"}"  # ltrim
+  _val="${_val%"${_val##*[![:space:]]}"}"  # rtrim
+  [[ -z "${!_var:-}" && -n "$_val" ]] && export "$_var=$_val"
+}
+if [[ -f "$ENV_DIR/.env" ]]; then
+  _prereq_read_root_var ATHYPER_CONFIG_ROOT
+  _prereq_read_root_var ATHYPER_SECRETS_ROOT
+  _prereq_read_root_var ATHYPER_DATA_ROOT
+  _prereq_read_root_var ATHYPER_LOG_ROOT
+  _prereq_read_root_var ATHYPER_BACKUP_ROOT
+fi
+unset -f _prereq_read_root_var
+
+# Six env-var roots — each accepts an override so staging/production can set
+# server paths (e.g. /opt/stack/athyper/*) via systemd Environment= lines without
+# touching this file. Local dev falls back to repo-relative paths.
+export ATHYPER_CONFIG_ROOT="${ATHYPER_CONFIG_ROOT:-$STACK_DIR/config}"
+export ATHYPER_SECRETS_ROOT="${ATHYPER_SECRETS_ROOT:-}"    # empty → use ENV_DIR fallback below
+export ATHYPER_DATA_ROOT="${ATHYPER_DATA_ROOT:-$STACK_DIR/data}"
+export ATHYPER_LOG_ROOT="${ATHYPER_LOG_ROOT:-$STACK_DIR/logs}"
+export ATHYPER_BACKUP_ROOT="${ATHYPER_BACKUP_ROOT:-$STACK_DIR/backups}"
+
+# Backwards-compat aliases — compose bind mounts in 47 yml files still reference
+# ${ATHYPER_CONFIG} and ${ATHYPER_DATA}; those variable names do not change.
+export ATHYPER_CONFIG="$ATHYPER_CONFIG_ROOT"
+export ATHYPER_DATA="$ATHYPER_DATA_ROOT"
+
+# .env location: server uses ATHYPER_SECRETS_ROOT/.env; local dev uses stack/env/.env.
+if [[ -n "${ATHYPER_SECRETS_ROOT:-}" ]]; then
+  ENV_FILE="$ATHYPER_SECRETS_ROOT/.env"
+else
+  ENV_FILE="$ENV_DIR/.env"
+fi
 
 if [[ ! -d "$COMPOSE_DIR" ]]; then
   echo "ERROR: COMPOSE_DIR not found: $COMPOSE_DIR"
@@ -115,6 +157,8 @@ build_compose_file_list() {
   _add_file "$COMPOSE_DIR/db/athyper-db.yml"
   _add_file "$COMPOSE_DIR/db/athyper-dbpool-apps.yml"
   _add_file "$COMPOSE_DIR/db/athyper-dbpool-session.yml"
+  _add_file "$COMPOSE_DIR/security/athyper-socket-proxy-gateway.yml"
+  _add_file "$COMPOSE_DIR/security/athyper-socket-proxy-logshipper.yml"
   _add_file "$COMPOSE_DIR/gateway/athyper-gateway.yml"
   _add_file "$COMPOSE_DIR/mail/athyper-mailhog.yml"
   _add_file "$COMPOSE_DIR/iam/athyper-iam.yml"

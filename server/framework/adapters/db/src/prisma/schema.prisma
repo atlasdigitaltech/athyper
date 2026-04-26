@@ -982,7 +982,7 @@ model document_sequence_config {
   separator                 String                      @default("-")
   pad_width                 Int                         @default(5) @db.SmallInt
   format_template           String?
-  reset_strategy            String                      @default("YEARLY")
+  reset_strategy            String                      @default("yearly")
   metadata                  Json                        @default("{}")
   status                    String                      @default("active")
   is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
@@ -2039,6 +2039,28 @@ model lookup_value {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model match_tolerance_config {
+  id              String        @id(map: "mtc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id       String?       @db.Uuid
+  company_code_id String?       @db.Uuid
+  entity_name     String        @default("purchase_invoice")
+  match_type      String
+  tolerance_type  String
+  tolerance_value Decimal       @db.Decimal(10, 4)
+  is_active       Boolean       @default(true)
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  created_by      String        @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  updated_at      DateTime?     @db.Timestamptz(6)
+  updated_by      String?       @db.Uuid
+  company_code    company_code? @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "mtc_company_fk")
+  tenant          tenant?       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mtc_tenant_fk")
+
+  @@index([entity_name, match_type, tolerance_type, tenant_id, company_code_id], map: "mtc_resolution_idx", where: raw("(is_active = true)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model metadata_change_application_log {
   id                                                              String                  @id(map: "mcal_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -2730,6 +2752,8 @@ model tax_group {
   principal                                                                                                 principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tg_created_by_fk")
   tenant                                                                                                    tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tg_tenant_fk")
   tax_group_component                                                                                       tax_group_component[]
+  purchase_invoice_line_purchase_invoice_line_tenant_id_tax_group_idTotax_group                             purchase_invoice_line[]         @relation("purchase_invoice_line_tenant_id_tax_group_idTotax_group")
+  purchase_invoice_line_purchase_invoice_line_tenant_id_withholding_tax_group_idTotax_group                 purchase_invoice_line[]         @relation("purchase_invoice_line_tenant_id_withholding_tax_group_idTotax_group")
   tax_calculation                                                                                           tax_calculation[]
   business_intent                                                                                           business_intent[]
   company_code_customer_profile                                                                             company_code_customer_profile[]
@@ -3203,6 +3227,28 @@ model asset_transaction {
   @@index([tenant_id, company_code_id, fiscal_year, period_number], map: "atx_period_idx")
   @@index([depreciation_run_id], map: "atx_run_idx", where: raw("(depreciation_run_id IS NOT NULL)"))
   @@index([tenant_id, company_code_id, txn_type], map: "atx_type_idx")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model command_log {
+  id              String    @id(map: "cmdl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id       String    @db.Uuid
+  operation       String
+  idempotency_key String
+  status          String    @default("processing")
+  result          Json?
+  error_code      String?
+  error_message   String?
+  principal_id    String?   @db.Uuid
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  completed_at    DateTime? @db.Timestamptz(6)
+  tenant          tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cmdl_tenant_fk")
+
+  @@unique([tenant_id, operation, idempotency_key], map: "cmdl_dedup_uq")
+  @@index([created_at], map: "ix_cl_cleanup", where: raw("(status = ANY (ARRAY['done'::text, 'error'::text]))"))
+  @@index([tenant_id, operation, created_at(sort: Desc)], map: "ix_cl_tenant_op")
   @@schema("document")
 }
 
@@ -5031,110 +5077,125 @@ model payment_term_discount_result {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_invoice {
-  id                       String                     @id(map: "pi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                String                     @db.Uuid
-  code                     String                     @default("")
-  name                     String                     @default("")
-  company_code_id          String                     @db.Uuid
-  invoice_number           String
-  fiscal_document_number   String?
-  invoice_source           String                     @default("po_based")
-  invoice_type             String                     @default("standard")
-  description              String?
-  supplier_id              String?                    @db.Uuid
-  supplier_invoice_number  String?
-  supplier_invoice_date    DateTime?                  @db.Date
-  commitment_id            String?                    @db.Uuid
-  document_date            DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  posting_date             DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  received_date            DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  baseline_date            DateTime?                  @db.Date
-  due_date                 DateTime?                  @db.Date
-  currency_code            String                     @db.Char(3)
-  base_currency_code       String                     @db.Char(3)
-  exchange_rate            Decimal?                   @db.Decimal(18, 10)
-  subtotal_amount          Decimal                    @default(0) @db.Decimal(18, 4)
-  discount_amount          Decimal                    @default(0) @db.Decimal(18, 4)
-  freight_amount           Decimal                    @default(0) @db.Decimal(18, 4)
-  misc_charges_amount      Decimal                    @default(0) @db.Decimal(18, 4)
-  total_amount             Decimal                    @default(0) @db.Decimal(18, 4)
-  tax_amount               Decimal                    @default(0) @db.Decimal(18, 4)
-  withholding_tax_amount   Decimal                    @default(0) @db.Decimal(18, 4)
-  payable_amount           Decimal?                   @default(dbgenerated("(total_amount - withholding_tax_amount)")) @db.Decimal(18, 4)
-  payment_term_id          String?                    @db.Uuid
-  term_snapshot            Json?
-  payment_method_id        String?                    @db.Uuid
-  advance_deduction_amount Decimal                    @default(0) @db.Decimal(18, 4)
-  retention_amount         Decimal                    @default(0) @db.Decimal(18, 4)
-  retention_pct            Decimal?                   @db.Decimal(5, 2)
-  paid_amount              Decimal                    @default(0) @db.Decimal(18, 4)
-  outstanding_amount       Decimal?                   @default(dbgenerated("((((total_amount - withholding_tax_amount) - advance_deduction_amount) - retention_amount) - paid_amount)")) @db.Decimal(18, 4)
-  budget_allocation_id     String?                    @db.Uuid
-  budget_check_result      String?
-  fiscal_year              Int                        @db.SmallInt
-  period_number            Int                        @db.SmallInt
-  cost_center_id           String?                    @db.Uuid
-  profit_center_id         String?                    @db.Uuid
-  project_id               String?                    @db.Uuid
-  site_id                  String?                    @db.Uuid
-  dimension_set_id         String?                    @db.Uuid
-  ap_je_id                 String?                    @db.Uuid
-  is_posted                Boolean                    @default(false)
-  posted_at                DateTime?                  @db.Timestamptz(6)
-  posted_by                String?                    @db.Uuid
-  match_type               String                     @default("three_way")
-  match_status             String                     @default("unmatched")
-  is_reversal              Boolean                    @default(false)
-  reversal_of_id           String?                    @db.Uuid
-  is_credit_note           Boolean                    @default(false)
-  workflow_request_id      String?                    @db.Uuid
-  approved_at              DateTime?                  @db.Timestamptz(6)
-  approved_by              String?                    @db.Uuid
-  is_on_hold               Boolean                    @default(false)
-  hold_reason              String?
-  line_count               Int                        @default(0) @db.SmallInt
-  notes                    String?
-  tags                     Json                       @default("[]")
-  metadata                 Json                       @default("{}")
-  status                   String                     @default("draft")
-  is_active                Boolean?                   @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'partially_paid'::text, 'on_hold'::text]))"))
-  status_changed_at        DateTime?                  @db.Timestamptz(6)
-  status_changed_by        String?                    @db.Uuid
-  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
-  created_by               String                     @db.Uuid
-  updated_at               DateTime?                  @db.Timestamptz(6)
-  updated_by               String?                    @db.Uuid
-  tax_mode                 String?
-  tax_mode_source          String?
-  invoice_address_snapshot invoice_address_snapshot[]
-  invoice_bank_snapshot    invoice_bank_snapshot?
-  invoice_match_case       invoice_match_case?
-  invoice_party_snapshot   invoice_party_snapshot?
-  invoice_tax_snapshot     invoice_tax_snapshot[]
-  payment_entry_allocation payment_entry_allocation[]
-  journal_entry            journal_entry?             @relation(fields: [ap_je_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pi_ap_je_fk")
-  commitment               commitment?                @relation(fields: [tenant_id, commitment_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_commitment_fk")
-  company_code             company_code               @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_company_fk")
-  payment_method           payment_method?            @relation(fields: [tenant_id, payment_method_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_payment_method_fk")
-  payment_term             payment_term?              @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_payment_term_fk")
-  purchase_invoice         purchase_invoice?          @relation("purchase_invoiceTopurchase_invoice", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_reversal_of_fk")
-  other_purchase_invoice   purchase_invoice[]         @relation("purchase_invoiceTopurchase_invoice")
-  supplier                 supplier?                  @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_supplier_fk")
-  tenant                   tenant                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pi_tenant_fk")
-  workflow_request         workflow_request?          @relation(fields: [workflow_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pi_workflow_fk")
-  purchase_invoice_line    purchase_invoice_line[]
+  id                                                String                     @id(map: "pi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                         String                     @db.Uuid
+  code                                              String                     @default("")
+  name                                              String                     @default("")
+  company_code_id                                   String                     @db.Uuid
+  invoice_number                                    String
+  fiscal_document_number                            String?
+  invoice_source                                    String                     @default("po_based")
+  invoice_type                                      String                     @default("standard")
+  description                                       String?
+  supplier_id                                       String?                    @db.Uuid
+  supplier_invoice_number                           String?
+  supplier_invoice_date                             DateTime?                  @db.Date
+  commitment_id                                     String?                    @db.Uuid
+  document_date                                     DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  posting_date                                      DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  received_date                                     DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  baseline_date                                     DateTime?                  @db.Date
+  due_date                                          DateTime?                  @db.Date
+  currency_code                                     String                     @db.Char(3)
+  base_currency_code                                String                     @db.Char(3)
+  exchange_rate                                     Decimal?                   @db.Decimal(18, 10)
+  subtotal_amount                                   Decimal                    @default(0) @db.Decimal(18, 4)
+  discount_amount                                   Decimal                    @default(0) @db.Decimal(18, 4)
+  freight_amount                                    Decimal                    @default(0) @db.Decimal(18, 4)
+  misc_charges_amount                               Decimal                    @default(0) @db.Decimal(18, 4)
+  total_amount                                      Decimal                    @default(0) @db.Decimal(18, 4)
+  tax_amount                                        Decimal                    @default(0) @db.Decimal(18, 4)
+  withholding_tax_amount                            Decimal                    @default(0) @db.Decimal(18, 4)
+  payable_amount                                    Decimal?                   @default(dbgenerated("(total_amount - withholding_tax_amount)")) @db.Decimal(18, 4)
+  payment_term_id                                   String?                    @db.Uuid
+  term_snapshot                                     Json?
+  payment_method_id                                 String?                    @db.Uuid
+  advance_deduction_amount                          Decimal                    @default(0) @db.Decimal(18, 4)
+  retention_amount                                  Decimal                    @default(0) @db.Decimal(18, 4)
+  retention_pct                                     Decimal?                   @db.Decimal(5, 2)
+  paid_amount                                       Decimal                    @default(0) @db.Decimal(18, 4)
+  outstanding_amount                                Decimal?                   @default(dbgenerated("((((total_amount - withholding_tax_amount) - advance_deduction_amount) - retention_amount) - paid_amount)")) @db.Decimal(18, 4)
+  budget_allocation_id                              String?                    @db.Uuid
+  budget_check_result                               String?
+  fiscal_year                                       Int                        @db.SmallInt
+  period_number                                     Int                        @db.SmallInt
+  cost_center_id                                    String?                    @db.Uuid
+  profit_center_id                                  String?                    @db.Uuid
+  project_id                                        String?                    @db.Uuid
+  site_id                                           String?                    @db.Uuid
+  dimension_set_id                                  String?                    @db.Uuid
+  ap_je_id                                          String?                    @db.Uuid
+  is_posted                                         Boolean                    @default(false)
+  posted_at                                         DateTime?                  @db.Timestamptz(6)
+  posted_by                                         String?                    @db.Uuid
+  match_type                                        String                     @default("three_way")
+  match_status                                      String                     @default("unmatched")
+  is_reversal                                       Boolean                    @default(false)
+  reversal_of_id                                    String?                    @db.Uuid
+  is_credit_note                                    Boolean                    @default(false)
+  workflow_request_id                               String?                    @db.Uuid
+  approved_at                                       DateTime?                  @db.Timestamptz(6)
+  approved_by                                       String?                    @db.Uuid
+  is_on_hold                                        Boolean                    @default(false)
+  hold_reason                                       String?
+  line_count                                        Int                        @default(0) @db.SmallInt
+  notes                                             String?
+  tags                                              Json                       @default("[]")
+  metadata                                          Json                       @default("{}")
+  status                                            String                     @default("draft")
+  is_active                                         Boolean?                   @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'partially_paid'::text, 'on_hold'::text]))"))
+  status_changed_at                                 DateTime?                  @db.Timestamptz(6)
+  status_changed_by                                 String?                    @db.Uuid
+  created_at                                        DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                                        String                     @db.Uuid
+  updated_at                                        DateTime?                  @db.Timestamptz(6)
+  updated_by                                        String?                    @db.Uuid
+  tax_mode                                          String?
+  tax_mode_source                                   String?
+  invoice_address_snapshot                          invoice_address_snapshot[]
+  invoice_bank_snapshot                             invoice_bank_snapshot?
+  invoice_match_case                                invoice_match_case?
+  invoice_party_snapshot                            invoice_party_snapshot?
+  invoice_tax_snapshot                              invoice_tax_snapshot[]
+  payment_entry_allocation                          payment_entry_allocation[]
+  journal_entry                                     journal_entry?             @relation(fields: [ap_je_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pi_ap_je_fk")
+  principal_purchase_invoice_approved_byToprincipal principal?                 @relation("purchase_invoice_approved_byToprincipal", fields: [approved_by], references: [id], onUpdate: NoAction, map: "pi_approved_by_fk")
+  budget_allocation                                 budget_allocation?         @relation(fields: [tenant_id, budget_allocation_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_budget_allocation_fk")
+  commitment                                        commitment?                @relation(fields: [tenant_id, commitment_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_commitment_fk")
+  company_code                                      company_code               @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_company_fk")
+  cost_center                                       cost_center?               @relation(fields: [tenant_id, cost_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_cost_center_fk")
+  currency                                          currency                   @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "pi_currency_fk")
+  dimension_set                                     dimension_set?             @relation(fields: [tenant_id, dimension_set_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_dimension_set_fk")
+  payment_method                                    payment_method?            @relation(fields: [tenant_id, payment_method_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_payment_method_fk")
+  payment_term                                      payment_term?              @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_payment_term_fk")
+  principal_purchase_invoice_posted_byToprincipal   principal?                 @relation("purchase_invoice_posted_byToprincipal", fields: [posted_by], references: [id], onUpdate: NoAction, map: "pi_posted_by_fk")
+  profit_center                                     profit_center?             @relation(fields: [tenant_id, profit_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_profit_center_fk")
+  project                                           project?                   @relation(fields: [tenant_id, project_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_project_fk")
+  purchase_invoice                                  purchase_invoice?          @relation("purchase_invoiceTopurchase_invoice", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_reversal_of_fk")
+  other_purchase_invoice                            purchase_invoice[]         @relation("purchase_invoiceTopurchase_invoice")
+  site                                              site?                      @relation(fields: [tenant_id, site_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pi_site_fk")
+  supplier                                          supplier?                  @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pi_supplier_fk")
+  tenant                                            tenant                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pi_tenant_fk")
+  workflow_request                                  workflow_request?          @relation(fields: [workflow_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pi_workflow_fk")
+  purchase_invoice_line                             purchase_invoice_line[]
 
   @@unique([tenant_id, id], map: "pi_tenant_id_uq")
   @@unique([tenant_id, company_code_id, invoice_number], map: "pi_tenant_number_uq")
   @@index([tenant_id, company_code_id, due_date], map: "pi_aging_company_idx", where: raw("((status = ANY (ARRAY['posted'::text, 'partially_paid'::text])) AND (due_date IS NOT NULL))"))
+  @@index([ap_je_id], map: "pi_ap_je_idx", where: raw("(ap_je_id IS NOT NULL)"))
+  @@index([tenant_id, budget_allocation_id], map: "pi_budget_allocation_idx", where: raw("(budget_allocation_id IS NOT NULL)"))
   @@index([tenant_id, commitment_id], map: "pi_commitment_idx", where: raw("(commitment_id IS NOT NULL)"))
+  @@index([tenant_id, cost_center_id], map: "pi_cost_center_idx", where: raw("(cost_center_id IS NOT NULL)"))
   @@index([tenant_id, due_date], map: "pi_due_date_idx", where: raw("((status = ANY (ARRAY['posted'::text, 'partially_paid'::text])) AND (due_date IS NOT NULL))"))
+  @@index([tenant_id, company_code_id, fiscal_year, period_number], map: "pi_fiscal_period_idx")
   @@index([tenant_id, match_status], map: "pi_match_status_idx", where: raw("(match_status = ANY (ARRAY['unmatched'::text, 'partially_matched'::text, 'match_exception'::text]))"))
   @@index([tenant_id], map: "pi_on_hold_idx", where: raw("(is_on_hold = true)"))
   @@index([tenant_id, company_code_id], map: "pi_pending_approval_idx", where: raw("(status = 'pending_approval'::text)"))
   @@index([tenant_id, company_code_id, posting_date(sort: Desc)], map: "pi_posting_date_idx")
+  @@index([tenant_id, project_id], map: "pi_project_idx", where: raw("(project_id IS NOT NULL)"))
   @@index([tenant_id, supplier_id], map: "pi_supplier_idx")
   @@index([tenant_id, supplier_id, supplier_invoice_number, supplier_invoice_date], map: "pi_supplier_invoice_dedup_idx", where: raw("((supplier_id IS NOT NULL) AND (status <> ALL (ARRAY['cancelled'::text, 'rejected'::text, 'proforma'::text])))"))
+  @@index([tenant_id, company_code_id, supplier_id, status, posting_date(sort: Desc)], map: "pi_supplier_status_idx", where: raw("(is_active = true)"))
   @@index([workflow_request_id], map: "pi_workflow_idx", where: raw("(workflow_request_id IS NOT NULL)"))
   @@schema("document")
 }
@@ -5142,64 +5203,79 @@ model purchase_invoice {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_invoice_line {
-  id                       String                    @id(map: "pil_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                String                    @db.Uuid
-  purchase_invoice_id      String                    @db.Uuid
-  line_no                  Int                       @db.SmallInt
-  commitment_line_id       String?                   @db.Uuid
-  goods_receipt_line_id    String?                   @db.Uuid
-  ses_line_id              String?                   @db.Uuid
-  item_id                  String?                   @db.Uuid
-  item_description         String
-  procurement_type         String                    @default("goods")
-  spend_category_id        String?                   @db.Uuid
-  business_intent_id       String?                   @db.Uuid
-  uom_code                 String
-  quantity                 Decimal                   @db.Decimal(18, 4)
-  unit_price               Decimal                   @db.Decimal(18, 4)
-  price_unit               Decimal                   @default(1) @db.Decimal(18, 4)
-  net_amount               Decimal?                  @default(dbgenerated("((quantity * unit_price) / NULLIF(price_unit, (0)::numeric))")) @db.Decimal(18, 4)
-  discount_pct             Decimal?                  @default(0) @db.Decimal(5, 2)
-  discount_amount          Decimal?                  @default(0) @db.Decimal(18, 4)
-  tax_group_id             String?                   @db.Uuid
-  tax_amount               Decimal                   @default(0) @db.Decimal(18, 4)
-  withholding_tax_group_id String?                   @db.Uuid
-  withholding_tax_amount   Decimal                   @default(0) @db.Decimal(18, 4)
-  gross_amount             Decimal                   @default(0) @db.Decimal(18, 4)
-  cost_center_id           String?                   @db.Uuid
-  profit_center_id         String?                   @db.Uuid
-  project_id               String?                   @db.Uuid
-  site_id                  String?                   @db.Uuid
-  dimension_set_id         String?                   @db.Uuid
-  is_asset                 Boolean                   @default(false)
-  asset_category_id        String?                   @db.Uuid
-  matched_quantity         Decimal                   @default(0) @db.Decimal(18, 4)
-  match_status             String                    @default("unmatched")
-  notes                    String?
-  metadata                 Json                      @default("{}")
-  status                   String                    @default("open")
-  created_at               DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by               String                    @db.Uuid
-  updated_at               DateTime?                 @db.Timestamptz(6)
-  updated_by               String?                   @db.Uuid
-  retention_pct            Decimal?                  @default(0) @db.Decimal(5, 2)
-  retention_amount         Decimal                   @default(0) @db.Decimal(18, 4)
-  invoice_tax_snapshot     invoice_tax_snapshot[]
-  match_exception          match_exception[]
-  business_intent          business_intent?          @relation(fields: [tenant_id, business_intent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_business_intent_fk")
-  commitment_line          commitment_line?          @relation(fields: [tenant_id, commitment_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_commitment_line_fk")
-  goods_receipt_line       goods_receipt_line?       @relation(fields: [tenant_id, goods_receipt_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_gr_line_fk")
-  purchase_invoice         purchase_invoice          @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pil_invoice_fk")
-  service_entry_sheet_line service_entry_sheet_line? @relation(fields: [tenant_id, ses_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_ses_line_fk")
-  spend_category           spend_category?           @relation(fields: [tenant_id, spend_category_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_spend_category_fk")
-  tenant                   tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pil_tenant_fk")
+  id                                                                            String                    @id(map: "pil_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                     String                    @db.Uuid
+  purchase_invoice_id                                                           String                    @db.Uuid
+  line_no                                                                       Int                       @db.SmallInt
+  commitment_line_id                                                            String?                   @db.Uuid
+  goods_receipt_line_id                                                         String?                   @db.Uuid
+  ses_line_id                                                                   String?                   @db.Uuid
+  item_id                                                                       String?                   @db.Uuid
+  item_description                                                              String
+  procurement_type                                                              String                    @default("goods")
+  spend_category_id                                                             String?                   @db.Uuid
+  business_intent_id                                                            String?                   @db.Uuid
+  uom_code                                                                      String
+  quantity                                                                      Decimal                   @db.Decimal(18, 4)
+  unit_price                                                                    Decimal                   @db.Decimal(18, 4)
+  price_unit                                                                    Decimal                   @default(1) @db.Decimal(18, 4)
+  net_amount                                                                    Decimal?                  @default(dbgenerated("((quantity * unit_price) / NULLIF(price_unit, (0)::numeric))")) @db.Decimal(18, 4)
+  discount_pct                                                                  Decimal?                  @default(0) @db.Decimal(5, 2)
+  discount_amount                                                               Decimal?                  @default(0) @db.Decimal(18, 4)
+  tax_group_id                                                                  String?                   @db.Uuid
+  tax_amount                                                                    Decimal                   @default(0) @db.Decimal(18, 4)
+  withholding_tax_group_id                                                      String?                   @db.Uuid
+  withholding_tax_amount                                                        Decimal                   @default(0) @db.Decimal(18, 4)
+  gross_amount                                                                  Decimal                   @default(0) @db.Decimal(18, 4)
+  cost_center_id                                                                String?                   @db.Uuid
+  profit_center_id                                                              String?                   @db.Uuid
+  project_id                                                                    String?                   @db.Uuid
+  site_id                                                                       String?                   @db.Uuid
+  dimension_set_id                                                              String?                   @db.Uuid
+  is_asset                                                                      Boolean                   @default(false)
+  asset_category_id                                                             String?                   @db.Uuid
+  matched_quantity                                                              Decimal                   @default(0) @db.Decimal(18, 4)
+  match_status                                                                  String                    @default("unmatched")
+  notes                                                                         String?
+  metadata                                                                      Json                      @default("{}")
+  status                                                                        String                    @default("open")
+  created_at                                                                    DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                                                                    String                    @db.Uuid
+  updated_at                                                                    DateTime?                 @db.Timestamptz(6)
+  updated_by                                                                    String?                   @db.Uuid
+  retention_pct                                                                 Decimal?                  @default(0) @db.Decimal(5, 2)
+  retention_amount                                                              Decimal                   @default(0) @db.Decimal(18, 4)
+  classification_decision                                                       Json                      @default("{}")
+  invoice_tax_snapshot                                                          invoice_tax_snapshot[]
+  match_exception                                                               match_exception[]
+  asset_class                                                                   asset_class?              @relation(fields: [tenant_id, asset_category_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_asset_category_fk")
+  business_intent                                                               business_intent?          @relation(fields: [tenant_id, business_intent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_business_intent_fk")
+  commitment_line                                                               commitment_line?          @relation(fields: [tenant_id, commitment_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_commitment_line_fk")
+  cost_center                                                                   cost_center?              @relation(fields: [tenant_id, cost_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_cost_center_fk")
+  dimension_set                                                                 dimension_set?            @relation(fields: [tenant_id, dimension_set_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_dimension_set_fk")
+  goods_receipt_line                                                            goods_receipt_line?       @relation(fields: [tenant_id, goods_receipt_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_gr_line_fk")
+  purchase_invoice                                                              purchase_invoice          @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pil_invoice_fk")
+  item                                                                          item?                     @relation(fields: [item_id], references: [id], onUpdate: NoAction, map: "pil_item_fk")
+  profit_center                                                                 profit_center?            @relation(fields: [tenant_id, profit_center_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_profit_center_fk")
+  project                                                                       project?                  @relation(fields: [tenant_id, project_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_project_fk")
+  service_entry_sheet_line                                                      service_entry_sheet_line? @relation(fields: [tenant_id, ses_line_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_ses_line_fk")
+  site                                                                          site?                     @relation(fields: [tenant_id, site_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_site_fk")
+  spend_category                                                                spend_category?           @relation(fields: [tenant_id, spend_category_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pil_spend_category_fk")
+  tax_group_purchase_invoice_line_tenant_id_tax_group_idTotax_group             tax_group?                @relation("purchase_invoice_line_tenant_id_tax_group_idTotax_group", fields: [tenant_id, tax_group_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_tax_group_fk")
+  tenant                                                                        tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pil_tenant_fk")
+  uom                                                                           uom                       @relation(fields: [uom_code], references: [code], onUpdate: NoAction, map: "pil_uom_fk")
+  tax_group_purchase_invoice_line_tenant_id_withholding_tax_group_idTotax_group tax_group?                @relation("purchase_invoice_line_tenant_id_withholding_tax_group_idTotax_group", fields: [tenant_id, withholding_tax_group_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_wht_group_fk")
 
   @@unique([purchase_invoice_id, line_no], map: "pil_line_uq")
   @@unique([tenant_id, id], map: "pil_tenant_id_uq")
+  @@index([tenant_id, asset_category_id], map: "pil_asset_idx", where: raw("(is_asset = true)"))
+  @@index([tenant_id, business_intent_id], map: "pil_business_intent_idx", where: raw("(business_intent_id IS NOT NULL)"))
   @@index([tenant_id, commitment_line_id], map: "pil_commitment_line_idx", where: raw("(commitment_line_id IS NOT NULL)"))
   @@index([tenant_id, goods_receipt_line_id], map: "pil_gr_line_idx", where: raw("(goods_receipt_line_id IS NOT NULL)"))
   @@index([tenant_id, purchase_invoice_id], map: "pil_invoice_idx")
   @@index([tenant_id, purchase_invoice_id], map: "pil_match_exception_idx", where: raw("(match_status = 'match_exception'::text)"))
+  @@index([tenant_id, match_status], map: "pil_match_status_idx", where: raw("(match_status <> 'fully_matched'::text)"))
+  @@index([tenant_id, spend_category_id], map: "pil_spend_category_idx", where: raw("(spend_category_id IS NOT NULL)"))
   @@schema("document")
 }
 
@@ -5375,6 +5451,7 @@ model purchase_requisition_line {
   created_by              String               @db.Uuid
   updated_at              DateTime?            @db.Timestamptz(6)
   updated_by              String?              @db.Uuid
+  classification_decision Json                 @default("{}")
   commitment_line         commitment_line[]
   business_intent         business_intent?     @relation(fields: [tenant_id, business_intent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "prl_business_intent_fk")
   purchase_requisition    purchase_requisition @relation(fields: [tenant_id, purchase_requisition_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "prl_pr_fk")
@@ -9005,6 +9082,7 @@ model asset_class {
   updated_at                                             DateTime?                   @db.Timestamptz(6)
   updated_by                                             String?                     @db.Uuid
   asset_class_book_policy                                asset_class_book_policy[]
+  purchase_invoice_line                                  purchase_invoice_line[]
   asset                                                  asset[]
   currency_asset_class_capitalization_currencyTocurrency currency?                   @relation("asset_class_capitalization_currencyTocurrency", fields: [capitalization_currency], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_cap_currency_fk")
   company_code                                           company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ac_company_fk")
@@ -9326,7 +9404,7 @@ model bank_account {
   bic_override                                                              String?
   bank_name_override                                                        String?
   bank_country_override                                                     String?             @db.Char(2)
-  account_nature                                                            String              @default("DIRECT")
+  account_nature                                                            String              @default("direct")
   provider_account_ref                                                      String?
   correspondent_bank_party_id                                               String?             @db.Uuid
   is_verified                                                               Boolean             @default(false)
@@ -9552,6 +9630,7 @@ model budget_allocation {
   updated_at                                                                      DateTime?             @db.Timestamptz(6)
   updated_by                                                                      String?               @db.Uuid
   forecast_line                                                                   forecast_line[]
+  purchase_invoice                                                                purchase_invoice[]
   budget_balance                                                                  budget_balance[]
   budget_transaction                                                              budget_transaction[]
   budget_transfer_budget_transfer_tenant_id_from_allocation_idTobudget_allocation budget_transfer[]     @relation("budget_transfer_tenant_id_from_allocation_idTobudget_allocation")
@@ -9931,6 +10010,7 @@ model company_code {
   forecast_line                                                                                      forecast_line[]
   intent_profile_override                                                                            intent_profile_override[]
   intent_to_accounting_profile_rule                                                                  intent_to_accounting_profile_rule[]
+  match_tolerance_config                                                                             match_tolerance_config[]
   payment_method_company_policy                                                                      payment_method_company_policy[]
   payment_method_interface_binding                                                                   payment_method_interface_binding[]
   payment_settlement_rule                                                                            payment_settlement_rule[]
@@ -10017,6 +10097,7 @@ model company_code {
   holiday_calendar                                                                                   holiday_calendar[]
   item                                                                                               item[]
   letterhead                                                                                         letterhead[]
+  numbering_series                                                                                   numbering_series[]
   principal_profile_principal_profile_tenant_id_default_company_code_idTocompany_code                principal_profile[]                 @relation("principal_profile_tenant_id_default_company_code_idTocompany_code")
   principal_profile_principal_profile_default_company_code_idTocompany_code                          principal_profile[]                 @relation("principal_profile_default_company_code_idTocompany_code")
   principal_ui_profile                                                                               principal_ui_profile[]
@@ -10686,6 +10767,8 @@ model cost_center {
   updated_at                                             DateTime?                 @db.Timestamptz(6)
   updated_by                                             String?                   @db.Uuid
   journal_line                                           journal_line[]
+  purchase_invoice                                       purchase_invoice[]
+  purchase_invoice_line                                  purchase_invoice_line[]
   gl_balance                                             gl_balance[]
   asset                                                  asset[]
   company_code_gl_account                                company_code_gl_account[]
@@ -10894,6 +10977,8 @@ model dimension_set {
   updated_at                    DateTime?                       @db.Timestamptz(6)
   updated_by                    String?                         @db.Uuid
   journal_line                  journal_line[]
+  purchase_invoice              purchase_invoice[]
+  purchase_invoice_line         purchase_invoice_line[]
   gl_balance                    gl_balance[]
   company_code_customer_profile company_code_customer_profile[]
   company_code_supplier_profile company_code_supplier_profile[]
@@ -11413,6 +11498,7 @@ model item {
   created_by                String                      @db.Uuid
   updated_at                DateTime?                   @db.Timestamptz(6)
   updated_by                String?                     @db.Uuid
+  purchase_invoice_line     purchase_invoice_line[]
   stocktake_line            stocktake_line[]
   inventory_balance         inventory_balance[]
   inventory_movement        inventory_movement[]
@@ -11763,6 +11849,30 @@ model notification {
   @@index([expires_at], map: "notif_expiry_pidx", where: raw("(expires_at IS NOT NULL)"))
   @@index([tenant_id, recipient_id, created_at(sort: Desc)], map: "notif_recipient_idx")
   @@index([tenant_id, recipient_id, created_at(sort: Desc)], map: "notif_recipient_unread_pidx", where: raw("((is_read = false) AND (is_dismissed = false))"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model numbering_series {
+  id              String       @id(map: "ns_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id       String       @db.Uuid
+  company_code_id String       @db.Uuid
+  document_type   String
+  prefix          String       @default("")
+  fiscal_year     Int?         @db.SmallInt
+  last_number     Int          @default(0)
+  padding         Int          @default(5) @db.SmallInt
+  is_active       Boolean      @default(true)
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  created_by      String       @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  updated_at      DateTime?    @db.Timestamptz(6)
+  updated_by      String?      @db.Uuid
+  company_code    company_code @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "ns_company_fk")
+  tenant          tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ns_tenant_fk")
+
+  @@unique([tenant_id, company_code_id, document_type, fiscal_year], map: "ns_scope_uq")
+  @@index([tenant_id, company_code_id, document_type, fiscal_year], map: "ix_ns_lookup", where: raw("(is_active = true)"))
   @@schema("master")
 }
 
@@ -12148,6 +12258,8 @@ model principal {
   obligation_horizon                                                                                    obligation_horizon[]
   payment_term_application                                                                              payment_term_application[]
   payment_term_discount_result                                                                          payment_term_discount_result[]
+  purchase_invoice_purchase_invoice_approved_byToprincipal                                              purchase_invoice[]                  @relation("purchase_invoice_approved_byToprincipal")
+  purchase_invoice_purchase_invoice_posted_byToprincipal                                                purchase_invoice[]                  @relation("purchase_invoice_posted_byToprincipal")
   render_job                                                                                            render_job[]
   render_output                                                                                         render_output[]
   stocktake_stocktake_completed_byToprincipal                                                           stocktake[]                         @relation("stocktake_completed_byToprincipal")
@@ -12705,44 +12817,46 @@ model product {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model profit_center {
-  id                                                       String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                String              @db.Uuid
+  id                                                       String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                String                  @db.Uuid
   code                                                     String
   name                                                     String
-  company_code_id                                          String              @db.Uuid
-  parent_id                                                String?             @db.Uuid
-  level_no                                                 Int                 @default(1) @db.SmallInt
+  company_code_id                                          String                  @db.Uuid
+  parent_id                                                String?                 @db.Uuid
+  level_no                                                 Int                     @default(1) @db.SmallInt
   path                                                     String?
-  node_type                                                String              @default("posting")
+  node_type                                                String                  @default("posting")
   description                                              String?
-  profit_center_type                                       String              @default("revenue")
+  profit_center_type                                       String                  @default("revenue")
   segment_code                                             String?
-  responsible_person_id                                    String?             @db.Uuid
-  currency_code                                            String?             @db.Char(3)
-  valid_from                                               DateTime?           @db.Date
-  valid_to                                                 DateTime?           @db.Date
-  sort_order                                               Int                 @default(0) @db.SmallInt
-  metadata                                                 Json                @default("{}")
-  status                                                   String              @default("draft")
-  is_active                                                Boolean?            @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                        DateTime?           @db.Timestamptz(6)
-  status_changed_by                                        String?             @db.Uuid
-  created_at                                               DateTime            @default(now()) @db.Timestamptz(6)
-  created_by                                               String              @db.Uuid
-  updated_at                                               DateTime?           @db.Timestamptz(6)
-  updated_by                                               String?             @db.Uuid
+  responsible_person_id                                    String?                 @db.Uuid
+  currency_code                                            String?                 @db.Char(3)
+  valid_from                                               DateTime?               @db.Date
+  valid_to                                                 DateTime?               @db.Date
+  sort_order                                               Int                     @default(0) @db.SmallInt
+  metadata                                                 Json                    @default("{}")
+  status                                                   String                  @default("draft")
+  is_active                                                Boolean?                @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                        DateTime?               @db.Timestamptz(6)
+  status_changed_by                                        String?                 @db.Uuid
+  created_at                                               DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                                               String                  @db.Uuid
+  updated_at                                               DateTime?               @db.Timestamptz(6)
+  updated_by                                               String?                 @db.Uuid
   journal_line                                             journal_line[]
+  purchase_invoice                                         purchase_invoice[]
+  purchase_invoice_line                                    purchase_invoice_line[]
   gl_balance                                               gl_balance[]
   asset                                                    asset[]
   cost_center                                              cost_center[]
   principal_profile                                        principal_profile[]
-  company_code                                             company_code        @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pc_company_fk")
-  principal_profit_center_created_byToprincipal            principal           @relation("profit_center_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_created_by_fk")
-  currency                                                 currency?           @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "pc_currency_fk")
-  profit_center                                            profit_center?      @relation("profit_centerToprofit_center", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pc_parent_fk")
-  other_profit_center                                      profit_center[]     @relation("profit_centerToprofit_center")
-  principal_profit_center_responsible_person_idToprincipal principal?          @relation("profit_center_responsible_person_idToprincipal", fields: [responsible_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_person_fk")
-  tenant                                                   tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pc_tenant_fk")
+  company_code                                             company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pc_company_fk")
+  principal_profit_center_created_byToprincipal            principal               @relation("profit_center_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_created_by_fk")
+  currency                                                 currency?               @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "pc_currency_fk")
+  profit_center                                            profit_center?          @relation("profit_centerToprofit_center", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pc_parent_fk")
+  other_profit_center                                      profit_center[]         @relation("profit_centerToprofit_center")
+  principal_profit_center_responsible_person_idToprincipal principal?              @relation("profit_center_responsible_person_idToprincipal", fields: [responsible_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_person_fk")
+  tenant                                                   tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pc_tenant_fk")
 
   @@unique([tenant_id, company_code_id, code], map: "profit_center_company_code_uq")
   @@unique([tenant_id, id], map: "profit_center_tenant_id_uq")
@@ -12757,54 +12871,56 @@ model profit_center {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model project {
-  id                                                 String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                          String              @db.Uuid
+  id                                                 String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                          String                  @db.Uuid
   code                                               String
   name                                               String
-  company_code_id                                    String              @db.Uuid
+  company_code_id                                    String                  @db.Uuid
   description                                        String?
   project_type                                       String
-  parent_project_id                                  String?             @db.Uuid
-  level_no                                           Int                 @default(1) @db.SmallInt
+  parent_project_id                                  String?                 @db.Uuid
+  level_no                                           Int                     @default(1) @db.SmallInt
   path                                               String?
-  responsible_person_id                              String?             @db.Uuid
-  is_cross_company                                   Boolean             @default(false)
-  funding_profile_id                                 String?             @db.Uuid
-  default_cost_center_id                             String?             @db.Uuid
-  planned_cost                                       Decimal?            @db.Decimal(18, 4)
-  actual_cost                                        Decimal             @default(0) @db.Decimal(18, 4)
-  currency_code                                      String              @db.Char(3)
-  planned_start                                      DateTime?           @db.Date
-  planned_end                                        DateTime?           @db.Date
-  actual_start                                       DateTime?           @db.Date
-  actual_end                                         DateTime?           @db.Date
-  settlement_type                                    String?             @default("cost_center")
-  settlement_target_id                               String?             @db.Uuid
-  valid_from                                         DateTime?           @db.Date
-  valid_to                                           DateTime?           @db.Date
-  sort_order                                         Int                 @default(0) @db.SmallInt
-  tags                                               Json                @default("[]")
-  metadata                                           Json                @default("{}")
-  status                                             String              @default("draft")
-  is_active                                          Boolean?            @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                  DateTime?           @db.Timestamptz(6)
-  status_changed_by                                  String?             @db.Uuid
-  created_at                                         DateTime            @default(now()) @db.Timestamptz(6)
-  created_by                                         String              @db.Uuid
-  updated_at                                         DateTime?           @db.Timestamptz(6)
-  updated_by                                         String?             @db.Uuid
+  responsible_person_id                              String?                 @db.Uuid
+  is_cross_company                                   Boolean                 @default(false)
+  funding_profile_id                                 String?                 @db.Uuid
+  default_cost_center_id                             String?                 @db.Uuid
+  planned_cost                                       Decimal?                @db.Decimal(18, 4)
+  actual_cost                                        Decimal                 @default(0) @db.Decimal(18, 4)
+  currency_code                                      String                  @db.Char(3)
+  planned_start                                      DateTime?               @db.Date
+  planned_end                                        DateTime?               @db.Date
+  actual_start                                       DateTime?               @db.Date
+  actual_end                                         DateTime?               @db.Date
+  settlement_type                                    String?                 @default("cost_center")
+  settlement_target_id                               String?                 @db.Uuid
+  valid_from                                         DateTime?               @db.Date
+  valid_to                                           DateTime?               @db.Date
+  sort_order                                         Int                     @default(0) @db.SmallInt
+  tags                                               Json                    @default("[]")
+  metadata                                           Json                    @default("{}")
+  status                                             String                  @default("draft")
+  is_active                                          Boolean?                @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                  DateTime?               @db.Timestamptz(6)
+  status_changed_by                                  String?                 @db.Uuid
+  created_at                                         DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                                         String                  @db.Uuid
+  updated_at                                         DateTime?               @db.Timestamptz(6)
+  updated_by                                         String?                 @db.Uuid
   journal_line                                       journal_line[]
+  purchase_invoice                                   purchase_invoice[]
+  purchase_invoice_line                              purchase_invoice_line[]
   gl_balance                                         gl_balance[]
   asset                                              asset[]
   principal_profile                                  principal_profile[]
-  cost_center                                        cost_center?        @relation(fields: [tenant_id, default_cost_center_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_cc_fk")
-  company_code                                       company_code        @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_company_fk")
-  principal_project_created_byToprincipal            principal           @relation("project_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "proj_created_by_fk")
-  currency                                           currency            @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "proj_currency_fk")
-  project                                            project?            @relation("projectToproject", fields: [tenant_id, parent_project_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_parent_fk")
-  other_project                                      project[]           @relation("projectToproject")
-  principal_project_responsible_person_idToprincipal principal?          @relation("project_responsible_person_idToprincipal", fields: [responsible_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "proj_person_fk")
-  tenant                                             tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "proj_tenant_fk")
+  cost_center                                        cost_center?            @relation(fields: [tenant_id, default_cost_center_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_cc_fk")
+  company_code                                       company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_company_fk")
+  principal_project_created_byToprincipal            principal               @relation("project_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "proj_created_by_fk")
+  currency                                           currency                @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "proj_currency_fk")
+  project                                            project?                @relation("projectToproject", fields: [tenant_id, parent_project_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "proj_parent_fk")
+  other_project                                      project[]               @relation("projectToproject")
+  principal_project_responsible_person_idToprincipal principal?              @relation("project_responsible_person_idToprincipal", fields: [responsible_person_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "proj_person_fk")
+  tenant                                             tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "proj_tenant_fk")
   project_item                                       project_item[]
 
   @@unique([tenant_id, code], map: "project_tenant_code_uq")
@@ -12969,6 +13085,8 @@ model site {
   updated_by                           String?                   @db.Uuid
   delivery_note                        delivery_note[]
   journal_line                         journal_line[]
+  purchase_invoice                     purchase_invoice[]
+  purchase_invoice_line                purchase_invoice_line[]
   asset                                asset[]
   company_code_gl_account              company_code_gl_account[]
   cost_center                          cost_center[]
@@ -13362,6 +13480,7 @@ model tenant {
   lifecycle_state                   lifecycle_state[]
   lifecycle_timer_policy            lifecycle_timer_policy[]
   lookup_value                      lookup_value[]
+  match_tolerance_config            match_tolerance_config[]
   metadata_change_application_log   metadata_change_application_log[]
   mfa_config                        mfa_config[]
   notification_routing_rule         notification_routing_rule[]
@@ -13384,6 +13503,7 @@ model tenant {
   workflow_template                 workflow_template[]
   accounting_distribution           accounting_distribution[]
   asset_transaction                 asset_transaction[]
+  command_log                       command_log[]
   commitment                        commitment[]
   commitment_address_snapshot       commitment_address_snapshot[]
   commitment_line                   commitment_line[]
@@ -13570,6 +13690,7 @@ model tenant {
   lifecycle_instance                lifecycle_instance[]
   multipart_upload                  multipart_upload[]
   notification                      notification[]
+  numbering_series                  numbering_series[]
   owner_type                        owner_type[]
   payment_method                    payment_method[]
   payment_term                      payment_term[]
@@ -13954,6 +14075,7 @@ model currency {
   journal_line_journal_line_transaction_currencyTocurrency        journal_line[]                     @relation("journal_line_transaction_currencyTocurrency")
   journal_line_reference                                          journal_line_reference[]
   netting_batch                                                   netting_batch[]
+  purchase_invoice                                                purchase_invoice[]
   stocktake_line                                                  stocktake_line[]
   wht_certificate                                                 wht_certificate[]
   asset_revaluation_reserve                                       asset_revaluation_reserve[]
@@ -14479,22 +14601,23 @@ model timezone {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model uom {
-  id                String        @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String        @unique(map: "uom_code_uq")
-  name              String
-  symbol            String?
-  quantity_type     String?
-  metadata          Json          @default("{}")
-  status            String        @default("active")
-  is_active         Boolean?      @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime?     @db.Timestamptz(6)
-  status_changed_by String?       @db.Uuid
-  created_at        DateTime      @default(now()) @db.Timestamptz(6)
-  created_by        String        @db.Uuid
-  updated_at        DateTime?     @db.Timestamptz(6)
-  updated_by        String?       @db.Uuid
-  asset_class       asset_class[]
-  item              item[]
+  id                    String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                  String                  @unique(map: "uom_code_uq")
+  name                  String
+  symbol                String?
+  quantity_type         String?
+  metadata              Json                    @default("{}")
+  status                String                  @default("active")
+  is_active             Boolean?                @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at     DateTime?               @db.Timestamptz(6)
+  status_changed_by     String?                 @db.Uuid
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  created_by            String                  @db.Uuid
+  updated_at            DateTime?               @db.Timestamptz(6)
+  updated_by            String?                 @db.Uuid
+  purchase_invoice_line purchase_invoice_line[]
+  asset_class           asset_class[]
+  item                  item[]
 
   @@index([code], map: "uom_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("shared")

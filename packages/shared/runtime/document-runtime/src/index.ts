@@ -40,6 +40,15 @@ export { ItemsGrid, type ItemsGridProps, type ItemsGridColumn } from "./items";
 export { SplitAccountingPanel, type SplitAccountingPanelProps } from "./items/SplitAccountingPanel";
 export { LineEditorSheet, type LineEditorSheetProps } from "./items/LineEditorSheet";
 export { LinesGrid, type LinesGridProps } from "./items/LinesGrid";
+export { JournalLinesGrid, type JournalLinesGridProps } from "./items/JournalLinesGrid";
+export { PaymentAllocationLinesGrid, type PaymentAllocationLinesGridProps } from "./items/PaymentAllocationLinesGrid";
+export {
+  ClassificationDecisionPanel,
+  type ClassificationDecisionPanelProps,
+  ClassificationStatusBadge,
+  type ClassificationStatusBadgeProps,
+} from "./items/ClassificationDecisionPanel";
+export { LineComposerSheet, type LineComposerSheetProps } from "./items/LineComposerSheet";
 
 // ── Orchestrator components (Spec v1.2) ──────────────────────────────────────
 export { ProcessHealthStrip, type ProcessHealthStripProps } from "./health";
@@ -83,3 +92,7 @@ export {
   type DocumentKpiStripProps,
   type KpiStripCell,
 } from "./kpi";
+
+// ── Boot-time renderer registration ──────────────────────────────────────────
+// Call registerDocumentRenderers() once at app startup (root layout).
+export { registerDocumentRenderers } from "./register";

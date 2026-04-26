@@ -7,6 +7,20 @@
 -- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
 -- ══════════════════════════════════════════════════════════════════════════════
+-- Prerequisite: ensure permission codes used below exist in shared.permission.
+-- hold / release_hold are workflow-hold operations; view_match is a utility read.
+-- ══════════════════════════════════════════════════════════════════════════════
+INSERT INTO shared.permission (code, name, category_id, scope_type, risk_level, sort_order, created_by)
+SELECT v.code, v.name, c.id, v.st, v.rl, v.so, '00000000-0000-0000-0000-000000000000'::uuid
+FROM shared.permission_category c
+JOIN (VALUES
+    ('hold',         'Hold',             'workflow', 'record', 'medium', 92),
+    ('release_hold', 'Release Hold',     'workflow', 'record', 'medium', 93),
+    ('view_match',   'View Match Case',  'utility',  'record', 'low',    75)
+) AS v(code, name, cat, st, rl, so) ON c.code = v.cat
+ON CONFLICT (code) DO NOTHING;
+
+-- ══════════════════════════════════════════════════════════════════════════════
 -- Vendor operations
 -- permission_codes must reference shared.permission.code
 -- Master lifecycle actions map to: cancel (deactivate/block), close (archive)
@@ -67,17 +81,34 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'purchase_invoice', 'create',   'LIST',   'PRIMARY',  'NAVIGATE', '/app/purchase_invoice/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'update',   'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/purchase_invoice/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'submit',   'DETAIL', 'PRIMARY',  'MODAL',    'submit',                               true,  30, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'approve',  'DETAIL', 'PRIMARY',  'MODAL',    'approve',                              true,  40, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'deny',     'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                                 true,  50, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'post',     'DETAIL', 'TOOLBAR',  'MODAL',    'post',                                 true,  60, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'cancel',   'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                               true,  70, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'reverse',  'DETAIL', 'OVERFLOW', 'MODAL',    'reverse',                              true,  80, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                                 true,  90, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                               false, 100, '00000000-0000-0000-0000-000000000000')
+    (NULL, 'purchase_invoice', 'create',          'LIST',   'PRIMARY',  'NAVIGATE', '/app/purchase_invoice/new',       false, 10,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'update',          'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/purchase_invoice/{id}/edit', true,  20,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'submit',          'DETAIL', 'PRIMARY',  'MODAL',    'flow:submit_for_approval',        true,  30,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'approve',         'DETAIL', 'PRIMARY',  'MODAL',    'approve',                        true,  40,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'deny',            'DETAIL', 'TOOLBAR',  'MODAL',    'deny',                           true,  50,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'post',            'DETAIL', 'TOOLBAR',  'MODAL',    'flow:post_invoice',              true,  60,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'cancel',          'DETAIL', 'OVERFLOW', 'MODAL',    'cancel',                         true,  70,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'reverse',         'DETAIL', 'OVERFLOW', 'MODAL',    'flow:reverse_invoice',           true,  80,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'copy',            'DETAIL', 'OVERFLOW', 'API',      'copy',                           true,  90,  '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'export',          'LIST',   'TOOLBAR',  'API',      'export',                         false, 100, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'hold',            'DETAIL', 'OVERFLOW', 'MODAL',    'hold',                           true,  110, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'release_hold',    'DETAIL', 'OVERFLOW', 'MODAL',    'release_hold',                   true,  120, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'amend',           'DETAIL', 'OVERFLOW', 'MODAL',    'amend',                          true,  130, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice', 'ap.promote_proforma','DETAIL', 'PRIMARY',  'MODAL',    'flow:promote_proforma',          true,  25,  '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+
+-- Idempotent correction: ensure submit and post use the flow handler_targets
+-- (catches existing rows that were seeded with the generic 'submit'/'post' targets)
+UPDATE control.entity_operation
+   SET handler_target = CASE
+       WHEN permission_code = 'submit'  THEN 'flow:submit_for_approval'
+       WHEN permission_code = 'post'    THEN 'flow:post_invoice'
+       WHEN permission_code = 'reverse' THEN 'flow:reverse_invoice'
+   END
+ WHERE tenant_id IS NULL
+   AND entity_name = 'purchase_invoice'
+   AND permission_code IN ('submit','post','reverse')
+   AND handler_target NOT LIKE 'flow:%';
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Purchase Order operations
@@ -146,8 +177,9 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'purchase_invoice_line', 'create',       'LIST',   'PRIMARY',  'MODAL',    'add_line',                           false, 10,  '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice_line', 'update',       'DETAIL', 'PRIMARY',  'MODAL',    'edit_line',                          true,  20,  '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice_line', 'delete_draft', 'DETAIL', 'OVERFLOW', 'MODAL',    'delete_line',                        true,  30,  '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'purchase_invoice_line', 'view_je',      'DETAIL', 'OVERFLOW', 'NAVIGATE', '/document/accounting_distribution?source_line_id={id}', true, 40, '00000000-0000-0000-0000-000000000000')
+    (NULL, 'purchase_invoice_line', 'create',              'LIST',   'PRIMARY',  'MODAL',    'add_line',                                               false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'update',              'DETAIL', 'PRIMARY',  'MODAL',    'edit_line',                                              true,  20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'delete_draft',        'DETAIL', 'OVERFLOW', 'MODAL',    'delete_line',                                            true,  30, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'view_je',             'DETAIL', 'OVERFLOW', 'NAVIGATE', '/document/accounting_distribution?source_line_id={id}', true,  40, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'purchase_invoice_line', 'view_match',          'DETAIL', 'OVERFLOW', 'NAVIGATE', '/document/invoice_match_case?invoice_line_id={id}',      true,  50, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;

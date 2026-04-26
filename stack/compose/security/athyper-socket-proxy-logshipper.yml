@@ -1,0 +1,44 @@
+# =======================================================================
+# Stack       : athyper Stack – Security
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-socket-proxy-logshipper
+#
+# Description :
+#   Docker socket proxy for the Grafana Alloy (logshipper) service.
+#   Exposes only CONTAINERS read access — the minimum required for
+#   container log discovery. Alloy never touches docker.sock directly.
+#
+#   Allowed:  CONTAINERS (read-only GET only)
+#   Denied:   all write/mutate operations and all other API categories
+# =======================================================================
+services:
+  socket-proxy-logshipper:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    profiles: ["core", "telemetry"]
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      # All other categories denied
+      POST: 0
+      DELETE: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+    healthcheck:
+      # Verify the proxy is responsive before logshipper connects. A silent
+      # crash would stop new containers from being discovered (already-known
+      # containers keep shipping logs, but new services would be invisible).
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2375/version | grep -q ApiVersion"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

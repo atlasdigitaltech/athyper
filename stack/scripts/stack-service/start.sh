@@ -5,23 +5,23 @@
 # Usage:
 #   ./start.sh iam                 -> start by alias
 #   ./start.sh db redis gateway    -> start multiple at once
-#   ./start.sh athyper-stack-iam-1 -> raw container name passthrough
+#   ./start.sh athyper-iam-1 -> raw container name passthrough
 #
 # Aliases (case-insensitive; also accepts raw container names):
-#   iam                        -> Keycloak          (athyper-stack-iam-1)
-#   db                         -> Postgres          (athyper-stack-db-1)
-#   dbpool-session             -> PgBouncer session (athyper-stack-dbpool-session-1)
-#   dbpool-apps                -> PgBouncer apps    (athyper-stack-dbpool-apps-1)
-#   gateway | traefik          -> Traefik ingress   (athyper-stack-gateway-1)
-#   redis | cache | memorycache -> Redis cache      (athyper-stack-memorycache-1)
-#   minio | storage            -> MinIO object store (athyper-stack-objectstorage-1)
-#   mail | mailhog             -> Mailhog           (athyper-stack-mailhog-1)
-#   web | frontend             -> Next.js frontend  (athyper-stack-athyper-neon-web-1)
-#   api | backend              -> Backend API       (athyper-stack-athyper-api-1)
-#   search | meilisearch       -> Meilisearch       (athyper-stack-meilisearch-1)
+#   iam                        -> Keycloak          (athyper-iam-1)
+#   db                         -> Postgres          (athyper-db-1)
+#   dbpool-session             -> PgBouncer session (athyper-dbpool-session-1)
+#   dbpool-apps                -> PgBouncer apps    (athyper-dbpool-apps-1)
+#   gateway | traefik          -> Traefik ingress   (athyper-gateway-1)
+#   redis | cache | memorycache -> Redis cache      (athyper-memorycache-1)
+#   minio | storage            -> MinIO object store (athyper-objectstorage-1)
+#   mail | mailhog             -> Mailhog           (athyper-mailhog-1)
+#   web | frontend             -> Next.js frontend  (athyper-athyper-neon-web-1)
+#   api | backend              -> Backend API       (athyper-athyper-api-1)
+#   search | meilisearch       -> Meilisearch       (athyper-meilisearch-1)
 #
 # Container name prefix is derived from COMPOSE_PROJECT_NAME in stack/env/.env
-# (defaults to athyper-stack). Override per-container via DOCKER_CONTAINER_* env vars.
+# (defaults to athyper). Override per-container via DOCKER_CONTAINER_* env vars.
 # ============================================================
 
 set -euo pipefail
@@ -35,13 +35,13 @@ _resolve() {
     db)                      echo "${CONTAINER_DB}" ;;
     dbpool-session)          echo "${CONTAINER_DBPOOL_SESSION}" ;;
     dbpool-apps)             echo "${CONTAINER_DBPOOL_APPS}" ;;
-    gateway|traefik)         echo "${DOCKER_CONTAINER_GATEWAY:-athyper-stack-gateway-1}" ;;
-    redis|cache|memorycache) echo "${DOCKER_CONTAINER_REDIS:-athyper-stack-memorycache-1}" ;;
-    minio|storage)           echo "${DOCKER_CONTAINER_MINIO:-athyper-stack-objectstorage-1}" ;;
-    mail|mailhog)            echo "${DOCKER_CONTAINER_MAIL:-athyper-stack-mailhog-1}" ;;
-    web|frontend)            echo "${DOCKER_CONTAINER_WEB:-athyper-stack-athyper-neon-web-1}" ;;
-    api|backend)             echo "${DOCKER_CONTAINER_API:-athyper-stack-athyper-api-1}" ;;
-    search|meilisearch)      echo "${DOCKER_CONTAINER_SEARCH:-athyper-stack-meilisearch-1}" ;;
+    gateway|traefik)         echo "${DOCKER_CONTAINER_GATEWAY:-athyper-gateway-1}" ;;
+    redis|cache|memorycache) echo "${DOCKER_CONTAINER_REDIS:-athyper-memorycache-1}" ;;
+    minio|storage)           echo "${DOCKER_CONTAINER_MINIO:-athyper-objectstorage-1}" ;;
+    mail|mailhog)            echo "${DOCKER_CONTAINER_MAIL:-athyper-mailhog-1}" ;;
+    web|frontend)            echo "${DOCKER_CONTAINER_WEB:-athyper-athyper-neon-web-1}" ;;
+    api|backend)             echo "${DOCKER_CONTAINER_API:-athyper-athyper-api-1}" ;;
+    search|meilisearch)      echo "${DOCKER_CONTAINER_SEARCH:-athyper-meilisearch-1}" ;;
     *)                       echo "$1" ;;
   esac
 }

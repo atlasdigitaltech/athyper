@@ -1461,3 +1461,171 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE document.wht_certificate ADD CONSTRAINT whtc_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §PI-PATCH  purchase_invoice — missing header FKs (Phase 1 DDL patch)
+-- ============================================================================
+
+-- Budget allocation linkage
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_budget_allocation_fk
+    FOREIGN KEY (tenant_id, budget_allocation_id)
+    REFERENCES master.budget_allocation (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_column THEN NULL; END $$;
+
+-- Currency lookup (character(3) → shared.currency)
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_currency_fk
+    FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Dimension FKs — ON DELETE SET NULL (dimension deletions must not block invoice reads)
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_cost_center_fk
+    FOREIGN KEY (tenant_id, cost_center_id)
+    REFERENCES master.cost_center (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_profit_center_fk
+    FOREIGN KEY (tenant_id, profit_center_id)
+    REFERENCES master.profit_center (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_project_fk
+    FOREIGN KEY (tenant_id, project_id)
+    REFERENCES master.project (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_site_fk
+    FOREIGN KEY (tenant_id, site_id)
+    REFERENCES master.site (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_dimension_set_fk
+    FOREIGN KEY (tenant_id, dimension_set_id)
+    REFERENCES master.dimension_set (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Posted-by / Approved-by / Posted-at pair consistency already in table CHECK.
+-- principal FKs for workflow actors
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_posted_by_fk
+    FOREIGN KEY (posted_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice ADD CONSTRAINT pi_approved_by_fk
+    FOREIGN KEY (approved_by) REFERENCES master.principal (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §PIL-PATCH  purchase_invoice_line — missing FKs (Phase 1 DDL patch)
+-- ============================================================================
+
+-- Item (shared catalogue item — tenant_id IS NULL for shared items)
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_item_fk
+    FOREIGN KEY (item_id) REFERENCES master.item (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Normalise any legacy informal codes to UN/ECE equivalents before adding FK
+UPDATE document.purchase_invoice_line SET uom_code = 'HUR' WHERE uom_code = 'HR';
+
+-- Unit of measure
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_uom_fk
+    FOREIGN KEY (uom_code) REFERENCES shared.uom (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Tax group
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_tax_group_fk
+    FOREIGN KEY (tenant_id, tax_group_id)
+    REFERENCES control.tax_group (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Withholding tax group
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_wht_group_fk
+    FOREIGN KEY (tenant_id, withholding_tax_group_id)
+    REFERENCES control.tax_group (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Dimension FKs on lines
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_cost_center_fk
+    FOREIGN KEY (tenant_id, cost_center_id)
+    REFERENCES master.cost_center (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_profit_center_fk
+    FOREIGN KEY (tenant_id, profit_center_id)
+    REFERENCES master.profit_center (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_project_fk
+    FOREIGN KEY (tenant_id, project_id)
+    REFERENCES master.project (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_site_fk
+    FOREIGN KEY (tenant_id, site_id)
+    REFERENCES master.site (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_dimension_set_fk
+    FOREIGN KEY (tenant_id, dimension_set_id)
+    REFERENCES master.dimension_set (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- Asset category
+DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_asset_category_fk
+    FOREIGN KEY (tenant_id, asset_category_id)
+    REFERENCES master.asset_class (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object OR undefined_table THEN NULL; END $$;
+
+-- CHECK: if a line is flagged as an asset, the asset category must be set
+DO $$ BEGIN
+    ALTER TABLE document.purchase_invoice_line
+        ADD CONSTRAINT pil_asset_category_req
+        CHECK (is_asset = false OR asset_category_id IS NOT NULL);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §PTA-PATCH  payment_term_application — invoice FK (previously missing)
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE document.payment_term_application ADD CONSTRAINT pta_invoice_fk
+    FOREIGN KEY (tenant_id, purchase_invoice_id)
+    REFERENCES document.purchase_invoice (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object OR undefined_column THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §NS-PATCH  master.numbering_series — FKs
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE master.numbering_series ADD CONSTRAINT ns_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.numbering_series ADD CONSTRAINT ns_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §MTC-PATCH  control.match_tolerance_config — FKs
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE control.match_tolerance_config ADD CONSTRAINT mtc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.match_tolerance_config ADD CONSTRAINT mtc_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §CMDL-PATCH  document.command_log — FKs
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE document.command_log ADD CONSTRAINT cmdl_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

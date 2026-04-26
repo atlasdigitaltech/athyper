@@ -1,0 +1,235 @@
+/**
+ * AI Foundation Routes
+ *
+ * POST   /api/ai/actions/run            — execute an AI action (persists inference log)
+ * POST   /api/ai/actions/preview        — dry-run (no inference log, no DB writes)
+ * POST   /api/ai/feedback               — submit user verdict on an AI output
+ * GET    /api/ai/policy/effective       — resolve effective policy for (action, doc_class)
+ *
+ * Auth:   Bearer token required on all routes.
+ * Perms:  ai.use_extraction to call /run and /preview
+ *         ai.review_ai_output to call /feedback
+ *         (no permission gate on /policy/effective — informational only)
+ */
+
+import type { Router } from "express";
+import { sql } from "kysely";
+import { z } from "zod";
+import {
+  verifyBearer,
+  resolveTenantId,
+  resolvePrincipalIdOrNull,
+  extractOrgHeaders,
+  isUuid,
+} from "@athyper/svc-shared";
+import type { AIRuntime }         from "../ai-runtime.js";
+import type { AutonomyResolver }  from "../autonomy-resolver.service.js";
+import type { ConfidenceResolver } from "../confidence-resolver.service.js";
+import type { FeedbackLogWriter } from "../feedback-log-writer.js";
+import type { AnyDb }             from "../ai-runtime.types.js";
+import { ActionRequestSchema }    from "../ai-runtime.types.js";
+
+// ── Deps ──────────────────────────────────────────────────────────────────────
+
+export interface AiRouteDeps {
+  db:                 AnyDb;
+  auth:               { verifyToken(token: string): Promise<{ sub: string; [k: string]: unknown }> };
+  aiRuntime:          AIRuntime;
+  autonomyResolver:   AutonomyResolver;
+  confidenceResolver: ConfidenceResolver;
+  feedbackLogWriter:  FeedbackLogWriter;
+  logger:             { info(event: string, fields?: Record<string, unknown>): void; error(event: string, fields?: Record<string, unknown>): void; warn(event: string, fields?: Record<string, unknown>): void };
+}
+
+// ── Route registration ────────────────────────────────────────────────────────
+
+export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
+  const { db, auth, aiRuntime, autonomyResolver, confidenceResolver, feedbackLogWriter, logger } = deps;
+
+  // ── POST /api/ai/actions/run ─────────────────────────────────────────────
+  router.post("/ai/actions/run", (req, res) => {
+    void (async () => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
+
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+
+        // Permission gate — ai.use_extraction
+        const permCheck = await sql<{ decision: string }>`
+          SELECT master.check_permission(
+            ${tenantId}::uuid, ${principalId}::uuid, 'ai.use_extraction', NULL
+          ) AS decision
+        `.execute(db);
+        if (permCheck.rows[0]?.decision !== "allow") {
+          res.status(403).json({ error: "forbidden", required: "ai.use_extraction" });
+          return;
+        }
+
+        const parsed = ActionRequestSchema.safeParse(req.body);
+        if (!parsed.success) {
+          res.status(400).json({ error: "invalid_request", issues: parsed.error.issues });
+          return;
+        }
+
+        const response = await aiRuntime.runAction(parsed.data, tenantId, principalId);
+        res.status(response.status === "ok" ? 200 : response.status === "blocked" ? 403 : 422).json(response);
+      } catch (e) {
+        logger.error("ai_run_route_error", { err: String(e) });
+        res.status(500).json({ error: "internal_error" });
+      }
+    })();
+  });
+
+  // ── POST /api/ai/actions/preview ─────────────────────────────────────────
+  // Same as /run but runs without writing inference log or mutating DB.
+  // Used by the frontend to show the AI suggestion before the user commits.
+  router.post("/ai/actions/preview", (req, res) => {
+    void (async () => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
+
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+
+        const permCheck = await sql<{ decision: string }>`
+          SELECT master.check_permission(
+            ${tenantId}::uuid, ${principalId}::uuid, 'ai.use_extraction', NULL
+          ) AS decision
+        `.execute(db);
+        if (permCheck.rows[0]?.decision !== "allow") {
+          res.status(403).json({ error: "forbidden", required: "ai.use_extraction" });
+          return;
+        }
+
+        const parsed = ActionRequestSchema.safeParse(req.body);
+        if (!parsed.success) {
+          res.status(400).json({ error: "invalid_request", issues: parsed.error.issues });
+          return;
+        }
+
+        // Preview runs through the same runtime but the inference log writer
+        // is a no-op in preview context.  We mark the response pipeline_id with
+        // "preview:" prefix so logs can distinguish.
+        const response = await aiRuntime.runAction(
+          { ...parsed.data, context: { ...parsed.data.context, extra: { ...parsed.data.context.extra, _preview: true } } },
+          tenantId,
+          principalId,
+        );
+
+        res.status(200).json({ ...response, ai_inference_log_id: null });
+      } catch (e) {
+        logger.error("ai_preview_route_error", { err: String(e) });
+        res.status(500).json({ error: "internal_error" });
+      }
+    })();
+  });
+
+  // ── POST /api/ai/feedback ────────────────────────────────────────────────
+  const FeedbackSchema = z.object({
+    feedback_type:     z.string().min(1),
+    entity_type:       z.string().optional(),
+    entity_id:         z.string().uuid().optional(),
+    target_id:         z.string().uuid().optional(),
+    verdict:           z.enum(["correct", "wrong", "partial", "missing"]),
+    reason_code:       z.string().optional(),
+    reason_detail:     z.string().max(2000).optional(),
+    evidence_snapshot: z.any().optional(),
+    detail:            z.any().optional(),
+  });
+
+  router.post("/ai/feedback", (req, res) => {
+    void (async () => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
+
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+
+        const permCheck = await sql<{ decision: string }>`
+          SELECT master.check_permission(
+            ${tenantId}::uuid, ${principalId}::uuid, 'ai.review_ai_output', NULL
+          ) AS decision
+        `.execute(db);
+        if (permCheck.rows[0]?.decision !== "allow") {
+          res.status(403).json({ error: "forbidden", required: "ai.review_ai_output" });
+          return;
+        }
+
+        const parsed = FeedbackSchema.safeParse(req.body);
+        if (!parsed.success) {
+          res.status(400).json({ error: "invalid_request", issues: parsed.error.issues });
+          return;
+        }
+
+        const fb = parsed.data;
+        await feedbackLogWriter.write({
+          tenantId,
+          principalId,
+          feedbackType:     fb.feedback_type,
+          entityType:       fb.entity_type,
+          entityId:         fb.entity_id,
+          targetId:         fb.target_id,
+          verdict:          fb.verdict,
+          reasonCode:       fb.reason_code,
+          reasonDetail:     fb.reason_detail,
+          evidenceSnapshot: fb.evidence_snapshot,
+          detail:           fb.detail,
+        });
+
+        res.status(201).json({ ok: true });
+      } catch (e) {
+        logger.error("ai_feedback_route_error", { err: String(e) });
+        res.status(500).json({ error: "internal_error" });
+      }
+    })();
+  });
+
+  // ── GET /api/ai/policy/effective ─────────────────────────────────────────
+  // Returns the effective (tenant-resolved) autonomy policy and confidence
+  // thresholds for a given action + doc_class.  Informational — no permission gate.
+  router.get("/ai/policy/effective", (req, res) => {
+    void (async () => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
+
+        const actionCode = String(req.query["action_code"] ?? "");
+        const docClass   = req.query["doc_class"] ? String(req.query["doc_class"]) : null;
+
+        if (!actionCode) {
+          res.status(400).json({ error: "action_code_required" });
+          return;
+        }
+
+        const [policy, thresholds] = await Promise.all([
+          autonomyResolver.resolve(tenantId, actionCode, docClass),
+          confidenceResolver.resolve(tenantId, actionCode, docClass, null),
+        ]);
+
+        res.json({ action_code: actionCode, doc_class: docClass, policy, thresholds });
+      } catch (e) {
+        logger.error("ai_policy_route_error", { err: String(e) });
+        res.status(500).json({ error: "internal_error" });
+      }
+    })();
+  });
+
+  return router;
+}

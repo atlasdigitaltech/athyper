@@ -291,10 +291,6 @@ export const EntityListSortEntrySchema = z.object({
   nulls: z.enum(["first", "last"]).optional(),
 });
 export type EntityListSortEntry = z.infer<typeof EntityListSortEntrySchema>;
-/** @deprecated Use EntityListSortEntry */
-export const EntityListSortSchema = EntityListSortEntrySchema;
-/** @deprecated Use EntityListSortEntry */
-export type EntityListSort = EntityListSortEntry;
 
 /**
  * Facet resolution scope — controls how expensive the facet query is.

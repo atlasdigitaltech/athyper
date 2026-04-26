@@ -91,49 +91,20 @@ describe("Layer 2 — feature-flag driven tabs", () => {
     expect(tabs({ version_control: true })).toContain("versions");
   });
 
-  it("adds versions via legacy alias has_versioning", () => {
-    expect(tabs({ has_versioning: true })).toContain("versions");
-  });
-
-  it("adds comments via canonical flag comments_enabled", () => {
+  it("adds comments via comments_enabled", () => {
     expect(tabs({ comments_enabled: true })).toContain("comments");
   });
 
-  it("adds comments via legacy alias has_comments", () => {
-    expect(tabs({ has_comments: true })).toContain("comments");
-  });
-
-  it("adds events via canonical flag event_history", () => {
+  it("adds events via event_history", () => {
     expect(tabs({ event_history: true })).toContain("events");
   });
 
-  it("adds events via legacy alias has_activity_log", () => {
-    expect(tabs({ has_activity_log: true })).toContain("events");
-  });
-
-  it("adds lines via canonical flag has_lines", () => {
+  it("adds lines via has_lines", () => {
     expect(tabs({ has_lines: true })).toContain("lines");
   });
 
-  it("adds lines via legacy alias has_line_items", () => {
-    expect(tabs({ has_line_items: true })).toContain("lines");
-  });
-
-  it("adds distributions via canonical flag has_accounting_distribution", () => {
+  it("adds distributions via has_accounting_distribution", () => {
     expect(tabs({ has_accounting_distribution: true })).toContain("distributions");
-  });
-
-  it("adds distributions via legacy alias has_accounting_entries", () => {
-    expect(tabs({ has_accounting_entries: true })).toContain("distributions");
-  });
-
-  it("canonical false overrides legacy true for comments (??-semantics)", () => {
-    // comments_enabled: false is not null/undefined → ?? short-circuits, result = false
-    expect(tabs({ comments_enabled: false, has_comments: true })).not.toContain("comments");
-  });
-
-  it("canonical false overrides legacy true for events (??-semantics)", () => {
-    expect(tabs({ event_history: false, has_activity_log: true })).not.toContain("events");
   });
 
   it("Phase-3 tabs: quality, reports, tasks, watchers, rules, integrations", () => {
@@ -249,7 +220,7 @@ describe("deduplication — pushIfMissing prevents duplicate tabs", () => {
       entity_class: "DOCUMENT",
       default_tabs: ["lines"],
     };
-    const result = resolveTabs(makeEntity({ has_line_items: true }), profile, []);
+    const result = resolveTabs(makeEntity({ has_lines: true }), profile, []);
     const count = result.filter((t) => t === "lines").length;
     expect(count).toBe(1);
   });
@@ -288,16 +259,12 @@ describe("regression — purchase_invoice feature_flags (finance-core)", () => {
   const PURCHASE_INVOICE_FLAGS: CompiledEntity["feature_flags"] = {
     is_approvable:               true,
     document_category:           "payables",
-    has_line_items:              true,   // legacy → lines
-    comments_enabled:            true,   // canonical
-    has_comments:                true,   // legacy
-    event_history:               true,   // canonical
-    has_activity_log:            true,   // legacy
+    has_lines:                   true,
+    comments_enabled:            true,
+    event_history:               true,
     has_attachments:             true,
-    version_control:             true,   // canonical
-    has_versioning:              true,   // legacy
-    has_accounting_entries:      true,   // legacy → distributions
-    has_accounting_distribution: true,   // canonical
+    version_control:             true,
+    has_accounting_distribution: true,
     has_payment_schedule:        true,   // health tile only, no tab
   };
 

@@ -1,0 +1,400 @@
+/**
+ * Invoice Submit Handler — flow:submit_for_approval
+ *
+ * Called from action-dispatcher.route.ts when handler_target = 'flow:submit_for_approval'
+ * for purchase_invoice entity.
+ *
+ * Steps:
+ *   1. Load and validate invoice (must be in 'draft' status with at least 1 line)
+ *   2. Resolve workflow template via control.workflow_definition rules
+ *   3. If allow_self_approval=true and all approvers === requester → auto-approve
+ *   4. Create document.workflow_request (ON CONFLICT DO NOTHING for idempotency)
+ *   5. Create document.workflow_stage rows (one per template stage)
+ *   6. Create document.work_item for stage 1 (type=approval) + assign approvers
+ *   7. Update invoice.status → 'pending_approval' + set workflow_request_id
+ *   8. Return { ok: true, record: updatedInvoice }
+ *
+ * If no workflow_definition is found for purchase_invoice, falls through to a
+ * direct status transition (auto-approve path for tenants without approval rules).
+ *
+ * Schema notes:
+ *   - Routing: control.workflow_definition  (entity_type + rules jsonb)
+ *   - Templates: control.workflow_template  (tenant_id IS NULL = platform-global)
+ *   - Stages: control.workflow_template_stage (joined by workflow_template_id + stage_no)
+ *   - Rules: control.workflow_template_rule   (assign_to jsonb: {type, value})
+ *     assign_to.type: "requester" | "principal" | "role" | "group" | "field"
+ *
+ * workflow_definition.tenant_id: NOT NULL — '00000000-0000-0000-0000-000000000000'
+ * is used as the platform-default sentinel for seeds that predate tenant provisioning.
+ */
+
+import type { Kysely } from "kysely";
+import { sql } from "kysely";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDb = Kysely<Record<string, any>>;
+
+interface HandlerResult {
+  status: number;
+  body:   Record<string, unknown>;
+}
+
+interface TemplateStage {
+  id:       string;
+  stage_no: number;
+  name:     string;
+  mode:     string;
+  quorum:   Record<string, unknown> | null;
+}
+
+interface WorkflowTemplate {
+  id:        string;
+  behaviors: Record<string, unknown>;
+  stages:    TemplateStage[];
+}
+
+const V_NIL = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * Resolves a workflow_template for the given entity + operation by evaluating
+ * the workflow_definition rules against the entity payload.
+ * Tenant-specific definitions take priority over the nil-UUID platform default.
+ */
+async function resolveWorkflowTemplate(
+  db:          AnyDb,
+  tenantId:    string,
+  entityName:  string,
+  entityPayload: Record<string, unknown>,
+): Promise<WorkflowTemplate | null> {
+  const defResult = await sql<{ rules: unknown }>`
+    SELECT rules
+    FROM   control.workflow_definition
+    WHERE  entity_type = ${entityName}
+      AND  is_active   = true
+      AND  (tenant_id = ${tenantId}::uuid OR tenant_id = ${V_NIL}::uuid)
+    ORDER BY (tenant_id = ${tenantId}::uuid) DESC
+    LIMIT  1
+  `.execute(db);
+
+  const def = defResult.rows[0];
+  if (!def) return null;
+
+  const rules = Array.isArray(def.rules) ? (def.rules as Array<{
+    condition: Record<string, unknown> | null;
+    template_code: string;
+    priority: number;
+  }>) : [];
+  rules.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+
+  let templateCode: string | null = null;
+  for (const rule of rules) {
+    if (!rule.condition) { templateCode = rule.template_code; break; }
+    const cond = rule.condition as { field?: string; operator?: string; value?: unknown };
+    if (cond.field && cond.operator) {
+      const fieldVal = Number(entityPayload[cond.field] ?? 0);
+      const refVal   = Number(cond.value ?? 0);
+      let matches = false;
+      if      (cond.operator === "gte") matches = fieldVal >= refVal;
+      else if (cond.operator === "gt")  matches = fieldVal > refVal;
+      else if (cond.operator === "lte") matches = fieldVal <= refVal;
+      else if (cond.operator === "lt")  matches = fieldVal < refVal;
+      else if (cond.operator === "eq")  matches = fieldVal === refVal;
+      if (matches) { templateCode = rule.template_code; break; }
+    }
+  }
+  if (!templateCode) return null;
+
+  const tmplResult = await sql<{ id: string; behaviors: Record<string, unknown> }>`
+    SELECT id, behaviors
+    FROM   control.workflow_template
+    WHERE  code      = ${templateCode}
+      AND  is_active = true
+      AND  (tenant_id = ${tenantId}::uuid OR tenant_id IS NULL)
+    ORDER BY tenant_id NULLS LAST
+    LIMIT  1
+  `.execute(db);
+
+  const tmpl = tmplResult.rows[0];
+  if (!tmpl) return null;
+
+  const stages = await sql<TemplateStage>`
+    SELECT id, stage_no, name, mode, quorum
+    FROM   control.workflow_template_stage
+    WHERE  workflow_template_id = ${tmpl.id}
+    ORDER  BY stage_no
+  `.execute(db);
+
+  return {
+    id:        tmpl.id,
+    behaviors: (tmpl.behaviors as Record<string, unknown>) ?? {},
+    stages:    stages.rows,
+  };
+}
+
+/**
+ * Resolves the set of approver principal_ids for a given template stage.
+ * assign_to.type values: "requester" | "self" | "principal" | "direct" | "role" | "group" | "field"
+ */
+async function resolveApprovers(
+  db:          AnyDb,
+  tenantId:    string,
+  templateId:  string,
+  stageNo:     number,
+  invoiceRow:  Record<string, unknown>,
+  principalId: string | null,
+): Promise<string[]> {
+  const rules = await sql<{ assign_to: Record<string, unknown> | null }>`
+    SELECT assign_to
+    FROM   control.workflow_template_rule
+    WHERE  workflow_template_id = ${templateId}
+      AND  (stage_no = ${stageNo} OR stage_no IS NULL)
+    ORDER  BY priority
+  `.execute(db);
+
+  const ids = new Set<string>();
+
+  for (const rule of rules.rows) {
+    const at   = rule.assign_to ?? {};
+    const type = String(at["type"] ?? "");
+    const val  = String(at["value"] ?? "");
+
+    switch (type) {
+      case "requester":
+      case "self":
+        if (principalId) ids.add(principalId);
+        break;
+      case "principal":
+      case "direct":
+        if (val) ids.add(val);
+        break;
+      case "role": {
+        const rows = await sql<{ principal_id: string }>`
+          SELECT prm.principal_id
+          FROM   master.principal_role_member prm
+          JOIN   master.role r ON r.id = prm.role_id
+          WHERE  r.tenant_id = ${tenantId} AND r.code = ${val} AND r.is_active = true
+        `.execute(db);
+        rows.rows.forEach((r) => ids.add(r.principal_id));
+        break;
+      }
+      case "group": {
+        const rows = await sql<{ principal_id: string }>`
+          SELECT agm.principal_id
+          FROM   master.auth_group_member agm
+          JOIN   master.auth_group g ON g.id = agm.group_id
+          WHERE  g.tenant_id = ${tenantId} AND g.code = ${val}
+        `.execute(db);
+        rows.rows.forEach((m) => ids.add(m.principal_id));
+        break;
+      }
+      case "field": {
+        const fv = invoiceRow[val];
+        if (typeof fv === "string" && fv) ids.add(fv);
+        break;
+      }
+    }
+  }
+
+  return Array.from(ids);
+}
+
+export async function handleSubmitForApproval(
+  db:          AnyDb,
+  tenantId:    string,
+  invoiceId:   string,
+  principalId: string | null,
+  body:        Record<string, unknown>,
+  logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
+): Promise<HandlerResult> {
+  // Accept either 'notes' (flow field name) or legacy 'remarks'
+  const remarks = (typeof body["notes"] === "string" ? body["notes"] : undefined)
+               ?? (typeof body["remarks"] === "string" ? body["remarks"] : undefined);
+
+  return db.transaction().execute(async (trx) => {
+
+    // Step 1: Load invoice + validate
+    const invoiceResult = await sql<Record<string, unknown>>`
+      SELECT * FROM document.purchase_invoice
+      WHERE id = ${invoiceId} AND tenant_id = ${tenantId}
+      LIMIT 1 FOR UPDATE
+    `.execute(trx);
+
+    const invoice = invoiceResult.rows[0];
+    if (!invoice) {
+      return { status: 404, body: { error: "INVOICE_NOT_FOUND", message: "Invoice not found" } };
+    }
+
+    const currentStatus = String(invoice["status"] ?? "").toLowerCase();
+    if (currentStatus !== "draft") {
+      return { status: 422, body: { error: "INVALID_STATUS", message: `Invoice is in '${currentStatus}' — only draft invoices can be submitted` } };
+    }
+
+    const lineCount = Number(invoice["line_count"] ?? 0);
+    if (lineCount === 0) {
+      return { status: 422, body: { error: "NO_LINES", message: "Invoice must have at least one line before submitting" } };
+    }
+
+    const now = new Date();
+
+    // Step 2: Resolve workflow template via workflow_definition rules
+    const template = await resolveWorkflowTemplate(trx, tenantId, "purchase_invoice", invoice);
+
+    if (!template || template.stages.length === 0) {
+      // Auto-approve: no workflow configured for this tenant
+      const updated = await sql<Record<string, unknown>>`
+        UPDATE document.purchase_invoice
+           SET status            = 'approved',
+               status_changed_at = ${now},
+               status_changed_by = ${principalId},
+               approved_at       = ${now},
+               approved_by       = ${principalId},
+               updated_at        = ${now},
+               updated_by        = ${principalId}
+         WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
+         RETURNING *
+      `.execute(trx);
+
+      logger?.info("ap_invoice_auto_approved", { tenantId, invoiceId });
+      return { status: 200, body: { ok: true, record: updated.rows[0] ?? invoice } };
+    }
+
+    // Step 3: Check for self-approval shortcut
+    const allowSelfApproval = template.behaviors["allow_self_approval"] === true;
+    if (allowSelfApproval && principalId) {
+      const stage1 = template.stages.find((s) => s.stage_no === 1);
+      if (stage1) {
+        const approvers = await resolveApprovers(
+          trx, tenantId, template.id, stage1.stage_no, invoice, principalId,
+        );
+        const onlyRequester = approvers.length > 0 && approvers.every((a) => a === principalId);
+        if (onlyRequester) {
+          const updated = await sql<Record<string, unknown>>`
+            UPDATE document.purchase_invoice
+               SET status            = 'approved',
+                   status_changed_at = ${now},
+                   status_changed_by = ${principalId},
+                   approved_at       = ${now},
+                   approved_by       = ${principalId},
+                   notes             = COALESCE(${remarks ?? null}, notes),
+                   updated_at        = ${now},
+                   updated_by        = ${principalId}
+             WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
+             RETURNING *
+          `.execute(trx);
+
+          logger?.info("ap_invoice_self_approved", { tenantId, invoiceId });
+          return { status: 200, body: { ok: true, record: updated.rows[0] ?? invoice } };
+        }
+      }
+    }
+
+    // Step 4: Create workflow_request (idempotent)
+    const wreqResult = await sql<{ id: string }>`
+      INSERT INTO document.workflow_request (
+        tenant_id, workflow_type, workflow_template_id, entity_type, entity_id,
+        entity_snapshot, requested_by, status, created_by, created_at
+      ) VALUES (
+        ${tenantId}, 'approval', ${template.id},
+        'purchase_invoice', ${invoiceId},
+        ${JSON.stringify(invoice)}::jsonb,
+        ${principalId ?? V_NIL},
+        'pending',
+        ${principalId ?? V_NIL},
+        ${now}
+      )
+      ON CONFLICT (tenant_id, entity_type, entity_id)
+        WHERE status = 'pending'
+      DO NOTHING
+      RETURNING id
+    `.execute(trx);
+
+    let wreqId: string;
+    if (wreqResult.rows[0]) {
+      wreqId = wreqResult.rows[0].id;
+    } else {
+      const existing = await sql<{ id: string }>`
+        SELECT id FROM document.workflow_request
+        WHERE tenant_id = ${tenantId} AND entity_type = 'purchase_invoice'
+          AND entity_id = ${invoiceId} AND status = 'pending'
+        LIMIT 1
+      `.execute(trx);
+      if (!existing.rows[0]) {
+        return { status: 409, body: { error: "CONFLICT", message: "Another workflow request is already pending for this invoice" } };
+      }
+      wreqId = existing.rows[0].id;
+    }
+
+    // Step 5: Create workflow stages
+    for (const stage of template.stages) {
+      const isStageActive = stage.stage_no === 1;
+      await sql`
+        INSERT INTO document.workflow_stage (
+          tenant_id, workflow_request_id, template_stage_id,
+          stage_no, name, mode, quorum, status, started_at, created_by, created_at
+        ) VALUES (
+          ${tenantId}, ${wreqId}, ${stage.id},
+          ${stage.stage_no}, ${stage.name}, ${stage.mode},
+          ${stage.quorum ? JSON.stringify(stage.quorum) : null}::jsonb,
+          ${isStageActive ? "active" : "pending"},
+          ${isStageActive ? now : null},
+          ${principalId ?? V_NIL},
+          ${now}
+        )
+        ON CONFLICT (workflow_request_id, stage_no) DO NOTHING
+      `.execute(trx);
+    }
+
+    // Step 6: Create work_items for stage 1 approvers
+    const stage1 = template.stages.find((s) => s.stage_no === 1);
+    if (stage1) {
+      const approvers = await resolveApprovers(
+        trx, tenantId, template.id, stage1.stage_no, invoice, principalId,
+      );
+
+      const stageRow = await sql<{ id: string }>`
+        SELECT id FROM document.workflow_stage
+        WHERE workflow_request_id = ${wreqId} AND stage_no = 1
+        LIMIT 1
+      `.execute(trx);
+      const stageDbId = stageRow.rows[0]?.id;
+
+      if (stageDbId && approvers.length > 0) {
+        for (const approverId of approvers) {
+          await sql`
+            INSERT INTO event.work_item (
+              tenant_id, workflow_request_id, workflow_stage_id,
+              task_type, designated_id, assignee_id,
+              status, created_by, created_at
+            ) VALUES (
+              ${tenantId}, ${wreqId}, ${stageDbId},
+              'approval', ${approverId}, ${approverId},
+              'pending', ${principalId ?? V_NIL}, ${now}
+            )
+            ON CONFLICT DO NOTHING
+          `.execute(trx);
+        }
+      }
+    }
+
+    // Step 7: Update invoice status → pending_approval
+    const updated = await sql<Record<string, unknown>>`
+      UPDATE document.purchase_invoice
+         SET status              = 'pending_approval',
+             workflow_request_id = ${wreqId},
+             status_changed_at   = ${now},
+             status_changed_by   = ${principalId},
+             notes               = COALESCE(${remarks ?? null}, notes),
+             updated_at          = ${now},
+             updated_by          = ${principalId}
+       WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
+       RETURNING *
+    `.execute(trx);
+
+    if (!updated.rows[0]) {
+      return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently — please retry" } };
+    }
+
+    logger?.info("ap_invoice_submitted", { tenantId, invoiceId, wreqId, stages: template.stages.length });
+    return { status: 200, body: { ok: true, record: updated.rows[0], workflow_request_id: wreqId } };
+  });
+}

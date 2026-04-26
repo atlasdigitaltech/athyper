@@ -5,15 +5,16 @@ REM ============================================================
 REM athyper - Web Frontend UP - Windows Batch
 REM Location: stack\scripts\app\web-up.bat
 REM
-REM Behaviour (auto-detected from ENVIRONMENT in .env):
-REM   local      -> pnpm --filter @athyper/web dev  (foreground, HMR)
+REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
+REM   local      -> load stack\env\.env, translate Docker hostnames to 127.0.0.1,
+REM                 derive web-specific vars, then: pnpm --filter @athyper/web dev
 REM   staging    -> docker compose up -d --no-deps athyper-neon-web
 REM   production -> docker compose up -d --no-deps athyper-neon-web
+REM
+REM Single source of truth: stack\env\.env is the only env file needed.
+REM apps\web\.env.local is NOT required -- this script injects all vars directly.
 REM ============================================================
 
-REM ----------------------------
-REM Resolve directories
-REM ----------------------------
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -28,32 +29,40 @@ popd >nul
 set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
-set "ATHYPER_CONFIG=%STACK_DIR:\=/%/config"
-set "ATHYPER_DATA=%STACK_DIR:\=/%/data"
-
 REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
 
 REM ----------------------------
-REM Read ENVIRONMENT from .env
+REM Read all vars from stack .env into the current environment.
+REM Uses FOR variable expansion (%%A=%%B) — avoids delayed-expansion ! processing
+REM inside values (bcrypt hashes, auth secrets with special chars).
 REM ----------------------------
 set "ENVIRONMENT=local"
 
 if exist "%ENV_FILE%" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
-    set "K=%%A"
-    set "V=%%B"
-    for /f "tokens=* delims= " %%K in ("!K!") do set "K=%%K"
-    if not "!K!"=="" if /I not "!K:~0,1!"=="#" (
-      set "V=!V:"=!"
-      for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
-      for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ENVIRONMENT" set "ENVIRONMENT=!V!"
+    set "_k=%%A"
+    for /f "tokens=* delims= " %%K in ("!_k!") do set "_k=%%K"
+    if not "!_k!"=="" if /I not "!_k:~0,1!"=="#" (
+      set "%%A=%%B"
     )
   )
 ) else (
-  echo WARNING: .env not found: "%ENV_FILE%" — defaulting to local mode.
+  echo WARNING: .env not found: "%ENV_FILE%" -- defaulting to local mode.
 )
+
+if "!ENVIRONMENT!"=="" set "ENVIRONMENT=local"
+
+REM ATHYPER_CONFIG_ROOT / ATHYPER_DATA_ROOT fallbacks
+if not "!ATHYPER_CONFIG_ROOT!"=="" goto :app_skip_cr
+set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
+:app_skip_cr
+if not "!ATHYPER_DATA_ROOT!"==""   goto :app_skip_dr
+set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+:app_skip_dr
+
+set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!" & set "ATHYPER_CONFIG=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
 
 echo.
 echo ==========================
@@ -63,9 +72,42 @@ echo ==========================
 echo.
 
 REM ----------------------------
-REM Local: run pnpm dev (foreground)
+REM Local: translate, derive web-specific vars, run pnpm dev
 REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
+  REM Redis: translate Docker hostname to 127.0.0.1
+  set "REDIS_URL=!REDIS_URL:memorycache=127.0.0.1!"
+  REM Disable socket idle timeout -- avoids ECONNRESET on Windows Docker reconnects
+  set "REDIS_SOCKET_TIMEOUT_MS=0"
+
+  REM API runs on the host at port 4000 (set by api-up.bat)
+  REM Mirrors compose: RUNTIME_API_URL: "http://athyper-api:${API_PORT}"
+  set "RUNTIME_API_URL=http://localhost:4000"
+
+  REM Derive Keycloak vars from IAM stack vars.
+  REM Mirrors compose: KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
+  set "KEYCLOAK_BASE_URL=https://!IAM_HOST!"
+  set "KEYCLOAK_REALM=!IAM_DEFAULT_REALM!"
+  if "!KEYCLOAK_CLIENT_ID!"=="" set "KEYCLOAK_CLIENT_ID=neon-web"
+
+  REM Allow direct localhost:3000 access (bypasses host-guard middleware)
+  set "ALLOW_DIRECT_ACCESS=true"
+
+  REM Map GlitchTip DSN to SENTRY_DSN (mirrors production.env.example)
+  if "!SENTRY_DSN!"=="" set "SENTRY_DSN=!GLITCHTIP_DSN!"
+
+  REM Derive NEXT_PUBLIC_ vars from base stack vars (mirrors compose service env block)
+  set "NEXT_PUBLIC_ENVIRONMENT=!ENVIRONMENT!"
+  set "NEXT_PUBLIC_SERVICE_VERSION=!SERVICE_VERSION!"
+  set "NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=!SENTRY_TRACES_SAMPLE_RATE!"
+
+  REM Feature flags -- default off unless overridden in stack/env/.env
+  if "!NEXT_PUBLIC_GITHUB_LOGIN_ENABLED!"==""      set "NEXT_PUBLIC_GITHUB_LOGIN_ENABLED=false"
+  if "!NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED!"==""  set "NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED=false"
+
+  set "NODE_ENV=development"
+  set "NODE_TLS_REJECT_UNAUTHORIZED=0"
+
   echo Local mode: starting Next.js dev server
   echo   pnpm --filter @athyper/web dev
   echo.
@@ -100,6 +142,8 @@ if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMP
 if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
 if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""
