@@ -334,6 +334,16 @@ if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]]; then
   find "$LIVE_CFG" -type d -exec chmod 755 {} \;
   find "$LIVE_CFG" -type f -exec chmod 644 {} \;
   echo "  owner: root:athyper-config  dirs: 755  files: 644"
+
+  # redis-acl.conf exception: validate-env.sh runs as athyper (not root) and
+  # overwrites this file before each stack start to render password SHA-256
+  # hashes. Give athyper ownership so it can write it. Mode stays 644 so
+  # container processes (UID 999) can read the file via the :ro bind mount.
+  ACL_FILE="$LIVE_CFG/memorycache/redis-acl.conf"
+  if [[ -f "$ACL_FILE" ]]; then
+    chown athyper:athyper-config "$ACL_FILE"
+    echo "  owner: athyper:athyper-config  $ACL_FILE  (validate-env.sh write exception)"
+  fi
 fi
 
 echo ""

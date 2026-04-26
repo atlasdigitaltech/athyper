@@ -185,7 +185,10 @@ else
       -e "s/__INFISICAL_HASH__/$INF_HASH/g" \
       -e "s/__ADMIN_HASH__/$ADM_HASH/g" \
       "$ACL_TPL" > "$ACL_OUT"
-  chmod 600 "$ACL_OUT"
+  # 644: container processes (UID 999) need +r to read this file via the :ro bind
+  # mount. The file contains SHA-256 hashes (not raw passwords) and is root-owned
+  # after setup-config.sh runs, so world-readable is acceptable.
+  chmod 644 "$ACL_OUT"
   # Verify no tokens remain — catches silent sha256sum failures or missing variables.
   if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT"; then
     LEFTOVER=$(grep -oE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT" | sort -u | tr '\n' ' ')
