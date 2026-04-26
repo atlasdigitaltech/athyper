@@ -191,21 +191,11 @@ const STATUS_FIELD_NAMES = new Set([
   "approval_status", "workflow_status", "payment_status",
 ]);
 
-const CLOSE_RUN_ENTITIES  = ["close_run", "period_close"];
-const CLOSE_TASK_ENTITIES = ["close_task", "close_step"];
-const AP_AR_ENTITIES      = [
-  "ap_invoice", "ar_invoice", "purchase_invoice", "sales_invoice",
-  "payment_entry", "journal_entry", "receipt",
-];
-
-function detectSemanticResolver(entityCode: string, fieldName: string): string | undefined {
+function detectSemanticResolver(entity: CompiledEntity, fieldName: string): string | undefined {
   if (!STATUS_FIELD_NAMES.has(fieldName) && !fieldName.endsWith("_status")) return undefined;
-
-  if (CLOSE_TASK_ENTITIES.some((e) => entityCode.includes(e))) return "closeTaskStatusIntent";
-  if (CLOSE_RUN_ENTITIES.some((e)  => entityCode.includes(e))) return "closeRunStatusIntent";
-  if (AP_AR_ENTITIES.some((e)      => entityCode.includes(e))) return "apArStatusIntent";
-
-  return "kanbanStatusIntent";
+  // Use the per-entity status_resolver from display_config (set in entity engine seeds).
+  // This is the authoritative source — no entity code matching needed.
+  return entity.display_config.status_resolver ?? "kanbanStatusIntent";
 }
 
 // ── Formatter detection from field type ──────────────────────────────────────
@@ -249,7 +239,7 @@ export function resolvePresentationConfig(entity: CompiledEntity): EntityListPre
     const col: ColumnPresentation = { fieldName: field.name };
 
     // Semantic badge resolver for status-like fields
-    const resolver = detectSemanticResolver(entity_code, field.name);
+    const resolver = detectSemanticResolver(entity, field.name);
     if (resolver) col.semanticResolver = resolver;
 
     // Formatter from data_type

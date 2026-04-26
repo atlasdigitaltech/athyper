@@ -294,16 +294,27 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // ── Build display_config ──────────────────────────────────────────────
       const dbDisplayConfig = (entityRow.display_config ?? {}) as Record<string, unknown>;
       const displayConfig = {
-        title_field: (dbDisplayConfig["title_field"] ?? undefined) as string | undefined,
-        subtitle_field: (dbDisplayConfig["subtitle_field"] ?? undefined) as string | undefined,
-        icon: ((dbDisplayConfig["icon"] ?? entityRow.icon_key) ?? undefined) as string | undefined,
-        color: ((dbDisplayConfig["color"] ?? entityRow.color_token) ?? undefined) as string | undefined,
+        title_field:        (dbDisplayConfig["title_field"] ?? undefined) as string | undefined,
+        subtitle_field:     (dbDisplayConfig["subtitle_field"] ?? undefined) as string | undefined,
+        icon:               ((dbDisplayConfig["icon"] ?? entityRow.icon_key) ?? undefined) as string | undefined,
+        color:              ((dbDisplayConfig["color"] ?? entityRow.color_token) ?? undefined) as string | undefined,
         default_sort_field: (dbDisplayConfig["default_sort_field"] ?? undefined) as string | undefined,
         default_sort_order: (dbDisplayConfig["default_sort_order"] ?? undefined) as "asc" | "desc" | undefined,
-        list_columns: (dbDisplayConfig["list_columns"] ?? undefined) as string[] | undefined,
-        search_fields: (dbDisplayConfig["search_fields"] ?? undefined) as string[] | undefined,
-        detail_renderer: (dbDisplayConfig["detail_renderer"] ?? undefined) as "generic" | "approvable" | "ledger" | undefined,
-        document_header: (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
+        list_columns:       (dbDisplayConfig["list_columns"] ?? undefined) as string[] | undefined,
+        search_fields:      (dbDisplayConfig["search_fields"] ?? undefined) as string[] | undefined,
+        detail_renderer:    (dbDisplayConfig["detail_renderer"] ?? undefined) as "generic" | "approvable" | "ledger" | undefined,
+        document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
+        // Lines section — null = entity has no line items; string = registered renderer key.
+        // "lines_renderer" in check preserves explicit null (no lines) vs. absent (also no lines).
+        lines_renderer:     "lines_renderer" in dbDisplayConfig
+          ? (dbDisplayConfig["lines_renderer"] as string | null)
+          : null,
+        list_renderer:      (dbDisplayConfig["list_renderer"] ?? undefined) as string | undefined,
+        view_modes:         (dbDisplayConfig["view_modes"] ?? undefined) as string[] | undefined,
+        status_field_names: (dbDisplayConfig["status_field_names"] ?? undefined) as string[] | undefined,
+        alternate_flows:    (dbDisplayConfig["alternate_flows"] ?? undefined) as string[] | undefined,
+        action_groups:      (dbDisplayConfig["action_groups"] ?? undefined) as Record<string, unknown> | undefined,
+        status_resolver:    (dbDisplayConfig["status_resolver"] ?? undefined) as string | undefined,
       };
 
       // ── Build feature_flags ───────────────────────────────────────────────

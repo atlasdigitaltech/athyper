@@ -43,6 +43,14 @@ export interface LinesGridProps {
   isLoading?:     boolean;
   /** Called after any mutation; parent should invalidate/refetch lines + distributions. */
   onRefresh?:     () => void;
+  /** Driven by CompiledEntity.feature_flags.has_ai_classification. Enables ClassificationDecisionPanel in LineEditorSheet. */
+  hasAiClassification?: boolean;
+  /** Driven by CompiledEntity.feature_flags.has_ai_classification. Uses LineComposerSheet for full-intake line adding. */
+  hasLineComposer?: boolean;
+  /** AI suggest endpoint base, e.g. from display_config. Passed through to LineComposerSheet. */
+  suggestEndpointBase?: string;
+  /** AI classify endpoint base, e.g. from display_config. Passed through to LineComposerSheet and LineEditorSheet. */
+  classifyEndpointBase?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -722,6 +730,10 @@ export function LinesGrid({
   distributions,
   isLoading,
   onRefresh,
+  hasAiClassification,
+  hasLineComposer,
+  suggestEndpointBase,
+  classifyEndpointBase,
 }: LinesGridProps) {
   // ── UI state ──────────────────────────────────────────────────────────────
   const [sheetLine,    setSheetLine]    = useState<DocumentLine | null>(null);
@@ -809,8 +821,8 @@ export function LinesGrid({
   }, []);
 
   async function handleAddLine() {
-    // For purchase invoices, use the full-intake LineComposerSheet
-    if (entityCode === "purchase_invoice") {
+    // Use full-intake LineComposerSheet when entity has the line composer feature
+    if (hasLineComposer) {
       setComposerOpen(true);
       return;
     }
@@ -1208,13 +1220,14 @@ export function LinesGrid({
           initialTab={sheetTab}
           companyCodeId={companyCodeId}
           record={record}
+          hasAiClassification={hasAiClassification}
           onLineSaved={onRefresh}
           onMutated={onRefresh}
         />
       )}
 
-      {/* Procurement line composer — full-intake sheet for purchase_invoice */}
-      {entityCode === "purchase_invoice" && (
+      {/* Procurement line composer — full-intake sheet for entities with hasLineComposer */}
+      {hasLineComposer && (
         <LineComposerSheet
           open={composerOpen}
           onOpenChange={setComposerOpen}
@@ -1223,6 +1236,8 @@ export function LinesGrid({
           recordId={recordId}
           currencyCode={currencyCode}
           companyCodeId={companyCodeId}
+          suggestBaseUrl={suggestEndpointBase}
+          classifyBaseUrl={classifyEndpointBase}
           onMutated={onRefresh}
         />
       )}

@@ -229,6 +229,14 @@ export const CompiledEntitySchema = z.object({
       status_changed_by_field: z.string().optional(),
     }).optional(),
     /**
+     * Semantic resolver key for status-field badge coloring in list/detail views.
+     * When set, overrides the heuristic detection in resolvePresentationConfig.
+     * Known values: "apArStatusIntent" | "closeTaskStatusIntent" | "closeRunStatusIntent" | "kanbanStatusIntent"
+     * Set this in entity engine display_config seeds.
+     */
+    status_resolver: z.string().optional(),
+
+    /**
      * Status-driven action grouping consumed by buildOrchestratorFromRecord().
      * Maps status value → { primary, working, output } operation-code lists.
      * Operations not listed for the current status are demoted to "overflow".
@@ -296,6 +304,23 @@ export const CompiledEntitySchema = z.object({
     record_reports: z.boolean().optional(),
     /** SLA target in hours for stage-level SLA tracking (default: 24). */
     sla_target_hours: z.number().optional(),
+    /**
+     * Entity supports AI-driven line classification (spend category, GL account suggestion).
+     * Drives ClassificationDecisionPanel + classify endpoint calls in LinesGrid/LineEditorSheet.
+     * Set true for AP invoice entities in entity engine seeds.
+     */
+    has_ai_classification: z.boolean().optional(),
+    /**
+     * Uses LineComposerSheet for AI-assisted line intake (vs. inline row add).
+     * Set true for AP invoice entities in entity engine seeds.
+     */
+    has_line_composer: z.boolean().optional(),
+    /**
+     * Entity records are scoped to a company_code — reference searches must filter by it.
+     * Applies to dimension entities: cost_center, profit_center, project, site.
+     * Set true in entity engine seeds for DIMENSION-class entities with company scope.
+     */
+    is_company_scoped: z.boolean().optional(),
   }),
 
   governance_level: z.string(),

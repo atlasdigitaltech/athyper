@@ -70,6 +70,8 @@ export interface LineEditorSheetProps {
   record?: Record<string, unknown>;
   entityCode: string;
   recordId: string;
+  /** Driven by CompiledEntity.feature_flags.has_ai_classification — no entity code checks. */
+  hasAiClassification?: boolean;
   initialTab?: TabId;
   onLineSaved?: (patch: Partial<DocumentLine>) => void;
   onMutated?: () => void;
@@ -713,8 +715,8 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
 // ── CLASSIFY TAB ──────────────────────────────────────────────────────────────
 
-function ClassifyTab({ line, entityCode, recordId, companyCodeId, onSaved }: {
-  line: DocumentLine; entityCode: string; recordId: string; companyCodeId?: string; onSaved?: () => void;
+function ClassifyTab({ line, entityCode, recordId, companyCodeId, hasAiClassification, onSaved }: {
+  line: DocumentLine; entityCode: string; recordId: string; companyCodeId?: string; hasAiClassification?: boolean; onSaved?: () => void;
 }) {
   const lineData = (line.data as Record<string, unknown> | null) ?? {};
   const lineAny  = line as Record<string, unknown>;
@@ -787,7 +789,7 @@ function ClassifyTab({ line, entityCode, recordId, companyCodeId, onSaved }: {
         // PATCH auto-classifies when spend_category_id changes and returns the decision inline
         if (respBody.classification) {
           setLocalDecision(respBody.classification as Record<string, unknown>);
-        } else if (entityCode === "purchase_invoice" && (spendCatId || intentId)) {
+        } else if (hasAiClassification && (spendCatId || intentId)) {
           // Explicit classify when auto-classify didn't fire (e.g. only intent changed)
           const cr = await relayMutate(
             `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/classify`,
@@ -847,7 +849,7 @@ function ClassifyTab({ line, entityCode, recordId, companyCodeId, onSaved }: {
       {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
 
-      {entityCode === "purchase_invoice" && (
+      {hasAiClassification && (
         <div className="pt-2 border-t border-border/30">
           <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Classification result</p>
           <ClassificationDecisionPanel
@@ -1118,7 +1120,7 @@ function RetentionTab({ line, currencyCode, entityCode, recordId, onSaved }: {
 
 export function LineEditorSheet({
   open, onOpenChange, line, distributions, currencyCode, companyCodeId, record, entityCode, recordId,
-  initialTab, onLineSaved, onMutated, onLineCopied, onLineDeleted,
+  hasAiClassification, initialTab, onLineSaved, onMutated, onLineCopied, onLineDeleted,
 }: LineEditorSheetProps) {
   const cc         = currencyCode ?? "USD";
   const lineAmount = Number(line.line_amount) || 0;
@@ -1225,7 +1227,7 @@ export function LineEditorSheet({
         <div className="flex-1 overflow-y-auto min-h-0">
           {tab === "details"    && <ItemDetailsTab  line={line} entityCode={entityCode} recordId={recordId} currencyCode={cc} onSaved={onLineSaved} />}
           {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} record={record} onMutated={onMutated} />}
-          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} onSaved={onMutated} />}
+          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} hasAiClassification={hasAiClassification} onSaved={onMutated} />}
           {tab === "discount"   && <DiscountTab     line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
           {tab === "charges"    && <ChargesTab      line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
           {tab === "tax"        && <TaxTab          line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}

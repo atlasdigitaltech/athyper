@@ -292,6 +292,10 @@ SET feature_flags = jsonb_build_object(
     'auto_number',                 true,
     -- Lines tab
     'has_lines',                   true,
+    -- AI classification panel in LineEditorSheet
+    'has_ai_classification',       true,
+    -- LineComposerSheet for AI-assisted line intake
+    'has_line_composer',           true,
     -- Comments tab
     'comments_enabled',            true,
     -- Activity / events tab

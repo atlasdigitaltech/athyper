@@ -37,6 +37,16 @@ export interface LineComposerSheetProps {
   recordId: string;
   currencyCode?: string;
   companyCodeId?: string;
+  /**
+   * Base URL for the AI suggest endpoint, e.g. "/api/finance/ap/invoices/{recordId}/lines/suggest".
+   * When absent, the suggest feature is disabled. Driven by the parent, not entity code branching.
+   */
+  suggestBaseUrl?: string;
+  /**
+   * Base URL for the AI classify endpoint, e.g. "/api/finance/ap/invoices/{recordId}/lines/{lineId}/classify".
+   * When absent, classification is disabled. Driven by the parent, not entity code branching.
+   */
+  classifyBaseUrl?: string;
   /** Called after any successful save or create so parent can refresh. */
   onMutated?: () => void;
 }
@@ -68,18 +78,14 @@ function lineUrl(e: string, r: string, l?: string) {
   return l ? `${base}/${encodeURIComponent(l)}` : base;
 }
 
-function suggestUrl(entityCode: string, recordId: string, q: string) {
-  if (entityCode === "purchase_invoice") {
-    return `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/suggest?q=${encodeURIComponent(q)}`;
-  }
-  return null;
+function buildSuggestUrl(base: string | undefined, q: string): string | null {
+  if (!base) return null;
+  return `${base}?q=${encodeURIComponent(q)}`;
 }
 
-function classifyUrl(entityCode: string, recordId: string, lineId: string, mode: "preview" | "save") {
-  if (entityCode === "purchase_invoice") {
-    return `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(lineId)}/classify?mode=${mode}`;
-  }
-  return null;
+function buildClassifyUrl(base: string | undefined, lineId: string, mode: "preview" | "save"): string | null {
+  if (!base) return null;
+  return `${base}/${encodeURIComponent(lineId)}/classify?mode=${mode}`;
 }
 
 // ── Section header ────────────────────────────────────────────────────────────
@@ -293,7 +299,8 @@ function EntryModeToggle({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function LineComposerSheet({
-  open, onOpenChange, line, entityCode, recordId, currencyCode = "USD", companyCodeId, onMutated,
+  open, onOpenChange, line, entityCode, recordId, currencyCode = "USD", companyCodeId,
+  suggestBaseUrl, classifyBaseUrl, onMutated,
 }: LineComposerSheetProps) {
   const isNew = !line;
   const lineAny = (line ?? {}) as Record<string, unknown>;
@@ -394,7 +401,7 @@ export function LineComposerSheet({
     if (suggestTimer.current) clearTimeout(suggestTimer.current);
     if (!desc.trim() || spendCatId) { setSuggestions([]); return; }
     suggestTimer.current = setTimeout(async () => {
-      const url = suggestUrl(entityCode, recordId, desc);
+      const url = buildSuggestUrl(suggestBaseUrl, desc);
       if (!url) return;
       try {
         const r = await fetch(url);
@@ -409,7 +416,7 @@ export function LineComposerSheet({
   // ── Debounced preview ─────────────────────────────────────────────────────
 
   const runPreview = useCallback(async (lid: string) => {
-    const url = classifyUrl(entityCode, recordId, lid, "preview");
+    const url = buildClassifyUrl(classifyBaseUrl, lid, "preview");
     if (!url) return;
     previewAbort.current?.abort();
     const ctrl = new AbortController();

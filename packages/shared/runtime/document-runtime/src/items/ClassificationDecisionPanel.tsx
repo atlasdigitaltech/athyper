@@ -260,11 +260,7 @@ export function ClassificationDecisionPanel({
   const lineId   = String(lineAny["id"] ?? "");
   const hasLineId = lineId.length > 10;
 
-  // Build the classify URL from the entity code
   function classifyUrl(mode: "preview" | "save") {
-    if (entityCode === "purchase_invoice") {
-      return `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(lineId)}/classify?mode=${mode}`;
-    }
     return `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(lineId)}/classify?mode=${mode}`;
   }
 

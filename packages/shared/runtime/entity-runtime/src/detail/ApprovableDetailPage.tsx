@@ -76,6 +76,7 @@ export interface ApprovableDetailPageProps {
 function LinesPanel({
   entityCode, recordId, companyCodeId, record,
   lines, distributions, isLoading, onRefresh, linesRenderer,
+  hasAiClassification, hasLineComposer,
 }: {
   entityCode: string; recordId: string;
   companyCodeId?: string; record?: Record<string, unknown>;
@@ -84,6 +85,8 @@ function LinesPanel({
   isLoading: boolean;
   onRefresh: () => void;
   linesRenderer: string;
+  hasAiClassification?: boolean;
+  hasLineComposer?: boolean;
 }) {
   const RendererComponent = resolveLinesRenderer(linesRenderer);
   if (!RendererComponent) return null;
@@ -104,6 +107,8 @@ function LinesPanel({
       isLoading={isLoading}
       onRefresh={onRefresh}
       currencyCode={currencyCode}
+      hasAiClassification={hasAiClassification}
+      hasLineComposer={hasLineComposer}
     />
   );
 }
@@ -505,9 +510,12 @@ export function ApprovableDetailPage({
   const resolvedTabs  = resolveTabs(entity, null, []);
 
   // display_config v2 — lines_renderer drives which tab/renderer is active.
-  // null means this entity has no line items (master / non-document entities).
+  // Fallback: if lines_renderer isn't set but feature_flags.has_lines is true,
+  // default to "generic" so entities seeded before the display_config backfill
+  // still show the Lines tab.
   const resolvedDisplayConfig = resolveDisplayConfig(entity.display_config as Record<string, unknown>);
-  const linesRenderer   = resolvedDisplayConfig.lines_renderer;
+  const linesRenderer = resolvedDisplayConfig.lines_renderer
+    ?? (resolvedTabs.includes("lines") ? "generic" : null);
   const hasLinesSection = linesRenderer !== null;
 
   // ── MODAL operation dispatch ───────────────────────────────────────────────
@@ -833,6 +841,8 @@ export function ApprovableDetailPage({
               isLoading={linesQuery.isLoading}
               onRefresh={onLinesRefresh}
               linesRenderer={linesRenderer ?? "generic"}
+              hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
+              hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
             />
           </Card>
         )}
