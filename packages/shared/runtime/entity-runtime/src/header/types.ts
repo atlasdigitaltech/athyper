@@ -51,13 +51,39 @@ export interface HeaderIdentity {
   /** Inverted-fill chip label, e.g. "INVOICE", "PURCHASE ORDER". */
   typeLabel: string;
   /**
+   * When set, the type chip becomes a link to the entity list page.
+   * e.g. "/app/purchase_invoice"
+   * Rendering: standalone chip → <Link>; merged back+chip pill → chip text is <Link>.
+   */
+  typeHref?: string;
+  /** Tooltip shown on the type chip (e.g. "View all invoices"). Phase 5 rendering. */
+  typeTooltip?: string;
+  /**
    * Primary document number or creation label.
    * Create surface: "New"
    * View/edit surface: business key, e.g. "PI-202604-QNBTBC"
    */
   number: string;
-  /** Short document title or description rendered on the second row. */
+  /**
+   * Copy-on-click behavior for the number field.
+   * "copy"  → clicking the number copies it to clipboard (default for view/edit)
+   * "none"  → plain text, no copy affordance (use for create surface where number is "New")
+   * Absent  → treated as "copy"
+   */
+  identifierAction?: "copy" | "none";
+  /** Short document title shown on the second row (legacy; prefer description). */
   title?: string;
+  /**
+   * Long-form document description shown on the second row.
+   * Takes precedence over title when both are present.
+   * Typically the vendor invoice description or document subject.
+   */
+  description?: string;
+  /**
+   * When false, description wraps instead of truncating (default: true).
+   * Used when descriptions are short and always visible.
+   */
+  descriptionTruncate?: boolean;
   /** Main lifecycle / document status — singular, always one. */
   status: {
     label: string;
@@ -242,6 +268,37 @@ export interface HeaderAuditMeta {
   statusChangedBy?: string;
 }
 
+// ── Freshness ──────────────────────────────────────────────────────────────
+
+/**
+ * Data freshness state:
+ *   "fresh"    → fetched recently, no visual indicator needed
+ *   "aging"    → older than the soft threshold; show a subtle "X min ago" chip
+ *   "stale"    → old enough to warrant a refresh prompt
+ *   "disabled" → soft-refresh is not available for this record
+ */
+export type HeaderFreshnessState = "fresh" | "aging" | "stale" | "disabled";
+
+/**
+ * Soft-refresh affordance for the identity bar.
+ *
+ * Rendering: inline chip next to the document number — "Synced just now" / "3 min ago".
+ * Clicking the chip (when not disabled/pending) triggers onRefresh().
+ * Phase 5 wires the rendering; this type locks the contract now.
+ */
+export interface HeaderFreshness {
+  /** ISO timestamp of the last successful fetch. */
+  fetchedAt: string;
+  state: HeaderFreshnessState;
+  /** Human-readable label, e.g. "Synced just now", "3 min ago". */
+  label?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  /** True while a refresh is in-flight. */
+  pending?: boolean;
+  onRefresh: () => Promise<void>;
+}
+
 // ── Root model ─────────────────────────────────────────────────────────────
 
 /**
@@ -261,6 +318,11 @@ export interface EntityHeaderModel {
   identity: HeaderIdentity;
   /** P1 — always visible. Sorted by `order` before render. */
   actions: HeaderAction[];
+  /**
+   * Soft-refresh affordance. When present, renders an inline freshness chip
+   * in the identity bar. Phase 5 wires the visual; field is contract-locked here.
+   */
+  freshness?: HeaderFreshness;
   /** P1.5 — always visible when present, never collapses. */
   exceptions?: HeaderException[];
   /** P2 — critical KPI cells. */

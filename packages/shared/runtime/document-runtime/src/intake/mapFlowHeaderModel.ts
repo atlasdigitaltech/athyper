@@ -37,6 +37,7 @@ export function mapFlowHeaderModel(
     identity: {
       typeLabel,
       number: "New",
+      identifierAction: "none",
       status: { label: "Draft", intent: "neutral" },
     },
     progress: {

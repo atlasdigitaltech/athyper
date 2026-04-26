@@ -6,12 +6,12 @@
  * Import into the (dev)/header-fixtures pages or unit tests.
  *
  * Fixture map:
- *   create-invoice-draft       P1 only  (wizard/create surface)
- *   view-invoice-approved      All Ps   (mature document, timeline collapsed)
- *   edit-invoice-dirty         P1+P2+P3 (unsaved changes badge, Save/Cancel actions)
+ *   create-invoice-draft          P1 only  (wizard/create surface)
+ *   view-invoice-approved         All Ps   (mature document, timeline collapsed)
+ *   edit-invoice-dirty            P1+P2+P3 (unsaved changes badge, Save/Cancel actions)
  *   view-invoice-with-exceptions  P1+P1.5+P2+P3+P5 (one blocking + one warning)
- *   view-invoice-pinned        Same as approved — rendered at mode="pinned"
- *   view-invoice-mobile        Minimal facts — xl cell only
+ *   view-invoice-pinned           Same as approved — rendered at mode="pinned"
+ *   view-invoice-mobile           Minimal facts — xl cell only
  */
 
 import type { EntityHeaderModel } from "../types";
@@ -20,9 +20,22 @@ import type { EntityHeaderModel } from "../types";
 
 export const createInvoiceDraft: EntityHeaderModel = {
   identity: {
-    typeLabel: "CREATE INVOICE",
+    typeLabel: "INVOICE",
+    typeHref: "/app/purchase_invoice",
+    typeTooltip: "View all invoices",
     number: "New",
+    identifierAction: "none",
     status: { label: "Draft", intent: "neutral" },
+  },
+  progress: {
+    kind: "wizard",
+    currentKey: "identify",
+    stepIndex: 0,
+    stages: [
+      { key: "identify",   label: "Identify" },
+      { key: "commercial", label: "Commercial" },
+      { key: "review",     label: "Review" },
+    ],
   },
   actions: [
     {
@@ -39,28 +52,31 @@ export const createInvoiceDraft: EntityHeaderModel = {
 export const viewInvoiceApproved: EntityHeaderModel = {
   identity: {
     typeLabel: "INVOICE",
+    typeHref: "/app/purchase_invoice",
+    typeTooltip: "View all invoices",
     number: "PI-202604-QNBTBC",
-    title: "34324234",
+    identifierAction: "copy",
+    description: "Vendor Invoice No. 34324234",
     status: { label: "Approved", intent: "success" },
   },
   actions: [
-    { id: "post",             label: "Post",            placement: "primary",   order: 1 },
-    { id: "propose_payment",  label: "Propose Payment", placement: "secondary", order: 2 },
-    { id: "view_je",          label: "View JE",         placement: "secondary", order: 3 },
-    { id: "cancel_invoice",   label: "Cancel",          placement: "danger",    order: 4 },
+    { id: "post",            label: "Post",            placement: "primary",   order: 1 },
+    { id: "propose_payment", label: "Propose Payment", placement: "secondary", order: 2 },
+    { id: "view_je",         label: "View JE",         placement: "secondary", order: 3 },
+    { id: "cancel_invoice",  label: "Cancel",          placement: "danger",    order: 4 },
   ],
   facts: [
-    { id: "supplier",    label: "Supplier",            value: "Acme Consulting LLC",  subValue: "ACME-CONSULT-US" },
-    { id: "invoice_date",label: "Invoice Date",        value: "25 Apr 2026" },
-    { id: "company",     label: "Company Code",        value: "AUKA · Athyper UK Agriculture" },
-    { id: "source",      label: "Invoice Source",      value: "Non PO" },
-    { id: "total",       label: "Invoice Total",       value: "450.00", currency: "USD", xl: true,
+    { id: "supplier",     label: "Supplier",       value: "Acme Consulting LLC",         subValue: "ACME-CONSULT-US" },
+    { id: "invoice_date", label: "Invoice Date",   value: "25 Apr 2026" },
+    { id: "company",      label: "Company Code",   value: "AUKA · Athyper UK Agriculture" },
+    { id: "source",       label: "Invoice Source", value: "Non PO" },
+    { id: "total",        label: "Invoice Total",  value: "450.00", currency: "USD", xl: true,
       subValue: "Subtotal 450.00 · Tax 0.00" },
   ],
   statuses: [
-    { id: "accounting",    label: "Accounting",    value: "Unposted",  intent: "warning"  },
-    { id: "settlement",    label: "Settlement",    value: "Unpaid",    intent: "warning"  },
-    { id: "reconciliation",label: "Reconciliation",value: "Unmatched", intent: "neutral"  },
+    { id: "accounting",     label: "Accounting",     value: "Unposted",  intent: "warning" },
+    { id: "settlement",     label: "Settlement",     value: "Unpaid",    intent: "warning" },
+    { id: "reconciliation", label: "Reconciliation", value: "Unmatched", intent: "neutral" },
   ],
   progress: {
     currentKey: "approved",
@@ -80,8 +96,8 @@ export const viewInvoiceApproved: EntityHeaderModel = {
     { id: "workflow",      label: "Workflow" },
     { id: "attachments",   label: "Attachments", count: 0, countPending: false },
     { id: "versions",      label: "Versions" },
-    { id: "approvals",     label: "Approvals",  count: 1 },
-    { id: "comments",      label: "Comments",   count: 0, countPending: true },
+    { id: "approvals",     label: "Approvals", count: 1 },
+    { id: "comments",      label: "Comments",  count: 0, countPending: true },
     { id: "activity",      label: "Activity" },
   ],
   audit: {
@@ -99,13 +115,16 @@ export const viewInvoiceApproved: EntityHeaderModel = {
 export const editInvoiceDirty: EntityHeaderModel = {
   identity: {
     typeLabel: "INVOICE",
+    typeHref: "/app/purchase_invoice",
+    typeTooltip: "View all invoices",
     number: "PI-202604-QNBTBC",
-    title: "34324234",
+    identifierAction: "copy",
+    description: "Vendor Invoice No. 34324234",
     status: { label: "Unsaved changes", intent: "warning" },
   },
   actions: [
-    { id: "save",   label: "Save",    placement: "primary",   order: 1, icon: "approve" },
-    { id: "discard",label: "Discard", placement: "secondary", order: 2 },
+    { id: "save",    label: "Save",    placement: "primary",   order: 1, icon: "approve" },
+    { id: "discard", label: "Discard", placement: "secondary", order: 2 },
   ],
   facts: viewInvoiceApproved.facts,
   statuses: viewInvoiceApproved.statuses,
@@ -121,9 +140,9 @@ export const viewInvoiceWithExceptions: EntityHeaderModel = {
     status: { label: "Approved", intent: "success" },
   },
   actions: [
-    { id: "post",   label: "Post",   placement: "primary",   order: 1,
+    { id: "post",           label: "Post",   placement: "primary",   order: 1,
       disabled: true, disabledReason: "Resolve blocking exceptions before posting" },
-    { id: "cancel_invoice", label: "Cancel", placement: "danger", order: 2 },
+    { id: "cancel_invoice", label: "Cancel", placement: "danger",    order: 2 },
   ],
   exceptions: [
     {
@@ -160,10 +179,10 @@ export const viewInvoiceMobile: EntityHeaderModel = {
 // ── Named fixture map for the (dev) fixture page ──────────────────────────
 
 export const FIXTURES: Record<string, EntityHeaderModel> = {
-  "create-invoice-draft":         createInvoiceDraft,
-  "view-invoice-approved":        viewInvoiceApproved,
-  "edit-invoice-dirty":           editInvoiceDirty,
-  "view-invoice-with-exceptions": viewInvoiceWithExceptions,
-  "view-invoice-pinned":          viewInvoicePinned,
-  "view-invoice-mobile":          viewInvoiceMobile,
+  "create-invoice-draft":          createInvoiceDraft,
+  "view-invoice-approved":         viewInvoiceApproved,
+  "edit-invoice-dirty":            editInvoiceDirty,
+  "view-invoice-with-exceptions":  viewInvoiceWithExceptions,
+  "view-invoice-pinned":           viewInvoicePinned,
+  "view-invoice-mobile":           viewInvoiceMobile,
 };

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Check } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { TypeChip } from "@athyper/ui/layout";
@@ -22,12 +24,28 @@ export function EntityIdentityBar({
   className,
 }: EntityIdentityBarProps) {
   const { subtleBadge } = resolveSemanticColors(identity.status.intent);
+  const [copied, setCopied] = useState(false);
+
+  const canCopy = identity.identifierAction !== "none";
+  const descText = identity.description ?? identity.title;
+  const shouldTruncate = identity.descriptionTruncate !== false;
+
+  const handleCopyNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(identity.number);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard write failed; no visual feedback needed
+    }
+  };
 
   return (
     <div className={cn("px-4 py-3 sm:px-5 lg:px-[22px]", className)}>
       {/* Row 1: chip · number · version · status → actions */}
       <div className="flex items-center gap-3 min-w-0">
-        {/* Back + chip group */}
+
+        {/* Back + chip group OR standalone chip */}
         {onBack ? (
           <div className="inline-flex items-center h-[34px] rounded-full border border-border overflow-hidden shrink-0">
             <button
@@ -37,18 +55,43 @@ export function EntityIdentityBar({
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center">
-              {identity.typeLabel}
-            </span>
+            {identity.typeHref ? (
+              <Link
+                href={identity.typeHref}
+                className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
+              >
+                {identity.typeLabel}
+              </Link>
+            ) : (
+              <span className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center">
+                {identity.typeLabel}
+              </span>
+            )}
           </div>
+        ) : identity.typeHref ? (
+          <Link href={identity.typeHref} className="shrink-0">
+            <TypeChip>{identity.typeLabel}</TypeChip>
+          </Link>
         ) : (
           <TypeChip className="shrink-0">{identity.typeLabel}</TypeChip>
         )}
 
-        {/* Number */}
-        <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-          {identity.number}
-        </span>
+        {/* Number — copyable by default; opt out with identifierAction: "none" */}
+        {canCopy ? (
+          <button
+            type="button"
+            onClick={handleCopyNumber}
+            title="Copy to clipboard"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums shrink-0 hover:text-foreground/70 transition-colors"
+          >
+            {identity.number}
+            {copied && <Check className="h-3 w-3 flex-none text-muted-foreground" />}
+          </button>
+        ) : (
+          <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
+            {identity.number}
+          </span>
+        )}
 
         {/* Version badge */}
         {identity.version && (
@@ -71,10 +114,13 @@ export function EntityIdentityBar({
         </div>
       </div>
 
-      {/* Row 2: title (optional) */}
-      {identity.title && (
-        <p className="mt-1 text-xs text-muted-foreground truncate">
-          {identity.title}
+      {/* Row 2: description (or legacy title) — optional, truncated by default */}
+      {descText && (
+        <p className={cn(
+          "mt-1 text-xs text-muted-foreground",
+          shouldTruncate ? "truncate" : "line-clamp-2",
+        )}>
+          {descText}
         </p>
       )}
     </div>

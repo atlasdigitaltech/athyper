@@ -1,4 +1,4 @@
-// ── Types (Phase 1) ───────────────────────────────────────────────────────
+// ── Types (Phase 1 + Phase 3.5) ───────────────────────────────────────────
 export type {
   HeaderMode,
   HeaderIdentity,
@@ -8,6 +8,8 @@ export type {
   HeaderStatusDimension,
   HeaderProgressStage,
   HeaderProgress,
+  HeaderFreshnessState,
+  HeaderFreshness,
   HeaderTab,
   HeaderAuditMeta,
   EntityHeaderModel,

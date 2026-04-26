@@ -34,6 +34,8 @@ export type {
   HeaderStatusDimension,
   HeaderProgressStage,
   HeaderProgress,
+  HeaderFreshnessState,
+  HeaderFreshness,
   HeaderTab,
   HeaderAuditMeta,
   EntityHeaderModel,
@@ -44,6 +46,7 @@ export type {
   EntityHeaderAdapter,
   SlaStatus,
 } from "./header";
+export type { ActionPolicy } from "./adapters";
 export { EntityHeader, type EntityHeaderProps } from "./header";
 export { useEntityHeaderController } from "./header";
 export { ENTITY_HEADER_EVENTS } from "./header";
