@@ -1,7 +1,8 @@
 # Athyper Infrastructure — Master Plan
 ## Permission Model + Staging Deployment
 
-**Status:** Pre-implementation reference — read and sign off before any server work begins  
+**Status:** v12 — Audit-incorporated; cleared for Phase 0 execution  
+**Audit:** Two independent sign-off reviews completed 2026-04-26; all blockers (B1–B8, M1–M5) resolved in this version; tech-debt items T1–T7 tracked in Phase 23  
 **Supersedes:** [staging-deploy-runbook.md](staging-deploy-runbook.md), [infrastructure-perms-superseded.md](infrastructure-perms-superseded.md)  
 **Environments covered:** Staging (62.169.31.9) — Production uses identical model, different values  
 **Rule:** Nothing on the server is touched until every Pre-Gate below is green
@@ -32,8 +33,18 @@ ops runbook. A future operator who understands this rule cannot accidentally bre
 | Account | Type | UID | Purpose | Login method |
 |---|---|---|---|---|
 | `root` | System | 0 | VNC console recovery only | VNC tty (`5.189.174.159:63128`) |
-| `athyper` | System service | **9000** | Runs the entire stack via systemd | None — `nologin` shell; reached via `sudo -iu athyper` |
-| `<devname>` | Human | auto | Container inspection, log tailing | SSH key only |
+| `athyper` | System service | **9000** | Runs the entire stack via systemd | No SSH (ForceCommand blocks it); reached via `sudo -iu athyper` from a human account |
+| `<ops-admin>` | Human operator | auto | Bootstrap, root-owned file writes, `sudo -iu athyper` access | SSH key + `sudo` group |
+| `<dev-inspector>` | Human developer | auto | Config inspection, log tailing, container checks | SSH key only; no `sudo` |
+
+**Human role separation:**
+
+| Role | Groups | Can do | Cannot do |
+|---|---|---|---|
+| `ops-admin` | `sudo`, `athyper-config`, `docker` (if needed, documented) | Anything root requires; switch to `athyper` via `sudo -iu athyper` | Implicit — full sudo means full responsibility |
+| `dev-inspector` | `athyper-config`, `docker` (by approval only) | Read config, tail logs, exec into containers | Write config/secrets, systemctl, sudo |
+
+> **No human account gets both `sudo` and `docker` without explicit justification documented.** `docker` group = root-equivalent.
 
 **UID 9000 is pinned** — it must not collide with any container-internal UID. All known container
 UIDs in this stack are: 472, 999, 1000, 1001, 10001, 65534. UID 9000 sits above all of them.
@@ -43,7 +54,7 @@ UIDs in this stack are: 472, 999, 1000, 1001, 10001, 65534. UID 9000 sits above 
 | Account | SSH password | SSH key | Shell | `sudo` access |
 |---|---|---|---|---|
 | `root` | Never (disabled post-bootstrap) | Never (PermitRootLogin no) | N/A | N/A |
-| `athyper` | Never (passwd --lock) | Never (ForceCommand /usr/sbin/nologin) | /usr/sbin/nologin | systemctl athyper-* only |
+| `athyper` | Never (passwd --lock) | Never (ForceCommand /usr/sbin/nologin) | **/bin/bash** | systemctl athyper-* only |
 | `<devname>` | Never (PasswordAuthentication no) | Yes | /bin/bash | None |
 
 **Access path for operators needing an athyper shell:**
@@ -462,8 +473,9 @@ on day forty after someone runs `docker compose` from a different working direct
 
 - It shares the same disk as `data/`.
 - A single hardware failure or `rm -rf /opt/stack/athyper` destroys both.
-- Scripts write dumps here, then a cron pushes immediately to MinIO / S3 / remote host.
-- A file existing in `backups/` does not mean it is safe. A file in MinIO is safe.
+- Scripts write dumps here, then a cron pushes immediately to a **remote** MinIO / S3 / off-host target.
+- A file existing in `backups/` does not mean it is safe.
+- **A backup is durable only after it lands in remote S3, remote MinIO, or an off-host target.** Local MinIO on the same server is not durable — it shares the same failure domain as `data/`.
 
 ---
 
@@ -479,6 +491,7 @@ on day forty after someone runs `docker compose` from a different working direct
 8. **Never re-use `chown -R` after containers start.** Breaks Grafana (472), Prometheus (65534), Loki/Tempo (10001).
 9. **Never treat `backups/` as durable.** Only a file in MinIO/S3 is safe.
 10. **Never symlink `/opt/products/athyper` and `/opt/stack/athyper` together.** They exist on different lifecycles by design.
+11. **Every application/infra service must have `mem_limit` set in compose.** 24 GB RAM + 25 containers including Loki, Keycloak (JVM), Prometheus (TSDB) — one runaway OOM can take down the host. The 8 GB swap masks unbounded memory growth rather than solving it.
 
 ---
 
@@ -585,6 +598,7 @@ echo "  MANIFEST written: $MANIFEST"
 | PG2-07 | Prepared-by and Reviewed-by sign-off complete | ☐ |
 | PG2-08 | All PG-01 through PG-10 merged and CI green | ☐ |
 | PG2-09 | All 6 critical DNS A records on both 1.1.1.1 and 8.8.8.8 | ☐ |
+| PG2-10 | **Offsite backup target provisioned** — external S3/B2/Wasabi bucket in a separate account/region; credentials added to `.env` (`BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`, `BACKUP_S3_ENDPOINT`) | ☐ |
 
 ---
 
@@ -765,10 +779,11 @@ passwd root       # enter and confirm new password
 | 2.1 | `groupadd --force --gid 9000 athyper` | `getent group athyper` |
 | 2.2 | `groupadd --force --gid 9001 athyper-config` | `getent group athyper-config` |
 | 2.3 | `groupadd --force --gid 9002 athyper-data` | `getent group athyper-data` |
-| 2.4 | `useradd --system --uid 9000 --gid 9000 --create-home --home-dir /home/athyper --shell /usr/sbin/nologin athyper` | `id athyper` shows uid=9000 |
+| 2.4 | `useradd --system --uid 9000 --gid 9000 --create-home --home-dir /home/athyper --shell /bin/bash athyper` | `id athyper` shows uid=9000 |
 | 2.5 | `passwd --lock athyper` | `passwd -S athyper` shows L |
 | 2.6 | `usermod -aG docker,athyper-config,athyper-data athyper` | `groups athyper` shows all |
-| 2.7 | Per developer: `adduser --gecos "Name" devname` + `usermod -aG docker,athyper-config devname` | `id devname` |
+| 2.7a | **ops-admin**: `adduser --gecos "Name" devname` + `usermod -aG sudo,docker,athyper-config devname` | `id devname` shows sudo + docker + athyper-config |
+| 2.7b | **dev-inspector**: `adduser --gecos "Name" devname` + `usermod -aG athyper-config devname` | `id devname` shows athyper-config only |
 | 2.8 | Install developer SSH public keys (see detail below) | `cat /home/devname/.ssh/authorized_keys` is non-empty |
 
 **Step 2.8 detail — SSH key install (example: `nchandravel-atlas`)**
@@ -887,10 +902,9 @@ touch /opt/stack/athyper/secrets/gateway/certs/acme.json
 chown root:root /opt/stack/athyper/secrets/gateway/certs/acme.json
 chmod 600 /opt/stack/athyper/secrets/gateway/certs/acme.json
 
-# Data parent — athyper owns, set-GID propagates group
+# Data parent — athyper owns, 2751 (set-GID 751): group inherits on new files
 chown athyper:athyper-data /opt/stack/athyper/data
-chmod 751 /opt/stack/athyper/data
-chmod g+s /opt/stack/athyper/data
+chmod 2751 /opt/stack/athyper/data
 
 # Per-service data dirs (DO NOT recurse after containers start)
 chown 999:1000   /opt/stack/athyper/data/memorycache
@@ -903,7 +917,12 @@ chown 472:472    /opt/stack/athyper/data/telemetry/observability
 chown 1000:1000  /opt/stack/athyper/data/meilisearch
 chown 1000:1000  /opt/stack/athyper/data/uptime-kuma
 chown 1000:1000  /opt/stack/athyper/data/metabase
-find /opt/stack/athyper/data -maxdepth 3 -type d -exec chmod 750 {} \;
+
+# chmod leaf dirs to 750 (mindepth 1 avoids touching the data root itself)
+find /opt/stack/athyper/data -mindepth 1 -maxdepth 3 -type d -exec chmod 750 {} \;
+
+# Reassert data root after leaf chmod (find above would have reset it to 750)
+chmod 2751 /opt/stack/athyper/data
 
 # Logs and backups
 chown athyper:athyper /opt/stack/athyper/logs
@@ -1189,6 +1208,8 @@ stat -c "%U:%G %a %n" /opt/stack/athyper/data/telemetry/observability
 
 Start in dependency order. Verify health before next group.
 
+> ⚠️ **Before starting:** confirm every service in compose has `mem_limit` set (or `deploy.resources.limits.memory`). Without limits a single runaway container (Loki label cardinality spike, Keycloak JVM leak, Prometheus TSDB growth) can OOM the host. Swap is not a substitute.
+
 | Step | Group | Services | Health gate |
 |---|---|---|---|
 | 12.1 | proxies | socket-proxy-gateway | `docker ps` shows running |
@@ -1214,10 +1235,12 @@ docker inspect athyper-gateway-1 \
 
 | Step | Action | Gate |
 |---|---|---|
-| 13.1 | Expose port temporarily: add `"127.0.0.1:5432:5432"` to db ports in override | For seed only |
+| 13.1 | Expose port temporarily: add `"127.0.0.1:5432:5432"` to db ports in override | For seed only — **staging workaround; see tech-debt note below** |
 | 13.2 | `docker exec athyper-db-1 psql -U athyperadmin -l` | 7 databases shown |
 | 13.3 | `bash /opt/products/athyper/stack/scripts/db/transaction/neon/seed-db.sh` | `=== Seed complete ===` |
 | 13.4 | Remove temp port; force-recreate db | `ss -tln \| grep 5432` → nothing on host |
+
+> ⚠️ **Staging-only workaround.** The host port exposure window is short but carries real risk (forgotten override, 0.0.0.0 typo). The clean solution is a one-shot seed container on the Docker network (`docker compose run --rm seed-runner`) that never touches host networking. Tracked in Phase 23 tech-debt (23.2).
 
 ---
 
@@ -1279,12 +1302,15 @@ Verify all 8 secondary DNS records resolve first.
 
 | Step | Profile | Verify |
 |---|---|---|
-| 17.1 | `up.sh telemetry` (+ socket-proxy-logshipper) | Grafana UI accessible |
-| 17.2 | `up.sh monitoring` | GlitchTip, Healthchecks, Uptime Kuma accessible |
-| 17.3 | `up.sh render` | Containers healthy |
-| 17.4 | `up.sh search` | `curl https://meilisearch-stg.athyper.com/health` |
-| 17.5 | No direct docker.sock on logshipper: `docker inspect athyper-logshipper-1 \| jq '...'` | `[]` |
-| 17.6 | GlitchTip migrations, superuser, DSN copy | DSN in `.env`; test error in GlitchTip UI |
+| 17.1 | `up.sh telemetry` (+ socket-proxy-logshipper + **node_exporter**) | Grafana UI accessible; `curl http://localhost:9100/metrics` returns node metrics |
+| 17.2 | Add `node_exporter` scrape job to Prometheus config; confirm `up{job="node"}` == 1 in Grafana | Metric visible |
+| 17.3 | `up.sh monitoring` | GlitchTip, Healthchecks, Uptime Kuma accessible |
+| 17.4 | `up.sh render` | Containers healthy |
+| 17.5 | `up.sh search` | `curl https://meilisearch-stg.athyper.com/health` |
+| 17.6 | No direct docker.sock on logshipper: `docker inspect athyper-logshipper-1 \| jq '...'` | `[]` |
+| 17.7 | GlitchTip migrations, superuser, DSN copy | DSN in `.env`; test error in GlitchTip UI |
+
+> **Why node_exporter here, not in Phase 23:** disk pressure on `/opt/stack/athyper/data` is the most likely staging failure in the first week. Without host metrics the first signal is containers dying, not a Grafana alert.
 
 ---
 
@@ -1322,7 +1348,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 User=athyper
-Group=docker
+Group=athyper
+SupplementaryGroups=docker athyper-config athyper-data
 WorkingDirectory=/opt/products/athyper
 
 Environment=HOME=/home/athyper
@@ -1339,6 +1366,8 @@ ProtectSystem=strict
 ReadOnlyPaths=/opt/products/athyper /opt/stack/athyper/config /opt/stack/athyper/secrets
 ReadWritePaths=/opt/stack/athyper/data /opt/stack/athyper/logs /opt/stack/athyper/backups /home/athyper
 
+# Render redis-acl.conf from .env hashes before any container starts
+ExecStartPre=/bin/bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/stack/athyper/secrets/.env
 ExecStartPre=/bin/sleep 15
 ExecStart=/bin/bash stack/scripts/stack-profile/up.sh all
 ExecStop=/bin/bash stack/scripts/stack-profile/down.sh all
@@ -1364,11 +1393,11 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 
 | Step | Action |
 |---|---|
-| 20.1 | Write `stack/scripts/db/backup-all.sh`: pg_dump all 7 DBs to `ATHYPER_BACKUP_ROOT/`; MinIO mirror; Meilisearch snapshot; Redis BGSAVE |
-| 20.2 | After each dump: cron pushes to MinIO backup bucket. Log to `ATHYPER_LOG_ROOT/backup.log` |
+| 20.1 | Write `stack/scripts/db/backup-all.sh`: pg_dump all 7 DBs to `ATHYPER_BACKUP_ROOT/`; push to **offsite** S3/B2 bucket (using `BACKUP_S3_*` env vars); Meilisearch snapshot; Redis BGSAVE. Log to `ATHYPER_LOG_ROOT/backup.log` |
+| 20.2 | Verify offsite push: `mc ls remote-backup/athyper-backup-staging` on the **remote** alias — must show files |
 | 20.3 | Write `/etc/cron.d/athyper-backup` (02:00 daily, run as root) |
 | 20.4 | Test restore: `bash stack/scripts/db/restore/restore-db.sh athyper_analytics <id>` |
-| 20.5 | **Confirm file lands in MinIO, not just in `backups/`.** `backups/` is staging area only. |
+| 20.5 | **Confirm file lands in offsite bucket, not just in `backups/`.** Local `backups/` shares disk with `data/` — not durable. |
 
 ---
 
@@ -1380,9 +1409,9 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 
 | Step | Action | Gate |
 |---|---|---|
-| 21.1 | Import each secret from `~/secrets-staging.txt` into Infisical staging project | Confirmed in UI |
+| 21.1 | Import each secret from `~/secrets-staging.txt` into **Infisical** staging project — this becomes the primary source of truth | Confirmed in Infisical UI |
 | 21.2 | `shred -u ~/secrets-staging.txt` | `ls ~/secrets-staging.txt` fails |
-| 21.3 | **Keep `/opt/stack/athyper/secrets/.env` on server** — Infisical is a backup, not the primary | |
+| 21.3 | **Infisical is the primary.** The on-disk `.env` is a materialized cache rendered at startup via `ExecStartPre`. Do not keep secrets only on disk — Infisical is the record of truth. For highest-sensitivity credentials (DB root password, MinIO root key, Keycloak admin password, IAM client secret) consider Docker secrets so they don't appear in `docker inspect` (visible to anyone in the `docker` group, which is root-equivalent). | |
 | 21.4 | `sudo reboot` | |
 | 21.5 | Reconnect after 3 min; `docker ps` — all Up | ✓ |
 | 21.6 | `systemctl status athyper-stack` → `active (exited)` | ✓ |
@@ -1399,8 +1428,9 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 
 | Check | Command | Expected |
 |---|---|---|
-| No world-readable config | `find /opt/stack/athyper/config -perm /o+r -ls` | Nothing |
+| Config not world-writable | `find /opt/stack/athyper/config -perm /022 -ls` | Nothing (644/755 is intentional — containers need world-read on :ro mounts) |
 | No world-readable secrets | `find /opt/stack/athyper/secrets -perm /o+r -ls` | Nothing |
+| No secrets in config tree | `grep -RIE '(PASSWORD\|SECRET\|TOKEN\|PRIVATE KEY\|CLIENT_SECRET)' /opt/stack/athyper/config` | Only placeholders or approved non-secret references |
 | No NOPASSWD:ALL | `grep -r NOPASSWD:ALL /etc/sudoers*` | Nothing |
 | No direct docker.sock | `docker inspect athyper-gateway-1 \| jq '.[0].HostConfig.Binds \| map(select(contains("docker.sock")))'` | `[]` |
 | systemd score | `systemd-analyze security athyper-stack` | ≤ 4.0 |
@@ -1420,13 +1450,19 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 | # | Action | Deadline | Owner |
 |---|---|---|---|
 | 23.1 | PR: upstream `server/Dockerfile.prod` pnpm@10.33.0 pin | 1 week | |
-| 23.2 | Tech-debt ticket: host-side seed → dedicated seed image | 1 week | |
+| 23.2 | **Replace Phase 13 host-port seed with `docker compose run --rm seed-runner`** — seed container runs on the Docker network, no host port exposure needed. Required before production; strongly recommended for staging v2. | 2 weeks | |
 | 23.3 | Write `stack/docs/UID_MATRIX.md` with per-service container UID re-verify instructions | 1 week | |
-| 23.4 | Prometheus `node_exporter` filesystem alert rule | 2 weeks | |
+| 23.4 | Prometheus `node_exporter` disk alert rule (filesystem_avail_bytes threshold on `/opt/stack/athyper/data`) | 1 week | |
 | 23.5 | Review Loki and Tempo retention after 7 days of real volume | 1 week | |
 | 23.6 | Production: replace `0.0.0.0/0` in workbench routes with VPN CIDRs | Before prod | |
 | 23.7 | Stale developer account review | 1 month | |
-| 23.8 | Dry-run full runbook on clean VM; produce v12 | 1 month | |
+| 23.8 | Dry-run full runbook on clean VM; produce v13 | 1 month | |
+| 23.9 | Container hardening: add `read_only: true` + `tmpfs: [/tmp]` to api/worker/scheduler/neon-web compose definitions | 2 weeks | |
+| 23.10 | THP suppression: add systemd-tmpfiles unit or `/etc/rc.local` entry to set `transparent_hugepage=never` (eliminates Redis WARNING on every start) | 1 week | |
+| 23.11 | `depends_on` with `condition: service_healthy` on gateway → socket-proxy-gateway, logshipper → socket-proxy-logshipper, and apps → db/cache. Compose file ordering does not enforce startup sequence. | 1 week | |
+| 23.12 | CI pipeline: build app images in CI, push to registry, pull on server (Phase 11). Staging build-on-host is acceptable short term; server should not carry Node/pnpm toolchain permanently. | Before prod | |
+| 23.13 | PgBouncer auth verification: add `docker exec athyper-dbpool-apps-1 psql -h 127.0.0.1 -p 6432 -U <user> -c 'SHOW USERS'` to Phase 12.2 smoke check. A `userlist.txt` typo currently fails silently at first app login. | 1 week | |
+| 23.14 | Externalize `FILE_MAP` in `setup-config.sh` (PG-02) into `stack/scripts/setup/files-manifest.yaml` consumed by both `setup-config.sh` and Phase 22 drift check. Prevents silent divergence between copy logic and verification. | 2 weeks | |
 
 ---
 
@@ -1446,5 +1482,5 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 | Force-recreate app | `docker compose --env-file /opt/stack/athyper/secrets/.env ... up -d --force-recreate athyper-api` |
 | View all containers | `docker compose --env-file /opt/stack/athyper/secrets/.env ... ps` |
 | Read MANIFEST | `cat /opt/stack/athyper/MANIFEST` |
-| VNC recovery | `5.189.174.159:63128` — login as athyper with rotated vault password |
+| VNC recovery | `5.189.174.159:63128` — login as **root** (or break-glass ops-admin) using vault credential; **never as athyper** |
 | Rollback | `git -C /opt/products/athyper tag --list "staging-deploy-*" \| sort \| tail -5` → checkout tag → re-run from Phase 11 |
