@@ -764,6 +764,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         : SYSTEM_PRINCIPAL_UUID;
       mappedData.created_by = principalId;
 
+      // Hoisted payment_entry post-insert data (set inside enrichment block below)
+      let peSourceInvoiceId: string | undefined;
+
       // Auto-populate DOCUMENT-entity system fields that the generic form doesn't expose
       if (table.entity_class === "DOCUMENT") {
         if (!mappedData["company_code_id"]) {
@@ -864,6 +867,98 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           }
         }
 
+        // payment_entry-specific enrichment
+        if (entityCode === "payment_entry") {
+          const postingDate = mappedData["posting_date"] as string | undefined;
+
+          // source_invoice_id is not a DB column so fieldMap drops it from mappedData.
+          // Read it from the raw inputData body instead.
+          peSourceInvoiceId = inputData["source_invoice_id"] as string | undefined;
+
+          // The wizard payment_type field captures instrument modality (bank_transfer/cheque/cash).
+          // The DB payment_type column is a settlement classification (standard/advance/etc.) with
+          // a CHECK constraint that rejects the wizard values. Extract the modality, store it in
+          // metadata for display, then let the DB default handle payment_type = 'standard'.
+          const instrumentMode = String(mappedData["payment_type"] ?? "bank_transfer");
+          delete mappedData["payment_type"];
+          const existingMeta = (typeof mappedData["metadata"] === "object" && mappedData["metadata"] !== null)
+            ? (mappedData["metadata"] as Record<string, unknown>)
+            : {};
+          mappedData["metadata"] = { ...existingMeta, instrument_mode: instrumentMode };
+
+          // supplier_name: denormalized NOT NULL — resolve from master.supplier
+          if (!mappedData["supplier_name"] && mappedData["supplier_id"]) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const vendor = await (db as any)
+              .selectFrom("master.supplier as s")
+              .select(["s.name"])
+              .where("s.id",        "=", mappedData["supplier_id"])
+              .where("s.tenant_id", "=", tenantId)
+              .executeTakeFirst() as { name: string } | undefined;
+            mappedData["supplier_name"] = vendor?.name ?? "Unknown Supplier";
+          }
+          if (!mappedData["supplier_name"]) mappedData["supplier_name"] = "Unknown Supplier";
+
+          // fiscal_year + period_number: NOT NULL — resolve from master.fiscal_period
+          if (!mappedData["fiscal_year"] && postingDate) {
+            const peCompanyId = mappedData["company_code_id"] as string | undefined;
+            if (peCompanyId) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const fp = await (db as any)
+                .selectFrom("master.fiscal_period as fp")
+                .select(["fp.fiscal_year", "fp.period_number"])
+                .where("fp.tenant_id",       "=", tenantId)
+                .where("fp.company_code_id", "=", peCompanyId)
+                .where("fp.period_number",   ">=", 1)
+                .where("fp.period_number",   "<=", 12)
+                .where("fp.start_date",      "<=", postingDate)
+                .where("fp.end_date",        ">=", postingDate)
+                .orderBy("fp.period_number", "asc")
+                .executeTakeFirst() as { fiscal_year: number; period_number: number } | undefined;
+              if (fp) {
+                mappedData["fiscal_year"]   = fp.fiscal_year;
+                mappedData["period_number"] = fp.period_number;
+              }
+            }
+            // Fallback: extract from date directly
+            if (!mappedData["fiscal_year"]) {
+              const d = new Date(postingDate);
+              mappedData["fiscal_year"]   = d.getFullYear();
+              mappedData["period_number"] = d.getMonth() + 1;
+            }
+          }
+
+          // payment_method_id: NOT NULL — look up by instrument_mode, fallback to any active
+          if (!mappedData["payment_method_id"]) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let pm = await (db as any)
+              .selectFrom("master.payment_method as pm")
+              .select(["pm.id"])
+              .where("pm.tenant_id",       "=", tenantId)
+              .where("pm.instrument_mode", "=", instrumentMode)
+              .where("pm.is_active",       "=", true)
+              .orderBy("pm.sort_order",    "asc")
+              .executeTakeFirst() as { id: string } | undefined;
+            // Fallback: any active method for this tenant
+            if (!pm) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              pm = await (db as any)
+                .selectFrom("master.payment_method as pm")
+                .select(["pm.id"])
+                .where("pm.tenant_id", "=", tenantId)
+                .where("pm.is_active", "=", true)
+                .orderBy("pm.sort_order", "asc")
+                .executeTakeFirst() as { id: string } | undefined;
+            }
+            if (pm) mappedData["payment_method_id"] = pm.id;
+          }
+
+          // value_date: NOT NULL DEFAULT CURRENT_DATE — mirror posting_date when absent
+          if (!mappedData["value_date"] && postingDate) {
+            mappedData["value_date"] = postingDate;
+          }
+        }
+
         // Auto-generate the system document number when the wizard doesn't supply one.
         // Each document type has its own NOT NULL number column; a short random suffix
         // keeps it unique within the tenant without a DB sequence.
@@ -871,6 +966,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           purchase_invoice: { col: "invoice_number",    prefix: "PI"  },
           journal_entry:    { col: "je_number",         prefix: "JE"  },
           purchase_order:   { col: "commitment_number", prefix: "PO"  },
+          payment_entry:    { col: "payment_number",    prefix: "PMT" },
         };
         const docNum = DOC_NUMBER_COLS[entityCode];
         if (docNum && !mappedData[docNum.col]) {
@@ -883,6 +979,60 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
       const row = await db.insertInto(fullTable).values(mappedData as never).returningAll().executeTakeFirst();
+
+      // payment_entry post-insert: create allocation row linking to the source invoice.
+      // Only when payment was created from an invoice (Propose Payment flow).
+      if (entityCode === "payment_entry" && row && peSourceInvoiceId) {
+        try {
+          const paymentId     = (row as Record<string, unknown>)["id"] as string;
+          const currencyCode  = (row as Record<string, unknown>)["currency_code"] as string;
+          const paymentAmount = String((row as Record<string, unknown>)["payment_amount"] ?? "0");
+          await sql`
+            INSERT INTO document.payment_entry_allocation (
+              id, tenant_id, payment_entry_id, line_no,
+              purchase_invoice_id,
+              currency_code,
+              allocated_amount, discount_amount, withholding_tax_amount,
+              advance_recovery_amount, retention_amount,
+              created_by
+            ) VALUES (
+              ${crypto.randomUUID()}, ${tenantId}, ${paymentId}, 1,
+              ${peSourceInvoiceId},
+              ${currencyCode},
+              ${paymentAmount}, 0, 0,
+              0, 0,
+              ${principalId}
+            )
+          `.execute(db);
+
+          // Recalculate invoice paid_amount / outstanding_amount / status
+          await sql`
+            WITH alloc_sum AS (
+              SELECT COALESCE(SUM(allocated_amount), 0) AS total_paid
+                FROM document.payment_entry_allocation
+               WHERE purchase_invoice_id = ${peSourceInvoiceId}
+                 AND tenant_id = ${tenantId}
+            )
+            UPDATE document.purchase_invoice pi
+               SET paid_amount        = a.total_paid,
+                   outstanding_amount = GREATEST(0, COALESCE(pi.payable_amount, pi.total_amount) - a.total_paid),
+                   status             = CASE
+                     WHEN a.total_paid >= COALESCE(pi.payable_amount, pi.total_amount) THEN 'fully_paid'
+                     WHEN a.total_paid > 0 THEN 'partially_paid'
+                     ELSE pi.status
+                   END
+              FROM alloc_sum a
+             WHERE pi.id        = ${peSourceInvoiceId}
+               AND pi.tenant_id = ${tenantId}
+          `.execute(db);
+        } catch (allocErr) {
+          logger?.warn("pe_allocation_create_failed", {
+            paymentId: String((row as Record<string, unknown>)["id"]),
+            invoiceId: peSourceInvoiceId,
+            err: allocErr instanceof Error ? allocErr.message : String(allocErr),
+          });
+        }
+      }
 
       // Emit search-topic outbox event — best-effort; must not fail the
       // request. The generic search outbox handler routes this through
@@ -1908,6 +2058,144 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      // ── journal_entry: use document.journal_line (non-conventional table name) ──
+      // ── payment_entry: use document.payment_entry_allocation ─────────────────
+      if (entityCode === "payment_entry") {
+        try {
+          const peRows = await sql<{
+            id: string; line_no: number;
+            purchase_invoice_id: string | null;
+            invoice_number: string | null; invoice_date: string | null;
+            currency_code: string;
+            allocated_amount: string;
+            discount_amount: string;
+            withholding_tax_amount: string;
+            advance_recovery_amount: string;
+            retention_amount: string;
+            net_payment_amount: string;
+            base_amount: string | null;
+            notes: string | null;
+          }>`
+            SELECT
+              pea.id,
+              pea.line_no,
+              pea.purchase_invoice_id,
+              pi.invoice_number,
+              pi.document_date  AS invoice_date,
+              pea.currency_code,
+              pea.allocated_amount,
+              pea.discount_amount,
+              pea.withholding_tax_amount,
+              pea.advance_recovery_amount,
+              pea.retention_amount,
+              pea.net_payment_amount,
+              pea.base_amount,
+              pea.notes
+            FROM document.payment_entry_allocation pea
+            LEFT JOIN document.purchase_invoice pi
+                   ON pi.id = pea.purchase_invoice_id
+             WHERE pea.payment_entry_id = ${id}
+               AND pea.tenant_id = ${tenantId}
+             ORDER BY pea.line_no
+          `.execute(db);
+
+          const data = peRows.rows.map((r) => ({
+            id:           r.id,
+            document_id:  id,
+            line_number:  r.line_no,
+            description:  r.invoice_number ? `Invoice ${r.invoice_number}` : "On Account",
+            item_code:    r.invoice_number ?? null,
+            quantity:     null,
+            unit_code:    null,
+            unit_price:   null,
+            line_amount:  Number(r.allocated_amount),
+            net_amount:   Number(r.net_payment_amount),
+            gross_amount: Number(r.allocated_amount),
+            data: {
+              purchase_invoice_id:     r.purchase_invoice_id,
+              invoice_number:          r.invoice_number,
+              invoice_date:            r.invoice_date,
+              currency_code:           r.currency_code,
+              allocated_amount:        r.allocated_amount,
+              discount_amount:         r.discount_amount,
+              withholding_tax_amount:  r.withholding_tax_amount,
+              advance_recovery_amount: r.advance_recovery_amount,
+              retention_amount:        r.retention_amount,
+              net_payment_amount:      r.net_payment_amount,
+              base_amount:             r.base_amount,
+            },
+          }));
+          res.json({ data });
+        } catch (err) {
+          logger?.error("pe_lines_error", { err: String(err) });
+          res.json({ data: [] });
+        }
+        return;
+      }
+
+      if (entityCode === "journal_entry") {
+        try {
+          const jeRows = await sql<{
+            id: string; line_no: number;
+            gl_account_id: string; gl_account_code: string | null; gl_account_name: string | null;
+            description: string | null;
+            transaction_debit: string; transaction_credit: string;
+            base_debit: string; base_credit: string;
+            transaction_currency: string | null;
+            subledger_type: string | null; party_type: string | null; party_id: string | null;
+            cost_center_id: string | null; profit_center_id: string | null; project_id: string | null;
+          }>`
+            SELECT jl.id, jl.line_no,
+                   jl.gl_account_id,
+                   ga.code  AS gl_account_code,
+                   ga.name  AS gl_account_name,
+                   jl.description,
+                   jl.transaction_debit,  jl.transaction_credit,
+                   jl.base_debit,         jl.base_credit,
+                   jl.transaction_currency,
+                   jl.subledger_type, jl.party_type, jl.party_id,
+                   jl.cost_center_id, jl.profit_center_id, jl.project_id
+              FROM document.journal_line jl
+              LEFT JOIN master.gl_account ga ON ga.id = jl.gl_account_id
+             WHERE jl.journal_entry_id = ${id}
+               AND jl.tenant_id = ${tenantId}
+             ORDER BY jl.line_no
+          `.execute(db);
+
+          const data = jeRows.rows.map((r) => ({
+            id:           r.id,
+            document_id:  id,
+            line_number:  r.line_no,
+            description:  r.description ?? "",
+            item_code:    r.gl_account_code ?? null,
+            quantity:     null,
+            unit_code:    null,
+            unit_price:   null,
+            line_amount:  Math.max(Number(r.transaction_debit), Number(r.transaction_credit)),
+            net_amount:   r.transaction_debit,
+            gross_amount: r.transaction_credit,
+            data: {
+              gl_account_id:      r.gl_account_id,
+              gl_account_code:    r.gl_account_code,
+              gl_account_name:    r.gl_account_name,
+              transaction_debit:  r.transaction_debit,
+              transaction_credit: r.transaction_credit,
+              base_debit:         r.base_debit,
+              base_credit:        r.base_credit,
+              subledger_type:     r.subledger_type,
+              party_type:         r.party_type,
+              party_id:           r.party_id,
+              is_debit:           Number(r.transaction_debit) > 0,
+            },
+          }));
+          res.json({ data });
+        } catch (err) {
+          logger?.error("je_lines_error", { err: String(err) });
+          res.json({ data: [] });
+        }
+        return;
+      }
 
       const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
       const fkCol      = `${table.table_name}_id`;

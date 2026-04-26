@@ -41,7 +41,7 @@ if not defined COMPOSE_PROJECT_NAME (
         set "COMPOSE_PROJECT_NAME=!COMPOSE_PROJECT_NAME:"=!"
     )
 )
-if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper-stack"
+if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper"
 
 if not defined DOCKER_CONTAINER_IAM set "DOCKER_CONTAINER_IAM=!COMPOSE_PROJECT_NAME!-iam-1"
 

@@ -63,11 +63,11 @@ interface FieldGroup {
 
 interface FeatureFlags {
   has_attachments: boolean;
-  has_comments: boolean;
-  has_activity_log: boolean;
+  comments_enabled: boolean;
+  event_history: boolean;
   has_workflow: boolean;
   has_lifecycle: boolean;
-  has_versioning: boolean;
+  version_control: boolean;
   is_importable: boolean;
   is_exportable: boolean;
   is_bulk_editable: boolean;
@@ -472,11 +472,11 @@ export default function DescriptorInspectorPage() {
                     </p>
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
                       <FlagPill label="Attachments"   enabled={flags.has_attachments} />
-                      <FlagPill label="Comments"      enabled={flags.has_comments} />
-                      <FlagPill label="Activity log"  enabled={flags.has_activity_log} />
+                      <FlagPill label="Comments"      enabled={flags.comments_enabled} />
+                      <FlagPill label="Events"        enabled={flags.event_history} />
                       <FlagPill label="Workflow"      enabled={flags.has_workflow} />
                       <FlagPill label="Lifecycle"     enabled={flags.has_lifecycle} />
-                      <FlagPill label="Versioning"    enabled={flags.has_versioning} />
+                      <FlagPill label="Versions"      enabled={flags.version_control} />
                       <FlagPill label="Importable"    enabled={flags.is_importable} />
                       <FlagPill label="Exportable"    enabled={flags.is_exportable} />
                       <FlagPill label="Bulk editable" enabled={flags.is_bulk_editable} />

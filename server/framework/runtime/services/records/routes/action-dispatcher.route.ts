@@ -46,6 +46,11 @@ import { handlePromoteProforma } from "../../business/ap/promote-proforma.handle
 import { handleSubmitForApproval } from "../../business/ap/invoice-submit.handler.js";
 import { handlePostInvoice }      from "../../business/ap/invoice-posting.service.js";
 import { handleReverseInvoice }   from "../../business/ap/invoice-posting.service.js";
+import {
+  handlePostPayment,
+  handleSubmitPayment,
+  handleVoidPayment,
+} from "../../business/ap/payment-posting.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -267,6 +272,28 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       const remarks = typeof body["remarks"] === "string" ? body["remarks"] : undefined;
       const target  = (operation.handler_target ?? code).toLowerCase();
       const now     = new Date();
+
+      // ── Dispatch: payment_entry lifecycle handlers (GL-aware) ─────────────────
+      if (entityCode === "payment_entry") {
+        if (target === "post") {
+          const { status, body: respBody } = await handlePostPayment(db, tenantId, recordId, principalId, logger);
+          if (status === 200) logger?.info("action_dispatch_post_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+        if (target === "submit") {
+          const { status, body: respBody } = await handleSubmitPayment(db, tenantId, recordId, principalId, logger);
+          if (status === 200) logger?.info("action_dispatch_submit_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+        if (target === "void") {
+          const { status, body: respBody } = await handleVoidPayment(db, tenantId, recordId, principalId, body, logger);
+          if (status === 200) logger?.info("action_dispatch_void_payment", { tenantId, recordId });
+          res.status(status).json(respBody);
+          return;
+        }
+      }
 
       // ── Dispatch: status transition ───────────────────────────────────────────
       const targetStatus = TARGET_STATUS[target];

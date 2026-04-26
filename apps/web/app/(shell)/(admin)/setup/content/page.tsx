@@ -14,7 +14,7 @@ import {
   ShieldAlert, RefreshCw, CheckCircle2, Trash2, AlertTriangle,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { RowCard } from "@athyper/ui/data";
 import {
   Button, Badge, Skeleton,

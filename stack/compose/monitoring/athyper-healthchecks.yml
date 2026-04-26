@@ -46,6 +46,10 @@ services:
       EMAIL_PORT: ${KC_SMTP_PORT:-1025}
       EMAIL_USE_TLS: ${HEALTHCHECKS_EMAIL_USE_TLS:-False}
       DEBUG: "False"
+      # Redis for Celery task queue (DB 3 — reserved in cache.conf to avoid
+      # colliding with GlitchTip on DB 1). Set REDIS_HEALTHCHECKS_PASSWORD in
+      # .env and add a `healthchecks` ACL user to redis-acl.conf before enabling.
+      # REDIS_URL: redis://healthchecks:${REDIS_HEALTHCHECKS_PASSWORD}@memorycache:6379/${REDIS_HEALTHCHECKS_DB:-3}
     deploy:
       resources:
         limits:

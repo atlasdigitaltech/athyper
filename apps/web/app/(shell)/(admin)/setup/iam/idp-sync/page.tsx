@@ -18,7 +18,7 @@ import {
   PlayCircle, Wifi,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import {
   Button, Badge, Skeleton, Card, CardContent,
 } from "@athyper/ui/primitives";

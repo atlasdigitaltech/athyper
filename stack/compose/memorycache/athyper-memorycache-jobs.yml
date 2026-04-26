@@ -79,10 +79,11 @@ services:
       - ${ATHYPER_DATA}/memorycache-jobs:/data
     networks: [internal]
     healthcheck:
+      # REDISCLI_AUTH keeps the password out of the process table (no -a flag).
       test:
         [
           "CMD-SHELL",
-          'test "$$(redis-cli --user app -a "$$MEMORYCACHE_PASSWORD" --no-auth-warning ACL WHOAMI 2>/dev/null)" = "app"',
+          'result=$$(REDISCLI_AUTH="$$MEMORYCACHE_PASSWORD" redis-cli --user app --no-auth-warning ACL WHOAMI 2>/dev/null); test "$$result" = "app"',
         ]
       interval: 10s
       timeout: 3s

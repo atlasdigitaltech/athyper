@@ -33,10 +33,11 @@ import {
   buildOrchestratorFromRecord,
   buildApprovableHeaderFromRecord,
   AmountSummaryCard,
-  LinesGrid,
   FlowModal,
   type ApprovableReference,
 } from "@athyper/document-runtime";
+import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
+import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
@@ -70,19 +71,30 @@ export interface ApprovableDetailPageProps {
 
 // LinesPanel is a pure display component — queries are lifted to ApprovableDetailPage
 // so data is prefetched on page load, not on first tab click.
+// Renderer is resolved from display_config.lines_renderer via the runtime-shared
+// registry — no entity-code branching here.
 function LinesPanel({
   entityCode, recordId, companyCodeId, record,
-  lines, distributions, isLoading, onRefresh,
+  lines, distributions, isLoading, onRefresh, linesRenderer,
 }: {
   entityCode: string; recordId: string;
   companyCodeId?: string; record?: Record<string, unknown>;
-  lines: import("@athyper/api-contracts/documents").DocumentLine[];
-  distributions: import("@athyper/api-contracts/documents").AccountingDistribution[];
+  lines: DocumentLine[];
+  distributions: AccountingDistribution[];
   isLoading: boolean;
   onRefresh: () => void;
+  linesRenderer: string;
 }) {
+  const RendererComponent = resolveLinesRenderer(linesRenderer);
+  if (!RendererComponent) return null;
+
+  const currencyCode =
+    typeof record?.["transaction_currency"] === "string" ? record["transaction_currency"]
+    : typeof record?.["currency_code"]       === "string" ? record["currency_code"]
+    : "USD";
+
   return (
-    <LinesGrid
+    <RendererComponent
       entityCode={entityCode}
       recordId={recordId}
       companyCodeId={companyCodeId}
@@ -91,6 +103,7 @@ function LinesPanel({
       distributions={distributions}
       isLoading={isLoading}
       onRefresh={onRefresh}
+      currencyCode={currencyCode}
     />
   );
 }
@@ -510,10 +523,17 @@ export function ApprovableDetailPage({
   operations,
   recordId,
 }: ApprovableDetailPageProps) {
+  const router  = useRouter();
   const data    = record.data;
 
   const detailConfig  = resolveDetailConfig(entity);
   const resolvedTabs  = resolveTabs(entity, null, []);
+
+  // display_config v2 — lines_renderer drives which tab/renderer is active.
+  // null means this entity has no line items (master / non-document entities).
+  const resolvedDisplayConfig = resolveDisplayConfig(entity.display_config as Record<string, unknown>);
+  const linesRenderer   = resolvedDisplayConfig.lines_renderer;
+  const hasLinesSection = linesRenderer !== null;
 
   // ── MODAL operation dispatch ───────────────────────────────────────────────
   // Handles entity_operation rows where handler_type='MODAL'. Fetches the
@@ -739,7 +759,7 @@ export function ApprovableDetailPage({
   const tabs = [
     { id: "__overview", label: "Overview" },
     ...sectionTabs,
-    ...(resolvedTabs.includes("lines")         ? [{ id: "__lines",         label: "Lines" }]         : []),
+    ...(hasLinesSection                         ? [{ id: "__lines",         label: "Lines" }]         : []),
     ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Distributions" }] : []),
     ...(resolvedTabs.includes("workflow")      ? [{ id: "__workflow",      label: "Workflow" }]      : []),
     ...(resolvedTabs.includes("attachments")   ? [{ id: "__attachments",   label: "Attachments" }]   : []),
@@ -772,7 +792,7 @@ export function ApprovableDetailPage({
       if (!res.ok) throw new Error(`lines ${res.status}`);
       return res.json() as Promise<{ data: DocumentLine[] }>;
     },
-    enabled: resolvedTabs.includes("lines"),
+    enabled: hasLinesSection,
     staleTime: 60_000,
     retry: 3,
     retryDelay: 1000,
@@ -788,7 +808,7 @@ export function ApprovableDetailPage({
       if (!res.ok) throw new Error(`distributions ${res.status}`);
       return res.json() as Promise<{ data: AccountingDistribution[] }>;
     },
-    enabled: resolvedTabs.includes("lines") || resolvedTabs.includes("distributions"),
+    enabled: hasLinesSection || resolvedTabs.includes("distributions"),
     staleTime: 60_000,
     retry: 3,
     retryDelay: 1000,
@@ -812,12 +832,38 @@ export function ApprovableDetailPage({
     <ApprovableDocumentShell
         data={headerData}
         persistMode
+        onBack={() => router.back()}
         validationNotices={orchestrator.validationNotices}
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onAction={async (action, remarks) => {
           if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
+
+          // view_je — navigate to the posted JE using the UUID on the record
+          if (action === "view_je") {
+            const jeId = record.data["ap_je_id"] as string | null | undefined;
+            if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
+            return;
+          }
+
+          // NAVIGATE operations — substitute {id} and push client-side
+          const op = (operations ?? []).find((o) => o.permission_code === action);
+          if (op?.handler_type === "NAVIGATE" && op.handler_target) {
+            const url = op.handler_target
+              .replace(/\{id\}/g, record.id)
+              .replace(/\{recordId\}/g, recordId);
+            router.push(url);
+            return;
+          }
+
+          // MODAL operations whose handler_target has no server handler yet —
+          // guard here to avoid a 400 from the action dispatcher
+          if (action === "allocate_payment") {
+            router.push(`/finance/ap?invoice=${record.id}`);
+            return;
+          }
+
           await opDispatch.dispatch(action, operations ?? [], { remarks });
         }}
       >
@@ -872,6 +918,7 @@ export function ApprovableDetailPage({
               distributions={distQuery.data?.data ?? []}
               isLoading={linesQuery.isLoading}
               onRefresh={onLinesRefresh}
+              linesRenderer={linesRenderer ?? "generic"}
             />
           </Card>
         )}

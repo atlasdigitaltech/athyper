@@ -24,7 +24,7 @@ import {
   Separator,
 } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 
 // ── Priority badge ────────────────────────────────────────────────────────────
 

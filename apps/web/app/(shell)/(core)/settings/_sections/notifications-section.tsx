@@ -22,7 +22,7 @@ import {
   Loader2, RefreshCcw, Save,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import {
   Badge, Button, Card, CardContent,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,

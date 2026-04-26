@@ -71,6 +71,7 @@ import { resolveActionsForSurface, type ResolvedAction } from "@athyper/metadata
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
 import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { resolveListConfig, resolvePresentationConfig } from "@athyper/metadata-client/compiled-reader";
+import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
 import { DataTable, type ColumnDef, type RowSelectionState, type SortingState } from "@athyper/ui/data";
 import { PageShell } from "../shell/PageShell";
 import { PageHeader } from "../shell/PageHeader";
@@ -117,6 +118,14 @@ export interface EntityListPageProps {
 }
 
 type ViewMode = "list" | "board" | "compact" | "dashboard" | "excel";
+
+// Maps display_config v2 canonical view-mode names → legacy EntityListPage ViewMode names.
+const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
+  table:       "list",
+  kanban:      "board",
+  dashboard:   "dashboard",
+  spreadsheet: "excel",
+};
 
 // ── Status badge (semantic — driven by ColumnPresentation.semanticResolver) ───
 
@@ -355,15 +364,17 @@ function OrganizeControl({
 // "View: List ▾" dropdown — mode + density selection.
 
 interface ViewLauncherButtonProps {
-  mode:            ViewMode;
-  density?:        "compact" | "comfortable" | "spacious";
-  hasGroupable:    boolean;
-  onChangeMode:    (m: ViewMode) => void;
-  onChangeDensity: (d: "compact" | "comfortable" | "spacious" | undefined) => void;
+  mode:             ViewMode;
+  density?:         "compact" | "comfortable" | "spacious";
+  hasGroupable:     boolean;
+  onChangeMode:     (m: ViewMode) => void;
+  onChangeDensity:  (d: "compact" | "comfortable" | "spacious" | undefined) => void;
+  /** When set, restricts the listed view modes to only those in this array. */
+  availableModes?:  ViewMode[];
 }
 
 function ViewLauncherButton({
-  mode, density, hasGroupable, onChangeMode, onChangeDensity,
+  mode, density, hasGroupable, onChangeMode, onChangeDensity, availableModes,
 }: ViewLauncherButtonProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -412,7 +423,10 @@ function ViewLauncherButton({
           <div className="absolute -top-[5px] right-3 h-2.5 w-2.5 rotate-45 rounded-sm border-l border-t bg-popover" />
 
           <p className={hdg}>View</p>
-          {modeOptions.filter((o) => !o.gated).map(({ value, Icon, label }) => (
+          {(availableModes
+            ? modeOptions.filter((o) => availableModes.includes(o.value))
+            : modeOptions.filter((o) => !o.gated)
+          ).map(({ value, Icon, label }) => (
             <button key={value} onClick={() => { onChangeMode(value); setOpen(false); }} className={rowAct(mode === value)}>
               <Icon className={cn("h-3.5 w-3.5 shrink-0", mode !== value && "text-muted-foreground")} />
               <span className="flex-1">{label}</span>
@@ -1227,8 +1241,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     hasActiveQuery,
   } = useEntityListUrl(entityCode);
 
-  const viewMode = (state.viewMode ?? "list") as ViewMode;
-
   const { data: entity,     isLoading: metaLoading, error: metaError } = useCompiledEntity(entityCode);
   const { data: operations }                                            = useEntityOperations(entityCode);
   const { data: savedViews = [] }                                       = useSavedViews(entityCode);
@@ -1254,6 +1266,18 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     () => entity ? resolvePresentationConfig(entity) : undefined,
     [entity],
   );
+
+  // Normalised display_config v2 fields (list_renderer, view_modes, status_field_names, …)
+  const displayConfig = useMemo(
+    () => entity ? resolveDisplayConfig(entity.display_config as Record<string, unknown>) : undefined,
+    [entity],
+  );
+
+  // Active view mode: URL state overrides the entity-level default.
+  // Fallback chain: state.viewMode → display_config.list_renderer → "list"
+  const viewMode = (state.viewMode ?? (
+    displayConfig?.list_renderer ? (B5_TO_LEGACY_MODE[displayConfig.list_renderer] ?? "list") : "list"
+  )) as ViewMode;
 
   // Resolve active sort: URL state → metadata default → undefined
   const activeSort = (state.sort && state.sort.length > 0) ? state.sort : presentationConfig?.defaultSort;
@@ -1316,10 +1340,11 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     [entity],
   );
 
-  // Quick status filter — the first status-like field that has a semanticResolver
-  const statusFieldName = presentationConfig?.columns.find(
-    (c) => c.semanticResolver,
-  )?.fieldName;
+  // Quick status filter — prefer display_config.status_field_names[0]; fall back to
+  // the first column with a semanticResolver (legacy heuristic).
+  const statusFieldName =
+    displayConfig?.status_field_names?.[0] ??
+    presentationConfig?.columns.find((c) => c.semanticResolver)?.fieldName;
 
   const handleRemoveFilterField = useCallback(
     (field: string) => {
@@ -1691,6 +1716,9 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 hasGroupable={hasGroupable}
                 onChangeMode={setViewMode}
                 onChangeDensity={(d) => setDensity(d)}
+                availableModes={displayConfig?.view_modes?.map(
+                  (m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode),
+                )}
               />
 
               {operations ? (

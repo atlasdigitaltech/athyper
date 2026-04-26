@@ -5,9 +5,11 @@
  * POST   /api/finance/ap/invoices               — create AP invoice (proforma or draft)
  * GET    /api/finance/ap/invoices/:id           — single AP invoice with lines
  * PATCH  /api/finance/ap/invoices/:id           — update AP invoice header fields (draft/proforma only)
- * POST   /api/finance/ap/invoices/:id/lines     — add a line item
- * PATCH  /api/finance/ap/invoices/:id/lines/:lid — update a line item
- * DELETE /api/finance/ap/invoices/:id/lines/:lid — remove a line item
+ * POST   /api/finance/ap/invoices/:id/lines          — add a line item
+ * PATCH  /api/finance/ap/invoices/:id/lines/:lid    — update a line item (auto-classifies when spend_category_id changes)
+ * DELETE /api/finance/ap/invoices/:id/lines/:lid    — remove a line item
+ * POST   /api/finance/ap/invoices/:id/lines/:lid/classify — explicit classify trigger (?mode=preview|save)
+ * GET    /api/finance/ap/invoices/:id/lines/suggest — spend-category text suggestions (?q=)
  * GET    /api/finance/ap/payments               — payment_entry WHERE direction = OUTBOUND
  * POST   /api/finance/ap/payments               — create draft payment entry for an AP invoice
  * GET    /api/finance/ap/payment-methods        — list active payment methods (OUTBOUND/BOTH)
@@ -31,6 +33,9 @@ import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, extrac
 import { randomUUID } from "node:crypto";
 import { handleCreateApInvoice } from "../../business/ap/invoice-create.handler.js";
 import { handleAddInvoiceLine, handleUpdateInvoiceLine, handleDeleteInvoiceLine } from "../../business/ap/invoice-lines.handler.js";
+import { handlePostPayment, handleSubmitPayment, handleVoidPayment } from "../../business/ap/payment-posting.service.js";
+import { resolveLineClassification } from "../../business/procurement-intake/IntentResolutionService.js";
+import { suggestSpendCategories } from "../../business/procurement-intake/SpendCategorySuggestService.js";
 
 // ── Payment status resolution ─────────────────────────────────────────────────
 // Recomputes paid_amount, outstanding_amount, and status after any allocation
@@ -1073,6 +1078,24 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         body as unknown as Parameters<typeof handleUpdateInvoiceLine>[5],
         logger,
       );
+
+      // Auto-classify when spend_category_id or business_intent_id is being set
+      if (status === 200 && principalId &&
+          (Object.prototype.hasOwnProperty.call(body, "spend_category_id") ||
+           Object.prototype.hasOwnProperty.call(body, "business_intent_id"))) {
+        try {
+          const decision = await resolveLineClassification(
+            { db, logger },
+            { tenantId, principalId, invoiceId, lineId, mode: "save" },
+          );
+          res.status(status).json({ ...respBody as object, classification: decision });
+          return;
+        } catch (e) {
+          logger?.error("auto_classify_error", { err: String(e), lineId });
+          // Fall through — return the update result without classification
+        }
+      }
+
       res.status(status).json(respBody);
     } catch (err) {
       logger?.error("finance_ap_invoice_line_update_error", { err: String(err) });
@@ -1103,6 +1126,145 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
     }
   }) as RequestHandler);
 
+
+  // ── POST /api/finance/ap/invoices/:id/lines/:lid/classify ────────────────
+  // Explicit classification trigger. Runs the intent resolution pipeline and
+  // persists classification_decision on the line.
+  // ?mode=preview  — run without persisting (default: save)
+  router.post("/finance/ap/invoices/:id/lines/:lid/classify", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const invoiceId = String(req.params["id"]  ?? "");
+      const lineId    = String(req.params["lid"] ?? "");
+      if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const modeParam = String(req.query["mode"] ?? "save");
+      const mode = modeParam === "preview" ? "preview" : "save";
+
+      let decision;
+      try {
+        decision = await resolveLineClassification(
+          { db, logger },
+          { tenantId, principalId, invoiceId, lineId, mode },
+        );
+      } catch (classifyErr: unknown) {
+        if (/Line .+ not found on invoice/.test(String(classifyErr))) {
+          res.status(404).json({ error: "LINE_NOT_FOUND" });
+          return;
+        }
+        throw classifyErr;
+      }
+
+      // Fire-and-forget activity log — best effort, non-blocking
+      if (mode === "save" && decision?.status) {
+        const d = decision as Record<string, unknown>;
+        const resolved = d["resolved"] as Record<string, unknown> | undefined;
+        sql`
+          INSERT INTO log.activity_log
+            (tenant_id, domain, activity_type, entity_type, entity_id, actor_id, detail, created_by)
+          VALUES (
+            ${tenantId}::uuid, 'procurement', 'line_classified',
+            'purchase_invoice_line', ${lineId}::uuid, ${principalId}::uuid,
+            ${JSON.stringify({
+              invoice_id:     invoiceId,
+              status:         d["status"],
+              intent_code:    (d["selected"] as Record<string, unknown> | undefined)?.["business_intent_id"] ?? null,
+              profile_id:     (d["selected"] as Record<string, unknown> | undefined)?.["profile_config_id"] ?? null,
+              confidence:     resolved?.["confidence"] ?? null,
+              pipeline_id:    d["pipeline_id"] ?? null,
+            })}::jsonb,
+            ${principalId}::uuid
+          )
+        `.execute(db).catch((e: unknown) => {
+          logger?.error("classify_activity_log_write_failed", { err: String(e), lineId });
+        });
+      }
+
+      res.json({ ok: true, classification: decision });
+    } catch (err) {
+      logger?.error("finance_ap_classify_line_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── GET /api/finance/ap/invoices/:id/lines/suggest ────────────────────────
+  // Returns up to 5 spend-category suggestions based on a text query.
+  // Query params: q (required), companyCodeId (optional, unused in Phase 1)
+  router.get("/finance/ap/invoices/:id/lines/suggest", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ suggestions: [] }); return; }
+
+      const q = String(req.query["q"] ?? "").trim();
+      if (!q) { res.json({ suggestions: [] }); return; }
+
+      const suggestions = await suggestSpendCategories(db, tenantId, q, 5);
+      res.json({ suggestions });
+    } catch (err) {
+      logger?.error("finance_ap_lines_suggest_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/payments/:id/submit — draft → pending_approval | approved ──
+  router.post("/finance/ap/payments/:id/submit", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handleSubmitPayment(db, tenantId, id, principalId);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_submit_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── POST /api/finance/ap/payments/:id/post — approved → posted (creates GL JE) ──
+  router.post("/finance/ap/payments/:id/post", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handlePostPayment(db, tenantId, id, principalId);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_post_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── POST /api/finance/ap/payments/:id/void — posted|approved|draft → voided ──
+  router.post("/finance/ap/payments/:id/void", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const id = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const result = await handleVoidPayment(db, tenantId, id, principalId, req.body as Record<string, unknown>);
+      res.status(result.status).json(result.body);
+    } catch (err) { logger?.error("finance_ap_payment_void_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
 
   return router;
 }

@@ -76,6 +76,12 @@ services:
       context: ../..
       dockerfile: server/Dockerfile.prod
 
+  # Grafana: strict provisioning — edits and deletions blocked in the UI.
+  # All dashboard changes must go through the JSON files in provisioning/dashboards/json/.
+  telemetry:
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.production.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+
   # Database: guaranteed memory + named volume (I-08).
   # The named volume overrides the bind-mount from athyper-db.yml by target
   # path (/var/lib/postgresql/data); config file mounts are inherited as-is.

@@ -20,7 +20,7 @@ The following env vars contain secrets that MUST be injected in staging/producti
 | `DATABASE_URL` | PgBouncer (apps) | Full connection string with password |
 | `DATABASE_ADMIN_URL` | Direct PostgreSQL | Admin/migration connection |
 | `DBPOOL_APPS_PASSWORD` | PgBouncer apps | Written to `userlist.txt` at container start |
-| `DBPOOL_AUTH_PASSWORD` | PgBouncer auth | Written to `userlist.txt` at container start |
+| `DBPOOL_SESSION_PASSWORD` | PgBouncer session | Written to `userlist.txt` at container start |
 | `REDIS_URL` | Redis | Includes password in URL |
 | `MEMORYCACHE_PASSWORD` | Redis ACL | Default user password |
 | `REDIS_ADMIN_PASSWORD` | Redis ACL | Admin user password |
@@ -183,7 +183,7 @@ DB_ADMIN_PASSWORD={{ .Data.data.admin_password }}
 DATABASE_URL={{ .Data.data.url }}
 DATABASE_ADMIN_URL={{ .Data.data.admin_url }}
 DBPOOL_APPS_PASSWORD={{ .Data.data.pool_apps_password }}
-DBPOOL_AUTH_PASSWORD={{ .Data.data.pool_auth_password }}
+DBPOOL_SESSION_PASSWORD={{ .Data.data.pool_session_password }}
 {{- end }}
 ```
 
@@ -231,7 +231,7 @@ DB_ADMIN_PASSWORD=$(echo "$DB" | jq -r .admin_password)
 DATABASE_URL=$(echo "$DB" | jq -r .url)
 DATABASE_ADMIN_URL=$(echo "$DB" | jq -r .admin_url)
 DBPOOL_APPS_PASSWORD=$(echo "$DB" | jq -r .pool_apps_password)
-DBPOOL_AUTH_PASSWORD=$(echo "$DB" | jq -r .pool_auth_password)
+DBPOOL_SESSION_PASSWORD=$(echo "$DB" | jq -r .pool_session_password)
 REDIS_URL=$(echo "$REDIS" | jq -r .url)
 MEMORYCACHE_PASSWORD=$(echo "$REDIS" | jq -r .password)
 REDIS_ADMIN_PASSWORD=$(echo "$REDIS" | jq -r .admin_password)

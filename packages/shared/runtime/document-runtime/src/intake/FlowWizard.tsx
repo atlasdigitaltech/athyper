@@ -38,6 +38,8 @@ export interface FlowWizardProps {
   entityLabel?: string;
   /** User-context values seeded into derived fields (e.g. default_company_code). */
   userCtx?: Record<string, unknown>;
+  /** Pre-populated field values (e.g. from a source document like an AP invoice). */
+  initialValues?: Record<string, unknown>;
   /** Rendered in the header row between the title and the cancel button (e.g. flow-type switcher). */
   headerAction?: React.ReactNode;
 }
@@ -50,9 +52,10 @@ export function FlowWizard({
   submitting = false,
   entityLabel,
   userCtx,
+  initialValues,
   headerAction,
 }: FlowWizardProps) {
-  const engine = useFlowEngine(bundle, userPermissions, userCtx);
+  const engine = useFlowEngine(bundle, userPermissions, userCtx, initialValues);
   const {
     state,
     currentStep,

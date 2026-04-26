@@ -3,12 +3,20 @@
 /**
  * DatePicker — themed date/datetime picker with Radix Popover + CalendarGrid.
  *
- * For "date" mode: opens CalendarGrid (fully themed, no browser native picker).
- * For "datetime" mode: CalendarGrid + a compact time input below.
+ * Behaviour:
+ *   date mode     — popover closes automatically after the user picks a day
+ *                   (Today button also closes; Clear closes and resets)
+ *   datetime mode — popover stays open after day pick so the user can also
+ *                   set the time; a "Done" button closes it explicitly
+ *
+ * Navigation in CalendarGrid:
+ *   « / » = prev/next year
+ *   ‹ / › = prev/next month
+ *   Click month+year header = year-picker grid (12 years at a time)
  */
 
-import { useCallback, useId } from "react";
-import { CalendarDays, X } from "lucide-react";
+import { useCallback, useId, useState } from "react";
+import { CalendarDays, X, Check } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { cn } from "@athyper/theme/utils";
 import { CalendarGrid } from "./CalendarGrid";
@@ -72,13 +80,24 @@ export function DatePicker({
   const id = externalId ?? generatedId;
   const display = formatDisplay(value, mode);
 
+  // Controlled open state — required to programmatically close the popover
+  const [open, setOpen] = useState(false);
+
   const handleDateChange = useCallback(
     (date: string | null) => {
-      if (!date) { onChange?.(null); return; }
+      if (!date) {
+        onChange?.(null);
+        // "Clear" in CalendarGrid footer — close the popover
+        setOpen(false);
+        return;
+      }
       if (mode === "datetime") {
+        // In datetime mode stay open so user can also pick the time
         onChange?.(`${date}T${timePart(value)}`);
       } else {
         onChange?.(date);
+        // Auto-close after date selection in date mode
+        setOpen(false);
       }
     },
     [mode, onChange, value],
@@ -86,7 +105,7 @@ export function DatePicker({
 
   const handleTimeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const dp = datePartOf(value) ?? datePartOf(new Date().toISOString().slice(0, 10));
+      const dp = datePartOf(value) ?? new Date().toISOString().slice(0, 10);
       onChange?.(`${dp}T${e.target.value}`);
     },
     [onChange, value],
@@ -96,22 +115,25 @@ export function DatePicker({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       onChange?.(null);
+      setOpen(false);
     },
     [onChange],
   );
 
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={disabled ? undefined : setOpen}>
       <Popover.Trigger asChild>
         <button
           type="button"
           id={id}
           disabled={disabled}
+          aria-expanded={open}
           className={cn(
             "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1",
             "text-left text-sm",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             "disabled:cursor-not-allowed disabled:opacity-50",
+            open && "ring-2 ring-ring",
             error && "border-destructive ring-1 ring-destructive",
             className,
           )}
@@ -138,11 +160,16 @@ export function DatePicker({
       <Popover.Portal>
         <Popover.Content
           className={cn(
-            "z-50 rounded-xl border border-border bg-card p-3 shadow-lg",
+            "z-popover rounded-xl border border-border bg-card p-3 shadow-lg",
             "animate-in fade-in-0 zoom-in-95",
           )}
+          side="top"
           align="start"
-          sideOffset={4}
+          sideOffset={6}
+          avoidCollisions
+          collisionBoundary={[]}
+          collisionPadding={12}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <CalendarGrid
             value={datePartOf(value)}
@@ -151,21 +178,37 @@ export function DatePicker({
           />
 
           {mode === "datetime" && (
-            <div className="mt-3 border-t border-border pt-3">
-              <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Time
-              </label>
-              <input
-                type="time"
-                value={timePart(value)}
-                onChange={handleTimeChange}
-                disabled={disabled}
+            <div className="mt-3 border-t border-border pt-3 space-y-3">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={timePart(value)}
+                  onChange={handleTimeChange}
+                  disabled={disabled}
+                  className={cn(
+                    "h-8 w-full rounded-md border border-input bg-background px-2 text-sm",
+                    "focus:outline-none focus:ring-2 focus:ring-primary/40",
+                    "disabled:opacity-50",
+                  )}
+                />
+              </div>
+
+              {/* Done button — closes the popover in datetime mode */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
                 className={cn(
-                  "h-8 w-full rounded-md border border-input bg-background px-2 text-sm",
-                  "focus:outline-none focus:ring-2 focus:ring-primary/40",
-                  "disabled:opacity-50",
+                  "flex w-full items-center justify-center gap-1.5 rounded-md h-8 text-sm font-medium",
+                  "bg-primary text-primary-foreground hover:opacity-90 transition-opacity",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 )}
-              />
+              >
+                <Check className="size-3.5" />
+                Done
+              </button>
             </div>
           )}
 

@@ -26,29 +26,15 @@
  * table name. Never use hyphens in entity codes.
  */
 
-import { use, useMemo, useState, useCallback } from "react";
+import { use, useMemo, useState } from "react";
 import { cn } from "@athyper/theme/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { EntityForm } from "@athyper/entity-runtime/form";
-import { useCreateEntity, useEntityFlow } from "@athyper/query";
+import { useCreateEntity, useEntityFlow, useCompiledEntity } from "@athyper/query";
 import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
-/**
- * Alternate flow codes available per entity. Keyed by entity_code (underscore).
- * Populated here because the metadata API only exposes the *default* flow via
- * useEntityFlow(). Non-default flows are fetched on demand when the user
- * explicitly requests them.
- *
- * Add entries for other entities as their alternate flows are seeded.
- */
-const ALTERNATE_FLOWS: Record<string, { flow_code: string; label: string }[]> = {
-  purchase_invoice: [
-    { flow_code: "create_proforma", label: "Create Pro-forma instead" },
-  ],
-};
-
 
 export default function AppEntityNewRoute({
   params,
@@ -57,17 +43,81 @@ export default function AppEntityNewRoute({
 }) {
   const { entity } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const createMutation = useCreateEntity(entity);
+
+  // ── Source-document pre-population ─────────────────────────────────────────
+  // ?invoice=<uuid> — when navigating from an AP invoice's "Propose Payment" action.
+  // The mapped fields are written into the intake draft as initialValues; the flow
+  // engine ignores keys that don't match its field bindings.
+  const sourceInvoiceId = searchParams.get("invoice");
+
+  const { data: sourceInvoice, isLoading: invoiceLoading } = useQuery({
+    queryKey: ["new-page-prefill", "purchase_invoice", sourceInvoiceId],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/relay/api/records/purchase_invoice/${encodeURIComponent(sourceInvoiceId!)}`,
+      );
+      if (!res.ok) return null;
+      const body = await res.json() as { data?: Record<string, unknown> };
+      return body.data ?? null;
+    },
+    enabled: !!sourceInvoiceId,
+    staleTime: Infinity,
+  });
+
+  // Build initialValues from the source document when present.
+  // Unrecognised keys are silently ignored by the flow engine.
+  const initialValues = useMemo<Record<string, unknown> | undefined>(() => {
+    if (!sourceInvoice) return undefined;
+    return {
+      supplier_id:       sourceInvoice["supplier_id"]                                  ?? undefined,
+      currency_code:     sourceInvoice["currency_code"]                                ?? undefined,
+      payment_amount:    sourceInvoice["payable_amount"] ?? sourceInvoice["total_amount"] ?? undefined,
+      payment_direction: "OUTBOUND",
+      source_invoice_id: sourceInvoiceId,
+    };
+  }, [sourceInvoice, sourceInvoiceId]);
 
   // Default flow (is_default=true, trigger=new)
   const { data: defaultBundle, isLoading: flowLoading } = useEntityFlow(entity, "new");
 
-  // Active bundle: starts as the default; user can switch to an alternate
-  const [activeBundle, setActiveBundle] = useState<FlowBundle | null | undefined>(undefined);
-  const [altLoading, setAltLoading] = useState(false);
+  // ── Alternate flows — driven by display_config.alternate_flows ─────────────
+  // The entity's display_config carries an array of alternate flow codes.
+  // We eagerly fetch all alternate bundles so their labels are available before
+  // the user interacts with the switcher.
+  const { data: compiledEntity } = useCompiledEntity(entity);
+  const alternateFlowCodes = useMemo(
+    () => (compiledEntity?.display_config?.alternate_flows ?? []) as string[],
+    [compiledEntity],
+  );
+
+  const { data: alternateBundles = [] } = useQuery({
+    queryKey: ["entity-flow-alternates", entity, alternateFlowCodes],
+    queryFn: async () => {
+      const results = await Promise.all(
+        alternateFlowCodes.map(async (code) => {
+          const res = await fetch(
+            `/api/relay/api/metadata/entities/${encodeURIComponent(entity)}/flow?flow_code=${encodeURIComponent(code)}`,
+          );
+          if (!res.ok) return null;
+          const json = await res.json() as { bundle: FlowBundle } | FlowBundle;
+          return "bundle" in json ? json.bundle : json;
+        }),
+      );
+      return results.filter((b): b is FlowBundle => b !== null);
+    },
+    enabled: alternateFlowCodes.length > 0,
+    staleTime: Infinity,
+  });
+
+  // Active flow code — null means "use default"
+  const [activeFlowCode, setActiveFlowCode] = useState<string | null>(null);
 
   // Resolved bundle — undefined = not yet loaded, null = no flow
-  const bundle = activeBundle !== undefined ? activeBundle : defaultBundle;
+  const bundle = activeFlowCode === null
+    ? defaultBundle
+    : (alternateBundles.find((b) => b.flow_code === activeFlowCode) ?? defaultBundle);
 
   // Fetch the current user's profile to seed ctx.user.* derived fields
   const { data: profileData } = useQuery({
@@ -89,25 +139,6 @@ export default function AppEntityNewRoute({
     };
   }, [profileData]);
 
-  const switchToAlternateFlow = useCallback(async (flowCode: string) => {
-    setAltLoading(true);
-    try {
-      const res = await fetch(
-        `/api/relay/api/metadata/entities/${encodeURIComponent(entity)}/flow?flow_code=${encodeURIComponent(flowCode)}`,
-      );
-      if (!res.ok) return;
-      const json = await res.json() as { bundle: FlowBundle } | FlowBundle;
-      const fetched = "bundle" in json ? json.bundle : json;
-      setActiveBundle(fetched);
-    } finally {
-      setAltLoading(false);
-    }
-  }, [entity]);
-
-  const switchToDefaultFlow = useCallback(() => {
-    setActiveBundle(undefined);
-  }, []);
-
   // Guard — all hooks above; safe to return early from here
   const { guardLoading, denied } = useSubrouteGuard(entity, "hasEdit");
   if (guardLoading) return <GuardSkeleton />;
@@ -123,43 +154,37 @@ export default function AppEntityNewRoute({
     router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
   }
 
-  // Loading state
-  if (flowLoading || altLoading) return <FlowWizardSkeleton />;
-
-  const alternates = ALTERNATE_FLOWS[entity] ?? [];
-  // We're on an alternate flow when activeBundle is set and differs from the default
-  const isAlternate = activeBundle !== undefined && activeBundle !== null;
+  // Loading state — also wait for source invoice when navigating from ?invoice=
+  if (flowLoading || (!!sourceInvoiceId && invoiceLoading)) return <FlowWizardSkeleton />;
 
   if (bundle) {
-    const flowSwitcher = alternates.length > 0 ? (
+    // Build flow-type switcher when the entity has alternate flows in its display_config.
+    // Labels come from the eagerly-prefetched bundles — no hardcoded strings.
+    const allFlowOptions: { flow_code: string | null; label: string }[] = [
+      { flow_code: null, label: defaultBundle?.label ?? entity },
+      ...alternateBundles.map((b) => ({ flow_code: b.flow_code, label: b.label })),
+    ];
+
+    const flowSwitcher = alternateBundles.length > 0 ? (
       <div className="flex items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5 text-xs">
-        <button
-          type="button"
-          onClick={switchToDefaultFlow}
-          className={cn(
-            "rounded-md px-3 py-1.5 font-semibold transition-colors",
-            !isAlternate
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Invoice
-        </button>
-        {alternates.map((alt) => (
-          <button
-            key={alt.flow_code}
-            type="button"
-            onClick={!isAlternate ? () => void switchToAlternateFlow(alt.flow_code) : undefined}
-            className={cn(
-              "rounded-md px-3 py-1.5 font-semibold transition-colors",
-              isAlternate
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Pro-forma
-          </button>
-        ))}
+        {allFlowOptions.map((opt) => {
+          const isActive = activeFlowCode === opt.flow_code;
+          return (
+            <button
+              key={opt.flow_code ?? "__default"}
+              type="button"
+              onClick={() => setActiveFlowCode(opt.flow_code)}
+              className={cn(
+                "rounded-md px-3 py-1.5 font-semibold transition-colors",
+                isActive
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     ) : undefined;
 
@@ -168,6 +193,7 @@ export default function AppEntityNewRoute({
         bundle={bundle}
         userPermissions={bundle.user_permissions}
         userCtx={userCtx}
+        initialValues={initialValues}
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
         submitting={createMutation.isPending}

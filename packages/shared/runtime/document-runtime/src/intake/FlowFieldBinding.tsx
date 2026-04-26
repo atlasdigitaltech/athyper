@@ -25,7 +25,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { cn } from "@athyper/theme/utils";
 import { AlertCircle, Search } from "lucide-react";
 import type { FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-contracts/documents";
-import { EntityRefPicker, DatePicker, type EntityRefOption } from "@athyper/ui/composites";
+import { DatePicker } from "@athyper/ui/composites";
+import { EntityPicker, type EntityPickerOption } from "@athyper/runtime-shared/entity-search";
 import { DerivedChip } from "./DerivedChip";
 import { canOverride } from "./useFlowEngine";
 
@@ -168,7 +169,7 @@ function FlowInlineRefPicker({
   }, [uuid, needsResolve]);
 
   const searchFn = useCallback(
-    async (query: string): Promise<EntityRefOption[]> => {
+    async (query: string): Promise<EntityPickerOption[]> => {
       if (!entityCode) return [];
       try {
         const params = new URLSearchParams({ q: query, limit: "20" });
@@ -233,7 +234,7 @@ function FlowInlineRefPicker({
   }
 
   return (
-    <EntityRefPicker
+    <EntityPicker
       value={typeof value === "string" && value ? value : null}
       displayLabel={effectiveDisplayLabel}
       onChange={handleChange}
@@ -409,13 +410,11 @@ interface FieldOption { code: string; name: string; display_tier?: "primary" | "
 
 const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
   invoice_type: [
-    // Primary tier — always visible (min 5)
     { code: "standard",          name: "Standard",          display_tier: "primary"  },
     { code: "credit_note",       name: "Credit Note",       display_tier: "primary"  },
     { code: "debit_note",        name: "Debit Note",        display_tier: "primary"  },
     { code: "advance",           name: "Advance",           display_tier: "primary"  },
     { code: "retention_release", name: "Retention Release", display_tier: "primary"  },
-    // Advanced tier — behind "More types…"
     { code: "final",             name: "Final",             display_tier: "advanced" },
     { code: "self_billed",       name: "Self-Billed",       display_tier: "advanced" },
   ],
@@ -424,6 +423,23 @@ const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
     { code: "contract_based",  name: "Contract-Based"  },
     { code: "non_po",          name: "Non-PO"          },
     { code: "one_time_vendor", name: "One-Time Vendor" },
+  ],
+  payment_type: [
+    { code: "bank_transfer",   name: "Bank Transfer",   display_tier: "primary"  },
+    { code: "cheque",          name: "Cheque",           display_tier: "primary"  },
+    { code: "cash",            name: "Cash",             display_tier: "primary"  },
+    { code: "online_transfer", name: "Online Transfer",  display_tier: "primary"  },
+    { code: "card",            name: "Card",             display_tier: "advanced" },
+    { code: "direct_debit",    name: "Direct Debit",     display_tier: "advanced" },
+  ],
+  payment_direction: [
+    { code: "OUTBOUND", name: "Outbound (Payment)" },
+    { code: "INBOUND",  name: "Inbound (Receipt)"  },
+  ],
+  tax_mode: [
+    { code: "inclusive", name: "Inclusive", display_tier: "primary" },
+    { code: "exclusive", name: "Exclusive", display_tier: "primary" },
+    { code: "no_tax",    name: "No Tax",    display_tier: "primary" },
   ],
 };
 

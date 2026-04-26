@@ -43,6 +43,10 @@ services:
       - "80:80"
       - "443:443"
     environment:
+      # Docker socket proxy — Traefik uses this instead of a direct docker.sock
+      # bind mount. socket-proxy-gateway exposes only read-only container/network
+      # discovery endpoints (CONTAINERS, NETWORKS, SERVICES, TASKS).
+      DOCKER_HOST: "tcp://socket-proxy-gateway:2375"
       # Passed into container so Traefik Go templates ({{ env "VAR" }}) in
       # file-provider configs (dynamic/*.yml) can resolve hostnames at runtime.
       APPS_ATHYPER_WEB_HOST: "${APPS_ATHYPER_WEB_HOST}"
@@ -63,13 +67,16 @@ services:
       # Staging/production override APPS_ATHYPER_WEB_UPSTREAM_URL to the
       # in-network service name (athyper-neon-web), so this entry is unused there.
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - socket-proxy-gateway
     volumes:
-      # Docker socket — required for Traefik service discovery.
-      # Works on Linux and Docker Desktop (WSL2 backend translates the path).
-      # Not compatible with native Windows containers (not a target platform).
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # No direct docker.sock mount — Traefik reaches Docker via socket-proxy-gateway
+      # (tcp://socket-proxy-gateway:2375) which exposes only read-only service
+      # discovery endpoints. See compose/security/athyper-socket-proxy-gateway.yml.
       - ${ATHYPER_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
-      - ${ATHYPER_CONFIG}/gateway/certs:/certs:ro
+      # TLS certs (acme.json, private keys) live in secrets/ not config/ because
+      # they contain private key material. ATHYPER_SECRETS_ROOT is set by compose.sh.
+      - ${ATHYPER_SECRETS_ROOT}/gateway/certs:/certs
     networks: [edge]
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]

@@ -19,13 +19,16 @@ ENV_FILE="$ENV_DIR/.env"
 
 # ----------------------------
 # Derive ATHYPER_DATA from STACK_DIR (portable — works at any clone path).
+# Priority: ATHYPER_DATA_ROOT (six-var model, set by systemd on servers or
+# in .env for local dev) → ATHYPER_DATA (legacy backwards-compat alias, set
+# by compose.sh) → STACK_DIR/data fallback.
 # ATHYPER_DATA in .env is the docker-compose substitution value and may be a
-# relative path (../../data) that is only meaningful from a compose file
-# directory. For filesystem operations we always anchor to STACK_DIR/data.
-# Override: if ATHYPER_DATA is already set in the environment as an absolute
-# path, honour it (allows CI / non-standard layouts).
+# relative path that is only meaningful from a compose file directory; always
+# anchor to an absolute path here.
 # ----------------------------
-if [[ "${ATHYPER_DATA:-}" == /* ]]; then
+if [[ "${ATHYPER_DATA_ROOT:-}" == /* ]]; then
+  ATHYPER_DATA="$ATHYPER_DATA_ROOT"
+elif [[ "${ATHYPER_DATA:-}" == /* ]]; then
   : # keep the absolute path already in the environment
 else
   ATHYPER_DATA="$STACK_DIR/data"
@@ -70,3 +73,52 @@ echo "  $ATHYPER_DATA/telemetry/observability"
 echo "  $ATHYPER_DATA/telemetry/tracing"
 echo "  $ATHYPER_DATA/uptime-kuma"
 echo ""
+
+# ----------------------------
+# Per-service data dir ownership — server only.
+# Each data dir is owned by the UID the writing container runs as, NOT by athyper.
+# Gate: only execute when running as root on a server path (/opt/...).
+# NEVER run chown -R on the entire data tree after containers have started —
+# that would break Grafana (472), Prometheus (65534), Loki/Tempo (10001), Redis (999).
+# Only chown individual leaf dirs before a service's very first start.
+# ----------------------------
+if [[ "${ATHYPER_DATA:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
+  echo "Setting per-service data dir ownership (server mode)..."
+
+  # Redis (redis:7.4.8-alpine) — UID 999 / GID 1000
+  chown 999:1000  "$ATHYPER_DATA/memorycache"
+  chown 999:1000  "$ATHYPER_DATA/memorycache-jobs"
+  chmod 750       "$ATHYPER_DATA/memorycache"
+  chmod 750       "$ATHYPER_DATA/memorycache-jobs"
+
+  # MinIO (minio/minio) — UID 1000 / GID 1001
+  chown 1000:1001 "$ATHYPER_DATA/objectstorage"
+  chmod 750       "$ATHYPER_DATA/objectstorage"
+
+  # Grafana Loki (grafana/loki) and Tempo (grafana/tempo) — UID 10001 / GID 10001
+  chown 10001:10001 "$ATHYPER_DATA/telemetry/logging"
+  chown 10001:10001 "$ATHYPER_DATA/telemetry/tracing"
+  chmod 750         "$ATHYPER_DATA/telemetry/logging"
+  chmod 750         "$ATHYPER_DATA/telemetry/tracing"
+
+  # Prometheus (prom/prometheus) — nobody = UID 65534 / GID 65534
+  chown 65534:65534 "$ATHYPER_DATA/telemetry/metrics"
+  chmod 750         "$ATHYPER_DATA/telemetry/metrics"
+
+  # Grafana (grafana/grafana) — UID 472 / GID 472
+  chown 472:472   "$ATHYPER_DATA/telemetry/observability"
+  chmod 750       "$ATHYPER_DATA/telemetry/observability"
+
+  # Meilisearch and Uptime Kuma — UID 1000 / GID 1000
+  chown 1000:1000 "$ATHYPER_DATA/meilisearch"
+  chown 1000:1000 "$ATHYPER_DATA/uptime-kuma"
+  chmod 750       "$ATHYPER_DATA/meilisearch"
+  chmod 750       "$ATHYPER_DATA/uptime-kuma"
+
+  # Metabase (analytics profile, deferred) — UID 1000 / GID 1000
+  chown 1000:1000 "$ATHYPER_DATA/metabase"
+  chmod 750       "$ATHYPER_DATA/metabase"
+
+  echo "Per-service ownership set. Verify with: ls -lan $ATHYPER_DATA"
+  echo "Recheck UID matrix before every major image version bump."
+fi

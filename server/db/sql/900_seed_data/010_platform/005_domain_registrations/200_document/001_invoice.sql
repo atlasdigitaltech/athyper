@@ -24,7 +24,7 @@ SELECT
     'Invoice', 'Invoices', 'file-text', 'violet',
     true,
     '{"prefix":"INV","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_line_items":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -281,35 +281,29 @@ WHERE  m.code          = 'PROC'
   AND  e.table_name    = 'purchase_invoice'
   AND  e.tenant_id     IS NULL;
 
--- 5b. Full feature_flags — canonical spec names + legacy aliases so that
---     resolveTabs() (??-fallback chain) activates every applicable tab:
---       lines, workflow, attachments, versions, comments, events,
---       distributions (accounting), payment health tile.
+-- 5b. Full feature_flags — canonical names only.
+--     Replaces the whole object so existing rows are migrated on next seed run.
 UPDATE control.entity
 SET feature_flags = jsonb_build_object(
     -- Core document flags
-    'is_approvable',          true,
-    'document_category',      'payables',
-    'allow_on_behalf_of',     false,
-    'auto_number',            true,
+    'is_approvable',               true,
+    'document_category',           'payables',
+    'allow_on_behalf_of',          false,
+    'auto_number',                 true,
     -- Lines tab
-    'has_line_items',         true,
-    -- Comments tab (canonical + legacy alias)
-    'comments_enabled',       true,
-    'has_comments',           true,
-    -- Activity / events tab (canonical + legacy alias)
-    'event_history',          true,
-    'has_activity_log',       true,
+    'has_lines',                   true,
+    -- Comments tab
+    'comments_enabled',            true,
+    -- Activity / events tab
+    'event_history',               true,
     -- Attachments tab
-    'has_attachments',        true,
-    -- Version control tabs (versions + compare)
-    'version_control',        true,
-    'has_versioning',         true,
-    -- Accounting entries → distributions tab + accounting health tile
-    'has_accounting_entries', true,
+    'has_attachments',             true,
+    -- Version control
+    'version_control',             true,
+    -- Accounting distributions tab + accounting health tile
     'has_accounting_distribution', true,
-    -- Payment settlement → settlement health tile
-    'has_payment_schedule',   true
+    -- Payment settlement health tile
+    'has_payment_schedule',        true
 )
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL;

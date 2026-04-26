@@ -4,11 +4,11 @@
  * Built-in renderers for all standard data types.
  * Call registerDefaults() at app startup to populate the registry.
  */
-import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
-import { EntityRefPicker, DatePicker, type EntityRefOption } from "@athyper/ui/composites";
+import { DatePicker } from "@athyper/ui/composites";
+import { EntityPicker } from "@athyper/runtime-shared/entity-search";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
 import { registerFieldRenderer, type FieldRendererProps } from "./registry";
@@ -163,18 +163,6 @@ function UuidRenderer({ value, mode }: FieldRendererProps) {
 
 // ── Reference (entity chooser) ───────────────────────────────────
 
-/** Returns a human-readable label from a raw/remapped entity row. */
-function getEntityRowLabel(row: Record<string, unknown>): string {
-  const keys = Object.keys(row);
-  const nameKey = keys.find((k) => k !== "id" && k.endsWith("_name"));
-  if (nameKey && row[nameKey]) return String(row[nameKey]);
-  if (row.name) return String(row.name);
-  const codeKey = keys.find((k) => k !== "id" && k.endsWith("_code") && k !== "currency_code");
-  if (codeKey && row[codeKey]) return String(row[codeKey]);
-  if (row.code) return String(row.code);
-  return String(row.id ?? "").slice(0, 8);
-}
-
 function getReferenceEntityCode(field: FieldRendererProps["field"]): string | null {
   if (field.reference_config?.target_entity) return field.reference_config.target_entity;
   const v = field.validation_rules as Record<string, unknown> | null;
@@ -182,11 +170,6 @@ function getReferenceEntityCode(field: FieldRendererProps["field"]): string | nu
   return null;
 }
 
-/**
- * Wrapper that wires EntityRefPicker to the relay-backed record search.
- * Calls GET /api/relay/api/records/{entityCode}?q={query}&limit=20
- * so the BFF injects auth and tenant headers transparently.
- */
 function ReferencePickerField({
   entityCode,
   value,
@@ -198,34 +181,15 @@ function ReferencePickerField({
   onChange: (v: string) => void;
   error?: string;
 }) {
-  const searchFn = useCallback(
-    async (query: string): Promise<EntityRefOption[]> => {
-      if (!entityCode) return [];
-      const params = new URLSearchParams({ q: query, limit: "20" });
-      const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`);
-      if (!res.ok) return [];
-      const body = await res.json() as { data?: Record<string, unknown>[] };
-      return (body.data ?? []).map((row) => ({
-        value: String(row["id"] ?? ""),
-        label: getEntityRowLabel(row),
-        description: row["code"] ? String(row["code"]) : undefined,
-      }));
-    },
-    [entityCode],
-  );
-
   return (
-    <div className="space-y-1">
-      <EntityRefPicker
-        value={value || null}
-        onChange={(v) => onChange(v ?? "")}
-        search={searchFn}
-        disabled={!entityCode}
-        error={error}
-        placeholder="Search records…"
-      />
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    <EntityPicker
+      entityCode={entityCode}
+      value={value || null}
+      onChange={(v) => onChange(v ?? "")}
+      disabled={!entityCode}
+      error={error}
+      placeholder="Search records…"
+    />
   );
 }
 

@@ -1,5 +1,5 @@
 discovery.docker "linux" {
-  host = "unix:///var/run/docker.sock"
+  host = "tcp://socket-proxy-logshipper:2375"
 }
 
 loki.process "normalize" {
@@ -11,9 +11,9 @@ loki.process "normalize" {
 }
 
 loki.source.docker "docker_logs" {
-  host       = "unix:///var/run/docker.sock"
+  host       = "tcp://socket-proxy-logshipper:2375"
   targets    = discovery.docker.linux.targets
-  labels     = { "platform" = "docker", "env" = env("ATHYPER_ENV") }
+  labels     = { "platform" = "docker", "env" = sys.env("ATHYPER_ENV") }
   forward_to = [loki.process.normalize.receiver]
 }
 

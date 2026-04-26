@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Plug, Link2, Link2Off } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import { FilterPillBar } from "@athyper/ui/composites";
 import { RowCard } from "@athyper/ui/data";
 import {

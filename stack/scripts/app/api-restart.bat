@@ -28,13 +28,11 @@ popd >nul
 set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
-set "ATHYPER_CONFIG=%STACK_DIR:\=/%/config"
-set "ATHYPER_DATA=%STACK_DIR:\=/%/data"
-
 REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
 
 set "ENVIRONMENT=local"
+set "_CR_FROM_ENV=" & set "_DR_FROM_ENV="
 
 if exist "%ENV_FILE%" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
@@ -45,12 +43,26 @@ if exist "%ENV_FILE%" (
       set "V=!V:"=!"
       for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
       for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ENVIRONMENT" set "ENVIRONMENT=!V!"
+      if /I "!K!"=="ENVIRONMENT"          set "ENVIRONMENT=!V!"
+      if /I "!K!"=="ATHYPER_CONFIG_ROOT"  if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_DATA_ROOT"    if "!_DR_FROM_ENV!"=="" set "_DR_FROM_ENV=!V!"
     )
   )
 ) else (
   echo WARNING: .env not found: "%ENV_FILE%" — defaulting to local mode.
 )
+
+if not "!ATHYPER_CONFIG_ROOT!"=="" goto :app_skip_cr
+if not "!_CR_FROM_ENV!"==""        (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & goto :app_skip_cr)
+set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
+:app_skip_cr
+if not "!ATHYPER_DATA_ROOT!"==""   goto :app_skip_dr
+if not "!_DR_FROM_ENV!"==""        (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :app_skip_dr)
+set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+:app_skip_dr
+
+set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!" & set "ATHYPER_CONFIG=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
 
 echo.
 echo ==========================
@@ -94,6 +106,8 @@ if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMP
 if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
 if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""

@@ -7068,6 +7068,7 @@ export type purchase_invoice_line = {
     updated_by: string | null;
     retention_pct: Generated<string | null>;
     retention_amount: Generated<string>;
+    classification_decision: Generated<unknown>;
 };
 export type purchase_order_confirmation = {
     id: Generated<string>;
@@ -7196,6 +7197,7 @@ export type purchase_requisition_line = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    classification_decision: Generated<unknown>;
 };
 export type push_subscription = {
     id: Generated<string>;

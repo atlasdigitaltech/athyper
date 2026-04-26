@@ -43,15 +43,13 @@ if [[ -z "$ENVIRONMENT" ]]; then
 fi
 
 # ----------------------------
-# Derive ATHYPER_DATA from STACK_DIR.
-# ATHYPER_DATA in .env is the docker-compose substitution value; it may be a
-# relative path (../../data) that is only meaningful from a compose file
-# directory, not from STACK_DIR.  Always anchor to STACK_DIR/data so the
-# script works regardless of where the repo is cloned.
-# Override: if ATHYPER_DATA in the environment is already an absolute path,
-# honour it (allows CI / non-standard layouts).
+# Derive ATHYPER_DATA — same priority chain as data-dirs-create.sh:
+# ATHYPER_DATA_ROOT (six-var model) → ATHYPER_DATA (backwards-compat alias)
+# → STACK_DIR/data fallback.
 # ----------------------------
-if [[ "${ATHYPER_DATA:-}" == /* ]]; then
+if [[ "${ATHYPER_DATA_ROOT:-}" == /* ]]; then
+  ATHYPER_DATA="$ATHYPER_DATA_ROOT"
+elif [[ "${ATHYPER_DATA:-}" == /* ]]; then
   : # keep the absolute path already in the environment
 else
   ATHYPER_DATA="$STACK_DIR/data"

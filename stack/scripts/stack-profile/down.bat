@@ -27,12 +27,6 @@ set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
 
-REM Compute absolute paths for ATHYPER_CONFIG / ATHYPER_DATA and export them.
-REM Shell env vars take precedence over --env-file in Docker Compose, so these
-REM override the relative ../../config values in .env regardless of CWD.
-set "ATHYPER_CONFIG=%STACK_DIR:\=/%/config"
-set "ATHYPER_DATA=%STACK_DIR:\=/%/data"
-
 if not exist "%COMPOSE_DIR%" (
   echo ERROR: COMPOSE_DIR not found: "%COMPOSE_DIR%"
   pause
@@ -41,16 +35,15 @@ if not exist "%COMPOSE_DIR%" (
 
 REM ----------------------------
 REM Determine docker compose profile to run
-REM   STACK_PROFILE  = persisted value from .env
-REM   ACTIVE_PROFILE = resolved runtime value (CLI arg > STACK_PROFILE > "core")
 REM ----------------------------
 set "ACTIVE_PROFILE=%~1"
 
 REM ----------------------------
-REM Read ENVIRONMENT + STACK_PROFILE from .env (optional)
+REM Read ENVIRONMENT + STACK_PROFILE + six ATHYPER_*_ROOT vars from .env
 REM ----------------------------
 set "ENVIRONMENT="
 set "STACK_PROFILE="
+set "_CR_FROM_ENV=" & set "_SR_FROM_ENV=" & set "_DR_FROM_ENV=" & set "_LR_FROM_ENV=" & set "_BR_FROM_ENV="
 
 if exist "%ENV_FILE%" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
@@ -61,14 +54,34 @@ if exist "%ENV_FILE%" (
       set "V=!V:"=!"
       for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
       for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ENVIRONMENT"     set "ENVIRONMENT=!V!"
-      if /I "!K!"=="STACK_PROFILE" set "STACK_PROFILE=!V!"
+      if /I "!K!"=="ENVIRONMENT"          set "ENVIRONMENT=!V!"
+      if /I "!K!"=="STACK_PROFILE"        set "STACK_PROFILE=!V!"
+      if /I "!K!"=="ATHYPER_CONFIG_ROOT"  if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_SECRETS_ROOT" if "!_SR_FROM_ENV!"=="" set "_SR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_DATA_ROOT"    if "!_DR_FROM_ENV!"=="" set "_DR_FROM_ENV=!V!"
     )
   )
 ) else (
   echo WARNING: .env not found: "%ENV_FILE%"
   echo Will attempt to run compose down without env-file.
 )
+
+if not "!ATHYPER_CONFIG_ROOT!"==""  goto :dn_skip_cr
+if not "!_CR_FROM_ENV!"==""         (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & goto :dn_skip_cr)
+set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
+:dn_skip_cr
+if not "!ATHYPER_SECRETS_ROOT!"=="" goto :dn_skip_sr
+if not "!_SR_FROM_ENV!"==""         (set "ATHYPER_SECRETS_ROOT=!_SR_FROM_ENV!" & goto :dn_skip_sr)
+set "ATHYPER_SECRETS_ROOT=%STACK_DIR%\secrets"
+:dn_skip_sr
+if not "!ATHYPER_DATA_ROOT!"==""    goto :dn_skip_dr
+if not "!_DR_FROM_ENV!"==""         (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :dn_skip_dr)
+set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+:dn_skip_dr
+
+set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!" & set "ATHYPER_CONFIG=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
+set "_TMP=!ATHYPER_SECRETS_ROOT:\=/!" & set "ATHYPER_SECRETS_ROOT=!_TMP!"
 
 REM Default: no arg = stop ALL services (no profile filter), matching down.sh behaviour.
 REM A specific profile name activates per-profile filtering.
@@ -104,8 +117,9 @@ if not exist "!OVERRIDE!" (
 echo.
 echo ==========================
 echo COMPOSE_DIR     = "%COMPOSE_DIR%"
-echo ATHYPER_CONFIG  = "%ATHYPER_CONFIG%"
-echo ATHYPER_DATA    = "%ATHYPER_DATA%"
+echo ATHYPER_CONFIG  = "!ATHYPER_CONFIG!"
+echo ATHYPER_SECRETS = "!ATHYPER_SECRETS_ROOT!"
+echo ATHYPER_DATA    = "!ATHYPER_DATA!"
 echo ENV_FILE        = "%ENV_FILE%"
 echo ENVIRONMENT     = "!ENVIRONMENT!"
 echo ACTIVE_PROFILE  = "!ACTIVE_PROFILE!"
@@ -137,6 +151,8 @@ if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMP
 if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
 if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
+if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
 if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""

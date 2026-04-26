@@ -24,9 +24,10 @@ import type {
   ActionBundleGroup,
   ValidationNotice,
 } from "@athyper/api-contracts/documents";
-import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent, type StatusIntent } from "../_shared/status";
+import type { SemanticIntent } from "@athyper/theme/semantic-colors";
+import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent } from "@athyper/runtime-shared/core";
 
-type Intent = StatusIntent | "primary" | "accent" | "muted";
+type Intent = SemanticIntent | "primary" | "accent" | "muted";
 
 function formatLabel(code: string): string {
   return code
@@ -159,8 +160,8 @@ function buildStatusDimensions(
     intent: statusToIntent(statusNorm),
   });
 
-  // 2. Accounting — when entity has accounting entries
-  if (flags?.has_accounting_entries || POSITIVE.has("posted") && data["is_posted"] != null) {
+  // 2. Accounting — when entity has accounting distributions
+  if (flags?.has_accounting_distribution || POSITIVE.has("posted") && data["is_posted"] != null) {
     const isPosted = data["is_posted"] === true || data["is_posted"] === "true";
     dims.push({
       dimension: "accounting",
@@ -236,8 +237,8 @@ function buildHealthTiles(
     });
   }
 
-  // Accounting tile — when entity has accounting entries
-  if (flags?.has_accounting_entries) {
+  // Accounting tile — when entity has accounting distributions
+  if (flags?.has_accounting_distribution) {
     tiles.push({
       dimension: "accounting",
       label: "Accounting",

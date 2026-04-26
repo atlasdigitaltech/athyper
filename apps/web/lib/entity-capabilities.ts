@@ -42,7 +42,7 @@ export function resolveCapabilities(meta: CompiledEntity): EntityCapabilities {
   const tabs = resolveTabs(meta, null, []);
   const renderer = resolveRendererFamily(meta);
 
-  const hasVersions = Boolean(flags.version_control ?? flags.has_versioning);
+  const hasVersions = Boolean(flags.version_control);
 
   return {
     // Subroutes

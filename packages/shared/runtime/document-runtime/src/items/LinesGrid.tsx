@@ -15,13 +15,15 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { cn } from "@athyper/theme/utils";
 import { Skeleton } from "@athyper/ui/primitives";
 import {
-  MoreHorizontal, SplitSquareHorizontal, Check, AlertTriangle,
+  MoreHorizontal, SplitSquareHorizontal, Check, AlertTriangle, XCircle,
   Trash2, Copy, ChevronDown, ExternalLink, Plus, Minus, FileText,
   Pencil, Upload, Download,
 } from "lucide-react";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
-import { relayMutate } from "../_shared/csrf";
+import { relayMutate } from "@athyper/runtime-shared/client";
 import { LineEditorSheet } from "./LineEditorSheet";
+import { ClassificationStatusBadge } from "./ClassificationDecisionPanel";
+import { LineComposerSheet } from "./LineComposerSheet";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -137,6 +139,32 @@ function MatchCell({ line }: { line: DocumentLine }) {
     </span>
   );
   return <span className="text-muted-foreground/30 text-sm leading-none" title="Not applicable">—</span>;
+}
+
+// ── Classification status cell ────────────────────────────────────────────────
+
+function ClassificationCell({
+  line,
+  onClick,
+}: {
+  line: DocumentLine;
+  onClick: () => void;
+}) {
+  const raw = (line as Record<string, unknown>)["classification_decision"];
+  const hasDecision = raw != null && typeof raw === "object" && "status" in (raw as object);
+  const hasCategory = !!(line as Record<string, unknown>)["spend_category_id"];
+  if (!hasDecision && !hasCategory) {
+    return <span className="text-muted-foreground/30 text-sm leading-none" title="Not classified">—</span>;
+  }
+  return (
+    <button
+      onClick={onClick}
+      title="Open Classify tab"
+      className="hover:opacity-70 transition-opacity"
+    >
+      <ClassificationStatusBadge line={line as Record<string, unknown>} compact />
+    </button>
+  );
 }
 
 // ── Allocated-To cell — three states ─────────────────────────────────────────
@@ -349,6 +377,8 @@ function StateToolbar({
   splitCount,
   unmatchedCount,
   exceptionCount,
+  blockedCount,
+  needsReviewCount,
   activeFilter,
   onFilterToggle,
   onAddLine,
@@ -359,61 +389,79 @@ function StateToolbar({
   splitCount: number;
   unmatchedCount: number;
   exceptionCount: number;
+  blockedCount: number;
+  needsReviewCount: number;
   activeFilter: ActiveFilter;
   onFilterToggle: (f: ActiveFilter) => void;
   onAddLine: () => void;
   adding: boolean;
 }) {
   return (
-    <div className="flex justify-between items-center px-3.5 py-2 bg-muted/40 border-b border-border/40 gap-2 flex-wrap">
-      {/* Left: summary pills */}
-      <div className="flex items-center gap-2 flex-wrap text-xs">
-        <span className="font-semibold text-foreground">
-          {lineCount} line{lineCount !== 1 ? "s" : ""}
-        </span>
-        {selCount > 0 && (
-          <span className="font-semibold text-foreground/60">· {selCount} selected</span>
-        )}
-        {splitCount > 0 && (
-          <FilterPill
-            label={`${splitCount} split`}
-            active={activeFilter === "split"}
-            color="info"
-            ariaLabel={`Filter: ${splitCount} split lines — click to toggle`}
-            onClick={() => onFilterToggle(activeFilter === "split" ? null : "split")}
-          />
-        )}
-        {unmatchedCount > 0 && (
-          <FilterPill
-            label={`${unmatchedCount} unmatched`}
-            active={activeFilter === "unmatched"}
-            color="warning"
-            ariaLabel={`Filter: ${unmatchedCount} unmatched lines — click to toggle`}
-            onClick={() => onFilterToggle(activeFilter === "unmatched" ? null : "unmatched")}
-          />
-        )}
-        {exceptionCount > 0 && (
-          <FilterPill
-            label={`${exceptionCount} exception`}
-            active={activeFilter === "exception"}
-            color="danger"
-            ariaLabel={`Filter: ${exceptionCount} exception lines — click to toggle`}
-            onClick={() => onFilterToggle(activeFilter === "exception" ? null : "exception")}
-          />
-        )}
-        {activeFilter && (
-          <button
-            onClick={() => onFilterToggle(null)}
-            className="inline-flex items-center gap-1 text-2xs px-2 py-0.5 rounded-full bg-muted border border-border/60 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Filtered: {activeFilter} only ×
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col gap-0">
+      {blockedCount > 0 && (
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-destructive/5 border-b border-destructive/20 text-xs text-destructive">
+          <XCircle className="h-3 w-3 flex-shrink-0" />
+          <span className="font-semibold">{blockedCount} line{blockedCount !== 1 ? "s" : ""} blocked</span>
+          <span className="text-destructive/70 font-normal">— resolve classification issues before submitting.</span>
+        </div>
+      )}
+      {!blockedCount && needsReviewCount > 0 && (
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-warning/5 border-b border-warning/20 text-xs text-warning">
+          <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+          <span className="font-semibold">{needsReviewCount} line{needsReviewCount !== 1 ? "s" : ""} need review</span>
+          <span className="text-warning/70 font-normal">— open the Classify tab to confirm intent.</span>
+        </div>
+      )}
+      <div className="flex justify-between items-center px-3.5 py-2 bg-muted/40 border-b border-border/40 gap-2 flex-wrap">
+        {/* Left: summary pills */}
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="font-semibold text-foreground">
+            {lineCount} line{lineCount !== 1 ? "s" : ""}
+          </span>
+          {selCount > 0 && (
+            <span className="font-semibold text-foreground/60">· {selCount} selected</span>
+          )}
+          {splitCount > 0 && (
+            <FilterPill
+              label={`${splitCount} split`}
+              active={activeFilter === "split"}
+              color="info"
+              ariaLabel={`Filter: ${splitCount} split lines — click to toggle`}
+              onClick={() => onFilterToggle(activeFilter === "split" ? null : "split")}
+            />
+          )}
+          {unmatchedCount > 0 && (
+            <FilterPill
+              label={`${unmatchedCount} unmatched`}
+              active={activeFilter === "unmatched"}
+              color="warning"
+              ariaLabel={`Filter: ${unmatchedCount} unmatched lines — click to toggle`}
+              onClick={() => onFilterToggle(activeFilter === "unmatched" ? null : "unmatched")}
+            />
+          )}
+          {exceptionCount > 0 && (
+            <FilterPill
+              label={`${exceptionCount} exception`}
+              active={activeFilter === "exception"}
+              color="danger"
+              ariaLabel={`Filter: ${exceptionCount} exception lines — click to toggle`}
+              onClick={() => onFilterToggle(activeFilter === "exception" ? null : "exception")}
+            />
+          )}
+          {activeFilter && (
+            <button
+              onClick={() => onFilterToggle(null)}
+              className="inline-flex items-center gap-1 text-2xs px-2 py-0.5 rounded-full bg-muted border border-border/60 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Filtered: {activeFilter} only ×
+            </button>
+          )}
+        </div>
 
-      {/* Right: page actions */}
-      <div className="flex items-center gap-1.5">
-        <AddLineButton onAddBlankLine={onAddLine} adding={adding} />
+        {/* Right: page actions */}
+        <div className="flex items-center gap-1.5">
+          <AddLineButton onAddBlankLine={onAddLine} adding={adding} />
+        </div>
       </div>
     </div>
   );
@@ -690,6 +738,9 @@ export function LinesGrid({
   const [massApplying,  setMassApplying]  = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
+  // LineComposerSheet — used for new-line intake on purchase_invoice
+  const [composerOpen, setComposerOpen] = useState(false);
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const distByLine = useMemo(() => {
     const m = new Map<string, AccountingDistribution[]>();
@@ -704,6 +755,16 @@ export function LinesGrid({
   const splitCount     = useMemo(() => lines.filter((l) => (distByLine.get(l.id)?.length ?? 0) > 1).length, [lines, distByLine]);
   const unmatchedCount = useMemo(() => lines.filter((l) => getMatchState(l) === "unmatched").length,         [lines]);
   const exceptionCount = useMemo(() => lines.filter((l) => getMatchState(l) === "exception").length,         [lines]);
+
+  // Classification gate counts
+  const blockedCount     = useMemo(() => lines.filter((l) => {
+    const d = (l as Record<string, unknown>)["classification_decision"];
+    return d != null && typeof d === "object" && (d as Record<string, unknown>)["status"] === "blocked";
+  }).length, [lines]);
+  const needsReviewCount = useMemo(() => lines.filter((l) => {
+    const d = (l as Record<string, unknown>)["classification_decision"];
+    return d != null && typeof d === "object" && (d as Record<string, unknown>)["status"] === "needs_review";
+  }).length, [lines]);
 
   const visibleLines = useMemo(() => {
     if (!activeFilter) return lines;
@@ -748,6 +809,12 @@ export function LinesGrid({
   }, []);
 
   async function handleAddLine() {
+    // For purchase invoices, use the full-intake LineComposerSheet
+    if (entityCode === "purchase_invoice") {
+      setComposerOpen(true);
+      return;
+    }
+    // Generic blank-line flow for all other document types
     setAdding(true);
     try {
       const nextNo = lines.length + 1;
@@ -925,6 +992,8 @@ export function LinesGrid({
         splitCount={splitCount}
         unmatchedCount={unmatchedCount}
         exceptionCount={exceptionCount}
+        blockedCount={blockedCount}
+        needsReviewCount={needsReviewCount}
         activeFilter={activeFilter}
         onFilterToggle={setActiveFilter}
         onAddLine={() => void handleAddLine()}
@@ -946,6 +1015,7 @@ export function LinesGrid({
             <col style={{ width: 106 }} />
             <col style={{ width: 28  }} />
             <col style={{ width: 28  }} />
+            <col style={{ width: 28  }} />
           </colgroup>
           <thead className="border-b bg-muted/40">
             <tr>
@@ -964,6 +1034,7 @@ export function LinesGrid({
               <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-right">Unit</th>
               <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-right">Net</th>
               <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-left">Allocated to</th>
+              <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center">C</th>
               <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center">M</th>
               <th className="px-2 py-2" />
             </tr>
@@ -971,7 +1042,7 @@ export function LinesGrid({
           <tbody className="divide-y divide-border/40">
             {visibleLines.length === 0 ? (
               <tr>
-                <td colSpan={11}>
+                <td colSpan={12}>
                   <div className="flex flex-col items-center gap-2 py-10 text-center">
                     <FileText className="h-7 w-7 text-muted-foreground/25" />
                     <p className="text-sm text-muted-foreground">
@@ -1041,6 +1112,14 @@ export function LinesGrid({
                         line={line}
                         dists={lineDists}
                         onOpenEditor={openSheet}
+                      />
+                    </td>
+
+                    {/* Classification — stops propagation */}
+                    <td className="px-2 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <ClassificationCell
+                        line={line}
+                        onClick={() => openSheet(line, "classify")}
                       />
                     </td>
 
@@ -1130,6 +1209,20 @@ export function LinesGrid({
           companyCodeId={companyCodeId}
           record={record}
           onLineSaved={onRefresh}
+          onMutated={onRefresh}
+        />
+      )}
+
+      {/* Procurement line composer — full-intake sheet for purchase_invoice */}
+      {entityCode === "purchase_invoice" && (
+        <LineComposerSheet
+          open={composerOpen}
+          onOpenChange={setComposerOpen}
+          line={null}
+          entityCode={entityCode}
+          recordId={recordId}
+          currencyCode={currencyCode}
+          companyCodeId={companyCodeId}
           onMutated={onRefresh}
         />
       )}

@@ -14,7 +14,7 @@
  */
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage, SlaStatus } from "./types";
-import { statusToIntent } from "../_shared/status";
+import { statusToIntent } from "@athyper/runtime-shared/core";
 
 // ── Label formatter ───────────────────────────────────────────────────────────
 
@@ -242,7 +242,7 @@ export function buildApprovableHeaderFromRecord(
 
   // ── Context counters ────────────────────────────────────────────────────────
   dto.context = {
-    lineItems: flags.has_line_items ? 0 : undefined,
+    lineItems: flags.has_lines ? 0 : undefined,
   };
 
   // ── Progress rail ───────────────────────────────────────────────────────────

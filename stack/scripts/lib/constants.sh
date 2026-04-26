@@ -30,7 +30,7 @@ if [[ -z "${COMPOSE_PROJECT_NAME:-}" ]]; then
   fi
   unset _CONST_STACK_DIR _CONST_ENV
 fi
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-athyper-stack}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-athyper}"
 
 # ---------------------------------------------------------------------------
 # Docker container names

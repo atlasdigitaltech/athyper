@@ -64,7 +64,12 @@ export function createPool(config: PoolConfig): pg.Pool {
     );
   });
 
-  pool.on("connect", () => {
+  pool.on("connect", (client) => {
+    // Force UTC on every new connection so PgBouncer tracks 'UTC' rather than
+    // whatever PGTZ / system timezone the process inherits (e.g. 'gmt+0800' on
+    // Windows is not a valid PostgreSQL timezone name and causes ERRORs when
+    // PgBouncer replays it to a backend in transaction-pool mode).
+    void client.query("SET TIME ZONE 'UTC'");
     console.log(
       JSON.stringify({
         msg: "postgres_pool_connected",

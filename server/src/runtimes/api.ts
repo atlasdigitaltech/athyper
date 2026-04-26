@@ -43,6 +43,10 @@ import { ClamavScanner } from "../../framework/runtime/services/content/services
 import { registerIntegrationRoutes } from "../../framework/runtime/services/integration/routes/index.js";
 import { registerDocServicesRoutes } from "../../framework/runtime/services/docservices/routes/index.js";
 import { createOpenApiRouter } from "../../framework/runtime/openapi/openapi-generator.js";
+import {
+  createAiServiceBundle,
+  registerAiRoutes,
+} from "../../framework/runtime/services/ai/index.js";
 
 import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
@@ -529,6 +533,21 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerDocServicesRoutes(apiRouter, {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
+  // ─── AI Foundation routes ──────────────────────────────────────────────────
+  // Phase 7a: POST /ai/actions/run | /preview, POST /ai/feedback,
+  //           GET /ai/policy/effective
+  // ANTHROPIC_API_KEY must be set in env to enable real model calls.
+  const aiBundle = await createAiServiceBundle({ db: _db, redis, logger });
+  registerAiRoutes(apiRouter, {
+    db:    _db,
+    auth:  { verifyToken: (token: string) => auth.verifyToken(token) as Promise<{ sub: string; [k: string]: unknown }> },
+    aiRuntime:          aiBundle.aiRuntime,
+    autonomyResolver:   aiBundle.autonomyResolver,
+    confidenceResolver: aiBundle.confidenceResolver,
+    feedbackLogWriter:  aiBundle.feedbackLogWriter,
     logger,
   });
 

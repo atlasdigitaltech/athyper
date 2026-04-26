@@ -24,3 +24,19 @@ export {
   registerFieldRenderer, resolveFieldRenderer, registerDefaults,
   type FieldRendererProps,
 } from "./field-renderers";
+export {
+  DEFAULT_DISPLAY_CONFIG,
+  resolvePresentationConfig,
+  detailRendererMap,
+  listRendererMap,
+  registerLinesRenderer,
+  resolveLinesRenderer,
+  type ResolvedDisplayConfig,
+  type DetailRenderer,
+  type ListRenderer,
+  type ViewMode,
+  type LinesRenderer,
+  type LinesRendererProps,
+  type DetailRendererKey,
+  type ListRendererKey,
+} from "./metadata";

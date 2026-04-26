@@ -7,13 +7,18 @@
  * No external date library — uses only the built-in JS Date API.
  * Renders a fixed 6-row × 7-col grid so the popover height never jumps.
  *
+ * Navigation:
+ *   ‹ / › buttons  — prev/next month
+ *   « / » buttons  — prev/next year
+ *   Month+Year header click — enter year-picker mode
+ *
  * Props:
  *   value    — YYYY-MM-DD string or null
  *   onChange — called with YYYY-MM-DD string or null (Clear)
  */
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 
 export interface CalendarGridProps {
@@ -41,43 +46,37 @@ function parseYMD(s: string): { y: number; m: number; d: number } | null {
   return { y, m, d };
 }
 
-/** Build the 6×7 day grid for a given year/month view. */
 function buildGrid(viewYear: number, viewMonth: number): Array<{ date: string; inMonth: boolean }> {
   const firstDay = new Date(viewYear, viewMonth, 1);
-  const startOffset = firstDay.getDay(); // 0=Sun
+  const startOffset = firstDay.getDay();
   const cells: Array<{ date: string; inMonth: boolean }> = [];
-
-  // Fill from previous month
   for (let i = startOffset - 1; i >= 0; i--) {
-    const d = new Date(viewYear, viewMonth, -i);
-    cells.push({ date: toLocalYMD(d), inMonth: false });
+    cells.push({ date: toLocalYMD(new Date(viewYear, viewMonth, -i)), inMonth: false });
   }
-  // Current month
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   for (let i = 1; i <= daysInMonth; i++) {
-    const d = new Date(viewYear, viewMonth, i);
-    cells.push({ date: toLocalYMD(d), inMonth: true });
+    cells.push({ date: toLocalYMD(new Date(viewYear, viewMonth, i)), inMonth: true });
   }
-  // Fill to 42 cells (6 rows × 7)
   let next = 1;
   while (cells.length < 42) {
-    const d = new Date(viewYear, viewMonth + 1, next++);
-    cells.push({ date: toLocalYMD(d), inMonth: false });
+    cells.push({ date: toLocalYMD(new Date(viewYear, viewMonth + 1, next++)), inMonth: false });
   }
   return cells;
 }
 
 function monthLabel(year: number, month: number): string {
-  return new Date(year, month, 1).toLocaleString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
+  return new Date(year, month, 1).toLocaleString(undefined, { month: "long", year: "numeric" });
+}
+
+// Build a year grid centred around the view year, 12 years × 3 cols = 4 rows
+function buildYearGrid(centreYear: number): number[] {
+  const start = Math.floor(centreYear / 12) * 12;
+  return Array.from({ length: 12 }, (_, i) => start + i);
 }
 
 export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
   const today = toLocalYMD(new Date());
 
-  // Initialise view to the selected month, or today's month
   const initView = () => {
     if (value) {
       const p = parseYMD(value);
@@ -88,20 +87,30 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
   };
 
   const [view, setView] = useState(initView);
+  const [yearPicker, setYearPicker] = useState(false);
+  const [yearPage, setYearPage] = useState(() => Math.floor(initView().year / 12) * 12);
+
   const cells = buildGrid(view.year, view.month);
+  const yearGrid = buildYearGrid(yearPage);
 
   function prevMonth() {
-    setView(({ year, month }) => {
-      if (month === 0) return { year: year - 1, month: 11 };
-      return { year, month: month - 1 };
-    });
+    setView(({ year, month }) =>
+      month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 },
+    );
   }
 
   function nextMonth() {
-    setView(({ year, month }) => {
-      if (month === 11) return { year: year + 1, month: 0 };
-      return { year, month: month + 1 };
-    });
+    setView(({ year, month }) =>
+      month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 },
+    );
+  }
+
+  function prevYear() {
+    setView(({ year, month }) => ({ year: year - 1, month }));
+  }
+
+  function nextYear() {
+    setView(({ year, month }) => ({ year: year + 1, month }));
   }
 
   function goToday() {
@@ -110,10 +119,96 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
     onChange(today);
   }
 
+  function selectYear(y: number) {
+    setView((v) => ({ year: y, month: v.month }));
+    setYearPicker(false);
+  }
+
+  // ── Year picker view ──────────────────────────────────────────────────────────
+  if (yearPicker) {
+    return (
+      <div className="w-[252px] select-none">
+        {/* Year page nav */}
+        <div className="flex items-center justify-between px-1 pb-2">
+          <button
+            type="button"
+            onClick={() => setYearPage((p) => p - 12)}
+            disabled={disabled}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            aria-label="Previous 12 years"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-semibold text-foreground">
+            {yearGrid[0]} – {yearGrid[yearGrid.length - 1]}
+          </span>
+          <button
+            type="button"
+            onClick={() => setYearPage((p) => p + 12)}
+            disabled={disabled}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            aria-label="Next 12 years"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* 4 × 3 year grid */}
+        <div className="grid grid-cols-3 gap-1 pb-2">
+          {yearGrid.map((y) => {
+            const isCurrentView = y === view.year;
+            const isThisYear = y === new Date().getFullYear();
+            return (
+              <button
+                key={y}
+                type="button"
+                disabled={disabled}
+                onClick={() => selectYear(y)}
+                className={cn(
+                  "flex h-9 items-center justify-center rounded-md text-sm transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isCurrentView
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : isThisYear
+                    ? "border border-primary text-primary font-semibold hover:bg-accent"
+                    : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {y}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-end border-t border-border pt-2">
+          <button
+            type="button"
+            onClick={() => setYearPicker(false)}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Month grid view ───────────────────────────────────────────────────────────
   return (
     <div className="w-[252px] select-none">
-      {/* Month nav */}
+      {/* Month nav with year jumps */}
       <div className="flex items-center justify-between px-1 pb-2">
+        {/* Prev year */}
+        <button
+          type="button"
+          onClick={prevYear}
+          disabled={disabled}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+          aria-label="Previous year"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </button>
+        {/* Prev month */}
         <button
           type="button"
           onClick={prevMonth}
@@ -124,10 +219,18 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <span className="text-sm font-semibold text-foreground">
+        {/* Month+Year — click to open year picker */}
+        <button
+          type="button"
+          onClick={() => { setYearPage(Math.floor(view.year / 12) * 12); setYearPicker(true); }}
+          disabled={disabled}
+          className="flex-1 text-center text-sm font-semibold text-foreground hover:text-primary transition-colors disabled:pointer-events-none"
+          title="Pick a year"
+        >
           {monthLabel(view.year, view.month)}
-        </span>
+        </button>
 
+        {/* Next month */}
         <button
           type="button"
           onClick={nextMonth}
@@ -136,6 +239,16 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
           aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
+        </button>
+        {/* Next year */}
+        <button
+          type="button"
+          onClick={nextYear}
+          disabled={disabled}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+          aria-label="Next year"
+        >
+          <ChevronsRight className="h-4 w-4" />
         </button>
       </div>
 
@@ -188,7 +301,7 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
           type="button"
           onClick={() => onChange(null)}
           disabled={disabled || !value}
-          className="text-xs font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-40"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40 transition-colors"
         >
           Clear
         </button>

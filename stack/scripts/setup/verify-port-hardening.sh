@@ -49,7 +49,12 @@ fi
 # `services:` (e.g. `  gateway:` → "gateway").
 # ----------------------------
 ALLOWLIST=(
-  "gateway"      # Traefik itself — publishes 80/443 as ingress, not a backend port
+  "gateway"        # Traefik itself — publishes 80/443 as ingress, not a backend port
+  "objectstorage"  # Loopback-only (127.0.0.1:9000/9001): host-side dev server needs
+                   # direct S3 access (S3_ENDPOINT=http://127.0.0.1:9000). External
+                   # traffic still routes exclusively through Traefik on the edge
+                   # network. Loopback is unreachable from outside the host in
+                   # staging/production, so this is not a single-ingress bypass.
 )
 
 is_allowlisted() {

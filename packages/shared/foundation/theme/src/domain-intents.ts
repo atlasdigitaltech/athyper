@@ -13,7 +13,7 @@
  *   <span className={cn("...", colors.subtleBadge)}>{status}</span>
  */
 
-import type { SemanticIntent } from "./semantic-colors";
+import type { SemanticIntent } from "./semanticColors";
 
 // ── Generic lifecycle / admin status ─────────────────────────────────────────
 

@@ -94,7 +94,11 @@ services:
       - ${ATHYPER_DATA}/telemetry/logging:/loki
     networks: [edge, internal]
     healthcheck:
-      test: ["NONE"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready | grep -q ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     # Shutdown: 20s — Loki flushes WAL and pending writes
     stop_grace_period: 20s
     restart: unless-stopped

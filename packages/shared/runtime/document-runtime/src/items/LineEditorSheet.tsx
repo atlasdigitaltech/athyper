@@ -17,8 +17,9 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
-import { fmtAmount } from "../_shared/format";
-import { relayMutate } from "../_shared/csrf";
+import { fmtAmount } from "@athyper/runtime-shared/core";
+import { relayMutate } from "@athyper/runtime-shared/client";
+import { ClassificationDecisionPanel } from "./ClassificationDecisionPanel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,8 @@ function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) 
 
 // ── Entity search input ───────────────────────────────────────────────────────
 
+const COMPANY_CODE_SCOPED = new Set(["cost_center", "profit_center", "project", "site"]);
+
 function EntitySearchInput({
   entityCode, companyCodeId, valueId, displayValue, onSelect, placeholder,
 }: {
@@ -196,7 +199,7 @@ function EntitySearchInput({
       setFetching(true);
       try {
         const params = new URLSearchParams({ q: v, page_size: "8" });
-        if (companyCodeId) params.set("filters", JSON.stringify({ company_code_id: companyCodeId }));
+        if (companyCodeId && COMPANY_CODE_SCOPED.has(entityCode)) params.set("filters", JSON.stringify({ company_code_id: companyCodeId }));
         const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params.toString()}`);
         if (r.ok) {
           const data = await r.json() as { data?: Record<string, unknown>[] };
@@ -710,25 +713,91 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
 
 // ── CLASSIFY TAB ──────────────────────────────────────────────────────────────
 
-function ClassifyTab({ line, entityCode, recordId, onSaved }: {
-  line: DocumentLine; entityCode: string; recordId: string; onSaved?: () => void;
+function ClassifyTab({ line, entityCode, recordId, companyCodeId, onSaved }: {
+  line: DocumentLine; entityCode: string; recordId: string; companyCodeId?: string; onSaved?: () => void;
 }) {
-  const lineData     = (line.data as Record<string, unknown> | null) ?? {};
-  const [unspscCode,    setUnspscCode]    = useState(String(lineData.unspsc_code    ?? ""));
-  const [spendCategory, setSpendCategory] = useState(String(lineData.spend_category ?? ""));
-  const [hsCode,        setHsCode]        = useState(String(lineData.hs_code        ?? ""));
+  const lineData = (line.data as Record<string, unknown> | null) ?? {};
+  const lineAny  = line as Record<string, unknown>;
+
+  const [spendCatId,    setSpendCatId]    = useState(String(lineAny.spend_category_id    ?? ""));
+  const [spendCatLabel, setSpendCatLabel] = useState("");
+  const [intentId,      setIntentId]      = useState(String(lineAny.business_intent_id   ?? ""));
+  const [intentLabel,   setIntentLabel]   = useState("");
+  const [unspscCode, setUnspscCode] = useState(String(lineData.unspsc_code ?? ""));
+  const [hsCode,     setHsCode]     = useState(String(lineData.hs_code     ?? ""));
+
   const [saving,        setSaving]        = useState(false);
   const [dirty,         setDirty]         = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
-  function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
+  // Holds the classification decision returned inline by the PATCH/classify call
+  const [localDecision, setLocalDecision] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    async function resolveLabel(id: string, entity: string, set: (v: string) => void) {
+      if (!id) return;
+      try {
+        const r = await fetch(`/api/relay/api/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
+        if (!r.ok) return;
+        const d = await r.json() as { data?: Record<string, unknown> };
+        if (d.data) {
+          const code = String(d.data.code ?? "");
+          const name = String(d.data.name ?? "");
+          set(code ? `${code} · ${name}` : name);
+        }
+      } catch { /* ignore */ }
+    }
+    void resolveLabel(spendCatId, "spend_category",  setSpendCatLabel);
+    void resolveLabel(intentId,   "business_intent", setIntentLabel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSpendCatSelect(id: string, label: string) {
+    setSpendCatId(id); setSpendCatLabel(label); setDirty(true);
+    if (!id || intentId) return;
+    try {
+      const r = await fetch(`/api/relay/api/records/spend_category/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      const d = await r.json() as { data?: Record<string, unknown> };
+      const defIntentId = String(d.data?.default_intent_id ?? "");
+      if (!defIntentId) return;
+      setIntentId(defIntentId);
+      const r2 = await fetch(`/api/relay/api/records/business_intent/${encodeURIComponent(defIntentId)}`);
+      if (!r2.ok) return;
+      const d2 = await r2.json() as { data?: Record<string, unknown> };
+      if (d2.data) {
+        const code = String(d2.data.code ?? "");
+        const name = String(d2.data.name ?? "");
+        setIntentLabel(code ? `${code} · ${name}` : name);
+      }
+    } catch { /* ignore */ }
+  }
 
   async function save() {
     setSaving(true); setSaveError(null);
     try {
-      const data = { ...lineData, unspsc_code: unspscCode || null, spend_category: spendCategory || null, hs_code: hsCode || null };
-      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify({ data }) });
+      const patch = {
+        spend_category_id:  spendCatId || null,
+        business_intent_id: intentId   || null,
+        data: { ...lineData, unspsc_code: unspscCode || null, hs_code: hsCode || null },
+      };
+      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
+        const respBody = await res.json() as Record<string, unknown>;
         setDirty(false);
+        // PATCH auto-classifies when spend_category_id changes and returns the decision inline
+        if (respBody.classification) {
+          setLocalDecision(respBody.classification as Record<string, unknown>);
+        } else if (entityCode === "purchase_invoice" && (spendCatId || intentId)) {
+          // Explicit classify when auto-classify didn't fire (e.g. only intent changed)
+          const cr = await relayMutate(
+            `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(line.id)}/classify`,
+            { method: "POST" },
+          );
+          if (cr.ok) {
+            const cd = await cr.json() as { classification?: Record<string, unknown> };
+            if (cd.classification) setLocalDecision(cd.classification);
+          }
+        }
         onSaved?.();
       } else {
         const body = await res.json().catch(() => ({})) as { error?: string };
@@ -739,19 +808,57 @@ function ClassifyTab({ line, entityCode, recordId, onSaved }: {
     } finally { setSaving(false); }
   }
 
+  // Merge: localDecision (from save response) overlays the persisted decision
+  const lineWithDecision: Record<string, unknown> = localDecision
+    ? { ...lineAny, classification_decision: localDecision }
+    : lineAny;
+
   return (
     <div className="px-5 py-4 space-y-4">
       <Field label="UNSPSC code">
-        <Input value={unspscCode} onChange={mark(setUnspscCode)} placeholder="e.g. 80101504" className="font-mono" />
+        <Input value={unspscCode} onChange={(v) => { setUnspscCode(v); setDirty(true); }} placeholder="e.g. 80101504" className="font-mono" />
       </Field>
       <Field label="Spend category">
-        <Input value={spendCategory} onChange={mark(setSpendCategory)} placeholder="e.g. IT-SOFTWARE" className="font-mono" />
+        <EntitySearchInput
+          entityCode="spend_category"
+          companyCodeId={companyCodeId}
+          valueId={spendCatId}
+          displayValue={spendCatLabel}
+          onSelect={(id, label) => void handleSpendCatSelect(id, label)}
+          placeholder="Search spend category…"
+        />
+      </Field>
+      <Field label="Business intent">
+        <EntitySearchInput
+          entityCode="business_intent"
+          valueId={intentId}
+          displayValue={intentLabel}
+          onSelect={(id, label) => { setIntentId(id); setIntentLabel(label); setDirty(true); }}
+          placeholder="Search business intent…"
+        />
+        {!spendCatId && (
+          <p className="text-2xs text-muted-foreground/50 mt-0.5">Selecting a spend category will auto-suggest the intent.</p>
+        )}
       </Field>
       <Field label="HS / Trade code">
-        <Input value={hsCode} onChange={mark(setHsCode)} placeholder="e.g. 8471.30 (goods only)" className="font-mono" />
+        <Input value={hsCode} onChange={(v) => { setHsCode(v); setDirty(true); }} placeholder="e.g. 8471.30 (goods only)" className="font-mono" />
       </Field>
+
       {saveError && <InlineError message={saveError} onDismiss={() => setSaveError(null)} />}
       {dirty && <SaveBtn saving={saving} onClick={() => void save()} />}
+
+      {entityCode === "purchase_invoice" && (
+        <div className="pt-2 border-t border-border/30">
+          <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Classification result</p>
+          <ClassificationDecisionPanel
+            line={lineWithDecision}
+            entityCode={entityCode}
+            recordId={recordId}
+            onRefresh={() => { setLocalDecision(null); onSaved?.(); }}
+            previewDecision={localDecision}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1051,7 +1158,7 @@ export function LineEditorSheet({
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
     { id: "accounting", label: "Accounting", badge: distributions.length > 0 ? String(distributions.length) : undefined },
-    { id: "classify",   label: "Classify"   },
+    { id: "classify",   label: "Classify",  badge: (line as Record<string, unknown>).spend_category_id ? "✓" : undefined },
     { id: "discount",   label: "Discount",  badge: line.discount_pct   ? `${line.discount_pct}%`  : undefined },
     { id: "charges",    label: "Charges"    },
     { id: "tax",        label: "Tax",       badge: line.tax_amount     ? "✓"                      : undefined },
@@ -1118,7 +1225,7 @@ export function LineEditorSheet({
         <div className="flex-1 overflow-y-auto min-h-0">
           {tab === "details"    && <ItemDetailsTab  line={line} entityCode={entityCode} recordId={recordId} currencyCode={cc} onSaved={onLineSaved} />}
           {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} record={record} onMutated={onMutated} />}
-          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} onSaved={onMutated} />}
+          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} onSaved={onMutated} />}
           {tab === "discount"   && <DiscountTab     line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
           {tab === "charges"    && <ChargesTab      line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
           {tab === "tax"        && <TaxTab          line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}

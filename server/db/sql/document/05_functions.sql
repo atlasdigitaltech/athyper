@@ -558,21 +558,21 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    SELECT COALESCE(SUM(base_debit), 0),
-           COALESCE(SUM(base_credit), 0),
-           COUNT(*)::smallint
-    INTO   v_sum_debit, v_sum_credit, v_count
+    -- Only keep line_count live during draft/created phase.
+    -- total_debit and total_credit are set authoritatively by the
+    -- draft→created transition guard (trg_je_status_transition_guard)
+    -- once all lines are present and the entry is balanced.
+    -- Updating them here after every individual line insert would
+    -- violate je_balanced_chk in the intermediate unbalanced state.
+    SELECT COUNT(*)::smallint
+    INTO   v_count
     FROM   document.journal_line
     WHERE  journal_entry_id = v_je_id;
 
     UPDATE document.journal_entry
-    SET    total_debit  = v_sum_debit,
-           total_credit = v_sum_credit,
-           line_count   = v_count
+    SET    line_count = v_count
     WHERE  id = v_je_id
-      AND (total_debit  IS DISTINCT FROM v_sum_debit
-        OR total_credit IS DISTINCT FROM v_sum_credit
-        OR line_count   IS DISTINCT FROM v_count);
+      AND  line_count IS DISTINCT FROM v_count;
 
     IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
@@ -947,8 +947,8 @@ COMMENT ON FUNCTION document.trg_je_period_gate_fn IS
 --   - posting_allowed = true (account not globally blocked)
 --   - blocked_for_manual = false (unless source_doc_type is auto-posting)
 --
--- A missing company_code_gl_account row means the account is NOT assigned
--- to this company — posting is rejected.
+-- A missing company_code_gl_account row means no explicit controls exist;
+-- the account is allowed by default (consistent with mv_company_postable_account).
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION document.trg_jl_validate_posting_controls_fn()
@@ -960,7 +960,8 @@ DECLARE
   v_ctrl       record;
   v_je_source  text;
 BEGIN
-  -- Look up posting controls for this company + account
+  -- Look up posting controls for this company + account.
+  -- No row = allowed by default (consistent with mv_company_postable_account COALESCE behaviour).
   SELECT cga.posting_allowed,
          cga.blocked_for_manual,
          cga.blocked_for_auto
@@ -971,13 +972,9 @@ BEGIN
      AND cga.gl_account_id   = NEW.gl_account_id
    LIMIT 1;
 
-  -- Account not assigned to company at all
   IF NOT FOUND THEN
-    RAISE EXCEPTION
-      'ACCOUNT_NOT_ASSIGNED: GL account % is not assigned to company % '
-      'in master.company_code_gl_account.',
-      NEW.gl_account_id, NEW.company_code_id
-      USING ERRCODE = 'P0001';
+    -- No explicit controls row: account is allowed for this company by default.
+    RETURN NEW;
   END IF;
 
   -- Globally blocked

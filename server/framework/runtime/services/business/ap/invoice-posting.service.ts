@@ -42,51 +42,55 @@ async function resolvePostingAccount(
   companyId:       string,
   spendCategoryId: string | null,
   businessIntentId: string | null,
-  isAsset:         boolean,
+  _isAsset:        boolean,
 ): Promise<string | null> {
 
-  // 1. Spend category → posting role → account
+  // 1. Spend category → default_intent_id → business_intent.default_gl_account_id
   if (spendCategoryId) {
     const scResult = await sql<{ account_id: string }>`
-      SELECT pra.account_id
-      FROM   control.posting_role_assignment pra
-      JOIN   master.spend_category sc ON sc.posting_role_id = pra.posting_role_id
-      WHERE  sc.id = ${spendCategoryId}
+      SELECT bi.default_gl_account_id AS account_id
+      FROM   master.spend_category sc
+      JOIN   master.business_intent bi ON bi.id = sc.default_intent_id
+      WHERE  sc.id        = ${spendCategoryId}
         AND  sc.tenant_id = ${tenantId}
-        AND  pra.company_code_id = ${companyId}
-        AND  pra.is_active = true
-        AND  pra.account_side = 'debit'
+        AND  bi.default_gl_account_id IS NOT NULL
       LIMIT  1
     `.execute(db);
     if (scResult.rows[0]) return scResult.rows[0].account_id;
   }
 
-  // 2. Business intent → posting role → account
+  // 2. Business intent → default_gl_account_id
   if (businessIntentId) {
     const biResult = await sql<{ account_id: string }>`
-      SELECT pra.account_id
-      FROM   control.posting_role_assignment pra
-      JOIN   master.business_intent bi ON bi.posting_role_id = pra.posting_role_id
-      WHERE  bi.id = ${businessIntentId}
-        AND  bi.tenant_id = ${tenantId}
-        AND  pra.company_code_id = ${companyId}
-        AND  pra.is_active = true
-        AND  pra.account_side = 'debit'
+      SELECT default_gl_account_id AS account_id
+      FROM   master.business_intent
+      WHERE  id        = ${businessIntentId}
+        AND  tenant_id = ${tenantId}
+        AND  default_gl_account_id IS NOT NULL
       LIMIT  1
     `.execute(db);
     if (biResult.rows[0]) return biResult.rows[0].account_id;
   }
 
-  // 3. Asset or expense default from company
-  const defaultCol = isAsset ? "default_asset_account_id" : "default_expense_account_id";
-  const ccResult = await sql<{ account_id: string }>`
-    SELECT ${sql.raw(defaultCol)} AS account_id
-    FROM   master.company_code
-    WHERE  id = ${companyId} AND tenant_id = ${tenantId}
+  // 3. Fallback: first posting-type expense account on the company's active chart
+  const fallbackResult = await sql<{ account_id: string }>`
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id     = ${tenantId}
+      AND  ga.account_class = 'expense'
+      AND  ga.is_active     = true
+      AND  ga.node_type     = 'posting'
+    ORDER  BY ga.sort_order, ga.code
     LIMIT  1
   `.execute(db);
+  if (fallbackResult.rows[0]) return fallbackResult.rows[0].account_id;
 
-  return ccResult.rows[0]?.account_id ?? null;
+  return null;
 }
 
 async function resolveApControlAccount(
@@ -94,15 +98,20 @@ async function resolveApControlAccount(
   tenantId:  string,
   companyId: string,
 ): Promise<string | null> {
+  // Find the AP subledger account from the company's operating chart assignment.
+  // subledger_type = 'ap' identifies the trade payables control account (IFRS-L-AP-TRADE).
   const result = await sql<{ account_id: string }>`
-    SELECT pra.account_id
-    FROM   control.posting_role_assignment pra
-    JOIN   control.posting_role pr ON pr.id = pra.posting_role_id
-    WHERE  pr.code           = 'ap_control'
-      AND  pr.tenant_id      = ${tenantId}
-      AND  pra.company_code_id = ${companyId}
-      AND  pra.is_active     = true
-      AND  pra.account_side  = 'credit'
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id      = ${tenantId}
+      AND  ga.subledger_type = 'ap'
+      AND  ga.is_active      = true
+      AND  ga.node_type      = 'posting'
     LIMIT  1
   `.execute(db);
   return result.rows[0]?.account_id ?? null;
@@ -131,7 +140,8 @@ export async function handlePostInvoice(
   logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
 ): Promise<HandlerResult> {
 
-  const remarks = typeof body["remarks"] === "string" ? body["remarks"] : undefined;
+  const remarks = typeof body["remarks"] === "string" ? body["remarks"]
+    : typeof body["notes"] === "string" ? body["notes"] : undefined;
 
   return db.transaction().execute(async (trx) => {
 
@@ -213,14 +223,19 @@ export async function handlePostInvoice(
     }
 
     // Resolve fiscal period for posting_date
-    const postingDate = invoice["posting_date"] ? new Date(String(invoice["posting_date"])) : now;
+    // Priority: body.posting_date → invoice.posting_date → now
+    const bodyDate = body["posting_date"] as string | undefined;
+    const postingDate = bodyDate
+      ? new Date(bodyDate)
+      : invoice["posting_date"] ? new Date(String(invoice["posting_date"])) : now;
     const fpResult = await sql<{ id: string; fiscal_year: number; period_number: number }>`
       SELECT id, fiscal_year, period_number
       FROM   master.fiscal_period
-      WHERE  tenant_id  = ${tenantId}
-        AND  start_date <= ${postingDate}
-        AND  end_date   >= ${postingDate}
-        AND  is_closed  = false
+      WHERE  tenant_id       = ${tenantId}
+        AND  company_code_id = ${companyId}
+        AND  start_date     <= ${postingDate}
+        AND  end_date       >= ${postingDate}
+        AND  status         IN ('open', 'soft_close')
       ORDER  BY start_date DESC
       LIMIT  1
     `.execute(trx);
@@ -228,6 +243,30 @@ export async function handlePostInvoice(
     const fp = fpResult.rows[0];
     if (!fp) {
       return { status: 422, body: { error: "NO_OPEN_PERIOD", message: "No open fiscal period for the invoice posting date" } };
+    }
+
+    // Resolve ledger book: prefer company.default_ledger_book_id, fall back to
+    // highest-priority statutory assignment from company_code_book_assignment.
+    const bookRes = await sql<{ book_id: string }>`
+      SELECT COALESCE(
+        cc.default_ledger_book_id,
+        (SELECT ba.book_id
+         FROM   master.company_code_book_assignment ba
+         JOIN   master.ledger_book lb ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
+         WHERE  ba.tenant_id      = ${tenantId}
+           AND  ba.company_code_id = ${companyId}
+           AND  ba.status         = 'active'
+           AND  lb.category       = 'statutory'
+           AND  lb.status         = 'active'
+         ORDER  BY ba.priority DESC
+         LIMIT  1)
+      ) AS book_id
+      FROM   master.company_code cc
+      WHERE  cc.id = ${companyId} AND cc.tenant_id = ${tenantId}
+    `.execute(trx);
+    const bookId = bookRes.rows[0]?.book_id ?? null;
+    if (!bookId) {
+      return { status: 422, body: { error: "NO_LEDGER_BOOK", message: "No statutory ledger book assigned to this company" } };
     }
 
     // ── Create journal_entry ──────────────────────────────────────────────
@@ -238,24 +277,24 @@ export async function handlePostInvoice(
 
     const jeResult = await sql<{ id: string }>`
       INSERT INTO document.journal_entry (
-        tenant_id, code, name, company_code_id,
+        tenant_id, je_number, company_code_id, book_id,
         source_doc_type, source_doc_id,
-        entry_type, fiscal_period_id, posting_date,
-        currency_code, base_currency_code, exchange_rate,
-        debit_total, credit_total,
+        fiscal_period_id, fiscal_year, period_number,
+        document_date, posting_date,
+        transaction_currency, base_currency,
+        total_debit, total_credit,
         description, status,
-        created_by, created_at
+        created_by
       ) VALUES (
-        ${tenantId}, ${jeCode},
-        ${"AP Invoice — " + String(invoice["invoice_number"] ?? "")},
-        ${companyId},
+        ${tenantId}, ${jeCode}, ${companyId}, ${bookId},
         'purchase_invoice', ${invoiceId},
-        'invoice', ${fp.id}, ${postingDate},
-        ${currencyCode}, ${baseCurrencyCode}, ${exchangeRate},
-        ${totalPayable}, ${totalPayable},
+        ${fp.id}, ${fp.fiscal_year}, ${fp.period_number},
+        ${postingDate}, ${postingDate},
+        ${currencyCode}, ${baseCurrencyCode},
+        0, 0,
         ${remarks ?? ("AP Invoice " + String(invoice["invoice_number"] ?? ""))},
-        'posted',
-        ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+        'draft',
+        ${principalId ?? "00000000-0000-0000-0000-000000000000"}
       )
       RETURNING id
     `.execute(trx);
@@ -279,7 +318,7 @@ export async function handlePostInvoice(
           status: 422,
           body: {
             error:   "NO_EXPENSE_ACCOUNT",
-            message: `No posting account found for line ${line.line_no} (${line.item_description}). Configure spend_category or business_intent posting rules.`,
+            message: `No expense GL account found for line ${line.line_no} (${line.item_description}). Assign a spend_category, business_intent, or ensure the company chart has at least one active posting-type expense account.`,
           },
         };
       }
@@ -291,46 +330,48 @@ export async function handlePostInvoice(
 
       await sql`
         INSERT INTO document.journal_line (
-          tenant_id, journal_entry_id, line_no, account_id,
-          company_code_id,
-          debit_amount, credit_amount, base_debit, base_credit,
-          currency_code, base_currency_code, exchange_rate,
+          tenant_id, journal_entry_id, line_no, gl_account_id,
+          company_code_id, book_id,
+          fiscal_period_id, fiscal_year, period_number, posting_date,
+          transaction_currency, transaction_debit, transaction_credit,
+          base_currency, base_debit, base_credit, exchange_rate,
           description,
           cost_center_id, profit_center_id, project_id,
-          source_doc_type, source_doc_id, source_line_id,
-          subledger_type, subledger_id,
-          posting_date, fiscal_period_id,
-          created_by, created_at
+          source_doc_line_id,
+          created_by
         ) VALUES (
           ${tenantId}, ${jeId}, ${lineSeq}, ${debitAccount},
-          ${companyId},
-          ${debitAmount}, 0, ${debitBase}, 0,
-          ${currencyCode}, ${baseCurrencyCode}, ${exchangeRate},
+          ${companyId}, ${bookId},
+          ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
+          ${currencyCode}, ${debitAmount}, 0,
+          ${baseCurrencyCode}, ${debitBase}, 0, ${exchangeRate},
           ${line.item_description},
           ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
-          'purchase_invoice', ${invoiceId}, ${line.id},
-          'supplier', ${invoice["supplier_id"] ?? null},
-          ${postingDate}, ${fp.id},
-          ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+          ${line.id},
+          ${principalId ?? "00000000-0000-0000-0000-000000000000"}
         )
       `.execute(trx);
 
       // Write accounting_distribution
       await sql`
         INSERT INTO document.accounting_distribution (
-          tenant_id, journal_entry_id, journal_line_no,
+          tenant_id,
           source_doc_type, source_doc_id, source_line_id,
-          account_id, debit_amount, credit_amount,
+          distribution_no, distribution_basis, split_pct,
+          distributed_amount, currency_code,
+          account_source, gl_account_id,
+          business_intent_id, spend_category_id,
           cost_center_id, profit_center_id, project_id,
-          spend_category_id, business_intent_id,
-          created_by, created_at
+          created_by
         ) VALUES (
-          ${tenantId}, ${jeId}, ${lineSeq},
-          'purchase_invoice', ${invoiceId}, ${line.id},
-          ${debitAccount}, ${debitAmount}, 0,
+          ${tenantId},
+          'PURCHASE_INVOICE_LINE', ${invoiceId}, ${line.id},
+          1, 'PERCENT', 100,
+          ${debitAmount}, ${currencyCode},
+          'FIXED', ${debitAccount},
+          ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
           ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
-          ${line.spend_category_id ?? null}, ${line.business_intent_id ?? null},
-          ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+          ${principalId ?? "00000000-0000-0000-0000-000000000000"}
         )
         ON CONFLICT DO NOTHING
       `.execute(trx);
@@ -381,26 +422,42 @@ export async function handlePostInvoice(
     // CR: AP Control — credit the full payable amount
     await sql`
       INSERT INTO document.journal_line (
-        tenant_id, journal_entry_id, line_no, account_id,
-        company_code_id,
-        debit_amount, credit_amount, base_debit, base_credit,
-        currency_code, base_currency_code, exchange_rate,
+        tenant_id, journal_entry_id, line_no, gl_account_id,
+        company_code_id, book_id,
+        fiscal_period_id, fiscal_year, period_number, posting_date,
+        transaction_currency, transaction_debit, transaction_credit,
+        base_currency, base_debit, base_credit, exchange_rate,
         description,
-        source_doc_type, source_doc_id,
-        subledger_type, subledger_id,
-        posting_date, fiscal_period_id,
-        created_by, created_at
+        subledger_type,
+        party_type, party_id,
+        created_by
       ) VALUES (
         ${tenantId}, ${jeId}, ${lineSeq}, ${apControlAccountId},
-        ${companyId},
-        0, ${totalPayable}, 0, ${totalBase},
-        ${currencyCode}, ${baseCurrencyCode}, ${exchangeRate},
+        ${companyId}, ${bookId},
+        ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
+        ${currencyCode}, 0, ${totalPayable},
+        ${baseCurrencyCode}, 0, ${totalBase}, ${exchangeRate},
         ${"AP Control — " + String(invoice["supplier_name"] ?? String(invoice["supplier_id"] ?? ""))},
-        'purchase_invoice', ${invoiceId},
+        'ap',
         'supplier', ${invoice["supplier_id"] ?? null},
-        ${postingDate}, ${fp.id},
-        ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+        ${principalId ?? "00000000-0000-0000-0000-000000000000"}
       )
+    `.execute(trx);
+
+    // ── Transition JE: draft → created (validates balance, caches totals) ────────
+    await sql`
+      UPDATE document.journal_entry
+         SET status = 'created'
+       WHERE id = ${jeId} AND tenant_id = ${tenantId}
+    `.execute(trx);
+
+    // ── Transition JE: created → posted ──────────────────────────────────────
+    await sql`
+      UPDATE document.journal_entry
+         SET status     = 'posted',
+             posted_at  = ${now},
+             posted_by  = ${principalId ?? "00000000-0000-0000-0000-000000000000"}
+       WHERE id = ${jeId} AND tenant_id = ${tenantId}
     `.execute(trx);
 
     // ── Update invoice: posted ────────────────────────────────────────────
@@ -442,7 +499,8 @@ export async function handleReverseInvoice(
   logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
 ): Promise<HandlerResult> {
 
-  const remarks = typeof body["remarks"] === "string" ? body["remarks"] : "Invoice reversal";
+  const remarks = typeof body["remarks"] === "string" ? body["remarks"]
+    : typeof body["notes"] === "string" ? body["notes"] : "Invoice reversal";
 
   return db.transaction().execute(async (trx) => {
 
@@ -471,10 +529,11 @@ export async function handleReverseInvoice(
     const fpResult = await sql<{ id: string; fiscal_year: number; period_number: number }>`
       SELECT id, fiscal_year, period_number
       FROM   master.fiscal_period
-      WHERE  tenant_id  = ${tenantId}
-        AND  start_date <= ${now}
-        AND  end_date   >= ${now}
-        AND  is_closed  = false
+      WHERE  tenant_id       = ${tenantId}
+        AND  company_code_id = ${companyId}
+        AND  start_date     <= ${now}
+        AND  end_date       >= ${now}
+        AND  status         IN ('open', 'soft_close')
       ORDER  BY start_date DESC
       LIMIT  1
     `.execute(trx);
@@ -494,23 +553,24 @@ export async function handleReverseInvoice(
 
     const revJeResult = await sql<{ id: string }>`
       INSERT INTO document.journal_entry (
-        tenant_id, code, name, company_code_id,
+        tenant_id, je_number, company_code_id, book_id,
         source_doc_type, source_doc_id,
-        entry_type, fiscal_period_id, posting_date,
-        currency_code, base_currency_code, exchange_rate,
-        debit_total, credit_total,
-        description, status,
-        created_by, created_at
+        fiscal_period_id, fiscal_year, period_number,
+        document_date, posting_date,
+        transaction_currency, base_currency,
+        total_debit, total_credit,
+        description, is_reversal, reversal_of_id, status,
+        created_by
       )
       SELECT
-        tenant_id, ${revJeCode},
-        'Reversal — ' || name, company_code_id,
+        tenant_id, ${revJeCode}, company_code_id, book_id,
         source_doc_type, source_doc_id,
-        'reversal', ${fp.id}, ${now},
-        currency_code, base_currency_code, ${exchangeRate},
-        ${totalPayable}, ${totalPayable},
-        ${remarks}, 'posted',
-        ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+        ${fp.id}, ${fp.fiscal_year}, ${fp.period_number},
+        ${now}::date, ${now}::date,
+        transaction_currency, base_currency,
+        0, 0,
+        ${remarks}, true, ${originalJeId}, 'draft',
+        ${principalId ?? "00000000-0000-0000-0000-000000000000"}
       FROM document.journal_entry WHERE id = ${originalJeId}
       RETURNING id
     `.execute(trx);
@@ -521,25 +581,49 @@ export async function handleReverseInvoice(
     // Mirror all lines with swapped debit/credit
     await sql`
       INSERT INTO document.journal_line (
-        tenant_id, journal_entry_id, line_no, account_id, company_code_id,
-        debit_amount, credit_amount, base_debit, base_credit,
-        currency_code, base_currency_code, exchange_rate,
+        tenant_id, journal_entry_id, line_no, gl_account_id,
+        company_code_id, book_id,
+        fiscal_period_id, fiscal_year, period_number, posting_date,
+        transaction_currency, transaction_debit, transaction_credit,
+        base_currency, base_debit, base_credit, exchange_rate,
         description, cost_center_id, profit_center_id, project_id,
-        source_doc_type, source_doc_id, source_line_id,
-        subledger_type, subledger_id,
-        posting_date, fiscal_period_id,
-        created_by, created_at
+        source_doc_line_id,
+        subledger_type, party_type, party_id,
+        created_by
       )
       SELECT
-        tenant_id, ${revJeId}, line_no, account_id, company_code_id,
-        credit_amount, debit_amount, base_credit, base_debit,
-        currency_code, base_currency_code, exchange_rate,
-        'Reversal — ' || description, cost_center_id, profit_center_id, project_id,
-        source_doc_type, source_doc_id, source_line_id,
-        subledger_type, subledger_id,
-        ${now}, ${fp.id},
-        ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
+        tenant_id, ${revJeId}, line_no, gl_account_id,
+        company_code_id, book_id,
+        ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${now}::date,
+        transaction_currency, transaction_credit, transaction_debit,
+        base_currency, base_credit, base_debit, exchange_rate,
+        'Reversal — ' || COALESCE(description, ''), cost_center_id, profit_center_id, project_id,
+        source_doc_line_id,
+        subledger_type, party_type, party_id,
+        ${principalId ?? "00000000-0000-0000-0000-000000000000"}
       FROM document.journal_line WHERE journal_entry_id = ${originalJeId}
+    `.execute(trx);
+
+    // Transition reversal JE: draft → created (validates balance) → posted
+    await sql`
+      UPDATE document.journal_entry SET status = 'created'
+       WHERE id = ${revJeId} AND tenant_id = ${tenantId}
+    `.execute(trx);
+
+    await sql`
+      UPDATE document.journal_entry
+         SET status    = 'posted',
+             posted_at = ${now},
+             posted_by = ${principalId ?? "00000000-0000-0000-0000-000000000000"}
+       WHERE id = ${revJeId} AND tenant_id = ${tenantId}
+    `.execute(trx);
+
+    // Mark the original JE as reversed
+    await sql`
+      UPDATE document.journal_entry
+         SET status         = 'reversed',
+             reversed_by_id = ${revJeId}
+       WHERE id = ${originalJeId} AND tenant_id = ${tenantId}
     `.execute(trx);
 
     // Update original invoice → reversed

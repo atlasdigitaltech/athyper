@@ -602,6 +602,32 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
           skipped:     dbSkipped,
           codeEntries: codeEntries.length,
         });
+
+        // M7: dead-man's-switch guard — if the backup storage adapter is wired
+        // but no enabled backup schedule was found in control.cron_schedule, the
+        // scheduler process will never enqueue a pg-dump job. Alert early so ops
+        // doesn't discover the gap after a recovery event requires a restore.
+        if (backupStorage) {
+          const backupScheduled = dbSchedules.some(
+            (cs) => cs.target_queue === QUEUE_NAME.BACKUP,
+          );
+          if (!backupScheduled) {
+            logger?.warn("backup_no_schedule", {
+              queue:   QUEUE_NAME.BACKUP,
+              message: "backupStorage is configured but no enabled backup schedule found in control.cron_schedule — pg_dump backups will not run",
+              hint:    "Seed 013_platform_cron_backup.sql or add a row via the jobs admin UI",
+            });
+            if (hooks?.onQueueAlert) {
+              try {
+                hooks.onQueueAlert(
+                  QUEUE_NAME.BACKUP,
+                  "no_schedule_registered",
+                  { message: "No enabled cron_schedule row for jobs-backup; pg_dump backups will not run" },
+                );
+              } catch { /* swallow */ }
+            }
+          }
+        }
       } catch (err) {
         // DB unavailable at start — not fatal; schedules will be absent until next reload
         logger?.error("jobs_db_schedules_load_failed", { err: String(err) });

@@ -175,6 +175,13 @@ REM ============================================================
     copy /Y "!ENV_DIR!\.env" "!ENV_DIR!\.env.bak" >nul
   )
   copy /Y "!STK_TPL!" "!ENV_DIR!\.env" >nul
+  REM *.env* files are stored as LF in git (gitattributes: eol=lf).
+  REM cmd.exe for /f cannot parse LF-only files on Windows -- it reads the
+  REM entire file as one line and filters it out because it starts with '#'.
+  REM Convert to CRLF so api-up.bat / web-up.bat for /f loops work correctly.
+  set "_wf=!ENV_DIR!\.env"
+  powershell -NoProfile -Command "[IO.File]::WriteAllLines('%_wf%',[IO.File]::ReadAllLines('%_wf%'),[Text.UTF8Encoding]::new($false))" >nul 2>&1
+  set "_wf="
   echo   [stack]
   echo     src : !STK_TPL!
   echo     dst : !ENV_DIR!\.env
@@ -184,6 +191,10 @@ REM ============================================================
 REM fn_server — resolves server/{env}.env.example
 REM ============================================================
 :fn_server
+  if /I "!ENV_NAME!"=="local" (
+    echo   [server] skipped -- edit server\.env manually for local dev ^(pnpm does not inherit batch env^)
+    exit /b 0
+  )
   set "SRV_TPL=!SERVER_DIR!\!ENV_NAME!.env.example"
   if not exist "!SRV_TPL!" set "SRV_TPL=!SERVER_DIR!\.env.example"
 
@@ -208,6 +219,10 @@ REM ============================================================
 REM fn_apps — resolves apps/web/{env}.env.example
 REM ============================================================
 :fn_apps
+  if /I "!ENV_NAME!"=="local" (
+    echo   [apps/web] skipped -- web-up.bat reads stack\env\.env directly ^(no .env.local needed^)
+    exit /b 0
+  )
   set "WEB_TPL=!WEB_DIR!\!ENV_NAME!.env.example"
   if not exist "!WEB_TPL!" set "WEB_TPL=!WEB_DIR!\.env.example"
 
@@ -234,14 +249,19 @@ echo.
 echo Done.
 echo.
 echo Next steps:
-if /I "!TARGET!"=="all"     echo   ^• stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
-if /I "!TARGET!"=="stack"   echo   ^• stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
-if /I "!TARGET!"=="all"     echo   ^• server   : Open server\.env -- set credentials and external service URLs.
-if /I "!TARGET!"=="runtime" echo   ^• server   : Open server\.env -- set credentials and external service URLs.
-if /I "!TARGET!"=="server"  echo   ^• server   : Open server\.env -- set credentials and external service URLs.
-if /I "!TARGET!"=="all"     echo   ^• apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
-if /I "!TARGET!"=="runtime" echo   ^• apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
-if /I "!TARGET!"=="apps"    echo   ^• apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
+if /I "!TARGET!"=="all"     echo   - stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
+if /I "!TARGET!"=="stack"   echo   - stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
+if /I "!ENV_NAME!"=="local" (
+  if /I "!TARGET!"=="all"     echo   - server   : server\.env must exist for local dev ^(pnpm does not inherit batch env^).
+  if /I "!TARGET!"=="all"     echo   - stack    : stack\env\.env is used by Docker Compose and web-up.bat.
+) else (
+  if /I "!TARGET!"=="all"     echo   - server   : Open server\.env -- set credentials and external service URLs.
+  if /I "!TARGET!"=="runtime" echo   - server   : Open server\.env -- set credentials and external service URLs.
+  if /I "!TARGET!"=="server"  echo   - server   : Open server\.env -- set credentials and external service URLs.
+  if /I "!TARGET!"=="all"     echo   - apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
+  if /I "!TARGET!"=="runtime" echo   - apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
+  if /I "!TARGET!"=="apps"    echo   - apps/web : Open apps\web\.env.local -- verify RUNTIME_API_URL and KEYCLOAK_BASE_URL.
+)
 echo.
 
 endlocal

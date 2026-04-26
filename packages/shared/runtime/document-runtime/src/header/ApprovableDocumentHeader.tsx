@@ -45,6 +45,8 @@ export interface ApprovableDocumentHeaderProps {
   initialMode?: HeaderMode;
   onModeChange?: (mode: HeaderMode) => void;
   onAction?: (action: string, remarks?: string) => void | Promise<void>;
+  /** Renders a compact back chevron before the type chip */
+  onBack?: () => void;
   tabs?: ApprovableDocumentHeaderTab[];
   activeTab?: string;
   onTabChange?: (tabId: string) => void;
@@ -395,6 +397,7 @@ export function ApprovableDocumentHeader({
   initialMode = "expanded",
   onModeChange,
   onAction,
+  onBack,
   tabs,
   activeTab,
   onTabChange,
@@ -479,6 +482,7 @@ export function ApprovableDocumentHeader({
         actionsSlot={actionsSlot}
         blockedReasons={blockedReasons ?? []}
         onAction={onAction}
+        onBack={onBack}
       />
 
       {/* ── KPI STRIP — expanded only ────────────────────────────────── */}

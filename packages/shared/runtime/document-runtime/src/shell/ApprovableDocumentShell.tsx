@@ -50,6 +50,8 @@ export interface ApprovableDocumentShellProps {
 
   onModeChange?: (mode: HeaderMode) => void;
   onAction?: (action: string, remarks?: string) => void | Promise<void>;
+  /** Renders a compact back chevron before the type chip */
+  onBack?: () => void;
 
   // ── Tabs ───────────────────────────────────────────────────────
   tabs: ApprovableDocumentHeaderTab[];
@@ -76,6 +78,7 @@ export function ApprovableDocumentShell({
   initialMode = "expanded",
   onModeChange,
   onAction,
+  onBack,
   tabs,
   activeTab,
   onTabChange,
@@ -118,6 +121,7 @@ export function ApprovableDocumentShell({
         initialMode={effectiveInitialMode}
         onModeChange={handleModeChange}
         onAction={onAction}
+        onBack={onBack}
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={onTabChange}

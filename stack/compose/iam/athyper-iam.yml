@@ -54,8 +54,10 @@ services:
       timeout: 5s
       retries: 20
       start_period: 60s    # JVM startup + Hibernate schema validation + realm imports
-    # Shutdown: 10s — stateless HTTP; no in-flight transactions to drain
-    stop_grace_period: 10s
+    # Shutdown: 45s — JVM shutdown hook flushes Infinispan caches, terminates
+    # active sessions, and closes DB connections. 10s caused SIGKILL before KC
+    # finished, leaving dangling PgBouncer connections and corrupt session cache.
+    stop_grace_period: 45s
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

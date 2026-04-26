@@ -16,7 +16,7 @@ import {
   GitBranch,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle, Skeleton,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,

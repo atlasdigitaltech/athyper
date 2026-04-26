@@ -19,16 +19,38 @@ setlocal EnableDelayedExpansion
 :: ============================================================
 
 :: ----------------------------
-:: Prefer Git Bash if available
+:: Prefer Git Bash; skip WSL relay (System32\bash.exe requires a distro).
 :: ----------------------------
-where bash >nul 2>&1
-if %errorlevel% equ 0 (
-    if "%~1"=="" (
-        bash "%~dp0verify-objectstorage.sh"
-    ) else (
-        bash "%~dp0verify-objectstorage.sh" "%~1"
+set "BASH_EXE="
+
+:: 1. Well-known system-scope Git Bash locations
+for %%P in (
+    "C:\Program Files\Git\bin\bash.exe"
+    "C:\Program Files (x86)\Git\bin\bash.exe"
+) do if "!BASH_EXE!"=="" if exist "%%~P" set "BASH_EXE=%%~P"
+
+:: 2. User-scope Git install (winget / scoop default)
+if "!BASH_EXE!"=="" if exist "!LOCALAPPDATA!\Programs\Git\bin\bash.exe" (
+    set "BASH_EXE=!LOCALAPPDATA!\Programs\Git\bin\bash.exe"
+)
+
+:: 3. Any bash on PATH that is NOT the WSL relay at System32\bash.exe
+if "!BASH_EXE!"=="" (
+    for /f "delims=" %%B in ('where bash 2^>nul') do (
+        if "!BASH_EXE!"=="" (
+            echo "%%B" | findstr /i /c:"System32\bash" >nul 2>&1
+            if errorlevel 1 set "BASH_EXE=%%B"
+        )
     )
-    exit /b %errorlevel%
+)
+
+if not "!BASH_EXE!"=="" (
+    if "%~1"=="" (
+        "!BASH_EXE!" "%~dp0verify-objectstorage.sh"
+    ) else (
+        "!BASH_EXE!" "%~dp0verify-objectstorage.sh" "%~1"
+    )
+    exit /b !errorlevel!
 )
 
 :: ----------------------------

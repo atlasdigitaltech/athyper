@@ -50,12 +50,6 @@ export interface TopbarProps {
   onNotificationClick?: () => void;
   /** Avatar / user menu slot. */
   userSlot?: ReactNode;
-
-  // ── Legacy / convenience ─────────────────────────────────
-  /** @deprecated Pass tenantSlot instead. */
-  tenantName?: string;
-  /** @deprecated Pass userSlot instead. */
-  userName?: string;
 }
 
 // ── Separator ─────────────────────────────────────────────────────────────────
@@ -76,16 +70,7 @@ export function Topbar({
   notificationCount = 0,
   onNotificationClick,
   userSlot,
-  userName,
 }: TopbarProps) {
-  const initials = userName
-    ? userName
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((n) => n.charAt(0).toUpperCase())
-        .join("")
-    : null;
-
   return (
     <div className="flex w-full items-center gap-1.5 overflow-hidden">
 
@@ -170,13 +155,7 @@ export function Topbar({
         </Button>
 
         {/* Avatar / user menu */}
-        {userSlot ?? (
-          initials && (
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-              {initials}
-            </div>
-          )
-        )}
+        {userSlot}
       </div>
     </div>
   );

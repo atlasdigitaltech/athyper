@@ -15,7 +15,7 @@ import {
   ShieldCheck, RefreshCw, Search, ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/feedback";
+import { EmptyState } from "@athyper/ui/composites";
 import {
   Button, Badge, Skeleton, Input, Label,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,

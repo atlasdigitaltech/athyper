@@ -170,10 +170,7 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  *   3. entity_class ∈ {LEDGER, LOG, AGGREGATE} → "ledger"
  *   4. fallback → "generic"
  */
-export type RendererFamily = "generic" | "approvable" | "ledger";
-
-/** @deprecated Use resolveRendererFamily. Kept for one-release backward compat. */
-export type DetailRenderer = RendererFamily;
+export type RendererFamily = "generic" | "approvable" | "ledger" | "standard" | "master";
 
 export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
   const explicit = entity.display_config.detail_renderer;
@@ -186,9 +183,6 @@ export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
 
   return "generic";
 }
-
-/** @deprecated Use resolveRendererFamily. */
-export const resolveDetailRenderer = resolveRendererFamily;
 
 // ── Semantic resolver detection ───────────────────────────────────────────────
 
@@ -330,20 +324,17 @@ export function resolveTabs(
   if (flags.has_attachments !== false)
     tabs.push("attachments");
 
-  // Version chain — canonical: version_control; legacy alias: has_versioning
-  if (flags.version_control ?? flags.has_versioning)
+  if (flags.version_control)
     tabs.push("versions");
 
-  // Comments — canonical: comments_enabled; legacy alias: has_comments
-  if (flags.comments_enabled ?? flags.has_comments)
+  if (flags.comments_enabled)
     tabs.push("comments");
 
   // Full approval history panel — coexists with workflow (compact) tab
   if (flags.is_approvable)
     tabs.push("approvals");
 
-  // Domain event log — canonical: event_history; legacy alias: has_activity_log
-  if (flags.event_history ?? flags.has_activity_log)
+  if (flags.event_history)
     tabs.push("events");
 
   // Per-record validation
@@ -359,12 +350,10 @@ export function resolveTabs(
   // Webhook / external-sync events
   if (flags.has_integrations) tabs.push("integrations");
 
-  // Line items — canonical: has_lines; legacy alias: has_line_items
-  if (flags.has_lines ?? flags.has_line_items)
+  if (flags.has_lines)
     pushIfMissing(tabs, "lines");
 
-  // Accounting distributions — canonical: has_accounting_distribution; legacy alias: has_accounting_entries
-  if (flags.has_accounting_distribution ?? flags.has_accounting_entries)
+  if (flags.has_accounting_distribution)
     pushIfMissing(tabs, "distributions");
 
   // ── Layer 3: tenant overlay additions / removals ──────────────────────────
