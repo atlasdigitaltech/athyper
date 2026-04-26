@@ -998,6 +998,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const body   = (req.body ?? {}) as Record<string, unknown>;
       const now    = new Date();
       const ALLOWED = [
+        "description",
         "supplier_invoice_number", "supplier_invoice_date",
         "document_date", "posting_date", "received_date",
         "payment_term_id", "payment_method_id",
