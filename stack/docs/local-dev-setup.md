@@ -24,6 +24,136 @@ Install everything in this table before running any script:
 
 ---
 
+### P-1 — Docker Desktop
+
+**Windows**
+```powershell
+# Requires winget (ships with Windows 11 / updated Windows 10)
+winget install --id Docker.DockerDesktop -e --source winget
+```
+
+After installation, launch Docker Desktop from the Start menu and wait for the
+whale icon in the taskbar to show **"Docker Desktop is running"**. Then enable
+WSL 2 integration if prompted.
+
+Verify:
+```powershell
+docker version        # should show Client + Server
+docker compose version
+```
+
+**macOS**
+```bash
+brew install --cask docker
+# Open Docker.app from /Applications to complete the first-run setup
+```
+
+**Linux (Ubuntu / Debian)**
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # allow your user to run docker without sudo
+newgrp docker                   # apply group change without logout
+```
+
+---
+
+### P-2 — Node.js 24 LTS (via fnm)
+
+`fnm` (Fast Node Manager) installs and switches Node versions without admin
+rights. Use it instead of installing Node directly so you can pin the exact
+version per terminal session.
+
+**Windows (PowerShell)**
+```powershell
+winget install Schniz.fnm -e --source winget
+# Restart PowerShell, then:
+fnm install 24
+fnm default 24
+fnm use 24
+node --version     # v24.x.x
+```
+
+Add fnm to your shell profile so it activates automatically on every new
+terminal (fnm prints the exact snippet to paste when you run `fnm --help`):
+
+```powershell
+# Append to $PROFILE (Microsoft.PowerShell_profile.ps1)
+fnm env --use-on-cd --shell power-shell | Out-String | Invoke-Expression
+```
+
+**macOS / Linux**
+```bash
+curl -fsSL https://fnm.vercel.app/install | bash
+# Restart the shell, then:
+fnm install 24
+fnm default 24
+node --version     # v24.x.x
+```
+
+> **Alternative: nvm**  
+> If you already use nvm: `nvm install 24 && nvm alias default 24`
+
+---
+
+### P-3 — pnpm 10+
+
+Install pnpm globally after Node is active:
+
+```bash
+npm install -g pnpm@latest
+pnpm --version     # 10.x.x
+```
+
+Or via Corepack (ships with Node 24 — no extra install):
+
+```bash
+corepack enable pnpm
+corepack use pnpm@latest
+pnpm --version
+```
+
+> If you switch Node versions with fnm later, re-run `npm install -g pnpm`
+> once per version — global packages are version-scoped.
+
+---
+
+### P-4 — Remaining Tools
+
+```powershell
+# Windows — run in PowerShell (one block)
+winget install FiloSottile.mkcert -e --source winget
+winget install jqlang.jq        -e --source winget
+winget install Git.Git           -e --source winget
+# Git Bash ships with Git.Git automatically
+```
+
+```bash
+# macOS
+brew install mkcert jq git
+```
+
+```bash
+# Linux (Ubuntu / Debian)
+sudo apt-get install -y jq git
+sudo apt-get install -y libnss3-tools   # required by mkcert
+curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+chmod +x mkcert-v*-linux-amd64
+sudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+```
+
+Verify all tools before continuing:
+
+```bash
+docker --version
+node --version
+pnpm --version
+mkcert --version
+jq --version
+git --version
+```
+
+---
+
 ## Directory Layout — Two-Root Architecture
 
 Athyper uses two separate root directories. **Never mix them.**

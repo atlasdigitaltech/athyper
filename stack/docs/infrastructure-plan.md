@@ -603,15 +603,113 @@ echo "  MANIFEST written: $MANIFEST"
 
 ## Phase 1: System Packages `[SERVER — as root]`
 
-| Step | Action | Verify |
-|---|---|---|
-| 1.1 | `apt update && apt upgrade -y` | Clean |
-| 1.2 | `apt install -y curl git jq htop fail2ban postgresql-client unzip` | `jq --version`, `psql --version` |
-| 1.3 | Node 24.x via NodeSource | `node --version` → v24.x.x |
-| 1.4 | `corepack enable && corepack prepare pnpm@10.33.0 --activate` | `pnpm --version` → 10.33.0 |
-| 1.5 | Docker Engine — official apt repo, NOT snap | `docker --version`, `docker compose version` → v2.x |
-| 1.6 | fail2ban: SSH max-retry 5, ban 1 hour | `fail2ban-client status sshd` |
-| 1.7 | Rotate `athyper` bootstrap password immediately | New value in vault |
+### 1.1 — System update
+
+```bash
+apt update && apt upgrade -y
+apt install -y curl git jq htop fail2ban postgresql-client unzip ca-certificates gnupg lsb-release
+```
+
+Verify: `jq --version` · `psql --version`
+
+---
+
+### 1.2 — Docker Engine (official apt repo — NOT the snap package)
+
+```bash
+# Add Docker's official GPG key and repo
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" \
+  | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Enable + start
+systemctl enable --now docker
+```
+
+Verify:
+```bash
+docker --version          # Docker 27.x or later
+docker compose version    # Docker Compose version v2.x  — note: no hyphen
+docker run --rm hello-world
+```
+
+> **Why not snap?** Snap Docker runs in a strict confinement that conflicts
+> with `/opt/stack/athyper` bind mounts and breaks the journald log driver.
+
+---
+
+### 1.3 — Node.js 24 LTS (via NodeSource)
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+apt install -y nodejs
+```
+
+Verify:
+```bash
+node --version    # v24.x.x
+npm --version
+```
+
+---
+
+### 1.4 — pnpm 10 (via Corepack — ships with Node 24)
+
+```bash
+corepack enable
+corepack prepare pnpm@10.33.0 --activate
+```
+
+Verify:
+```bash
+pnpm --version    # 10.33.0
+```
+
+> Corepack pins the exact pnpm version so `pnpm install --frozen-lockfile`
+> in Phase 11 uses the same binary as the workstation that generated
+> `pnpm-lock.yaml`. Avoid `npm install -g pnpm` here — it installs latest
+> which may drift from the lockfile format.
+
+---
+
+### 1.5 — fail2ban (SSH brute-force protection)
+
+```bash
+# /etc/fail2ban/jail.local
+cat > /etc/fail2ban/jail.local << 'EOF'
+[sshd]
+enabled  = true
+maxretry = 5
+bantime  = 3600
+findtime = 600
+EOF
+
+systemctl enable --now fail2ban
+```
+
+Verify: `fail2ban-client status sshd`
+
+---
+
+### 1.6 — Rotate bootstrap password
+
+Contabo sends a root password by email. Change it immediately and record the
+new value in the team password vault:
+
+```bash
+passwd root       # enter and confirm new password
+# Then save the value in vault — never leave the Contabo default active
+```
 
 ---
 
