@@ -587,7 +587,10 @@ echo "  MANIFEST written: $MANIFEST"
 
 ---
 
-## Phase 0: Server Pre-flight `[SERVER — initial root SSH or VNC]`
+## Phase 0: Server Pre-flight
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> Access: initial root SSH provided by Contabo panel, or VNC console `5.189.174.159:63128`
 
 | Step | Action | Gate |
 |---|---|---|
@@ -601,7 +604,10 @@ echo "  MANIFEST written: $MANIFEST"
 
 ---
 
-## Phase 1: System Packages `[SERVER — as root]`
+## Phase 1: System Packages
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> Access: `ssh root@62.169.31.9` (Contabo initial SSH) — or root from VNC if SSH not yet hardened
 
 ### 1.1 — System update
 
@@ -713,7 +719,9 @@ passwd root       # enter and confirm new password
 
 ---
 
-## Phase 2: Groups and User Account `[SERVER — as root]`
+## Phase 2: Groups and User Account
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
 
 | Step | Command | Verify |
 |---|---|---|
@@ -727,7 +735,9 @@ passwd root       # enter and confirm new password
 
 ---
 
-## Phase 3: Two-Root Directory Tree `[SERVER — as root]`
+## Phase 3: Two-Root Directory Tree
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
 
 ```bash
 # Product root — git checkout destination
@@ -813,7 +823,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 4: System Hardening `[SERVER — as root]`
+## Phase 4: System Hardening
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> ⚠️ Step 4.6 — **test SSH key login as devname** before disabling password auth. If the key test fails, do NOT proceed — you will lock yourself out.
 
 | Step | Action | Verify |
 |---|---|---|
@@ -828,7 +841,11 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 5: SSH Key Infrastructure `[SERVER — as athyper via sudo -iu athyper]`
+## Phase 5: SSH Key Infrastructure
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> ⚠️ **Step 5.4 is WORKSTATION only** — register the deploy key on GitHub from your local browser/machine, then return to the server for step 5.5.
 
 | Step | Action | Verify |
 |---|---|---|
@@ -840,7 +857,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 6: Repository Clone `[SERVER — as athyper]`
+## Phase 6: Repository Clone
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Verify |
 |---|---|---|
@@ -855,7 +875,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 7: Config Deploy `[SERVER — as athyper]`
+## Phase 7: Config Deploy
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Verify |
 |---|---|---|
@@ -870,7 +893,11 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 8: Secrets — Populate `.env` `[SERVER — as athyper]`
+## Phase 8: Secrets — Populate `.env`
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> ⚠️ Run `unset HISTFILE` (step 8.1) **before** typing any secret values — prevents them landing in bash history.
 
 | Step | Action |
 |---|---|
@@ -893,7 +920,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 9: Environment Validation `[SERVER — as athyper]`
+## Phase 9: Environment Validation
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Gate |
 |---|---|---|
@@ -903,7 +933,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 10: Data Directories — Server-side Ownership `[SERVER — as root]`
+## Phase 10: Data Directories — Server-side Ownership
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> Exit the athyper shell (`exit` twice) back to root, or open a new root session.
 
 | Step | Action | Verify |
 |---|---|---|
@@ -915,7 +948,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 11: Image Build `[SERVER — as athyper]`
+## Phase 11: Image Build
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Verify |
 |---|---|---|
@@ -924,7 +960,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ---
 
-## Phase 12: Infrastructure Tier Startup `[SERVER — as athyper]`
+## Phase 12: Infrastructure Tier Startup
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 Start in dependency order. Verify health before next group.
 
@@ -946,7 +985,10 @@ docker inspect athyper-gateway-1 \
 
 ---
 
-## Phase 13: Database Seed `[SERVER — as athyper]`
+## Phase 13: Database Seed
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Gate |
 |---|---|---|
@@ -957,7 +999,10 @@ docker inspect athyper-gateway-1 \
 
 ---
 
-## Phase 14: IAM / Keycloak Bootstrap `[SERVER — as athyper]`
+## Phase 14: IAM / Keycloak Bootstrap
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Verify |
 |---|---|---|
@@ -968,7 +1013,10 @@ docker inspect athyper-gateway-1 \
 
 ---
 
-## Phase 15: Application Tier Startup `[SERVER — as athyper]`
+## Phase 15: Application Tier Startup
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 | Step | Action | Verify |
 |---|---|---|
@@ -979,7 +1027,11 @@ docker inspect athyper-gateway-1 \
 
 ---
 
-## Phase 16: Smoke Test Gate `[SERVER + BROWSER]`
+## Phase 16: Smoke Test Gate
+
+> **▶ EXECUTE ON:** `SERVER` (curl/docker checks) &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> **Login row** → open on your **WORKSTATION browser**: `https://neon-stg.athyper.com`
 
 **Stop here if any check fails.**
 
@@ -996,7 +1048,10 @@ docker inspect athyper-gateway-1 \
 
 ---
 
-## Phase 17: Observability, Monitoring, Render, Search `[SERVER — as athyper]`
+## Phase 17: Observability, Monitoring, Render, Search
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 Verify all 8 secondary DNS records resolve first.
 
@@ -1011,7 +1066,10 @@ Verify all 8 secondary DNS records resolve first.
 
 ---
 
-## Phase 18: Full Smoke Test `[SERVER — as athyper]`
+## Phase 18: Full Smoke Test
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
 
 ```bash
 set -a
@@ -1026,7 +1084,10 @@ docker compose --env-file /opt/stack/athyper/secrets/.env ps --format "table {{.
 
 ---
 
-## Phase 19: systemd Auto-start `[SERVER — as root]`
+## Phase 19: systemd Auto-start
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
+> Write the unit file and run `systemctl` commands as root. The service itself runs **as the `athyper` user** (the `User=` line inside the unit file controls that).
 
 ```ini
 [Unit]
@@ -1073,7 +1134,11 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 
 ---
 
-## Phase 20: Backup Setup `[SERVER — as athyper / root]`
+## Phase 20: Backup Setup
+
+> **▶ EXECUTE ON:** `SERVER` — two accounts in this phase
+> - Steps 20.1 · 20.2 · 20.4 · 20.5 → **AS:** `athyper` (`ssh <devname>@62.169.31.9` → `sudo -iu athyper`)
+> - Step 20.3 (write `/etc/cron.d/athyper-backup`) → **AS:** `root`
 
 | Step | Action |
 |---|---|
@@ -1086,6 +1151,10 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 ---
 
 ## Phase 21: Secrets Mirror + Reboot Drill
+
+> **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
+> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> ⚠️ Step 21.4 (`sudo reboot`) — athyper's sudoers only covers `systemctl`. Run reboot as **`root`** or as `devname` (who has full sudo): `sudo reboot`
 
 | Step | Action | Gate |
 |---|---|---|
@@ -1100,6 +1169,11 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 ---
 
 ## Phase 22: Post-Deploy Verification
+
+> **▶ EXECUTE ON:** `SERVER` — mixed accounts
+> - Security checks (`find /etc/sudoers*`, `grep`, `systemd-analyze`) → **AS:** `root`
+> - Docker/container checks (`docker inspect`, `docker exec`) → **AS:** `athyper`
+> - All checks can be run as `devname` (who is in `docker` + `athyper-config` groups)
 
 | Check | Command | Expected |
 |---|---|---|
@@ -1118,6 +1192,8 @@ systemd-analyze security athyper-stack    # target ≤ 4.0
 ---
 
 ## Phase 23: Post-Handoff Actions
+
+> **▶ EXECUTE ON:** `WORKSTATION` — create tickets, open PRs, schedule reviews
 
 | # | Action | Deadline | Owner |
 |---|---|---|---|
