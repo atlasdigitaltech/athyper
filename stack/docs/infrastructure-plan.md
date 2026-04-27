@@ -1738,12 +1738,67 @@ cat /opt/stack/athyper/MANIFEST
 
 | Step | Action |
 |---|---|
+| **8.0** | **Create the bootstrap file** `stack/env/.env` — see 8.0 detail below |
 | 8.1 | `unset HISTFILE && set +o history` |
 | 8.2 | Generate all secrets to `~/secrets-staging.txt` (600) via `openssl rand` — see generation commands below |
 | 8.3 | `nano /opt/stack/athyper/secrets/.env` |
 | 8.4 | Populate all values — see sections below for format rules and gotchas |
 | 8.5 | `set -o history && export HISTFILE=~/.bash_history` |
 | 8.6 | Confirm key structural values are correct (see checklist below) |
+
+---
+
+### 8.0 — Create the Bootstrap File (Critical — Do This First)
+
+> ⚠️ **Missing this step causes 100+ "variable is not set" WARN lines on every `up.sh` / `down.sh` / `logs.sh` run — and silently starts all containers with blank credentials.**
+
+#### What the bootstrap file is
+
+`stack/env/.env` (inside the git checkout, gitignored) is **not** the secrets file. It contains only the five root path variables that tell `compose.sh` where to find the real secrets. No passwords, no tokens.
+
+#### Why it is needed
+
+`compose.sh` resolves the env file location in two ways:
+
+| How the stack is started | How `ATHYPER_SECRETS_ROOT` reaches `compose.sh` |
+|---|---|
+| Via **systemd** (`athyper-stack.service`) | `Environment=ATHYPER_SECRETS_ROOT=...` in the unit file — already in the process environment |
+| Via **manual shell** (`sudo -iu athyper && up.sh core`) | systemd env vars are **not** inherited — `compose.sh` must read them from `stack/env/.env` |
+
+When running `up.sh` manually (Phase 11, 12, every ad-hoc command), the shell does not have the systemd environment. Without `stack/env/.env`, `ATHYPER_SECRETS_ROOT` is empty, `compose.sh` falls back to using `stack/env/.env` itself as the secrets file — which is just the gitignored template with no values — and Docker Compose gets 60+ blank variables.
+
+#### Create it now (run as `athyper`)
+
+```bash
+cat > /opt/products/athyper/stack/env/.env << 'EOF'
+# Bootstrap file — path overrides only. No secrets here.
+# Tells compose.sh where to find the real secrets/.env on this server.
+# This file is gitignored and must be created manually on every server.
+ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
+ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config
+ATHYPER_DATA_ROOT=/opt/stack/athyper/data
+ATHYPER_LOG_ROOT=/opt/stack/athyper/logs
+ATHYPER_BACKUP_ROOT=/opt/stack/athyper/backups
+EOF
+chmod 644 /opt/products/athyper/stack/env/.env
+```
+
+#### Verify it works
+
+```bash
+# Should print the path to the secrets file, not the bootstrap file
+grep -m1 "^ATHYPER_SECRETS_ROOT" /opt/products/athyper/stack/env/.env
+# expect: ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
+
+# Dry-run: confirm compose picks up the right env file
+# Look for: --env-file /opt/stack/athyper/secrets/.env  (NOT stack/env/.env)
+bash /opt/products/athyper/stack/scripts/stack-profile/up.sh core 2>&1 | head -5
+```
+
+If `--env-file` still shows `stack/env/.env` — the bootstrap file was not written to the correct path. Double-check:
+```bash
+cat /opt/products/athyper/stack/env/.env
+```
 
 ---
 
