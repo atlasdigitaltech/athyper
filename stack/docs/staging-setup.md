@@ -860,10 +860,19 @@ Expected output format: `admin:$$2y$$05$$...`
 ## 9.3 Populate `/opt/stack/athyper/secrets/.env`
 
 **EXECUTE ON:** SERVER  
-**AS:** athyper
+**AS:** root (then restore ownership)
+
+> **Why root?** `secrets/` is `root:athyper 750` — the `athyper` user has group
+> read+execute but cannot create files in the directory. `nano` tries to write a
+> backup file (`~`) there and fails with "Directory is not writable". Edit as root,
+> then restore ownership so `validate-env.sh` (which runs as `athyper`) can write
+> the file.
 
 ```bash
-nano /opt/stack/athyper/secrets/.env
+sudo nano /opt/stack/athyper/secrets/.env
+# After saving:
+sudo chown athyper:athyper /opt/stack/athyper/secrets/.env
+sudo chmod 600 /opt/stack/athyper/secrets/.env
 ```
 
 Minimum structural values that must be present and correct:
@@ -1965,9 +1974,13 @@ git pull
 ## D.5 Edit Secrets
 
 ```bash
-sudo -iu athyper
-nano /opt/stack/athyper/secrets/.env
-bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/stack/athyper/secrets/.env
+# Edit as root (secrets/ dir is root:athyper 750 — no write for athyper)
+sudo nano /opt/stack/athyper/secrets/.env
+sudo chown athyper:athyper /opt/stack/athyper/secrets/.env
+sudo chmod 600 /opt/stack/athyper/secrets/.env
+
+# Validate as athyper
+sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh staging
 ```
 
 ## D.6 Edit Config
