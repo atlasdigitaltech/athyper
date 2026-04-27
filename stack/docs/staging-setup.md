@@ -329,16 +329,6 @@ systemctl enable --now fail2ban
 fail2ban-client status sshd
 ```
 
-### 1.5 Rotate Root Password
-
-```bash
-passwd root
-```
-
-Save the new root password in the vault before proceeding. This is the only root
-credential once SSH hardening is applied in Phase 26 — VNC console is the sole
-break-glass path from that point on.
-
 ---
 
 ## Phase 2 — Create Groups, Service Identities, and Service Account
@@ -1657,17 +1647,26 @@ All core containers must be `Up` and smoke test must pass. Only then proceed to 
 **EXECUTE ON:** SERVER  
 **AS:** root
 
-> This is the last phase. It creates human operator accounts, installs their SSH keys,
-> and then locks down SSH. Order matters: verify key-based login **before** disabling
-> password auth.
+> This is the last phase. It rotates the root password, creates human operator accounts,
+> installs their SSH keys, and then locks down SSH. Order matters: verify key-based login
+> **before** disabling password auth.
 
 **Prerequisites:** Phase 25 (Reboot Drill) complete. All containers `Up`. Smoke test passing.
 
 > **Keep your current root session open the entire time.**  
-> Do not close it until you have verified key login from a second terminal (Step C).  
+> Do not close it until you have verified key login from a second terminal (Step D).  
 > If the new config breaks login, the open session is your rollback path.
 
-### Step A — Create Human Operator Accounts
+### Step A — Rotate Root Password
+
+```bash
+passwd root
+```
+
+Store the new root password in the vault **immediately**. After Step E (SSH config reload),
+root SSH is disabled — VNC console is the only break-glass path from that point on.
+
+### Step B — Create Human Operator Accounts
 
 ```bash
 # Primary ops account — full sudo + docker + config read access
@@ -1695,7 +1694,7 @@ No human user gets svc-* groups.
 No human user gets both sudo and docker unless explicitly approved.
 ```
 
-### Step B — Install SSH Public Keys
+### Step C — Install SSH Public Keys
 
 ```bash
 USERNAME="nchandravel-atlas"
@@ -1725,7 +1724,7 @@ for u in nchandravel-atlas ops-admin rmanoj-atlas; do
 done
 ```
 
-### Step C — Write and validate the SSH config
+### Step D — Write and validate the SSH config
 
 ```bash
 cat > /etc/ssh/sshd_config.d/athyper.conf << 'EOF'
@@ -1745,7 +1744,7 @@ chmod 0644 /etc/ssh/sshd_config.d/athyper.conf
 sshd -t && echo "sshd config OK"
 ```
 
-### Step D — Reload and verify from a second terminal
+### Step E — Reload and verify from a second terminal
 
 ```bash
 systemctl reload sshd
@@ -1761,7 +1760,7 @@ id
 
 Login must succeed with the key, no password prompt.
 
-### Step E — Confirm root and athyper are blocked
+### Step F — Confirm root and athyper are blocked
 
 ```bash
 # root SSH must be refused
@@ -1771,17 +1770,17 @@ ssh root@<SERVER_PUBLIC_IP> 2>&1 | grep -i "denied\|not allowed\|closed" || true
 ssh athyper@<SERVER_PUBLIC_IP> 2>&1 | grep -i "nologin\|not allowed\|closed" || true
 ```
 
-### Step F — VNC break-glass verification
+### Step G — VNC break-glass verification
 
 ```text
 VNC: provider console
-Login: root  (use the vault password — set in Phase 1.5 and stored in the vault)
+Login: root  (use the vault password set in Step A of this phase)
 Verify: id returns root; docker ps shows running containers
 ```
 
 Root via VNC is the only break-glass path after this phase. Root SSH no longer works.
 
-### Step G — SSH hardening checklist
+### Step H — SSH hardening checklist
 
 ```text
 [ ] root SSH disabled — ssh root@<SERVER> returns Permission denied
@@ -2080,15 +2079,16 @@ Do not declare staging ready until every item below is checked.
 **SSH hardening — Phase 26 (last step before go-live)**
 
 ```text
-[ ] Human operator accounts created (nchandravel-atlas, ops-admin, rmanoj-atlas).
-[ ] SSH public keys installed and verified from a workstation terminal.
+[ ] Root password rotated and stored in vault (Step A).
+[ ] Human operator accounts created — nchandravel-atlas, ops-admin, rmanoj-atlas (Step B).
+[ ] SSH public keys installed and verified from a workstation terminal (Step C).
 [ ] root SSH disabled — ssh root@<SERVER> returns Permission denied.
 [ ] password SSH disabled — PasswordAuthentication no in sshd_config.d/athyper.conf.
-[ ] key login verified — ops account logs in without password prompt in a new terminal.
+[ ] key login verified — ops account logs in without password prompt in a new terminal (Step E).
 [ ] athyper direct SSH blocked — ForceCommand nologin; connection drops immediately.
-[ ] VNC / root break-glass verified — root login via provider VNC console confirmed working.
+[ ] VNC / root break-glass verified — root login via provider VNC console confirmed working (Step G).
 ```
 
 > Phase 26 items are gated on a fully running, reboot-verified stack.
 > Execute Phase 26 only after the reboot drill passes. Keep an active root session open
-> while applying the config — do not close it until Step D key-login verification succeeds.
+> while applying the config — do not close it until Step E key-login verification succeeds.
