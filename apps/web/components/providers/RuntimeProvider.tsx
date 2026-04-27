@@ -21,6 +21,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { registerDefaults } from "@athyper/entity-runtime/field-renderers";
+import { registerDocumentRenderers } from "@athyper/document-runtime/register";
 import {
   createMetadataClient,
   createRecordsClient,
@@ -34,6 +35,11 @@ import { useShellSession } from "@/components/providers/SessionProvider";
 // ── Register all built-in field renderers once at module load ─────────────────
 // This must happen before any EntityListPage / EntityDetailPage renders.
 registerDefaults();
+
+// ── Register all lines renderers once at module load ──────────────────────────
+// Wires generic / journal / payment renderer keys into the renderer-registry
+// so resolveLinesRenderer() works in ApprovableDetailPage.
+registerDocumentRenderers();
 
 // ── Initialize API clients once at module load ────────────────────────────────
 // relayFetch is stateless (reads CSRF from cookie, org from server-side session),

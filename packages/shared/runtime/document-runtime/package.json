@@ -21,7 +21,8 @@
     "./validation": "./src/validation/index.ts",
     "./actions": "./src/actions/index.ts",
     "./orchestrator": "./src/orchestrator/index.ts",
-    "./intake": "./src/intake/index.ts"
+    "./intake": "./src/intake/index.ts",
+    "./register": "./src/register.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

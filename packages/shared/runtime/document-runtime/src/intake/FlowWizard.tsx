@@ -92,6 +92,7 @@ export function FlowWizard({
       {/* Region 1: EntityHeader (identity + stepper + cancel) */}
       <EntityHeader
         model={entityHeaderModel}
+        onBack={onCancel}
         extensionSlot={headerAction}
       />
 
