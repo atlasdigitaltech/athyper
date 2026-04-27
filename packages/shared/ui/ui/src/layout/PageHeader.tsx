@@ -41,19 +41,40 @@
  */
 
 import { type ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 
 // ── TypeChip ─────────────────────────────────────────────────────────────────
 
 /** Inverted-fill chip labelling the document family ("Invoice", "Vendor"). */
-export function TypeChip({ children, className }: { children: string; className?: string }) {
+export function TypeChip({
+  children,
+  onBack,
+  className,
+}: {
+  children: string;
+  /** When provided, renders a back arrow button on the left of the chip label. */
+  onBack?: () => void;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
-        "inline-flex h-[26px] items-center rounded-md bg-foreground px-2.5 text-xs font-semibold tracking-wide text-background",
+        "inline-flex h-[26px] items-center rounded-md bg-foreground text-xs font-semibold tracking-wide text-background",
+        onBack ? "pl-1 pr-2.5" : "px-2.5",
         className,
       )}
     >
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="mr-1 flex items-center justify-center rounded p-0.5 opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-3 w-3" />
+        </button>
+      )}
       {children}
     </span>
   );
@@ -81,6 +102,9 @@ export interface PageHeaderProps {
   /** Inverted label shown left of the title (e.g. "Invoice"). Omit for list variant. */
   typeChip?: string;
 
+  /** When provided, renders a back arrow inside the TypeChip. Ignored when typeChip is absent. */
+  onBack?: () => void;
+
   /** Primary title: entity plural for list ("Invoices"), doc number for detail ("INV-A1-0001"). */
   title: string;
 
@@ -105,6 +129,7 @@ export interface PageHeaderProps {
 
 export function PageHeader({
   typeChip,
+  onBack,
   title,
   titleVariant = "page",
   statusSlot,
@@ -118,7 +143,7 @@ export function PageHeader({
       <div className="flex min-w-0 flex-col gap-1">
         {/* Row 1: type-chip + title + status */}
         <div className="flex flex-wrap items-center gap-2">
-          {typeChip && <TypeChip>{typeChip}</TypeChip>}
+          {typeChip && <TypeChip onBack={onBack}>{typeChip}</TypeChip>}
           <span
             className={cn(
               "font-semibold leading-tight text-foreground",

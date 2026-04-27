@@ -53,11 +53,11 @@ export function EntityIdentityBar({
 
         {/* Back + chip group OR standalone chip */}
         {onBack ? (
-          <div className="inline-flex items-center h-[34px] rounded-full border border-border overflow-hidden shrink-0">
+          <div className="inline-flex items-center h-[32px] rounded-md border border-border overflow-hidden shrink-0">
             <button
               onClick={onBack}
               aria-label="Go back"
-              className="h-full px-2.5 flex items-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border-r border-border"
+              className="px-1 h-full flex items-center text-background bg-foreground hover:bg-foreground/85 border-r border-r-ring transition-colors"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -67,7 +67,7 @@ export function EntityIdentityBar({
                 onClick={onTypeClick}
                 className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
               >
-                {identity.typeLabel}
+                {identity.typeLabel} 
               </button>
             ) : identity.typeHref ? (
               <Link
@@ -78,7 +78,7 @@ export function EntityIdentityBar({
               </Link>
             ) : (
               <span className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center">
-                {identity.typeLabel}
+                {identity.typeLabel} 
               </span>
             )}
           </div>
@@ -107,15 +107,16 @@ export function EntityIdentityBar({
           </button>
         ) : (
           <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-            {identity.number}
+            {identity.number} 
           </span>
+          
         )}
 
         {/* Version badge */}
         {identity.version && (
           <span className="text-2xs font-medium text-muted-foreground border border-border rounded px-1.5 py-0.5 shrink-0">
             {identity.version}
-          </span>
+          </span>        
         )}
 
         {/* Status badge */}
