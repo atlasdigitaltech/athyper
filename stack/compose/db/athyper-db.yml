@@ -36,6 +36,14 @@ services:
       - config_file=/etc/postgresql/postgresql.conf
       - -c
       - hba_file=/etc/postgresql/pg_hba.conf
+    # user 999:999 = postgres inside postgres:16-bookworm. Must be set explicitly
+    # because cap_drop: ALL removes CAP_SETUID, which breaks the image entrypoint's
+    # "exec gosu postgres …" user-switch. With user: set here, the container starts
+    # directly as the postgres user and the setuid call is never attempted.
+    # This is NOT a v12 legacy value — Postgres uses a named Docker volume
+    # (athyper-stack-db-data), not a host bind mount, so there is no host UID
+    # collision risk. The v13 decision table excludes Postgres from the 91XX
+    # service identities; this is the correct container-default enforcement.
     user: "999:999"
     networks: [internal]
     healthcheck:

@@ -71,6 +71,7 @@ services:
   logging:
     image: grafana/loki:3.6.10
     profiles: ["core", "telemetry"]
+    user: "9103:9103"
     deploy:
       resources:
         limits:

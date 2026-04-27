@@ -19,6 +19,7 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:1
     profiles: ["monitoring"]
+    user: "9105:9105"
     networks: [edge, internal]
     volumes:
       - ${ATHYPER_DATA}/uptime-kuma:/app/data

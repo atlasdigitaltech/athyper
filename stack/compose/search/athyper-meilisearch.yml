@@ -28,6 +28,7 @@ services:
   meilisearch:
     image: getmeili/meilisearch:v1.13
     profiles: ["search"]
+    user: "9105:9105"
     networks: [edge, internal]
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}

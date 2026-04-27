@@ -17,6 +17,10 @@ services:
   socket-proxy-gateway:
     image: tecnativa/docker-socket-proxy:0.3.0
     profiles: ["core", "gateway", "apps"]
+    deploy:
+      resources:
+        limits:
+          memory: "32m"
     restart: unless-stopped
     environment:
       CONTAINERS: 1

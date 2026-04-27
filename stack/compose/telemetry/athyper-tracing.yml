@@ -80,6 +80,7 @@ services:
   tracing:
     image: grafana/tempo:2.10.4
     profiles: ["core", "telemetry"]
+    user: "9103:9103"
     deploy:
       resources:
         limits:

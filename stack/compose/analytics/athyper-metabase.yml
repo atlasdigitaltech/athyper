@@ -35,6 +35,7 @@ services:
   metabase:
     image: metabase/metabase:v0.51.10
     profiles: ["analytics"]
+    user: "9105:9105"
     networks: [edge, internal]
     environment:
       # --- App DB (where Metabase stores dashboards/users/permissions)

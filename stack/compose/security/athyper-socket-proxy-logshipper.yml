@@ -17,6 +17,10 @@ services:
   socket-proxy-logshipper:
     image: tecnativa/docker-socket-proxy:0.3.0
     profiles: ["core", "telemetry"]
+    deploy:
+      resources:
+        limits:
+          memory: "32m"
     restart: unless-stopped
     environment:
       CONTAINERS: 1

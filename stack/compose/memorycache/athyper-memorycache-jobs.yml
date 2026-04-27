@@ -35,6 +35,7 @@ services:
   memorycache_jobs:
     image: redis:7.4.8-alpine
     profiles: ["memorycache-jobs"]
+    user: "9100:9100"
     deploy:
       resources:
         limits:

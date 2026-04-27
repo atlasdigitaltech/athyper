@@ -13,6 +13,7 @@ services:
   metrics:
     image: prom/prometheus:v3.11.2
     profiles: ["core", "telemetry"]
+    user: "9104:9104"
     deploy:
       resources:
         limits:

@@ -13,6 +13,7 @@ services:
   memorycache:
     image: redis:7.4.8-alpine
     profiles: ["core", "memorycache"]
+    user: "9100:9100"
     deploy:
       resources:
         limits:
