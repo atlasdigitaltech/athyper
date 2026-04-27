@@ -2,7 +2,7 @@
 # Stack       : athyper Stack – Core Infrastructure & Observability
 # Maintainer  : Atlas Digital Technology Solutions (athyper Team)
 # Environment : local
-# Version     : 1.0.0
+# Version     : 1.1.0
 # Compose     : athyper-override-local-config
 #
 # Description :
@@ -13,40 +13,94 @@
 # =======================================================================
 
 services:
-  # Grafana: relax dashboard provisioning for local iteration.
-  # Shadows the prod-safe default with an editable/deletable variant so
-  # developers can reshape panels in the UI. Re-provisions from JSON on
-  # restart — nothing persists that isn't committed under
-  # config/telemetry/provisioning/dashboards/json/.
+  # ── Local Windows Docker: user + capability overrides ─────────────────────────
+  # Named service users (9100-9105) exist only on the Linux server where
+  # data-dirs-create.sh runs chown before first start. On Windows, Docker bind
+  # mounts present as drwxr-xr-x (755) inside the container and non-zero UIDs
+  # hit "Permission denied (os error 13)". Two overrides are needed:
+  #   user: "0:0"         — run as root so UID matches are not needed
+  #   cap_add: [DAC_OVERRIDE] — restore the capability dropped by cap_drop: ALL
+  #                             so root can actually write to 755 bind mounts
+
+  memorycache:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+    ports:
+      - "6379:6379"
+    networks:
+      internal: null
+      edge: null
+
+  memorycache_jobs:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  objectstorage:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  logging:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  metrics:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  # Grafana: root override + capability fix + local dashboard provisioning.
+  # Re-provisions from JSON on restart — nothing persists that isn't committed
+  # under config/telemetry/provisioning/dashboards/json/.
   telemetry:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
     volumes:
       - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.local.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+
+  tracing:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  meilisearch:
+    user: "0:0"
+    cap_add:
+      - DAC_OVERRIDE
+
+  # uptime-kuma and metabase do not use cap_drop: ALL — user override only.
+  uptime-kuma:
+    user: "0:0"
+
+  metabase:
+    user: "0:0"
 
   iam:
     depends_on:
       mailhog:
         condition: service_healthy
+
   db:
     ports:
       - "5432:5432"
     networks:
       internal: null
       edge: null
+
   dbpool-apps:
     ports:
       - "6432:6432"
     networks:
       internal: null
       edge: null
+
   dbpool-session:
     ports:
       - "6433:6433"
-    networks:
-      internal: null
-      edge: null
-  memorycache:
-    ports:
-      - "6379:6379"
     networks:
       internal: null
       edge: null
