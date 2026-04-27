@@ -780,66 +780,203 @@ passwd root       # enter and confirm new password
 | 2.2 | `groupadd --force --gid 9001 athyper-config` | `getent group athyper-config` |
 | 2.3 | `groupadd --force --gid 9002 athyper-data` | `getent group athyper-data` |
 | 2.4 | `useradd --system --uid 9000 --gid 9000 --create-home --home-dir /home/athyper --shell /bin/bash athyper` | `id athyper` shows uid=9000 |
-| 2.5 | `passwd --lock athyper` | `passwd -S athyper` shows L |
-| 2.6 | `usermod -aG docker,athyper-config,athyper-data athyper` | `groups athyper` shows all |
-| 2.7a | **ops-admin**: `adduser --gecos "Name" devname` + `usermod -aG sudo,docker,athyper-config devname` | `id devname` shows sudo + docker + athyper-config |
-| 2.7b | **dev-inspector**: `adduser --gecos "Name" devname` + `usermod -aG athyper-config devname` | `id devname` shows athyper-config only |
-| 2.8 | Install developer SSH public keys (see detail below) | `cat /home/devname/.ssh/authorized_keys` is non-empty |
+| 2.5 | `passwd --lock athyper` | `passwd -S athyper` shows `L` |
+| 2.6 | `usermod -aG docker,athyper-config,athyper-data athyper` | `groups athyper` shows all three |
+| 2.7a | **ops-admin role** — two separate commands per named account (see detail below) | `id <account>` shows sudo + docker + athyper-config |
+| 2.7b | **dev-inspector role** — two separate commands per named account (see detail below) | `id <account>` shows athyper-config only — no sudo, no docker |
+| 2.8 | Install SSH public key for each account (see detail below) | `cat /home/<account>/.ssh/authorized_keys` non-empty |
 
-**Step 2.8 detail — SSH key install (example: `nchandravel-atlas`)**
+> ⚠️ **Common mistake:** steps 2.7a and 2.7b are **two separate commands**, not one. Do not join them with `+` or `&&` on a single line — `adduser` is interactive (prompts for password) and must complete before `usermod` runs.
 
-Run on the **local machine (Windows)** to get the public key:
+---
+
+### 2.7a — ops-admin Accounts
+
+ops-admin accounts can do anything root requires: write config, run systemctl, switch to `athyper` via `sudo -iu athyper`. They are in `sudo`, `docker`, and `athyper-config`.
+
+**Accounts created on this server:**
+
+| Username | Full name | UID | Role |
+|---|---|---|---|
+| `ops-admin` | ops admin | 1000 | Generic ops-admin account |
+| `nchandravel-atlas` | Chandravel Natarajan | 1002 | ops-admin (primary operator) |
+
+**Commands — run once per ops-admin account (substitute username and full name):**
+
+```bash
+# Step 1: Create the account (interactive — sets password at prompt)
+adduser --gecos "Chandravel Natarajan" nchandravel-atlas
+
+# Step 2: Assign groups (run after adduser completes)
+usermod -aG sudo,docker,athyper-config nchandravel-atlas
+```
+
+```bash
+# Repeat for ops-admin generic account
+adduser --gecos "ops admin" ops-admin
+usermod -aG sudo,docker,athyper-config ops-admin
+```
+
+**Verify each account:**
+```bash
+id nchandravel-atlas
+# uid=1002(nchandravel-atlas) gid=1002(nchandravel-atlas)
+# groups=...,27(sudo),998(docker),9001(athyper-config),...
+
+id ops-admin
+# uid=1000(ops-admin) gid=1000(ops-admin)
+# groups=...,27(sudo),998(docker),9001(athyper-config),...
+```
+
+> **Note — `ops-admin` group assignment:** If `usermod -aG sudo,docker,athyper-config ops-admin` was not confirmed after the failed combined command attempt, run it now and re-verify with `id ops-admin`.
+
+---
+
+### 2.7b — dev-inspector Accounts
+
+dev-inspector accounts can read config, tail logs, and exec into containers. They get `athyper-config` only — no `sudo`, no `docker`.
+
+**Accounts created on this server:**
+
+| Username | Full name | UID | Role |
+|---|---|---|---|
+| `dev-inspector` | dev inspector | 1001 | Generic dev-inspector account |
+| `rmanoj-atlas` | Manoj Rajendran | 1003 | dev-inspector |
+
+**Commands — run once per dev-inspector account:**
+
+```bash
+# Step 1: Create the account
+adduser --gecos "Manoj Rajendran" rmanoj-atlas
+
+# Step 2: Assign athyper-config ONLY
+usermod -aG athyper-config rmanoj-atlas
+```
+
+```bash
+# Repeat for dev-inspector generic account
+adduser --gecos "dev inspector" dev-inspector
+usermod -aG athyper-config dev-inspector
+```
+
+**Verify each account:**
+```bash
+id rmanoj-atlas
+# groups must include athyper-config — must NOT include sudo or docker
+
+id dev-inspector
+# groups must include athyper-config — must NOT include sudo or docker
+```
+
+> ⚠️ **Correction required — `dev-inspector` was given wrong groups.** The `usermod` that ran on the server was:
+> ```
+> usermod -aG sudo,docker,athyper-config dev-inspector
+> ```
+> This is wrong. `dev-inspector` must not be in `sudo` or `docker`. Fix immediately:
+> ```bash
+> # Remove dev-inspector from sudo and docker
+> gpasswd -d dev-inspector sudo
+> gpasswd -d dev-inspector docker
+>
+> # Confirm fix
+> id dev-inspector
+> # groups must NOT include sudo(27) or docker
+> ```
+
+---
+
+### 2.8 — Install SSH Public Keys
+
+Each account needs its SSH public key installed before Phase 4 disables password auth. After Phase 4, key login is the only way in.
+
+**Procedure for each account — run as root on the server:**
+
+```bash
+# 1. Create .ssh directory
+mkdir -p /home/<username>/.ssh
+chmod 700 /home/<username>/.ssh
+
+# 2. Create authorized_keys and install the key (one line, no line breaks)
+touch /home/<username>/.ssh/authorized_keys
+chmod 600 /home/<username>/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA...paste-full-key-here..." >> /home/<username>/.ssh/authorized_keys
+
+# 3. Fix ownership — sshd rejects key files not owned by the account
+chown -R <username>:<username> /home/<username>/.ssh
+```
+
+**How to get the public key from a Windows workstation:**
 
 ```powershell
-# PowerShell or Git Bash
-type $env:USERPROFILE\.ssh\id_ed25519.pub
-# or in Git Bash:
+# In PowerShell or Git Bash
 cat ~/.ssh/id_ed25519.pub
-# prints something like: ssh-ed25519 AAAA... user@host
+# Prints: ssh-ed25519 AAAA... email@domain.com
 ```
 
-If no key exists yet, generate one first:
-
+If the key does not exist yet, generate it first:
 ```powershell
-ssh-keygen -t ed25519 -C "nchandravel@atlasdigitaltech.com"
-# accept default path; set a passphrase when prompted
-type $env:USERPROFILE\.ssh\id_ed25519.pub
+ssh-keygen -t ed25519 -C "name@atlasdigitaltech.com"
+# Accept default path; set a passphrase
+cat ~/.ssh/id_ed25519.pub
 ```
 
-Run on the **server as root**:
+---
 
+**Current SSH key status per account:**
+
+| Account | Role | SSH key installed | Verified login |
+|---|---|---|---|
+| `nchandravel-atlas` | ops-admin | ✅ installed (2026-04-27) | ☐ test in step 4.6 |
+| `ops-admin` | ops-admin | ☐ pending | ☐ |
+| `rmanoj-atlas` | dev-inspector | ☐ pending | ☐ |
+| `dev-inspector` | dev-inspector | ☐ pending | ☐ |
+
+**`nchandravel-atlas` — already installed:**
 ```bash
-# 1. Create .ssh directory with correct permissions
-mkdir -p /home/nchandravel-atlas/.ssh
-chmod 700 /home/nchandravel-atlas/.ssh
+# Key installed 2026-04-27:
+# ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFHEMSIYbda0bFn9sozpBGriXfUkkA3t2ls5rN8pHAb
+# chandravel.natarajan@atlasdigitaltech.com
 
-# 2. Create authorized_keys file and install the public key
-touch /home/nchandravel-atlas/.ssh/authorized_keys
-chmod 600 /home/nchandravel-atlas/.ssh/authorized_keys
-echo "ssh-ed25519 AAAA...paste-full-key-here..." >> /home/nchandravel-atlas/.ssh/authorized_keys
-
-# 3. Fix ownership
-chown -R nchandravel-atlas:nchandravel-atlas /home/nchandravel-atlas/.ssh
-```
-
-Verify on the **server**:
-
-```bash
-cat /home/nchandravel-atlas/.ssh/authorized_keys
-# must show the full public key on one line
-
+# Verify
 ls -la /home/nchandravel-atlas/.ssh/
-# .ssh dir: drwx------ (700)  authorized_keys: -rw------- (600)  owner: nchandravel-atlas
+# drwx------ .ssh/  (700)  -rw------- authorized_keys (600)
+cat /home/nchandravel-atlas/.ssh/authorized_keys
+# must show one complete ssh-ed25519 line
 ```
 
-Test SSH login from the **local machine** before closing the root session:
-
+**`rmanoj-atlas` — pending (Manoj Rajendran must provide public key):**
 ```bash
-ssh nchandravel-atlas@<server-ip>
-# expect shell prompt — not a password prompt
+# Manoj: run this on your workstation and share the output
+cat ~/.ssh/id_ed25519.pub
+
+# Once received, install on server as root:
+mkdir -p /home/rmanoj-atlas/.ssh
+chmod 700 /home/rmanoj-atlas/.ssh
+touch /home/rmanoj-atlas/.ssh/authorized_keys
+chmod 600 /home/rmanoj-atlas/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA...manoj-key..." >> /home/rmanoj-atlas/.ssh/authorized_keys
+chown -R rmanoj-atlas:rmanoj-atlas /home/rmanoj-atlas/.ssh
 ```
 
-> Repeat steps 2.7–2.8 for each additional developer, substituting their username and public key.
+**`ops-admin` — pending (install a shared ops key or skip if not using this account):**
+```bash
+mkdir -p /home/ops-admin/.ssh
+chmod 700 /home/ops-admin/.ssh
+touch /home/ops-admin/.ssh/authorized_keys
+chmod 600 /home/ops-admin/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA...ops-key..." >> /home/ops-admin/.ssh/authorized_keys
+chown -R ops-admin:ops-admin /home/ops-admin/.ssh
+```
+
+**Verify all accounts before Phase 4:**
+```bash
+for u in nchandravel-atlas ops-admin rmanoj-atlas dev-inspector; do
+  echo "=== $u ==="
+  id "$u"
+  ls -la "/home/$u/.ssh/" 2>/dev/null || echo "  .ssh/ missing"
+  cat "/home/$u/.ssh/authorized_keys" 2>/dev/null || echo "  no authorized_keys"
+done
+```
 
 ---
 
@@ -947,52 +1084,579 @@ find /opt/stack/athyper/config -type f ! -perm 644 -ls
 ## Phase 4: System Hardening
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `root`
-> ⚠️ Step 4.6 — **test SSH key login as devname** before disabling password auth. If the key test fails, do NOT proceed — you will lock yourself out.
+> You are still in the root SSH session opened in Phase 3. Do not switch accounts.
+> ⚠️ **Lockout risk in this phase:** steps 4.4 + 4.5 disable password SSH. Before closing this session, step 4.6 opens a second terminal to prove key login works. If the key test fails and you close this session, re-entry requires VNC console only.
 
 | Step | Action | Verify |
 |---|---|---|
-| 4.1 | Write `/etc/docker/daemon.json` (journald, live-restore, address-pools, no userland-proxy) | `docker info \| grep "Logging Driver"` → journald |
+| 4.1 | Write `/etc/docker/daemon.json` (journald, live-restore, address-pools, no userland-proxy) | `docker info \| grep "Logging Driver"` → `journald` |
 | 4.2 | `systemctl restart docker` | `docker ps` works |
-| 4.3 | Write `/etc/systemd/journald.conf.d/athyper.conf` (SystemMaxUse=2G, MaxRetentionSec=2week) | `systemctl restart systemd-journald` |
-| 4.4 | Write `/etc/ssh/sshd_config.d/athyper.conf` per S10 | `sshd -t` passes |
-| 4.5 | `systemctl reload sshd` | |
-| 4.6 | **Test SSH key login as devname NOW — before disabling password** | Shell prompt |
-| 4.7 | Write `/etc/sudoers.d/athyper` per S9 with `chmod 440` | `visudo -c -f /etc/sudoers.d/athyper` |
-| 4.8 | `grep -r NOPASSWD:ALL /etc/sudoers*` | Must return nothing |
+| 4.3 | Write `/etc/systemd/journald.conf.d/athyper.conf` (SystemMaxUse=2G, MaxRetentionSec=2week) | `journalctl --disk-usage` ≤ 2G |
+| 4.4 | Write `/etc/ssh/sshd_config.d/athyper.conf` per S10 | `sshd -t` exits 0 |
+| 4.5 | `systemctl reload sshd` | prompt returns |
+| 4.6 | **Test SSH key login as `devname` from a NEW terminal — keep this session open** | Shell prompt, no password asked |
+| 4.7 | Write `/etc/sudoers.d/athyper` per S9, `chmod 440` | `visudo -c -f /etc/sudoers.d/athyper` → `parsed OK` |
+| 4.8 | `grep -r NOPASSWD:ALL /etc/sudoers*` | No output |
+
+---
+
+### 4.1 — Docker Daemon Configuration
+
+Docker is installed but running with defaults. `daemon.json` configures how the daemon behaves for logging, networking, and container security — applies to every container on this server.
+
+> Before writing the file, note: `daemon.json` is read only at daemon start. Any syntax error here will prevent Docker from starting in step 4.2. Always validate JSON before restarting.
+
+```bash
+cat > /etc/docker/daemon.json << 'EOF'
+{
+  "log-driver": "journald",
+  "log-opts": {
+    "tag": "{{.Name}}"
+  },
+  "live-restore": true,
+  "default-address-pools": [
+    { "base": "10.200.0.0/16", "size": 24 }
+  ],
+  "userland-proxy": false,
+  "no-new-privileges": true
+}
+EOF
+chmod 644 /etc/docker/daemon.json
+
+# Validate JSON syntax before touching Docker
+python3 -c "import json; json.load(open('/etc/docker/daemon.json')); print('JSON valid')"
+```
+
+Expected: `JSON valid`
+
+**What each setting does:**
+
+| Setting | Value | Without it |
+|---|---|---|
+| `log-driver: journald` | All container stdout/stderr goes into systemd-journald, queryable by name (`journalctl CONTAINER_NAME=athyper-api`) | Docker writes per-container JSON files under `/var/lib/docker/` — never cleaned up, fills disk |
+| `log-opts.tag: {{.Name}}` | Journal entries are tagged with the container name (e.g. `athyper-api`) not a 12-char ID | Log searches show meaningless container IDs |
+| `live-restore: true` | Containers keep running when dockerd is restarted (security patch, config change) | Every daemon restart kills all containers |
+| `default-address-pools: 10.200.0.0/16` | Bridge networks get IPs from `10.200.x.0/24` slices | Docker defaults to `172.17.0.0/16` — overlaps most corporate VPNs |
+| `userland-proxy: false` | Kernel NAT (iptables) handles port forwarding | A `docker-proxy` Go process spawns per exposed port — unnecessary overhead |
+| `no-new-privileges: true` | Daemon-wide: containers cannot gain Linux capabilities after start | Setuid escalation possible inside containers |
+
+---
+
+### 4.2 — Restart Docker Daemon
+
+Apply `daemon.json`. Because `live-restore: true` was just written, any already-running containers (none expected at this point) survive the restart.
+
+```bash
+systemctl restart docker
+
+# Verify daemon is up and settings applied
+docker ps                             # empty table is correct — no containers yet
+docker info | grep "Logging Driver"   # → Logging Driver: journald
+docker info | grep "Live Restore"     # → Live Restore Enabled: true
+```
+
+**If `docker ps` errors or hangs:**
+```bash
+journalctl -u docker -n 30 --no-pager
+# Most common cause: JSON syntax error in daemon.json
+# Fix the file, then: systemctl restart docker
+```
+
+---
+
+### 4.3 — Journal Disk Retention Limits
+
+Container logs now flow into journald (step 4.1). Without limits, journald grows until the disk is full. This step writes a **drop-in** under `journald.conf.d/` — it overrides only these specific settings without touching the base `journald.conf`, so OS updates cannot remove our limits.
+
+```bash
+mkdir -p /etc/systemd/journald.conf.d
+
+cat > /etc/systemd/journald.conf.d/athyper.conf << 'EOF'
+[Journal]
+SystemMaxUse=2G
+SystemKeepFree=500M
+MaxRetentionSec=2week
+EOF
+chmod 644 /etc/systemd/journald.conf.d/athyper.conf
+
+# journald requires full restart (not reload) to apply conf changes — safe, no entries lost
+systemctl restart systemd-journald
+```
+
+**Verify:**
+```bash
+journalctl --disk-usage
+# Any number ≤ 2G is correct
+```
+
+**What each setting does:**
+
+| Setting | Effect |
+|---|---|
+| `SystemMaxUse=2G` | Hard cap: oldest entries deleted automatically when journal hits 2 GB |
+| `SystemKeepFree=500M` | Always keeps 500 MB free on the journal filesystem — protects against disk-full at log burst |
+| `MaxRetentionSec=2week` | Entries older than 2 weeks deleted on next vacuum — prevents old container logs from occupying the cap indefinitely |
+
+---
+
+### 4.4 — SSH Hardening Drop-in
+
+The server arrived from Contabo with password SSH and root login enabled. This step disables both and restricts login to specific groups.
+
+Written as a **drop-in** under `/etc/ssh/sshd_config.d/` — sshd reads the base `sshd_config` first, then alphabetically applies all files in this directory. Our file overrides only what we need; OS updates to the base config do not affect it.
+
+```bash
+cat > /etc/ssh/sshd_config.d/athyper.conf << 'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+AllowGroups sudo athyper-config
+
+Match User athyper
+    ForceCommand /usr/sbin/nologin
+EOF
+chmod 644 /etc/ssh/sshd_config.d/athyper.conf
+```
+
+**What each line does:**
+
+| Line | Effect |
+|---|---|
+| `PermitRootLogin no` | Direct root SSH blocked. Root is reachable only via VNC (`5.189.174.159:63128`) or `sudo -i` from a human account |
+| `PasswordAuthentication no` | Keys only — entire category of password-based attacks (brute force, credential stuffing) eliminated. **This is the lockout risk — keys must work before closing this session** |
+| `PubkeyAuthentication yes` | Explicit: some hardened base images disable this by default |
+| `AllowGroups sudo athyper-config` | Only ops-admins (`sudo`) and dev-inspectors (`athyper-config`) can SSH in. `athyper` is in neither group by design |
+| `Match User athyper` + `ForceCommand /usr/sbin/nologin` | Belt-and-suspenders: even if `athyper` is accidentally added to `AllowGroups` later, SSH immediately exits |
+
+**Validate syntax before proceeding — mandatory:**
+```bash
+sshd -t
+echo "exit $?"
+# Must print: exit 0  (no output from sshd -t means no errors)
+```
+
+> Never run step 4.5 without `sshd -t` passing clean. A broken sshd config applied to a live daemon blocks all new SSH connections — your current session stays open but no one else can log in.
+
+---
+
+### 4.5 — Apply SSH Configuration
+
+The config file is on disk but sshd has not read it. `reload` sends `SIGHUP` to sshd — it re-reads config and applies the new policy to **new** connections. Your current session is not dropped.
+
+> Do NOT use `restart` here — `restart` terminates all active SSH sessions including yours.
+
+```bash
+systemctl reload sshd
+# No output on success — prompt returns immediately
+```
+
+New SSH connections from this point forward obey the hardened policy. Step 4.6 immediately verifies this.
+
+---
+
+### 4.6 — Verify SSH Key Login (Lockout Prevention Gate)
+
+Password auth is now disabled. If the ops-admin key is missing or mis-permissioned, new connections will be silently rejected — no password fallback. This step proves key login works while the current session is still available as a safety net.
+
+**⚠️ Do not close this terminal until step 5 below succeeds.**
+
+**1.** Keep this root terminal open.
+
+**2.** Open a **new terminal window** on your workstation.
+
+**3.** Connect as the ops-admin account (created in Phase 2):
+```bash
+ssh nchandravel-atlas@62.169.31.9
+# Expected: shell prompt with no password prompt
+# nchandravel-atlas@vmi2836875:~$
+```
+
+**4.** Confirm groups from inside the new session:
+```bash
+id
+# Must show: groups include sudo (27) or athyper-config
+```
+
+**5.** Key login confirmed. You may now close the root terminal.
+
+---
+
+**If the connection is refused or immediately closed — debug from the root terminal:**
+
+```bash
+# 1. Is the account in AllowGroups?
+id nchandravel-atlas
+# groups must include sudo or athyper-config
+# Fix: usermod -aG sudo,athyper-config nchandravel-atlas
+
+# 2. Are .ssh permissions correct?
+ls -la /home/nchandravel-atlas/.ssh/
+# .ssh/             must be 700  (drwx------)
+# authorized_keys   must be 600  (-rw-------)
+# Fix:
+chmod 700 /home/nchandravel-atlas/.ssh
+chmod 600 /home/nchandravel-atlas/.ssh/authorized_keys
+
+# 3. Is the key content valid — one unbroken line?
+cat /home/nchandravel-atlas/.ssh/authorized_keys
+# Must be: ssh-ed25519 AAAA...  (single line, no wrapping)
+
+# 4. What did sshd actually reject?
+journalctl -u sshd -n 30 --no-pager
+# Look for: Authentication refused / not in AllowGroups / bad key format
+```
+
+Retry key login after each fix. Do not proceed to 4.7 until login succeeds.
+
+---
+
+### 4.7 — Scoped sudoers for `athyper`
+
+The `athyper` service account runs the stack via systemd (Phase 19). When the stack's management scripts call `systemctl restart athyper-stack`, `athyper` needs to run that command as root — `systemctl` lifecycle commands require root. This step grants exactly that, nothing more.
+
+```bash
+cat > /etc/sudoers.d/athyper << 'EOF'
+athyper ALL=(root) NOPASSWD: \
+    /usr/bin/systemctl start athyper-*, \
+    /usr/bin/systemctl stop athyper-*, \
+    /usr/bin/systemctl restart athyper-*, \
+    /usr/bin/systemctl status athyper-*, \
+    /usr/bin/systemctl reload athyper-*
+EOF
+chmod 440 /etc/sudoers.d/athyper
+```
+
+**Reading the sudoers syntax:**
+```
+athyper  ALL=(root)  NOPASSWD:  /usr/bin/systemctl start athyper-*
+│        │    │       │          │                   │     │
+account  host runas   no-pwd     full binary path    verb  service pattern
+```
+The wildcard `athyper-*` matches `athyper-stack`, `athyper-api`, etc. It does not match `bash`, `sh`, `docker`, or any other command — unlisted commands are denied.
+
+> **Why `chmod 440` is mandatory:** `sudo` refuses to read any sudoers file writable by group or world. If permissions are wrong, sudo silently ignores the file — the grant disappears with no error message. `440` = root:root, read-only for both.
+
+**Validate syntax:**
+```bash
+visudo -c -f /etc/sudoers.d/athyper
+# Expected: /etc/sudoers.d/athyper: parsed OK
+```
+
+**Test the grant works and is scoped correctly:**
+```bash
+# Grants work (unit not found is fine — it's not installed yet)
+su -s /bin/bash athyper -c "sudo systemctl status athyper-stack 2>&1 || true"
+# Expected: Unit athyper-stack.service could not be found.  ← NOT "permission denied"
+
+# Cannot escalate beyond the grant
+su -s /bin/bash athyper -c "sudo bash -c 'id' 2>&1 || true"
+# Expected: Sorry, user athyper is not allowed to execute '/usr/bin/bash...' as root
+```
+
+---
+
+### 4.8 — Audit: No NOPASSWD:ALL in Sudoers
+
+`NOPASSWD:ALL` means any command as root with no password — unrestricted root-equivalent. It must not exist anywhere on the system.
+
+```bash
+grep -r NOPASSWD:ALL /etc/sudoers*
+# Must return nothing (silent = pass)
+```
+
+This scans `/etc/sudoers` and every file in `/etc/sudoers.d/`. The `athyper` rule from 4.7 uses `NOPASSWD:` (command-scoped) — it will not appear in this grep.
+
+**Why this audit matters:** Contabo's Ubuntu base image ships with:
+```
+ubuntu ALL=(ALL:ALL) NOPASSWD:ALL
+```
+This is a provisioning convenience left in by the provider. If the `ubuntu` account exists and has an SSH key, it is a full privilege escalation path. This grep catches it.
+
+**If output is returned:**
+```bash
+# Identify the file and account
+cat /etc/sudoers.d/90-cloud-init-users    # common offender
+
+# Option A — account no longer needed: delete the file
+rm /etc/sudoers.d/90-cloud-init-users
+
+# Option B — account needed with restricted access: open for editing
+visudo -f /etc/sudoers.d/90-cloud-init-users
+# Replace NOPASSWD:ALL with a scoped rule, or remove the account's line
+
+# Confirm clean
+grep -r NOPASSWD:ALL /etc/sudoers*    # must return nothing
+```
+
+Do not proceed to Phase 5 until this grep is silent.
 
 ---
 
 ## Phase 5: SSH Key Infrastructure
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
-> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
-> ⚠️ **Step 5.4 is WORKSTATION only** — register the deploy key on GitHub from your local browser/machine, then return to the server for step 5.5.
+> **Switch accounts:** `ssh nchandravel-atlas@62.169.31.9` → `sudo -iu athyper`
+> ⚠️ Step 5.4 is **WORKSTATION only** — you register the deploy key in GitHub from your browser. Return to the server terminal for step 5.5.
+
+This phase gives the `athyper` service account read-only access to the GitHub repo via a dedicated SSH deploy key. The deploy key is scoped to one repository — if the server is ever compromised, the blast radius is limited to read access on this repo only. A personal SSH key would give access to everything in the GitHub account.
 
 | Step | Action | Verify |
 |---|---|---|
-| 5.1 | `ssh-keygen -t ed25519 -C "athyper-staging-deploy-key" -f /home/athyper/.ssh/github_deploy_key -N ""` | Key pair at `/home/athyper/.ssh/` |
-| 5.2 | Write `/home/athyper/.ssh/config` routing github.com to deploy key | `chmod 600` |
-| 5.3 | `cat /home/athyper/.ssh/github_deploy_key.pub` | |
-| 5.4 | **[WORKSTATION]** GitHub → repo Settings → Deploy keys → Add → Read-only | |
-| 5.5 | `ssh -T git@github.com` | "Hi atlasdigitaltech/athyper! You've successfully authenticated…" |
+| 5.1 | Generate deploy key pair | Key files exist at `/home/athyper/.ssh/` |
+| 5.2 | Write SSH config routing `github.com` to deploy key | `chmod 600` on config |
+| 5.3 | Print public key for copy-paste into GitHub | key displayed |
+| 5.4 | **[WORKSTATION]** Register public key in GitHub as read-only deploy key | Key appears in repo settings |
+| 5.5 | Test GitHub auth from server | Success message |
+
+---
+
+### 5.1 — Generate the Deploy Key Pair
+
+```bash
+ssh-keygen \
+  -t ed25519 \
+  -C "athyper-staging-deploy-key" \
+  -f /home/athyper/.ssh/github_deploy_key \
+  -N ""
+```
+
+| Flag | Meaning |
+|---|---|
+| `-t ed25519` | Ed25519 algorithm — smaller key, faster, more secure than RSA-4096 |
+| `-C "athyper-staging-deploy-key"` | Comment embedded in the public key — identifies this key in GitHub's deploy key list |
+| `-f /home/athyper/.ssh/github_deploy_key` | Key saved with a specific name, not the default `id_ed25519` — avoids colliding with any personal key |
+| `-N ""` | Empty passphrase — required because this key is used by automated scripts that cannot type a passphrase |
+
+**Verify both files were created:**
+```bash
+ls -la /home/athyper/.ssh/github_deploy_key*
+# -rw------- github_deploy_key       (private — 600)
+# -rw-r--r-- github_deploy_key.pub   (public  — 644)
+```
+
+---
+
+### 5.2 — Write SSH Config to Route github.com via Deploy Key
+
+Without this config file, `git clone git@github.com:...` uses whatever key SSH finds first (usually `~/.ssh/id_ed25519`). The config explicitly routes all `github.com` connections through the deploy key.
+
+```bash
+cat > /home/athyper/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile /home/athyper/.ssh/github_deploy_key
+    IdentitiesOnly yes
+EOF
+chmod 600 /home/athyper/.ssh/config
+```
+
+`IdentitiesOnly yes` tells SSH to use only the key listed and not offer any other keys from the agent or default paths. Without this, SSH may try multiple keys and confuse the handshake.
+
+---
+
+### 5.3 — Print the Public Key
+
+```bash
+cat /home/athyper/.ssh/github_deploy_key.pub
+```
+
+Output looks like:
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... athyper-staging-deploy-key
+```
+
+Copy this entire line — you need it for step 5.4. The key is one line; if it wraps in the terminal, copy all of it.
+
+---
+
+### 5.4 — [WORKSTATION] Register Deploy Key on GitHub
+
+Do this in your browser, not the server terminal.
+
+1. Go to: `https://github.com/atlasdigitaltech/athyper/settings/keys`
+2. Click **Add deploy key**
+3. **Title:** `athyper-staging-deploy-key`
+4. **Key:** paste the full `ssh-ed25519 AAAA...` line from step 5.3
+5. **Allow write access:** leave **unchecked** — read-only is sufficient for `git clone` and `git pull`
+6. Click **Add key**
+
+The key appears in the deploy keys list. Return to the server terminal.
+
+---
+
+### 5.5 — Test GitHub Authentication from the Server
+
+```bash
+ssh -T git@github.com
+```
+
+**Expected output:**
+```
+Hi atlasdigitaltech/athyper! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+This confirms:
+- The deploy key is registered and matches
+- The SSH config (step 5.2) is routing the connection correctly
+- The `athyper` account can pull the repo in Phase 6
+
+**If you get `Permission denied (publickey)`:**
+```bash
+# Test with verbose output to see which keys are being tried
+ssh -vT git@github.com 2>&1 | grep -E "Trying|Offering|identity|Authenticated"
+# Should show: Offering public key: /home/athyper/.ssh/github_deploy_key
+
+# If the deploy key is not being offered, check the SSH config
+cat /home/athyper/.ssh/config
+# IdentityFile must point to /home/athyper/.ssh/github_deploy_key
+# IdentitiesOnly yes must be present
+
+# If the key is offered but rejected, the public key in GitHub may not match
+# Re-print and re-paste:
+cat /home/athyper/.ssh/github_deploy_key.pub
+```
 
 ---
 
 ## Phase 6: Repository Clone
 
 > **▶ EXECUTE ON:** `SERVER` &nbsp;&nbsp; **AS:** `athyper`
-> Switch: `ssh <devname>@62.169.31.9` → `sudo -iu athyper`
+> Still in the `athyper` shell from Phase 5. If you left: `ssh nchandravel-atlas@62.169.31.9` → `sudo -iu athyper`
+
+This phase clones the codebase into `/opt/products/athyper` — the git-managed source root. After cloning, five verification checks confirm the repo was deployed in the correct state before any image build happens.
 
 | Step | Action | Verify |
 |---|---|---|
-| 6.1 | `git clone --branch feature/finance-core git@github.com:atlasdigitaltech/athyper.git /opt/products/athyper` | |
-| 6.2 | `ls /opt/products/athyper/stack/compose/compose.yml` | Must exist |
-| 6.3 | Verify PG-01: `grep "ATHYPER_CONFIG_ROOT:-" /opt/products/athyper/stack/scripts/lib/compose.sh` | Must match |
-| 6.4 | Verify PG-06: `grep "ATHYPER_SECRETS_ROOT" /opt/products/athyper/stack/compose/gateway/athyper-gateway.yml` | Must match |
-| 6.5 | Verify no direct docker.sock: `grep "docker.sock" /opt/products/athyper/stack/compose/gateway/athyper-gateway.yml` | Must return nothing |
-| 6.6 | Record SHA: `git -C /opt/products/athyper rev-parse HEAD` → `~/deploy-record.txt (600)` | |
-| 6.7 | Tag: `git -C /opt/products/athyper tag staging-deploy-$(date +%Y%m%d-%H%M)-<sha7>` | |
-| 6.8 | Patch Dockerfile.prod pnpm pin (until upstream PR merged): `sed -i 's/pnpm@latest/pnpm@10.33.0/' server/Dockerfile.prod` | `grep "pnpm@10.33.0" server/Dockerfile.prod` |
+| 6.1 | Clone the repo to the product root | directory populated |
+| 6.2 | Confirm key compose file exists | `ls` shows file |
+| 6.3 | Pre-gate PG-01: compose.sh uses `ATHYPER_CONFIG_ROOT:-` default | grep returns line |
+| 6.4 | Pre-gate PG-06: gateway compose uses `ATHYPER_SECRETS_ROOT` variable | grep returns line |
+| 6.5 | Security gate: gateway compose has no direct `docker.sock` mount | grep returns nothing |
+| 6.6 | Record deploy SHA | file written |
+| 6.7 | Tag the deployed commit | tag created |
+| 6.8 | Patch pnpm version pin in Dockerfile.prod | grep confirms pin |
+
+---
+
+### 6.1 — Clone the Repository
+
+```bash
+git clone \
+  --branch feature/finance-core \
+  git@github.com:atlasdigitaltech/athyper.git \
+  /opt/products/athyper
+```
+
+This clones the `feature/finance-core` branch into the product root created in Phase 3. The directory is already owned by `athyper` (Phase 3) — no permission issues.
+
+**Verify the clone succeeded:**
+```bash
+ls /opt/products/athyper/stack/compose/compose.yml
+# Must output the file path — not "No such file or directory"
+```
+
+**If clone fails with `Permission denied (publickey)`:** the deploy key is not set up correctly — return to Phase 5.
+
+---
+
+### 6.2 — Confirm Key Compose File Exists
+
+A quick sanity check that the expected directory structure is present. If this file is missing, the wrong branch was cloned or the repo is incomplete.
+
+```bash
+ls /opt/products/athyper/stack/compose/compose.yml
+```
+
+Expected: the path is printed. Any error here means stop — the clone is wrong.
+
+---
+
+### 6.3 — Pre-Gate PG-01: Config Root Variable
+
+Confirms that `compose.sh` uses the correct environment variable name with a `:-` default syntax. This is a pre-gate condition that must be true before the stack can resolve config paths.
+
+```bash
+grep "ATHYPER_CONFIG_ROOT:-" /opt/products/athyper/stack/scripts/lib/compose.sh
+```
+
+Expected: a line containing `ATHYPER_CONFIG_ROOT:-` is returned. If nothing is returned — the script is using a different variable name and the config deployment in Phase 7 will fail silently.
+
+---
+
+### 6.4 — Pre-Gate PG-06: Secrets Root in Gateway Compose
+
+Confirms the gateway compose file references `ATHYPER_SECRETS_ROOT` for its TLS cert mounts. If it has a hardcoded path, the cert bind mounts will be wrong.
+
+```bash
+grep "ATHYPER_SECRETS_ROOT" \
+  /opt/products/athyper/stack/compose/gateway/athyper-gateway.yml
+```
+
+Expected: one or more matching lines returned.
+
+---
+
+### 6.5 — Security Gate: No Direct docker.sock Mount on Gateway
+
+The gateway (Traefik) must not mount the Docker socket directly. It must use the socket proxy service instead. A direct mount gives Traefik full Docker API access — if Traefik is compromised, the attacker controls every container.
+
+```bash
+grep "docker.sock" \
+  /opt/products/athyper/stack/compose/gateway/athyper-gateway.yml
+```
+
+**Expected: no output.** If this returns anything, stop — the socket proxy wiring is not in place and this would be a security regression from the intended architecture (S8).
+
+---
+
+### 6.6 — Record the Deployed Commit SHA
+
+Write the exact git SHA to a file so there is an unambiguous record of what is running on this server. If something breaks and a rollback is needed, this file is the reference point.
+
+```bash
+git -C /opt/products/athyper rev-parse HEAD > ~/deploy-record.txt
+chmod 600 ~/deploy-record.txt
+
+cat ~/deploy-record.txt
+# e.g.: 82cc4d2f3a1b...  (full 40-char SHA)
+```
+
+---
+
+### 6.7 — Tag the Deployed Commit
+
+Create a lightweight git tag on the deployed commit so it can be found easily in git history and used for rollback.
+
+```bash
+# Replace <sha7> with the first 7 characters from deploy-record.txt
+SHA7=$(git -C /opt/products/athyper rev-parse --short HEAD)
+git -C /opt/products/athyper tag "staging-deploy-$(date +%Y%m%d-%H%M)-${SHA7}"
+
+# Confirm the tag was created
+git -C /opt/products/athyper tag --list "staging-deploy-*" | tail -3
+```
+
+To roll back to this exact state later: `git -C /opt/products/athyper checkout <tag-name>`.
+
+---
+
+### 6.8 — Patch pnpm Version Pin in Dockerfile.prod
+
+The `server/Dockerfile.prod` references `pnpm@latest` which resolves to whatever pnpm version is current at build time. The monorepo's `pnpm-lock.yaml` was generated with pnpm `10.33.0`. A version mismatch causes `pnpm install --frozen-lockfile` to fail during image build (Phase 11) because the lockfile format differs.
+
+This is a temporary patch until the upstream PR is merged and the repo is updated.
+
+```bash
+sed -i 's/pnpm@latest/pnpm@10.33.0/' \
+  /opt/products/athyper/server/Dockerfile.prod
+
+# Confirm the substitution
+grep "pnpm@10.33.0" /opt/products/athyper/server/Dockerfile.prod
+# Must return the patched line
+```
+
+> Track this as Phase 23 tech-debt (23.1): open a PR to pin `pnpm@10.33.0` in the repo so this manual patch is not needed on future deploys.
 
 ---
 
