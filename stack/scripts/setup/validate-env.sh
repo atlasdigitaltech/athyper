@@ -42,9 +42,10 @@ while IFS='=' read -r key value; do
   [[ "$key" =~ ^[[:space:]]*# ]] && continue
   [[ -z "$key" ]] && continue
   key=$(echo "$key" | xargs)
+  [[ -z "$key" ]] && continue
   value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
   ENV_MAP["$key"]="$value"
-done < "$ENV_FILE"
+done < <(tr -d '\r' < "$ENV_FILE")
 
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-}"
 
@@ -185,9 +186,9 @@ else
       -e "s/__INFISICAL_HASH__/$INF_HASH/g" \
       -e "s/__ADMIN_HASH__/$ADM_HASH/g" \
       "$ACL_TPL" > "$ACL_OUT"
-  # 644: container processes (UID 999) need +r to read this file via the :ro bind
-  # mount. The file contains SHA-256 hashes (not raw passwords) and is root-owned
-  # after setup-config.sh runs, so world-readable is acceptable.
+  # 644: the Redis container (svc-redis / UID 9100) reads this file via the :ro bind
+  # mount. The file contains SHA-256 hashes only (not raw passwords). setup-config.sh
+  # tightens ownership to athyper:svc-redis 640 on the server after this script runs.
   chmod 644 "$ACL_OUT"
   # Verify no tokens remain — catches silent sha256sum failures or missing variables.
   if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT"; then

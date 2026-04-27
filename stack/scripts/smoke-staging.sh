@@ -62,9 +62,10 @@ while IFS='=' read -r key value; do
   [[ "$key" =~ ^[[:space:]]*# ]] && continue
   [[ -z "$key" ]] && continue
   key="$(echo "$key" | xargs)"
+  [[ -z "$key" ]] && continue
   value="$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')"
   ENV_MAP["$key"]="${value:-}"
-done < "$ENV_FILE"
+done < <(tr -d '\r' < "$ENV_FILE")
 
 PROJECT="${ENV_MAP[COMPOSE_PROJECT_NAME]:-athyper}"
 API_HOST="${ENV_MAP[APPS_ATHYPER_API_HOST]:-}"

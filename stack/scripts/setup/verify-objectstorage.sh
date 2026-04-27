@@ -43,9 +43,10 @@ while IFS='=' read -r key value; do
   [[ "$key" =~ ^[[:space:]]*# ]] && continue
   [[ -z "$key" ]] && continue
   key=$(echo "$key" | xargs)
+  [[ -z "$key" ]] && continue
   value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
   ENV_MAP["$key"]="$value"
-done < "$ENV_FILE"
+done < <(tr -d '\r' < "$ENV_FILE")
 
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-local}"
 

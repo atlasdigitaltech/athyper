@@ -105,12 +105,13 @@ init_compose_env() {
     [[ "$key" =~ ^[[:space:]]*# ]] && continue
     [[ -z "$key" ]] && continue
     key=$(echo "$key" | xargs)
+    [[ -z "$key" ]] && continue
     value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
     case "$key" in
       ENVIRONMENT)   ENVIRONMENT="$value" ;;
       STACK_PROFILE) STACK_PROFILE="$value" ;;
     esac
-  done < "$ENV_FILE"
+  done < <(tr -d '\r' < "$ENV_FILE")
 }
 
 # ---------------------------------------------------------------------------

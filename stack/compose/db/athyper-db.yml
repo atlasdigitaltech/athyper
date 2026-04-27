@@ -26,9 +26,9 @@ services:
       POSTGRES_DB: athyper_neon
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ${ATHYPER_CONFIG}/db/local/postgresql.conf:/etc/postgresql/postgresql.conf:ro
-      - ${ATHYPER_CONFIG}/db/local/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
-      - ${ATHYPER_CONFIG}/db/local/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ${ATHYPER_CONFIG}/db/${ENVIRONMENT:-local}/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ${ATHYPER_CONFIG}/db/${ENVIRONMENT:-local}/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ${ATHYPER_CONFIG}/db/${ENVIRONMENT:-local}/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
       - athyper-db-data:/var/lib/postgresql/data
     command:
       - postgres

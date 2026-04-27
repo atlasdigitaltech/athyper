@@ -33,9 +33,10 @@ while IFS='=' read -r key value; do
   [[ "$key" =~ ^[[:space:]]*# ]] && continue
   [[ -z "$key" ]] && continue
   key=$(echo "$key" | xargs)
+  [[ -z "$key" ]] && continue
   value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
   [[ "$key" == "ENVIRONMENT" ]] && ENVIRONMENT="$value"
-done < "$ENV_FILE"
+done < <(tr -d '\r' < "$ENV_FILE")
 
 if [[ -z "$ENVIRONMENT" ]]; then
   echo "ERROR: ENVIRONMENT not found in $ENV_FILE"

@@ -109,19 +109,20 @@ FILE_MAP["$GATEWAY_TLS_SRC"]="gateway/dynamic/athyper.tls.yml"
 FILE_MAP["$WORKBENCH_SRC"]="gateway/dynamic/athyper.workbench.yml"
 FILE_MAP["gateway/dynamic/athyper.api.yml"]="gateway/dynamic/athyper.api.yml"
 
-# db — repo-managed configs (safe to auto-update)
-# db/local/* — always deployed: postgres mounts these paths on all envs (hardcoded in compose)
-FILE_MAP["db/local/postgresql.conf"]="db/local/postgresql.conf"
-FILE_MAP["db/local/pg_hba.conf"]="db/local/pg_hba.conf"
-FILE_MAP["db/local/init-databases.sh"]="db/local/init-databases.sh"
-FILE_MAP["db/local/dbpool/pgbouncer-apps.ini"]="db/local/dbpool/pgbouncer-apps.ini"
-FILE_MAP["db/local/dbpool/pgbouncer-auth.ini"]="db/local/dbpool/pgbouncer-auth.ini"
-FILE_MAP["db/local/dbpool/pgbouncer-session.ini"]="db/local/dbpool/pgbouncer-session.ini"
-FILE_MAP["db/local/dbpool/userlist.txt"]="db/local/dbpool/userlist.txt"
+# db — env-specific postgres configs (compose mounts db/${ENVIRONMENT:-local}/* so each
+# environment gets its own tuned postgresql.conf, pg_hba.conf, and init-databases.sh)
+FILE_MAP["db/${ENV_NAME}/postgresql.conf"]="db/${ENV_NAME}/postgresql.conf"
+FILE_MAP["db/${ENV_NAME}/pg_hba.conf"]="db/${ENV_NAME}/pg_hba.conf"
+FILE_MAP["db/${ENV_NAME}/init-databases.sh"]="db/${ENV_NAME}/init-databases.sh"
 
-# db/{env}/dbpool — staging/production PgBouncer use env-specific ini files
-# (DBPOOL_APPS_CONFIG / DBPOOL_SESSION_CONFIG in .env point to these paths)
-if [[ "$ENV_NAME" == "staging" || "$ENV_NAME" == "production" ]]; then
+# db pgbouncer configs — local uses flat dbpool/, staging/production use env-specific paths
+# (DBPOOL_APPS_CONFIG / DBPOOL_SESSION_CONFIG in .env point to the correct subpath)
+if [[ "$ENV_NAME" == "local" ]]; then
+  FILE_MAP["db/local/dbpool/pgbouncer-apps.ini"]="db/local/dbpool/pgbouncer-apps.ini"
+  FILE_MAP["db/local/dbpool/pgbouncer-auth.ini"]="db/local/dbpool/pgbouncer-auth.ini"
+  FILE_MAP["db/local/dbpool/pgbouncer-session.ini"]="db/local/dbpool/pgbouncer-session.ini"
+  FILE_MAP["db/local/dbpool/userlist.txt"]="db/local/dbpool/userlist.txt"
+else
   FILE_MAP["db/${ENV_NAME}/dbpool/apps/pgbouncer-apps.ini"]="db/${ENV_NAME}/dbpool/apps/pgbouncer-apps.ini"
   FILE_MAP["db/${ENV_NAME}/dbpool/session/pgbouncer-session.ini"]="db/${ENV_NAME}/dbpool/session/pgbouncer-session.ini"
 fi
