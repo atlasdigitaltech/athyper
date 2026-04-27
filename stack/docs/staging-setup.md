@@ -25,7 +25,7 @@
 3. [Part B — Server Installation](#part-b--server-installation)
    - Phase 0 — Server Pre-flight
    - Phase 1 — Base Packages and Docker
-   - Phase 2 — Groups, Service Identities, Users
+   - Phase 2 — Groups, Service Identities, Service Account
    - Phase 3 — Two-Root Filesystem Layout
    - Phase 4 — System Hardening
    - Phase 5 — GitHub Deploy Key
@@ -48,8 +48,10 @@
    - Phase 22 — systemd Service
    - Phase 23 — Backup Setup
    - Phase 24 — Secrets Mirror and Cleanup
-   - Phase 25 — Reboot Drill
-   - Phase 26 — Final SSH Hardening *(last step — do not skip)*
+   - Phase 25 — Create Human Operator Accounts *(post-installation)*
+   - Phase 26 — Install SSH Public Keys for Human Accounts
+   - Phase 27 — Reboot Drill
+   - Phase 28 — Final SSH Hardening *(last step — do not skip)*
 4. [Part C — Post-Deploy Verification](#part-c--post-deploy-verification)
 5. [Part D — Day-2 Operations](#part-d--day-2-operations)
 6. [Part E — Go/No-Go Checklist](#part-e--gono-go-checklist)
@@ -335,12 +337,12 @@ fail2ban-client status sshd
 passwd root
 ```
 
-Save the new root password in the vault. Root SSH will be disabled in Phase 26; this
+Save the new root password in the vault. Root SSH will be disabled in Phase 28; this
 password is then the only root credential (used only via VNC console break-glass).
 
 ---
 
-## Phase 2 — Create Groups, Service Identities, and Users
+## Phase 2 — Create Groups, Service Identities, and Service Account
 
 ---
 
@@ -434,70 +436,6 @@ usermod -aG docker,athyper-config,athyper-data athyper
 id athyper
 passwd -S athyper   # must show 'L'
 groups athyper      # must include docker, athyper-config, athyper-data
-```
-
-## 2.4 Create Human Operator Accounts
-
-**EXECUTE ON:** SERVER  
-**AS:** root
-
-```bash
-# Primary ops account — full sudo + docker + config read access
-adduser --gecos "Chandravel Natarajan" nchandravel-atlas
-usermod -aG sudo,docker,athyper-config nchandravel-atlas
-id nchandravel-atlas
-
-# Optional generic ops account
-adduser --gecos "ops admin" ops-admin
-usermod -aG sudo,docker,athyper-config ops-admin
-id ops-admin
-
-# Developer read-only inspector (config read only — no sudo, no docker)
-adduser --gecos "Manoj Rajendran" rmanoj-atlas
-usermod -aG athyper-config rmanoj-atlas
-id rmanoj-atlas
-```
-
-**Role matrix:**
-
-```text
-ops-admin role:       sudo + docker + athyper-config
-dev-inspector role:   athyper-config only
-No human user gets svc-* groups.
-No human user gets both sudo and docker unless explicitly approved.
-```
-
-## 2.5 Install SSH Public Keys for Human Accounts
-
-**EXECUTE ON:** SERVER  
-**AS:** root
-
-```bash
-USERNAME="nchandravel-atlas"
-
-mkdir -p "/home/$USERNAME/.ssh"
-chmod 0700 "/home/$USERNAME/.ssh"
-touch "/home/$USERNAME/.ssh/authorized_keys"
-chmod 0600 "/home/$USERNAME/.ssh/authorized_keys"
-
-# Paste the real ed25519 public key:
-echo "ssh-ed25519 AAAA... chandravel.natarajan@atlasdigitaltech.com" >> "/home/$USERNAME/.ssh/authorized_keys"
-
-chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.ssh"
-
-# Verify
-ls -la "/home/$USERNAME/.ssh"
-cat "/home/$USERNAME/.ssh/authorized_keys"
-```
-
-Repeat for each ops account, then verify all:
-
-```bash
-for u in nchandravel-atlas ops-admin rmanoj-atlas; do
-  echo "=== $u ==="
-  id "$u" 2>/dev/null || true
-  ls -la "/home/$u/.ssh/" 2>/dev/null || true
-done
 ```
 
 ---
@@ -646,16 +584,16 @@ systemctl restart systemd-journald
 journalctl --disk-usage
 ```
 
-## 4.3 SSH Hardening — DEFERRED TO PHASE 26
+## 4.3 SSH Hardening — DEFERRED TO PHASE 28
 
 > **⚠ Do NOT harden SSH here.**
 >
 > Locking out root login and disabling password auth at Phase 4 means any misconfiguration
-> during Phases 5–25 leaves the server unreachable by SSH with no recovery path except VNC.
+> during Phases 5–27 leaves the server unreachable by SSH with no recovery path except VNC.
 >
 > SSH hardening is the **last step** before declaring the deployment complete. It is performed
-> in **Phase 26**, after the full stack is up, the reboot drill passes, and key-based login for
-> the ops account is confirmed in a live session.
+> in **Phase 28**, after human accounts are created (Phase 25–26), the full stack is up, the
+> reboot drill passes, and key-based login for the ops account is confirmed in a live session.
 >
 > Proceed to Phase 4.4.
 
@@ -1684,7 +1622,80 @@ ls ~/secrets-staging.txt || true   # must show: No such file or directory
 
 ---
 
-## Phase 25 — Reboot Drill
+## Phase 25 — Create Human Operator Accounts
+
+**EXECUTE ON:** SERVER  
+**AS:** root
+
+> Human accounts are created here — after the stack is running and verified — so that
+> account creation issues cannot block the core installation path.
+
+```bash
+# Primary ops account — full sudo + docker + config read access
+adduser --gecos "Chandravel Natarajan" nchandravel-atlas
+usermod -aG sudo,docker,athyper-config nchandravel-atlas
+id nchandravel-atlas
+
+# Optional generic ops account
+adduser --gecos "ops admin" ops-admin
+usermod -aG sudo,docker,athyper-config ops-admin
+id ops-admin
+
+# Developer read-only inspector (config read only — no sudo, no docker)
+adduser --gecos "Manoj Rajendran" rmanoj-atlas
+usermod -aG athyper-config rmanoj-atlas
+id rmanoj-atlas
+```
+
+**Role matrix:**
+
+```text
+ops-admin role:       sudo + docker + athyper-config
+dev-inspector role:   athyper-config only
+No human user gets svc-* groups.
+No human user gets both sudo and docker unless explicitly approved.
+```
+
+---
+
+## Phase 26 — Install SSH Public Keys for Human Accounts
+
+**EXECUTE ON:** SERVER  
+**AS:** root
+
+```bash
+USERNAME="nchandravel-atlas"
+
+mkdir -p "/home/$USERNAME/.ssh"
+chmod 0700 "/home/$USERNAME/.ssh"
+touch "/home/$USERNAME/.ssh/authorized_keys"
+chmod 0600 "/home/$USERNAME/.ssh/authorized_keys"
+
+# Paste the real ed25519 public key:
+echo "ssh-ed25519 AAAA... chandravel.natarajan@atlasdigitaltech.com" >> "/home/$USERNAME/.ssh/authorized_keys"
+
+chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.ssh"
+
+# Verify
+ls -la "/home/$USERNAME/.ssh"
+cat "/home/$USERNAME/.ssh/authorized_keys"
+```
+
+Repeat for each ops account, then verify all:
+
+```bash
+for u in nchandravel-atlas ops-admin rmanoj-atlas; do
+  echo "=== $u ==="
+  id "$u" 2>/dev/null || true
+  ls -la "/home/$u/.ssh/" 2>/dev/null || true
+done
+```
+
+SSH key login must be verified from a workstation terminal before proceeding to the reboot drill.
+
+---
+
+## Phase 27 — Reboot Drill
 
 **EXECUTE ON:** SERVER  
 **AS:** root or sudo-enabled ops user
@@ -1711,16 +1722,16 @@ set +a
 bash /opt/products/athyper/stack/scripts/smoke-staging.sh
 ```
 
-All core containers must be `Up` and smoke test must pass. Only then proceed to Phase 26.
+All core containers must be `Up` and smoke test must pass. Only then proceed to Phase 28.
 
 ---
 
-## Phase 26 — Final SSH Hardening
+## Phase 28 — Final SSH Hardening
 
 **EXECUTE ON:** SERVER  
 **AS:** root
 
-**Prerequisites:** Phase 25 (Reboot Drill) complete. All containers `Up`. Smoke test passing.  
+**Prerequisites:** Phase 27 (Reboot Drill) complete. All containers `Up`. Smoke test passing.  
 SSH key login for the ops account is confirmed working in your **current terminal session**.
 
 > **Keep this terminal open the entire time.**  
@@ -2027,7 +2038,7 @@ bash stack/scripts/stack-profile/up.sh core
 
 ## D.8 VNC Recovery
 
-Use VNC console only for break-glass. Root SSH is disabled after Phase 26.
+Use VNC console only for break-glass. Root SSH is disabled after Phase 28.
 
 ```text
 VNC: provider console
@@ -2076,10 +2087,10 @@ Do not declare staging ready until every item below is checked.
 [ ] Memory limits audit (C.6) prints "OK — all services have memory limits".
 [ ] Manual backup test (--no-upload) produced dumps with no errors.
 [ ] At least one full backup has been confirmed in the offsite bucket.
-[ ] Reboot drill (Phase 25) passed — stack auto-recovered within 10 minutes.
+[ ] Reboot drill (Phase 27) passed — stack auto-recovered within 10 minutes.
 ```
 
-**SSH hardening — Phase 26 (last step before go-live)**
+**SSH hardening — Phase 28 (last step before go-live)**
 
 ```text
 [ ] root SSH disabled — ssh root@<SERVER> returns Permission denied.
@@ -2090,5 +2101,5 @@ Do not declare staging ready until every item below is checked.
 ```
 
 > The five SSH hardening items are gated on a fully running, reboot-verified stack.
-> Execute Phase 26 only after the reboot drill passes. Keep an active SSH session open
+> Execute Phase 28 only after the reboot drill passes. Keep an active SSH session open
 > while applying the config — do not close it until Step 2 key-login verification succeeds.
