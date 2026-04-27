@@ -98,7 +98,7 @@ function buildTier1HeaderModel(
       },
       {
         id:        "cancel",
-        label:     "Cancel",
+        label:     "Exit",
         placement: "secondary",
         order:     3,
       },

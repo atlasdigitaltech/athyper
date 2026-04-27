@@ -35,6 +35,8 @@ export interface FlowWizardProps {
   onCancel?: () => void;
   submitting?: boolean;
   entityLabel?: string;
+  /** Entity code (e.g. "purchase_invoice") — makes the type chip a link to the list page. */
+  entityCode?: string;
   /** User-context values seeded into derived fields (e.g. default_company_code). */
   userCtx?: Record<string, unknown>;
   /** Pre-populated field values (e.g. from a source document like an AP invoice). */
@@ -50,6 +52,7 @@ export function FlowWizard({
   onCancel,
   submitting = false,
   entityLabel,
+  entityCode,
   userCtx,
   initialValues,
   headerAction,
@@ -80,6 +83,7 @@ export function FlowWizard({
     onCancel,
     submitting,
     entityTypeLabel: entityLabel,
+    entityCode,
   });
 
   async function handleSubmit() {
@@ -182,7 +186,7 @@ export function FlowWizard({
                     disabled={submitting}
                     className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                   >
-                    Cancel
+                    Exit
                   </button>
                 )}
 

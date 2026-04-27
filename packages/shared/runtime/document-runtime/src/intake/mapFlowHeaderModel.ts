@@ -3,7 +3,7 @@ import type { EntityHeaderModel } from "@athyper/entity-runtime/header";
 
 export interface MapFlowHeaderOptions {
   onCancel?: () => void;
-  /** When true the Cancel action is rendered as disabled. */
+  /** When true the Exit action is rendered as disabled. */
   submitting?: boolean;
   /**
    * Override the chip label. If omitted, derived from bundle.label by stripping
@@ -11,6 +11,11 @@ export interface MapFlowHeaderOptions {
    * Always uppercased before rendering.
    */
   entityTypeLabel?: string;
+  /**
+   * Entity code (e.g. "purchase_invoice"). When provided, the type chip becomes
+   * a link to the entity list page at /app/\{entityCode\}.
+   */
+  entityCode?: string;
 }
 
 const ACTION_VERB_RE = /^(create|new|add|edit|update)\s+/i;
@@ -36,6 +41,7 @@ export function mapFlowHeaderModel(
   return {
     identity: {
       typeLabel,
+      typeHref: options?.entityCode ? `/app/${options.entityCode}` : undefined,
       number: "New",
       identifierAction: "none",
       status: { label: "Draft", intent: "neutral" },
@@ -49,7 +55,7 @@ export function mapFlowHeaderModel(
     actions: options?.onCancel
       ? [{
           id: "cancel",
-          label: "Cancel",
+          label: "Exit",
           placement: "secondary" as const,
           order: 99,
           disabled: options.submitting,

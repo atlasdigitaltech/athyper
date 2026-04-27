@@ -100,7 +100,7 @@ function GenericMetaEditInner({
       return;
     }
     if (action === "cancel") {
-      guardNavigate(() => router.push(`/app/${entityCode}/${recordId}`));
+      guardNavigate(() => router.push(`/app/${entityCode}`));
       return;
     }
     if (action === "save") {

@@ -195,7 +195,8 @@ export default function AppEntityNewRoute({
         userCtx={userCtx}
         initialValues={initialValues}
         onSubmit={handleSubmit}
-        onCancel={() => router.back()}
+        entityCode={entity}
+        onCancel={() => router.push(`/app/${entity}`)}
         submitting={createMutation.isPending}
         headerAction={flowSwitcher}
       />
