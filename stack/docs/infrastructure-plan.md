@@ -1739,21 +1739,144 @@ cat /opt/stack/athyper/MANIFEST
 | Step | Action |
 |---|---|
 | 8.1 | `unset HISTFILE && set +o history` |
-| 8.2 | Generate all secrets to `~/secrets-staging.txt (600)` via `openssl rand` |
+| 8.2 | Generate all secrets to `~/secrets-staging.txt` (600) via `openssl rand` — see generation commands below |
 | 8.3 | `nano /opt/stack/athyper/secrets/.env` |
-| 8.4 | Confirm key values: |
-| | `ENVIRONMENT=staging` |
-| | `COMPOSE_PROJECT_NAME=athyper` |
-| | `ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config` |
-| | `ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets` |
-| | `ATHYPER_DATA_ROOT=/opt/stack/athyper/data` |
-| | `ATHYPER_LOG_ROOT=/opt/stack/athyper/logs` |
-| | `ATHYPER_BACKUP_ROOT=/opt/stack/athyper/backups` |
-| | `DB_HOST=db` (not external hostname) |
-| | `DBPOOL_APPS_CONFIG=db/local/dbpool/pgbouncer-apps.ini` |
-| | `DBPOOL_SESSION_CONFIG=db/local/dbpool/pgbouncer-session.ini` |
-| | `ACME_EMAIL=ops@atlasdigitaltech.com` |
+| 8.4 | Populate all values — see sections below for format rules and gotchas |
 | 8.5 | `set -o history && export HISTFILE=~/.bash_history` |
+| 8.6 | Confirm key structural values are correct (see checklist below) |
+
+---
+
+### 8.A — Secret Generation Commands
+
+Run these **before** opening `.env`. Output goes to `~/secrets-staging.txt` — keep it until Infisical import (Phase 21) then shred it.
+
+```bash
+unset HISTFILE && set +o history
+
+# Random secrets
+echo "DB_PASSWORD=$(openssl rand -base64 32)"
+echo "DBPOOL_PASSWORD=$(openssl rand -base64 32)"
+echo "REDIS_PASSWORD=$(openssl rand -base64 32)"
+echo "MINIO_ROOT_PASSWORD=$(openssl rand -base64 32)"
+echo "KC_DB_PASSWORD=$(openssl rand -base64 32)"
+echo "GLITCHTIP_DB_PASSWORD=$(openssl rand -base64 32)"
+echo "INFISICAL_DB_PASSWORD=$(openssl rand -base64 32)"
+echo "ANALYTICS_DB_PASSWORD=$(openssl rand -base64 32)"
+echo "SESSION_SECRET=$(openssl rand -hex 32)"
+echo "CSRF_SECRET=$(openssl rand -hex 32)"
+echo "JOBS_SECRET=$(openssl rand -hex 32)"
+```
+
+Save output to `~/secrets-staging.txt`:
+```bash
+chmod 600 ~/secrets-staging.txt
+```
+
+---
+
+### 8.B — GATEWAY_DASHBOARD_HTPASSWD (Critical — Read Carefully)
+
+> ⚠️ **This variable caused a deployment failure during staging bringup. The root cause and correct format are documented here in full.**
+
+#### Root cause of the failure
+
+The Traefik dashboard uses HTTP Basic Auth via the `basicAuth` middleware. This middleware expects credentials in **Apache htpasswd format**:
+
+```
+username:bcrypt_hash
+```
+
+The `.env` entry was initially set to **just the bcrypt hash** without the `username:` prefix:
+
+```bash
+# ❌ BROKEN — hash only, no username prefix
+GATEWAY_DASHBOARD_HTPASSWD=$$2y$$05$$d81hAtQQ8Il.Dd9lRiPQfuaKsk3ZCrsh9YJEINQnzdSHsKexqC1ce
+```
+
+Traefik received this value, tried to parse it as `user:hash`, found no `:` separator, and rejected every login attempt silently. The dashboard loaded but no credentials were accepted.
+
+#### The fix
+
+Prepend `username:` to the bcrypt hash:
+
+```bash
+# ✅ CORRECT — username:hash format
+GATEWAY_DASHBOARD_HTPASSWD=admin:$$2y$$05$$d81hAtQQ8Il.Dd9lRiPQfuaKsk3ZCrsh9YJEINQnzdSHsKexqC1ce
+```
+
+#### Why `$$` instead of `$`
+
+Docker Compose performs variable interpolation when it reads the `.env` file and substitutes values into the compose YAML. A bare `$` in a value is treated as the start of a `${VARIABLE}` reference. A bcrypt hash contains multiple literal `$` signs (e.g. `$2y$05$...`), so each must be escaped as `$$` so Compose passes a literal `$` to Traefik.
+
+| In `.env` file | What Traefik receives |
+|---|---|
+| `$$2y$$05$$abc` | `$2y$05$abc` ✅ |
+| `$2y$05$abc` | Compose interpolation error or empty string ❌ |
+
+#### How to generate a new htpasswd value
+
+On any machine with `htpasswd` (Apache utils) or `docker`:
+
+```bash
+# Option A — htpasswd utility (install: apt install apache2-utils)
+htpasswd -nbB admin "your-secure-password"
+# Output: admin:$2y$05$...
+
+# Option B — docker (no install needed)
+docker run --rm httpd:alpine htpasswd -nbB admin "your-secure-password"
+# Output: admin:$2y$05$...
+```
+
+The output is already in `username:hash` format. Before putting it in `.env`, **escape every `$` as `$$`**:
+
+```bash
+# One-liner: generate and escape in a single step
+docker run --rm httpd:alpine htpasswd -nbB admin "your-secure-password" \
+  | sed 's/\$/\$\$/g'
+# Output ready to paste directly into .env
+```
+
+#### Current staging value (2026-04-27)
+
+```
+GATEWAY_DASHBOARD_HTPASSWD=admin:$$2y$$05$$d81hAtQQ8Il.Dd9lRiPQfuaKsk3ZCrsh9YJEINQnzdSHsKexqC1ce
+```
+
+- **Username:** `admin`
+- **Password:** stored in `~/secrets-staging.txt` and Infisical
+- **Generated:** 2026-04-27 during staging bringup
+
+#### Verification after stack start
+
+```bash
+# Traefik dashboard should prompt for credentials
+curl -u admin:"your-password" https://traefik-stg.athyper.com/dashboard/
+# HTTP 200 = working
+# HTTP 401 = wrong password or wrong format in .env
+# No prompt at all = basicAuth middleware not applied
+```
+
+---
+
+### 8.C — Structural Values Checklist
+
+Confirm these values are exactly correct in `.env` — wrong values here cause silent failures that are hard to trace:
+
+| Variable | Correct value | Common mistake |
+|---|---|---|
+| `ENVIRONMENT` | `staging` | `production` left from template |
+| `COMPOSE_PROJECT_NAME` | `athyper` | Affects all container names — do not change mid-run |
+| `ATHYPER_CONFIG_ROOT` | `/opt/stack/athyper/config` | Relative path — bind mounts silently fail |
+| `ATHYPER_SECRETS_ROOT` | `/opt/stack/athyper/secrets` | Same |
+| `ATHYPER_DATA_ROOT` | `/opt/stack/athyper/data` | Same |
+| `ATHYPER_LOG_ROOT` | `/opt/stack/athyper/logs` | Same |
+| `ATHYPER_BACKUP_ROOT` | `/opt/stack/athyper/backups` | Same |
+| `DB_HOST` | `db` | External hostname — app cannot reach DB |
+| `DBPOOL_APPS_CONFIG` | `db/local/dbpool/pgbouncer-apps.ini` | Wrong path = PgBouncer fails to start |
+| `DBPOOL_SESSION_CONFIG` | `db/local/dbpool/pgbouncer-session.ini` | Same |
+| `ACME_EMAIL` | `ops@atlasdigitaltech.com` | Empty = Let's Encrypt rejects cert request |
+| `GATEWAY_DASHBOARD_HTPASSWD` | `username:$$2y$$...` | Missing `username:` prefix; unescaped `$` |
 
 ---
 
