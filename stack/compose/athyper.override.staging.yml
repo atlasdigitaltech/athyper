@@ -149,6 +149,5 @@ services:
       - --certificatesResolvers.letsencrypt-staging.acme.storage=/certs/acme.json
       - --certificatesResolvers.letsencrypt-staging.acme.httpChallenge.entryPoint=web
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ATHYPER_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
-      - ${ATHYPER_CONFIG}/gateway/certs:/certs
+      - ${ATHYPER_SECRETS_ROOT}/gateway/certs:/certs

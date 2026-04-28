@@ -79,10 +79,18 @@ resolve_iam_credentials() {
     IAM_RESOLVED_PASS="$(env_val IAM_DB_PASSWORD)"
   fi
 
+  # Step 2.5: Try secrets/.env (staging/production — IAM_DB_PASSWORD lives there)
+  if [[ -z "$IAM_RESOLVED_PASS" ]]; then
+    local secrets_file="${ATHYPER_SECRETS_ROOT:-/opt/stack/athyper/secrets}/.env"
+    if [[ -f "$secrets_file" ]]; then
+      IAM_RESOLVED_PASS="$(grep -E "^IAM_DB_PASSWORD=" "$secrets_file" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+    fi
+  fi
+
   # Step 3: Fail if password is still empty
   if [[ -z "$IAM_RESOLVED_PASS" ]]; then
     echo -e "\033[0;31mError: Cannot determine IAM database password\033[0m"
-    echo -e "\033[1;33mSet IAM_DB_PASSWORD in stack/env/.env or as an environment variable\033[0m"
+    echo -e "\033[1;33mSet IAM_DB_PASSWORD in stack/env/.env, secrets/.env, or as an environment variable\033[0m"
     return 1
   fi
 
