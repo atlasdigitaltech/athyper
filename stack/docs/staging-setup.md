@@ -682,6 +682,10 @@ ssh -T git@github.com
 **AS:** athyper
 
 ```bash
+sudo -iu athyper
+```
+
+```bash
 set -euo pipefail
 
 # Clone into the product root (read-only side of the two-root layout).
