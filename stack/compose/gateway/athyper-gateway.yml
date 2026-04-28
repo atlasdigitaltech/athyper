@@ -104,4 +104,5 @@ services:
       - traefik.http.routers.gateway.rule=Host(`${GATEWAY_HOST}`)
       - traefik.http.routers.gateway.service=api@internal
       - traefik.http.routers.gateway.tls=true
+      - traefik.http.routers.gateway.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.routers.gateway.tls.options=${GATEWAY_TLS_OPTIONS}
