@@ -142,8 +142,13 @@ build_compose_file_list
 # Bring up stack (PROFILE-AWARE)
 # ----------------------------
 if [[ "$USE_PROFILE" -eq 1 ]]; then
-  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} --profile $ACTIVE_PROFILE ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans"
-  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
+  # Always include "core" alongside the requested profile so that core-profile
+  # services (memorycache, dbpool-*, clamav …) remain visible for depends_on
+  # validation. COMPOSE_PROFILES is used instead of --profile to guarantee both
+  # profiles are active regardless of Docker Compose version merge behaviour.
+  EFFECTIVE_PROFILES="core,${ACTIVE_PROFILE}"
+  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans [profiles=$EFFECTIVE_PROFILES]"
+  COMPOSE_PROFILES="$EFFECTIVE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
 else
   echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans [all profiles]"
   COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
@@ -154,7 +159,7 @@ echo "NOTE: --scale gotenberg=N is not forwarded by this script. To run multiple
 
 # Show status
 if [[ "$USE_PROFILE" -eq 1 ]]; then
-  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" ps
+  COMPOSE_PROFILES="$EFFECTIVE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" ps
 else
   COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" ps
 fi

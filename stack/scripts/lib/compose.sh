@@ -54,11 +54,11 @@ _prereq_read_root_var() {
   [[ -z "${!_var:-}" && -n "$_val" ]] && export "$_var=$_val"
 }
 if [[ -f "$ENV_DIR/.env" ]]; then
-  _prereq_read_root_var ATHYPER_CONFIG_ROOT
-  _prereq_read_root_var ATHYPER_SECRETS_ROOT
-  _prereq_read_root_var ATHYPER_DATA_ROOT
-  _prereq_read_root_var ATHYPER_LOG_ROOT
-  _prereq_read_root_var ATHYPER_BACKUP_ROOT
+  _prereq_read_root_var ATHYPER_CONFIG_ROOT  || true
+  _prereq_read_root_var ATHYPER_SECRETS_ROOT || true
+  _prereq_read_root_var ATHYPER_DATA_ROOT    || true
+  _prereq_read_root_var ATHYPER_LOG_ROOT     || true
+  _prereq_read_root_var ATHYPER_BACKUP_ROOT  || true
 fi
 unset -f _prereq_read_root_var
 
