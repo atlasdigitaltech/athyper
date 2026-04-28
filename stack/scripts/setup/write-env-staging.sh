@@ -72,7 +72,11 @@ echo "Step 1/4  Generating 22 secrets..."
 
 # ── Generate all secrets ───────────────────────────────────────────────────
 CREDENTIAL_MASTER_KEY=$(openssl rand -base64 48 | tr -d '\n=')
-DB_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
+# DB_ADMIN_PASSWORD uses hex (not base64) so it is safe to embed in a JDBC/libpq
+# connection URL without percent-encoding. Base64 passwords contain '+' and '/'
+# which are reserved URL characters — they cause "Invalid URL" errors in Node.js
+# when the password appears verbatim in postgresql://user:PASS@host/db strings.
+DB_ADMIN_PASSWORD=$(openssl rand -hex 32)
 # Both PgBouncer pools proxy the postgres superuser — their userlist.txt must
 # carry the same password so client auth and backend auth both succeed.
 DBPOOL_APPS_PASSWORD=$DB_ADMIN_PASSWORD

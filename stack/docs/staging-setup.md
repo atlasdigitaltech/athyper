@@ -1364,13 +1364,16 @@ DB_IP=$(docker inspect athyper-db-1 \
   --format '{{(index .NetworkSettings.Networks "athyper-internal").IPAddress}}')
 echo "DB container IP: ${DB_IP}"
 
-# Extract the admin password from secrets
+# Extract the admin password from secrets and percent-encode it for URL safety.
+# Base64 passwords contain '+' and '/' which are reserved URL characters — embedding
+# them verbatim in a postgresql:// URL causes "TypeError: Invalid URL" in Node.js.
 DB_PASS=$(grep '^DB_ADMIN_PASSWORD=' /opt/stack/athyper/secrets/.env | cut -d= -f2-)
+DB_PASS_ENC=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
 
 # Pre-export DATABASE_ADMIN_URL with the container IP so the seed script uses it directly.
 # IMPORTANT: postgres superuser is "postgres", NOT "athyperadmin".
 # "athyperadmin" is the pgweb HTTP login — it is not a database user.
-export DATABASE_ADMIN_URL="postgresql://postgres:${DB_PASS}@${DB_IP}:5432/athyper_neon"
+export DATABASE_ADMIN_URL="postgresql://postgres:${DB_PASS_ENC}@${DB_IP}:5432/athyper_neon"
 echo "Seed target: ${DB_IP}:5432/athyper_neon"
 
 # Run all phases: DDL + platform seed + blueprints + tenant data
