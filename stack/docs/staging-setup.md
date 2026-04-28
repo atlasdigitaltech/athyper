@@ -1298,12 +1298,16 @@ ls -lan /opt/stack/athyper/data/memorycache
 ## Phase 17 — Database Seed
 
 **EXECUTE ON:** SERVER  
-**AS:** athyper
+**AS:** athyper (all steps)
 
 > **Prerequisites for this phase:**
-> - Phase 1.3 installed Node.js 24 and pnpm — `node` and `npx` are on PATH ✓
-> - Phase 15 ran `pnpm install --frozen-lockfile` — `server/node_modules` (including `tsx`) is populated ✓
+> - Phase 1.3 installed Node.js 24 — `node` and `npx` are on PATH ✓
 > - Phase 16 started core infrastructure — `athyper-db-1` is healthy ✓
+>
+> **`server/` uses npm, not pnpm.**  
+> The root `pnpm install` (Phase 15) installs the `apps/` frontend workspace only.
+> `server/` is an independent npm package with its own `package-lock.json`.
+> Its dependencies (`pg`, `tsx`, etc.) must be installed separately before seeding.
 >
 > **Why DATABASE_ADMIN_URL must use the container IP:**
 > Postgres is on the `athyper-internal` Docker network (`internal: true`). There is no
@@ -1311,6 +1315,33 @@ ls -lan /opt/stack/athyper/data/memorycache
 > internet. The seed script runs on the host; to reach postgres it must connect to the
 > container's IP on the Docker bridge. The host's bridge interface (`10.200.0.1`) can reach
 > container IPs directly, and `pg_hba.conf` permits `10.0.0.0/8` with scram-sha-256.
+
+### 17.1 Install server/ dependencies
+
+```bash
+sudo -iu athyper
+cd /opt/products/athyper/server
+
+# Install all server dependencies from the lockfile.
+# This populates server/node_modules including pg, tsx, drizzle-orm, and other
+# packages required by migrate.ts. Must run before the seed script.
+npm install
+
+# Verify pg is present (the seed script imports it directly)
+node -e "require('pg'); console.log('pg ok')"
+```
+
+Expected:
+
+```
+added N packages in Xs
+pg ok
+```
+
+> **Re-runs:** `npm install` is idempotent. Safe to run again after a `git pull`
+> that adds or updates server dependencies.
+
+### 17.2 Run the seed
 
 ```bash
 sudo -iu athyper
@@ -1997,14 +2028,25 @@ git pull
 
 ## D.5 Edit Secrets
 
+The `secrets/` directory is `root:athyper 750` — the athyper account can read the
+`.env` file (owned `athyper:athyper 600`) but **cannot create files inside `secrets/`**.
+This means `sed -i` fails as athyper (it creates a temp file in the same directory).
+Always edit secrets as **root**.
+
 ```bash
-# Edit as root (secrets/ dir is root:athyper 750 — no write for athyper)
+# Edit as root (secrets/ dir is root:athyper 750 — sed -i and nano need directory write access)
 sudo nano /opt/stack/athyper/secrets/.env
 sudo chown athyper:athyper /opt/stack/athyper/secrets/.env
 sudo chmod 600 /opt/stack/athyper/secrets/.env
 
-# Validate as athyper
+# Validate as athyper after saving
 sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh staging
+```
+
+If you need to patch a single value non-interactively (e.g. align a password), run as root:
+
+```bash
+sudo bash -c "sed -i 's|^IAM_DB_PASSWORD=.*|IAM_DB_PASSWORD=newvalue|' /opt/stack/athyper/secrets/.env"
 ```
 
 ## D.6 Edit Config
