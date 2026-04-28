@@ -757,6 +757,13 @@ tracing:           user: "9103:9103"   # svc-loki
 metrics:           user: "9104:9104"   # svc-prometheus
 ```
 
+> **Before Phase 8:** exit the athyper shell to return to root —
+> Phase 6 switched you to `athyper`; Phase 8 requires root to write the config tree.
+
+```bash
+exit
+```
+
 ---
 
 ## Phase 8 — Deploy Config Files
