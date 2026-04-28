@@ -99,8 +99,8 @@ RESTART_ARGS=( restart )
 # Execute RESTART (all profiles active so every running service is restarted)
 # ----------------------------
 if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose --project-directory $COMPOSE_DIR --env-file $ENV_FILE ${COMPOSE_FILE_ARGS[*]} ${RESTART_ARGS[*]} [all profiles]"
-  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILE_ARGS[@]}" "${RESTART_ARGS[@]}"
+  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} ${COMPOSE_FILE_ARGS[*]} ${RESTART_ARGS[*]} [all profiles]"
+  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" "${RESTART_ARGS[@]}"
 else
   echo "Running: docker compose --project-directory $COMPOSE_DIR ${COMPOSE_FILE_ARGS[*]} ${RESTART_ARGS[*]} [all profiles]"
   COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${COMPOSE_FILE_ARGS[@]}" "${RESTART_ARGS[@]}"
@@ -112,7 +112,7 @@ echo ""
 
 # Show status
 if [[ -f "$ENV_FILE" ]]; then
-  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILE_ARGS[@]}" ps
+  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" ps
 else
   COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${COMPOSE_FILE_ARGS[@]}" ps
 fi

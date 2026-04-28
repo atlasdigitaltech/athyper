@@ -98,8 +98,8 @@ echo "=========================="
 echo ""
 
 if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose --project-directory $COMPOSE_DIR --env-file $ENV_FILE ${COMPOSE_FILE_ARGS[*]} $LOGS_ARGS [all profiles]"
-  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILE_ARGS[@]}" $LOGS_ARGS
+  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} ${COMPOSE_FILE_ARGS[*]} $LOGS_ARGS [all profiles]"
+  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" $LOGS_ARGS
 else
   echo "Running: docker compose --project-directory $COMPOSE_DIR ${COMPOSE_FILE_ARGS[*]} $LOGS_ARGS [all profiles]"
   COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${COMPOSE_FILE_ARGS[@]}" $LOGS_ARGS

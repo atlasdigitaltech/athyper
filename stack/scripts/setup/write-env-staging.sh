@@ -93,6 +93,7 @@ INFISICAL_AUTH_SECRET=$(openssl rand -base64 32 | tr -d '\n=')
 TELEMETRY_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -d '\n=')
 MEILI_MASTER_KEY=$(openssl rand -base64 32 | tr -d '\n=')
 HEALTHCHECKS_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
+GLITCHTIP_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
 
 echo "Step 2/4  Generating gateway htpasswd (pulling httpd:alpine if needed)..."
 GATEWAY_DASHBOARD_HTPASSWD=$(
@@ -133,6 +134,7 @@ INFISICAL_AUTH_SECRET=$INFISICAL_AUTH_SECRET
 TELEMETRY_ADMIN_PASSWORD=$TELEMETRY_ADMIN_PASSWORD
 MEILI_MASTER_KEY=$MEILI_MASTER_KEY
 HEALTHCHECKS_SECRET_KEY=$HEALTHCHECKS_SECRET_KEY
+GLITCHTIP_SECRET_KEY=$GLITCHTIP_SECRET_KEY
 ACME_EMAIL=$ACME_EMAIL
 SECRETS
 chmod 0600 "$SECRETS_FILE"
@@ -174,13 +176,17 @@ IAM_ISSUER_URL=https://iam-stg.athyper.com/realms/athyper
 # ── Database ──────────────────────────────────────────────────────────────────
 DB_HOST=athyper-db-1
 DB_PORT=5432
+DB_ADMIN_USER=postgres
 DATABASE_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_platform
+DATABASE_ADMIN_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_neon
 DB_ADMIN_PASSWORD=$DB_ADMIN_PASSWORD
 DBPOOL_APPS_HOST=athyper-dbpool-apps-1
 DBPOOL_APPS_PORT=6432
 DBPOOL_SESSION_HOST=athyper-dbpool-session-1
 DBPOOL_SESSION_PORT=6433
+DBPOOL_APPS_USER=postgres
 DBPOOL_APPS_PASSWORD=$DBPOOL_APPS_PASSWORD
+DBPOOL_SESSION_USER=postgres
 DBPOOL_SESSION_PASSWORD=$DBPOOL_SESSION_PASSWORD
 DBPOOL_APPS_CONFIG=db/staging/dbpool/apps/pgbouncer-apps.ini
 DBPOOL_SESSION_CONFIG=db/staging/dbpool/session/pgbouncer-session.ini
@@ -197,13 +203,25 @@ REDIS_INFISICAL_PASSWORD=$REDIS_INFISICAL_PASSWORD
 REDIS_ADMIN_PASSWORD=$REDIS_ADMIN_PASSWORD
 
 # ── IAM (Keycloak) ────────────────────────────────────────────────────────────
+IAM_ADMIN=admin
 IAM_ADMIN_PASSWORD=$IAM_ADMIN_PASSWORD
 IAM_CLIENT_SECRET=$IAM_CLIENT_SECRET
+IAM_CLIENT_ID=athyper-api
+IAM_DB_URL=jdbc:postgresql://dbpool-session:6433/athyper_iam?preferQueryMode=simple
+IAM_DB_USERNAME=postgres
+IAM_DB_PASSWORD=$DB_ADMIN_PASSWORD
+KEYCLOAK_ADMIN_USERNAME=admin
+KEYCLOAK_ADMIN_PASSWORD=$IAM_ADMIN_PASSWORD
+ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET=$IAM_CLIENT_SECRET
 
 # ── Object storage (MinIO) ────────────────────────────────────────────────────
 S3_ACCESS_KEY=athyper-minio-root
 S3_SECRET_KEY=$S3_SECRET_KEY
 S3_ENDPOINT=http://athyper-objectstorage-1:9000
+S3_BUCKET=athyper-staging
+S3_USE_SSL=false
+LOKI_S3_INSECURE=true
+TEMPO_S3_INSECURE=true
 APP_S3_ACCESS_KEY=athyper-app
 APP_S3_SECRET_KEY=$APP_S3_SECRET_KEY
 BACKUP_S3_ACCESS_KEY=athyper-backup
@@ -238,8 +256,12 @@ RENDERER_INTERNAL_TOKEN=$RENDERER_INTERNAL_TOKEN
 # ── Search ────────────────────────────────────────────────────────────────────
 MEILI_MASTER_KEY=$MEILI_MASTER_KEY
 
-# ── Healthchecks ─────────────────────────────────────────────────────────────
+# ── Monitoring ───────────────────────────────────────────────────────────────
 HEALTHCHECKS_SECRET_KEY=$HEALTHCHECKS_SECRET_KEY
+GLITCHTIP_SECRET_KEY=$GLITCHTIP_SECRET_KEY
+
+# ── Telemetry collector ───────────────────────────────────────────────────────
+OTLP_ENDPOINT=http://logshipper:4318
 
 # ── Gateway ───────────────────────────────────────────────────────────────────
 ACME_EMAIL=$ACME_EMAIL

@@ -142,11 +142,11 @@ build_compose_file_list
 # Bring up stack (PROFILE-AWARE)
 # ----------------------------
 if [[ "$USE_PROFILE" -eq 1 ]]; then
-  echo "Running: docker compose --project-directory $COMPOSE_DIR --env-file $ENV_FILE --profile $ACTIVE_PROFILE ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans"
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
+  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} --profile $ACTIVE_PROFILE ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans"
+  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
 else
-  echo "Running: docker compose --project-directory $COMPOSE_DIR --env-file $ENV_FILE ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans [all profiles]"
-  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
+  echo "Running: docker compose --project-directory $COMPOSE_DIR ${ENV_FILE_ARGS[*]} ${COMPOSE_FILE_ARGS[*]} up -d --remove-orphans [all profiles]"
+  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" up -d --remove-orphans
 fi
 
 echo "Stack is UP (profile=$ACTIVE_PROFILE, env=$ENVIRONMENT)"
@@ -154,9 +154,9 @@ echo "NOTE: --scale gotenberg=N is not forwarded by this script. To run multiple
 
 # Show status
 if [[ "$USE_PROFILE" -eq 1 ]]; then
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" ps
+  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" --profile "$ACTIVE_PROFILE" "${COMPOSE_FILE_ARGS[@]}" ps
 else
-  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILE_ARGS[@]}" ps
+  COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" ps
 fi
 
 echo ""

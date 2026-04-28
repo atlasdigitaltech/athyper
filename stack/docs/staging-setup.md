@@ -797,17 +797,30 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 
 ## Phase 9 — Bootstrap File and Secrets
 
-## 9.1 Create Non-Secret Path Bootstrap File
+## 9.1 Create Non-Secret Bootstrap File
 
 **EXECUTE ON:** SERVER  
 **AS:** root
 
+> `stack/env/.env` is the non-secret half of the environment (memory limits, image tags,
+> hostnames, SMTP config, etc.). `up.sh` passes it as the **first** `--env-file` to Docker
+> Compose so staging config is available; the secrets `.env` is passed second and overrides
+> any duplicates.
+
 ```bash
-# This file belongs in the git checkout (readable by compose.sh) because it contains
-# only filesystem paths — no credentials. It tells compose.sh where to find secrets,
-# config, and data roots on this specific server.
-cat > /opt/products/athyper/stack/env/.env << 'EOF'
-# Bootstrap file — path overrides only. No secrets here.
+# Copy all staging non-secret config from the template
+cp /opt/products/athyper/stack/env/staging.env.example \
+   /opt/products/athyper/stack/env/.env
+
+# Pin SERVICE_VERSION for now (not a CI deploy — no ${RELEASE_VERSION})
+sed -i 's/SERVICE_VERSION=\${RELEASE_VERSION}/SERVICE_VERSION=1.0.0/' \
+   /opt/products/athyper/stack/env/.env
+
+# Append server-specific path overrides — these come last so they win over
+# any ATHYPER_* comments in the template above.
+cat >> /opt/products/athyper/stack/env/.env << 'EOF'
+
+# ── Server path overrides (two-root layout) ───────────────────────────────────
 ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
 ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config
 ATHYPER_DATA_ROOT=/opt/stack/athyper/data
@@ -816,7 +829,10 @@ ATHYPER_BACKUP_ROOT=/opt/stack/athyper/backups
 EOF
 
 chmod 0644 /opt/products/athyper/stack/env/.env
-cat /opt/products/athyper/stack/env/.env
+
+# Gate: confirm SERVICE_VERSION is not a bare placeholder
+grep "^SERVICE_VERSION=" /opt/products/athyper/stack/env/.env
+# Expected: SERVICE_VERSION=1.0.0
 ```
 
 ## 9.2 + 9.3 Generate Secrets and Write `.env`

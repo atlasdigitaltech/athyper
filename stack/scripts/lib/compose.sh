@@ -83,6 +83,17 @@ else
   ENV_FILE="$ENV_DIR/.env"
 fi
 
+# Build env-file arg list for all docker compose calls.
+# Server mode (ENV_FILE != ENV_DIR/.env): pass bootstrap file first (provides non-secret
+# staging config: memory limits, image tags, usernames, hostnames) then secrets file last
+# so secrets win on any duplicate keys.
+# Local dev (ENV_FILE == ENV_DIR/.env): single --env-file arg, no duplicate.
+ENV_FILE_ARGS=()
+if [[ -f "$ENV_DIR/.env" ]] && [[ "$ENV_DIR/.env" != "$ENV_FILE" ]]; then
+  ENV_FILE_ARGS+=( --env-file "$ENV_DIR/.env" )
+fi
+ENV_FILE_ARGS+=( --env-file "$ENV_FILE" )
+
 if [[ ! -d "$COMPOSE_DIR" ]]; then
   echo "ERROR: COMPOSE_DIR not found: $COMPOSE_DIR"
   exit 1
