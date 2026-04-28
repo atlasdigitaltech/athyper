@@ -779,6 +779,15 @@ importers:
       '@athyper/svc-shared':
         specifier: workspace:*
         version: link:framework/runtime/services/shared
+      '@bull-board/api':
+        specifier: ^7.0.0
+        version: 7.0.0(@bull-board/ui@7.0.0)
+      '@bull-board/express':
+        specifier: ^7.0.0
+        version: 7.0.0
+      '@bull-board/ui':
+        specifier: ^7.0.0
+        version: 7.0.0
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -806,12 +815,18 @@ importers:
       bullmq:
         specifier: ^5.74.1
         version: 5.74.1
+      busboy:
+        specifier: ^1.6.0
+        version: 1.6.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
       express:
         specifier: ^5.0.0
         version: 5.2.1
+      jose:
+        specifier: ^6.2.2
+        version: 6.2.2
       kysely:
         specifier: ^0.28.16
         version: 0.28.16
