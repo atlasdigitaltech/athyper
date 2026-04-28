@@ -1300,22 +1300,66 @@ ls -lan /opt/stack/athyper/data/memorycache
 **EXECUTE ON:** SERVER  
 **AS:** athyper
 
+> **Prerequisites for this phase:**
+> - Phase 1.3 installed Node.js 24 and pnpm — `node` and `npx` are on PATH ✓
+> - Phase 15 ran `pnpm install --frozen-lockfile` — `server/node_modules` (including `tsx`) is populated ✓
+> - Phase 16 started core infrastructure — `athyper-db-1` is healthy ✓
+>
+> **Why DATABASE_ADMIN_URL must use the container IP:**
+> Postgres is on the `athyper-internal` Docker network (`internal: true`). There is no
+> `localhost:5432` port publishing — the database is intentionally unreachable from the
+> internet. The seed script runs on the host; to reach postgres it must connect to the
+> container's IP on the Docker bridge. The host's bridge interface (`10.200.0.1`) can reach
+> container IPs directly, and `pg_hba.conf` permits `10.0.0.0/8` with scram-sha-256.
+
 ```bash
 sudo -iu athyper
 cd /opt/products/athyper
 
-# Verify the database is visible before seeding
-docker exec athyper-db-1 psql -U athyperadmin -l
+# Verify the database is accessible (unix-socket peer auth — must succeed before seeding)
+docker exec athyper-db-1 psql -U postgres -l
+# Expected: 7 databases listed (athyper_neon, athyper_mesh, athyper_iam, ...)
+# If this fails check: docker logs athyper-db-1 --tail 50
 
-bash /opt/products/athyper/stack/scripts/db/transaction/neon/seed-db.sh
+# Get the DB container's IP on the internal Docker bridge
+DB_IP=$(docker inspect athyper-db-1 \
+  --format '{{(index .NetworkSettings.Networks "athyper-internal").IPAddress}}')
+echo "DB container IP: ${DB_IP}"
+
+# Extract the admin password from secrets
+DB_PASS=$(grep '^DB_ADMIN_PASSWORD=' /opt/stack/athyper/secrets/.env | cut -d= -f2-)
+
+# Pre-export DATABASE_ADMIN_URL with the container IP so the seed script uses it directly.
+# IMPORTANT: postgres superuser is "postgres", NOT "athyperadmin".
+# "athyperadmin" is the pgweb HTTP login — it is not a database user.
+export DATABASE_ADMIN_URL="postgresql://postgres:${DB_PASS}@${DB_IP}:5432/athyper_neon"
+echo "Seed target: ${DB_IP}:5432/athyper_neon"
+
+# Run all phases: DDL + platform seed + blueprints + tenant data
+bash /opt/products/athyper/stack/scripts/db/transaction/neon/seed-db.sh --all
 ```
 
-After seed, confirm the Postgres port is not exposed on the host:
+Expected output (abridged):
+
+```
+=== Athyper Database Seed ===
+Database : <container-ip>:5432/athyper_neon
+Server   : /opt/products/athyper/server
+Tenant ID: (not set — Phase 3 files use baked-in UUIDs)
+Arguments: --all
+...
+=== Seed complete ===
+```
+
+If the seed fails partway through, it is safe to re-run — `migrate.ts` tracks applied files
+by checksum and skips any file that has not changed since the last run.
+
+After seed, confirm postgres port is not exposed on the host:
 
 ```bash
-# Port 5432 must NOT appear in the output — it should be accessible only via
-# PgBouncer within the compose network, not from outside the server.
+# Port 5432 must NOT appear — database is reachable only from within the Docker network.
 ss -tln | grep 5432 || true
+# Expected: no output
 ```
 
 ---
