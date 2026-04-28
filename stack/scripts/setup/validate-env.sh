@@ -206,7 +206,8 @@ fi
 echo "[4/6] Kernel config hostname parity..."
 
 KERNEL_CONFIG_PATH="${ENV_MAP[ATHYPER_KERNEL_CONFIG_PATH]:-}"
-KERNEL_FILE="$STACK_DIR/config/$KERNEL_CONFIG_PATH"
+KERNEL_CFG_ROOT="${ATHYPER_CONFIG_VAL:-$STACK_DIR/config}"
+KERNEL_FILE="$KERNEL_CFG_ROOT/$KERNEL_CONFIG_PATH"
 
 if [[ -f "$KERNEL_FILE" ]]; then
   # Extract publicBaseUrl from JSON (simple grep, no jq dependency)
