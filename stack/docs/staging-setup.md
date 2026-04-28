@@ -766,28 +766,20 @@ set -euo pipefail
 cd /opt/products/athyper
 
 # Deploy env-specific config from the git source into the runtime config root.
-# setup-config.sh reads the ENVIRONMENT var from the .env and copies db/staging/,
-# gateway/, iam/, memorycache/, telemetry/ etc.
+# setup-config.sh copies db/staging/, gateway/, iam/, memorycache/, telemetry/
+# and sets ownership (root:athyper-config 755/644) automatically.
+# redis-acl.conf exception: set to athyper:svc-redis 0640 by setup-config.sh so
+# validate-env.sh (athyper) can write it and the Redis container (svc-redis) can read it.
 ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
-ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets \
-bash stack/scripts/setup/setup-config.sh staging
+  bash stack/scripts/setup/setup-config.sh staging
 
-# Config root: root-owned, athyper-config group can read, no world-write
-chown -R root:athyper-config /opt/stack/athyper/config
-find /opt/stack/athyper/config -type d -exec chmod 0755 {} \;
-find /opt/stack/athyper/config -type f -exec chmod 0644 {} \;
-
-# redis-acl.conf exception: validate-env.sh (running as athyper) writes this file,
-# so athyper must own it. The file contains SHA-256 password hashes — restrict to
-# owner + svc-redis group only (mode 0640, not world-readable).
-touch /opt/stack/athyper/config/memorycache/redis-acl.conf
-chown athyper:svc-redis /opt/stack/athyper/config/memorycache/redis-acl.conf
-chmod 0640 /opt/stack/athyper/config/memorycache/redis-acl.conf
-
-# Verify ACL file ownership and that no secrets file is world-readable
+# Gate: verify ACL file ownership before continuing
 stat -c "%U:%G %a %n" /opt/stack/athyper/config/memorycache/redis-acl.conf
+# Must be: athyper:svc-redis 640
+
+# Gate: no file in the secrets tree must be world-readable
 find /opt/stack/athyper/secrets -perm /o+r -ls
-# Last command must return no output
+# Must return no output
 ```
 
 ---
