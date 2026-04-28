@@ -102,7 +102,7 @@ echo -e "${GREEN}=== Athyper Database Seed ===${NC}"
 # ---------------------------------------------------------------------------
 if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
   if [ -f "$ENV_FILE" ]; then
-    DATABASE_ADMIN_URL=$(grep -E '^DATABASE_ADMIN_URL=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DATABASE_ADMIN_URL=$(grep -E '^DATABASE_ADMIN_URL=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
   fi
 fi
 
@@ -110,7 +110,7 @@ fi
 # Path matches write-env-staging.sh: /opt/stack/athyper/secrets/.env
 SECRETS_FILE="${ATHYPER_SECRETS_ROOT:-/opt/stack/athyper/secrets}/.env"
 if [ -z "${DATABASE_ADMIN_URL:-}" ] && [ -f "$SECRETS_FILE" ]; then
-  DATABASE_ADMIN_URL=$(grep -E '^DATABASE_ADMIN_URL=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  DATABASE_ADMIN_URL=$(grep -E '^DATABASE_ADMIN_URL=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
 fi
 
 if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
@@ -122,10 +122,10 @@ if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
 
   DB_PASSWORD="${DB_PASSWORD:-}"
   if [ -z "$DB_PASSWORD" ] && [ -f "$ENV_FILE" ]; then
-    DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
   fi
   if [ -z "$DB_PASSWORD" ] && [ -f "$SECRETS_FILE" ]; then
-    DB_PASSWORD=$(grep -E '^DB_ADMIN_PASSWORD=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_PASSWORD=$(grep -E '^DB_ADMIN_PASSWORD=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
   fi
 
   if [ -z "$DB_PASSWORD" ]; then
@@ -168,7 +168,7 @@ export DATABASE_ADMIN_URL
 # ---------------------------------------------------------------------------
 if [ -z "${SEED_TENANT_ID:-}" ]; then
   if [ -f "$ENV_FILE" ]; then
-    SEED_TENANT_ID=$(grep -E '^SEED_TENANT_ID=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    SEED_TENANT_ID=$(grep -E '^SEED_TENANT_ID=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
   fi
 fi
 # If --tenant-id=UUID was passed on the command line, migrate.ts handles that
