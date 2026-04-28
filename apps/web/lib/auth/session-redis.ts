@@ -56,7 +56,7 @@ function reconnectStrategy(retries: number): number | Error {
 function createConnection(): Promise<AnyRedisClient> {
   _promise = (async () => {
     const { createClient } = await import("redis");
-    const url = process.env.REDIS_URL ?? "redis://localhost:6379/0";
+    const url = process.env.REDIS_URL || "redis://localhost:6379/0";
     const client = createClient({
       url,
       pingInterval: PING_INTERVAL_MS,
