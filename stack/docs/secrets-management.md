@@ -399,6 +399,33 @@ docker compose restart gateway
 # Verify: open https://gateway.<domain> and log in with the new password.
 ```
 
+### Adding a Missing Secret After an Upgrade
+
+When a new secret variable is added to `write-env-staging.sh` in a later commit, an
+already-provisioned server will not have it in its `secrets/.env`. The symptom is one
+or more containers entering a crash-restart loop at startup with a config-validation
+error naming the missing variable.
+
+**Do not re-run `write-env-staging.sh`** — that rotates all 22 secrets and requires
+re-applying every downstream credential (DB, Redis, IAM, S3, etc.).
+
+Instead, run the patch script as root. It adds only the missing variables and
+deduplicates any accidental double entries, leaving all existing values untouched:
+
+```bash
+sudo bash /opt/products/athyper/stack/scripts/setup/patch-missing-secrets.sh
+```
+
+The script prints a summary of what was added vs. what was already present, and tells
+you which services to restart. After restarting, re-run `validate-env.sh` to confirm.
+
+> **Keeping the script current:** `patch-missing-secrets.sh` maintains a canonical list
+> of all generated secrets (mirroring `write-env-staging.sh`). When you add a new secret
+> to `write-env-staging.sh`, add the corresponding `has_key` / `add_key` block to
+> `patch-missing-secrets.sh` in the same commit.
+
+---
+
 ### `CREDENTIAL_MASTER_KEY` Rotation
 
 > **Warning:** rotating `CREDENTIAL_MASTER_KEY` invalidates all encrypted credential rows

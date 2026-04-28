@@ -891,6 +891,38 @@ wc -l /opt/stack/athyper/secrets/.env
 > secret values. Copy it to a password manager, then delete it from the server once
 > the stack is confirmed healthy.
 
+> **`CREDENTIAL_MASTER_KEY` — do not duplicate, do not rotate carelessly.**
+> This key is used by `CredentialEncryptionService` to AES-encrypt tenant credential
+> rows in the database (webhook signing keys, endpoint auth tokens). Two rules:
+>
+> 1. **One copy only.** If you ever append a second value manually (e.g.
+>    `echo CREDENTIAL_MASTER_KEY=... >> secrets/.env`) the containers will start
+>    with the wrong key and fail to decrypt existing rows. If this happens, run the
+>    deduplication script — it keeps the first (originally provisioned) value:
+>    ```bash
+>    sudo bash /opt/products/athyper/stack/scripts/setup/patch-missing-secrets.sh
+>    ```
+>
+> 2. **Rotation requires a re-encryption migration (B3.4, not yet implemented).**
+>    Do not change the value without coordinating with the team.
+>    See `docs/secrets-management.md §6` for the full rotation runbook.
+
+## 9.3 Patching Missing Secrets After an Upgrade
+
+When a new secret variable is added to `write-env-staging.sh` in a later commit, an
+already-provisioned server will not have it in its `secrets/.env`. **Do not re-run
+`write-env-staging.sh`** — that rotates all 22 secrets and breaks every downstream
+service that uses them.
+
+Instead, run the targeted patch script. It adds only the missing variables and
+deduplicates any accidental double entries, leaving all existing values untouched:
+
+```bash
+sudo bash /opt/products/athyper/stack/scripts/setup/patch-missing-secrets.sh
+```
+
+Then restart the affected app tier services as directed by the script output.
+
 ---
 
 ## Phase 10 — Validate Environment and Render Redis ACL
