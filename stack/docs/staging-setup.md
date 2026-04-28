@@ -52,6 +52,11 @@
    - Phase 26 — Final SSH Hardening *(last step — do not skip)*
 4. [Part C — Post-Deploy Verification](#part-c--post-deploy-verification)
 5. [Part D — Day-2 Operations](#part-d--day-2-operations)
+   - D.5 Edit Secrets
+   - D.6 Edit Config
+   - D.7 Permission Repair for One Leaf
+   - D.8 VNC Recovery
+   - D.9 Seed fails — `permission denied for schema control`
 6. [Part E — Go/No-Go Checklist](#part-e--gono-go-checklist)
 
 ---
@@ -2120,6 +2125,62 @@ VNC: provider console
 Login: root  (vault password)
 Note: never use "sudo -iu athyper" through VNC for routine tasks — always SSH as ops account
 ```
+
+## D.9 Seed fails — `permission denied for schema control`
+
+**Symptom:**
+
+```
+{"msg":"migrate_executing","phase":2,"file":"...003_control/011_notification_routing_collab",...}
+{"msg":"migrate_failed","phase":2,"file":"...003_control/011_notification_routing_collab",
+ "error":"error: permission denied for schema control"}
+```
+
+Phase 1 DDL succeeds. Phase 2 seed files 001–010 succeed. File 011 (or any file that
+inserts into a table with lookup-validation triggers) fails.
+
+**Root cause:**
+
+`control.fn_valid_lookup` and `control.fn_valid_lookup_nullable` are `SECURITY DEFINER`
+functions owned by `athyperadmin`. When a BEFORE INSERT trigger on
+`control.notification_routing_rule` fires and calls these functions, PostgreSQL executes
+them as `athyperadmin`. Because `athyperadmin` was never granted `USAGE` on the `control`
+schema, the functions raise `permission denied for schema control` even though the
+calling session is the `postgres` superuser.
+
+This was a gap in `99_security/800_security_hardening.sql`: only `athyperapp` received
+schema USAGE and table-level grants. The fix landed in that file — the updated DDL grants
+`athyperadmin` USAGE on all schemas and full DML on all tables so SECURITY DEFINER
+functions can execute correctly.
+
+**Recovery (on a server where Phase 1 already ran without the fix):**
+
+```bash
+sudo -iu athyper
+cd /opt/products/athyper
+
+# 1. Pull the fix
+git pull
+
+# 2. Re-run Phase 1 DDL only — the changed checksum in 800_security_hardening.sql
+#    causes migrate.ts to re-apply it (which grants athyperadmin the missing privileges).
+DB_IP=$(docker inspect athyper-db-1 \
+  --format '{{(index .NetworkSettings.Networks "athyper-internal").IPAddress}}')
+DB_PASS=$(grep '^DB_ADMIN_PASSWORD=' /opt/stack/athyper/secrets/.env | cut -d= -f2-)
+DB_PASS_ENC=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
+export DATABASE_ADMIN_URL="postgresql://postgres:${DB_PASS_ENC}@${DB_IP}:5432/athyper_neon"
+
+bash /opt/products/athyper/stack/scripts/db/transaction/neon/seed-db.sh --ddl-only
+
+# 3. Now run the full seed — Phase 2 will continue from where it left off
+#    (migrate.ts skips already-applied files by checksum)
+bash /opt/products/athyper/stack/scripts/db/transaction/neon/seed-db.sh --all
+```
+
+**Prevention:**
+
+New deployments using the updated `800_security_hardening.sql` are not affected — the
+missing grants are now part of Phase 1 DDL from the initial run.
 
 ---
 

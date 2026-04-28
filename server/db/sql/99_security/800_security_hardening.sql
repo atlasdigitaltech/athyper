@@ -216,6 +216,29 @@ GRANT INSERT, UPDATE, DELETE ON
     master.label
 TO athyperapp;
  
+-- ── athyperadmin — schema + table access for SECURITY DEFINER functions ──────
+-- SECURITY DEFINER functions owned by athyperadmin execute as athyperadmin.
+-- Without USAGE on each schema they reference, those functions raise
+-- "permission denied for schema X" even when called by a superuser session.
+-- Full DML: admin_write RLS policies (TO athyperadmin) already restrict rows;
+-- these grants open the table-privilege layer for functions like fn_valid_lookup,
+-- fn_register_tenant, upsert_gl_balance, materialize_cycle_tasks, etc.
+
+GRANT USAGE ON SCHEMA shared, control, master,
+                      document, ledger, log, event, governance, snapshot, aggregate
+    TO athyperadmin;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA shared     TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA control    TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA master     TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA document   TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ledger     TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA log        TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA event      TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA governance TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA snapshot   TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA aggregate  TO athyperadmin;
+
 -- ── Default privileges for future tables ───────────────────────────────────
 -- Ensures tables created later by athyperadmin inherit SELECT for athyperapp.
  
