@@ -97,7 +97,8 @@ GREEN="$CLR_GREEN"; YELLOW="$CLR_YELLOW"; RED="$CLR_RED"; NC="$CLR_NC"
 echo -e "${GREEN}=== Athyper Database Seed ===${NC}"
 
 # ---------------------------------------------------------------------------
-# Read DATABASE_ADMIN_URL from .env or environment
+# Read DATABASE_ADMIN_URL — check env, then bootstrap .env, then secrets .env.
+# Secrets file wins over bootstrap (same precedence as Docker Compose loading).
 # ---------------------------------------------------------------------------
 if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
   if [ -f "$ENV_FILE" ]; then
@@ -105,22 +106,32 @@ if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
   fi
 fi
 
+# Also check secrets .env (staging/production — DATABASE_ADMIN_URL lives there).
+# Path matches write-env-staging.sh: /opt/stack/athyper/secrets/.env
+SECRETS_FILE="${ATHYPER_SECRETS_ROOT:-/opt/stack/athyper/secrets}/.env"
+if [ -z "${DATABASE_ADMIN_URL:-}" ] && [ -f "$SECRETS_FILE" ]; then
+  DATABASE_ADMIN_URL=$(grep -E '^DATABASE_ADMIN_URL=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+fi
+
 if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
-  # Fallback: construct from individual vars (mirrors bat defaults)
+  # Fallback: construct from individual vars
   DB_HOST="${DB_HOST:-$APP_DB_DEFAULT_HOST}"
   DB_PORT="${DB_PORT:-$APP_DB_DEFAULT_PORT}"
-  DB_NAME="${DB_NAME:-$DB_NAME_APPS}"
-  DB_USER="${DB_USER:-athyperadmin}"
+  DB_NAME="${DB_NAME:-athyper_neon}"
+  DB_USER="${DB_USER:-postgres}"
 
   DB_PASSWORD="${DB_PASSWORD:-}"
   if [ -z "$DB_PASSWORD" ] && [ -f "$ENV_FILE" ]; then
     DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
   fi
+  if [ -z "$DB_PASSWORD" ] && [ -f "$SECRETS_FILE" ]; then
+    DB_PASSWORD=$(grep -E '^DB_ADMIN_PASSWORD=' "$SECRETS_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  fi
 
   if [ -z "$DB_PASSWORD" ]; then
     echo -e "${RED}Error: Cannot determine database credentials${NC}"
-    echo -e "${YELLOW}Set DATABASE_ADMIN_URL or DB_PASSWORD in stack/env/.env${NC}"
-    echo -e "${YELLOW}Example: DATABASE_ADMIN_URL=postgres://user:pass@localhost:5432/athyper_dev1${NC}"
+    echo -e "${YELLOW}Set DATABASE_ADMIN_URL in stack/env/.env or /opt/stack/athyper/secrets/.env${NC}"
+    echo -e "${YELLOW}Example: DATABASE_ADMIN_URL=postgres://postgres:pass@localhost:5432/athyper_neon${NC}"
     exit 1
   fi
 
@@ -129,24 +140,23 @@ fi
 
 # ---------------------------------------------------------------------------
 # Rewrite Docker-internal hostnames to localhost (this script runs on the host).
-# The .env file uses Docker service names (e.g. @db:5432) that only resolve
-# inside the Docker network. Rewrite @db:/@dbpool-*: to @localhost: so the
-# host-side Node process can connect. PgBouncer ports (:6432/:6433) are
-# checked and rejected separately below — DDL requires a direct connection.
+# Handles both the Docker service name (@db:) and the Compose container name
+# (@athyper-db-1: / @${COMPOSE_PROJECT_NAME}-db-1:) used in staging secrets.
+# PgBouncer ports (:6432/:6433) are rejected — DDL requires a direct connection.
 # ---------------------------------------------------------------------------
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@db:/@localhost:}"
+DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@athyper-db-1:/@localhost:}"
+DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@${COMPOSE_PROJECT_NAME}-db-1:/@localhost:}"
 
 # Warn and abort if the URL still routes through PgBouncer (ports 6432/6433).
-# migrate.ts explicitly requires a direct connection — PgBouncer breaks DDL.
 if echo "$DATABASE_ADMIN_URL" | grep -qE ':6432|:6433'; then
   echo -e "${RED}ERROR: DATABASE_ADMIN_URL appears to use a PgBouncer port (:6432 or :6433).${NC}"
   echo -e "${RED}       migrate.ts requires a direct Postgres connection (port 5432).${NC}"
   echo -e "${YELLOW}       Set DATABASE_ADMIN_URL to the direct DB URL, e.g.:${NC}"
-  echo -e "${YELLOW}         postgres://athyperadmin:<pass>@localhost:5432/athyper_dev1${NC}"
+  echo -e "${YELLOW}         postgres://postgres:<pass>@localhost:5432/athyper_neon${NC}"
   exit 1
 fi
-# Rewrite dbpool hostnames only after the port check (so the error message is
-# actionable — user sees the original pooler address, not localhost).
+# Rewrite dbpool hostnames only after the port check
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-apps:/@localhost:}"
 DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-session:/@localhost:}"
 
