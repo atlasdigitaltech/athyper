@@ -219,6 +219,7 @@ S3_ACCESS_KEY=athyper-minio-root
 S3_SECRET_KEY=$S3_SECRET_KEY
 S3_ENDPOINT=http://athyper-objectstorage-1:9000
 S3_BUCKET=athyper-staging
+S3_REGION=us-east-1
 S3_USE_SSL=false
 LOKI_S3_INSECURE=true
 TEMPO_S3_INSECURE=true

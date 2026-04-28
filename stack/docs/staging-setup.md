@@ -808,12 +808,10 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 > any duplicates.
 
 ```bash
-# Copy all staging non-secret config from the template
+# Copy all staging non-secret config from the template.
+# staging.env.example contains only real values — no ${PLACEHOLDER} lines.
+# All secrets come exclusively from the secrets .env (Phase 9.2).
 cp /opt/products/athyper/stack/env/staging.env.example \
-   /opt/products/athyper/stack/env/.env
-
-# Pin SERVICE_VERSION for now (not a CI deploy — no ${RELEASE_VERSION})
-sed -i 's/SERVICE_VERSION=\${RELEASE_VERSION}/SERVICE_VERSION=1.0.0/' \
    /opt/products/athyper/stack/env/.env
 
 # Append server-specific path overrides — these come last so they win over
@@ -830,7 +828,7 @@ EOF
 
 chmod 0644 /opt/products/athyper/stack/env/.env
 
-# Gate: confirm SERVICE_VERSION is not a bare placeholder
+# Gate: confirm SERVICE_VERSION is set (not a placeholder)
 grep "^SERVICE_VERSION=" /opt/products/athyper/stack/env/.env
 # Expected: SERVICE_VERSION=1.0.0
 ```
