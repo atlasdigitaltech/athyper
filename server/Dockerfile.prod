@@ -99,10 +99,11 @@ COPY packages/shared/foundation/config/ ./packages/shared/foundation/config/
 RUN pnpm --filter "@athyper/adapter-*" --filter "@athyper/svc-*" run build
 RUN pnpm --filter "@athyper/runtime-server" run build
 
-# Strip devDependencies (tsx, typescript, vitest, pino-pretty, etc.) from the
-# installed tree. Compiled dist/ artifacts are already on disk; only runtime
-# deps remain. This runs in-place — no separate stage needed.
-RUN CI=true pnpm prune --prod
+# pnpm prune --prod is intentionally omitted: in pnpm v10 with a filtered
+# install (--filter "@athyper/runtime-server..."), prune removes the
+# node_modules symlink for runtime deps (e.g. dotenv) that live in the
+# virtual store but not directly under server/node_modules. The image is
+# slightly larger but all runtime deps remain resolvable by Node ESM.
 
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 # Non-root for hardened runtime (mirrors apps/web/Dockerfile pattern).
