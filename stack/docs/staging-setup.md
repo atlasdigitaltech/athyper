@@ -964,6 +964,10 @@ chown svc-minio:svc-minio       "$DATA_ROOT/objectstorage"
 chown svc-meili:svc-meili       "$DATA_ROOT/meilisearch"
 chown svc-meili:svc-meili       "$DATA_ROOT/metabase"
 chown svc-meili:svc-meili       "$DATA_ROOT/uptime-kuma"
+# telemetry/ parent — intermediate dir; all four svc-* identities need +x to traverse
+chown athyper:athyper           "$DATA_ROOT/telemetry"
+chmod 0755                      "$DATA_ROOT/telemetry"
+
 chown svc-loki:svc-loki         "$DATA_ROOT/telemetry/logging"
 chown svc-prometheus:svc-prometheus "$DATA_ROOT/telemetry/metrics"
 chown svc-grafana:svc-grafana   "$DATA_ROOT/telemetry/observability"

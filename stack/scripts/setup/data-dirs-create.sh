@@ -120,6 +120,10 @@ if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
   chown svc-minio:svc-minio "$ATHYPER_DATA/objectstorage"
   chmod 0750 "$ATHYPER_DATA/objectstorage"
 
+  # telemetry/ parent — intermediate dir; all four svc-* identities need +x to traverse
+  chown athyper:athyper "$ATHYPER_DATA/telemetry"
+  chmod 0755 "$ATHYPER_DATA/telemetry"
+
   # svc-loki (9103:9103) — logging (Loki) and tracing (Tempo share the same identity)
   chown svc-loki:svc-loki "$ATHYPER_DATA/telemetry/logging"
   chown svc-loki:svc-loki "$ATHYPER_DATA/telemetry/tracing"
