@@ -800,11 +800,9 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 ## 9.1 Create Non-Secret Path Bootstrap File
 
 **EXECUTE ON:** SERVER  
-**AS:** athyper
+**AS:** root
 
 ```bash
-sudo -iu athyper
-
 # This file belongs in the git checkout (readable by compose.sh) because it contains
 # only filesystem paths — no credentials. It tells compose.sh where to find secrets,
 # config, and data roots on this specific server.
@@ -824,7 +822,7 @@ cat /opt/products/athyper/stack/env/.env
 ## 9.2 + 9.3 Generate Secrets and Write `.env`
 
 **EXECUTE ON:** SERVER  
-**AS:** athyper
+**AS:** root
 
 > One script does everything: generates all 22 secrets, builds the htpasswd,
 > saves a backup to `~/secrets-staging-values.txt`, writes the complete `.env`,
@@ -880,6 +878,10 @@ wc -l /opt/stack/athyper/secrets/.env
 
 **EXECUTE ON:** SERVER  
 **AS:** athyper
+
+```bash
+sudo -iu athyper
+```
 
 ```bash
 set -euo pipefail

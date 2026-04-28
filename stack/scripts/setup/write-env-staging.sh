@@ -3,19 +3,19 @@
 # athyper Stack — Staging Secret Generation + .env Writer
 # Location:
 #   stack/scripts/setup/write-env-staging.sh
-# Usage:
+# Usage (run as root):
 #   export ACME_EMAIL="ops@yourdomain.com"
 #   bash /opt/products/athyper/stack/scripts/setup/write-env-staging.sh
 #
 # What it does (one pass, no manual copy-paste):
 #   1. Generates all 22 required secrets with exact .env variable names
 #   2. Generates Traefik gateway htpasswd from IAM_ADMIN_PASSWORD
-#   3. Saves a plain-text backup to ~/secrets-staging-values.txt (0600)
-#   4. Writes the complete /opt/stack/athyper/secrets/.env via sudo tee
-#   5. Restores athyper:athyper 600 ownership on the .env
+#   3. Saves a plain-text backup to /home/athyper/secrets-staging-values.txt (0600)
+#   4. Writes the complete /opt/stack/athyper/secrets/.env
+#   5. Sets athyper:athyper 600 ownership on the .env
 #
 # Prerequisites:
-#   - Run as the athyper service account (sudo-capable)
+#   - Run as root (secrets/ dir is root:athyper 750 — only root can create files)
 #   - ACME_EMAIL exported before running
 #   - Docker available (pulls httpd:alpine for bcrypt htpasswd)
 #   - /opt/stack/athyper/secrets/ directory exists (Phase 3)
@@ -23,10 +23,20 @@
 
 set -euo pipefail
 
-SECRETS_FILE="$HOME/secrets-staging-values.txt"
+SECRETS_FILE="/home/athyper/secrets-staging-values.txt"
 ENV_FILE="/opt/stack/athyper/secrets/.env"
 
 # ── Pre-flight ─────────────────────────────────────────────────────────────
+if [[ $EUID -ne 0 ]]; then
+  echo ""
+  echo "ERROR: This script must be run as root."
+  echo "       secrets/ is root:athyper 750 — only root can create files there."
+  echo ""
+  echo "  sudo bash $0"
+  echo ""
+  exit 1
+fi
+
 if [[ -z "${ACME_EMAIL:-}" ]]; then
   echo ""
   echo "ERROR: ACME_EMAIL is not set."
@@ -129,7 +139,7 @@ chmod 0600 "$SECRETS_FILE"
 
 # ── Write the complete .env ────────────────────────────────────────────────
 echo "Step 4/4  Writing $ENV_FILE..."
-sudo tee "$ENV_FILE" > /dev/null << ENVEOF
+tee "$ENV_FILE" > /dev/null << ENVEOF
 # ── Identity ──────────────────────────────────────────────────────────────────
 ENVIRONMENT=staging
 COMPOSE_PROJECT_NAME=athyper
@@ -237,8 +247,8 @@ GATEWAY_DASHBOARD_HTPASSWD=$GATEWAY_DASHBOARD_HTPASSWD
 ENVEOF
 
 # ── Restore ownership ──────────────────────────────────────────────────────
-sudo chown athyper:athyper "$ENV_FILE"
-sudo chmod 600 "$ENV_FILE"
+chown athyper:athyper "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
 # ── Restore history ────────────────────────────────────────────────────────
 set -o history
