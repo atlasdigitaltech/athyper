@@ -19,7 +19,12 @@
  * Required env vars → see server/.env.example
  * Architecture      → see server/MIGRATION.md
  */
-import "dotenv/config"; // MUST be first — populates process.env before loadConfig()
+// Load .env in local dev (tsx watch). In Docker, env vars are injected by Compose
+// so dotenv is a no-op and the package may not be present after pnpm prune --prod.
+if (process.env.NODE_ENV !== "production") {
+  const { config } = await import("dotenv");
+  config();
+}
 
 // OTel must init BEFORE any codebase imports so auto-instrumentations can
 // patch express / pg / ioredis / http / undici at require time. No-op when

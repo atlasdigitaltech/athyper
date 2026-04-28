@@ -35,10 +35,28 @@ services:
       KC_SMTP_USERNAME: ${KC_SMTP_USERNAME}
       KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
 
-  # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder)
+  # MailHog: disable Traefik routing in staging — dev-only service, no public hostname.
+  # SMTP is still reachable internally by Keycloak on port 1025. Web UI is internal only.
+  mailhog:
+    labels:
+      - traefik.enable=false
+
+  # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder).
+  # Suppress Docker provider auto-router (container name becomes invalid hostname).
+  # Real routing comes from the file provider (gateway/dynamic/athyper.workbench.yml).
   athyper-neon-web:
     build:
       context: ../..
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.services.athyper-neon-web.loadbalancer.server.port=3000
+      - traefik.http.routers.athyper-neon-web-docker.rule=Host(`${APPS_ATHYPER_WEB_HOST}`)
+      - traefik.http.routers.athyper-neon-web-docker.entrypoints=websecure
+      - traefik.http.routers.athyper-neon-web-docker.tls=true
+      - traefik.http.routers.athyper-neon-web-docker.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.athyper-neon-web-docker.priority=1
+
 
   # API: 2 replicas to validate multi-instance behavior before production.
   # Dockerfile.prod compiles TS → JS and strips devDeps; Dockerfile.dev is
