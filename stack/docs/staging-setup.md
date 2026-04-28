@@ -1316,30 +1316,37 @@ ls -lan /opt/stack/athyper/data/memorycache
 > container's IP on the Docker bridge. The host's bridge interface (`10.200.0.1`) can reach
 > container IPs directly, and `pg_hba.conf` permits `10.0.0.0/8` with scram-sha-256.
 
-### 17.1 Install server/ dependencies
+### 17.1 Install workspace dependencies
+
+`server/` is a **pnpm workspace member** (listed in `pnpm-workspace.yaml`). Its
+dependencies use the `workspace:*` protocol which only pnpm understands — running
+`npm install` inside `server/` will fail with `EUNSUPPORTEDPROTOCOL`.
+
+Run `pnpm install` from the **repo root** to install all workspace packages,
+including `server/node_modules`:
 
 ```bash
 sudo -iu athyper
-cd /opt/products/athyper/server
+cd /opt/products/athyper
 
-# Install all server dependencies from the lockfile.
-# This populates server/node_modules including pg, tsx, drizzle-orm, and other
-# packages required by migrate.ts. Must run before the seed script.
-npm install
+# Installs all workspace packages: apps/, packages/, server/, server/framework/...
+# This is the same command Phase 15 runs for the image build; if Phase 15 already
+# ran successfully, node_modules will be up to date and this will be a no-op.
+pnpm install --frozen-lockfile
 
-# Verify pg is present (the seed script imports it directly)
-node -e "require('pg'); console.log('pg ok')"
+# Verify pg is present in the server workspace
+node -e "require('/opt/products/athyper/server/node_modules/pg'); console.log('pg ok')"
 ```
 
 Expected:
 
 ```
-added N packages in Xs
+Packages: N added (...)
 pg ok
 ```
 
-> **Re-runs:** `npm install` is idempotent. Safe to run again after a `git pull`
-> that adds or updates server dependencies.
+> **Re-runs:** `pnpm install --frozen-lockfile` is idempotent. Safe to run again
+> after a `git pull` that changes dependencies.
 
 ### 17.2 Run the seed
 
