@@ -1119,9 +1119,10 @@ dbfilename dump.rdb
 docker run --rm \
   --name athyper-canary-minio \
   --user 9101:9101 \
+  --entrypoint sh \
   -v /opt/stack/athyper/data/objectstorage:/data \
   minio/minio:RELEASE.2025-09-07T16-13-09Z \
-  sh -c 'mkdir -p /data/.minio.sys/tmp && touch /data/.minio.sys/tmp/probe && rm -r /data/.minio.sys && echo OK'
+  -c 'mkdir -p /data/.minio.sys/tmp && touch /data/.minio.sys/tmp/probe && rm -r /data/.minio.sys && echo OK'
 ```
 
 ### 13.3 Meilisearch Canary
