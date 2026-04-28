@@ -86,6 +86,10 @@ next-env.d.ts
 !.env.example
 !*.env.example
 
+# Grafana provisioning config dirs are named *.env but contain YAML, not secrets
+!stack/config/telemetry/provisioning.env/
+!stack/config/telemetry/provisioning.env/**
+
 # Sentry CLI auth token (used by @sentry/nextjs source-map upload)
 .sentryclirc
 

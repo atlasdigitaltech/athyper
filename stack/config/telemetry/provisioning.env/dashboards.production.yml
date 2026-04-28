@@ -1,0 +1,22 @@
+# Grafana dashboard provisioning — PRODUCTION override
+#
+# Mounted by stack/compose/athyper.override.production.yml onto
+# /etc/grafana/provisioning/dashboards/dashboards.yml, shadowing the
+# production-safe default.
+#
+# Production: strict lock-down. Dashboard edits and deletions are blocked
+# in the UI. All changes must go through the JSON files in provisioning/dashboards/json/
+# and be deployed via setup-config.sh --update.
+apiVersion: 1
+
+providers:
+  - name: athyper
+    orgId: 1
+    folder: Athyper
+    type: file
+    disableDeletion: true
+    editable: false
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

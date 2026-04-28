@@ -186,10 +186,9 @@ else
       -e "s/__INFISICAL_HASH__/$INF_HASH/g" \
       -e "s/__ADMIN_HASH__/$ADM_HASH/g" \
       "$ACL_TPL" > "$ACL_OUT"
-  # 644: the Redis container (svc-redis / UID 9100) reads this file via the :ro bind
-  # mount. The file contains SHA-256 hashes only (not raw passwords). setup-config.sh
-  # tightens ownership to athyper:svc-redis 640 on the server after this script runs.
-  chmod 644 "$ACL_OUT"
+  # 640: athyper (owner) writes; svc-redis group reads via :ro bind mount.
+  # No world-read — file contains SHA-256 password hashes.
+  chmod 640 "$ACL_OUT"
   # Verify no tokens remain — catches silent sha256sum failures or missing variables.
   if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT"; then
     LEFTOVER=$(grep -oE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT" | sort -u | tr '\n' ' ')
