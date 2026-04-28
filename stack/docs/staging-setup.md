@@ -818,208 +818,43 @@ chmod 0644 /opt/products/athyper/stack/env/.env
 cat /opt/products/athyper/stack/env/.env
 ```
 
-## 9.2 Generate All Secret Values
+## 9.2 + 9.3 Generate Secrets and Write `.env`
 
 **EXECUTE ON:** SERVER  
 **AS:** athyper
 
-> Variable names in this script match the `.env` exactly — no renaming or mapping required.
-> Run this once. If you re-run it, all secrets rotate and you must rewrite the `.env`.
+> One script does everything: generates all 22 secrets, builds the htpasswd,
+> saves a backup to `~/secrets-staging-values.txt`, writes the complete `.env`,
+> and restores ownership. No manual copy-paste required.
 
-**Step A — Generate secrets and save to `~/secrets-staging-values.txt`:**
-
-```bash
-# Prevent secrets from appearing in ~/.bash_history
-unset HISTFILE
-set +o history
-
-cat > ~/secrets-staging-values.txt << SECRETS
-CREDENTIAL_MASTER_KEY=$(openssl rand -base64 48 | tr -d '\n=')
-DB_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-DBPOOL_APPS_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-DBPOOL_SESSION_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-IAM_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-IAM_CLIENT_SECRET=$(openssl rand -hex 32)
-MEMORYCACHE_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-REDIS_EXPORTER_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-REDIS_GLITCHTIP_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-REDIS_INFISICAL_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-REDIS_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-S3_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-APP_S3_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-BACKUP_S3_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-TEMPO_S3_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-LOKI_S3_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-RENDERER_INTERNAL_TOKEN=$(openssl rand -hex 32)
-INFISICAL_ENCRYPTION_KEY=$(openssl rand -hex 16)
-INFISICAL_AUTH_SECRET=$(openssl rand -base64 32 | tr -d '\n=')
-TELEMETRY_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -d '\n=')
-MEILI_MASTER_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-HEALTHCHECKS_SECRET_KEY=$(openssl rand -base64 32 | tr -d '\n=')
-SECRETS
-
-chmod 0600 ~/secrets-staging-values.txt
-cat ~/secrets-staging-values.txt
-```
-
-**Step B — Generate the Traefik gateway htpasswd using `IAM_ADMIN_PASSWORD`:**
+**Step 1 — Set your ACME email (the only value you provide):**
 
 ```bash
-# Source the secrets file to access IAM_ADMIN_PASSWORD
-source ~/secrets-staging-values.txt
-
-# docker run pulls httpd:alpine on first run — expected output: admin:$$2y$$05$$...
-GATEWAY_DASHBOARD_HTPASSWD=$(
-  docker run --rm httpd:alpine htpasswd -nbB admin "$IAM_ADMIN_PASSWORD" \
-    | sed 's/\$/\$\$/g'
-)
-echo "GATEWAY_DASHBOARD_HTPASSWD: $GATEWAY_DASHBOARD_HTPASSWD"
+export ACME_EMAIL="ops@atlasdigitaltech.com"   # ← replace with your actual email
 ```
 
-Keep this terminal open — `$GATEWAY_DASHBOARD_HTPASSWD` must remain in the shell for Step 9.3.
-
-## 9.3 Write the Complete `.env`
-
-**EXECUTE ON:** SERVER  
-**AS:** athyper (sudo tee for the write, then restore ownership)
-
-> **Why sudo tee?** `secrets/` is `root:athyper 750` — `athyper` cannot create files
-> in the directory. The heredoc below expands all variables in `athyper`'s shell and
-> pipes the result through `sudo tee`, which writes as root. Ownership is restored
-> immediately after so `validate-env.sh` (which runs as `athyper`) can overwrite the
-> Redis ACL section.
-
-**Step 1 — Set your ACME email and confirm secrets are sourced:**
+**Step 2 — Run the script:**
 
 ```bash
-# Replace with your actual ops email address
-export ACME_EMAIL="ops@atlasdigitaltech.com"
-
-# Confirm secrets are still in scope (must all print non-empty values)
-echo "DB_ADMIN_PASSWORD : ${DB_ADMIN_PASSWORD:?not set — re-run Step A}"
-echo "MEMORYCACHE_PASSWORD: ${MEMORYCACHE_PASSWORD:?not set — re-run Step A}"
-echo "GATEWAY_DASHBOARD_HTPASSWD: ${GATEWAY_DASHBOARD_HTPASSWD:?not set — re-run Step B}"
+bash /opt/products/athyper/stack/scripts/setup/write-env-staging.sh
 ```
 
-**Step 2 — Write the complete `.env` in one command (no manual editing required):**
+Expected output:
+```
+=== Athyper Staging — Secret Generation + .env Write ===
 
-```bash
-sudo tee /opt/stack/athyper/secrets/.env > /dev/null << ENVEOF
-# ── Identity ──────────────────────────────────────────────────────────────────
-ENVIRONMENT=staging
-COMPOSE_PROJECT_NAME=athyper
-NODE_ENV=production
-NODE_TLS_REJECT_UNAUTHORIZED=1
+Step 1/4  Generating 22 secrets...
+Step 2/4  Generating gateway htpasswd (pulling httpd:alpine if needed)...
+Step 3/4  Writing secrets backup to /home/athyper/secrets-staging-values.txt...
+Step 4/4  Writing /opt/stack/athyper/secrets/.env...
 
-# ── Six-root paths ────────────────────────────────────────────────────────────
-ATHYPER_ROOT=/opt/products/athyper
-ATHYPER_STACK_ROOT=/opt/products/athyper/stack
-ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config
-ATHYPER_CONFIG=/opt/stack/athyper/config
-ATHYPER_DATA=/opt/stack/athyper/data
-ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
-ATHYPER_LOGS=/opt/stack/athyper/logs
-ATHYPER_BACKUPS=/opt/stack/athyper/backups
+=== Done ===
 
-# ── Kernel config ─────────────────────────────────────────────────────────────
-ATHYPER_KERNEL_CONFIG_PATH=apps/kernel.config.parameter.json
-
-# ── Public URLs ───────────────────────────────────────────────────────────────
-PUBLIC_BASE_URL=https://api-stg.athyper.com
-PUBLIC_WEB_URL=https://neon-stg.athyper.com
-
-# ── Hostnames ─────────────────────────────────────────────────────────────────
-APPS_ATHYPER_WEB_HOST=neon-stg.athyper.com
-APPS_ATHYPER_API_HOST=api-stg.athyper.com
-APPS_ATHYPER_WEB_UPSTREAM_URL=http://athyper-neon-web-1:3000
-GATEWAY_HOST=gateway-stg.athyper.com
-IAM_HOST=iam-stg.athyper.com
-IAM_ISSUER_URL=https://iam-stg.athyper.com/realms/athyper
-
-# ── Database ──────────────────────────────────────────────────────────────────
-DB_HOST=athyper-db-1
-DB_PORT=5432
-DATABASE_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_platform
-DB_ADMIN_PASSWORD=$DB_ADMIN_PASSWORD
-DBPOOL_APPS_HOST=athyper-dbpool-apps-1
-DBPOOL_APPS_PORT=6432
-DBPOOL_SESSION_HOST=athyper-dbpool-session-1
-DBPOOL_SESSION_PORT=6433
-DBPOOL_APPS_PASSWORD=$DBPOOL_APPS_PASSWORD
-DBPOOL_SESSION_PASSWORD=$DBPOOL_SESSION_PASSWORD
-DBPOOL_APPS_CONFIG=db/staging/dbpool/apps/pgbouncer-apps.ini
-DBPOOL_SESSION_CONFIG=db/staging/dbpool/session/pgbouncer-session.ini
-
-# ── Credentials ───────────────────────────────────────────────────────────────
-CREDENTIAL_MASTER_KEY=$CREDENTIAL_MASTER_KEY
-
-# ── Redis ─────────────────────────────────────────────────────────────────────
-REDIS_URL=redis://:$MEMORYCACHE_PASSWORD@athyper-memorycache-1:6379/0
-MEMORYCACHE_PASSWORD=$MEMORYCACHE_PASSWORD
-REDIS_EXPORTER_PASSWORD=$REDIS_EXPORTER_PASSWORD
-REDIS_GLITCHTIP_PASSWORD=$REDIS_GLITCHTIP_PASSWORD
-REDIS_INFISICAL_PASSWORD=$REDIS_INFISICAL_PASSWORD
-REDIS_ADMIN_PASSWORD=$REDIS_ADMIN_PASSWORD
-
-# ── IAM (Keycloak) ────────────────────────────────────────────────────────────
-IAM_ADMIN_PASSWORD=$IAM_ADMIN_PASSWORD
-IAM_CLIENT_SECRET=$IAM_CLIENT_SECRET
-
-# ── Object storage (MinIO) ────────────────────────────────────────────────────
-S3_ACCESS_KEY=athyper-minio-root
-S3_SECRET_KEY=$S3_SECRET_KEY
-S3_ENDPOINT=http://athyper-objectstorage-1:9000
-APP_S3_ACCESS_KEY=athyper-app
-APP_S3_SECRET_KEY=$APP_S3_SECRET_KEY
-BACKUP_S3_ACCESS_KEY=athyper-backup
-BACKUP_S3_SECRET_KEY=$BACKUP_S3_SECRET_KEY
-TEMPO_S3_ACCESS_KEY=athyper-tempo
-TEMPO_S3_SECRET_KEY=$TEMPO_S3_SECRET_KEY
-LOKI_S3_ACCESS_KEY=athyper-loki
-LOKI_S3_SECRET_KEY=$LOKI_S3_SECRET_KEY
-BACKUP_S3_BUCKET=athyper-backups
-BACKUP_S3_ENDPOINT=http://athyper-objectstorage-1:9000
-BACKUP_S3_REGION=us-east-1
-TEMPO_S3_BUCKET=athyper-tempo
-TEMPO_S3_ENDPOINT=http://athyper-objectstorage-1:9000
-LOKI_S3_BUCKET=athyper-loki
-LOKI_S3_ENDPOINT=http://athyper-objectstorage-1:9000
-
-# ── Telemetry storage ─────────────────────────────────────────────────────────
-TEMPO_STORAGE_BACKEND=s3
-LOKI_STORAGE_BACKEND=s3
-
-# ── Telemetry admin (Grafana) ─────────────────────────────────────────────────
-TELEMETRY_ADMIN_USER=admin
-TELEMETRY_ADMIN_PASSWORD=$TELEMETRY_ADMIN_PASSWORD
-
-# ── Infisical ─────────────────────────────────────────────────────────────────
-INFISICAL_ENCRYPTION_KEY=$INFISICAL_ENCRYPTION_KEY
-INFISICAL_AUTH_SECRET=$INFISICAL_AUTH_SECRET
-
-# ── Renderer ──────────────────────────────────────────────────────────────────
-RENDERER_INTERNAL_TOKEN=$RENDERER_INTERNAL_TOKEN
-
-# ── Search ────────────────────────────────────────────────────────────────────
-MEILI_MASTER_KEY=$MEILI_MASTER_KEY
-
-# ── Healthchecks ─────────────────────────────────────────────────────────────
-HEALTHCHECKS_SECRET_KEY=$HEALTHCHECKS_SECRET_KEY
-
-# ── Gateway ───────────────────────────────────────────────────────────────────
-ACME_EMAIL=$ACME_EMAIL
-GATEWAY_DASHBOARD_HTPASSWD=$GATEWAY_DASHBOARD_HTPASSWD
-ENVEOF
+  Secrets backup : /home/athyper/secrets-staging-values.txt  (0600)
+  Env file       : /opt/stack/athyper/secrets/.env  (athyper:athyper 600)
 ```
 
-**Step 3 — Restore ownership:**
-
-```bash
-sudo chown athyper:athyper /opt/stack/athyper/secrets/.env
-sudo chmod 600 /opt/stack/athyper/secrets/.env
-```
-
-**Step 4 — Verify:**
+**Step 3 — Verify:**
 
 ```bash
 stat -c "%U:%G %a %n" /opt/stack/athyper/secrets/.env
@@ -1027,17 +862,14 @@ stat -c "%U:%G %a %n" /opt/stack/athyper/secrets/.env
 
 wc -l /opt/stack/athyper/secrets/.env
 # Expect: ~65 lines
-
-grep -c 'CHANGE_ME\|<fill\|__placeholder' /opt/stack/athyper/secrets/.env
-# Must be: 0
 ```
 
-Restore shell history:
-
-```bash
-set -o history
-export HISTFILE=~/.bash_history
-```
+> **Re-running:** If you re-run the script it will prompt before overwriting.
+> All secrets rotate — re-apply them to every downstream service.
+>
+> **Secrets backup:** `~/secrets-staging-values.txt` is `0600` and contains all raw
+> secret values. Copy it to a password manager, then delete it from the server once
+> the stack is confirmed healthy.
 
 ---
 
