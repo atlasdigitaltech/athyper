@@ -50,12 +50,26 @@ fi
 
 # ---------------------------------------------------------------------------
 # Resolve seed passwords
+# Resolution order:
+#   1. Shell env var (highest priority — pass on CLI for staging)
+#   2. stack/env/.env (local dev)
+#   3. secrets/.env (staging/production — IAM_ADMIN_PASSWORD lives here)
 # ---------------------------------------------------------------------------
 IAM_ADMIN_USER="${IAM_ADMIN:-$(env_val IAM_ADMIN)}"
 IAM_ADMIN_PASS="${IAM_ADMIN_PASSWORD:-$(env_val IAM_ADMIN_PASSWORD)}"
 
+# Staging/production: fall back to secrets/.env when .env doesn't have these vars
 if [[ -z "$IAM_ADMIN_USER" || -z "$IAM_ADMIN_PASS" ]]; then
-  echo -e "${RED}Error: IAM_ADMIN / IAM_ADMIN_PASSWORD not resolvable (env or stack/env/.env)${NC}" >&2
+  _secrets_env="${ATHYPER_SECRETS_ROOT:-/opt/stack/athyper/secrets}/.env"
+  if [[ -f "$_secrets_env" ]]; then
+    [[ -z "$IAM_ADMIN_USER" ]] && IAM_ADMIN_USER="$(grep -E '^IAM_ADMIN=' "$_secrets_env" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+    [[ -z "$IAM_ADMIN_PASS" ]] && IAM_ADMIN_PASS="$(grep -E '^IAM_ADMIN_PASSWORD=' "$_secrets_env" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+  fi
+  unset _secrets_env
+fi
+
+if [[ -z "$IAM_ADMIN_USER" || -z "$IAM_ADMIN_PASS" ]]; then
+  echo -e "${RED}Error: IAM_ADMIN / IAM_ADMIN_PASSWORD not resolvable (env, stack/env/.env, or secrets/.env)${NC}" >&2
   exit 1
 fi
 
