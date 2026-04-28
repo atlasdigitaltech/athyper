@@ -1,5 +1,5 @@
 -- ============================================================================
--- document/01g_tables_procurement_intake.sql
+-- document/01k_tables_procurement_intake.sql
 -- Purpose: Additive columns for procurement line classification pipeline.
 --          Safe to re-run (IF NOT EXISTS / idempotent guards throughout).
 -- Depends on: 01e_tables_invoice.sql, 01j_tables_p2p.sql
@@ -37,7 +37,7 @@ COMMENT ON COLUMN document.purchase_requisition_line.classification_decision IS
 --     ON document.purchase_invoice_line USING gin (item_description gin_trgm_ops);
 
 DO $$ BEGIN
-    RAISE NOTICE 'document/01g_tables_procurement_intake.sql applied: '
+    RAISE NOTICE 'document/01k_tables_procurement_intake.sql applied: '
                  'classification_decision column added to purchase_invoice_line '
                  'and purchase_requisition_line.';
 END $$;
