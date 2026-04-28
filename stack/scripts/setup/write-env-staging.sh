@@ -73,8 +73,10 @@ echo "Step 1/4  Generating 22 secrets..."
 # ── Generate all secrets ───────────────────────────────────────────────────
 CREDENTIAL_MASTER_KEY=$(openssl rand -base64 48 | tr -d '\n=')
 DB_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-DBPOOL_APPS_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
-DBPOOL_SESSION_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
+# Both PgBouncer pools proxy the postgres superuser — their userlist.txt must
+# carry the same password so client auth and backend auth both succeed.
+DBPOOL_APPS_PASSWORD=$DB_ADMIN_PASSWORD
+DBPOOL_SESSION_PASSWORD=$DB_ADMIN_PASSWORD
 IAM_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
 IAM_CLIENT_SECRET=$(openssl rand -hex 32)
 MEMORYCACHE_PASSWORD=$(openssl rand -base64 32 | tr -d '\n=')
