@@ -128,6 +128,13 @@ export interface HeaderAction {
   /** Icon registry key, e.g. "send", "check", "x". Fallback: CircleHelp. */
   icon?: string;
   onSelect?: () => void | Promise<void>;
+  /**
+   * Visual group within the overflow ("More") dropdown.
+   *   "lifecycle" — domain-specific state transitions (Deactivate, Block, Archive…)
+   *   "record"    — generic CRUD ops (Copy, Delete, Export…)
+   * Unset items are rendered between the two sections.
+   */
+  group?: "lifecycle" | "record";
 }
 
 // ── P1.5 ───────────────────────────────────────────────────────────────────

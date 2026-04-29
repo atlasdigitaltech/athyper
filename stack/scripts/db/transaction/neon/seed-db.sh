@@ -270,6 +270,7 @@ if [ "$DOCKER_MODE" = "true" ]; then
   echo ""
 
   DB_DIR="${SERVER_DIR}/db"
+  echo -e "${YELLOW}Installing dependencies (pg + tsx) — may take ~60s on first run...${NC}"
   # shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
   if ! docker run --rm \
       --network "$DOCKER_NETWORK" \
@@ -278,7 +279,7 @@ if [ "$DOCKER_MODE" = "true" ]; then
       -v "${DB_DIR}:/app" \
       -w /app \
       "$DOCKER_NODE_IMAGE" \
-      sh -c "npm install --no-fund --no-audit --ignore-scripts --silent && npx tsx seed/migrate.ts $MIGRATE_ARGS"; then
+      sh -c "npm install --no-fund --no-audit --ignore-scripts && npx tsx seed/migrate.ts $MIGRATE_ARGS"; then
     echo ""
     echo -e "${RED}Seed failed!${NC}"
     exit 1

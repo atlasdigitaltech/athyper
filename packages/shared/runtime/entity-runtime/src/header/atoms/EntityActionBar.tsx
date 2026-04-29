@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@athyper/ui/primitives";
@@ -115,6 +116,71 @@ function SecondaryButton({ action, onAction }: { action: HeaderAction; onAction?
   return btn;
 }
 
+// ── Overflow groups ───────────────────────────────────────────────────────
+
+function OverflowItem({
+  action,
+  destructive = false,
+  onAction,
+}: {
+  action:      HeaderAction;
+  destructive?: boolean;
+  onAction?:   (id: string) => void;
+}) {
+  const Icon = action.icon ? getActionIcon(action.icon) : null;
+  return (
+    <DropdownMenuItem
+      key={action.id}
+      disabled={action.disabled || action.pending}
+      onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
+      className={destructive ? "text-xs gap-2 text-destructive focus:text-destructive" : "text-xs gap-2"}
+    >
+      {Icon && <Icon className={`h-3.5 w-3.5 ${destructive ? "" : "text-muted-foreground"}`} />}
+      {action.label}
+    </DropdownMenuItem>
+  );
+}
+
+function OverflowGroups({
+  overflow,
+  danger,
+  onAction,
+}: {
+  overflow: HeaderAction[];
+  danger:   HeaderAction[];
+  onAction?: (id: string) => void;
+}) {
+  const lifecycle = overflow.filter(a => a.group === "lifecycle");
+  const record    = overflow.filter(a => a.group === "record");
+  const general   = overflow.filter(a => !a.group);
+
+  // Build ordered sections — skip empties; inject separators between them
+  const sections: { items: HeaderAction[]; label?: string; destructive?: boolean }[] = [
+    { items: lifecycle },
+    { items: general },
+    { items: record, label: record.length > 0 && (lifecycle.length > 0 || general.length > 0) ? "Record" : undefined },
+    { items: danger, destructive: true },
+  ].filter(s => s.items.length > 0);
+
+  return (
+    <>
+      {sections.map((section, i) => (
+        <>
+          {i > 0 && <DropdownMenuSeparator key={`sep-${i}`} />}
+          {section.label && (
+            <DropdownMenuLabel key={`lbl-${i}`} className="text-[10px] text-muted-foreground/50 px-2 py-1 font-medium uppercase tracking-wider">
+              {section.label}
+            </DropdownMenuLabel>
+          )}
+          {section.items.map(a => (
+            <OverflowItem key={a.id} action={a} destructive={section.destructive} onAction={onAction} />
+          ))}
+        </>
+      ))}
+    </>
+  );
+}
+
 // ── Main bar ──────────────────────────────────────────────────────────────
 
 export function EntityActionBar({ actions, onAction, className }: EntityActionBarProps) {
@@ -140,36 +206,8 @@ export function EntityActionBar({ actions, onAction, className }: EntityActionBa
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[160px]">
-            {overflow.map(a => {
-              const Icon = a.icon ? getActionIcon(a.icon) : null;
-              return (
-                <DropdownMenuItem
-                  key={a.id}
-                  disabled={a.disabled || a.pending}
-                  onClick={() => { a.onSelect?.(); onAction?.(a.id); }}
-                  className="text-xs gap-2"
-                >
-                  {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
-                  {a.label}
-                </DropdownMenuItem>
-              );
-            })}
-            {overflow.length > 0 && danger.length > 0 && <DropdownMenuSeparator />}
-            {danger.map(a => {
-              const Icon = a.icon ? getActionIcon(a.icon) : null;
-              return (
-                <DropdownMenuItem
-                  key={a.id}
-                  disabled={a.disabled || a.pending}
-                  onClick={() => { a.onSelect?.(); onAction?.(a.id); }}
-                  className="text-xs gap-2 text-destructive focus:text-destructive"
-                >
-                  {Icon && <Icon className="h-3.5 w-3.5" />}
-                  {a.label}
-                </DropdownMenuItem>
-              );
-            })}
+          <DropdownMenuContent align="end" className="min-w-[168px]">
+            <OverflowGroups overflow={overflow} danger={danger} onAction={onAction} />
           </DropdownMenuContent>
         </DropdownMenu>
       )}

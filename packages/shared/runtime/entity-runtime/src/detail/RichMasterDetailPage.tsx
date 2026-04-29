@@ -101,6 +101,27 @@ const PLACEMENT_MAP: Record<string, "primary" | "secondary" | "overflow" | "dang
   COMMAND:  "overflow",
 };
 
+// ── Action group classifier ───────────────────────────────────────────────────
+
+const LIFECYCLE_VERBS = new Set([
+  "activate", "deactivate", "block", "unblock", "archive", "unarchive",
+  "reactivate", "suspend", "resume", "cancel", "void", "close", "reopen",
+  "lock", "unlock", "freeze", "thaw", "discontinue", "terminate", "reinstate",
+  "enable", "disable",
+]);
+
+const RECORD_VERBS = new Set([
+  "copy", "duplicate", "export", "print", "new", "delete", "purge", "destroy",
+]);
+
+function classifyActionGroup(permissionCode: string): "lifecycle" | "record" | undefined {
+  const code = permissionCode.toLowerCase();
+  const stem = code.split("_")[0];
+  if (LIFECYCLE_VERBS.has(code) || LIFECYCLE_VERBS.has(stem)) return "lifecycle";
+  if (RECORD_VERBS.has(code)    || RECORD_VERBS.has(stem))    return "record";
+  return undefined;
+}
+
 // ── Header model ──────────────────────────────────────────────────────────────
 
 function buildHeaderModel(
@@ -167,6 +188,7 @@ function buildHeaderModel(
       order:     op.sort_order,
       disabled:  !op.is_enabled,
       icon:      op.icon_override ?? undefined,
+      group:     classifyActionGroup(op.permission_code),
     }));
   }
 
