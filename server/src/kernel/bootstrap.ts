@@ -234,7 +234,7 @@ export async function bootstrap(
   });
   lifecycle.onShutdown(() => redis.disconnect());
 
-  const bullmqRedisUrl = config.redis.bullmqUrl ?? config.redis.url;
+  const bullmqRedisUrl = config.redis.bullmqUrl || config.redis.url;
   const bullmqConnection = {
     ...parseRedisUrl(bullmqRedisUrl),
     connectionName: "athyper-bullmq",
