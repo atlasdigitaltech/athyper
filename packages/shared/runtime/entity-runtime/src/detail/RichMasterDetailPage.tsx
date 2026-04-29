@@ -37,6 +37,7 @@ import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import {
   Button, Card, CardContent, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
+  Tooltip, TooltipContent, TooltipTrigger,
 } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import { EntityHeader } from "../header";
@@ -183,12 +184,8 @@ function buildHeaderModel(
         : { label: titleCase(statusVal), intent: statusIntent },
     },
     actions,
-    facts:   undefined,
+    facts: undefined,
     tabs,
-    audit: {
-      createdAt: data["created_at"] ? formatDate(data["created_at"]) : undefined,
-      updatedAt: data["updated_at"] ? formatDate(data["updated_at"]) : undefined,
-    },
   };
 }
 
@@ -263,14 +260,25 @@ function OverviewRenderer({
   );
 }
 
-// ── Read-only badge ───────────────────────────────────────────────────────────
+// ── View-only chip — only shown when editing is actually blocked ──────────────
+// Never shown in normal view mode when Edit is available.
 
-function ReadOnlyBadge() {
+interface ViewOnlyReason {
+  label:   string;
+  tooltip: string;
+}
+
+function ViewOnlyChip({ reason }: { reason: ViewOnlyReason }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground select-none">
-      <Lock className="h-2.5 w-2.5" />
-      Read Only
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground select-none cursor-default">
+          <Lock className="h-3 w-3 shrink-0" />
+          {reason.label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-56">{reason.tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -281,9 +289,11 @@ const SKIP_FIELD_NAMES = new Set(["code", "name", "status"]);
 function FieldsRenderer({
   entity,
   data,
+  viewOnlyReason,
 }: {
-  entity: CompiledEntity;
-  data:   Record<string, unknown>;
+  entity:         CompiledEntity;
+  data:           Record<string, unknown>;
+  viewOnlyReason: ViewOnlyReason | null;
 }) {
   const { field_groups, fields } = entity;
 
@@ -304,6 +314,12 @@ function FieldsRenderer({
     );
   }
 
+  const chipNode = viewOnlyReason ? (
+    <div className="flex items-center">
+      <ViewOnlyChip reason={viewOnlyReason} />
+    </div>
+  ) : null;
+
   if (field_groups.length > 0) {
     const sections = field_groups
       .sort((a, b) => a.sort_order - b.sort_order)
@@ -319,15 +335,13 @@ function FieldsRenderer({
 
     return (
       <div className="space-y-3">
+        {chipNode}
         {sections.map(({ group, fields: gFields }) => (
           <Card key={group.group_key}>
             <CardContent className="pt-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {group.label}
-                </h4>
-                <ReadOnlyBadge />
-              </div>
+              <h4 className="mb-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {group.label}
+              </h4>
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
                 {gFields.map((field) => (
                   <FieldCell
@@ -343,9 +357,6 @@ function FieldsRenderer({
         {ungrouped.length > 0 && (
           <Card>
             <CardContent className="pt-5">
-              <div className="mb-4 flex items-center justify-end">
-                <ReadOnlyBadge />
-              </div>
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
                 {ungrouped.map((field) => (
                   <FieldCell
@@ -363,22 +374,22 @@ function FieldsRenderer({
   }
 
   return (
-    <Card>
-      <CardContent className="pt-5">
-        <div className="mb-4 flex items-center justify-end">
-          <ReadOnlyBadge />
-        </div>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
-          {displayFields.map((field) => (
-            <FieldCell
-              key={field.name}
-              field={field}
-              value={data[field.name] ?? data[field.column_name ?? ""]}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      {chipNode}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+            {displayFields.map((field) => (
+              <FieldCell
+                key={field.name}
+                field={field}
+                value={data[field.name] ?? data[field.column_name ?? ""]}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -405,10 +416,12 @@ function ChildEntityPanel({
   tab,
   recordUuid,
   editMode,
+  viewOnlyReason,
 }: {
-  tab:        RichMasterTab;
-  recordUuid: string;
-  editMode:   boolean;
+  tab:            RichMasterTab;
+  recordUuid:     string;
+  editMode:       boolean;
+  viewOnlyReason: ViewOnlyReason | null;
 }) {
   const entityCode       = tab.entity_code!;
   // For view-backed child tabs: create the underlying writable entity (e.g. bank_account),
@@ -493,12 +506,15 @@ function ChildEntityPanel({
     <>
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          {isLoading
-            ? "Loading…"
-            : `${records.length} record${records.length !== 1 ? "s" : ""}`}
-        </p>
-        {canAdd ? (
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            {isLoading
+              ? "Loading…"
+              : `${records.length} record${records.length !== 1 ? "s" : ""}`}
+          </p>
+          {!canAdd && viewOnlyReason && <ViewOnlyChip reason={viewOnlyReason} />}
+        </div>
+        {canAdd && (
           <Button
             variant="outline"
             size="sm"
@@ -508,8 +524,6 @@ function ChildEntityPanel({
             <Plus className="h-3 w-3" />
             {tab.add_label ?? "Add"}
           </Button>
-        ) : (
-          <ReadOnlyBadge />
         )}
       </div>
 
@@ -607,12 +621,14 @@ function CompositeRenderer({
   sections,
   recordUuid,
   editMode,
+  viewOnlyReason,
 }: {
-  entity:     CompiledEntity;
-  data:       Record<string, unknown>;
-  sections:   RichMasterTabSection[];
-  recordUuid: string;
-  editMode:   boolean;
+  entity:         CompiledEntity;
+  data:           Record<string, unknown>;
+  sections:       RichMasterTabSection[];
+  recordUuid:     string;
+  editMode:       boolean;
+  viewOnlyReason: ViewOnlyReason | null;
 }) {
   const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
 
@@ -624,6 +640,11 @@ function CompositeRenderer({
     <div className="flex gap-6">
       {/* Left section nav */}
       <nav className="w-36 shrink-0 space-y-0.5 pt-0.5">
+        {viewOnlyReason && (
+          <div className="mb-3">
+            <ViewOnlyChip reason={viewOnlyReason} />
+          </div>
+        )}
         {sections.map((s) => (
           <button
             key={s.id}
@@ -641,12 +662,12 @@ function CompositeRenderer({
         ))}
       </nav>
 
-      {/* Section content */}
+      {/* Section content — chip already rendered in the nav column */}
       <div className="flex-1 min-w-0">
         {sections.map((s) => (
           <div key={s.id} className={s.id === activeSection ? "" : "hidden"}>
             {s.type === "fields" ? (
-              <FieldsRenderer entity={entity} data={data} />
+              <FieldsRenderer entity={entity} data={data} viewOnlyReason={null} />
             ) : s.type === "child" && s.entity_code ? (
               <ChildEntityPanel
                 tab={{
@@ -662,6 +683,7 @@ function CompositeRenderer({
                 }}
                 recordUuid={recordUuid}
                 editMode={editMode}
+                viewOnlyReason={null}
               />
             ) : (
               <EmptyState title={s.label} description="Section not yet configured." />
@@ -720,6 +742,35 @@ export function RichMasterDetailPage({
   const [isDirty, setIsDirty]     = useState(false);
   const [activePanel, setActivePanel] = useState<string | null>(null);
 
+  // Derive why editing is blocked (null = can edit — no chip shown).
+  // Checked once here; passed to every content renderer.
+  const viewOnlyReason = useMemo((): ViewOnlyReason | null => {
+    if (editMode) return null;
+    const editOp = (operations ?? []).find(
+      (op) =>
+        (op.surface === "DETAIL" || op.surface === "BOTH") &&
+        op.permission_code.toLowerCase().includes("edit"),
+    );
+    if (editOp?.is_enabled) return null;
+
+    const statusField = entity.display_config.status_field_names?.[0] ?? "status";
+    const statusVal   = String(data[statusField] ?? "active").toLowerCase();
+    const IMMUTABLE   = new Set(["archived", "inactive", "cancelled", "closed", "terminated", "voided", "deleted"]);
+    const entityLabel = entity.entity_name.replace(/_/g, " ");
+
+    if (IMMUTABLE.has(statusVal)) {
+      return {
+        label:   `${titleCase(statusVal)} · view only`,
+        tooltip: `${titleCase(statusVal)} ${entityLabel} cannot be edited. Reactivate to make changes.`,
+      };
+    }
+    return {
+      label:   "View only",
+      tooltip: `You do not have permission to edit this ${entityLabel}.`,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, operations, entity, data]);
+
   const rawTabs   = config.tabs!;
   const childTabs = rawTabs.filter((t) => t.renderer === "child");
   // Suppress the P5 tab strip when there is only one tab.
@@ -736,18 +787,71 @@ export function RichMasterDetailPage({
 
   const [activeTab, setActiveTab] = useState(defaultActiveTab);
 
-  // Build platform icons from config.platform_panels
+  // ── Platform panel counts ─────────────────────────────────────────────────────
+  // Fetched eagerly so badge counts appear on load, not only after the panel opens.
+  // Same query keys as CommentsPanel / AttachmentsPanel — cache is shared.
+  const hasPlatformComments    = (config.platform_panels ?? []).includes("comments");
+  const hasPlatformAttachments = (config.platform_panels ?? []).includes("attachments");
+
+  const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
+    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({
+        entityType: entity.entity_code,
+        entityId:   recordId,
+        limit:      "200",
+      });
+      const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
+      if (!res.ok) return { data: [], hasMore: false };
+      return res.json() as Promise<{ data: unknown[]; hasMore: boolean }>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformComments,
+  });
+
+  const attachmentsCountQuery = useQuery<unknown[]>({
+    queryKey: ["attachments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        { signal },
+      );
+      if (!res.ok) return [];
+      return res.json() as Promise<unknown[]>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformAttachments,
+  });
+
+  const commentsCount    = commentsCountQuery.data?.data?.length ?? 0;
+  const attachmentsCount = Array.isArray(attachmentsCountQuery.data) ? attachmentsCountQuery.data.length : 0;
+
+  // Build platform icons with live counts
   const platformIcons: PlatformPanelIcon[] = useMemo(
     () =>
       (config.platform_panels ?? []).map((panelId) => {
         switch (panelId) {
-          case "comments":    return { id: "comments",    icon: <MessageSquare className="h-4 w-4" />, label: "Comments"    };
-          case "attachments": return { id: "attachments", icon: <Paperclip     className="h-4 w-4" />, label: "Attachments" };
-          case "activity":    return { id: "activity",    icon: <Clock         className="h-4 w-4" />, label: "Activity"    };
+          case "comments":    return {
+            id: "comments", icon: <MessageSquare className="h-4 w-4" />, label: "Comments",
+            count:        commentsCount > 0 ? commentsCount : undefined,
+            countPending: hasPlatformComments && commentsCountQuery.isPending,
+          };
+          case "attachments": return {
+            id: "attachments", icon: <Paperclip className="h-4 w-4" />, label: "Attachments",
+            count:        attachmentsCount > 0 ? attachmentsCount : undefined,
+            countPending: hasPlatformAttachments && attachmentsCountQuery.isPending,
+          };
+          case "activity":    return {
+            id: "activity", icon: <Clock className="h-4 w-4" />, label: "Activity",
+          };
         }
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config.platform_panels?.join(",")],
+    [
+      config.platform_panels,
+      commentsCount, commentsCountQuery.isPending,
+      attachmentsCount, attachmentsCountQuery.isPending,
+    ],
   );
 
   const headerModel = useMemo(
@@ -829,7 +933,7 @@ export function RichMasterDetailPage({
             hideActions
           />
         ) : (
-          <FieldsRenderer entity={entity} data={data} />
+          <FieldsRenderer entity={entity} data={data} viewOnlyReason={viewOnlyReason} />
         );
 
       case "composite":
@@ -842,6 +946,7 @@ export function RichMasterDetailPage({
                 sections={activeTabDef.composite_sections}
                 recordUuid={record.id}
                 editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
               />
             </CardContent>
           </Card>
@@ -853,7 +958,12 @@ export function RichMasterDetailPage({
         return activeTabDef.entity_code ? (
           <Card>
             <CardContent className="pt-5">
-              <ChildEntityPanel tab={activeTabDef} recordUuid={record.id} editMode={editMode} />
+              <ChildEntityPanel
+                tab={activeTabDef}
+                recordUuid={record.id}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
+              />
             </CardContent>
           </Card>
         ) : (

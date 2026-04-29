@@ -23,6 +23,16 @@
 #   ./seed-db.sh --phase=N       # Low-level: run explicit phase(s) — N is 1, 2, or 3
 #                                #   e.g. --phase=1 --phase=2 for DDL + platform seed only
 #   ./seed-db.sh --tenant-id=UUID  # Set app.seed_tenant_id for the entire Phase 3 session
+#   ./seed-db.sh --docker        # Run the provisioner inside a Docker container on the
+#                                #   internal Docker network (athyper-internal by default).
+#                                #   Postgres is reached via the @db: service name — no
+#                                #   host-mapped port required. Use on staging/production
+#                                #   where port 5432 is not exposed to the host.
+#                                #   Can combine with any other flag:
+#                                #     --docker --reset --all
+#                                #     --docker --ddl-only
+#   ./seed-db.sh --docker-network=NAME  # Override Docker network (default: athyper-internal)
+#   ./seed-db.sh --docker-image=IMAGE   # Override Node image  (default: node:20-bookworm)
 #                                #   Blueprints (020_universal/ 030_industry/) and tenant
 #                                #   instance files use this UUID to scope their inserts.
 #                                #   Can also be set via SEED_TENANT_ID env var.
@@ -94,6 +104,26 @@ source "${SCRIPT_DIR}/../../../lib/constants.sh"
 
 GREEN="$CLR_GREEN"; YELLOW="$CLR_YELLOW"; RED="$CLR_RED"; NC="$CLR_NC"
 
+# ---------------------------------------------------------------------------
+# Parse --docker mode flags early (shell-only; stripped before forwarding to
+# migrate.ts so the provisioner never sees them).
+# ---------------------------------------------------------------------------
+DOCKER_MODE=false
+DOCKER_NETWORK=""                        # empty = auto-detect from constants
+DOCKER_NODE_IMAGE="node:20-bookworm"
+
+MIGRATE_ONLY_ARGS=()
+for _arg in "$@"; do
+  case "$_arg" in
+    --docker)              DOCKER_MODE=true ;;
+    --docker-network=*)    DOCKER_NETWORK="${_arg#--docker-network=}" ;;
+    --docker-image=*)      DOCKER_NODE_IMAGE="${_arg#--docker-image=}" ;;
+    *)                     MIGRATE_ONLY_ARGS+=("$_arg") ;;
+  esac
+done
+# Replace positional params with filtered set so ${*} below is migrate.ts args only
+set -- "${MIGRATE_ONLY_ARGS[@]+"${MIGRATE_ONLY_ARGS[@]}"}"
+
 echo -e "${GREEN}=== Athyper Database Seed ===${NC}"
 
 # ---------------------------------------------------------------------------
@@ -139,26 +169,39 @@ if [ -z "${DATABASE_ADMIN_URL:-}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Rewrite Docker-internal hostnames to localhost (this script runs on the host).
-# Handles both the Docker service name (@db:) and the Compose container name
-# (@athyper-db-1: / @${COMPOSE_PROJECT_NAME}-db-1:) used in staging secrets.
-# PgBouncer ports (:6432/:6433) are rejected — DDL requires a direct connection.
+# Hostname rewriting — strategy differs between host mode and Docker mode.
+#
+# Host mode  : rewrite Docker-internal service names (@db:, @athyper-db-1:)
+#              to @localhost: so the host process can reach the mapped port.
+# Docker mode: keep the Docker service name (@db:) so the container that runs
+#              migrate.ts reaches Postgres via the internal network.
+#              If the stored URL already has @localhost:, rewrite it back to
+#              @db: so the container-to-container routing works.
+# PgBouncer ports (:6432/:6433) are rejected in both modes.
 # ---------------------------------------------------------------------------
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@db:/@localhost:}"
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@athyper-db-1:/@localhost:}"
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@${COMPOSE_PROJECT_NAME}-db-1:/@localhost:}"
+if [ "$DOCKER_MODE" = "false" ]; then
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@db:/@localhost:}"
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@athyper-db-1:/@localhost:}"
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@${COMPOSE_PROJECT_NAME}-db-1:/@localhost:}"
 
-# Warn and abort if the URL still routes through PgBouncer (ports 6432/6433).
-if echo "$DATABASE_ADMIN_URL" | grep -qE ':6432|:6433'; then
-  echo -e "${RED}ERROR: DATABASE_ADMIN_URL appears to use a PgBouncer port (:6432 or :6433).${NC}"
-  echo -e "${RED}       migrate.ts requires a direct Postgres connection (port 5432).${NC}"
-  echo -e "${YELLOW}       Set DATABASE_ADMIN_URL to the direct DB URL, e.g.:${NC}"
-  echo -e "${YELLOW}         postgres://postgres:<pass>@localhost:5432/athyper_neon${NC}"
-  exit 1
+  if echo "$DATABASE_ADMIN_URL" | grep -qE ':6432|:6433'; then
+    echo -e "${RED}ERROR: DATABASE_ADMIN_URL appears to use a PgBouncer port (:6432 or :6433).${NC}"
+    echo -e "${RED}       migrate.ts requires a direct Postgres connection (port 5432).${NC}"
+    echo -e "${YELLOW}       Set DATABASE_ADMIN_URL to the direct DB URL, e.g.:${NC}"
+    echo -e "${YELLOW}         postgres://postgres:<pass>@localhost:5432/athyper_neon${NC}"
+    exit 1
+  fi
+  # Rewrite dbpool hostnames only after the port check
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-apps:/@localhost:}"
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-session:/@localhost:}"
+else
+  # Docker mode: ensure the URL targets the db service name on the internal network.
+  # Undo any prior @localhost: rewrite (handles URLs already rewritten or stored as localhost).
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@localhost:5432/@db:5432}"
+  # Container names are not reachable inside another container; normalise to service name.
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@athyper-db-1:/@db:}"
+  DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@${COMPOSE_PROJECT_NAME}-db-1:/@db:}"
 fi
-# Rewrite dbpool hostnames only after the port check
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-apps:/@localhost:}"
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL//@dbpool-session:/@localhost:}"
 
 export DATABASE_ADMIN_URL
 
@@ -188,9 +231,10 @@ echo -e "${GREEN}Arguments: ${*:-<none>}${NC}"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Pre-flight: verify npx (ships with Node/npm) is available
+# Pre-flight: verify npx (ships with Node/npm) is available.
+# Skipped in --docker mode — the container supplies its own Node runtime.
 # ---------------------------------------------------------------------------
-if ! command -v npx &>/dev/null; then
+if [ "$DOCKER_MODE" = "false" ] && ! command -v npx &>/dev/null; then
   echo -e "${RED}Error: npx not found in PATH — install Node.js (>= 18) and npm${NC}"
   exit 1
 fi
@@ -206,14 +250,48 @@ fi
 MIGRATE_ARGS="${*:---all}"
 
 # ---------------------------------------------------------------------------
-# Run the provisioner (cd to server/ so node_modules and tsconfig resolve correctly)
+# Run the provisioner.
+#
+# Host mode  : cd to server/ and invoke npx tsx directly. Node.js must be
+#              installed on the host and port 5432 must be reachable.
+#
+# Docker mode: spin up a temporary node container on the internal Docker
+#              network so the seed can reach Postgres by service name (@db:)
+#              without requiring a host-mapped port.
+#              server/db/ is mounted as /app — it is a self-contained package
+#              (package.json with pg + tsx), so npm install is fast (<10s).
 # ---------------------------------------------------------------------------
-cd "$SERVER_DIR"
-# shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
-if ! npx tsx db/seed/migrate.ts $MIGRATE_ARGS; then
+if [ "$DOCKER_MODE" = "true" ]; then
+  # Auto-detect the Docker network from constants if not overridden.
+  if [ -z "$DOCKER_NETWORK" ]; then
+    DOCKER_NETWORK="$NETWORK_NAME"   # from constants.sh: athyper-internal
+  fi
+  echo -e "${GREEN}Docker mode: network=${DOCKER_NETWORK}  image=${DOCKER_NODE_IMAGE}${NC}"
   echo ""
-  echo -e "${RED}Seed failed!${NC}"
-  exit 1
+
+  DB_DIR="${SERVER_DIR}/db"
+  # shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
+  if ! docker run --rm \
+      --network "$DOCKER_NETWORK" \
+      -e DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" \
+      -e SEED_TENANT_ID="${SEED_TENANT_ID:-}" \
+      -v "${DB_DIR}:/app" \
+      -w /app \
+      "$DOCKER_NODE_IMAGE" \
+      sh -c "npm install --no-fund --no-audit --ignore-scripts --silent && npx tsx seed/migrate.ts $MIGRATE_ARGS"; then
+    echo ""
+    echo -e "${RED}Seed failed!${NC}"
+    exit 1
+  fi
+else
+  # Host mode: cd to server/ so node_modules and tsconfig resolve correctly.
+  cd "$SERVER_DIR"
+  # shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
+  if ! npx tsx db/seed/migrate.ts $MIGRATE_ARGS; then
+    echo ""
+    echo -e "${RED}Seed failed!${NC}"
+    exit 1
+  fi
 fi
 
 echo ""
