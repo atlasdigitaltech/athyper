@@ -52,8 +52,17 @@ services:
           sleep 5
         done
         mc alias ls storage >/dev/null
-        mc mb --ignore-existing "storage/$${LOKI_S3_BUCKET}"
-        echo "[logging-bucket-init] bucket ready: $${LOKI_S3_BUCKET}"
+        # Use mc ls to check bucket existence first. In non-local environments
+        # objectstorage-init (running as root) creates the bucket; the scoped
+        # athyper-loki user only needs ListBucket for this check, not CreateBucket.
+        # mc mb --ignore-existing is not enough — it still issues CreateBucket and
+        # only suppresses BucketAlreadyOwnedByYou, not AccessDenied.
+        if mc ls "storage/$${LOKI_S3_BUCKET}/" >/dev/null 2>&1; then
+          echo "[logging-bucket-init] bucket already exists: $${LOKI_S3_BUCKET}"
+        else
+          mc mb "storage/$${LOKI_S3_BUCKET}"
+          echo "[logging-bucket-init] bucket created: $${LOKI_S3_BUCKET}"
+        fi
     depends_on:
       objectstorage:
         condition: service_healthy
