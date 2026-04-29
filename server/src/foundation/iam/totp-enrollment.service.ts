@@ -22,7 +22,6 @@
 
 import { createHmac, randomBytes } from "crypto";
 import type { Kysely } from "kysely";
-import QRCode from "qrcode";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,6 +106,7 @@ export class TotpEnrollmentService {
       .returning("id" as never)
       .executeTakeFirstOrThrow() as { id: string };
 
+    const { default: QRCode } = await import("qrcode");
     const qrSvg = await QRCode.toString(otpauthUri, { type: "svg", width: 200, margin: 2 });
 
     return {
