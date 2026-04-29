@@ -705,7 +705,11 @@ async function main(): Promise<void> {
 
     await runPhases(connectionString, phases, { force, tenantId });
   } catch (err) {
-    logError({ msg: "migrate_fatal", error: String(err) });
+    const errStr =
+      err instanceof AggregateError
+        ? `AggregateError(${err.errors.map((e: unknown) => String(e)).join(" | ")})`
+        : String(err);
+    logError({ msg: "migrate_fatal", error: errStr });
     process.exit(1);
   }
 }

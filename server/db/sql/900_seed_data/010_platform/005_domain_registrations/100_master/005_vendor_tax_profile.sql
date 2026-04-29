@@ -87,3 +87,15 @@ CROSS JOIN (VALUES
 WHERE e.entity_code = 'supplier_tax_profile' AND e.table_name = 'party_tax_profile'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
+
+-- ── 4. display_config + natural_key_fields ───────────────────────────────────
+UPDATE control.entity
+SET display_config        = jsonb_build_object(
+        'detail_renderer',    'standard',
+        'list_columns',       '["country_code","tax_classification","is_vat_registered","has_tax_clearance","status"]'::jsonb,
+        'default_sort_field', 'country_code',
+        'default_sort_order', 'asc'
+    ),
+    natural_key_fields    = ARRAY['country_code']
+WHERE entity_code = 'supplier_tax_profile' AND tenant_id IS NULL
+  AND display_config = '{}'::jsonb;

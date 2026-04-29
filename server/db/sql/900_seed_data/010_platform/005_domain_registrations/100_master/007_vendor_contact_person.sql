@@ -82,3 +82,15 @@ WHERE ef.entity_version_id = ev.id
     'fax_calling_code','fax_area','fax_number','fax_extension',
     'address_line1','address_line2','city','state_region','postal_code','address_country_code'
   );
+
+-- ── 5. display_config + natural_key_fields ───────────────────────────────────
+UPDATE control.entity
+SET display_config        = jsonb_build_object(
+        'detail_renderer',    'standard',
+        'list_columns',       '["contact_name","business_title","is_primary","status"]'::jsonb,
+        'default_sort_field', 'contact_name',
+        'default_sort_order', 'asc'
+    ),
+    natural_key_fields    = ARRAY['id']
+WHERE entity_code = 'supplier_contact_person' AND tenant_id IS NULL
+  AND display_config = '{}'::jsonb;

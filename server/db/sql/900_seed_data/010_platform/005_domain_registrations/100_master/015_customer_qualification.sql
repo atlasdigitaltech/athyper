@@ -68,3 +68,15 @@ CROSS JOIN (VALUES
        is_required, is_filterable, validation, sort_order)
 WHERE e.entity_code = 'customer_qualification' AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
+
+-- ── 4. display_config + natural_key_fields ───────────────────────────────────
+UPDATE control.entity
+SET display_config        = jsonb_build_object(
+        'detail_renderer',    'standard',
+        'list_columns',       '["credit_status","kyc_status","aml_sanctions_status","status"]'::jsonb,
+        'default_sort_field', 'credit_status',
+        'default_sort_order', 'asc'
+    ),
+    natural_key_fields    = ARRAY['id']
+WHERE entity_code = 'customer_qualification' AND tenant_id IS NULL
+  AND display_config = '{}'::jsonb;
