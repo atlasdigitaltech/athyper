@@ -35,7 +35,7 @@ import { cn } from "@athyper/theme/utils";
 import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import {
-  Button, Card, CardContent, Skeleton,
+  Button, Card, CardContent, Label, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@athyper/ui/primitives";
@@ -429,6 +429,90 @@ function FieldCell({ field, value }: { field: EntityField; value: unknown }) {
   );
 }
 
+// ── Inline editable fields — for composite tab sections in edit mode ──────────
+
+function InlineEditSection({
+  entity,
+  formData,
+  onFieldChange,
+  displayFieldNames,
+}: {
+  entity:            CompiledEntity;
+  formData:          Record<string, unknown>;
+  onFieldChange:     (name: string, value: unknown) => void;
+  displayFieldNames?: string[];
+}) {
+  const { fields, field_groups } = entity;
+
+  const editableFields = fields
+    .filter(
+      (f) =>
+        !f.is_readonly &&
+        f.origin !== "system" &&
+        f.data_type !== "lifecycle_state" &&
+        !SKIP_FIELD_NAMES.has(f.name) &&
+        (displayFieldNames ? displayFieldNames.includes(f.name) : true),
+    )
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  if (editableFields.length === 0) {
+    return (
+      <EmptyState
+        title="No editable fields"
+        description="No editable fields are configured for this section."
+      />
+    );
+  }
+
+  const grouped = field_groups.length > 0
+    ? field_groups
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((g) => ({ group: g, fields: editableFields.filter((f) => g.fields.includes(f.name)) }))
+        .filter((s) => s.fields.length > 0)
+    : [];
+
+  const ungrouped = grouped.length > 0
+    ? editableFields.filter((f) => !field_groups.some((g) => g.fields.includes(f.name)))
+    : editableFields;
+
+  const renderGrid = (flds: typeof editableFields) => (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {flds.map((field) => {
+        const Renderer = resolveFieldRenderer(field);
+        const val = formData[field.name] ?? formData[field.column_name ?? ""];
+        return (
+          <div key={field.name} className="space-y-1.5">
+            <Label>
+              {field.label ?? field.name}
+              {field.is_required && <span className="ml-1 text-destructive">*</span>}
+            </Label>
+            <Renderer
+              value={val}
+              field={field}
+              mode="edit"
+              onChange={(v) => onFieldChange(field.name, v)}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      {grouped.map(({ group, fields: gFields }) => (
+        <div key={group.group_key}>
+          <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {group.label}
+          </h4>
+          {renderGrid(gFields)}
+        </div>
+      ))}
+      {ungrouped.length > 0 && renderGrid(ungrouped)}
+    </div>
+  );
+}
+
 // ── Child entity panel ────────────────────────────────────────────────────────
 
 // List endpoint returns flat rows (all columns at top level, not nested under "data").
@@ -644,13 +728,17 @@ function CompositeRenderer({
   recordUuid,
   editMode,
   viewOnlyReason,
+  editFormData,
+  onFieldChange,
 }: {
-  entity:         CompiledEntity;
-  data:           Record<string, unknown>;
-  sections:       RichMasterTabSection[];
-  recordUuid:     string;
-  editMode:       boolean;
-  viewOnlyReason: ViewOnlyReason | null;
+  entity:          CompiledEntity;
+  data:            Record<string, unknown>;
+  sections:        RichMasterTabSection[];
+  recordUuid:      string;
+  editMode:        boolean;
+  viewOnlyReason:  ViewOnlyReason | null;
+  editFormData?:   Record<string, unknown>;
+  onFieldChange?:  (name: string, value: unknown) => void;
 }) {
   const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
 
@@ -689,7 +777,16 @@ function CompositeRenderer({
         {sections.map((s) => (
           <div key={s.id} className={s.id === activeSection ? "" : "hidden"}>
             {s.type === "fields" ? (
-              <FieldsRenderer entity={entity} data={data} viewOnlyReason={null} />
+              editMode && editFormData && onFieldChange ? (
+                <InlineEditSection
+                  entity={entity}
+                  formData={editFormData}
+                  onFieldChange={onFieldChange}
+                  displayFieldNames={s.display_fields}
+                />
+              ) : (
+                <FieldsRenderer entity={entity} data={data} viewOnlyReason={null} />
+              )
             ) : s.type === "child" && s.entity_code ? (
               <ChildEntityPanel
                 tab={{
@@ -761,8 +858,15 @@ export function RichMasterDetailPage({
   const updateMutation = useUpdateEntity(entity.entity_code, recordId);
   const config         = resolveRichMasterConfig(entity);
   const formRef        = useRef<EntityFormHandle>(null);
-  const [isDirty, setIsDirty]     = useState(false);
+  const [isDirty, setIsDirty]         = useState(false);
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  // Lifted form state for composite-tab edits (InlineEditSection does not own its own state).
+  const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
+
+  function handleCompositeFieldChange(name: string, value: unknown) {
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    setIsDirty(true);
+  }
 
   // Derive why editing is blocked (null = can edit — no chip shown).
   // Checked once here; passed to every content renderer.
@@ -892,11 +996,41 @@ export function RichMasterDetailPage({
     if (editMode) {
       if (actionId === "__exit" || actionId === "__discard") {
         setIsDirty(false);
+        setEditFormData(data);
         router.push(`/app/${entity.entity_code}/${recordId}`);
         return;
       }
       if (actionId === "__save") {
-        void formRef.current?.submit();
+        const activeTabDef = rawTabs.find((t) => t.id === activeTab);
+        if (activeTabDef?.renderer === "composite") {
+          // Composite tabs use lifted editFormData — submit directly.
+          const editableNames = new Set(
+            entity.fields
+              .filter(
+                (f) =>
+                  !f.is_readonly &&
+                  f.origin !== "system" &&
+                  f.data_type !== "lifecycle_state" &&
+                  !SKIP_FIELD_NAMES.has(f.name),
+              )
+              .map((f) => f.name),
+          );
+          const payload = Object.fromEntries(
+            Object.entries(editFormData).filter(([k]) => editableNames.has(k)),
+          );
+          void (async () => {
+            try {
+              await updateMutation.mutateAsync(payload);
+              setIsDirty(false);
+              router.push(`/app/${entity.entity_code}/${recordId}`);
+            } catch {
+              // mutation error is surfaced by useUpdateEntity
+            }
+          })();
+        } else {
+          // "fields" tabs use EntityForm via formRef.
+          void formRef.current?.submit();
+        }
         return;
       }
       return;
@@ -969,6 +1103,8 @@ export function RichMasterDetailPage({
                 recordUuid={record.id}
                 editMode={editMode}
                 viewOnlyReason={viewOnlyReason}
+                editFormData={editMode ? editFormData : undefined}
+                onFieldChange={editMode ? handleCompositeFieldChange : undefined}
               />
             </CardContent>
           </Card>

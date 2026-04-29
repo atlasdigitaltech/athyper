@@ -3712,7 +3712,7 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    IF v_direction NOT IN ('INBOUND', 'BOTH') THEN
+    IF lower(v_direction) NOT IN ('inbound', 'both') THEN
         RAISE EXCEPTION
             'company_code_customer_profile: default_receipt_method_id (%) has direction "%" '
             '— must be INBOUND or BOTH for receipt/collection methods',

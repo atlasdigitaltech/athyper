@@ -270,16 +270,50 @@ if [ "$DOCKER_MODE" = "true" ]; then
   echo ""
 
   DB_DIR="${SERVER_DIR}/db"
-  echo -e "${YELLOW}Installing dependencies (pg + tsx) — may take ~60s on first run...${NC}"
+
+  # node_modules are cached in a named Docker volume so npm install is skipped
+  # on repeat runs (common when developers git pull + re-seed frequently).
+  # The volume is keyed to the image name so an image upgrade triggers a fresh
+  # install automatically.
+  SAFE_IMAGE="${DOCKER_NODE_IMAGE//:/_}"
+  SAFE_IMAGE="${SAFE_IMAGE//\//_}"
+  NM_VOLUME="athyper_seed_nm_${SAFE_IMAGE}"
+
+  # Check if package.json checksum matches what was installed into the volume.
+  # If it changed (deps updated), wipe the volume so npm install runs fresh.
+  PKG_HASH=$(md5sum "${DB_DIR}/package.json" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+  HASH_FILE="/tmp/.athyper_seed_nm_hash_${SAFE_IMAGE}"
+  if [ -f "$HASH_FILE" ] && [ "$(cat "$HASH_FILE")" != "$PKG_HASH" ]; then
+    echo -e "${YELLOW}package.json changed — clearing node_modules cache...${NC}"
+    docker volume rm "$NM_VOLUME" >/dev/null 2>&1 || true
+    rm -f "$HASH_FILE"
+  fi
+
+  # docker run only accepts one --network flag. Work around this by using
+  # docker create (which defaults to the bridge network, giving internet
+  # access for npm install) and then connecting the container to the internal
+  # network so it can also reach the @db: Postgres service — all in one pass.
   # shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
-  if ! docker run --rm \
-      --network "$DOCKER_NETWORK" \
+  SEED_CID=$(docker create \
       -e DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" \
       -e SEED_TENANT_ID="${SEED_TENANT_ID:-}" \
       -v "${DB_DIR}:/app" \
+      -v "${NM_VOLUME}:/app/node_modules" \
       -w /app \
       "$DOCKER_NODE_IMAGE" \
-      sh -c "npm install --no-fund --no-audit --ignore-scripts && npx tsx seed/migrate.ts $MIGRATE_ARGS"; then
+      sh -c "npm install --no-fund --no-audit && npx tsx seed/migrate.ts $MIGRATE_ARGS")
+
+  docker network connect "$DOCKER_NETWORK" "$SEED_CID"
+
+  docker start -a "$SEED_CID"
+  SEED_EXIT=$?
+
+  docker rm "$SEED_CID" >/dev/null 2>&1 || true
+
+  # Record package.json hash so the next run can skip install if unchanged
+  [ "$SEED_EXIT" -eq 0 ] && echo "$PKG_HASH" > "$HASH_FILE"
+
+  if [ "$SEED_EXIT" -ne 0 ]; then
     echo ""
     echo -e "${RED}Seed failed!${NC}"
     exit 1
