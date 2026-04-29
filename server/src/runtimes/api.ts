@@ -293,6 +293,51 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   app.get("/healthz", readinessHandler);
   app.get("/health", readinessHandler);
 
+  // Forward-auth endpoint for the Traefik gateway. Mounted on `app` (not
+  // apiRouter) to bypass the X-Org tenant-stamp middleware — Traefik forwards
+  // only the Authorization header. Verifies the bearer token and returns
+  // X-User-Id / X-User-Roles / X-Tenant-Id headers consumed by downstream
+  // routers. See stack/config/gateway/environments/neon-workbench-routes.staging.yml.
+  app.get("/api/auth/verify", (req: Request, res: Response): void => {
+    void (async () => {
+      const authHeader = req.headers["authorization"] ?? "";
+      const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+      if (!match) {
+        res.status(401).end();
+        return;
+      }
+      try {
+        const claims = await auth.verifyToken(match[1]!);
+        const sub      = typeof claims["sub"]       === "string" ? claims["sub"]       : "";
+        const tenantId = typeof claims["tenant_id"] === "string" ? claims["tenant_id"] : "";
+
+        const roles: string[] = [];
+        const realmAccess = claims["realm_access"] as Record<string, unknown> | undefined;
+        if (Array.isArray(realmAccess?.["roles"])) {
+          roles.push(...(realmAccess["roles"] as string[]));
+        }
+        const resourceAccess = claims["resource_access"] as Record<string, Record<string, unknown>> | undefined;
+        if (resourceAccess && typeof resourceAccess === "object") {
+          for (const client of Object.values(resourceAccess)) {
+            if (Array.isArray(client?.["roles"])) {
+              roles.push(...(client["roles"] as string[]));
+            }
+          }
+        }
+        if (Array.isArray(claims["groups"])) {
+          roles.push(...(claims["groups"] as string[]));
+        }
+
+        res.setHeader("X-User-Id",    sub);
+        res.setHeader("X-User-Roles", [...new Set(roles)].join(","));
+        res.setHeader("X-Tenant-Id",  tenantId);
+        res.status(200).end();
+      } catch {
+        res.status(401).end();
+      }
+    })();
+  });
+
   // ─── API routes ────────────────────────────────────────────────────────────
 
   const apiRouter = Router();
