@@ -160,9 +160,12 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  * EntityDetailPage (RUNTIME_ROUTING_SPEC §8).
  *
  * Families:
- *   "generic"    — EntityDetailPage: field-grid + tabs
- *   "approvable" — ApprovableDetailPage: DocumentHeader + ProcessHealthStrip + ActionBar + tabs
- *   "ledger"     — LedgerDetailPage: posting-centric read-only view
+ *   "generic"      — EntityDetailPage: field-grid + tabs
+ *   "approvable"   — ApprovableDetailPage: DocumentHeader + ProcessHealthStrip + ActionBar + tabs
+ *   "ledger"       — read-only ledger / log viewer
+ *   "rich_master"  — RichMasterDetailPage: EntityHeader + config-driven tabs.
+ *                    One component for all master entities; entity config lives in
+ *                    display_config.rich_master_config (SQL only, never TSX).
  *
  * Resolution order:
  *   1. display_config.detail_renderer — explicit DB override
@@ -170,11 +173,11 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  *   3. entity_class ∈ {LEDGER, LOG, AGGREGATE} → "ledger"
  *   4. fallback → "generic"
  */
-export type RendererFamily = "generic" | "approvable" | "ledger" | "standard" | "master";
+export type RendererFamily = "generic" | "approvable" | "ledger" | "standard" | "master" | "rich_master";
 
 export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
   const explicit = entity.display_config.detail_renderer;
-  if (explicit) return explicit;
+  if (explicit) return explicit as RendererFamily;
 
   if (entity.feature_flags?.is_approvable) return "approvable";
 
@@ -182,6 +185,85 @@ export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
   if (cls === "LEDGER" || cls === "LOG" || cls === "AGGREGATE") return "ledger";
 
   return "generic";
+}
+
+// ── Rich master config types and resolver ─────────────────────────────────────
+
+export type RichMasterTabRenderer =
+  | "overview"
+  | "fields"
+  | "child"
+  | "composite"
+  | "comments"
+  | "attachments"
+  | "activity"
+  | "blank";
+
+/** A single section within a composite-renderer tab (entity fields or a child-entity list). */
+export interface RichMasterTabSection {
+  id: string;
+  label: string;
+  type: "fields" | "child";
+  entity_code?: string;
+  display_fields?: string[];
+  add_href_template?: string;
+  add_label?: string;
+  empty_title?: string;
+  empty_description?: string;
+}
+
+export interface RichMasterTab {
+  id: string;
+  label: string;
+  renderer: RichMasterTabRenderer;
+  entity_code?: string;
+  display_fields?: string[];
+  add_href_template?: string;
+  add_label?: string;
+  empty_title?: string;
+  empty_description?: string;
+  blank_message?: string;
+  /** Ordered sections for composite-renderer tabs (anchored section nav). */
+  composite_sections?: RichMasterTabSection[];
+  /**
+   * For view-backed child tabs (e.g. supplier_bank_account view): the entity to use for the
+   * create form and the first POST.  When absent, entity_code is used for both list and create.
+   */
+  create_entity_code?: string;
+  /**
+   * When set, a second POST is made to this entity after the primary record is created.
+   * Used for polymorphic link tables (e.g. bank_account_link).
+   */
+  link_entity_code?: string;
+  /** The owner_type value to inject into the link record (e.g. 'supplier'). */
+  link_owner_type?: string;
+}
+
+export interface RichMasterConfig {
+  type_label?: string;
+  /** Field name whose value is shown inline on the identity line: "ACME-CONSULT-US · Vendor" */
+  classification_field?: string;
+  header_facts?: string[];
+  tabs?: RichMasterTab[];
+  /** Platform context panels shown as icon buttons in the tab bar (Comments / Attachments / Activity). */
+  platform_panels?: Array<"comments" | "attachments" | "activity">;
+}
+
+const DEFAULT_RICH_MASTER_TABS: RichMasterTab[] = [
+  { id: "__profile",     label: "Profile",     renderer: "fields"      },
+  { id: "__comments",    label: "Comments",    renderer: "comments"    },
+  { id: "__attachments", label: "Attachments", renderer: "attachments" },
+  { id: "__activity",    label: "Activity",    renderer: "activity"    },
+];
+
+/**
+ * Resolve rich_master_config from a compiled entity.
+ * Returns defaults when the entity has no explicit rich_master_config.
+ */
+export function resolveRichMasterConfig(entity: CompiledEntity): RichMasterConfig {
+  const cfg = entity.display_config.rich_master_config;
+  if (!cfg) return { tabs: DEFAULT_RICH_MASTER_TABS };
+  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_RICH_MASTER_TABS };
 }
 
 // ── Semantic resolver detection ───────────────────────────────────────────────

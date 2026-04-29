@@ -7,23 +7,24 @@
  * Dispatched by EntityDetailPage when resolveRendererFamily() returns "approvable".
  *
  * All tabs are resolved via resolveTabs() — no hardcoded tab list.
- * Tabs: overview | lines | distributions | workflow | attachments | versions |
- *       comments | approvals | tasks | watchers | rules | integrations |
- *       quality | reports | events | [field-group sections]
+ * Tabs: overview | lines(Items) | distributions(Accounting) | workflow |
+ *       approvals | comments | attachments | versions | activity(events) |
+ *       tasks | watchers | rules | integrations | quality | reports | [field-group sections]
  *
  * Versions tab renders inline as a panel (same pattern as all other tabs).
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueries, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeftRight, CheckCircle2, Clock,
-  FileClock, GitBranch, RotateCcw, XCircle,
+  FileClock, GitBranch, MessageSquare, Paperclip, RotateCcw, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Badge, Button, Card, CardContent,
+  Sheet, SheetContent, SheetHeader, SheetTitle,
   Skeleton, Tooltip, TooltipContent, TooltipTrigger,
 } from "@athyper/ui/primitives";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
@@ -36,6 +37,7 @@ import {
   ValidationBanner,
 } from "@athyper/document-runtime";
 import { EntityHeader } from "../header";
+import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
 import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
@@ -677,20 +679,17 @@ export function ApprovableDetailPage({
   const tabs = [
     { id: "__overview", label: "Overview" },
     ...sectionTabs,
-    ...(hasLinesSection                         ? [{ id: "__lines",         label: "Lines" }]         : []),
-    ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Distributions" }] : []),
+    ...(hasLinesSection                         ? [{ id: "__lines",         label: "Items" }]         : []),
+    ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Accounting" }]    : []),
     ...(resolvedTabs.includes("workflow")      ? [{ id: "__workflow",      label: "Workflow" }]      : []),
-    ...(resolvedTabs.includes("attachments")   ? [{ id: "__attachments",   label: "Attachments" }]   : []),
-    ...(resolvedTabs.includes("versions")      ? [{ id: "__versions",      label: "Versions" }]      : []),
     ...(resolvedTabs.includes("approvals")     ? [{ id: "__approvals",     label: "Approvals" }]     : []),
+    ...(resolvedTabs.includes("versions")      ? [{ id: "__versions",      label: "Versions" }]      : []),
     ...(resolvedTabs.includes("tasks")         ? [{ id: "__tasks",         label: "Tasks" }]         : []),
     ...(resolvedTabs.includes("watchers")      ? [{ id: "__watchers",      label: "Watchers" }]      : []),
     ...(resolvedTabs.includes("rules")         ? [{ id: "__rules",         label: "Rules" }]         : []),
     ...(resolvedTabs.includes("integrations")  ? [{ id: "__integrations",  label: "Integrations" }]  : []),
     ...(resolvedTabs.includes("quality")       ? [{ id: "__quality",       label: "Quality" }]       : []),
     ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports" }]       : []),
-    ...(resolvedTabs.includes("comments")      ? [{ id: "__comments",      label: "Comments" }]      : []),
-    ...(resolvedTabs.includes("events")        ? [{ id: "__events",        label: "Activity" }]      : []),
   ];
 
   // ── Header model (Phase 5 — EntityHeader contract) ────────────────────────
@@ -706,7 +705,16 @@ export function ApprovableDetailPage({
       : undefined,
   });
 
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
+  const [activeTab,   setActiveTab]   = useState(tabs[0]?.id ?? "");
+  const [activePanel, setActivePanel] = useState<string | null>(null);
+
+  // Platform icons — Comments / Attachments / Activity rendered as tab-bar icons,
+  // opening Sheet side panels instead of navigating to a tab.
+  const platformIcons: PlatformPanelIcon[] = [
+    ...(resolvedTabs.includes("comments")    ? [{ id: "comments",    icon: <MessageSquare className="h-4 w-4" />, label: "Comments"    }] : []),
+    ...(resolvedTabs.includes("attachments") ? [{ id: "attachments", icon: <Paperclip     className="h-4 w-4" />, label: "Attachments" }] : []),
+    ...(resolvedTabs.includes("events")      ? [{ id: "activity",    icon: <Clock         className="h-4 w-4" />, label: "Activity"    }] : []),
+  ];
 
   // ── Lifted queries — prefetched on page load so tab switches are instant ───
   // Both queries share the same staleTime; onLinesRefresh invalidates both so
@@ -786,6 +794,9 @@ export function ApprovableDetailPage({
         }}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        platformIcons={platformIcons.length > 0 ? platformIcons : undefined}
+        onPlatformIconClick={(id) => setActivePanel((prev) => (prev === id ? null : id))}
+        activePlatformIcon={activePanel ?? undefined}
       />
       <ValidationBanner notices={orchestrator.validationNotices ?? []} />
       <div className="flex flex-col gap-2.5">
@@ -865,15 +876,6 @@ export function ApprovableDetailPage({
           </Card>
         )}
 
-        {/* Attachments */}
-        {activeTab === "__attachments" && (
-          <Card>
-            <CardContent className="pt-5">
-              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
         {/* Versions */}
         {activeTab === "__versions" && (
           <Card>
@@ -946,24 +948,31 @@ export function ApprovableDetailPage({
           </Card>
         )}
 
-        {/* Comments */}
-        {activeTab === "__comments" && (
-          <Card>
-            <CardContent className="pt-5">
-              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Activity */}
-        {activeTab === "__events" && (
-          <Card>
-            <CardContent className="pt-5">
-              <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {/* Platform context panels — slide in from right, consistent with rich master view */}
+      <Sheet open={activePanel !== null} onOpenChange={(open) => { if (!open) setActivePanel(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="px-6 pt-5 pb-4 border-b border-border shrink-0">
+            <SheetTitle>
+              {activePanel === "comments"    ? "Comments"
+                : activePanel === "attachments" ? "Attachments"
+                : "Activity"}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {activePanel === "comments" && (
+              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} />
+            )}
+            {activePanel === "attachments" && (
+              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+            )}
+            {activePanel === "activity" && (
+              <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* MODAL-type operation overlay — rendered outside the layout div so it sits
           at the top of the stacking context, not inside the header scroll. */}

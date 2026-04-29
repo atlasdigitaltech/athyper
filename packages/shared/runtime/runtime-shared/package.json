@@ -10,7 +10,8 @@
     "./core": "./src/core/index.ts",
     "./client": "./src/client/index.ts",
     "./entity-search": "./src/entity-search/index.ts",
-    "./renderer-registry": "./src/renderer-registry/index.ts"
+    "./renderer-registry": "./src/renderer-registry/index.ts",
+    "./descriptors": "./src/descriptors/types.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

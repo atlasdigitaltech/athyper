@@ -17,6 +17,12 @@
  *   import { getModuleIcon, getStatusIcon } from "@athyper/icons";
  */
 
+// Entity icons (control.entity.icon_key → Lucide component)
+export { getEntityIcon, hasEntityIcon } from "./entity-icons";
+
+// Entity color tokens (control.entity.color_token → Tailwind classes)
+export { getEntityColorClasses, type EntityColorClasses } from "./color-tokens";
+
 // Module icons (40 modules)
 export {
   getModuleIcon,

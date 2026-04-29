@@ -1,4 +1,5 @@
 import { EntityDetailPage } from "@athyper/entity-runtime/detail";
+import { ApprovableDetailPage } from "@athyper/document-runtime";
 
 /**
  * Runtime entity detail — /app/[entity]/[id]
@@ -21,8 +22,8 @@ import { EntityDetailPage } from "@athyper/entity-runtime/detail";
  *   /app/[entity]/[id]/flow        → approval workflow state
  *
  * Examples:
- *   /app/vendor/VND-001               → Vendor detail (read)
- *   /app/vendor/VND-001?mode=edit     → Vendor detail (edit mode, same shell)
+ *   /app/supplier/SUP-00001            → Supplier detail (read)
+ *   /app/supplier/SUP-00001?mode=edit → Supplier detail (edit mode, same shell)
  *   /app/purchase_invoice/INV-10045   → Invoice detail with DocumentShell
  */
 export default async function AppEntityDetailRoute({
@@ -39,6 +40,7 @@ export default async function AppEntityDetailRoute({
       entityCode={entity}
       recordId={id}
       editMode={mode === "edit"}
+      approvableRenderer={ApprovableDetailPage}
     />
   );
 }

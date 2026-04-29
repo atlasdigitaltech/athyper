@@ -45,6 +45,20 @@ BEGIN
         false, '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
+    -- ── 89b. supplier_bank_account (view entity) ─────────────────────────────
+    -- Read-only view entity used by the supplier Banking tab.
+    -- parent_fk "supplier_id" enables ?parent_id= filtering in records.route.
+    INSERT INTO control.entity (
+        module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
+        governance_level, security_tier, mutability, table_schema, table_name,
+        label_singular, label_plural, icon_key, color_token,
+        numbering_active, feature_flags, status, created_by)
+    VALUES (v_pay, 'supplier_bank_account', 'SBKACC', 'supplier_bank_account', 'RELATION', 'system', 'ent', 'table',
+        'full', 'tenant_critical', 'controlled', 'master', 'v_supplier_bank_account',
+        'Supplier Bank Account', 'Supplier Bank Accounts', 'credit-card', 'blue',
+        false, '{"parent_fk":"supplier_id"}'::jsonb, 'ACTIVE', v_su)
+    ON CONFLICT (table_schema, table_name) DO NOTHING;
+
     -- ── 90. bank_account_house_config ────────────────────────────────────────
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,

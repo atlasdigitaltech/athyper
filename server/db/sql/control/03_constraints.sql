@@ -1456,3 +1456,10 @@ DO $mcal4$ BEGIN
     ALTER TABLE control.metadata_change_application_log ADD CONSTRAINT mcal_created_by_fk
         FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $mcal4$;
+
+-- Extend eff_summary_role_chk to explicitly allow NULL
+-- (original constraint omitted IS NULL OR; re-applied idempotently)
+ALTER TABLE control.entity_flow_field DROP CONSTRAINT IF EXISTS eff_summary_role_chk;
+ALTER TABLE control.entity_flow_field ADD CONSTRAINT eff_summary_role_chk
+    CHECK (summary_role IS NULL OR summary_role IN (
+        'total','subtotal','addition','deduction','line_badge','warning','meta'));

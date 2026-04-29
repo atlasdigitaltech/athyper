@@ -20,10 +20,13 @@
  *       A principal with access to the root holding company (inherit_subtree=true)
  *       will automatically have access to all 16 subsidiaries without explicit grants.
  *
- * Phase 6.3 note: Group-level scope propagation requires master.auth_group_member.
- * Group expansion is implemented. Role-level expansion is deferred to Phase 7+.
+ * Fallback (no ACL rows): when master.company_code_access is empty for the tenant,
+ * scope is resolved via RBAC group-role assignments (same model as session.service.ts).
+ * Users with tenant-wide roles are unrestricted; users with company-specific roles are
+ * scoped to those companies; users with no assignments are unrestricted (backward compat).
  */
 
+import { sql } from "kysely";
 import type { Kysely } from "kysely";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -219,10 +222,10 @@ export class CompanyCodeScopeService {
    *   3. For each grant with inherit_subtree=true, expand to descendants
    *   4. Deduplicate and return the union
    *
-   * Special case: if the tenant has NO access grants at all (empty
-   * master.company_code_access for this tenant), the principal is considered
-   * "unrestricted" — they may access all company codes. This supports
-   * simple single-company tenants that haven't configured granular access.
+   * When master.company_code_access has no rows, falls back to RBAC group-role
+   * scope (resolveRbacScope): users with tenant-wide roles are unrestricted,
+   * users with company-specific roles see only those companies, and users with
+   * no assignments are unrestricted (backward compat for new users / service accounts).
    */
   async resolveScope(
     principalId: string,
@@ -237,21 +240,10 @@ export class CompanyCodeScopeService {
       .executeTakeFirst() as { id: string } | undefined;
 
     if (!anyGrant) {
-      // No ACL configured — unrestricted access (single-company mode)
-      const allCodes = await this.db
-        .selectFrom("master.company_code as cc" as never)
-        .select(["cc.id", "cc.code", "cc.name"] as never[])
-        .where("cc.tenant_id" as never, "=", tenantId as never)
-        .where("cc.status" as never, "=", "active" as never)
-        .execute() as Array<{ id: string; code: string; name: string }>;
-
-      return {
-        principalId,
-        tenantId,
-        companyCodeIds: allCodes.map((c) => c.id),
-        companyCodes:   allCodes,
-        isUnrestricted: true,
-      };
+      // No explicit ACL rows configured — fall back to RBAC group-role scope.
+      // This correctly handles multi-company tenants where users are assigned to
+      // company-specific group roles without requiring explicit ACL grants.
+      return this.resolveRbacScope(principalId, tenantId);
     }
 
     // Step 1: direct principal grants
@@ -332,6 +324,121 @@ export class CompanyCodeScopeService {
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Resolve company code scope from RBAC group-role assignments.
+   *
+   * Used as the fallback when master.company_code_access has no rows.
+   * Mirrors the scope CTE in session.service.ts — three assignment_scope_type cases:
+   *   'tenant'       → unrestricted (principal has tenant-wide role)
+   *   'company_code' → scoped to the specific company codes
+   *   'legal_entity' → scoped to company codes linked to those legal entities
+   *                    (subtree expansion via fn_resolve_le_subtree_companies)
+   *
+   * If the principal has no group role assignments at all, falls back to
+   * unrestricted to preserve backward compatibility for new users / service accounts.
+   */
+  private async resolveRbacScope(
+    principalId: string,
+    tenantId:    string,
+  ): Promise<ScopeResolutionResult> {
+    const result = await sql<{
+      has_tenant_scope: boolean;
+      cc_ids:           string[] | null;
+    }>`
+      WITH effective_roles AS (
+        SELECT gr.assignment_scope_type,
+               gr.assignment_scope_ref_id,
+               gr.include_descendants
+        FROM master.auth_group_member gm
+        JOIN master.auth_group_role   gr
+          ON  gr.group_id  = gm.group_id
+          AND gr.tenant_id = gm.tenant_id
+          AND gr.is_active = true
+        WHERE gm.principal_id = ${principalId}::uuid
+          AND gm.tenant_id    = ${tenantId}::uuid
+      ),
+      cc_scope AS (
+        -- Direct company_code scope
+        SELECT cc.id
+        FROM   effective_roles er
+        JOIN   master.company_code cc
+          ON   cc.id        = er.assignment_scope_ref_id
+          AND  cc.tenant_id = ${tenantId}::uuid
+          AND  cc.status    = 'active'
+        WHERE  er.assignment_scope_type = 'company_code'
+
+        UNION
+
+        -- Legal entity — direct CCs only (no subtree expansion)
+        SELECT cc.id
+        FROM   effective_roles er
+        JOIN   master.company_code cc
+          ON   cc.legal_entity_id = er.assignment_scope_ref_id
+          AND  cc.tenant_id       = ${tenantId}::uuid
+          AND  cc.status          = 'active'
+        WHERE  er.assignment_scope_type = 'legal_entity'
+          AND  er.include_descendants   = false
+
+        UNION
+
+        -- Legal entity — full descendant subtree
+        SELECT cc.id
+        FROM   effective_roles er
+        CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(${tenantId}::uuid, er.assignment_scope_ref_id) sub
+        JOIN   master.company_code cc
+          ON   cc.id     = sub.company_code_id
+          AND  cc.status = 'active'
+        WHERE  er.assignment_scope_type = 'legal_entity'
+          AND  er.include_descendants   = true
+      )
+      SELECT
+        coalesce(
+          (SELECT bool_or(assignment_scope_type = 'tenant') FROM effective_roles),
+          false
+        ) AS has_tenant_scope,
+        array(SELECT id FROM cc_scope) AS cc_ids
+    `.execute(this.db);
+
+    const row = result.rows[0];
+    const hasTenantScope = row?.has_tenant_scope ?? false;
+    const ccIds = (row?.cc_ids ?? []).filter(Boolean) as string[];
+
+    // Tenant-wide role → unrestricted
+    if (hasTenantScope) {
+      const allCodes = await this.db
+        .selectFrom("master.company_code as cc" as never)
+        .select(["cc.id", "cc.code", "cc.name"] as never[])
+        .where("cc.tenant_id" as never, "=", tenantId as never)
+        .where("cc.status"    as never, "=", "active" as never)
+        .execute() as Array<{ id: string; code: string; name: string }>;
+
+      return { principalId, tenantId, companyCodeIds: allCodes.map((c) => c.id), companyCodes: allCodes, isUnrestricted: true };
+    }
+
+    // Company-specific role assignments
+    if (ccIds.length > 0) {
+      const codes = await this.db
+        .selectFrom("master.company_code as cc" as never)
+        .select(["cc.id", "cc.code", "cc.name"] as never[])
+        .where("cc.tenant_id" as never, "=", tenantId as never)
+        .where("cc.id"        as never, "in" as never, ccIds as never)
+        .where("cc.status"    as never, "=", "active" as never)
+        .execute() as Array<{ id: string; code: string; name: string }>;
+
+      return { principalId, tenantId, companyCodeIds: codes.map((c) => c.id), companyCodes: codes, isUnrestricted: false };
+    }
+
+    // No RBAC assignments — unrestricted fallback (new users, service accounts)
+    const allCodes = await this.db
+      .selectFrom("master.company_code as cc" as never)
+      .select(["cc.id", "cc.code", "cc.name"] as never[])
+      .where("cc.tenant_id" as never, "=", tenantId as never)
+      .where("cc.status"    as never, "=", "active" as never)
+      .execute() as Array<{ id: string; code: string; name: string }>;
+
+    return { principalId, tenantId, companyCodeIds: allCodes.map((c) => c.id), companyCodes: allCodes, isUnrestricted: true };
+  }
 
   /**
    * Get group IDs the principal belongs to (for scope inheritance).

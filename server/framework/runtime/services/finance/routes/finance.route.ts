@@ -1,6 +1,7 @@
 /**
  * Finance Routes — read-model endpoints for the GL Workbench
  *
+ * GET  /api/finance/accounts/search            — GL account search (code/name ILIKE, node_type filter)
  * GET  /api/finance/master/companies           — list companies for scope selector
  * GET  /api/finance/master/entities            — list legal entities for scope selector
  * GET  /api/finance/period-status              — fiscal + book period status for a scope
@@ -523,6 +524,43 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       `.execute(db);
       res.json(rows.rows);
     } catch (err) { logger?.error("finance_accounts_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── GET /api/finance/accounts/search?q=&node_type=&limit= ─────────────────
+  // Searches master.gl_account by code ILIKE or name ILIKE within the tenant.
+  // ?q         search term (required, min 1 char)
+  // ?node_type posting | header (default: posting — only leaf accounts)
+  // ?limit     max results (default 10, max 50)
+
+  router.get("/finance/accounts/search", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ data: [] }); return; }
+
+      const q        = ((req.query["q"]         as string | undefined) ?? "").trim();
+      const nodeType = ((req.query["node_type"] as string | undefined) ?? "posting").trim();
+      const limit    = Math.min(50, Math.max(1, Number(req.query["limit"] ?? 10)));
+
+      if (!q) { res.json({ data: [] }); return; }
+
+      const pattern = `%${q}%`;
+      const rows = await sql<{ id: string; code: string; name: string; account_class: string; normal_balance: string; node_type: string }>`
+        SELECT ga.id, ga.code, ga.name, ga.account_class, ga.normal_balance, ga.node_type
+        FROM   master.gl_account ga
+        WHERE  ga.tenant_id = ${tenantId}::uuid
+          AND  ga.status    = 'active'
+          AND  (${nodeType} = '' OR ga.node_type = ${nodeType})
+          AND  (ga.code ILIKE ${pattern} OR ga.name ILIKE ${pattern})
+        ORDER  BY ga.code
+        LIMIT  ${limit}
+      `.execute(db);
+
+      res.json({ data: rows.rows });
+    } catch (err) { logger?.error("finance_accounts_search_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   // ── GET /api/finance/master/controls?companyCode= ─────────────────────────

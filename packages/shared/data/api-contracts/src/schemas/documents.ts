@@ -372,6 +372,7 @@ export const FlowBundleSchema = z.object({
   flow_id: z.string(),
   flow_code: z.string(),
   label: z.string(),
+  description: z.string().nullable().optional(),
   config: z.object({
     summary: z.object({
       fields: z.array(z.string()),

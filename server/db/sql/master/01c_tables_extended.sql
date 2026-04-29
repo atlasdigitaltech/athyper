@@ -1670,6 +1670,48 @@ COMMENT ON COLUMN master.bank_account_link.effective_from IS
 COMMENT ON COLUMN master.bank_account_link.effective_until IS
     'Exclusive end date. NULL = open-ended (currently active).';
 
+-- ============================================================================
+-- §BK3b v_supplier_bank_account — read-only denormalised view
+-- ============================================================================
+-- Joins bank_account_link (owner_type='supplier') with bank_account so the
+-- supplier Banking tab can list and filter by supplier_id via records.route
+-- ?parent_id= support.  bank_name resolves bank_party.name first, then falls
+-- back to bank_name_override.  account_number is the canonical account_id_value.
+-- ============================================================================
+
+CREATE OR REPLACE VIEW master.v_supplier_bank_account AS
+SELECT
+    bal.id,
+    bal.tenant_id,
+    bal.owner_id                                       AS supplier_id,
+    ba.account_id_value                                AS account_number,
+    ba.currency_code,
+    ba.account_holder_name,
+    ba.account_id_type,
+    ba.account_nature,
+    ba.is_verified,
+    bal.purpose,
+    bal.is_primary,
+    bal.effective_from,
+    bal.effective_until,
+    COALESCE(bp.name, ba.bank_name_override)           AS bank_name,
+    ba.bic_override,
+    ba.bank_party_id,
+    bal.bank_account_id,
+    bal.created_at,
+    bal.updated_at
+FROM   master.bank_account_link  bal
+JOIN   master.bank_account       ba  ON  ba.id        = bal.bank_account_id
+                                    AND  ba.tenant_id  = bal.tenant_id
+LEFT JOIN master.bank_party      bp  ON  bp.id        = ba.bank_party_id
+                                    AND  bp.tenant_id  = ba.tenant_id
+WHERE  bal.owner_type = 'supplier';
+
+COMMENT ON VIEW master.v_supplier_bank_account IS
+    'ARCHETYPE=V;SCOPE=T. Read-only view: supplier bank accounts resolved through '
+    'bank_account_link (owner_type=''supplier'') + bank_account + optional bank_party. '
+    'Filtered by supplier_id (= bank_account_link.owner_id). '
+    'Entity: supplier_bank_account. Used by entity Banking tab.';
 
 -- ============================================================================
 -- §BK4  bank_account_house_config — house-bank operational extension

@@ -19,6 +19,7 @@ import { cn } from "@athyper/theme/utils";
 import { useCompiledEntity, useEntityDetail, useEntityOperations, useUpdateEntity } from "@athyper/query";
 import { useQuery } from "@tanstack/react-query";
 import { resolveDetailConfig, resolveRendererFamily, resolveTabs } from "@athyper/metadata-client/compiled-reader";
+import { RichMasterDetailPage } from "./RichMasterDetailPage";
 import {
   Card, CardContent,
   Skeleton, Badge, Button,
@@ -29,7 +30,6 @@ import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { ActionBar } from "../actions/ActionBar";
-import { ApprovableDetailPage } from "./ApprovableDetailPage";
 import { PageShell } from "../shell/PageShell";
 import { PageHeader, ModeBadge } from "../shell/PageHeader";
 import { EntityForm } from "../form/EntityForm";
@@ -59,11 +59,20 @@ function ActivityTab({ entityCode, recordId }: { entityCode: string; recordId: s
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
+export interface ApprovableRendererProps {
+  entity:     CompiledEntity;
+  record:     { id: string; data: Record<string, unknown>; status?: string };
+  operations: EntityOperation[] | undefined;
+  recordId:   string;
+}
+
 export interface EntityDetailPageProps {
   entityCode: string;
   recordId: string;
   /** When true (URL: ?mode=edit) renders EntityForm in-place in the same shell. */
   editMode?: boolean;
+  /** Renderer for entities with detail_renderer="approvable". Pass ApprovableDetailPage from @athyper/document-runtime. */
+  approvableRenderer?: React.ComponentType<ApprovableRendererProps>;
 }
 
 // ── Generic read-mode view — owns tab state ────────────────────────────────
@@ -75,10 +84,11 @@ interface GenericDetailReadViewProps {
   record:      { id: string; data: Record<string, unknown>; status?: string };
   operations:  EntityOperation[] | undefined;
   onEditClick: () => void;
+  canEdit:     boolean;
 }
 
 function GenericDetailReadView({
-  entityCode, recordId, entity, record, operations, onEditClick,
+  entityCode, recordId, entity, record, operations, onEditClick, canEdit,
 }: GenericDetailReadViewProps) {
   const detailConfig  = resolveDetailConfig(entity);
   const data          = record.data;
@@ -123,9 +133,11 @@ function GenericDetailReadView({
               recordId={recordId}
             />
           )}
-          <Button variant="outline" size="sm" onClick={onEditClick}>
-            Edit
-          </Button>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={onEditClick}>
+              Edit
+            </Button>
+          )}
         </div>
       }
     />
@@ -224,12 +236,23 @@ function GenericDetailReadView({
 
 // ── Main dispatcher ────────────────────────────────────────────────────────────
 
-export function EntityDetailPage({ entityCode, recordId, editMode = false }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityCode, recordId, editMode = false, approvableRenderer: ApprovableRenderer }: EntityDetailPageProps) {
   const router = useRouter();
   const { data: entity, isLoading: metaLoading } = useCompiledEntity(entityCode);
   const { data: record, isLoading: recordLoading } = useEntityDetail(entityCode, recordId);
   const { data: operations } = useEntityOperations(entityCode);
   const updateMutation = useUpdateEntity(entityCode, recordId);
+
+  // Gate edit mode behind server-returned operations.
+  // operations===undefined = still loading → optimistic-allow (no flash).
+  // Once loaded: require an enabled NAVIGATE op whose target contains "mode=edit".
+  const canEdit = operations === undefined
+    || operations.some(
+        op => op.is_enabled &&
+              op.handler_type === "NAVIGATE" &&
+              (op.handler_target ?? "").includes("mode=edit"),
+      );
+  const effectiveEditMode = editMode && canEdit;
 
   if (metaLoading || recordLoading || !entity) {
     return (
@@ -256,11 +279,24 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false }: Ent
     );
   }
 
-  // Delegate approvable documents — they have their own rich shell
+  // Delegate to specialised shells based on resolved renderer family
   const renderer = resolveRendererFamily(entity);
-  if (renderer === "approvable") {
+
+  if (renderer === "rich_master") {
     return (
-      <ApprovableDetailPage
+      <RichMasterDetailPage
+        entity={entity}
+        record={record}
+        operations={operations}
+        recordId={recordId}
+        editMode={effectiveEditMode}
+      />
+    );
+  }
+
+  if (renderer === "approvable" && ApprovableRenderer) {
+    return (
+      <ApprovableRenderer
         entity={entity}
         record={record}
         operations={operations}
@@ -281,7 +317,7 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false }: Ent
     : undefined;
 
   // ── Edit mode — same shell, EntityForm in Region 3 ────────────────────────
-  if (editMode) {
+  if (effectiveEditMode) {
     const header = (
       <PageHeader
         typeChip={entity.entity_name}
@@ -326,6 +362,7 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false }: Ent
       record={record}
       operations={operations}
       onEditClick={() => router.push(`/app/${entityCode}/${recordId}?mode=edit`)}
+      canEdit={canEdit}
     />
   );
 }

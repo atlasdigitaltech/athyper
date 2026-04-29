@@ -83,11 +83,11 @@ function MoneyInput({
 /** Field name → entity code for relay search. Falls back to strip-_id convention. */
 const INLINE_SEARCH_ENTITY_MAP: Record<string, string> = {
   company_code_id: "company_code",
-  supplier_id:     "vendor",        // entity name in control.entity is 'vendor' (table: master.supplier)
-  vendor_id:       "vendor",
+  supplier_id:     "supplier",
+  vendor_id:       "supplier",
   commitment_id:   "purchase_order",
   contract_id:     "contract",
-  party_id:        "vendor",
+  party_id:        "supplier",
   cost_center_id:  "cost_center",
   project_id:      "project",
   asset_class_id:  "asset_class",
@@ -267,8 +267,11 @@ function RadioCards({
   const primaryOpts  = useMemo(() => options.filter((o) => o.display_tier !== "advanced"), [options]);
   const advancedOpts = useMemo(() => options.filter((o) => o.display_tier === "advanced"),  [options]);
 
-  const selectedIsAdvanced = advancedOpts.some((o) => o.code === value);
-  const visibleOpts = showAdvanced || selectedIsAdvanced ? options : primaryOpts;
+  // Only split primary/advanced when there are more than 10 options total.
+  const useToggle = options.length > 10 && advancedOpts.length > 0;
+
+  const selectedIsAdvanced = useToggle && advancedOpts.some((o) => o.code === value);
+  const visibleOpts = !useToggle || showAdvanced || selectedIsAdvanced ? options : primaryOpts;
 
   return (
     <div className="space-y-2">
@@ -291,7 +294,7 @@ function RadioCards({
           </button>
         ))}
 
-        {advancedOpts.length > 0 && !showAdvanced && !selectedIsAdvanced && (
+        {useToggle && !showAdvanced && !selectedIsAdvanced && (
           <button
             type="button"
             onClick={() => setShowAdvanced(true)}
@@ -300,7 +303,7 @@ function RadioCards({
             More types…
           </button>
         )}
-        {advancedOpts.length > 0 && (showAdvanced || selectedIsAdvanced) && !selectedIsAdvanced && (
+        {useToggle && (showAdvanced || selectedIsAdvanced) && !selectedIsAdvanced && (
           <button
             type="button"
             onClick={() => setShowAdvanced(false)}

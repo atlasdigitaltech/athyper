@@ -92,12 +92,12 @@ export const viewInvoiceApproved: EntityHeaderModel = {
   },
   tabs: [
     { id: "overview",      label: "Overview" },
-    { id: "distributions", label: "Distributions" },
+    { id: "distributions", label: "Accounting" },
     { id: "workflow",      label: "Workflow" },
-    { id: "attachments",   label: "Attachments", count: 0, countPending: false },
-    { id: "versions",      label: "Versions" },
     { id: "approvals",     label: "Approvals", count: 1 },
     { id: "comments",      label: "Comments",  count: 0, countPending: true },
+    { id: "attachments",   label: "Attachments", count: 0, countPending: false },
+    { id: "versions",      label: "Versions" },
     { id: "activity",      label: "Activity" },
   ],
   audit: {

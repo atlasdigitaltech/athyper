@@ -65,6 +65,12 @@ export interface HeaderIdentity {
    */
   number: string;
   /**
+   * Inline classification shown after the number with a "·" separator.
+   * e.g. "Vendor" for a supplier, "Manufacturer" for another.
+   * Driven by display_config.rich_master_config.classification_field — no hardcoding.
+   */
+  classification?: string;
+  /**
    * Copy-on-click behavior for the number field.
    * "copy"  → clicking the number copies it to clipboard (default for view/edit)
    * "none"  → plain text, no copy affordance (use for create surface where number is "New")

@@ -34,6 +34,7 @@ export {
   EntityProgressRow,  type EntityProgressRowProps,
   EntityTimeline,     type EntityTimelineProps,
   EntityTabBar,       type EntityTabBarProps,
+  type PlatformPanelIcon,
 } from "./atoms";
 
 // ── Hooks (Phase 2) ───────────────────────────────────────────────────────

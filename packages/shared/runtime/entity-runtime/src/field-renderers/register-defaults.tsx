@@ -4,10 +4,11 @@
  * Built-in renderers for all standard data types.
  * Call registerDefaults() at app startup to populate the registry.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
-import { DatePicker } from "@athyper/ui/composites";
+import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
 import { EntityPicker } from "@athyper/runtime-shared/entity-search";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
@@ -237,6 +238,56 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
   );
 }
 
+// ── Country Picker ──────────────────────────────────────────────
+
+interface CountryRow { code: string; name: string }
+
+function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
+  const [query, setQuery] = useState("");
+
+  // Load all countries once (250 rows, rarely changes).
+  const { data: countries, isLoading } = useQuery<CountryRow[]>({
+    queryKey: ["ref", "countries"],
+    queryFn: async () => {
+      const res = await fetch("/api/relay/api/platform/ref/countries?limit=300");
+      if (!res.ok) return [];
+      const body = await res.json() as { data?: CountryRow[] };
+      return body.data ?? [];
+    },
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const all = countries ?? [];
+
+  if (mode === "view") {
+    const country = all.find((c) => c.code === String(value ?? ""));
+    return <span className="text-sm">{country?.name ?? (value ? String(value) : "—")}</span>;
+  }
+
+  const q = query.toLowerCase();
+  const filtered = q
+    ? all.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+    : all;
+
+  const options = filtered.map((c) => ({ value: c.code, label: c.name, description: c.code }));
+  const displayLabel = all.find((c) => c.code === String(value ?? ""))?.name ?? null;
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={displayLabel}
+      options={options}
+      loading={isLoading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange?.(v)}
+      placeholder="Select country…"
+      searchPlaceholder="Search countries…"
+      error={error}
+    />
+  );
+}
+
 // ── JSON ────────────────────────────────────────────────────────
 
 function JsonRenderer({ value, mode }: FieldRendererProps) {
@@ -280,6 +331,9 @@ export function registerDefaults(): void {
 
   // Enum / Lookup
   registerFieldRenderer("enum", EnumRenderer);
+
+  // Country picker (ui_type="country" — backed by shared.country lookup domain)
+  registerFieldRenderer("country", CountryRenderer);
 
   // UUID
   registerFieldRenderer("uuid", UuidRenderer);

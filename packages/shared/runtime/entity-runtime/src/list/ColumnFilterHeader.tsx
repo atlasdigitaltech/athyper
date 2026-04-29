@@ -48,12 +48,16 @@ export function ColumnFilterHeader({
       {/* Label — clicks bubble to DataTable's sort handler */}
       <span className="flex-1 truncate">{label}</span>
 
-      {/* Filter affordance — click is isolated from sort */}
+      {/* Filter affordance — click is isolated from sort.
+          Uses div[role=button] because this is already inside DataTable's sort <button>. */}
       <div className="relative shrink-0">
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); } }}
           className={cn(
-            "rounded p-0.5 transition-colors",
+            "rounded p-0.5 transition-colors cursor-pointer",
             hasFilter
               ? "text-primary"
               : "text-transparent group-hover/colhdr:text-muted-foreground/60 hover:!text-muted-foreground",
@@ -66,7 +70,7 @@ export function ColumnFilterHeader({
           {hasFilter && (
             <span className="absolute -right-px -top-px h-1.5 w-1.5 rounded-full bg-primary" />
           )}
-        </button>
+        </div>
 
         {open && (
           <ColumnFilterPopover

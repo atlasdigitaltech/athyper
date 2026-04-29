@@ -1725,3 +1725,47 @@ COMMENT ON COLUMN master.company_code_supplier_profile.supplier_reconciliation_p
 COMMENT ON COLUMN master.company_code_supplier_profile.invoice_hold_policy_id IS
     'FUTURE ANCHOR — no FK target yet. Automatic invoice hold rules.';
 
+-- ============================================================================
+-- Extend master.supplier with business profile columns
+-- Kept out of the original CREATE TABLE to preserve a clean, minimal root.
+-- These are filterable facts that belong on the supplier, not in metadata JSON.
+-- ============================================================================
+
+ALTER TABLE master.supplier
+    ADD COLUMN IF NOT EXISTS long_description       text,
+    ADD COLUMN IF NOT EXISTS aliases                text[]      NOT NULL DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS business_types         text[]      NOT NULL DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS legal_form             text,
+    ADD COLUMN IF NOT EXISTS founded_year           smallint,
+    ADD COLUMN IF NOT EXISTS employee_count_band    text,
+    ADD COLUMN IF NOT EXISTS annual_revenue_band    text;
+
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'supplier_founded_year_chk'
+          AND conrelid = 'master.supplier'::regclass
+    ) THEN
+        ALTER TABLE master.supplier
+            ADD CONSTRAINT supplier_founded_year_chk
+                CHECK (founded_year IS NULL OR (founded_year BETWEEN 1800 AND 2200));
+    END IF;
+END $$;
+
+COMMENT ON COLUMN master.supplier.long_description IS
+    'Extended company description / about-us text. description holds the short one-liner.';
+COMMENT ON COLUMN master.supplier.aliases IS
+    'Trading names, brand aliases, abbreviations known by. Used for search/disambiguation.';
+COMMENT ON COLUMN master.supplier.business_types IS
+    'Multi-value business type codes (lookup: master.supplier_business_type). '
+    'e.g. {service_provider, technology_provider}.';
+COMMENT ON COLUMN master.supplier.legal_form IS
+    'Legal incorporation form (lookup: master.supplier_legal_form). '
+    'e.g. private_limited, public_listed, partnership, sole_proprietor.';
+COMMENT ON COLUMN master.supplier.founded_year IS
+    'Year the company was founded / incorporated. 4-digit year, 1800–2200.';
+COMMENT ON COLUMN master.supplier.employee_count_band IS
+    'Headcount band (lookup: master.employee_count_band). e.g. 11_50, 51_200.';
+COMMENT ON COLUMN master.supplier.annual_revenue_band IS
+    'Revenue band in USD (lookup: master.annual_revenue_band). e.g. 100k_1m, 1m_10m.';
+

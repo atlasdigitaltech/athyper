@@ -107,9 +107,15 @@ export function EntityIdentityBar({
           </button>
         ) : (
           <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-            {identity.number} 
+            {identity.number}
           </span>
-          
+        )}
+
+        {/* Inline classification: "· Vendor", "· Manufacturer" — config-driven */}
+        {identity.classification && (
+          <span className="text-sm font-normal text-muted-foreground shrink-0">
+            · {identity.classification}
+          </span>
         )}
 
         {/* Version badge */}

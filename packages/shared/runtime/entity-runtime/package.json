@@ -27,7 +27,6 @@
     "@athyper/api-contracts": "workspace:*",
     "@athyper/collaboration-ui": "workspace:*",
     "@athyper/content-ui": "workspace:*",
-    "@athyper/document-runtime": "workspace:*",
     "@athyper/domain-widgets": "workspace:*",
     "@athyper/metadata-client": "workspace:*",
     "@athyper/query": "workspace:*",

@@ -145,13 +145,16 @@ export const CompiledEntitySchema = z.object({
     search_fields: z.array(z.string()).optional(),
     /**
      * Selects the detail-page rendering strategy.
-     *   "standard"   — generic field-grid + tabs (MASTER / CONTROL / REFERENCE)
-     *   "master"     — same as standard, legacy alias
-     *   "approvable" — ApprovableDocumentShell with rich financial header
-     *   "ledger"     — read-only ledger / log viewer
-     *   "generic"    — deprecated alias for "standard"; kept for DB compat
+     *   "standard"    — generic field-grid + tabs (MASTER / CONTROL / REFERENCE)
+     *   "master"      — same as standard, legacy alias
+     *   "approvable"  — ApprovableDocumentShell with rich financial header
+     *   "ledger"      — read-only ledger / log viewer
+     *   "generic"     — deprecated alias for "standard"; kept for DB compat
+     *   "rich_master" — RichMasterDetailPage: EntityHeader + config-driven tabs
+     *                   driven entirely by display_config.rich_master_config.
+     *                   One component for all master entities — no per-entity TSX.
      */
-    detail_renderer: z.enum(["standard", "master", "approvable", "ledger", "generic"]).optional(),
+    detail_renderer: z.enum(["standard", "master", "approvable", "ledger", "generic", "rich_master"]).optional(),
     /**
      * Selects the list-view rendering strategy. Default: "table".
      */
@@ -252,6 +255,44 @@ export const CompiledEntitySchema = z.object({
         output:  z.array(z.string()).optional(),
       }),
     ).optional(),
+
+    /**
+     * Configuration for detail_renderer = "rich_master".
+     * Drives RichMasterDetailPage — one generic component for all master entities.
+     * All entity-specific layout decisions live here in SQL, never in TSX.
+     *
+     * Tab renderers:
+     *   "overview"     — KPI cards from header_facts + child-tab shortcut cards
+     *   "fields"       — entity field grid (view) / EntityForm (edit)
+     *   "child"        — child entity list panel (requires entity_code)
+     *   "comments"     — CommentsPanel
+     *   "attachments"  — AttachmentsPanel
+     *   "activity"     — EventsPanel
+     *   "blank"        — placeholder with blank_message
+     */
+    rich_master_config: z.object({
+      /** Chip label in P1 identity row, e.g. "SUPPLIER". Defaults to entity_name uppercased. */
+      type_label: z.string().optional(),
+      /** Field names to display as KPI fact cells in the P2 header rail. */
+      header_facts: z.array(z.string()).optional(),
+      /** Ordered tab definitions. Falls back to [{fields},{comments},{attachments},{activity}] when absent. */
+      tabs: z.array(z.object({
+        id:               z.string(),
+        label:            z.string(),
+        renderer:         z.enum(["overview", "fields", "child", "comments", "attachments", "activity", "blank"]),
+        /** Required for renderer="child". */
+        entity_code:      z.string().optional(),
+        /** Field names to show in child record rows (primary = first). */
+        display_fields:   z.array(z.string()).optional(),
+        /** URL template for "Add" button. "{uuid}" is replaced with the parent record's UUID. */
+        add_href_template: z.string().optional(),
+        add_label:        z.string().optional(),
+        empty_title:      z.string().optional(),
+        empty_description: z.string().optional(),
+        /** For renderer="blank": message shown in the placeholder. */
+        blank_message:    z.string().optional(),
+      })).optional(),
+    }).optional(),
   }),
 
   feature_flags: z.object({

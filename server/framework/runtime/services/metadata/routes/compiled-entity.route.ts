@@ -302,8 +302,9 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         default_sort_order: (dbDisplayConfig["default_sort_order"] ?? undefined) as "asc" | "desc" | undefined,
         list_columns:       (dbDisplayConfig["list_columns"] ?? undefined) as string[] | undefined,
         search_fields:      (dbDisplayConfig["search_fields"] ?? undefined) as string[] | undefined,
-        detail_renderer:    (dbDisplayConfig["detail_renderer"] ?? undefined) as "generic" | "approvable" | "ledger" | undefined,
+        detail_renderer:    (dbDisplayConfig["detail_renderer"] ?? undefined) as string | undefined,
         document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
+        rich_master_config: (dbDisplayConfig["rich_master_config"] ?? undefined) as Record<string, unknown> | undefined,
         // Lines section — null = entity has no line items; string = registered renderer key.
         // "lines_renderer" in check preserves explicit null (no lines) vs. absent (also no lines).
         lines_renderer:     "lines_renderer" in dbDisplayConfig

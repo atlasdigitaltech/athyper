@@ -1,2 +1,2 @@
-export { EntityDetailPage, type EntityDetailPageProps } from "./EntityDetailPage";
-export { ApprovableDetailPage, type ApprovableDetailPageProps } from "./ApprovableDetailPage";
+export { EntityDetailPage, type EntityDetailPageProps, type ApprovableRendererProps } from "./EntityDetailPage";
+export { RichMasterDetailPage, type RichMasterDetailPageProps } from "./RichMasterDetailPage";

@@ -12,7 +12,7 @@ BEGIN
 -- ── 1. control.lifecycle ─────────────────────────────────────────────────────
 INSERT INTO control.lifecycle (tenant_id, code, name, version_no, is_active, config, created_by)
 VALUES (NULL, 'vendor', 'Vendor Lifecycle', 1, true,
-    '{"initial_state_code":"draft","allow_parallel_instances":false,"icon_key":"building-2","ui_color":"#1D4ED8","entity_types":["vendor"]}'::jsonb,
+    '{"initial_state_code":"draft","allow_parallel_instances":false,"icon_key":"building-2","ui_color":"#1D4ED8","entity_types":["supplier"]}'::jsonb,
     '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (tenant_id, code) DO NOTHING;
 
@@ -47,15 +47,15 @@ VALUES
 ON CONFLICT (lifecycle_id, from_state_id, to_state_id) DO NOTHING;
 
 -- ── 4. control.entity_lifecycle binding ──────────────────────────────────────
--- Idempotency fix: migrate old binding if it was inserted as 'supplier'
+-- Idempotency fix: migrate old binding if it was inserted as 'vendor'
 UPDATE control.entity_lifecycle
-SET entity_name = 'vendor'
-WHERE entity_name = 'supplier' AND lifecycle_id = v_lc_id AND tenant_id IS NULL;
+SET entity_name = 'supplier'
+WHERE entity_name = 'vendor' AND lifecycle_id = v_lc_id AND tenant_id IS NULL;
 
 INSERT INTO control.entity_lifecycle
     (entity_name, lifecycle_id, tenant_id, conditions, priority, created_by)
 VALUES
-    ('vendor', v_lc_id, NULL, NULL, 100, '00000000-0000-0000-0000-000000000000')
+    ('supplier', v_lc_id, NULL, NULL, 100, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
 END $$;

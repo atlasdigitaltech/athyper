@@ -9,14 +9,14 @@ import { Skeleton } from "@athyper/ui/primitives";
  * The entity code drives all rendering, columns, filters, and actions via metadata.
  *
  * Record family is determined by entity metadata:
- *   family: "master"   → vendor, customer, account, cost_center, employee, item, warehouse…
+ *   family: "master"   → supplier, customer, account, cost_center, employee, item, warehouse…
  *   family: "document" → purchase_invoice, purchase_order, journal_entry, payment_entry…
  *
  * The [entity] segment is the canonical entity code — the business key
- * (e.g. "vendor", "purchase_invoice") not a UUID.
+ * (e.g. "supplier", "purchase_invoice") not a UUID.
  *
  * Examples:
- *   /app/vendor            → Vendor list
+ *   /app/supplier          → Supplier list
  *   /app/customer          → Customer list
  *   /app/purchase_invoice  → Purchase Invoice list
  *   /app/journal_entry     → Journal Entry list

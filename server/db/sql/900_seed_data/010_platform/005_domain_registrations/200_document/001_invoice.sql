@@ -84,7 +84,7 @@ CROSS JOIN (VALUES
     -- ── D: Source, References & Terms ────────────────────────────────────────
     ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
     ('vendor_invoice_ref',       'supplier_invoice_number', 'Vendor Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
-    ('description',              'description',             'Description',        'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":500}'::jsonb,            130),
+    ('description',              'description',             'Invoice Name',       'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":200}'::jsonb,            130),
     ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_terms"}'::jsonb,140),
     -- ── E: Matching & Hold ────────────────────────────────────────────────────
     ('match_type',               'match_type',              'Match Type',         'enum',           'one',         'document.invoice_match_type'::text,          true,  true,  NULL::jsonb,                           150),

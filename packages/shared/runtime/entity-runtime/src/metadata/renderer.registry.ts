@@ -9,7 +9,7 @@
  */
 
 import { EntityDetailPage } from "../detail";
-import { ApprovableDetailPage } from "../detail";
+import { RichMasterDetailPage } from "../detail";
 import { EntityListPage, KanbanView, DashboardView, ExcelView } from "../list";
 
 // Re-export the lines registry from runtime-shared so callers can
@@ -28,11 +28,12 @@ export {
  * the detail page for that strategy.
  */
 export const detailRendererMap = {
-  standard:   EntityDetailPage,
-  master:     EntityDetailPage,
-  generic:    EntityDetailPage,
-  approvable: ApprovableDetailPage,
-  ledger:     ApprovableDetailPage,
+  standard:     EntityDetailPage,
+  master:       EntityDetailPage,
+  generic:      EntityDetailPage,
+  approvable:   EntityDetailPage,
+  ledger:       EntityDetailPage,
+  rich_master:  RichMasterDetailPage,
 } as const;
 
 /**

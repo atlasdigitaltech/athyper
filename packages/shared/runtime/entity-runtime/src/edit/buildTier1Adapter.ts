@@ -13,7 +13,7 @@
  * not stored in the adapter registry. Descriptor registry drives Tier 1.
  */
 
-import type { EntityViewDescriptor } from "@athyper/document-runtime";
+import type { EntityViewDescriptor } from "@athyper/runtime-shared/descriptors";
 import type { EntityEditAdapter } from "./adapter/types";
 import type { EntityEditState } from "./types";
 import type { EntityHeaderModel, HeaderFact, HeaderAuditMeta } from "../header/types";

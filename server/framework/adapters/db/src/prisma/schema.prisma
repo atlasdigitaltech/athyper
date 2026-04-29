@@ -10824,6 +10824,13 @@ model customer {
   created_by                                          String                          @db.Uuid
   updated_at                                          DateTime?                       @db.Timestamptz(6)
   updated_by                                          String?                         @db.Uuid
+  long_description                                    String?
+  aliases                                             String[]                        @default([])
+  business_types                                      String[]                        @default([])
+  legal_form                                          String?
+  founded_year                                        Int?                            @db.SmallInt
+  employee_count_band                                 String?
+  annual_revenue_band                                 String?
   company_code_customer_profile                       company_code_customer_profile[]
   principal                                           principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cust_created_by_fk")
   tenant                                              tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cust_tenant_fk")
@@ -11693,6 +11700,20 @@ model legal_entity {
   created_by                                          String             @db.Uuid
   updated_at                                          DateTime?          @db.Timestamptz(6)
   updated_by                                          String?            @db.Uuid
+  display_name                                        String?
+  legal_name                                          String?
+  legal_form                                          String?
+  website_url                                         String?
+  external_ref                                        String?
+  aliases                                             String[]           @default([])
+  business_types                                      String[]           @default([])
+  founded_year                                        Int?               @db.SmallInt
+  employee_count_band                                 String?
+  annual_revenue_band                                 String?
+  tags                                                Json               @default("[]")
+  tax_residence_country_code                          String?            @db.Char(2)
+  effective_from                                      DateTime?          @db.Date
+  effective_until                                     DateTime?          @db.Date
   company_code                                        company_code[]
   holiday_calendar                                    holiday_calendar[]
   country                                             country            @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "le_country_fk")
@@ -13194,6 +13215,13 @@ model supplier {
   created_by                                          String                          @db.Uuid
   updated_at                                          DateTime?                       @db.Timestamptz(6)
   updated_by                                          String?                         @db.Uuid
+  long_description                                    String?
+  aliases                                             String[]                        @default([])
+  business_types                                      String[]                        @default([])
+  legal_form                                          String?
+  founded_year                                        Int?                            @db.SmallInt
+  employee_count_band                                 String?
+  annual_revenue_band                                 String?
   commitment_procurement                              commitment_procurement[]
   delivery_note                                       delivery_note[]
   goods_receipt                                       goods_receipt[]
@@ -14799,4 +14827,334 @@ model template_version {
   @@unique([tenant_id, template_id, checksum], map: "template_version_checksum_uq")
   @@unique([tenant_id, id], map: "template_version_tenant_id_uq")
   @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model certification {
+  id                     String    @id(map: "cert_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String    @db.Uuid
+  owner_type             String
+  owner_id               String    @db.Uuid
+  certification_type_id  String?   @db.Uuid
+  custom_name            String?
+  certificate_number     String?
+  certified_by           String?
+  certified_location     String?
+  additional_info        String?
+  document_attachment_id String?   @db.Uuid
+  effective_from         DateTime? @db.Date
+  effective_until        DateTime? @db.Date
+  metadata               Json      @default("{}")
+  status                 String    @default("active")
+  is_active              Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at      DateTime? @db.Timestamptz(6)
+  status_changed_by      String?   @db.Uuid
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  created_by             String    @db.Uuid
+  updated_at             DateTime? @db.Timestamptz(6)
+  updated_by             String?   @db.Uuid
+
+  @@unique([tenant_id, id], map: "cert_tenant_uq")
+  @@index([tenant_id, effective_until], map: "cert_expiry_idx", where: raw("((effective_until IS NOT NULL) AND (status = 'active'::text))"))
+  @@index([tenant_id, owner_type, owner_id], map: "cert_owner_idx")
+  @@index([tenant_id, certification_type_id], map: "cert_type_idx", where: raw("(certification_type_id IS NOT NULL)"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model certification_type {
+  id           String    @id(map: "ctype_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id    String?   @db.Uuid
+  code         String
+  name         String
+  issuing_body String?
+  category     String?
+  description  String?
+  is_custom    Boolean   @default(false)
+  metadata     Json      @default("{}")
+  status       String    @default("active")
+  is_active    Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  created_by   String    @db.Uuid
+  updated_at   DateTime? @db.Timestamptz(6)
+  updated_by   String?   @db.Uuid
+
+  @@index([category], map: "ctype_category_idx", where: raw("(category IS NOT NULL)"))
+  @@index([tenant_id], map: "ctype_tenant_idx", where: raw("(tenant_id IS NOT NULL)"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model customer_qualification {
+  id                            String    @id(map: "cq_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                     String    @db.Uuid
+  customer_id                   String    @db.Uuid
+  credit_status                 String    @default("not_assessed")
+  credit_limit_band             String?
+  credit_score                  Int?
+  credit_rating                 String?
+  dso_days                      Int?      @db.SmallInt
+  payment_behavior              String?
+  has_overdue_history           Boolean   @default(false)
+  kyc_status                    String    @default("not_started")
+  aml_sanctions_status          String    @default("not_checked")
+  beneficial_owner_check_status String?
+  kyc_check_date                DateTime? @db.Date
+  kyc_expiry_date               DateTime? @db.Date
+  is_dunning_eligible           Boolean   @default(true)
+  is_statement_eligible         Boolean   @default(true)
+  dunning_hold_reason           String?
+  last_credit_review_date       DateTime? @db.Date
+  next_credit_review_date       DateTime? @db.Date
+  reviewer_id                   String?   @db.Uuid
+  metadata                      Json      @default("{}")
+  status                        String    @default("active")
+  is_active                     Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  created_at                    DateTime  @default(now()) @db.Timestamptz(6)
+  created_by                    String    @db.Uuid
+  updated_at                    DateTime? @db.Timestamptz(6)
+  updated_by                    String?   @db.Uuid
+
+  @@unique([tenant_id, customer_id], map: "cq_customer_uq")
+  @@unique([tenant_id, id], map: "cq_tenant_uq")
+  @@index([tenant_id], map: "cq_blocked_pidx", where: raw("((credit_status = 'blocked'::text) AND (is_active = true))"))
+  @@index([tenant_id, credit_status], map: "cq_credit_status_idx")
+  @@index([tenant_id, customer_id], map: "cq_customer_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model party_contact_person {
+  id                String    @id(map: "pcp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  party_type        String
+  party_id          String    @db.Uuid
+  company_code_id   String?   @db.Uuid
+  contact_name      String
+  business_title    String?
+  is_primary        Boolean   @default(false)
+  metadata          Json      @default("{}")
+  status            String    @default("active")
+  is_active         Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at DateTime? @db.Timestamptz(6)
+  status_changed_by String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, id], map: "pcp_tenant_uq")
+  @@index([tenant_id, party_type, party_id], map: "pcp_party_idx")
+  @@index([tenant_id, party_type, party_id], map: "pcp_primary_pidx", where: raw("((is_primary = true) AND (is_active = true))"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model party_contact_role {
+  id                      String   @id(map: "pcr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id               String   @db.Uuid
+  party_contact_person_id String   @db.Uuid
+  role_code               String
+  created_at              DateTime @default(now()) @db.Timestamptz(6)
+  created_by              String   @db.Uuid
+
+  @@unique([tenant_id, party_contact_person_id, role_code], map: "pcr_contact_role_uq")
+  @@unique([tenant_id, id], map: "pcr_tenant_uq")
+  @@index([tenant_id, party_contact_person_id], map: "pcr_contact_idx")
+  @@index([tenant_id, role_code], map: "pcr_role_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model party_governance_relation {
+  id                String    @id(map: "pgr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  party_type        String
+  party_id          String    @db.Uuid
+  relation_type     String
+  member_name       String
+  member_type       String    @default("individual")
+  company_name      String?
+  business_title    String?
+  ownership_pct     Decimal?  @db.Decimal(7, 4)
+  share_class       String?
+  appointed_date    DateTime? @db.Date
+  end_of_term       DateTime? @db.Date
+  notes             String?
+  metadata          Json      @default("{}")
+  status            String    @default("active")
+  is_active         Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at DateTime? @db.Timestamptz(6)
+  status_changed_by String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, id], map: "pgr_tenant_uq")
+  @@index([tenant_id, party_type, party_id], map: "pgr_active_shareholders_pidx", where: raw("((relation_type = 'shareholder'::text) AND (is_active = true))"))
+  @@index([tenant_id, party_type, party_id], map: "pgr_party_idx")
+  @@index([tenant_id, party_type, party_id, relation_type], map: "pgr_relation_type_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model party_identifier {
+  id                String    @id(map: "pi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  owner_type        String
+  owner_id          String    @db.Uuid
+  scheme            String
+  value             String
+  issuing_authority String?
+  issued_at         DateTime? @db.Date
+  valid_until       DateTime? @db.Date
+  is_verified       Boolean   @default(false)
+  verified_at       DateTime? @db.Timestamptz(6)
+  is_primary        Boolean   @default(false)
+  metadata          Json      @default("{}")
+  status            String    @default("active")
+  is_active         Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at DateTime? @db.Timestamptz(6)
+  status_changed_by String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, owner_type, owner_id, scheme, value], map: "pi_owner_scheme_uq")
+  @@unique([tenant_id, id], map: "pi_tenant_uq")
+  @@index([tenant_id, owner_type, owner_id], map: "pi_owner_idx")
+  @@index([tenant_id, scheme, value], map: "pi_scheme_value_idx")
+  @@index([tenant_id, owner_type, owner_id], map: "pi_unverified_pidx", where: raw("((is_verified = false) AND (status = 'active'::text))"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model party_tax_profile {
+  id                        String    @id(map: "ptp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String    @db.Uuid
+  country_code              String    @db.Char(2)
+  penalty_information       String?
+  discount_information      String?
+  global_location_number    String?
+  tax_classification        String?
+  taxation_type             String?
+  tax_id                    String?
+  state_tax_id              String?
+  sales_tax_id              String?
+  service_tax_id            String?
+  regional_tax_id           String?
+  vat_id                    String?
+  vat_registered            Boolean   @default(false)
+  vat_registration_doc_id   String?   @db.Uuid
+  has_tax_clearance         Boolean   @default(false)
+  tax_clearance_number      String?
+  tax_clearance_doc_id      String?   @db.Uuid
+  tax_clearance_expiry_date DateTime? @db.Date
+  metadata                  Json      @default("{}")
+  status                    String    @default("active")
+  is_active                 Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at         DateTime? @db.Timestamptz(6)
+  status_changed_by         String?   @db.Uuid
+  created_at                DateTime  @default(now()) @db.Timestamptz(6)
+  created_by                String    @db.Uuid
+  updated_at                DateTime? @db.Timestamptz(6)
+  updated_by                String?   @db.Uuid
+  owner_type                String
+  owner_id                  String    @db.Uuid
+
+  @@unique([tenant_id, owner_type, owner_id, country_code], map: "ptp_owner_country_uq")
+  @@unique([tenant_id, id], map: "ptp_tenant_uq")
+  @@index([tenant_id, tax_clearance_expiry_date], map: "ptp_clearance_expiry_idx", where: raw("((has_tax_clearance = true) AND (tax_clearance_expiry_date IS NOT NULL))"))
+  @@index([tenant_id, country_code], map: "ptp_country_idx")
+  @@index([tenant_id, owner_type, owner_id], map: "ptp_owner_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model supplier_qualification {
+  id                       String    @id(map: "sq_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String    @db.Uuid
+  supplier_id              String    @db.Uuid
+  onboarding_status        String    @default("pending")
+  profile_completeness_pct Int?      @db.SmallInt
+  onboarding_approved_at   DateTime? @db.Timestamptz(6)
+  onboarding_approved_by   String?   @db.Uuid
+  is_approved_supplier     Boolean   @default(false)
+  is_preferred_supplier    Boolean   @default(false)
+  is_blocked               Boolean   @default(false)
+  block_reason             String?
+  block_start_date         DateTime? @db.Date
+  risk_tier                String?
+  sanctions_status         String    @default("not_checked")
+  aml_kyc_status           String    @default("not_started")
+  sanctions_check_date     DateTime? @db.Date
+  kyc_expiry_date          DateTime? @db.Date
+  sourcing_event_count     Int       @default(0)
+  bid_count                Int       @default(0)
+  awarded_count            Int       @default(0)
+  delivery_score           Decimal?  @db.Decimal(5, 2)
+  quality_score            Decimal?  @db.Decimal(5, 2)
+  sla_score                Decimal?  @db.Decimal(5, 2)
+  score_period_start       DateTime? @db.Date
+  score_period_end         DateTime? @db.Date
+  last_review_date         DateTime? @db.Date
+  next_review_date         DateTime? @db.Date
+  reviewed_by              String?   @db.Uuid
+  metadata                 Json      @default("{}")
+  status                   String    @default("active")
+  is_active                Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  created_at               DateTime  @default(now()) @db.Timestamptz(6)
+  created_by               String    @db.Uuid
+  updated_at               DateTime? @db.Timestamptz(6)
+  updated_by               String?   @db.Uuid
+
+  @@unique([tenant_id, supplier_id], map: "sq_supplier_uq")
+  @@unique([tenant_id, id], map: "sq_tenant_uq")
+  @@index([tenant_id], map: "sq_blocked_pidx", where: raw("((is_blocked = true) AND (is_active = true))"))
+  @@index([tenant_id, onboarding_status], map: "sq_onboarding_idx")
+  @@index([tenant_id, supplier_id], map: "sq_supplier_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model supplier_service_coverage {
+  id                String    @id(map: "ssc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  supplier_id       String    @db.Uuid
+  coverage_level    String
+  continent_code    String?
+  country_code      String?   @db.Char(2)
+  region_name       String?
+  city_name         String?
+  address_id        String?   @db.Uuid
+  coverage_type     String    @default("both")
+  notes             String?
+  metadata          Json      @default("{}")
+  status            String    @default("active")
+  is_active         Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at DateTime? @db.Timestamptz(6)
+  status_changed_by String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, id], map: "ssc_tenant_uq")
+  @@index([tenant_id, supplier_id], map: "ssc_active_supplier_pidx", where: raw("(is_active = true)"))
+  @@index([tenant_id, country_code], map: "ssc_country_idx", where: raw("(country_code IS NOT NULL)"))
+  @@index([tenant_id, supplier_id], map: "ssc_supplier_idx")
+  @@schema("master")
 }

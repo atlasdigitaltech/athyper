@@ -99,6 +99,9 @@ export {
 // Call registerDocumentRenderers() once at app startup (root layout).
 export { registerDocumentRenderers } from "./register";
 
+// ── Approvable document detail page ─────────────────────────────────────────
+export { ApprovableDetailPage, type ApprovableDetailPageProps } from "./pages/ApprovableDetailPage";
+
 // ── Entity view descriptors + registry ──────────────────────────────────────
 // Types and registry for optional descriptor overrides.
 // The generic edit runtime derives config from CompiledEntity metadata by default.

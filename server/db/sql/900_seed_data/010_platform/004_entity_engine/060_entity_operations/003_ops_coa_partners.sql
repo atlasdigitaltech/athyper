@@ -25,19 +25,19 @@ VALUES
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- vendor  (delta ops — base ops seeded by 001_fin_operations.sql)
--- NOTE: 001_fin_operations.sql seeds vendor with create/update/cancel/close/export.
+-- supplier  (delta ops — base ops seeded by 001_fin_operations.sql)
+-- NOTE: 001_fin_operations.sql seeds supplier with create/update/cancel/close/export.
 --       This file adds the extended ops: reopen, copy, delete, import, bulk_update.
 -- ══════════════════════════════════════════════════════════════════════════════
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL,'vendor','reopen',      'DETAIL','OVERFLOW','MODAL','reactivate',  true, 45,v_su),
-    (NULL,'vendor','copy',        'DETAIL','OVERFLOW','API',  'copy',        true, 55,v_su),
-    (NULL,'vendor','delete',      'DETAIL','OVERFLOW','MODAL','delete',      true, 65,v_su),
-    (NULL,'vendor','import',      'LIST',  'TOOLBAR', 'API',  'import',      false,75,v_su),
-    (NULL,'vendor','bulk_update', 'LIST',  'TOOLBAR', 'API',  'bulk_update', false,85,v_su)
+    (NULL,'supplier','reopen',      'DETAIL','OVERFLOW','MODAL','reactivate',  true, 45,v_su),
+    (NULL,'supplier','copy',        'DETAIL','OVERFLOW','API',  'copy',        true, 55,v_su),
+    (NULL,'supplier','delete',      'DETAIL','OVERFLOW','MODAL','delete',      true, 65,v_su),
+    (NULL,'supplier','import',      'LIST',  'TOOLBAR', 'API',  'import',      false,75,v_su),
+    (NULL,'supplier','bulk_update', 'LIST',  'TOOLBAR', 'API',  'bulk_update', false,85,v_su)
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════

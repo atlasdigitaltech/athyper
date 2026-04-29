@@ -5,4 +5,4 @@ export { EntityFactRail, type EntityFactRailProps } from "./EntityFactRail";
 export { EntityStatusStrip, type EntityStatusStripProps } from "./EntityStatusStrip";
 export { EntityProgressRow, type EntityProgressRowProps } from "./EntityProgressRow";
 export { EntityTimeline, type EntityTimelineProps } from "./EntityTimeline";
-export { EntityTabBar, type EntityTabBarProps } from "./EntityTabBar";
+export { EntityTabBar, type EntityTabBarProps, type PlatformPanelIcon } from "./EntityTabBar";

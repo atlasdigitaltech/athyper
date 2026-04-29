@@ -237,6 +237,75 @@ function EntitySearch({
   );
 }
 
+// ── UOM search combobox ───────────────────────────────────────────────────────
+
+function UomSearch({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const [q,       setQ]       = useState(value);
+  const [results, setResults] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [open,    setOpen]    = useState(false);
+  const [busy,    setBusy]    = useState(false);
+  const ref   = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setQ(value); }, [value]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function search(v: string) {
+    setQ(v);
+    if (timer.current) clearTimeout(timer.current);
+    setOpen(true);
+    timer.current = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const params = new URLSearchParams({ limit: "8" });
+        if (v.trim()) params.set("search", v.trim());
+        const r = await fetch(`/api/relay/api/platform/ref/uom?${params.toString()}`);
+        if (r.ok) {
+          const d = await r.json() as { data?: { id: string; code: string; name: string }[] };
+          setResults(d.data ?? []);
+        }
+      } finally { setBusy(false); }
+    }, 200);
+  }
+
+  function pick(row: { code: string }) {
+    setQ(row.code); setResults([]); setOpen(false);
+    onChange(row.code);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <input value={q}
+        onChange={(e) => search(e.target.value)}
+        onFocus={() => { if (!open) search(q); }}
+        placeholder="EA"
+        className="w-full h-9 px-3 text-sm text-center font-mono border border-border/60 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors placeholder:text-muted-foreground/40"
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border/60 bg-background shadow-lg overflow-hidden">
+          {busy ? <p className="px-3 py-2.5 text-xs text-muted-foreground">Searching…</p>
+                : results.length === 0 ? <p className="px-3 py-2.5 text-xs text-muted-foreground/60">No results</p>
+                : <div className="py-1 max-h-44 overflow-y-auto">
+                    {results.map((row) => (
+                      <button key={row.id} onClick={() => pick(row)}
+                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="font-mono font-medium text-foreground shrink-0">{row.code}</span>
+                        <span className="text-muted-foreground truncate">{row.name}</span>
+                      </button>
+                    ))}
+                  </div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Suggestion chips ──────────────────────────────────────────────────────────
 
 function SuggestionChips({
@@ -757,7 +826,7 @@ export function LineComposerSheet({
               {entryMode === "quantity_price" ? (
                 <div className="grid grid-cols-3 gap-3">
                   <Field label="Quantity"><NumInput value={qty} onChange={setQty} placeholder="0" /></Field>
-                  <Field label="Unit"><TextInput value={unitCode} onChange={setUnitCode} placeholder="EA" className="text-center" /></Field>
+                  <Field label="Unit"><UomSearch value={unitCode} onChange={setUnitCode} /></Field>
                   <Field label="Unit price"><NumInput value={unitPrice} onChange={setUnitPrice} placeholder="0.00" /></Field>
                 </div>
               ) : (

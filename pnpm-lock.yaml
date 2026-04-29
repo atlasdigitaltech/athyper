@@ -447,6 +447,9 @@ importers:
       '@athyper/workflow-ui':
         specifier: workspace:*
         version: link:../workflow-ui
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
@@ -471,9 +474,6 @@ importers:
       '@athyper/content-ui':
         specifier: workspace:*
         version: link:../../ui/content-ui
-      '@athyper/document-runtime':
-        specifier: workspace:*
-        version: link:../document-runtime
       '@athyper/domain-widgets':
         specifier: workspace:*
         version: link:../../ui/domain-widgets

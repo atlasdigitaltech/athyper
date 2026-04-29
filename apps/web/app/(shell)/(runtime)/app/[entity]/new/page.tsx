@@ -4,30 +4,23 @@
  * Runtime entity create — /app/[entity]/new
  *
  * Renders either:
- *   FlowWizard  — when the entity has an active 'create' flow in the flow
- *                 engine (approvable documents, guided intake).
- *   EntityForm  — for all other entities (master records, simple forms).
- *
- * Flow detection: fetches GET /meta/flow?entity=…&trigger=new via
- * useEntityFlow(). Falls back to EntityForm on any error or null response.
- *
- * Alternate flows: entities may expose additional non-default flows for the
- * same trigger (e.g. purchase_invoice exposes create_proforma alongside the
- * default create flow). When present, an "alternate flow" pill appears at the
- * top right so users can switch before entering the wizard.
+ *   IntentScreen — pre-wizard card picker when the entity exposes alternate
+ *                  flows (display_config.alternate_flows non-empty). The user
+ *                  picks a flow type; the chosen wizard then loads.
+ *   FlowWizard   — when the entity has an active 'create' flow in the flow
+ *                  engine (approvable documents, guided intake).
+ *   EntityForm   — for all other entities (master records, simple forms).
  *
  * Examples:
- *   /app/purchase_invoice/new   → FlowWizard (3-step AP intake)
- *                                  + "Create Pro-forma instead" pill
- *   /app/journal_entry/new      → FlowWizard (when flow is seeded)
- *   /app/vendor/new             → EntityForm  (master record, flat form)
+ *   /app/purchase_invoice/new  → IntentScreen → FlowWizard (Standard or Proforma)
+ *   /app/journal_entry/new     → FlowWizard (when flow is seeded)
+ *   /app/vendor/new            → EntityForm  (master record, flat form)
  *
  * Entity naming convention: purchase_invoice (underscore), matching the DB
  * table name. Never use hyphens in entity codes.
  */
 
 import { use, useMemo, useState } from "react";
-import { cn } from "@athyper/theme/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { EntityForm } from "@athyper/entity-runtime/form";
@@ -92,7 +85,7 @@ export default function AppEntityNewRoute({
     [compiledEntity],
   );
 
-  const { data: alternateBundles = [] } = useQuery({
+  const { data: alternateBundles = [], isLoading: alternatesLoading } = useQuery({
     queryKey: ["entity-flow-alternates", entity, alternateFlowCodes],
     queryFn: async () => {
       const results = await Promise.all(
@@ -111,11 +104,19 @@ export default function AppEntityNewRoute({
     staleTime: Infinity,
   });
 
-  // Active flow code — null means "use default"
-  const [activeFlowCode, setActiveFlowCode] = useState<string | null>(null);
+  // Active flow code:
+  //   undefined = intent screen (user hasn't chosen yet — only when alternates exist)
+  //   null      = use default flow
+  //   string    = use a specific alternate flow by flow_code
+  const [activeFlowCode, setActiveFlowCode] = useState<string | null | undefined>(undefined);
 
-  // Resolved bundle — undefined = not yet loaded, null = no flow
-  const bundle = activeFlowCode === null
+  const needsAlternates = alternateFlowCodes.length > 0;
+  const needsIntentScreen = needsAlternates && activeFlowCode === undefined;
+
+  // Resolved bundle — undefined when intent screen is shown or while loading
+  const bundle = needsIntentScreen
+    ? undefined
+    : activeFlowCode === null || activeFlowCode === undefined
     ? defaultBundle
     : (alternateBundles.find((b) => b.flow_code === activeFlowCode) ?? defaultBundle);
 
@@ -154,40 +155,57 @@ export default function AppEntityNewRoute({
     router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
   }
 
-  // Loading state — also wait for source invoice when navigating from ?invoice=
-  if (flowLoading || (!!sourceInvoiceId && invoiceLoading)) return <FlowWizardSkeleton />;
+  // Loading state — wait for default flow + alternates (if any) + source invoice
+  if (
+    flowLoading ||
+    (needsAlternates && alternatesLoading) ||
+    (!!sourceInvoiceId && invoiceLoading)
+  ) {
+    return <FlowWizardSkeleton />;
+  }
+
+  // Intent screen — shown before the wizard when the entity has alternate flows
+  if (needsIntentScreen && defaultBundle) {
+    const options = [
+      { code: null as null, bundle: defaultBundle },
+      ...alternateBundles.map((b) => ({ code: b.flow_code as string, bundle: b })),
+    ];
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+        <div className="w-full max-w-xl space-y-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            What are you creating?
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            {options.map(({ code, bundle: b }) => (
+              <button
+                key={code ?? "__default"}
+                type="button"
+                onClick={() => setActiveFlowCode(code)}
+                className="group text-left rounded-xl border bg-card px-5 py-4 hover:border-primary/50 hover:shadow-sm transition-all"
+              >
+                <div className="font-semibold text-sm text-foreground mb-1.5">{b.label}</div>
+                {b.description && (
+                  <div className="text-xs text-muted-foreground leading-relaxed">
+                    {b.description}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push(`/app/${entity}`)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (bundle) {
-    // Build flow-type switcher when the entity has alternate flows in its display_config.
-    // Labels come from the eagerly-prefetched bundles — no hardcoded strings.
-    const allFlowOptions: { flow_code: string | null; label: string }[] = [
-      { flow_code: null, label: defaultBundle?.label ?? entity },
-      ...alternateBundles.map((b) => ({ flow_code: b.flow_code, label: b.label })),
-    ];
-
-    const flowSwitcher = alternateBundles.length > 0 ? (
-      <div className="flex items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5 text-xs">
-        {allFlowOptions.map((opt) => {
-          const isActive = activeFlowCode === opt.flow_code;
-          return (
-            <button
-              key={opt.flow_code ?? "__default"}
-              type="button"
-              onClick={() => setActiveFlowCode(opt.flow_code)}
-              className={cn(
-                "rounded-md px-3 py-1.5 font-semibold transition-colors",
-                isActive
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-    ) : undefined;
-
     return (
       <FlowWizard
         bundle={bundle}
@@ -198,7 +216,6 @@ export default function AppEntityNewRoute({
         entityCode={entity}
         onCancel={() => router.push(`/app/${entity}`)}
         submitting={createMutation.isPending}
-        headerAction={flowSwitcher}
       />
     );
   }

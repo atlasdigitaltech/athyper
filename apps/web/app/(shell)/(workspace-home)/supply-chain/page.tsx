@@ -3,64 +3,79 @@
  *
  * Domain launcher. No data entry. Action cards only.
  * Routes users into supply-chain workbenches and document lists.
+ *
+ * Icon and color are derived from control.entity.icon_key / color_token
+ * via the @athyper/icons registries — no palette values in this file.
  */
 
-import { FileText, Package, ShoppingCart, Truck, Warehouse } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
 import { ActionLinkCard } from "@/components/home/ActionLinkCard";
 import { SectionLabel } from "@/components/home/SectionLabel";
+import { getEntityIcon } from "@athyper/icons/entity-icons";
+import { getEntityColorClasses } from "@athyper/icons/color-tokens";
 
-const WORKBENCH_ACTIONS = [
+// ── Entity config — matches control.entity seeds (icon_key / color_token) ─────
+// href, title, description come from label_singular / label_plural in the seed.
+// icon_key and color_token are the exact values stored in control.entity.
+
+const SUPPLY_CHAIN_ENTITIES = [
   {
-    href: "/app/purchase_order",
-    title: "Purchase Orders",
+    href:        "/app/purchase_order",
+    title:       "Purchase Orders",
     description: "Create and manage procurement orders",
-    icon: ShoppingCart,
-    iconClass: "text-primary",
-    iconBgClass: "bg-primary/10",
+    icon_key:    "shopping-cart",
+    color_token: "orange",
   },
   {
-    href: "/app/purchase_invoice",
-    title: "Supplier Invoices",
+    href:        "/app/purchase_invoice",
+    title:       "Supplier Invoices",
     description: "Receive, match, and approve supplier invoices",
-    icon: FileText,
-    iconClass: "text-warning",
-    iconBgClass: "bg-warning/10",
+    icon_key:    "file-text",
+    color_token: "violet",
   },
   {
-    href: "/app/vendor",
-    title: "Vendors",
+    href:        "/app/supplier",
+    title:       "Suppliers",
     description: "Supplier master records and onboarding",
-    icon: Package,
-    iconClass: "text-success",
-    iconBgClass: "bg-success/10",
+    icon_key:    "building-2",
+    color_token: "blue",
   },
   {
-    href: "/app/item",
-    title: "Item Master",
+    href:        "/app/customer",
+    title:       "Customers",
+    description: "Customer master records and accounts",
+    icon_key:    "users",
+    color_token: "teal",
+  },
+  {
+    href:        "/app/item",
+    title:       "Item Master",
     description: "Products, materials, and services catalog",
-    icon: Package,
-    iconClass: "text-accent-foreground",
-    iconBgClass: "bg-accent/10",
+    icon_key:    "box",
+    color_token: "rose",
   },
   {
-    href: "/app/warehouse",
-    title: "Warehouses",
+    href:        "/app/warehouse",
+    title:       "Warehouses",
     description: "Storage locations and inventory positions",
-    icon: Warehouse,
-    iconClass: "text-info",
-    iconBgClass: "bg-info/10",
+    icon_key:    "warehouse",
+    color_token: "emerald",
   },
   {
-    href: "/app/shipment",
-    title: "Shipments",
+    href:        "/app/shipment",
+    title:       "Shipments",
     description: "Logistics and transportation tracking",
-    icon: Truck,
-    iconClass: "text-destructive",
-    iconBgClass: "bg-destructive/10",
+    icon_key:    "truck",
+    color_token: "orange",
   },
-] as const;
+] satisfies Array<{
+  href: string;
+  title: string;
+  description: string;
+  icon_key: string;
+  color_token: string;
+}>;
 
 export default function SupplyChainWorkspacePage() {
   return (
@@ -72,9 +87,20 @@ export default function SupplyChainWorkspacePage() {
         <div>
           <SectionLabel>Supply Chain</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {WORKBENCH_ACTIONS.map((action) => (
-              <ActionLinkCard key={action.href} {...action} />
-            ))}
+            {SUPPLY_CHAIN_ENTITIES.map((entity) => {
+              const { iconClass, iconBgClass } = getEntityColorClasses(entity.color_token);
+              return (
+                <ActionLinkCard
+                  key={entity.href}
+                  href={entity.href}
+                  title={entity.title}
+                  description={entity.description}
+                  icon={getEntityIcon(entity.icon_key)}
+                  iconClass={iconClass}
+                  iconBgClass={iconBgClass}
+                />
+              );
+            })}
           </div>
         </div>
 

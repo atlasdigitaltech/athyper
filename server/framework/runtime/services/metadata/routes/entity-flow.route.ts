@@ -91,7 +91,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let flowQuery: any = db
         .selectFrom("control.entity_flow as ef")
-        .select(["ef.id", "ef.flow_code", "ef.label", "ef.config"])
+        .select(["ef.id", "ef.flow_code", "ef.label", "ef.description", "ef.config"])
         .where("ef.entity_version_id", "=", entityRow.version_id as string)
         .where("ef.status", "=", "active");
 
@@ -270,6 +270,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         flow_id: flowRow.id as string,
         flow_code: flowRow.flow_code as string,
         label: flowRow.label as string,
+        description: (flowRow.description ?? null) as string | null,
         config,
         steps,
         user_permissions: userPermissions,

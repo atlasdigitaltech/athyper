@@ -3,7 +3,7 @@
 /**
  * LineEditorSheet — right-side drawer for editing a single invoice line.
  *
- * Tabs:    Item · Accounting · Classify · Discount · Charges · Tax · Retention
+ * Tabs:    Item · Classify · Accounting · Tax · Discount · Charges · Retention
  * Actions: Edit (active) · Delete
  */
 
@@ -320,6 +320,225 @@ function AmountWaterfall({ rows, currency }: { rows: WaterfallRow[]; currency: s
 }
 
 
+// ── UOM search combobox ───────────────────────────────────────────────────────
+
+function UomSearch({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const [q,       setQ]       = useState(value);
+  const [results, setResults] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [open,    setOpen]    = useState(false);
+  const [busy,    setBusy]    = useState(false);
+  const ref   = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setQ(value); }, [value]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function search(v: string) {
+    setQ(v);
+    if (timer.current) clearTimeout(timer.current);
+    setOpen(true);
+    timer.current = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const params = new URLSearchParams({ limit: "8" });
+        if (v.trim()) params.set("search", v.trim());
+        const r = await fetch(`/api/relay/api/platform/ref/uom?${params.toString()}`);
+        if (r.ok) {
+          const d = await r.json() as { data?: { id: string; code: string; name: string }[] };
+          setResults(d.data ?? []);
+        }
+      } finally { setBusy(false); }
+    }, 200);
+  }
+
+  function pick(row: { code: string }) {
+    setQ(row.code); setResults([]); setOpen(false);
+    onChange(row.code);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <input value={q}
+        onChange={(e) => search(e.target.value)}
+        onFocus={() => { if (!open) search(q); }}
+        placeholder="EA"
+        className="w-full h-9 px-3 text-sm text-center font-mono border border-border/60 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors placeholder:text-muted-foreground/40"
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border/60 bg-background shadow-lg overflow-hidden">
+          {busy ? <p className="px-3 py-2.5 text-xs text-muted-foreground">Searching…</p>
+                : results.length === 0 ? <p className="px-3 py-2.5 text-xs text-muted-foreground/60">No results</p>
+                : <div className="py-1 max-h-44 overflow-y-auto">
+                    {results.map((row) => (
+                      <button key={row.id} onClick={() => pick(row)}
+                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="font-mono font-medium text-foreground shrink-0">{row.code}</span>
+                        <span className="text-muted-foreground truncate">{row.name}</span>
+                      </button>
+                    ))}
+                  </div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── GL Account search combobox ────────────────────────────────────────────────
+
+function GlAccountSearch({ value, onChange, companyCodeId, className }: {
+  value: string; onChange: (code: string) => void; companyCodeId?: string; className?: string;
+}) {
+  const [q,       setQ]       = useState(value);
+  const [results, setResults] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [open,    setOpen]    = useState(false);
+  const [busy,    setBusy]    = useState(false);
+  const ref   = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setQ(value); }, [value]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function search(v: string) {
+    setQ(v);
+    if (timer.current) clearTimeout(timer.current);
+    if (!v.trim()) { setResults([]); setOpen(false); return; }
+    setOpen(true);
+    timer.current = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const params = new URLSearchParams({ q: v, node_type: "posting", limit: "10" });
+        const r = await fetch(`/api/relay/api/finance/accounts/search?${params.toString()}`);
+        if (r.ok) {
+          const d = await r.json() as { data?: { id: string; code: string; name: string }[] };
+          setResults(d.data ?? []);
+        }
+      } finally { setBusy(false); }
+    }, 250);
+  }
+
+  function pick(row: { code: string }) {
+    setQ(row.code); setResults([]); setOpen(false);
+    onChange(row.code);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <input value={q}
+        onChange={(e) => search(e.target.value)}
+        placeholder="Search GL account…"
+        className={cn(
+          "w-full h-9 px-3 text-sm font-mono border border-border/60 rounded-lg bg-transparent",
+          "focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors",
+          "placeholder:text-muted-foreground/40",
+          className,
+        )}
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border/60 bg-background shadow-lg overflow-hidden">
+          {busy ? <p className="px-3 py-2.5 text-xs text-muted-foreground">Searching…</p>
+                : results.length === 0 ? <p className="px-3 py-2.5 text-xs text-muted-foreground/60">No results</p>
+                : <div className="py-1 max-h-52 overflow-y-auto">
+                    {results.map((row) => (
+                      <button key={row.id} onClick={() => pick(row)}
+                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="font-mono font-medium text-foreground shrink-0">{row.code}</span>
+                        <span className="text-muted-foreground truncate">{row.name}</span>
+                      </button>
+                    ))}
+                  </div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tax type search combobox ──────────────────────────────────────────────────
+// categoryFilter: "INDIRECT" | "SURCHARGE" | "WITHHOLDING" | "CUSTOMS_DUTY"
+// Pass undefined to search all categories.
+
+function TaxTypeSearch({ value, onChange, categoryFilter, placeholder }: {
+  value: string; onChange: (code: string) => void;
+  categoryFilter?: string; placeholder?: string;
+}) {
+  const [q,       setQ]       = useState(value);
+  const [results, setResults] = useState<{ id: string; code: string; name: string; category: string }[]>([]);
+  const [open,    setOpen]    = useState(false);
+  const [busy,    setBusy]    = useState(false);
+  const ref   = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setQ(value); }, [value]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function search(v: string) {
+    setQ(v);
+    if (timer.current) clearTimeout(timer.current);
+    setOpen(true);
+    timer.current = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const params = new URLSearchParams({ page_size: "10" });
+        if (v.trim()) params.set("q", v.trim());
+        if (categoryFilter) params.set("filters", JSON.stringify({ category: categoryFilter }));
+        const r = await fetch(`/api/relay/api/records/tax_type?${params.toString()}`);
+        if (r.ok) {
+          const d = await r.json() as { data?: { id: string; code: string; name: string; category: string }[] };
+          setResults(d.data ?? []);
+        }
+      } finally { setBusy(false); }
+    }, 250);
+  }
+
+  function pick(row: { code: string }) {
+    setQ(row.code); setResults([]); setOpen(false);
+    onChange(row.code);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <input value={q}
+        onChange={(e) => search(e.target.value)}
+        onFocus={() => { if (!open) search(q); }}
+        placeholder={placeholder}
+        className="w-full h-9 px-3 text-sm font-mono border border-border/60 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors placeholder:text-muted-foreground/40"
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border/60 bg-background shadow-lg overflow-hidden">
+          {busy ? <p className="px-3 py-2.5 text-xs text-muted-foreground">Searching…</p>
+                : results.length === 0 ? <p className="px-3 py-2.5 text-xs text-muted-foreground/60">No results</p>
+                : <div className="py-1 max-h-52 overflow-y-auto">
+                    {results.map((row) => (
+                      <button key={row.id} onClick={() => pick(row)}
+                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-xs hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="font-mono font-medium text-foreground shrink-0">{row.code}</span>
+                        <span className="text-muted-foreground truncate">{row.name}</span>
+                      </button>
+                    ))}
+                  </div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── ITEM DETAILS TAB ──────────────────────────────────────────────────────────
 
 function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
@@ -358,7 +577,7 @@ function ItemDetailsTab({ line, entityCode, recordId, currencyCode, onSaved }: {
       <Field label="Item code"><Input value={itemCode} onChange={mark(setItemCode)} placeholder="ITM-XXX (optional)" className="font-mono text-xs" /></Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Quantity"><Input type="number" value={qty} onChange={mark(setQty)} placeholder="0" className="text-right" /></Field>
-        <Field label="Unit"><Input value={unitCode} onChange={mark(setUnitCode)} placeholder="EA" className="text-center" /></Field>
+        <Field label="Unit"><UomSearch value={unitCode} onChange={mark(setUnitCode)} /></Field>
         <Field label="Unit price"><Input type="number" value={unitPrice} onChange={mark(setUnitPrice)} placeholder="0.00" className="text-right" /></Field>
       </div>
       {qty && unitPrice && (
@@ -580,7 +799,9 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
               placeholder="Search project…"
             />
           </Field>
-          <Field label="GL account"><Input value={sAccount} onChange={(v) => { setSAccount(v); setSDirty(true); }} placeholder="6100-OPEX" className="font-mono text-xs" /></Field>
+          <Field label="GL account">
+            <GlAccountSearch value={sAccount} companyCodeId={companyCodeId} onChange={(code) => { setSAccount(code); setSDirty(true); }} />
+          </Field>
           <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border/40 bg-muted/10">
             <div>
               <p className="text-xs font-medium text-foreground">Capital expenditure</p>
@@ -662,7 +883,7 @@ function AccountingTab({ line, distributions, currencyCode, entityCode, recordId
                         {row.account_source === "FIXED" ? (
                           <div className="space-y-1.5">
                             <label className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">GL account</label>
-                            <input value={row.account_code} onChange={(e) => updateRow(idx, { account_code: e.target.value })} placeholder="6100-MKTG" className="w-full h-8 px-2 text-xs font-mono border border-border/50 rounded-md bg-transparent focus:outline-none focus:ring-1 focus:ring-ring/40" />
+                            <GlAccountSearch value={row.account_code} companyCodeId={companyCodeId} onChange={(code) => updateRow(idx, { account_code: code })} className="h-8 text-xs" />
                           </div>
                         ) : (
                           <div className="space-y-1.5">
@@ -1039,14 +1260,18 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
       <div className="rounded-lg border border-border/50 bg-background overflow-hidden">
         <div className="px-3 py-2 bg-muted/30 border-b border-border/40"><span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Output tax</span></div>
         <div className="px-3 py-3 grid grid-cols-2 gap-3">
-          <Field label="Tax code"><Input value={taxCode} onChange={mark(setTaxCode)} placeholder="STD / ZERO / EXEMPT" /></Field>
+          <Field label="Tax code">
+            <TaxTypeSearch value={taxCode} categoryFilter="INDIRECT" placeholder="Search tax code…" onChange={mark(setTaxCode)} />
+          </Field>
           <Field label="Tax amount"><Input type="number" value={taxAmt} onChange={mark(setTaxAmt)} placeholder="0.00" className="text-right" /></Field>
         </div>
       </div>
       <div className="rounded-lg border border-border/50 bg-background overflow-hidden">
         <div className="px-3 py-2 bg-muted/30 border-b border-border/40"><span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Withholding tax</span></div>
         <div className="px-3 py-3 grid grid-cols-2 gap-3">
-          <Field label="WHT code"><Input value={whtCode} onChange={mark(setWhtCode)} placeholder="WHT-STD" /></Field>
+          <Field label="WHT code">
+            <TaxTypeSearch value={whtCode} categoryFilter="WITHHOLDING" placeholder="Search WHT code…" onChange={mark(setWhtCode)} />
+          </Field>
           <Field label="WHT amount"><Input type="number" value={whtAmt} onChange={mark(setWhtAmt)} placeholder="0.00" className="text-right" /></Field>
         </div>
       </div>
@@ -1159,11 +1384,11 @@ export function LineEditorSheet({
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
-    { id: "accounting", label: "Accounting", badge: distributions.length > 0 ? String(distributions.length) : undefined },
     { id: "classify",   label: "Classify",  badge: (line as Record<string, unknown>).spend_category_id ? "✓" : undefined },
+    { id: "accounting", label: "Accounting", badge: distributions.length > 0 ? String(distributions.length) : undefined },
+    { id: "tax",        label: "Tax",       badge: line.tax_amount     ? "✓"                      : undefined },
     { id: "discount",   label: "Discount",  badge: line.discount_pct   ? `${line.discount_pct}%`  : undefined },
     { id: "charges",    label: "Charges"    },
-    { id: "tax",        label: "Tax",       badge: line.tax_amount     ? "✓"                      : undefined },
     { id: "retention",  label: "Retention", badge: line.retention_pct  ? `${line.retention_pct}%` : undefined },
   ];
 

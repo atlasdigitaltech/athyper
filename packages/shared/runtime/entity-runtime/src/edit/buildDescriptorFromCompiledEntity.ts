@@ -17,7 +17,7 @@ import type {
   EntityViewDescriptor,
   EntityAuditDescriptor,
   EntityEditFieldDescriptor,
-} from "@athyper/document-runtime";
+} from "@athyper/runtime-shared/descriptors";
 
 // ── Input type mapping ────────────────────────────────────────────────────────
 

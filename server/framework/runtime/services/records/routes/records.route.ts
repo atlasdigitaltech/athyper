@@ -377,6 +377,29 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         if (groupCountQuery) groupCountQuery = groupCountQuery.where("tenant_id" as never, "=", tenantId as never);
       }
 
+      // ── Parent FK filter for child entities ───────────────────────────────────
+      // ?parent_id=<uuid> narrows results to records belonging to that parent.
+      // Uses feature_flags.parent_fk to resolve the physical FK column.
+      // feature_flags.parent_scope ("col=val") adds any extra discriminator.
+      const parentIdParam = typeof req.query["parent_id"] === "string" ? req.query["parent_id"] : null;
+      const parentFkCol   = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      if (parentIdParam && parentFkCol) {
+        listQuery  = listQuery.where(parentFkCol  as never, "=", parentIdParam as never);
+        countQuery = countQuery.where(parentFkCol as never, "=", parentIdParam as never);
+        if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentFkCol as never, "=", parentIdParam as never);
+        const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
+        if (scopeStr) {
+          const eqIdx = scopeStr.indexOf("=");
+          if (eqIdx > 0) {
+            const scopeCol = scopeStr.slice(0, eqIdx);
+            const scopeVal = scopeStr.slice(eqIdx + 1);
+            listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
+            countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
+          }
+        }
+      }
+
       // ── Company code scope filter ─────────────────────────────────────────────
       // When listing company_code records, restrict to only the company codes the
       // principal has been granted access to (via master.company_code_access).
@@ -748,6 +771,22 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
 
+      // Inject parent FK when entity is a child (feature_flags.parent_fk + parent_scope).
+      // The caller passes parent_id in body.data; we resolve the physical FK column from
+      // feature_flags so the form never needs to know the internal column name.
+      const createParentFk  = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      const createParentId  = typeof inputData["parent_id"] === "string" ? inputData["parent_id"] : null;
+      if (createParentFk && createParentId) {
+        mappedData[createParentFk] = createParentId;
+        const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
+        if (scopeStr) {
+          const eqIdx = scopeStr.indexOf("=");
+          if (eqIdx > 0) {
+            mappedData[scopeStr.slice(0, eqIdx)] = scopeStr.slice(eqIdx + 1);
+          }
+        }
+      }
+
       const xOrg = (req.headers["x-org"] as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
@@ -1086,14 +1125,23 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
-      // Remap form field names → physical column names
+      // Remap form field names → physical column names.
+      // Strip columns that are system-managed and must never be set via PUT:
+      //   is_active / is_deleted  — lifecycle flags owned by status transitions
+      //   id / tenant_id          — identity, never mutable
+      //   created_at / created_by — immutable creation audit
+      const IMMUTABLE_COLS = new Set([
+        "id", "tenant_id",
+        "created_at", "created_by",
+        "is_active", "is_deleted",
+      ]);
       const fieldMap = await resolveFieldMap(db, entityCode);
       const body = req.body as { data?: Record<string, unknown> };
       const inputData = body.data ?? {};
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName);
-        if (columnName) mappedData[columnName] = value;
+        if (columnName && !IMMUTABLE_COLS.has(columnName)) mappedData[columnName] = value;
       }
 
       // Resolve UUID from business key when caller passes a canonical key

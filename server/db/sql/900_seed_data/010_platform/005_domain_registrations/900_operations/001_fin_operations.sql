@@ -26,19 +26,18 @@ ON CONFLICT (code) DO NOTHING;
 -- Master lifecycle actions map to: cancel (deactivate/block), close (archive)
 -- ══════════════════════════════════════════════════════════════════════════════
 
--- Remove any legacy rows inserted under the old 'supplier' entity name.
--- The entity_engine ops file now seeds vendor directly; supplier rows are obsolete.
-DELETE FROM control.entity_operation WHERE entity_name = 'supplier' AND tenant_id IS NULL;
+-- Remove stale rows inserted under the old 'vendor' entity name.
+DELETE FROM control.entity_operation WHERE entity_name = 'vendor' AND tenant_id IS NULL;
 
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'vendor', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/master/vendor/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'vendor', 'update',  'DETAIL', 'PRIMARY',  'NAVIGATE', '/master/vendor/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'vendor', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',               true,  30, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'vendor', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                  true,  40, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'vendor', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                   false, 50, '00000000-0000-0000-0000-000000000000')
+    (NULL, 'supplier', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/app/supplier/new',          false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'supplier', 'update',  'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/supplier/{id}?mode=edit', true, 20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'supplier', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',                 true,  30, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'supplier', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                    true,  40, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'supplier', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                     false, 50, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════

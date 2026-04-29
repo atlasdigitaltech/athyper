@@ -52,7 +52,7 @@ import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metric
 import { makeAuditEvent } from "../audit.js";
 import { runComplianceSuiteIfDev } from "../foundation/metadata/entity-compliance.js";
 import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
-import { runWithContext } from "../kernel/request-context.js";
+import { runWithContext, tryGetContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 
@@ -296,6 +296,35 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // ─── API routes ────────────────────────────────────────────────────────────
 
   const apiRouter = Router();
+
+  // ── Tenant-stamp middleware ────────────────────────────────────────────────
+  // Reads X-Org, resolves tenant UUID from master.tenant (open_read policy —
+  // no GUC needed), and mutates the ALS context so the TenantStampDriver can
+  // set app.current_tenant_id on every downstream DB query.
+  // Without this, FORCE ROW LEVEL SECURITY tables (legal_entity, company_code,
+  // supplier, etc.) return 0 rows even when WHERE tenant_id = ? is applied.
+  apiRouter.use(async (req: Request, _res: Response, next: NextFunction) => {
+    const xOrg   = (req.headers["x-org"]   as string) ?? "";
+    const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+    if (xOrg) {
+      const tenantCode = xOrg.split("--")[0];
+      if (tenantCode) {
+        try {
+          const row = await _db
+            .selectFrom("master.tenant as t")
+            .select("t.id")
+            .where("t.code",      "=", tenantCode)
+            .where("t.realm_key", "=", xRealm || "athyper")
+            .executeTakeFirst();
+          if (row) {
+            const ctx = tryGetContext();
+            if (ctx) ctx.tenantId = row.id as string;
+          }
+        } catch { /* swallow — route handlers will 401/404 appropriately */ }
+      }
+    }
+    next();
+  });
 
   // ── KC admin token factory ────────────────────────────────────────────────
   // Derives the KC base URL from the issuer URL by stripping /realms/{realm}.

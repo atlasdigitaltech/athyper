@@ -10,6 +10,8 @@
     "./modules": "./src/module-icons.ts",
     "./workspaces": "./src/workspace-icons.ts",
     "./entity-classes": "./src/entity-class-icons.ts",
+    "./entity-icons": "./src/entity-icons.ts",
+    "./color-tokens": "./src/color-tokens.ts",
     "./actions": "./src/action-icons.ts",
     "./statuses": "./src/status-icons.ts",
     "./custom/*": "./src/custom/*.tsx"

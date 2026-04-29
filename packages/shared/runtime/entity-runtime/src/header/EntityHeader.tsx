@@ -30,7 +30,7 @@ import { EntityExceptionStrip } from "./atoms/EntityExceptionStrip";
 import { EntityFactRail } from "./atoms/EntityFactRail";
 import { EntityProgressRow } from "./atoms/EntityProgressRow";
 import { EntityStatusStrip } from "./atoms/EntityStatusStrip";
-import { EntityTabBar } from "./atoms/EntityTabBar";
+import { EntityTabBar, type PlatformPanelIcon } from "./atoms/EntityTabBar";
 
 export interface EntityHeaderProps {
   model: EntityHeaderModel;
@@ -45,6 +45,10 @@ export interface EntityHeaderProps {
   onTypeClick?: () => void;
   activeTab?: string;
   onTabChange?: (id: string) => void;
+  /** Platform context panel icons (Comments, Attachments, Activity) rendered in the tab bar. */
+  platformIcons?: PlatformPanelIcon[];
+  onPlatformIconClick?: (id: string) => void;
+  activePlatformIcon?: string;
   /** Arbitrary content rendered below the identity bar — visible in all modes. */
   extensionSlot?: ReactNode;
   className?: string;
@@ -110,6 +114,9 @@ export function EntityHeader({
   onTypeClick,
   activeTab,
   onTabChange,
+  platformIcons,
+  onPlatformIconClick,
+  activePlatformIcon,
   extensionSlot,
   className,
 }: EntityHeaderProps) {
@@ -152,8 +159,15 @@ export function EntityHeader({
             <EntityStatusStrip statuses={model.statuses!} compact />
           </div>
         )}
-        {(model.tabs?.length ?? 0) > 0 && (
-          <EntityTabBar tabs={model.tabs!} activeTab={activeTab} onTabChange={onTabChange} />
+        {((model.tabs?.length ?? 0) > 0 || (platformIcons?.length ?? 0) > 0) && (
+          <EntityTabBar
+            tabs={model.tabs ?? []}
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            platformIcons={platformIcons}
+            onPlatformIconClick={onPlatformIconClick}
+            activePlatformIcon={activePlatformIcon}
+          />
         )}
       </div>
     );
@@ -179,12 +193,17 @@ export function EntityHeader({
         </div>
       )}
 
-      {/* P2 — facts; collapsed shows hero cell summary */}
-      {(model.facts?.length ?? 0) > 0 && (
+      {/* P2 — facts.
+           Expanded: full grid.
+           Collapsed: only when an xl=true hero fact exists (e.g. invoice total).
+           Master entities have no xl facts → collapsed shows identity row only.
+           Document entities mark their total as xl → collapsed shows the hero cell. */}
+      {(model.facts?.length ?? 0) > 0 &&
+        (isExpanded || model.facts!.some((f) => f.xl)) && (
         <EntityFactRail facts={model.facts!} mode={mode} />
       )}
 
-      {/* P3 + P4 — expanded: full progress row with timeline toggle */}
+      {/* P3 + P4 — expanded only: full status dimensions + progress timeline */}
       {isExpanded && ((model.statuses?.length ?? 0) > 0 || !!model.progress) && (
         <EntityProgressRow
           progress={model.progress}
@@ -194,19 +213,19 @@ export function EntityHeader({
         />
       )}
 
-      {/* P3 collapsed: compact status chips only (no timeline or progress) */}
-      {!isExpanded && (model.statuses?.length ?? 0) > 0 && (
-        <div className="border-t border-border px-4 py-2 sm:px-5 lg:px-[22px]">
-          <EntityStatusStrip statuses={model.statuses!} compact />
-        </div>
-      )}
-
       {/* Audit meta — expanded only */}
       {isExpanded && model.audit && <AuditBar audit={model.audit} />}
 
-      {/* P5 — tabs; always visible when present */}
-      {(model.tabs?.length ?? 0) > 0 && (
-        <EntityTabBar tabs={model.tabs!} activeTab={activeTab} onTabChange={onTabChange} />
+      {/* P5 — tabs + platform icons; always visible when either is present */}
+      {((model.tabs?.length ?? 0) > 0 || (platformIcons?.length ?? 0) > 0) && (
+        <EntityTabBar
+          tabs={model.tabs ?? []}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          platformIcons={platformIcons}
+          onPlatformIconClick={onPlatformIconClick}
+          activePlatformIcon={activePlatformIcon}
+        />
       )}
     </div>
   );
