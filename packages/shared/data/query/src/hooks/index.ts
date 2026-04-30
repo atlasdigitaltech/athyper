@@ -170,6 +170,7 @@ export function useUpdateEntity(entityCode: string, id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
+      queryClient.invalidateQueries({ queryKey: ["activity", entityCode] });
     },
   });
 }

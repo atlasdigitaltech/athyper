@@ -260,3 +260,19 @@ BEGIN
       AND tenant_id IS NULL
       AND display_config != '{}'::jsonb;
 END $dc$;
+
+-- ── 7. Pin id and tenant_id as system/hidden (never rendered in UI) ──────────
+-- origin='system' → FieldsRenderer excludes field from view grid
+-- ui_type='hidden' → edit-mode field renderer registry uses no-op renderer
+-- Covers two cases: rows exist with wrong origin, or rows are missing (UPDATE
+-- is a no-op; 000_common_fields.sql will insert them correctly on next run).
+UPDATE control.entity_field ef
+SET origin  = 'system',
+    ui_type = 'hidden'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'master' AND e.table_name = 'supplier'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+  AND ef.name IN ('id', 'tenant_id')
+  AND (ef.origin IS DISTINCT FROM 'system' OR ef.ui_type IS DISTINCT FROM 'hidden');

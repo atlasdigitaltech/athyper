@@ -193,7 +193,7 @@ export function ActivityTimeline({ entries = [], className }: ActivityTimelinePr
                   {/* Action */}
                   <td className="px-4 py-2.5 align-top whitespace-nowrap">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium">
+                      <span className="text-xs font-medium text-foreground">
                         {resolveActionLabel(entry.activity_type)}
                       </span>
                       <Badge
@@ -207,7 +207,7 @@ export function ActivityTimeline({ entries = [], className }: ActivityTimelinePr
 
                   {/* Summary */}
                   <td className="px-4 py-2.5 align-top">
-                    <p className="text-xs leading-relaxed">{entry.description}</p>
+                    <p className="text-xs leading-relaxed text-foreground">{entry.description}</p>
                     {(entry.from_state || entry.to_state) && (
                       <div className="mt-1 flex items-center gap-1">
                         {entry.from_state && (

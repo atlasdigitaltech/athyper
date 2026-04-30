@@ -108,21 +108,32 @@ ENVIRONMENT=""
 STACK_PROFILE=""
 
 init_compose_env() {
-  if [[ ! -f "$ENV_FILE" ]]; then
+  # In staging/prod, ENV_FILE is the secrets-only file which does NOT contain
+  # ENVIRONMENT or STACK_PROFILE — those live in the bootstrap (ENV_DIR/.env).
+  # Read bootstrap first, then overlay secrets (mirrors ENV_FILE_ARGS order so
+  # the result matches what docker compose sees for these two keys).
+  local _files=()
+  [[ -f "$ENV_DIR/.env" ]] && _files+=( "$ENV_DIR/.env" )
+  [[ "$ENV_FILE" != "$ENV_DIR/.env" && -f "$ENV_FILE" ]] && _files+=( "$ENV_FILE" )
+
+  if [[ ${#_files[@]} -eq 0 ]]; then
     return 1
   fi
 
-  while IFS='=' read -r key value; do
-    [[ "$key" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "$key" ]] && continue
-    key=$(echo "$key" | xargs)
-    [[ -z "$key" ]] && continue
-    value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-    case "$key" in
-      ENVIRONMENT)   ENVIRONMENT="$value" ;;
-      STACK_PROFILE) STACK_PROFILE="$value" ;;
-    esac
-  done < <(tr -d '\r' < "$ENV_FILE")
+  local _f
+  for _f in "${_files[@]}"; do
+    while IFS='=' read -r key value; do
+      [[ "$key" =~ ^[[:space:]]*# ]] && continue
+      [[ -z "$key" ]] && continue
+      key=$(echo "$key" | xargs)
+      [[ -z "$key" ]] && continue
+      value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
+      case "$key" in
+        ENVIRONMENT)   ENVIRONMENT="$value" ;;
+        STACK_PROFILE) STACK_PROFILE="$value" ;;
+      esac
+    done < <(tr -d '\r' < "$_f")
+  done
 }
 
 # ---------------------------------------------------------------------------

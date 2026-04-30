@@ -25,7 +25,7 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'coa_type',            'coa_type',            'COA Type',          'enum',   'select', 'one','standard',true, true,  true,  false,110,v_su),
+            (v_ev,'coa_type',            'framework',           'COA Type',          'enum',   'select', 'one','standard',true, true,  true,  false,110,v_su),
             (v_ev,'base_currency_id',    'base_currency_id',    'Base Currency',     'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
             (v_ev,'account_level_count', 'account_level_count', 'Hierarchy Levels',  'integer','number', 'one','standard',false,false, false, false,130,v_su),
             (v_ev,'is_default',          'is_default',          'Default COA',       'boolean','hidden', 'one','standard',true, true,  false, false,140,v_su)
@@ -77,15 +77,14 @@ FROM (VALUES
             (v_ev,'chart_of_account_id','chart_of_account_id','Chart of Accounts','uuid','reference','one','standard',true, true,  false, false,110,v_su),
             (v_ev,'account_type_id',    'account_type_id',    'Account Type',     'uuid','reference','one','standard',true, true,  true,  false,120,v_su),
             (v_ev,'parent_id',          'parent_id',          'Parent Account',   'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'account_nature',     'account_nature',     'Nature',           'enum','select',  'one','standard',true, true,  true,  false,140,v_su),
-            (v_ev,'balance_type',       'balance_type',       'Balance Type',     'enum','select',  'one','standard',true, true,  true,  false,150,v_su),
-            (v_ev,'normal_balance',     'normal_balance',     'Normal Balance',   'enum','select',  'one','standard',true, true,  true,  false,160,v_su),
-            (v_ev,'currency_id',        'currency_id',        'Currency',         'uuid','reference','one','standard',false,true,  false, false,170,v_su),
-            (v_ev,'is_reconciling',     'is_reconciling',     'Reconciling',      'boolean','hidden','one','standard',false,true,  false, false,180,v_su),
-            (v_ev,'is_blocked',         'is_blocked',         'Blocked',          'boolean','hidden','one','standard',false,true,  false, false,190,v_su),
-            (v_ev,'posting_level',      'posting_level',      'Posting Level',    'enum','select',  'one','standard',true, true,  true,  false,200,v_su),
-            (v_ev,'account_level',      'account_level',      'Level',            'integer','number','one','standard',false,true,  true,  false,210,v_su),
-            (v_ev,'account_path',       'account_path',       'Account Path',     'string','text',  'one','system',  false,false, false, true, 220,v_su)
+            (v_ev,'account_nature',     'account_class',      'Nature',           'enum','select',  'one','standard',true, true,  true,  false,140,v_su),
+            (v_ev,'normal_balance',     'normal_balance',     'Normal Balance',   'enum','select',  'one','standard',true, true,  true,  false,150,v_su),
+            (v_ev,'currency_id',        'currency_code',      'Currency',         'uuid','reference','one','standard',false,true,  false, false,160,v_su),
+            (v_ev,'is_reconciling',     'is_reconciling',     'Reconciling',      'boolean','hidden','one','standard',false,true,  false, false,170,v_su),
+            (v_ev,'is_blocked',         'is_blocked',         'Blocked',          'boolean','hidden','one','standard',false,true,  false, false,180,v_su),
+            (v_ev,'posting_level',      'posting_level',      'Posting Level',    'enum','select',  'one','standard',true, true,  true,  false,190,v_su),
+            (v_ev,'account_level',      'level_no',           'Level',            'integer','number','one','standard',false,true,  true,  false,200,v_su),
+            (v_ev,'account_path',       'path',               'Account Path',     'string','text',  'one','system',  false,false, false, true, 210,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

@@ -19,6 +19,108 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
+    -- ══════════════════════════════════════════════════════════════════════
+    -- C0: Remove stale tax types not in the current canonical set.
+    --     Old seed versions used different code formats (e.g. VAT-AE, VAT-STD).
+    --     Prune in FK-reverse order — no ON DELETE CASCADE on any of these:
+    --       ledger.tax_calculation      → control.tax_rate_schedule → master.tax_type
+    --       control.tax_group_component → control.tax_rate_schedule → master.tax_type
+    --       control.tax_rate_schedule   → master.tax_type
+    -- ══════════════════════════════════════════════════════════════════════
+    DELETE FROM ledger.tax_calculation
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND tax_type_id IN (
+                SELECT id FROM master.tax_type
+                WHERE tenant_id = v_tid
+                  AND code NOT IN (
+                    'MY-SST-SALES','MY-SST-SVC','MY-WHT',
+                    'QA-WHT',
+                    'SA-VAT','SA-WHT','SA-ZAKAT',
+                    'AE-VAT',
+                    'US-SALES','US-WHT',
+                    'SG-GST','SG-WHT',
+                    'IN-CGST','IN-SGST','IN-IGST','IN-TDS','IN-TCS','IN-CUSTOMS','IN-CESS',
+                    'CA-GST','CA-PST','CA-HST','CA-WHT',
+                    'DE-UST','DE-WHT','DE-CUSTOMS',
+                    'TW-VAT','TW-WHT',
+                    'ZA-VAT','ZA-WHT','ZA-MINING-ROY',
+                    'GB-VAT','GB-WHT','GB-CUSTOMS',
+                    'JP-CT','JP-WHT',
+                    'PH-VAT','PH-EWT','PH-FWT'
+                  )));
+
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND tax_type_id IN (
+                SELECT id FROM master.tax_type
+                WHERE tenant_id = v_tid
+                  AND code NOT IN (
+                    'MY-SST-SALES','MY-SST-SVC','MY-WHT',
+                    'QA-WHT',
+                    'SA-VAT','SA-WHT','SA-ZAKAT',
+                    'AE-VAT',
+                    'US-SALES','US-WHT',
+                    'SG-GST','SG-WHT',
+                    'IN-CGST','IN-SGST','IN-IGST','IN-TDS','IN-TCS','IN-CUSTOMS','IN-CESS',
+                    'CA-GST','CA-PST','CA-HST','CA-WHT',
+                    'DE-UST','DE-WHT','DE-CUSTOMS',
+                    'TW-VAT','TW-WHT',
+                    'ZA-VAT','ZA-WHT','ZA-MINING-ROY',
+                    'GB-VAT','GB-WHT','GB-CUSTOMS',
+                    'JP-CT','JP-WHT',
+                    'PH-VAT','PH-EWT','PH-FWT'
+                  )));
+
+    DELETE FROM control.tax_rate_schedule
+    WHERE tenant_id = v_tid
+      AND tax_type_id IN (
+          SELECT id FROM master.tax_type
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'MY-SST-SALES','MY-SST-SVC','MY-WHT',
+              'QA-WHT',
+              'SA-VAT','SA-WHT','SA-ZAKAT',
+              'AE-VAT',
+              'US-SALES','US-WHT',
+              'SG-GST','SG-WHT',
+              'IN-CGST','IN-SGST','IN-IGST','IN-TDS','IN-TCS','IN-CUSTOMS','IN-CESS',
+              'CA-GST','CA-PST','CA-HST','CA-WHT',
+              'DE-UST','DE-WHT','DE-CUSTOMS',
+              'TW-VAT','TW-WHT',
+              'ZA-VAT','ZA-WHT','ZA-MINING-ROY',
+              'GB-VAT','GB-WHT','GB-CUSTOMS',
+              'JP-CT','JP-WHT',
+              'PH-VAT','PH-EWT','PH-FWT'
+            ));
+
+    DELETE FROM master.tax_type
+    WHERE tenant_id = v_tid
+      AND code NOT IN (
+        'MY-SST-SALES','MY-SST-SVC','MY-WHT',
+        'QA-WHT',
+        'SA-VAT','SA-WHT','SA-ZAKAT',
+        'AE-VAT',
+        'US-SALES','US-WHT',
+        'SG-GST','SG-WHT',
+        'IN-CGST','IN-SGST','IN-IGST','IN-TDS','IN-TCS','IN-CUSTOMS','IN-CESS',
+        'CA-GST','CA-PST','CA-HST','CA-WHT',
+        'DE-UST','DE-WHT','DE-CUSTOMS',
+        'TW-VAT','TW-WHT',
+        'ZA-VAT','ZA-WHT','ZA-MINING-ROY',
+        'GB-VAT','GB-WHT','GB-CUSTOMS',
+        'JP-CT','JP-WHT',
+        'PH-VAT','PH-EWT','PH-FWT'
+      );
+
+    -- ══════════════════════════════════════════════════════════════════════
+    -- Canonical tax type upsert
+    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO master.tax_type
         (tenant_id, code, name, category,
          is_recoverable, is_deducted_at_source, is_included_in_price,
@@ -81,12 +183,19 @@ BEGIN
         name = EXCLUDED.name, category = EXCLUDED.category,
         is_recoverable = EXCLUDED.is_recoverable,
         is_deducted_at_source = EXCLUDED.is_deducted_at_source,
+        is_included_in_price = EXCLUDED.is_included_in_price,
+        is_compound_eligible = EXCLUDED.is_compound_eligible,
+        sort_order = EXCLUDED.sort_order,
         updated_at = now(), updated_by = v_su
     WHERE (master.tax_type.name, master.tax_type.category,
-           master.tax_type.is_recoverable, master.tax_type.is_deducted_at_source)
+           master.tax_type.is_recoverable, master.tax_type.is_deducted_at_source,
+           master.tax_type.is_included_in_price, master.tax_type.is_compound_eligible,
+           master.tax_type.sort_order)
        IS DISTINCT FROM
           (EXCLUDED.name, EXCLUDED.category,
-           EXCLUDED.is_recoverable, EXCLUDED.is_deducted_at_source);
+           EXCLUDED.is_recoverable, EXCLUDED.is_deducted_at_source,
+           EXCLUDED.is_included_in_price, EXCLUDED.is_compound_eligible,
+           EXCLUDED.sort_order);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- ASSERTIONS

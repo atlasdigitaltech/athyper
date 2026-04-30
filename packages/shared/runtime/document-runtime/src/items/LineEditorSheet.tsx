@@ -9,13 +9,10 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Plus, Trash2, ChevronsUpDown,
-  XCircle, Maximize2, Minimize2,
+  Plus, Trash2, ChevronsUpDown, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
-} from "@athyper/ui/primitives";
+import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import { fmtAmount } from "@athyper/runtime-shared/core";
 import { relayMutate } from "@athyper/runtime-shared/client";
@@ -1350,37 +1347,6 @@ export function LineEditorSheet({
   const cc         = currencyCode ?? "USD";
   const lineAmount = Number(line.line_amount) || 0;
   const [tab, setTab] = useState<TabId>(initialTab ?? "details");
-  const [expanded, setExpanded] = useState(false);
-
-  const [dragWidth, setDragWidth] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
-      const v = localStorage.getItem("lineEditorSheetWidth");
-      return v ? Number(v) : null;
-    }
-    return null;
-  });
-
-  const effectiveWidth = dragWidth ?? (expanded ? 860 : 520);
-
-  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
-    e.preventDefault();
-    const handle = e.currentTarget;
-    handle.setPointerCapture(e.pointerId);
-    const startX = e.clientX;
-    const startW = effectiveWidth;
-    function onMove(ev: PointerEvent) {
-      const newW = Math.round(Math.max(380, Math.min(startW + (startX - ev.clientX), window.innerWidth * 0.92)));
-      setDragWidth(newW);
-    }
-    function onUp(ev: PointerEvent) {
-      const finalW = Math.round(Math.max(380, Math.min(startW + (startX - ev.clientX), window.innerWidth * 0.92)));
-      localStorage.setItem("lineEditorSheetWidth", String(finalW));
-      handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onUp);
-    }
-    handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onUp);
-  }
 
   const tabs: { id: TabId; label: string; badge?: string }[] = [
     { id: "details",    label: "Item"       },
@@ -1392,83 +1358,73 @@ export function LineEditorSheet({
     { id: "retention",  label: "Retention", badge: line.retention_pct  ? `${line.retention_pct}%` : undefined },
   ];
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="max-w-[95vw] p-0 flex flex-col gap-0 overflow-hidden" style={{ width: effectiveWidth }} aria-describedby={undefined}>
-        {/* Drag-resize handle on the left edge */}
-        <div
-          onPointerDown={startDrag}
-          title="Drag to resize"
-          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-20 group"
-        >
-          <div className="absolute left-0.5 top-0 bottom-0 w-px bg-transparent group-hover:bg-border/60 transition-colors" />
-        </div>
-        {/* Expand/collapse preset toggle — positioned just left of the built-in close button */}
-        <button
-          onClick={() => { setExpanded((v) => !v); setDragWidth(null); localStorage.removeItem("lineEditorSheetWidth"); }}
-          aria-label={expanded ? "Collapse panel" : "Expand panel"}
-          className="absolute top-4 right-10 z-10 inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        >
-          {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-        </button>
-        {/* Header */}
-        <SheetHeader className="shrink-0 px-5 pt-5 pb-0">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="shrink-0 inline-flex items-center h-5 px-2 rounded text-2xs font-semibold bg-muted text-muted-foreground border border-border/50 leading-none">LINE {line.line_number}</span>
-              {distributions.length > 0 && (
-                <span className="shrink-0 inline-flex items-center h-5 px-1.5 rounded text-2xs font-semibold bg-muted border border-border/50 text-muted-foreground leading-none">{distributions.length} split{distributions.length !== 1 ? "s" : ""}</span>
-              )}
-            </div>
-            <SheetTitle className="text-sm font-semibold text-foreground leading-snug truncate">{line.description ?? line.item_code ?? `Line ${line.line_number}`}</SheetTitle>
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              <span className="font-semibold tabular-nums text-foreground">{fmtAmt(lineAmount, cc)}</span>
-              {line.quantity != null && line.unit_code && (
-                <span>{Number(line.quantity).toLocaleString()} {line.unit_code}{line.unit_price != null ? ` · ${fmtAmt(Number(line.unit_price))}/unit` : ""}</span>
-              )}
-            </div>
-          </div>
-        </SheetHeader>
+  const subtitle = line.quantity != null && line.unit_code
+    ? `${fmtAmt(lineAmount, cc)} · ${Number(line.quantity).toLocaleString()} ${line.unit_code}${line.unit_price != null ? ` · ${fmtAmt(Number(line.unit_price))}/unit` : ""}`
+    : fmtAmt(lineAmount, cc);
 
-        {/* Tab bar */}
-        <div className="shrink-0 flex overflow-x-auto scrollbar-none border-b border-border/50 px-5">
+  return (
+    <DrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      intent="transactional"
+      widthKey={`${entityCode}:line-editor`}
+      defaultWidth={520}
+      expandedWidth={860}
+      minWidth={380}
+      maxWidth="92vw"
+      resizable
+      expandable
+      badge={`LINE ${line.line_number}`}
+      title={line.description ?? line.item_code ?? `Line ${line.line_number}`}
+      subtitle={subtitle}
+      headerRight={
+        distributions.length > 0
+          ? <span className="shrink-0 inline-flex items-center h-5 px-1.5 rounded text-2xs font-semibold bg-muted border border-border/50 text-muted-foreground leading-none">
+              {distributions.length} split{distributions.length !== 1 ? "s" : ""}
+            </span>
+          : undefined
+      }
+      headerBottom={
+        <div className="flex overflow-x-auto scrollbar-none px-5">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn("flex items-center gap-1.5 shrink-0 px-2.5 py-2.5 text-xs font-semibold border-b-2 transition-colors",
-                tab === t.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+              className={cn(
+                "flex items-center gap-1.5 shrink-0 px-2.5 py-2.5 text-xs font-semibold border-b-2 transition-colors",
+                tab === t.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               {t.label}
               {t.badge && (
-                <span className={cn("inline-flex items-center h-4 px-1.5 rounded-sm text-2xs font-semibold border leading-none",
-                  tab === t.id ? "bg-foreground/10 text-foreground border-foreground/20" : "bg-muted text-muted-foreground border-border/50"
+                <span className={cn(
+                  "inline-flex items-center h-4 px-1.5 rounded-sm text-2xs font-semibold border leading-none",
+                  tab === t.id ? "bg-foreground/10 text-foreground border-foreground/20" : "bg-muted text-muted-foreground border-border/50",
                 )}>{t.badge}</span>
               )}
             </button>
           ))}
         </div>
-
-        {/* Tab content */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {tab === "details"    && <ItemDetailsTab  line={line} entityCode={entityCode} recordId={recordId} currencyCode={cc} onSaved={onLineSaved} />}
-          {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} record={record} onMutated={onMutated} />}
-          {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} hasAiClassification={hasAiClassification} onSaved={onMutated} />}
-          {tab === "discount"   && <DiscountTab     line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
-          {tab === "charges"    && <ChargesTab      line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
-          {tab === "tax"        && <TaxTab          line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
-          {tab === "retention"  && <RetentionTab    line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
-        </div>
-
-        {/* Footer */}
-        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border/50 bg-muted/10">
-          <p className="text-2xs text-muted-foreground">
-            {distributions.length > 0 ? `${distributions.length} split${distributions.length !== 1 ? "s" : ""} · ${fmtAmt(lineAmount, cc)} allocable` : `${fmtAmt(lineAmount, cc)} unallocated`}
-          </p>
-          <SheetClose asChild>
-            <button className="h-8 px-4 text-xs font-semibold border border-border/60 rounded-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors">Done</button>
-          </SheetClose>
-        </div>
-      </SheetContent>
-    </Sheet>
+      }
+      footerStart={
+        distributions.length > 0
+          ? `${distributions.length} split${distributions.length !== 1 ? "s" : ""} · ${fmtAmt(lineAmount, cc)} allocable`
+          : `${fmtAmt(lineAmount, cc)} unallocated`
+      }
+      footerEnd={
+        <button
+          onClick={() => onOpenChange(false)}
+          className="h-8 px-4 text-xs font-semibold border border-border/60 rounded-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+        >
+          Done
+        </button>
+      }
+    >
+      {tab === "details"    && <ItemDetailsTab  line={line} entityCode={entityCode} recordId={recordId} currencyCode={cc} onSaved={onLineSaved} />}
+      {tab === "accounting" && <AccountingTab   line={line} distributions={distributions} currencyCode={cc} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} record={record} onMutated={onMutated} />}
+      {tab === "classify"   && <ClassifyTab     line={line} entityCode={entityCode} recordId={recordId} companyCodeId={companyCodeId} hasAiClassification={hasAiClassification} onSaved={onMutated} />}
+      {tab === "discount"   && <DiscountTab     line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
+      {tab === "charges"    && <ChargesTab      line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onMutated={onMutated} />}
+      {tab === "tax"        && <TaxTab          line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
+      {tab === "retention"  && <RetentionTab    line={line} currencyCode={cc} entityCode={entityCode} recordId={recordId} onSaved={onLineSaved} />}
+    </DrawerShell>
   );
 }

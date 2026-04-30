@@ -1,7 +1,7 @@
 -- 900_seed_data/040_tenants/010_demo/300_governance/001_finance_close_cycle.sql
 -- Finance month-end close cycle seed data — demo tenant instance.
 -- Requires: SET app.seed_tenant_id = '<demo_tenant_uuid>' before running.
--- Requires: 100_org_structure/ (entity_code US01 must exist)
+-- Requires: 100_org_structure/ (entity_code AUIC must exist)
 --           900_principals/ (at least one principal for this tenant)
 -- Idempotent: ON CONFLICT DO NOTHING on all inserts.
 
@@ -9,7 +9,7 @@ DO $$
 DECLARE
     v_t   uuid := current_setting('app.seed_tenant_id', true)::uuid;
     v_sys uuid;    -- system principal
-    v_e   varchar := 'US01';
+    v_e   varchar := 'AUIC';
 
     v_ty uuid;  -- cycle_type
     v_pp uuid;  -- phase: PREPARATION
@@ -121,31 +121,33 @@ BEGIN
     IF v_cn IS NULL THEN SELECT id INTO v_cn FROM governance.cycle_task_category WHERE tenant_id = v_t AND cycle_type_id = v_ty AND category_code = 'RECONCILIATION'; END IF;
 
     -- ── Task templates (17 tasks across 4 phases) ───────────────────────────
+    -- ctpl_system_handler_chk: completion_mode = 'MANUAL' OR system_check_handler IS NOT NULL
     INSERT INTO governance.cycle_task_template (
         tenant_id, entity_code, cycle_type_id, phase_id, category_id,
-        task_code, task_name, completion_mode, is_mandatory, sla_hours, sort_order, created_by
+        task_code, task_name, completion_mode, system_check_handler,
+        is_mandatory, sla_hours, sort_order, created_by
     ) VALUES
     -- PREPARATION
-    (v_t, v_e, v_ty, v_pp, v_cs, 'CUTOFF_REVIEW',     'Review period cutoff dates',          'MANUAL', true,   8, 1,  v_sys),
-    (v_t, v_e, v_ty, v_pp, v_cn, 'BANK_FEEDS',        'Verify bank statement feeds loaded',  'SYSTEM', true,   4, 2,  v_sys),
+    (v_t, v_e, v_ty, v_pp, v_cs, 'CUTOFF_REVIEW',      'Review period cutoff dates',          'MANUAL', NULL,                            true,   8, 1,  v_sys),
+    (v_t, v_e, v_ty, v_pp, v_cn, 'BANK_FEEDS',         'Verify bank statement feeds loaded',  'SYSTEM', 'finance.close.bank_feeds',      true,   4, 2,  v_sys),
     -- SOFT_CLOSE
-    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_AP',            'Subledger close — AP',                'HYBRID', true,  24, 10, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_AR',            'Subledger close — AR',                'HYBRID', true,  24, 11, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_FA',            'Subledger close — fixed assets',      'SYSTEM', true,  12, 12, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_PAYROLL',       'Subledger close — payroll',           'HYBRID', true,  16, 13, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_cn, 'BANK_RECON',        'Bank reconciliation',                 'HYBRID', true,  24, 20, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_cr, 'REV_RECOGNITION',   'Revenue recognition review',          'MANUAL', true,  16, 25, v_sys),
-    (v_t, v_e, v_ty, v_ps, v_ck, 'CASH_POSITION',     'Cash position reconciliation',        'MANUAL', true,  12, 30, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_AP',             'Subledger close — AP',                'HYBRID', 'finance.close.sub_ap',          true,  24, 10, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_AR',             'Subledger close — AR',                'HYBRID', 'finance.close.sub_ar',          true,  24, 11, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_FA',             'Subledger close — fixed assets',      'SYSTEM', 'finance.close.sub_fa',          true,  12, 12, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cs, 'SUB_PAYROLL',        'Subledger close — payroll',           'HYBRID', 'finance.close.sub_payroll',     true,  16, 13, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cn, 'BANK_RECON',         'Bank reconciliation',                 'HYBRID', 'finance.close.bank_recon',      true,  24, 20, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_cr, 'REV_RECOGNITION',    'Revenue recognition review',          'MANUAL', NULL,                            true,  16, 25, v_sys),
+    (v_t, v_e, v_ty, v_ps, v_ck, 'CASH_POSITION',      'Cash position reconciliation',        'MANUAL', NULL,                            true,  12, 30, v_sys),
     -- HARD_CLOSE
-    (v_t, v_e, v_ty, v_ph, v_cc, 'IC_ELIMINATION',    'Intercompany elimination entries',    'SYSTEM', true,   8, 40, v_sys),
-    (v_t, v_e, v_ty, v_ph, v_cc, 'FX_REVAL',          'FX revaluation run',                  'SYSTEM', true,   4, 41, v_sys),
-    (v_t, v_e, v_ty, v_ph, v_cx, 'TAX_PROVISION',     'Tax provision calculation',           'HYBRID', true,  16, 45, v_sys),
-    (v_t, v_e, v_ty, v_ph, v_ca, 'TOPSIDE_ADJ',       'Review & post topside adjustments',   'MANUAL', true,   8, 50, v_sys),
-    (v_t, v_e, v_ty, v_ph, v_cv, 'TB_VALIDATION',     'Trial balance validation',            'HYBRID', true,   8, 55, v_sys),
+    (v_t, v_e, v_ty, v_ph, v_cc, 'IC_ELIMINATION',     'Intercompany elimination entries',    'SYSTEM', 'finance.close.ic_elimination',  true,   8, 40, v_sys),
+    (v_t, v_e, v_ty, v_ph, v_cc, 'FX_REVAL',           'FX revaluation run',                  'SYSTEM', 'finance.close.fx_reval',        true,   4, 41, v_sys),
+    (v_t, v_e, v_ty, v_ph, v_cx, 'TAX_PROVISION',      'Tax provision calculation',           'HYBRID', 'finance.close.tax_provision',   true,  16, 45, v_sys),
+    (v_t, v_e, v_ty, v_ph, v_ca, 'TOPSIDE_ADJ',        'Review & post topside adjustments',   'MANUAL', NULL,                            true,   8, 50, v_sys),
+    (v_t, v_e, v_ty, v_ph, v_cv, 'TB_VALIDATION',      'Trial balance validation',            'HYBRID', 'finance.close.tb_validation',   true,   8, 55, v_sys),
     -- CERTIFICATION
-    (v_t, v_e, v_ty, v_pc, v_crp, 'MGMT_PACK',         'Prepare management reporting pack',   'MANUAL', true,  16, 60, v_sys),
-    (v_t, v_e, v_ty, v_pc, v_cp, 'CONTROLLER_SIGNOFF','Controller sign-off',                 'MANUAL', true,   8, 70, v_sys),
-    (v_t, v_e, v_ty, v_pc, v_cp, 'CFO_ATTESTATION',   'CFO attestation',                     'MANUAL', true,   8, 80, v_sys)
+    (v_t, v_e, v_ty, v_pc, v_crp, 'MGMT_PACK',          'Prepare management reporting pack',   'MANUAL', NULL,                            true,  16, 60, v_sys),
+    (v_t, v_e, v_ty, v_pc, v_cp,  'CONTROLLER_SIGNOFF', 'Controller sign-off',                 'MANUAL', NULL,                            true,   8, 70, v_sys),
+    (v_t, v_e, v_ty, v_pc, v_cp,  'CFO_ATTESTATION',    'CFO attestation',                     'MANUAL', NULL,                            true,   8, 80, v_sys)
     ON CONFLICT (tenant_id, entity_code, cycle_type_id, task_code) DO NOTHING;
 
     -- ── Carryforward rules (SOX-strict) ─────────────────────────────────────

@@ -51,10 +51,9 @@ on the core path would waste capacity in every environment.
 
 ```bash
 # Local dev — bring up Infisical alongside the usual core stack
-./stack/scripts/stack/up.sh core,security-infisical
+bash stack/scripts/stack-profile/up.sh security-infisical
 
-# Or with raw compose
-docker compose --profile core --profile security-infisical up -d
+# Prefer the wrapper so env files, compose files, and overrides are resolved consistently.
 ```
 
 First-boot signup happens via the Infisical UI at

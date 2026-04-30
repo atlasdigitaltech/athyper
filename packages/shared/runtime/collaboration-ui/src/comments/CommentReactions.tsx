@@ -45,7 +45,7 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
             type="button"
             onClick={() => toggleReaction(r.reactionType)}
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs transition-colors hover:bg-accent",
+              "inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-foreground transition-colors hover:bg-accent",
               r.reacted && "border-primary/40 bg-primary/5",
             )}
           >
@@ -67,7 +67,7 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
         </Button>
 
         {showPicker && (
-          <div className="absolute bottom-full left-0 z-50 mb-1 flex gap-0.5 rounded-lg border bg-popover p-1 shadow-md">
+          <div className="absolute bottom-full left-0 z-50 mb-1 flex gap-0.5 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md">
             {REACTIONS.map(({ code, emoji }) => (
               <button
                 key={code}

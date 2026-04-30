@@ -13,6 +13,11 @@ REM   production -> docker compose up -d --no-deps athyper-neon-web
 REM
 REM Single source of truth: stack\env\.env is the only env file needed.
 REM apps\web\.env.local is NOT required -- this script injects all vars directly.
+REM
+REM LOCAL WINDOWS DEVELOPMENT ONLY.
+REM For staging or production deployments use the Linux .sh equivalents on Ubuntu.
+REM The .bat scripts do not implement the two-file env model (bootstrap + secrets)
+REM required for staging/production and will silently drop secrets-file variables.
 REM ============================================================
 
 set "SCRIPT_DIR=%~dp0"

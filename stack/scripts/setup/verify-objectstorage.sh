@@ -4,8 +4,9 @@
 # Location:
 #   stack/scripts/setup/verify-objectstorage.sh
 # Usage:
-#   ./verify-objectstorage.sh              (auto-detects .env)
-#   ./verify-objectstorage.sh /path/.env   (explicit env file)
+#   ./verify-objectstorage.sh                              (auto-detects .env)
+#   ./verify-objectstorage.sh /path/bootstrap.env          (single file)
+#   ./verify-objectstorage.sh /path/bootstrap.env /path/secrets.env (two-file merge; secrets win)
 #
 # Verifies that MinIO is reachable, all required buckets exist,
 # and (in non-local envs) scoped service accounts are provisioned.
@@ -21,12 +22,14 @@
 set -euo pipefail
 
 # ----------------------------
-# Resolve paths
+# Resolve paths and env files (two-file model)
+# $1 = bootstrap env (non-secret config); $2 = secrets env (optional, wins on duplicates)
 # ----------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_DIR="$STACK_DIR/env"
 ENV_FILE="${1:-$ENV_DIR/.env}"
+ENV_FILE_2="${2:-}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "FATAL: env file not found: $ENV_FILE"
@@ -34,19 +37,30 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+if [[ -n "$ENV_FILE_2" && ! -f "$ENV_FILE_2" ]]; then
+  echo "FATAL: secrets env file not found: $ENV_FILE_2"
+  exit 1
+fi
+
 # ----------------------------
-# Parse .env into an associative array
+# Parse env files into an associative array (bootstrap first; secrets overlay wins)
 # ----------------------------
 declare -A ENV_MAP
 
-while IFS='=' read -r key value; do
-  [[ "$key" =~ ^[[:space:]]*# ]] && continue
-  [[ -z "$key" ]] && continue
-  key=$(echo "$key" | xargs)
-  [[ -z "$key" ]] && continue
-  value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-  ENV_MAP["$key"]="$value"
-done < <(tr -d '\r' < "$ENV_FILE")
+_parse_env_file() {
+  local _file="$1"
+  while IFS='=' read -r key value; do
+    [[ "$key" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$key" ]] && continue
+    key=$(echo "$key" | xargs)
+    [[ -z "$key" ]] && continue
+    value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
+    ENV_MAP["$key"]="$value"
+  done < <(tr -d '\r' < "$_file")
+}
+
+_parse_env_file "$ENV_FILE"
+[[ -n "$ENV_FILE_2" ]] && _parse_env_file "$ENV_FILE_2"
 
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-local}"
 
@@ -115,7 +129,8 @@ mc_run() {
 echo "=============================================="
 echo "  athyper object storage verification"
 echo "  environment: $ENVIRONMENT"
-echo "  env file:    $ENV_FILE"
+echo "  bootstrap:   $ENV_FILE"
+[[ -n "$ENV_FILE_2" ]] && echo "  secrets:     $ENV_FILE_2"
 echo "=============================================="
 echo ""
 

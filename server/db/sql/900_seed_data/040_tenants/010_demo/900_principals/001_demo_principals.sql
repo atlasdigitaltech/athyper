@@ -111,6 +111,12 @@ BEGIN
     -- STAGE B: master.principal_profile
     -- ══════════════════════════════════════════════════════════════════════════
 
+    -- shared.trg_set_updated_at() reads app.current_principal_id to set updated_by.
+    -- Without this GUC the trigger writes NULL, violating principal_profile_audit_pair_chk.
+    PERFORM set_config('app.current_principal_id', v_su::text, true);
+    -- Disable the keycloak column freeze guard so the seed can write KC metadata directly.
+    PERFORM set_config('app.iam_profile_kc_frozen', 'false', true);
+
     INSERT INTO master.principal_profile (
         tenant_id, principal_id,
         given_name, family_name, display_name,
@@ -140,7 +146,9 @@ BEGIN
             display_name         = EXCLUDED.display_name,
             keycloak_id          = EXCLUDED.keycloak_id,
             keycloak_username    = EXCLUDED.keycloak_username,
-            keycloak_sync_status = EXCLUDED.keycloak_sync_status;
+            keycloak_sync_status = EXCLUDED.keycloak_sync_status,
+            updated_at           = now(),
+            updated_by           = v_su;
 
     -- ══════════════════════════════════════════════════════════════════════════
     -- STAGE C: master.principal_identity_binding

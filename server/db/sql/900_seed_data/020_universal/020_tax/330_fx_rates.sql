@@ -368,14 +368,14 @@ BEGIN
     FROM shared.currency c
     WHERE c.status = 'active'
       AND c.code <> 'MYR'
-      AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR');
+      AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR','HRK','ZWL');
 
     IF EXISTS (
         SELECT 1
         FROM shared.currency c
         WHERE c.status = 'active'
           AND c.code <> 'MYR'
-          AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR')
+          AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR','HRK','ZWL')
           AND NOT EXISTS (
               SELECT 1 FROM master.fx_rate r
               WHERE r.tenant_id = v_tid
@@ -393,7 +393,7 @@ BEGIN
         FROM shared.currency c
         WHERE c.status = 'active'
           AND c.code <> 'MYR'
-          AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR')
+          AND c.code NOT IN ('XAU','XAG','XPT','XPD','XDR','HRK','ZWL')
           AND NOT EXISTS (
               SELECT 1 FROM master.fx_rate r
               WHERE r.tenant_id = v_tid

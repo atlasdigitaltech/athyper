@@ -17,14 +17,15 @@ Complete guide for exporting and importing Keycloak realms in the athyper platfo
 
 ### Available Tools
 ```
-framework/adapters/db/scripts/
+server/framework/adapters/db/scripts/
 ├── keycloak-export.sh      # JSON export via Keycloak CLI
 ├── postgres-export.sh      # PostgreSQL database dump
 └── keycloak-import.sh      # Universal import script
 
-stack/scripts/
-├── initdb-iam.sh           # Primary IAM seed (JSON realm import)
-└── initdb-iam.bat          # Windows equivalent
+stack/scripts/db/session/iam/
+├── import-iam.sh / .bat    # Primary IAM seed (JSON realm import)
+├── export-iam.sh / .bat    # Export committed realm JSON from running IAM
+└── seed-iam-credentials.sh # Seed demo/platform-control passwords after import
 
 stack/config/iam/
 ├── realm-demosetup.json          # athyper realm (clients, users, orgs, roles)
@@ -35,7 +36,7 @@ stack/config/iam/
 
 | Method | Format | Users | Size | Use Case |
 |--------|--------|-------|------|----------|
-| **JSON Realm Import** | JSON | ✅ Yes | Small | **Primary seed method** (`initdb-iam.sh`) |
+| **JSON Realm Import** | JSON | ✅ Yes | Small | **Primary seed method** (`import-iam.sh`) |
 | **JSON Export** | JSON | ✅ Yes | Small | Single realm, portable |
 | **PostgreSQL Dump** | SQL | ✅ Yes | Large | Full backup, disaster recovery |
 | **Admin Console** | JSON | ❌ No | Tiny | Quick config backup |
@@ -86,7 +87,7 @@ chmod +x postgres-export.sh
 # Set environment variables (if not using defaults)
 export IAM_DB_HOST=localhost
 export IAM_DB_PORT=5432
-export IAM_DB_NAME=athyperauth_dev1
+export IAM_DB_NAME=athyper_iam
 export IAM_DB_USERNAME=athyperauth
 
 ./postgres-export.sh
@@ -99,7 +100,7 @@ export IAM_DB_USERNAME=athyperauth
 - ✅ Keycloak internal tables
 
 **Output**:
-- `./exports/dump-athyperauth_dev1-YYYYMMDDHHMM.sql` - Full dump
+- `./exports/dump-athyper_iam-YYYYMMDDHHMM.sql` - Full dump
 - `./exports/keycloak-data-only-YYYYMMDDHHMM.sql` - Data only
 
 **Pros**:
@@ -145,19 +146,16 @@ export IAM_DB_USERNAME=athyperauth
 
 ## Import Methods
 
-### Primary: JSON Realm Import (`initdb-iam.sh`)
+### Primary: JSON Realm Import (`import-iam.sh`)
 
 The recommended way to seed the IAM database for fresh installations:
 
 ```bash
-# From stack/scripts/
-cd stack/scripts
-
 # Linux/macOS
-./initdb-iam.sh
+bash stack/scripts/db/session/iam/import-iam.sh
 
 # Windows
-initdb-iam.bat
+stack\scripts\db\session\iam\import-iam.bat
 ```
 
 This imports both realm JSON files (`realm-demosetup.json` + `realm-platform-control.json`)
@@ -185,7 +183,7 @@ docker run --rm \
   --network athyper-internal \
   -v $(pwd)/exports:/opt/keycloak/data/import \
   -e KC_DB=postgres \
-  -e KC_DB_URL=jdbc:postgresql://dbpool-auth:5432/athyperauth_dev1 \
+  -e KC_DB_URL=jdbc:postgresql://dbpool-session:6433/athyper_iam \
   -e KC_DB_USERNAME=athyperauth \
   -e KC_DB_PASSWORD=${IAM_DB_PASSWORD} \
   quay.io/keycloak/keycloak:26.5.1 \
@@ -232,8 +230,8 @@ Development → Staging → Production
 1. Export from dev:     ./keycloak-export.sh
 2. Update realm JSON:   cp exports/... stack/config/iam/realm-demosetup.json
 3. Review changes:      git diff
-4. Test import:         cd stack/scripts && ./initdb-iam.sh (in staging)
-5. Production deploy:   cd stack/scripts && ./initdb-iam.sh (after approval)
+4. Test import:         bash stack/scripts/db/session/iam/import-iam.sh (in staging)
+5. Production deploy:   bash stack/scripts/db/session/iam/import-iam.sh (after approval)
 ```
 
 ### 4. **Security Considerations**
@@ -242,10 +240,10 @@ Development → Staging → Production
 
 ```bash
 # Encrypt exports before storing
-gpg --symmetric --cipher-algo AES256 dump-athyperauth_dev1.sql
+gpg --symmetric --cipher-algo AES256 dump-athyper_iam.sql
 
 # Decrypt before import
-gpg --decrypt dump-athyperauth_dev1.sql.gpg > dump-athyperauth_dev1.sql
+gpg --decrypt dump-athyper_iam.sql.gpg > dump-athyper_iam.sql
 ```
 
 **Never commit to git**:
@@ -276,16 +274,15 @@ DELETE FROM realm_attribute WHERE name LIKE '%smtp%';
 
 ```bash
 # Always test in a non-production environment first
-docker compose -f stack/compose/compose.yml \
-  --profile test up -d
+bash stack/scripts/stack-profile/up.sh iam
 
 # Import and verify
-cd stack/scripts && ./initdb-iam.sh
-docker compose logs -f iam
+bash stack/scripts/db/session/iam/import-iam.sh
+bash stack/scripts/stack-profile/logs.sh iam -f
 
 # Check for errors
-docker exec athyper-stack-dbpool-auth-1 \
-  psql -U athyperauth -d athyperauth_dev1 \
+docker exec athyper-stack-dbpool-session-1 \
+  psql -U athyperauth -d athyper_iam \
   -c "SELECT id, name, enabled FROM realm;"
 ```
 
@@ -302,12 +299,12 @@ chmod +x framework/adapters/db/scripts/*.sh
 
 #### "Connection refused" to database
 ```bash
-# Check database is running
-docker compose ps dbpool-auth
+# Check database session pool is running
+docker ps --format '{{.Names}}\t{{.Status}}' | grep dbpool-session
 
 # Check database connection
-docker exec -it athyper-stack-dbpool-auth-1 \
-  psql -U athyperauth -d athyperauth_dev1 -c '\dt'
+docker exec -it athyper-stack-dbpool-session-1 \
+  psql -U athyperauth -d athyper_iam -c '\dt'
 ```
 
 #### JSON export fails with "realm not found"
@@ -340,7 +337,7 @@ TRUNCATE TABLE realm CASCADE;
 #### Import succeeds but Keycloak shows old data
 ```bash
 # Keycloak caches data - restart required
-docker compose restart iam
+bash stack/scripts/stack-profile/restart.sh iam
 
 # Clear Keycloak cache
 docker exec -it athyper-stack-iam-1 \
@@ -362,16 +359,16 @@ cd framework/adapters/db/scripts && ./postgres-export.sh
 cd framework/adapters/db/scripts && ./keycloak-export.sh
 
 # Import realm JSON (primary method)
-cd stack/scripts && ./initdb-iam.sh
+bash stack/scripts/db/session/iam/import-iam.sh
 
 # Check database size
-docker exec athyper-stack-dbpool-auth-1 \
-  psql -U athyperauth -d athyperauth_dev1 \
-  -c "SELECT pg_size_pretty(pg_database_size('athyperauth_dev1'));"
+docker exec athyper-stack-dbpool-session-1 \
+  psql -U athyperauth -d athyper_iam \
+  -c "SELECT pg_size_pretty(pg_database_size('athyper_iam'));"
 
 # Count users in realm
-docker exec athyper-stack-dbpool-auth-1 \
-  psql -U athyperauth -d athyperauth_dev1 \
+docker exec athyper-stack-dbpool-session-1 \
+  psql -U athyperauth -d athyper_iam \
   -c "SELECT COUNT(*) FROM user_entity WHERE realm_id = (SELECT id FROM realm WHERE name = 'athyper');"
 ```
 
@@ -385,10 +382,10 @@ Set these in `stack/env/.env` or export before running scripts:
 # Database
 IAM_DB_HOST=localhost
 IAM_DB_PORT=5432
-IAM_DB_NAME=athyperauth_dev1
+IAM_DB_NAME=athyper_iam
 IAM_DB_USERNAME=athyperauth
 IAM_DB_PASSWORD=<your-password>
-IAM_DB_URL=jdbc:postgresql://dbpool-auth:5432/athyperauth_dev1
+IAM_DB_URL=jdbc:postgresql://dbpool-session:6433/athyper_iam
 
 # Keycloak Admin
 KEYCLOAK_ADMIN=admin

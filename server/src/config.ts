@@ -321,13 +321,18 @@ export function loadConfig(): ServerConfig {
       return `${base}/realms/${realm}`;
     })();
 
-  const env =
-    process.env.NODE_ENV === "production"
-      ? "production"
-      : ((process.env.ATHYPER_ENV ?? "local") as
-          | "local"
-          | "staging"
-          | "production");
+  // ATHYPER_ENV / ENVIRONMENT are authoritative (set by stack scripts and systemd).
+  // NODE_ENV=production is a build-time signal and must not override them — a
+  // staging container built with NODE_ENV=production would otherwise self-identify
+  // as production and skip staging-specific config branches.
+  const _rawEnv = process.env.ATHYPER_ENV ?? process.env.ENVIRONMENT;
+  const env = ((["local", "staging", "production"] as const).includes(
+    _rawEnv as never,
+  )
+    ? _rawEnv
+    : process.env.NODE_ENV === "production"
+    ? "production"
+    : "local") as "local" | "staging" | "production";
 
   const raw = {
     env,

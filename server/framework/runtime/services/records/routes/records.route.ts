@@ -237,6 +237,30 @@ function resolveRelativeRange(token: string): { from: string; to: string } | nul
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
   const { db, auth, logger } = deps;
 
+  // Best-effort insert into log.activity_log. Never throws — main operation already succeeded.
+  const logActivityRecord = async (
+    tenantId: string, entityType: string, entityId: string,
+    activityType: string, actorId: string, detail: Record<string, unknown>,
+  ): Promise<void> => {
+    try {
+      await db
+        .insertInto("log.activity_log" as never)
+        .values({
+          tenant_id:     tenantId,
+          log_type:      "business",
+          domain:        "document",
+          activity_type: activityType,
+          entity_type:   entityType,
+          entity_id:     entityId,
+          actor_id:      actorId,
+          actor_type:    "principal",
+          detail:        JSON.stringify(detail),
+          created_by:    actorId,
+        } as never)
+        .execute();
+    } catch { /* best-effort */ }
+  };
+
   // ── LIST ──────────────────────────────────────────────────────────────────────
   //
   // Query params (canonical — matches EntityListQueryState URL serialization):
@@ -1092,6 +1116,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
           });
         }
+        void logActivityRecord(tenantId, entityCode, String((row as { id: string }).id), "document.created", principalId, {});
       }
 
       res.status(201).json(row);
@@ -1187,6 +1212,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
         });
       }
+
+      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { fields: Object.keys(inputData) });
 
       res.json(row);
     } catch (err) {
@@ -1288,6 +1315,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
         });
       }
+
+      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { fields: Object.keys(inputData) });
 
       res.json(row);
     } catch (err) {

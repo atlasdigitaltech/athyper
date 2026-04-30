@@ -43,14 +43,9 @@ resolve_compose_override
 docker_preflight
 build_compose_file_list
 
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose ... stop athyper-api"
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" stop athyper-api
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" stop athyper-api
-fi
+echo "Running: docker compose ... stop athyper-api"
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" stop athyper-api
 
 echo ""
 echo "API service stopped (env=$ENVIRONMENT)"

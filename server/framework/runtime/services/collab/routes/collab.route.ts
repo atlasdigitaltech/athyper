@@ -84,6 +84,9 @@ function toComment(row: Record<string, unknown>) {
     commenterId:     row.commenter_id ?? row.created_by,
     commenterName:   (row.commenter_name as string | undefined) ?? null,
     commentText:     row.comment_text,
+    contentFormat:   (row.content_format as string | undefined) ?? "plain",
+    contentJson:     (row.content_json as unknown) ?? null,
+    contentHtml:     (row.content_html as string | undefined) ?? null,
     parentCommentId: row.parent_comment_id ?? null,
     threadDepth:     row.thread_depth ?? 0,
     visibility:      row.visibility ?? "public",
@@ -235,7 +238,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
-          "c.commenter_id", "c.comment_text", "c.parent_comment_id",
+          "c.commenter_id", "c.comment_text", "c.content_format" as never,
+          "c.content_json" as never, "c.content_html" as never,
+          "c.parent_comment_id",
           "c.thread_depth", "c.visibility",
           "c.created_at", "c.updated_at", "c.created_by",
           "p.name as commenter_name" as never,
@@ -417,9 +422,20 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const attachmentIds: string[] = Array.isArray((req.body as Record<string, unknown>).attachment_ids)
         ? ((req.body as Record<string, unknown>).attachment_ids as string[])
         : [];
+      const contentJson = (req.body as Record<string, unknown>).contentJson ?? null;
+      const contentHtml = typeof (req.body as Record<string, unknown>).contentHtml === "string"
+        ? (req.body as Record<string, unknown>).contentHtml as string
+        : null;
+      const VALID_VISIBILITIES = ["internal", "public", "private"] as const;
+      type CommentVis = typeof VALID_VISIBILITIES[number];
+      const rawVis = (req.body as Record<string, unknown>).visibility;
+      const visibility: CommentVis = (VALID_VISIBILITIES as readonly string[]).includes(rawVis as string)
+        ? rawVis as CommentVis
+        : "internal";
 
-      if (!entityType || !entityId || !commentText?.trim()) {
-        res.status(400).json({ error: "entityType, entityId, and commentText are required" });
+      const hasContent = commentText?.trim() || attachmentIds.length > 0 || contentJson;
+      if (!entityType || !entityId || !hasContent) {
+        res.status(400).json({ error: "entityType, entityId, and content are required" });
         return;
       }
 
@@ -445,18 +461,22 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         threadDepth = Math.min(5, ((parent?.thread_depth as number) ?? 0) + 1);
       }
 
-      const trimmedText = commentText.trim();
+      const trimmedText = commentText?.trim() || (attachmentIds.length > 0 ? "[attachment]" : "[rich comment]");
+      const isRich = !!contentJson;
       const insertValues: Record<string, unknown> = {
-        tenant_id:    tenantId,
-        context_type: DEFAULT_CONTEXT_TYPE,
-        entity_type:  entityType,
-        entity_id:    entityId,
-        commenter_id: commenterId,
-        comment_text: trimmedText,
-        thread_depth: threadDepth,
-        visibility:   "public",
-        created_by:   commenterId,
+        tenant_id:      tenantId,
+        context_type:   DEFAULT_CONTEXT_TYPE,
+        entity_type:    entityType,
+        entity_id:      entityId,
+        commenter_id:   commenterId,
+        comment_text:   trimmedText.slice(0, 50000),
+        content_format: isRich ? "rich_json" : "plain",
+        thread_depth:   threadDepth,
+        visibility,
+        created_by:     commenterId,
       };
+      if (contentJson)     insertValues.content_json = JSON.stringify(contentJson);
+      if (contentHtml)     insertValues.content_html = contentHtml;
       if (parentCommentId && isUuid(parentCommentId)) {
         insertValues.parent_comment_id = parentCommentId;
       }
@@ -533,17 +553,28 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (!claims) return;
 
       const parentCommentId = req.params["commentId"] as string;
-      const { commentText } = req.body as Record<string, string | undefined>;
+      const { commentText: replyText } = req.body as Record<string, string | undefined>;
       const replyAttachmentIds: string[] = Array.isArray((req.body as Record<string, unknown>).attachment_ids)
         ? ((req.body as Record<string, unknown>).attachment_ids as string[])
         : [];
+      const replyContentJson = (req.body as Record<string, unknown>).contentJson ?? null;
+      const replyContentHtml = typeof (req.body as Record<string, unknown>).contentHtml === "string"
+        ? (req.body as Record<string, unknown>).contentHtml as string
+        : null;
+      const REPLY_VALID_VIS = ["internal", "public", "private"] as const;
+      type ReplyVis = typeof REPLY_VALID_VIS[number];
+      const rawReplyVis = (req.body as Record<string, unknown>).visibility;
+      const replyVisibility: ReplyVis = (REPLY_VALID_VIS as readonly string[]).includes(rawReplyVis as string)
+        ? rawReplyVis as ReplyVis
+        : "internal";
 
       if (!isUuid(parentCommentId)) {
         res.status(404).json({ error: "Comment not found" });
         return;
       }
-      if (!commentText?.trim()) {
-        res.status(400).json({ error: "commentText is required" });
+      const hasReplyContent = replyText?.trim() || replyAttachmentIds.length > 0 || replyContentJson;
+      if (!hasReplyContent) {
+        res.status(400).json({ error: "Reply must have text, attachments, or rich content" });
         return;
       }
 
@@ -570,21 +601,26 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
-      const trimmedText = commentText.trim();
+      const trimmedText = replyText?.trim() || (replyAttachmentIds.length > 0 ? "[attachment]" : "[rich comment]");
+      const replyInsertValues: Record<string, unknown> = {
+        tenant_id:         tenantId,
+        context_type:      DEFAULT_CONTEXT_TYPE,
+        entity_type:       parent.entity_type,
+        entity_id:         parent.entity_id,
+        commenter_id:      commenterId,
+        comment_text:      trimmedText.slice(0, 50000),
+        content_format:    replyContentJson ? "rich_json" : "plain",
+        parent_comment_id: parentCommentId,
+        thread_depth:      Math.min(5, ((parent.thread_depth as number) ?? 0) + 1),
+        visibility:        replyVisibility,
+        created_by:        commenterId,
+      };
+      if (replyContentJson) replyInsertValues.content_json = JSON.stringify(replyContentJson);
+      if (replyContentHtml) replyInsertValues.content_html = replyContentHtml;
+
       const row = await db
         .insertInto("master.comment" as never)
-        .values({
-          tenant_id:         tenantId,
-          context_type:      DEFAULT_CONTEXT_TYPE,
-          entity_type:       parent.entity_type,
-          entity_id:         parent.entity_id,
-          commenter_id:      commenterId,
-          comment_text:      trimmedText,
-          parent_comment_id: parentCommentId,
-          thread_depth:      Math.min(5, ((parent.thread_depth as number) ?? 0) + 1),
-          visibility:        "public",
-          created_by:        commenterId,
-        } as never)
+        .values(replyInsertValues as never)
         .returningAll()
         .executeTakeFirstOrThrow();
 
@@ -675,7 +711,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
-          "c.commenter_id", "c.comment_text", "c.parent_comment_id",
+          "c.commenter_id", "c.comment_text", "c.content_format" as never,
+          "c.content_json" as never, "c.content_html" as never,
+          "c.parent_comment_id",
           "c.thread_depth", "c.visibility", "c.created_at", "c.updated_at", "c.created_by",
           "p.name as commenter_name" as never,
         ])
@@ -722,13 +760,18 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const commentId = req.params["commentId"] as string;
       const { commentText } = req.body as Record<string, string | undefined>;
+      const updateContentJson = (req.body as Record<string, unknown>).contentJson ?? null;
+      const updateContentHtml = typeof (req.body as Record<string, unknown>).contentHtml === "string"
+        ? (req.body as Record<string, unknown>).contentHtml as string
+        : null;
 
       if (!isUuid(commentId)) {
         res.status(404).json({ error: "Comment not found" });
         return;
       }
-      if (!commentText?.trim()) {
-        res.status(400).json({ error: "commentText is required" });
+      const hasUpdateContent = commentText?.trim() || updateContentJson;
+      if (!hasUpdateContent) {
+        res.status(400).json({ error: "commentText or contentJson is required" });
         return;
       }
 
@@ -738,7 +781,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const trimmedText = commentText.trim();
+      const trimmedText = commentText?.trim() ?? "";
       const now = new Date().toISOString();
 
       // Fetch existing comment for mention diff
@@ -757,9 +800,17 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
+      const updateSet: Record<string, unknown> = {
+        comment_text:   (trimmedText || "[rich comment]").slice(0, 50000),
+        content_format: updateContentJson ? "rich_json" : "plain",
+        updated_at:     now,
+      };
+      if (updateContentJson !== null) updateSet.content_json = JSON.stringify(updateContentJson);
+      if (updateContentHtml !== null) updateSet.content_html = updateContentHtml;
+
       const row = await db
         .updateTable("master.comment" as never)
-        .set({ comment_text: trimmedText, updated_at: now } as never)
+        .set(updateSet as never)
         .where("id" as never, "=", commentId as never)
         .where("tenant_id" as never, "=", (tenantId ?? "") as never)
         .where("deleted_at" as never, "is", null)
@@ -1120,7 +1171,11 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       let query = db
         .selectFrom("master.comment_draft as cd" as never)
-        .select(["cd.id" as never, "cd.draft_text" as never, "cd.updated_at" as never, "cd.created_at" as never])
+        .select([
+          "cd.id" as never, "cd.draft_text" as never,
+          "cd.content_json" as never,
+          "cd.updated_at" as never, "cd.created_at" as never,
+        ])
         .where("cd.tenant_id" as never,   "=", tenantId as never)
         .where("cd.principal_id" as never, "=", principalId as never)
         .where("cd.entity_type" as never,  "=", entityType as never)
@@ -1143,9 +1198,10 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       res.json({
         ok: true,
         draft: {
-          id:        row.id,
-          draftText: row.draft_text,
-          updatedAt: row.updated_at ?? row.created_at,
+          id:          row.id,
+          draftText:   row.draft_text,
+          contentJson: (row.content_json as unknown) ?? null,
+          updatedAt:   row.updated_at ?? row.created_at,
         },
       });
     } catch (err) {
@@ -1164,13 +1220,14 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const { entityType, entityId, draftText, parentCommentId } =
         req.body as Record<string, string | undefined>;
+      const draftContentJson = (req.body as Record<string, unknown>).contentJson ?? null;
 
       if (!entityType || !entityId || draftText === undefined) {
         res.status(400).json({ error: "entityType, entityId, and draftText are required" });
         return;
       }
-      if (draftText.length > 5000) {
-        res.status(400).json({ error: "draftText exceeds 5000 characters" });
+      if (draftText.length > 50000) {
+        res.status(400).json({ error: "draftText exceeds 50000 characters" });
         return;
       }
 
@@ -1199,13 +1256,19 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         insertValues.parent_comment_id = parentCommentId;
       }
 
+      const draftConflictUpdate: Record<string, unknown> = { draft_text: draftText, updated_at: now };
+      if (draftContentJson !== null) draftConflictUpdate.content_json = JSON.stringify(draftContentJson);
+
       await db
         .insertInto("master.comment_draft" as never)
-        .values(insertValues as never)
+        .values({
+          ...insertValues,
+          ...(draftContentJson !== null ? { content_json: JSON.stringify(draftContentJson) } : {}),
+        } as never)
         .onConflict((oc) =>
           oc
             .columns(["tenant_id", "principal_id", "entity_type", "entity_id", "parent_comment_id"] as never[])
-            .doUpdateSet({ draft_text: draftText, updated_at: now } as never),
+            .doUpdateSet(draftConflictUpdate as never),
         )
         .execute();
 

@@ -11,7 +11,8 @@
 #   1. Generates all 22 required secrets with exact .env variable names
 #   2. Generates Traefik gateway htpasswd from IAM_ADMIN_PASSWORD
 #   3. Saves a plain-text backup to /home/athyper/secrets-staging-values.txt (0600)
-#   4. Writes the complete /opt/stack/athyper/secrets/.env
+#   4. Writes the secrets-only /opt/stack/athyper/secrets/.env
+#      (non-secret config lives in stack/env/.env ← staging.env.example)
 #   5. Sets athyper:athyper 600 ownership on the .env
 #
 # Prerequisites:
@@ -145,113 +146,68 @@ ACME_EMAIL=$ACME_EMAIL
 SECRETS
 chmod 0600 "$SECRETS_FILE"
 
-# ── Write the complete .env ────────────────────────────────────────────────
+# ── Write secrets-only .env ───────────────────────────────────────────────────
+# Non-secret config (ENVIRONMENT, NODE_ENV, hostnames, paths, IAM endpoints,
+# memory limits, etc.) lives in stack/env/.env ← staging.env.example.
+# This file contains ONLY generated secrets, credential compound URLs, and a
+# small set of operator-specific values that staging.env.example marks as
+# "injected from secrets/.env".  Docker compose merges both files; this file
+# wins on any duplicate keys.
 echo "Step 4/4  Writing $ENV_FILE..."
 tee "$ENV_FILE" > /dev/null << ENVEOF
-# ── Identity ──────────────────────────────────────────────────────────────────
-ENVIRONMENT=staging
-COMPOSE_PROJECT_NAME=athyper
-NODE_ENV=production
-NODE_TLS_REJECT_UNAUTHORIZED=1
+# ── Credential encryption ─────────────────────────────────────────────────────
+CREDENTIAL_MASTER_KEY=$CREDENTIAL_MASTER_KEY
 
-# ── Six-root paths ────────────────────────────────────────────────────────────
-ATHYPER_ROOT=/opt/products/athyper
-ATHYPER_STACK_ROOT=/opt/products/athyper/stack
-ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config
-ATHYPER_CONFIG=/opt/stack/athyper/config
-ATHYPER_DATA=/opt/stack/athyper/data
-ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
-ATHYPER_LOGS=/opt/stack/athyper/logs
-ATHYPER_BACKUPS=/opt/stack/athyper/backups
-
-# ── Kernel config ─────────────────────────────────────────────────────────────
-ATHYPER_KERNEL_CONFIG_PATH=apps/kernel.config.parameter.json
-
-# ── Public URLs ───────────────────────────────────────────────────────────────
-PUBLIC_BASE_URL=https://api-stg.athyper.com
-PUBLIC_WEB_URL=https://neon-stg.athyper.com
-
-# ── Hostnames ─────────────────────────────────────────────────────────────────
-APPS_ATHYPER_WEB_HOST=neon-stg.athyper.com
-APPS_ATHYPER_API_HOST=api-stg.athyper.com
-APPS_ATHYPER_WEB_UPSTREAM_URL=http://athyper-neon-web-1:3000
-GATEWAY_HOST=gateway-stg.athyper.com
-IAM_HOST=iam-stg.athyper.com
-IAM_ISSUER_URL=https://iam-stg.athyper.com/realms/athyper
-
-# ── Database ──────────────────────────────────────────────────────────────────
-DB_HOST=athyper-db-1
-DB_PORT=5432
-DB_ADMIN_USER=postgres
-DATABASE_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_platform
-DATABASE_ADMIN_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_neon
+# ── Database passwords + compound URLs ───────────────────────────────────────
+# Non-secret DB config (DB_HOST, DB_PORT, DBPOOL_*_CONFIG, etc.) is in bootstrap.
 DB_ADMIN_PASSWORD=$DB_ADMIN_PASSWORD
-DBPOOL_APPS_HOST=athyper-dbpool-apps-1
-DBPOOL_APPS_PORT=6432
-DBPOOL_SESSION_HOST=athyper-dbpool-session-1
-DBPOOL_SESSION_PORT=6433
 DBPOOL_APPS_USER=postgres
 DBPOOL_APPS_PASSWORD=$DBPOOL_APPS_PASSWORD
 DBPOOL_SESSION_USER=postgres
 DBPOOL_SESSION_PASSWORD=$DBPOOL_SESSION_PASSWORD
-DBPOOL_APPS_CONFIG=db/staging/dbpool/apps/pgbouncer-apps.ini
-DBPOOL_SESSION_CONFIG=db/staging/dbpool/session/pgbouncer-session.ini
-
-# ── Credentials ───────────────────────────────────────────────────────────────
-CREDENTIAL_MASTER_KEY=$CREDENTIAL_MASTER_KEY
+DATABASE_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_neon
+DATABASE_ADMIN_URL=postgresql://postgres:$DB_ADMIN_PASSWORD@athyper-db-1:5432/athyper_neon
 
 # ── Redis ─────────────────────────────────────────────────────────────────────
-REDIS_URL=redis://:$MEMORYCACHE_PASSWORD@athyper-memorycache-1:6379/0
 MEMORYCACHE_PASSWORD=$MEMORYCACHE_PASSWORD
+REDIS_URL=redis://:$MEMORYCACHE_PASSWORD@athyper-memorycache-1:6379/0
 REDIS_EXPORTER_PASSWORD=$REDIS_EXPORTER_PASSWORD
 REDIS_GLITCHTIP_PASSWORD=$REDIS_GLITCHTIP_PASSWORD
 REDIS_INFISICAL_PASSWORD=$REDIS_INFISICAL_PASSWORD
 REDIS_ADMIN_PASSWORD=$REDIS_ADMIN_PASSWORD
 
 # ── IAM (Keycloak) ────────────────────────────────────────────────────────────
-IAM_ADMIN=admin
+# Non-secret IAM config (IAM_ADMIN, IAM_CLIENT_ID, IAM_DB_URL, IAM_DB_USERNAME,
+# IAM_ISSUER_URL, KEYCLOAK_IMAGE_TAG, etc.) is in bootstrap.
 IAM_ADMIN_PASSWORD=$IAM_ADMIN_PASSWORD
 IAM_CLIENT_SECRET=$IAM_CLIENT_SECRET
-IAM_CLIENT_ID=athyper-api
-IAM_DB_URL=jdbc:postgresql://dbpool-session:6433/athyper_iam?preferQueryMode=simple
-IAM_DB_USERNAME=postgres
 IAM_DB_PASSWORD=$DB_ADMIN_PASSWORD
 KEYCLOAK_ADMIN_USERNAME=admin
 KEYCLOAK_ADMIN_PASSWORD=$IAM_ADMIN_PASSWORD
 ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET=$IAM_CLIENT_SECRET
 
-# ── Object storage (MinIO) ────────────────────────────────────────────────────
+# ── Object storage (MinIO S3) ────────────────────────────────────────────────
+# S3_REGION, S3_USE_SSL, TEMPO_S3_*/LOKI_S3_* non-credential vars are in bootstrap.
 S3_ACCESS_KEY=athyper-minio-root
 S3_SECRET_KEY=$S3_SECRET_KEY
-S3_ENDPOINT=http://athyper-objectstorage-1:9000
+S3_ENDPOINT=http://objectstorage:9000
 S3_BUCKET=athyper-staging
-S3_REGION=us-east-1
-S3_USE_SSL=false
-LOKI_S3_INSECURE=true
-TEMPO_S3_INSECURE=true
 APP_S3_ACCESS_KEY=athyper-app
 APP_S3_SECRET_KEY=$APP_S3_SECRET_KEY
 BACKUP_S3_ACCESS_KEY=athyper-backup
 BACKUP_S3_SECRET_KEY=$BACKUP_S3_SECRET_KEY
+BACKUP_S3_BUCKET=athyper-backups
+BACKUP_S3_ENDPOINT=http://objectstorage:9000
+BACKUP_S3_REGION=us-east-1
 TEMPO_S3_ACCESS_KEY=athyper-tempo
 TEMPO_S3_SECRET_KEY=$TEMPO_S3_SECRET_KEY
 LOKI_S3_ACCESS_KEY=athyper-loki
 LOKI_S3_SECRET_KEY=$LOKI_S3_SECRET_KEY
-BACKUP_S3_BUCKET=athyper-backups
-BACKUP_S3_ENDPOINT=http://athyper-objectstorage-1:9000
-BACKUP_S3_REGION=us-east-1
-TEMPO_S3_BUCKET=athyper-tempo
-TEMPO_S3_ENDPOINT=http://athyper-objectstorage-1:9000
-LOKI_S3_BUCKET=athyper-loki
-LOKI_S3_ENDPOINT=http://athyper-objectstorage-1:9000
 
-# ── Telemetry storage ─────────────────────────────────────────────────────────
-TEMPO_STORAGE_BACKEND=s3
-LOKI_STORAGE_BACKEND=s3
-
-# ── Telemetry admin (Grafana) ─────────────────────────────────────────────────
+# ── Telemetry ─────────────────────────────────────────────────────────────────
 TELEMETRY_ADMIN_USER=admin
 TELEMETRY_ADMIN_PASSWORD=$TELEMETRY_ADMIN_PASSWORD
+OTLP_ENDPOINT=http://logshipper:4318
 
 # ── Infisical ─────────────────────────────────────────────────────────────────
 INFISICAL_ENCRYPTION_KEY=$INFISICAL_ENCRYPTION_KEY
@@ -263,12 +219,9 @@ RENDERER_INTERNAL_TOKEN=$RENDERER_INTERNAL_TOKEN
 # ── Search ────────────────────────────────────────────────────────────────────
 MEILI_MASTER_KEY=$MEILI_MASTER_KEY
 
-# ── Monitoring ───────────────────────────────────────────────────────────────
+# ── Monitoring ────────────────────────────────────────────────────────────────
 HEALTHCHECKS_SECRET_KEY=$HEALTHCHECKS_SECRET_KEY
 GLITCHTIP_SECRET_KEY=$GLITCHTIP_SECRET_KEY
-
-# ── Telemetry collector ───────────────────────────────────────────────────────
-OTLP_ENDPOINT=http://logshipper:4318
 
 # ── Gateway ───────────────────────────────────────────────────────────────────
 ACME_EMAIL=$ACME_EMAIL
@@ -294,5 +247,7 @@ echo "  stat -c \"%U:%G %a %n\" $ENV_FILE"
 echo "  wc -l $ENV_FILE"
 echo ""
 echo "Next — Phase 10:"
-echo "  sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh staging"
+echo "  sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+    /opt/products/athyper/stack/env/.env \
+    /opt/stack/athyper/secrets/.env"
 echo ""

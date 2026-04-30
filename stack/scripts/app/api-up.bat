@@ -18,6 +18,12 @@ REM
 REM Single source of truth: stack\env\.env is the only env file needed.
 REM server\.env is NOT required -- this script injects all vars directly.
 REM ============================================================
+REM
+REM LOCAL WINDOWS DEVELOPMENT ONLY.
+REM For staging or production deployments use the Linux .sh equivalents on Ubuntu.
+REM The .bat scripts do not implement the two-file env model (bootstrap + secrets)
+REM required for staging/production and will silently drop secrets-file variables.
+REM ============================================================
 
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"

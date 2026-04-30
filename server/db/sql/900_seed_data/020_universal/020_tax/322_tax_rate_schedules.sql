@@ -28,8 +28,8 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    CREATE TEMP TABLE tmp_tj AS SELECT code, id FROM master.tax_jurisdiction WHERE tenant_id = v_tid;
-    CREATE TEMP TABLE tmp_tt AS SELECT code, id FROM master.tax_type WHERE tenant_id = v_tid;
+    CREATE TEMP TABLE tmp_tj ON COMMIT DROP AS SELECT code, id FROM master.tax_jurisdiction WHERE tenant_id = v_tid;
+    CREATE TEMP TABLE tmp_tt ON COMMIT DROP AS SELECT code, id FROM master.tax_type WHERE tenant_id = v_tid;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- Rate seed table: one row per (jurisdiction, type, direction, component)
@@ -156,7 +156,24 @@ BEGIN
 
     -- ══════════════════════════════════════════════════════════════════════
     -- SEED UPDATE STRATEGY: delete-owned-then-reinsert
+    -- Prune dependents first (no ON DELETE CASCADE on these FKs):
+    --   ledger.tax_calculation      → control.tax_rate_schedule
+    --   control.tax_group_component → control.tax_rate_schedule
     -- ══════════════════════════════════════════════════════════════════════
+    DELETE FROM ledger.tax_calculation
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND metadata->'_seed'->>'pack' = '322_org');
+
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND metadata->'_seed'->>'pack' = '322_org');
+
     DELETE FROM control.tax_rate_schedule
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = '322_org';
@@ -195,10 +212,12 @@ BEGIN
         (SELECT count(*) FROM control.tax_rate_schedule WHERE tenant_id = v_tid);
     END IF;
 
-    -- A2: Every recoverable indirect tax type has at least 1 SALE schedule
+    -- A2: Every seed-managed recoverable type has at least 1 SALE schedule.
+    -- Scoped to 321_org types to exclude stale rows from prior seed versions.
     IF EXISTS (
         SELECT tt.code FROM master.tax_type tt
         WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+          AND tt.metadata->'_seed'->>'pack' = '321_org'
           AND NOT EXISTS (
               SELECT 1 FROM control.tax_rate_schedule trs
               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
@@ -206,16 +225,18 @@ BEGIN
     ) THEN RAISE EXCEPTION '322 FAIL: recoverable tax type with no SALE schedule: %',
         (SELECT string_agg(tt.code, ', ') FROM master.tax_type tt
          WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+           AND tt.metadata->'_seed'->>'pack' = '321_org'
            AND NOT EXISTS (
                SELECT 1 FROM control.tax_rate_schedule trs
                WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
                  AND trs.tax_direction = 'SALE'));
     END IF;
 
-    -- A3: Every recoverable indirect tax type has at least 1 PURCHASE schedule
+    -- A3: Every seed-managed recoverable type has at least 1 PURCHASE schedule.
     IF EXISTS (
         SELECT tt.code FROM master.tax_type tt
         WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+          AND tt.metadata->'_seed'->>'pack' = '321_org'
           AND NOT EXISTS (
               SELECT 1 FROM control.tax_rate_schedule trs
               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
@@ -223,6 +244,7 @@ BEGIN
     ) THEN RAISE EXCEPTION '322 FAIL: recoverable tax type with no PURCHASE schedule: %',
         (SELECT string_agg(tt.code, ', ') FROM master.tax_type tt
          WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+           AND tt.metadata->'_seed'->>'pack' = '321_org'
            AND NOT EXISTS (
                SELECT 1 FROM control.tax_rate_schedule trs
                WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id

@@ -41,7 +41,7 @@ BEGIN
      WHERE tenant_id = v_tenant_id AND code = 'AUIC';
 
     IF v_tenant_id IS NULL OR v_cc_id IS NULL THEN
-        RAISE EXCEPTION 'demo/099: tenant athyper / company US01 not found';
+        RAISE EXCEPTION 'demo/099: tenant athyper / company AUIC not found';
     END IF;
 
     -- ── Verify demo prerequisites ──────────────────────────────────────────
@@ -91,12 +91,12 @@ BEGIN
     -- ── Print summary ───────────────────────────────────────────────────────
     RAISE NOTICE '';
     RAISE NOTICE '════════════════════════════════════════════════════════════════';
-    RAISE NOTICE ' DEMO APPLY SUMMARY — pack_ap_non_po / tenant athyper / US01';
+    RAISE NOTICE ' DEMO APPLY SUMMARY — pack_ap_non_po / tenant athyper / AUIC';
     RAISE NOTICE '════════════════════════════════════════════════════════════════';
     RAISE NOTICE '';
     RAISE NOTICE '  Master data:';
     RAISE NOTICE '    vendor (ACME-CONSULT-US)           : %', v_vendor_cnt;
-    RAISE NOTICE '    supplier_profile (vendor × US01)   : %', v_scp_cnt;
+    RAISE NOTICE '    supplier_profile (vendor × AUIC)   : %', v_scp_cnt;
     RAISE NOTICE '    payment_method (WIRE-USD)          : %', v_pm_cnt;
     RAISE NOTICE '    bank_account_link (disbursement)   : %', v_link_cnt;
     RAISE NOTICE '    tax_group (VAT + WHT)              : % (of 2)', v_tg_cnt;

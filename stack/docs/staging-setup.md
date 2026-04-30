@@ -117,7 +117,7 @@ to the same class of silent misconfiguration that caused the v12 incident.
 | PG-04 | All compose files declare `user: "910x:910x"` for writable bind-mounted services; ephemeral services use named volumes instead |
 | PG-05 | Gateway and logshipper mount `docker.sock` through socket-proxy containers — no direct `/var/run/docker.sock` mount on either |
 | PG-06 | Gateway TLS cert mount reads from `${ATHYPER_SECRETS_ROOT}/gateway/certs:/certs` |
-| PG-07 | `stack/env/.env` contains only path overrides (`ATHYPER_*_ROOT`), never secrets — it is committed to git |
+| PG-07 | `stack/env/.env` contains only non-secret bootstrap config (paths, hostnames, image tags, limits), never credentials |
 | PG-08 | Every compose service has `mem_limit` or `deploy.resources.limits.memory` |
 | PG-09 | `server/Dockerfile.prod` pins `pnpm@10.33.0`, not `pnpm@latest` |
 | PG-10 | Redis cache config uses `save ""` and `appendonly no` (no persistence) unless durability is intentional |
@@ -819,16 +819,13 @@ find /opt/stack/athyper/secrets -perm /o+r -ls
 cp /opt/products/athyper/stack/env/staging.env.example \
    /opt/products/athyper/stack/env/.env
 
-# Append server-specific path overrides — these come last so they win over
-# any ATHYPER_* comments in the template above.
+# Append only the secrets root. It is intentionally not in staging.env.example:
+# this keeps a copied template from accidentally activating two-file mode on
+# machines that do not have /opt/stack/athyper/secrets.
 cat >> /opt/products/athyper/stack/env/.env << 'EOF'
 
-# ── Server path overrides (two-root layout) ───────────────────────────────────
+# Server secrets root (activates bootstrap + secrets env-file mode)
 ATHYPER_SECRETS_ROOT=/opt/stack/athyper/secrets
-ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config
-ATHYPER_DATA_ROOT=/opt/stack/athyper/data
-ATHYPER_LOG_ROOT=/opt/stack/athyper/logs
-ATHYPER_BACKUP_ROOT=/opt/stack/athyper/backups
 EOF
 
 chmod 0644 /opt/products/athyper/stack/env/.env
@@ -844,8 +841,9 @@ grep "^SERVICE_VERSION=" /opt/products/athyper/stack/env/.env
 **AS:** root
 
 > One script does everything: generates all 22 secrets, builds the htpasswd,
-> saves a backup to `~/secrets-staging-values.txt`, writes the complete `.env`,
-> and restores ownership. No manual copy-paste required.
+> saves a backup to `~/secrets-staging-values.txt`, writes the secrets-only
+> `/opt/stack/athyper/secrets/.env`, and restores ownership. No manual
+> copy-paste required.
 
 **Step 1 — Set your ACME email (the only value you provide):**
 
@@ -881,7 +879,7 @@ stat -c "%U:%G %a %n" /opt/stack/athyper/secrets/.env
 # Must be: athyper:athyper 600
 
 wc -l /opt/stack/athyper/secrets/.env
-# Expect: ~65 lines
+# Must be non-empty; the exact line count changes as the secrets inventory evolves.
 ```
 
 > **Re-running:** If you re-run the script it will prompt before overwriting.
@@ -941,6 +939,7 @@ set -euo pipefail
 # policies (NODE_ENV=production, TLS, no dev passwords), and renders redis-acl.conf
 # from the ACL template by hashing the Redis passwords.
 bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
   /opt/stack/athyper/secrets/.env
 
 # Confirm no template tokens remain in the rendered ACL file.
@@ -1233,9 +1232,17 @@ ENV_FILE        = /opt/stack/athyper/secrets/.env
 Full render validation — abort on any unresolved variable or blank bind mount:
 
 ```bash
-docker compose \
-  --project-directory /opt/products/athyper/stack/compose \
-  --env-file /opt/stack/athyper/secrets/.env \
+SCRIPT_DIR=/opt/products/athyper/stack/scripts/stack-profile
+source "$SCRIPT_DIR/../lib/compose.sh"
+init_compose_env
+resolve_compose_override
+build_compose_file_list
+
+ALL_COMPOSE_PROFILES="admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
+COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose \
+  --project-directory "$COMPOSE_DIR" \
+  "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" \
   config > /tmp/athyper-compose.rendered.yml
 
 # Unresolved ${VAR} in a compose config is always a bug — the variable is missing from .env
@@ -1269,11 +1276,18 @@ pnpm install --frozen-lockfile
 Build the app images:
 
 ```bash
-# Preferred path (if wrapper supports build):
-bash stack/scripts/stack-profile/build.sh apps
+# Build with the same compose/env resolution used by up.sh.
+SCRIPT_DIR=/opt/products/athyper/stack/scripts/stack-profile
+source "$SCRIPT_DIR/../lib/compose.sh"
+init_compose_env
+resolve_compose_override
+build_compose_file_list
 
-# Fallback — get the exact docker compose command from up.sh output and substitute:
-# replace "up -d" with: build athyper-neon-web athyper-api athyper-worker athyper-scheduler
+COMPOSE_PROFILES=core,apps docker compose \
+  --project-directory "$COMPOSE_DIR" \
+  "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" \
+  build athyper-neon-web athyper-api athyper-worker athyper-scheduler
 ```
 
 Verify images were produced:
@@ -1465,7 +1479,9 @@ Open the Keycloak admin UI, confirm the client secret matches `IAM_CLIENT_SECRET
 If it differs, update `.env` and re-run:
 
 ```bash
-bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/stack/athyper/secrets/.env
+bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
 ```
 
 ---
@@ -1554,14 +1570,11 @@ docker inspect athyper-logshipper-1 \
 sudo -iu athyper
 cd /opt/products/athyper
 
-# Source the env so smoke-staging.sh reads hostnames from the staging .env
-set -a
-. /opt/stack/athyper/secrets/.env
-set +a
-
 # Three verification scripts must all pass
-bash /opt/products/athyper/stack/scripts/smoke-staging.sh           # 8 health check groups
-bash /opt/products/athyper/stack/scripts/setup/verify-objectstorage.sh  # MinIO buckets + accounts
+bash /opt/products/athyper/stack/scripts/smoke-staging.sh                # 8 health check groups
+bash /opt/products/athyper/stack/scripts/setup/verify-objectstorage.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env                                        # MinIO buckets + accounts
 bash /opt/products/athyper/stack/scripts/setup/verify-port-hardening.sh # no exposed DB/Redis ports
 
 docker ps --format 'table {{.Names}}\t{{.Status}}'
@@ -1616,7 +1629,7 @@ ReadWritePaths=/opt/stack/athyper/data /opt/stack/athyper/logs /opt/stack/athype
 
 # ExecStartPre validates the .env before attempting to start containers.
 # If validation fails, the stack never starts and systemd marks the unit failed.
-ExecStartPre=/bin/bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/stack/athyper/secrets/.env
+ExecStartPre=/bin/bash /opt/products/athyper/stack/scripts/setup/validate-env.sh /opt/products/athyper/stack/env/.env /opt/stack/athyper/secrets/.env
 ExecStartPre=/bin/bash -c 'until docker info >/dev/null 2>&1; do sleep 1; done'
 ExecStart=/bin/bash stack/scripts/stack-profile/up.sh all
 ExecStop=/bin/bash stack/scripts/stack-profile/down.sh all
@@ -1743,9 +1756,6 @@ systemctl status athyper-stack --no-pager
 # Full smoke test — all 8 groups must pass
 sudo -iu athyper
 cd /opt/products/athyper
-set -a
-. /opt/stack/athyper/secrets/.env
-set +a
 bash /opt/products/athyper/stack/scripts/smoke-staging.sh
 ```
 
@@ -2014,9 +2024,17 @@ Every compose service must declare a memory limit. Services without one can cons
 available RAM and trigger OOM kills on neighboring services.
 
 ```bash
-docker compose \
-  --project-directory /opt/products/athyper/stack/compose \
-  --env-file /opt/stack/athyper/secrets/.env \
+SCRIPT_DIR=/opt/products/athyper/stack/scripts/stack-profile
+source "$SCRIPT_DIR/../lib/compose.sh"
+init_compose_env
+resolve_compose_override
+build_compose_file_list
+
+ALL_COMPOSE_PROFILES="admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
+COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose \
+  --project-directory "$COMPOSE_DIR" \
+  "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" \
   config | python3 -c "
 import sys, yaml
 cfg = yaml.safe_load(sys.stdin)
@@ -2087,7 +2105,9 @@ sudo chown athyper:athyper /opt/stack/athyper/secrets/.env
 sudo chmod 600 /opt/stack/athyper/secrets/.env
 
 # Validate as athyper after saving
-sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh staging
+sudo -u athyper bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
 ```
 
 If you need to patch a single value non-interactively (e.g. align a password), run as root:
@@ -2234,7 +2254,7 @@ Do not declare staging ready until every item below is checked.
 [ ] GID pre-check passed — GIDs 9100–9105 were not claimed by a non-svc-* group.
 [ ] Host write probe (Phase 12) passes for all bind-mounted data directories.
 [ ] Container canaries (Phase 13) pass for Redis, MinIO, Meilisearch, and all telemetry directories.
-[ ] stack/env/.env contains only path variables — no credentials.
+[ ] stack/env/.env contains only non-secret bootstrap variables — no credentials.
 [ ] /opt/stack/athyper/secrets/.env is mode 0600 and not world-readable.
 [ ] redis-acl.conf is athyper:svc-redis mode 0640 — not world-readable (contains hashed passwords).
 [ ] validate-env.sh passes with exit 0 and renders redis-acl.conf without template tokens.

@@ -935,6 +935,8 @@ CREATE TABLE IF NOT EXISTS master.customer (
     customer_type    text         NOT NULL DEFAULT 'corporate',
     tax_id           text,
     description      text,
+    risk_rating      text,
+    is_key_account   boolean      NOT NULL DEFAULT false,
 
     -- Legal / registration
     legal_name                  text,

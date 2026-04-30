@@ -27,6 +27,173 @@ BEGIN
     v_zero := '{"_seed": {"pack": "323_org", "version": "2.0.0", "zero_rated": true}}'::jsonb;
 
     -- ══════════════════════════════════════════════════════════════════════
+    -- C0: Remove stale tax groups not in the current canonical code set.
+    --     Old seeds used different naming conventions (e.g. VAT_STD_US_7PCT).
+    --     tax_group_component.tax_group_id is NOT NULL so components go first.
+    -- ══════════════════════════════════════════════════════════════════════
+    -- Nullify nullable FK columns that reference stale groups before deleting.
+    -- scp_tax_group_fk had ON DELETE SET NULL on a composite (tenant_id, col) FK —
+    -- that action also nulls tenant_id, violating NOT NULL. Explicit UPDATE is required.
+    UPDATE master.company_code_supplier_profile
+    SET tax_group_id = NULL
+    WHERE tenant_id = v_tid
+      AND tax_group_id IN (
+          SELECT id FROM control.tax_group
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+              'TG-QA-EXEMPT','TG-QA-WHT-5',
+              'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+              'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+              'TG-US-CA-SALES','TG-US-WHT-30',
+              'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+              'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+              'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+              'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+              'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+              'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+              'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+              'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+              'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+              'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+              'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+            ));
+
+    UPDATE master.company_code_supplier_profile
+    SET default_wht_tax_group_id = NULL
+    WHERE tenant_id = v_tid
+      AND default_wht_tax_group_id IN (
+          SELECT id FROM control.tax_group
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+              'TG-QA-EXEMPT','TG-QA-WHT-5',
+              'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+              'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+              'TG-US-CA-SALES','TG-US-WHT-30',
+              'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+              'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+              'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+              'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+              'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+              'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+              'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+              'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+              'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+              'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+              'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+            ));
+
+    -- pil_tax_group_fk and pil_wht_group_fk are composite (tenant_id, col) ON DELETE SET NULL —
+    -- that action also nulls tenant_id, violating NOT NULL. Explicit UPDATEs required.
+    UPDATE document.purchase_invoice_line
+    SET tax_group_id = NULL
+    WHERE tenant_id = v_tid
+      AND tax_group_id IN (
+          SELECT id FROM control.tax_group
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+              'TG-QA-EXEMPT','TG-QA-WHT-5',
+              'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+              'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+              'TG-US-CA-SALES','TG-US-WHT-30',
+              'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+              'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+              'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+              'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+              'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+              'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+              'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+              'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+              'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+              'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+              'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+            ));
+
+    UPDATE document.purchase_invoice_line
+    SET withholding_tax_group_id = NULL
+    WHERE tenant_id = v_tid
+      AND withholding_tax_group_id IN (
+          SELECT id FROM control.tax_group
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+              'TG-QA-EXEMPT','TG-QA-WHT-5',
+              'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+              'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+              'TG-US-CA-SALES','TG-US-WHT-30',
+              'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+              'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+              'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+              'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+              'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+              'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+              'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+              'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+              'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+              'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+              'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+            ));
+
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_group_id IN (
+          SELECT id FROM control.tax_group
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+              'TG-QA-EXEMPT','TG-QA-WHT-5',
+              'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+              'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+              'TG-US-CA-SALES','TG-US-WHT-30',
+              'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+              'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+              'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+              'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+              'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+              'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+              'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+              'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+              'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+              'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+              'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+            ));
+
+    DELETE FROM control.tax_group
+    WHERE tenant_id = v_tid
+      AND code NOT IN (
+        'TG-MY-SST-SALES-10','TG-MY-SST-SVC-6','TG-MY-EXEMPT','TG-MY-WHT-10',
+        'TG-QA-EXEMPT','TG-QA-WHT-5',
+        'TG-SA-VAT-15-OUT','TG-SA-VAT-15-IN','TG-SA-VAT-ZERO','TG-SA-ZAKAT','TG-SA-WHT-5',
+        'TG-AE-VAT-5-OUT','TG-AE-VAT-5-IN','TG-AE-VAT-ZERO',
+        'TG-US-CA-SALES','TG-US-WHT-30',
+        'TG-SG-GST-9-OUT','TG-SG-GST-9-IN','TG-SG-GST-ZERO','TG-SG-WHT-15',
+        'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
+        'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN',
+        'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10',
+        'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+        'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
+        'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
+        'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
+        'TG-ZA-MINING-5','TG-ZA-WHT-DIV','TG-ZA-WHT-INT',
+        'TG-GB-VAT-20-OUT','TG-GB-VAT-20-IN','TG-GB-VAT-5-OUT','TG-GB-VAT-5-IN',
+        'TG-GB-VAT-ZERO','TG-GB-WHT-20',
+        'TG-JP-CT-10-OUT','TG-JP-CT-10-IN','TG-JP-CT-8-OUT','TG-JP-CT-8-IN','TG-JP-WHT-20',
+        'TG-PH-VAT-12-OUT','TG-PH-VAT-12-IN','TG-PH-EWT-GOODS','TG-PH-EWT-SVC','TG-PH-FWT-INT'
+      );
+
+    -- ══════════════════════════════════════════════════════════════════════
     -- STAGE A: Tax group headers
     -- Convention: -OUT = sales/output, -IN = purchase/input recovery
     -- ══════════════════════════════════════════════════════════════════════
@@ -138,10 +305,10 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     -- STAGE B: Tax group components (group → rate_schedule)
     -- ══════════════════════════════════════════════════════════════════════
-    CREATE TEMP TABLE tmp_tg AS SELECT code, id FROM control.tax_group WHERE tenant_id = v_tid;
+    CREATE TEMP TABLE tmp_tg ON COMMIT DROP AS SELECT code, id FROM control.tax_group WHERE tenant_id = v_tid;
 
     -- Build schedule lookup: tj_code|tt_code|direction|component → id
-    CREATE TEMP TABLE tmp_trs AS
+    CREATE TEMP TABLE tmp_trs ON COMMIT DROP AS
     SELECT
         tj.code || '|' || tt.code || '|' || trs.tax_direction
             || '|' || COALESCE(trs.component_code, '') AS key,
@@ -149,7 +316,15 @@ BEGIN
     FROM control.tax_rate_schedule trs
     JOIN master.tax_jurisdiction tj ON tj.id = trs.jurisdiction_id
     JOIN master.tax_type tt ON tt.id = trs.tax_type_id
-    WHERE trs.tenant_id = v_tid AND trs.is_active = true;
+    WHERE trs.tenant_id = v_tid AND trs.is_active = true
+      AND trs.metadata->'_seed'->>'pack' = '322_org';
+
+    -- Purge existing components for canonical groups before re-seeding.
+    -- Required for idempotency: prevents tgc_group_seq_uq violations when
+    -- 322 has replaced schedule IDs but leftover components still hold old seqs.
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_group_id IN (SELECT id FROM tmp_tg);
 
     INSERT INTO control.tax_group_component
         (tenant_id, tax_group_id, tax_rate_schedule_id, calculation_seq,
@@ -242,10 +417,12 @@ BEGIN
     -- ASSERTIONS
     -- ══════════════════════════════════════════════════════════════════════
 
-    -- A1: Every non-zero-rated group has at least 1 component
+    -- A1: Every seed-managed non-zero-rated group has at least 1 component.
+    -- Scoped to 323_org groups to exclude stale rows from prior seed versions.
     IF EXISTS (
         SELECT tg.code FROM control.tax_group tg
         WHERE tg.tenant_id = v_tid
+          AND tg.metadata->'_seed'->>'pack' = '323_org'
           AND NOT COALESCE((tg.metadata->'_seed'->>'zero_rated')::boolean, false)
           AND NOT EXISTS (
               SELECT 1 FROM control.tax_group_component tgc
@@ -253,6 +430,7 @@ BEGIN
     ) THEN RAISE EXCEPTION '323 FAIL: non-zero group with no components: %',
         (SELECT string_agg(tg.code, ', ') FROM control.tax_group tg
          WHERE tg.tenant_id = v_tid
+           AND tg.metadata->'_seed'->>'pack' = '323_org'
            AND NOT COALESCE((tg.metadata->'_seed'->>'zero_rated')::boolean, false)
            AND NOT EXISTS (
                SELECT 1 FROM control.tax_group_component tgc
@@ -278,11 +456,12 @@ BEGIN
               WHERE trs.id = tgc.tax_rate_schedule_id AND trs.tenant_id = tgc.tenant_id)
     ) THEN RAISE EXCEPTION '323 FAIL: component references missing schedule'; END IF;
 
-    -- A4: India compound groups have exactly 2 components each
+    -- A4: Seed-managed compound groups have exactly 2 components each
     IF EXISTS (
         SELECT tg.code, count(tgc.id) FROM control.tax_group tg
         JOIN control.tax_group_component tgc ON tgc.tax_group_id = tg.id
         WHERE tg.tenant_id = v_tid AND tg.is_compound = true
+          AND tg.metadata->'_seed'->>'pack' = '323_org'
         GROUP BY tg.code HAVING count(tgc.id) != 2
     ) THEN RAISE EXCEPTION '323 FAIL: compound group without exactly 2 components'; END IF;
 

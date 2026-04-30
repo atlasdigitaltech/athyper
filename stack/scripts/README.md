@@ -11,14 +11,16 @@ Install these before running any script:
 | Tool | Min version | Purpose | Install |
 |------|------------|---------|---------|
 | Docker Desktop | 4.25+ | Container runtime | https://docs.docker.com/get-docker/ |
-| Node.js + npm | 18 LTS | Database seeding (`seed-db`) | https://nodejs.org |
-| pnpm | 8+ | Local dev server (`api-up`, `web-up`) | `npm i -g pnpm` |
+| Node.js + Corepack | 22+ | Database seeding and local dev servers | https://nodejs.org |
+| pnpm | 10.33.0 | Workspace package manager | `corepack prepare pnpm@10.33.0 --activate` |
 | mkcert | any | Local TLS certs (`generate-certs`) | `brew install mkcert` / `winget install FiloSottile.mkcert` |
 | jq | 1.6+ | JSON validation in IAM scripts (optional but recommended) | `brew install jq` / `winget install jqlang.jq` |
 | Git Bash or WSL | — | Required on Windows for `.sh` scripts | https://git-scm.com |
 
 > **Windows users**: `.bat` scripts run natively in Command Prompt or PowerShell — no Git Bash needed.
-> Git Bash is only required if you prefer the `.sh` versions or are on WSL.
+> Git Bash is only required if you prefer the `.sh` versions or are on WSL. Use the `.sh`
+> scripts for Ubuntu staging/production operations because they implement the two-file
+> bootstrap + secrets env model.
 
 ---
 
@@ -155,6 +157,11 @@ Copies `stack/config/apps/kernel.config.{env}.parameter.json` → `kernel.config
 # Git Bash / WSL
 bash stack/scripts/setup/validate-env.sh
 bash stack/scripts/setup/validate-env.sh /path/to/custom.env  # explicit env file
+
+# Staging / production two-file merge: bootstrap first, secrets second
+bash stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
 ```
 ```bat
 :: Command Prompt / PowerShell
@@ -256,6 +263,11 @@ After the stack is healthy, confirm MinIO is reachable and all buckets are provi
 ```bash
 # Git Bash / WSL
 bash stack/scripts/setup/verify-objectstorage.sh
+
+# Staging / production:
+bash stack/scripts/setup/verify-objectstorage.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
 ```
 ```bat
 :: Command Prompt / PowerShell
@@ -267,8 +279,8 @@ Exit code 0 = pass. Exit code 1 = MinIO not reachable or a bucket/user is missin
 The `objectstorage-init` sidecar provisions all buckets automatically on stack start (it runs as a one-shot container after MinIO is healthy). If verify-objectstorage fails:
 
 1. Check init logs: `docker logs $(docker ps -aqf name=objectstorage-init)`
-2. Re-run the sidecar: `docker compose --profile core up objectstorage-init`
-3. Re-run verify: `bash stack/scripts/setup/verify-objectstorage.sh`
+2. Re-run the sidecar through the profile wrapper: `bash stack/scripts/stack-profile/up.sh objectstorage`
+3. Re-run verify with the same env-file mode used for the environment.
 
 > **Local dev**: if `S3_ENDPOINT` is not set in `stack/env/.env`, the API server disables object storage
 > (file attachments return 503). Set `S3_ENDPOINT=http://objectstorage:9000` or the server `.env`
@@ -569,13 +581,14 @@ sudo ATHYPER_CONFIG_ROOT=/opt/stack/athyper/config \
 ### setup/validate-env
 
 ```
-validate-env.sh [env-file-path]
+validate-env.sh [env-file-path] [second-env-file-path]
 validate-env.bat [env-file-path]
 ```
 
 | Parameter | Description |
 |-----------|-------------|
-| `env-file-path` | Explicit path to `.env` file. Auto-detects `stack/env/.env` if omitted. |
+| `env-file-path` | Explicit path to the first `.env` file. Auto-detects `stack/env/.env` if omitted. |
+| `second-env-file-path` | Optional secrets file. Used on staging/production so validation mirrors Docker Compose merge order. |
 
 Exit codes: `0` = all checks pass, `1` = fatal errors (fix before running `up`), `2` = warnings only.
 
@@ -777,7 +790,7 @@ api-restart.bat
 
 No parameters.
 - **local**: prints guidance (tsx watch restarts on file changes automatically)
-- **staging/production**: `docker compose restart athyper-api`; prints `docker compose ps` after
+- **staging/production**: restarts `athyper-api` through the shared compose/env-file chain; prints `docker compose ps` after
 
 ### app/web-up
 
@@ -810,7 +823,7 @@ web-restart.bat
 
 No parameters.
 - **local**: prints guidance (HMR handles hot reload automatically)
-- **staging/production**: `docker compose restart athyper-neon-web`
+- **staging/production**: restarts `athyper-neon-web` through the shared compose/env-file chain
 
 ### db/transaction/neon/seed-db
 

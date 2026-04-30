@@ -30,8 +30,9 @@ BEGIN
     -- 1. UPSERT HOLIDAY CALENDAR HEADERS (15 total)
     -- ══════════════════════════════════════════════════════════════════════
 
+    DROP TABLE IF EXISTS tmp_cal;
     CREATE TEMP TABLE tmp_cal (
-        code            text     NOT NULL,
+        code            text     NOT NULL PRIMARY KEY,
         name            text     NOT NULL,
         country_code    character(2),
         weekend_pattern text     NOT NULL DEFAULT 'SAT_SUN',
@@ -56,34 +57,52 @@ BEGIN
         ('HC-JP',      'Japan',             'JP', 'SAT_SUN', false, 130),
         ('HC-PH',      'Philippines',       'PH', 'SAT_SUN', false, 140);
 
+    -- is_default is forced to false in both the INSERT and DO UPDATE paths.
+    -- trg_hc_single_default fires BEFORE INSERT OR UPDATE OF is_default and does
+    -- UPDATE master.holiday_calendar SET is_default=false on other rows. When 15
+    -- rows are speculatively inserted in one batch that includes HC-DEFAULT
+    -- (is_default=true), the trigger's cross-row UPDATE collides with the other
+    -- in-flight rows → "affect row a second time". Forcing false here suppresses
+    -- the trigger's cross-row UPDATE; is_default is reconciled below.
     INSERT INTO master.holiday_calendar
         (tenant_id, code, name, country_code, weekend_pattern, is_default, sort_order,
          metadata, status, created_by)
     SELECT
-        v_tid, t.code, t.name, t.country_code, t.weekend_pattern, t.is_default, t.sort_order,
-        v_meta, 'active', v_su
+        v_tid, t.code, t.name, t.country_code, t.weekend_pattern,
+        false,   -- always false here; reconciled by the UPDATE below
+        t.sort_order, v_meta, 'active', v_su
     FROM tmp_cal t
     ON CONFLICT (tenant_id, code) DO UPDATE SET
         name            = EXCLUDED.name,
         country_code    = EXCLUDED.country_code,
         weekend_pattern = EXCLUDED.weekend_pattern,
-        is_default      = EXCLUDED.is_default,
         sort_order      = EXCLUDED.sort_order,
         metadata        = EXCLUDED.metadata,
         updated_at      = now(),
         updated_by      = v_su
     WHERE (master.holiday_calendar.name, master.holiday_calendar.country_code,
-           master.holiday_calendar.weekend_pattern, master.holiday_calendar.is_default,
+           master.holiday_calendar.weekend_pattern,
            master.holiday_calendar.sort_order, master.holiday_calendar.metadata)
        IS DISTINCT FROM
           (EXCLUDED.name, EXCLUDED.country_code,
-           EXCLUDED.weekend_pattern, EXCLUDED.is_default,
+           EXCLUDED.weekend_pattern,
            EXCLUDED.sort_order, EXCLUDED.metadata);
+
+    -- Reconcile is_default: single-row UPDATE so trg_hc_single_default fires
+    -- exactly once, clearing any stale true flags on other rows safely.
+    UPDATE master.holiday_calendar
+       SET is_default = true,
+           updated_at = now(),
+           updated_by = v_su
+     WHERE tenant_id = v_tid
+       AND code = 'HC-DEFAULT'
+       AND is_default = false;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- 2. BUILD RESOLVE MAP: calendar code -> id
     -- ══════════════════════════════════════════════════════════════════════
 
+    DROP TABLE IF EXISTS tmp_cal_map;
     CREATE TEMP TABLE tmp_cal_map (
         code text PRIMARY KEY,
         cal_id uuid NOT NULL
@@ -99,6 +118,7 @@ BEGIN
     -- 3. STAGE ALL HOLIDAYS IN TEMP TABLE
     -- ══════════════════════════════════════════════════════════════════════
 
+    DROP TABLE IF EXISTS tmp_hol;
     CREATE TEMP TABLE tmp_hol (
         cal_code  text    NOT NULL,
         cal_year  smallint NOT NULL,
@@ -167,6 +187,7 @@ BEGIN
     ('HC-SA', 2026, '2026-03-19', 'Eid al-Fitr'),
     ('HC-SA', 2026, '2026-03-20', 'Eid al-Fitr (2nd Day)'),
     ('HC-SA', 2026, '2026-03-21', 'Eid al-Fitr (3rd Day)'),
+    ('HC-SA', 2026, '2026-05-25', 'Eid al-Adha Eve'),
     ('HC-SA', 2026, '2026-05-26', 'Eid al-Adha'),
     ('HC-SA', 2026, '2026-05-27', 'Eid al-Adha (2nd Day)'),
     ('HC-SA', 2026, '2026-05-28', 'Eid al-Adha (3rd Day)'),
@@ -189,6 +210,7 @@ BEGIN
     ('HC-AE', 2026, '2026-03-19', 'Eid al-Fitr'),
     ('HC-AE', 2026, '2026-03-20', 'Eid al-Fitr (2nd Day)'),
     ('HC-AE', 2026, '2026-03-21', 'Eid al-Fitr (3rd Day)'),
+    ('HC-AE', 2026, '2026-05-25', 'Arafat Day'),
     ('HC-AE', 2026, '2026-05-26', 'Eid al-Adha'),
     ('HC-AE', 2026, '2026-05-27', 'Eid al-Adha (2nd Day)'),
     ('HC-AE', 2026, '2026-06-27', 'Al Hijra (Islamic New Year)'),
@@ -233,9 +255,10 @@ BEGIN
     ('HC-SG', 2026, '2026-03-20', 'Hari Raya Puasa'),
     ('HC-SG', 2026, '2026-04-03', 'Good Friday'),
     ('HC-SG', 2026, '2026-05-01', 'Labour Day'),
-    ('HC-SG', 2026, '2026-05-31', 'Vesak Day'),
     ('HC-SG', 2026, '2026-05-27', 'Hari Raya Haji'),
+    ('HC-SG', 2026, '2026-05-31', 'Vesak Day'),
     ('HC-SG', 2026, '2026-08-09', 'National Day'),
+    ('HC-SG', 2026, '2026-11-08', 'Deepavali'),
     ('HC-SG', 2026, '2026-12-25', 'Christmas Day'),
 
     -- ─── INDIA (HC-IN) ────────────────────────────────────────────────

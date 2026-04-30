@@ -43,14 +43,9 @@ resolve_compose_override
 docker_preflight
 build_compose_file_list
 
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose ... stop athyper-neon-web"
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" stop athyper-neon-web
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" stop athyper-neon-web
-fi
+echo "Running: docker compose ... stop athyper-neon-web"
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" stop athyper-neon-web
 
 echo ""
 echo "Web service stopped (env=$ENVIRONMENT)"

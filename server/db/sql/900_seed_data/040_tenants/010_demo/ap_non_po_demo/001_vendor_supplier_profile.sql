@@ -1,7 +1,7 @@
 -- ============================================================================
 -- FILE: demo/001_vendor_supplier_profile.sql
 -- Purpose: Create 1 demo vendor + supplier profile + tax groups for tenant 'athyper'
---          and company_code 'US01'. Prerequisite for all scenario files.
+--          and company_code 'AUIC'. Prerequisite for all scenario files.
 -- Idempotent: all inserts use WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 -- ============================================================================
 
@@ -35,7 +35,7 @@ BEGIN
     SELECT id INTO v_cc_id FROM master.company_code
      WHERE tenant_id = v_tenant_id AND code = 'AUIC';
     IF v_cc_id IS NULL THEN
-        RAISE EXCEPTION 'Company code US01 not found in tenant athyper';
+        RAISE EXCEPTION 'Company code AUIC not found in tenant athyper';
     END IF;
 
     -- ── 1. Vendor record ────────────────────────────────────────────────────
@@ -208,11 +208,11 @@ BEGIN
             INSERT INTO master.bank_account_link (
                 tenant_id, bank_account_id, owner_type, owner_id,
                 company_code_id, purpose, is_primary,
-                effective_from, status, created_by
+                effective_from, created_by
             ) VALUES (
                 v_tenant_id, v_house_bank_id, 'company_code', v_cc_id,
                 v_cc_id, 'disbursement', true,
-                CURRENT_DATE, 'active', v_sys
+                CURRENT_DATE, v_sys
             ) RETURNING id INTO v_bank_link_id;
         END IF;
     END IF;
@@ -261,5 +261,5 @@ BEGIN
            AND payment_term_id IS NULL;
     END IF;
 
-    RAISE NOTICE 'demo/001: vendor ACME-CONSULT-US + profile for US01 set up';
+    RAISE NOTICE 'demo/001: vendor ACME-CONSULT-US + profile for AUIC set up';
 END $demo_vendor_setup$;

@@ -94,7 +94,7 @@ BEGIN
     (tenant_id, flow_id, step_key, label, icon_key, sort_order, advance_rule, layout_hint, created_by)
   VALUES
   (NULL, v_flow_id, 'identify',   'Identify',   'id-card',      10,
-   '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","vendor_invoice_ref","supplier_invoice_date","posting_date","received_date"]}'::jsonb,
+   '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","supplier_invoice_number","supplier_invoice_date","posting_date","received_date"]}'::jsonb,
    'summary_side', v_su),
   (NULL, v_flow_id, 'commercial', 'Commercial', 'receipt',      20,
    '{"required_fields":["total_amount","tax_mode"]}'::jsonb,
@@ -106,7 +106,7 @@ BEGIN
 
   -- Always update advance_rules to current spec
   UPDATE control.entity_flow_step
-     SET advance_rule = '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","vendor_invoice_ref","supplier_invoice_date","posting_date","received_date"]}'::jsonb
+     SET advance_rule = '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","supplier_invoice_number","supplier_invoice_date","posting_date","received_date"]}'::jsonb
    WHERE flow_id = v_flow_id AND step_key = 'identify';
   UPDATE control.entity_flow_step
      SET advance_rule = '{"required_fields":["total_amount","tax_mode"]}'::jsonb
@@ -185,7 +185,7 @@ BEGIN
       '{"in":[{"var":"invoice_source"},["po_based","contract_based"]]}',
       NULL, NULL, NULL, NULL, 'inline_search', 2,
       'Required for PO-based and contract-based invoices.', 50),
-    ('vendor_invoice_ref',     'required', 'manual',
+    ('supplier_invoice_number', 'required', 'manual',
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1,
       'Number printed on the vendor''s invoice. Triggers duplicate detection.', 60),
     ('supplier_invoice_date', 'required',  'manual',

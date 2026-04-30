@@ -66,7 +66,7 @@ CROSS JOIN (VALUES
     ('total_amount',   'total_amount',   'Total Amount',      'decimal', 'one',         NULL::text,                              true,  false, '{"min":0}'::jsonb,            80),
     ('tax_amount',     'tax_amount',     'Tax Amount',        'decimal', 'zero_or_one', NULL::text,                              false, false, '{"min":0}'::jsonb,            90),
     ('payment_terms',  'payment_terms',  'Payment Terms',     'enum',    'zero_or_one', 'master.party_payment_terms'::text,      false, false, NULL::jsonb,                  100),
-    ('delivery_site',  'delivery_site',  'Delivery Site',     'ref',     'zero_or_one', NULL::text,                              false, false, '{"ref_entity":"site"}'::jsonb, 110),
+    ('delivery_site',  'delivery_site',  'Delivery Site',     'reference','zero_or_one', NULL::text,                              false, false, '{"ref_entity":"site"}'::jsonb, 110),
     ('buyer_id',       'buyer_id',       'Buyer',             'reference', 'zero_or_one', NULL::text,                              false, true,  '{"ref_entity":"principal"}'::jsonb, 120),
     ('notes',          'notes',          'Notes',             'text',    'zero_or_one', NULL::text,                              false, false, '{"max_length":1000}'::jsonb, 130)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
@@ -74,6 +74,17 @@ CROSS JOIN (VALUES
 WHERE e.table_schema = 'document' AND e.table_name = 'purchase_order'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
+
+-- ── Fix data_type 'ref' → 'reference' on already-seeded rows ────────────────
+UPDATE control.entity_field ef
+SET data_type = 'reference'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'document' AND e.table_name = 'purchase_order'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+  AND ef.name = 'delivery_site'
+  AND ef.data_type = 'ref';
 
 -- ── Fix origin for existing rows (idempotent) ─────────────────────────────────
 UPDATE control.entity_field ef

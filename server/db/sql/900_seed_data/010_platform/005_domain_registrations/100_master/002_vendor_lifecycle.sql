@@ -1,6 +1,6 @@
 -- 100_finance/100_master/002_vendor_lifecycle.sql
 -- Purpose: control.lifecycle + 5 states + 7 transitions + entity_lifecycle binding
---          for the Vendor (master.supplier) entity
+--          for the Supplier (master.supplier) entity
 -- Depends on: 001_vendor.sql
 -- Idempotent: ON CONFLICT DO NOTHING throughout
 
@@ -10,13 +10,18 @@ DO $$ DECLARE
 BEGIN
 
 -- ── 1. control.lifecycle ─────────────────────────────────────────────────────
+-- Rename old lifecycle code 'vendor' → 'supplier' on already-seeded rows
+UPDATE control.lifecycle
+SET code = 'supplier', name = 'Supplier Lifecycle'
+WHERE code = 'vendor' AND tenant_id IS NULL;
+
 INSERT INTO control.lifecycle (tenant_id, code, name, version_no, is_active, config, created_by)
-VALUES (NULL, 'vendor', 'Vendor Lifecycle', 1, true,
+VALUES (NULL, 'supplier', 'Supplier Lifecycle', 1, true,
     '{"initial_state_code":"draft","allow_parallel_instances":false,"icon_key":"building-2","ui_color":"#1D4ED8","entity_types":["supplier"]}'::jsonb,
     '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (tenant_id, code) DO NOTHING;
 
-SELECT id INTO v_lc_id FROM control.lifecycle WHERE code = 'vendor' AND tenant_id IS NULL;
+SELECT id INTO v_lc_id FROM control.lifecycle WHERE code = 'supplier' AND tenant_id IS NULL;
 
 -- ── 2. control.lifecycle_state (5 states) ────────────────────────────────────
 INSERT INTO control.lifecycle_state

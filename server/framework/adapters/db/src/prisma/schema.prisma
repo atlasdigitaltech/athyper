@@ -9794,6 +9794,9 @@ model chart_of_account {
   created_by                    String                          @db.Uuid
   updated_at                    DateTime?                       @db.Timestamptz(6)
   updated_by                    String?                         @db.Uuid
+  base_currency_id              String?                         @db.Uuid
+  account_level_count           Int?                            @db.SmallInt
+  is_default                    Boolean                         @default(false)
   country                       country?                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "coa_country_fk")
   principal                     principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "coa_created_by_fk")
   tenant                        tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coa_tenant_fk")
@@ -9820,6 +9823,10 @@ model comment {
   commenter_id                              String     @db.Uuid
   comment_text                              String
   mentions                                  Json?
+  content_format                            String     @default("plain")
+  content_json                              Json?
+  content_html                              String?
+  attachment_refs                           Json       @default("[]")
   parent_comment_id                         String?    @db.Uuid
   thread_depth                              Int        @default(0) @db.SmallInt
   visibility                                String     @default("public")
@@ -9862,6 +9869,9 @@ model comment_draft {
   entity_id                                       String    @db.Uuid
   parent_comment_id                               String?   @db.Uuid
   draft_text                                      String
+  content_json                                    Json?
+  content_html                                    String?
+  attachment_refs                                 Json      @default("[]")
   visibility                                      String    @default("public")
   created_at                                      DateTime  @default(now()) @db.Timestamptz(6)
   created_by                                      String    @db.Uuid
@@ -10001,6 +10011,11 @@ model company_code {
   created_by                                                                                         String                              @db.Uuid
   updated_at                                                                                         DateTime?                           @db.Timestamptz(6)
   updated_by                                                                                         String?                             @db.Uuid
+  local_currency_id                                                                                  String?                             @db.Uuid
+  accounting_currency_id                                                                             String?                             @db.Uuid
+  chart_of_account_id                                                                                String?                             @db.Uuid
+  company_code_type                                                                                  String?
+  timezone                                                                                           String?
   tax_credit_summary                                                                                 tax_credit_summary[]
   wht_vendor_accumulator                                                                             wht_vendor_accumulator[]
   asset_class_book_policy                                                                            asset_class_book_policy[]
@@ -10468,9 +10483,9 @@ model company_code_supplier_profile {
   dimension_set                                                                         dimension_set?     @relation(fields: [tenant_id, default_dimension_set_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_dimension_set_fk")
   payment_method_ref                                                                    payment_method?    @relation(fields: [tenant_id, payment_method_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_payment_method_id_fk")
   payment_term                                                                          payment_term?      @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_payment_term_fk")
-  bank_account_link                                                                     bank_account_link? @relation(fields: [tenant_id, preferred_remittance_bank_link_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_remittance_bank_link_fk")
+  bank_account_link                                                                     bank_account_link? @relation(fields: [tenant_id, preferred_remittance_bank_link_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_remittance_bank_link_fk")
   supplier                                                                              supplier           @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_supplier_fk")
-  tax_group_company_code_supplier_profile_tenant_id_tax_group_idTotax_group             tax_group?         @relation("company_code_supplier_profile_tenant_id_tax_group_idTotax_group", fields: [tenant_id, tax_group_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_tax_group_fk")
+  tax_group_company_code_supplier_profile_tenant_id_tax_group_idTotax_group             tax_group?         @relation("company_code_supplier_profile_tenant_id_tax_group_idTotax_group", fields: [tenant_id, tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_tax_group_fk")
   tenant                                                                                tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "scp_tenant_fk")
 
   @@unique([tenant_id, supplier_id, company_code_id], map: "scp_supplier_company_uq")
@@ -10806,6 +10821,8 @@ model customer {
   customer_type                                       String                          @default("corporate")
   tax_id                                              String?
   description                                         String?
+  risk_rating                                         String?
+  is_key_account                                      Boolean                         @default(false)
   legal_name                                          String?
   registration_no                                     String?
   registration_country_code                           String?                         @db.Char(2)
@@ -10831,6 +10848,10 @@ model customer {
   founded_year                                        Int?                            @db.SmallInt
   employee_count_band                                 String?
   annual_revenue_band                                 String?
+  account_manager_id                                  String?                         @db.Uuid
+  payment_term_id                                     String?                         @db.Uuid
+  credit_limit                                        Decimal?                        @db.Decimal(18, 4)
+  credit_currency_id                                  String?                         @db.Uuid
   company_code_customer_profile                       company_code_customer_profile[]
   principal                                           principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cust_created_by_fk")
   tenant                                              tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cust_tenant_fk")
@@ -11358,6 +11379,10 @@ model gl_account {
   created_by                    String                          @db.Uuid
   updated_at                    DateTime?                       @db.Timestamptz(6)
   updated_by                    String?                         @db.Uuid
+  account_type_id               String?                         @db.Uuid
+  is_reconciling                Boolean                         @default(false)
+  is_blocked                    Boolean                         @default(false)
+  posting_level                 String?
   accounting_distribution       accounting_distribution[]
   journal_line                  journal_line[]
   fx_revaluation_line           fx_revaluation_line[]
@@ -11714,6 +11739,8 @@ model legal_entity {
   tax_residence_country_code                          String?            @db.Char(2)
   effective_from                                      DateTime?          @db.Date
   effective_until                                     DateTime?          @db.Date
+  registration_no                                     String?
+  is_publicly_listed                                  Boolean            @default(false)
   company_code                                        company_code[]
   holiday_calendar                                    holiday_calendar[]
   country                                             country            @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "le_country_fk")
@@ -13222,6 +13249,10 @@ model supplier {
   founded_year                                        Int?                            @db.SmallInt
   employee_count_band                                 String?
   annual_revenue_band                                 String?
+  account_manager_id                                  String?                         @db.Uuid
+  payment_term_id                                     String?                         @db.Uuid
+  payment_method_id                                   String?                         @db.Uuid
+  spend_category_id                                   String?                         @db.Uuid
   commitment_procurement                              commitment_procurement[]
   delivery_note                                       delivery_note[]
   goods_receipt                                       goods_receipt[]

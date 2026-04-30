@@ -4,8 +4,9 @@
 # Location:
 #   stack/scripts/smoke-staging.sh
 # Usage:
-#   bash stack/scripts/smoke-staging.sh               (auto-detects .env)
-#   bash stack/scripts/smoke-staging.sh /path/.env    (explicit env file)
+#   bash stack/scripts/smoke-staging.sh                              (auto-detects)
+#   bash stack/scripts/smoke-staging.sh /path/bootstrap.env          (single file)
+#   bash stack/scripts/smoke-staging.sh /path/bootstrap.env /path/secrets.env (two-file)
 #
 # Runs a fast end-to-end health sweep against a running stack:
 #   1. Docker container status (all expected containers Up)
@@ -34,17 +35,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ----------------------------
-# Resolve env file
+# Resolve env files (two-file model)
+# $1 = bootstrap env (non-secret config); $2 = secrets env (optional, wins on duplicates)
+# Auto-detect: bootstrap = stack/env/.env; secrets = /opt/stack/athyper/secrets/.env (if present)
 # ----------------------------
 ENV_FILE="${1:-}"
+ENV_FILE_2="${2:-}"
+
 if [[ -z "$ENV_FILE" ]]; then
-  # Precedence: runtime secrets path → stack/env/.env → stack/env/.env.example
-  if [[ -f "/opt/stack/athyper/secrets/.env" ]]; then
-    ENV_FILE="/opt/stack/athyper/secrets/.env"
-  elif [[ -f "$STACK_DIR/env/.env" ]]; then
+  # Bootstrap file: stack/env/.env → stack/env/.env.example
+  if [[ -f "$STACK_DIR/env/.env" ]]; then
     ENV_FILE="$STACK_DIR/env/.env"
   else
     ENV_FILE="$STACK_DIR/env/.env.example"
+  fi
+  # Auto-attach secrets file when running on a staging/prod server
+  if [[ -z "$ENV_FILE_2" && -f "/opt/stack/athyper/secrets/.env" ]]; then
+    ENV_FILE_2="/opt/stack/athyper/secrets/.env"
   fi
 fi
 
@@ -54,18 +61,30 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+if [[ -n "$ENV_FILE_2" && ! -f "$ENV_FILE_2" ]]; then
+  echo "FATAL: secrets env file not found: $ENV_FILE_2" >&2
+  exit 1
+fi
+
 # ----------------------------
-# Parse env file into variables
+# Parse env files into variables (bootstrap first; secrets overlay wins)
 # ----------------------------
 declare -A ENV_MAP
-while IFS='=' read -r key value; do
-  [[ "$key" =~ ^[[:space:]]*# ]] && continue
-  [[ -z "$key" ]] && continue
-  key="$(echo "$key" | xargs)"
-  [[ -z "$key" ]] && continue
-  value="$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')"
-  ENV_MAP["$key"]="${value:-}"
-done < <(tr -d '\r' < "$ENV_FILE")
+
+_parse_env_file() {
+  local _file="$1"
+  while IFS='=' read -r key value; do
+    [[ "$key" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$key" ]] && continue
+    key="$(echo "$key" | xargs)"
+    [[ -z "$key" ]] && continue
+    value="$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')"
+    ENV_MAP["$key"]="${value:-}"
+  done < <(tr -d '\r' < "$_file")
+}
+
+_parse_env_file "$ENV_FILE"
+[[ -n "$ENV_FILE_2" ]] && _parse_env_file "$ENV_FILE_2"
 
 PROJECT="${ENV_MAP[COMPOSE_PROJECT_NAME]:-athyper}"
 API_HOST="${ENV_MAP[APPS_ATHYPER_API_HOST]:-}"
@@ -127,7 +146,8 @@ printf "============================================================\n"
 printf "  athyper Smoke Test\n"
 printf "  environment : %s\n" "$ENVIRONMENT"
 printf "  project     : %s\n" "$PROJECT"
-printf "  env file    : %s\n" "$ENV_FILE"
+printf "  bootstrap   : %s\n" "$ENV_FILE"
+[[ -n "$ENV_FILE_2" ]] && printf "  secrets     : %s\n" "$ENV_FILE_2"
 printf "============================================================\n\n"
 
 # ----------------------------

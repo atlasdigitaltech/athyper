@@ -23,6 +23,7 @@ import {
 import { cn } from "@athyper/theme/utils";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { DrawerShell } from "@athyper/ui/primitives";
 import { ClassificationDecisionPanel, ClassificationStatusBadge } from "./ClassificationDecisionPanel";
 
 // ── Prop types ────────────────────────────────────────────────────────────────
@@ -48,10 +49,6 @@ export interface LineComposerSheetProps {
   classifyBaseUrl?: string;
   /** Called after any successful save or create so parent can refresh. */
   onMutated?: () => void;
-  /** Controlled panel width in px. Uncontrolled default: 520. */
-  width?: number;
-  /** Called on every drag-resize so the parent can persist the user's preference. */
-  onWidthChange?: (w: number) => void;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -368,53 +365,16 @@ function EntryModeToggle({
   );
 }
 
-// ── Resize constants ──────────────────────────────────────────────────────────
-
-const COMPOSER_MIN_WIDTH       = 380;
-const COMPOSER_MAX_WIDTH_RATIO = 0.85;
-const COMPOSER_DEFAULT_WIDTH   = 520;
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function LineComposerSheet({
   open, onOpenChange, line, entityCode, recordId, currencyCode = "USD", companyCodeId,
   suggestBaseUrl, classifyBaseUrl, onMutated,
-  width: controlledWidth, onWidthChange,
 }: LineComposerSheetProps) {
   const isNew = !line;
   const lineAny = (line ?? {}) as Record<string, unknown>;
-
-  // ── Panel width + resize ──────────────────────────────────────────────────
-  const [width, setWidth] = useState(
-    controlledWidth ?? COMPOSER_DEFAULT_WIDTH,
-  );
-  const isDragging = useRef(false);
-
-  useEffect(() => {
-    if (controlledWidth !== undefined) setWidth(controlledWidth);
-  }, [controlledWidth]);
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    const startX = e.clientX;
-    const startW = width;
-
-    const onMove = (mv: MouseEvent) => {
-      if (!isDragging.current) return;
-      const maxW = Math.round(window.innerWidth * COMPOSER_MAX_WIDTH_RATIO);
-      const next = Math.max(COMPOSER_MIN_WIDTH, Math.min(maxW, startW + (startX - mv.clientX)));
-      setWidth(next);
-      onWidthChange?.(next);
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [width, onWidthChange]);
 
   // ── WHAT section ──────────────────────────────────────────────────────────
 
@@ -693,68 +653,52 @@ export function LineComposerSheet({
         : undefined;
 
   return (
-    <>
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[1px]"
-          onClick={() => onOpenChange(false)}
-        />
-      )}
-
-      {/* Slide-in panel */}
-      <div
-        className={cn(
-          "fixed inset-y-0 right-0 z-40 flex flex-col bg-background shadow-2xl border-l overflow-hidden",
-          "transition-transform duration-200 ease-out",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-        style={{ width }}
-        role="dialog"
-        aria-modal="true"
-        aria-label={isNew ? "Add line" : "Edit line"}
-      >
-        {/* Resize handle */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize group z-50"
-          onMouseDown={handleResizeStart}
-        >
-          <div className="absolute inset-y-0 left-1 w-px bg-primary/20 group-hover:bg-primary/60 group-active:bg-primary transition-colors duration-150" />
-          <div className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-full bg-primary/35 animate-pulse group-hover:animate-none group-hover:bg-primary/70 group-active:bg-primary transition-colors duration-150" />
-        </div>
-
-        {/* Header */}
-        <div className="shrink-0 px-5 pt-5 pb-4 border-b border-border/50">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="shrink-0 inline-flex items-center h-5 px-2 rounded text-2xs font-semibold bg-muted border border-border/50 leading-none">
-                  {isNew ? "NEW LINE" : `LINE ${String(lineAny.line_number ?? "")}`}
-                </span>
-                {classStatus && (
-                  <ClassificationStatusBadge line={virtualLine} />
-                )}
-              </div>
-              <h2 className="text-sm font-semibold text-foreground leading-snug">
-                {isNew ? "Add line" : (desc || String(lineAny.description ?? "") || "Edit line")}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{currencyCode}</p>
-            </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              aria-label="Close"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-
+    <DrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      intent="transactional"
+      widthKey={`${entityCode}:line-composer`}
+      defaultWidth={520}
+      expandedWidth={760}
+      minWidth={380}
+      maxWidth="85vw"
+      resizable
+      expandable
+      badge={isNew ? "NEW LINE" : `LINE ${String(lineAny.line_number ?? "")}`}
+      title={isNew ? "Add line" : (desc || String(lineAny.description ?? "") || "Edit line")}
+      subtitle={currencyCode}
+      headerRight={classStatus ? <ClassificationStatusBadge line={virtualLine} /> : undefined}
+      footerStart={
+        blockerCount > 0
+          ? <span className="flex items-center gap-1.5 text-warning text-xs">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {blockerCount} blocker{blockerCount !== 1 ? "s" : ""}
+            </span>
+          : saveError
+          ? <span className="flex items-center gap-1.5 text-destructive text-xs">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {saveError}
+            </span>
+          : undefined
+      }
+      footerEnd={
+        <>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="h-9 px-4 text-xs font-semibold border border-border/60 rounded-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+          >
+            {isNew ? "Cancel" : "Done"}
+          </button>
+          <button
+            onClick={() => void save()}
+            disabled={saving || creating || !desc.trim()}
+            className="h-9 px-5 text-xs font-semibold rounded-lg bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
+          >
+            {creating ? "Creating…" : saving ? "Saving…" : isNew ? "Add line" : "Save"}
+          </button>
+        </>
+      }
+    >
           {/* ── WHAT section ─────────────────────────────────────────────── */}
           <SectionHeader
             label="What"
@@ -907,39 +851,6 @@ export function LineComposerSheet({
               />
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="shrink-0 px-5 py-3 border-t border-border/50 bg-muted/10 space-y-2">
-          {saveError && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {saveError}
-            </div>
-          )}
-          {blockerCount > 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {blockerCount} blocker{blockerCount !== 1 ? "s" : ""} — resolve before submitting the document
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="h-9 px-4 text-xs font-semibold border border-border/60 rounded-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors"
-            >
-              {isNew ? "Cancel" : "Done"}
-            </button>
-            <button
-              onClick={() => void save()}
-              disabled={saving || creating || !desc.trim()}
-              className="h-9 px-5 text-xs font-semibold rounded-lg bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
-            >
-              {creating ? "Creating…" : saving ? "Saving…" : isNew ? "Add line" : "Save"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+    </DrawerShell>
   );
 }

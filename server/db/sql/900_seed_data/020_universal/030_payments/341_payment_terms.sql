@@ -36,6 +36,7 @@ BEGIN
     -- 1. PAYMENT TERM HEADERS (25 terms)
     -- ══════════════════════════════════════════════════════════════════════
 
+    DROP TABLE IF EXISTS _pt;
     CREATE TEMP TABLE _pt (
         code text, name text, description text,
         applicable_to text, base_event text, due_rule_type text,
@@ -126,6 +127,16 @@ BEGIN
      'SALE','INVOICE_DATE','NET_DAYS',  0, NULL, 0,'FIXED',NULL,        NULL,'subscription',1,  800);
 
 
+    -- trg_pt_immutable and trg_ptc_immutable block business-column changes when the
+    -- parent term status is not draft. Set existing active terms to draft first so
+    -- the upserts below (and all clause/tier upserts that follow) are permitted.
+    UPDATE master.payment_term
+       SET status = 'draft', updated_at = now(), updated_by = v_su
+     WHERE tenant_id = v_tid
+       AND code IN (SELECT code FROM _pt)
+       AND version = 1
+       AND status != 'draft';
+
     -- UPSERT into master.payment_term
     INSERT INTO master.payment_term
         (tenant_id, code, name, description,
@@ -142,7 +153,7 @@ BEGIN
         s.due_date_flexibility, s.business_day_convention, NULL,
         COALESCE(s.month_offset, 0), s.term_category, s.installment_count,
         1, true, '2025-01-01'::date,
-        s.sort_order, v_meta, 'active', v_su
+        s.sort_order, v_meta, 'draft', v_su
     FROM _pt s
     ON CONFLICT ON CONSTRAINT pt_tenant_code_ver_uq DO UPDATE SET
         name                    = EXCLUDED.name,
@@ -407,14 +418,7 @@ BEGIN
          'RET-10-GOV', 'HEADER', 'GROSS', 'PERCENT', 50.00, 'FIXED',
          'practical_completion', 365, -- 1 year after practical completion
          100.00,                      -- cumulative cap: full retention now released
-         jsonb_build_object(
-             '_seed', jsonb_build_object(
-                 'pack', '341_org', 'version', '2.0.0', 'seeded_at', now()::text,
-                 'due_day_rule', 'first_of_following_month'
-                 -- Engine resolves: release_date + 365 days → round to 1st of next month
-                 -- e.g. PC = 2026-03-15 → +365 = 2027-03-15 → due 2027-04-01
-             )
-         ),
+         '{"_seed": {"pack": "341_org", "version": "2.0.0", "due_day_rule": "first_of_following_month"}}'::jsonb,
          true, v_su)
     ON CONFLICT (tenant_id, payment_term_id, clause_code) DO UPDATE SET
         settles_clause_code = EXCLUDED.settles_clause_code,
@@ -482,14 +486,7 @@ BEGIN
          'RET-10-2TR', 'HEADER', 'GROSS', 'PERCENT', 50.00, 'FIXED',
          'practical_completion', 365,
          100.00,
-         jsonb_build_object(
-             '_seed', jsonb_build_object(
-                 'pack', '341_org', 'version', '2.0.0', 'seeded_at', now()::text,
-                 'due_day_rule', 'first_of_following_month'
-                 -- Engine: PC date + 365 days → round to 1st of next month
-                 -- e.g. PC = 2026-06-20 → +365 = 2027-06-20 → due 2027-07-01
-             )
-         ),
+         '{"_seed": {"pack": "341_org", "version": "2.0.0", "due_day_rule": "first_of_following_month"}}'::jsonb,
          true, v_su)
     ON CONFLICT (tenant_id, payment_term_id, clause_code) DO UPDATE SET
         settles_clause_code = EXCLUDED.settles_clause_code,
@@ -598,6 +595,14 @@ BEGIN
           (EXCLUDED.qualify_within_days, EXCLUDED.discount_pct);
 
 
+    -- Activate all seeded payment terms now that clauses and tiers are set.
+    UPDATE master.payment_term
+       SET status = 'active', updated_at = now(), updated_by = v_su
+     WHERE tenant_id = v_tid
+       AND code IN (SELECT code FROM _pt)
+       AND version = 1
+       AND status = 'draft';
+
     -- ══════════════════════════════════════════════════════════════════════
     -- ASSERTIONS
     -- ══════════════════════════════════════════════════════════════════════
@@ -605,7 +610,7 @@ BEGIN
     -- A1: Total payment terms >= 28
     IF (SELECT count(*) FROM master.payment_term
         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = '341_org') < 28
-    THEN RAISE EXCEPTION '341 FAIL: expected >= 25 payment terms, got %',
+    THEN RAISE EXCEPTION '341 FAIL: expected >= 28 payment terms, got %',
         (SELECT count(*) FROM master.payment_term
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = '341_org');
     END IF;

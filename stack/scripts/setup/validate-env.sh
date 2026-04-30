@@ -4,8 +4,9 @@
 # Location:
 #   stack/scripts/setup/validate-env.sh
 # Usage:
-#   ./validate-env.sh              (auto-detects .env)
-#   ./validate-env.sh /path/.env   (explicit env file)
+#   ./validate-env.sh                                       (auto-detects stack/env/.env)
+#   ./validate-env.sh /path/bootstrap.env                   (explicit single env file)
+#   ./validate-env.sh /path/bootstrap.env /path/secrets.env (two-file merge; secrets win)
 #
 # Validates that all required environment variables are set and
 # consistent before docker compose up. Called automatically by
@@ -26,6 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_DIR="$STACK_DIR/env"
 ENV_FILE="${1:-$ENV_DIR/.env}"
+ENV_FILE_2="${2:-}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "FATAL: env file not found: $ENV_FILE"
@@ -46,6 +48,22 @@ while IFS='=' read -r key value; do
   value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
   ENV_MAP["$key"]="$value"
 done < <(tr -d '\r' < "$ENV_FILE")
+
+# Merge second env file if provided (secrets win on duplicates — mirrors docker compose --env-file order)
+if [[ -n "$ENV_FILE_2" ]]; then
+  if [[ ! -f "$ENV_FILE_2" ]]; then
+    echo "FATAL: second env file not found: $ENV_FILE_2"
+    exit 1
+  fi
+  while IFS='=' read -r key value; do
+    [[ "$key" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$key" ]] && continue
+    key=$(echo "$key" | xargs)
+    [[ -z "$key" ]] && continue
+    value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
+    ENV_MAP["$key"]="$value"
+  done < <(tr -d '\r' < "$ENV_FILE_2")
+fi
 
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-}"
 
@@ -131,6 +149,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # DB_HOST is substituted into pgbouncer-{apps,auth}.ini at container start.
   # If unset, the compose default ('db') leaks the dev service name into prod.
   require_var DB_HOST
+  require_var DB_ADMIN_USER
   require_var DBPOOL_APPS_PASSWORD
   require_var DBPOOL_SESSION_PASSWORD
   require_var IAM_ADMIN_PASSWORD
@@ -164,7 +183,7 @@ fi
 # config dir so the memorycache container mounts a hash-ready file —
 # no sed/sha256sum at container startup, no substitution race window.
 # ----------------------------
-ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-}"
+ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-${ENV_MAP[ATHYPER_CONFIG_ROOT]:-}}"
 ACL_TPL="$STACK_DIR/config/memorycache/redis-acl.conf.tpl"
 if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
   echo "  FAIL  ATHYPER_CONFIG not set — Redis ACL cannot be rendered (memorycache will refuse to start)"

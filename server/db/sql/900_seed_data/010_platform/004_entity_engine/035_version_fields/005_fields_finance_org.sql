@@ -29,14 +29,13 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'legal_name',       'legal_name',       'Legal Name',        'string','text',      'one','standard',true, true,  true,  true,  110,v_su),
-            (v_ev,'registration_no',  'registration_no',  'Registration No.',  'string','text',      'one','standard',false,true,  false, true,  120,v_su),
-            (v_ev,'tax_identifier',   'tax_id',           'Tax ID',            'string','text',      'one','standard',false,true,  false, true,  130,v_su),
-            (v_ev,'country_code',     'country_code',     'Country',           'string','text',      'one','standard',true, true,  true,  false, 140,v_su),
-            (v_ev,'currency_id',      'currency_id',      'Currency',          'uuid',  'reference', 'one','standard',true, true,  false, false, 150,v_su),
-            (v_ev,'entity_type',      'entity_type',      'Entity Type',       'enum',  'select',    'one','standard',true, true,  true,  false, 160,v_su),
-            (v_ev,'incorporation_date','incorporation_date','Incorporated',     'date',  'date',      'one','standard',false,true,  true,  false, 170,v_su),
-            (v_ev,'is_publicly_listed','is_publicly_listed','Publicly Listed', 'boolean','hidden',   'one','standard',false,true,  false, false, 180,v_su)
+            (v_ev,'legal_name',        'legal_name',             'Legal Name',        'string','text',      'one','standard',true, true,  true,  true,  110,v_su),
+            (v_ev,'registration_no',   'registration_no',        'Registration No.',  'string','text',      'one','standard',false,true,  false, true,  120,v_su),
+            (v_ev,'tax_identifier',    'tax_registration_number','Tax ID',            'string','text',      'one','standard',false,true,  false, true,  130,v_su),
+            (v_ev,'country_code',      'country_code',           'Country',           'string','text',      'one','standard',true, true,  true,  false, 140,v_su),
+            (v_ev,'entity_type',       'entity_type',            'Entity Type',       'enum',  'select',    'one','standard',true, true,  true,  false, 150,v_su),
+            (v_ev,'incorporation_date','incorporation_date',      'Incorporated',      'date',  'date',      'one','standard',false,true,  true,  false, 160,v_su),
+            (v_ev,'is_publicly_listed','is_publicly_listed',     'Publicly Listed',   'boolean','hidden',   'one','standard',false,true,  false, false, 170,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -111,11 +110,11 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'company_code_id',  'company_code_id',  'Company Code',  'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'cost_center_type', 'cost_center_type', 'Type',          'enum','select',   'one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'manager_id',       'manager_id',       'Manager',       'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'parent_id',        'parent_id',        'Parent',        'uuid','reference','one','standard',false,true,  false, false,140,v_su),
-            (v_ev,'business_unit_id', 'business_unit_id', 'Business Unit', 'uuid','reference','one','standard',false,true,  false, false,150,v_su)
+            (v_ev,'company_code_id',  'company_code_id',     'Company Code',  'uuid','reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'cost_center_type', 'cost_center_category','Type',          'enum','select',   'one','standard',true, true,  true,  false,120,v_su),
+            (v_ev,'manager_id',       'responsible_person_id','Manager',      'uuid','reference','one','standard',false,true,  false, false,130,v_su),
+            (v_ev,'parent_id',        'parent_id',           'Parent',        'uuid','reference','one','standard',false,true,  false, false,140,v_su),
+            (v_ev,'business_unit_id', 'business_unit_id',    'Business Unit', 'uuid','reference','one','standard',false,true,  false, false,150,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -137,10 +136,10 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'company_code_id', 'company_code_id', 'Company Code', 'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'pc_type',         'pc_type',         'Type',         'enum','select',   'one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'manager_id',      'manager_id',      'Manager',      'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'parent_id',       'parent_id',       'Parent',       'uuid','reference','one','standard',false,true,  false, false,140,v_su)
+            (v_ev,'company_code_id', 'company_code_id',     'Company Code', 'uuid','reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'pc_type',         'profit_center_type',  'Type',         'enum','select',   'one','standard',true, true,  true,  false,120,v_su),
+            (v_ev,'manager_id',      'responsible_person_id','Manager',     'uuid','reference','one','standard',false,true,  false, false,130,v_su),
+            (v_ev,'parent_id',       'parent_id',           'Parent',       'uuid','reference','one','standard',false,true,  false, false,140,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -162,10 +161,9 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'company_code_id', 'company_code_id', 'Company Code',   'uuid','reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'site_id',         'site_id',         'Site',           'uuid','reference','one','standard',true, true,  false, false,110,v_su),
             (v_ev,'warehouse_type',  'warehouse_type',  'Type',           'enum','select',   'one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'address_id',      'address_id',      'Address',        'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'capacity',        'capacity',        'Capacity',       'decimal','number','one','standard',false,false, true,  false,140,v_su)
+            (v_ev,'manager_id',      'manager_id',      'Manager',        'uuid','reference','one','standard',false,true,  false, false,130,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

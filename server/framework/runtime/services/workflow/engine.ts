@@ -15,7 +15,6 @@
  *   The engine checks for an existing pending request before inserting (idempotent).
  */
 
-import { sql } from "kysely";
 import type { Kysely, Transaction } from "kysely";
 import { evaluateJsonLogic } from "./jsonlogic.js";
 import type { ApproverResolverService } from "./approver-resolver.service.js";
@@ -251,7 +250,7 @@ export class WorkflowEngine {
       )
       .where("wt.is_active", "=", true)
       // Prefer tenant-specific over platform-global
-      .orderBy("wt.tenant_id", sql`desc nulls last`)
+      .orderBy("wt.tenant_id", (ob) => ob.desc().nullsLast())
       .executeTakeFirst();
 
     if (!template) {
@@ -907,7 +906,7 @@ export class WorkflowEngine {
           "ws.stage_no as stageNo",
           "ws.name as stageName",
         ])
-        .orderBy("wi.due_at", sql`asc nulls last`)
+        .orderBy("wi.due_at", (ob) => ob.asc().nullsLast())
         .orderBy("wi.assigned_at", "asc")
         .limit(limit)
         .offset(offset)

@@ -27,14 +27,11 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'owner_type',      'owner_type',      'Owner Type',   'string', 'text',     'one','standard',true, true,  true,  false,110,v_su),
-            (v_ev,'owner_id',        'owner_id',        'Owner',        'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'file_name',       'file_name',       'File Name',    'string', 'text',     'one','standard',true, false, true,  true, 130,v_su),
-            (v_ev,'file_size',       'file_size',       'File Size',    'integer','number',   'one','system',  false,false, true,  false,140,v_su),
-            (v_ev,'mime_type',       'mime_type',       'MIME Type',    'string', 'text',     'one','system',  false,true,  true,  false,150,v_su),
-            (v_ev,'storage_key',     'storage_key',     'Storage Key',  'string', 'text',     'one','system',  false,false, false, false,160,v_su),
-            (v_ev,'is_public',       'is_public',       'Public',       'boolean','hidden',   'one','standard',false,true,  false, false,170,v_su),
-            (v_ev,'checksum',        'checksum',        'Checksum',     'string', 'text',     'one','system',  false,false, false, false,180,v_su)
+            (v_ev,'file_name',   'file_name',    'File Name',  'string', 'text',  'one','standard',true, false, true,  true, 110,v_su),
+            (v_ev,'file_size',   'size_bytes',   'File Size',  'integer','number','one','system',  false,false, true,  false,120,v_su),
+            (v_ev,'mime_type',   'content_type', 'MIME Type',  'string', 'text',  'one','system',  false,true,  true,  false,130,v_su),
+            (v_ev,'storage_key', 'storage_key',  'Storage Key','string', 'text',  'one','system',  false,false, false, false,140,v_su),
+            (v_ev,'checksum',    'sha256',        'Checksum',   'string', 'text',  'one','system',  false,false, false, false,150,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -56,11 +53,10 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'upload_ref',  'upload_id',   'Upload ID',   'string', 'text',  'one','system',  true, false, false, false,110,v_su),
-            (v_ev,'file_name',   'file_name',   'File Name',   'string', 'text',  'one','standard',true, false, true,  true, 120,v_su),
-            (v_ev,'mime_type',   'mime_type',   'MIME Type',   'string', 'text',  'one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'total_parts', 'total_parts', 'Total Parts', 'integer','number','one','system',  false,false, false, false,140,v_su),
-            (v_ev,'expires_at',  'expires_at',  'Expires At',  'timestamp','datetime','one','system',false,true,true,false,150,v_su)
+            (v_ev,'upload_ref',  'upload_id',    'Upload ID',  'string',    'text',     'one','system',  true, false, false, false,110,v_su),
+            (v_ev,'file_name',   'file_name',    'File Name',  'string',    'text',     'one','standard',true, false, true,  true, 120,v_su),
+            (v_ev,'mime_type',   'content_type', 'MIME Type',  'string',    'text',     'one','standard',false,true,  false, false,130,v_su),
+            (v_ev,'expires_at',  'expires_at',   'Expires At', 'timestamp', 'datetime', 'one','system',  false,true,  true,  false,140,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -107,13 +103,10 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'entity_type',   'entity_type',   'Entity Type', 'string', 'text',     'one','standard',true, true,  true,  false,110,v_su),
-            (v_ev,'entity_id',     'entity_id',     'Entity',      'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'parent_id',     'parent_id',     'Parent',      'uuid',   'reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'body',          'body',          'Body',        'text',   'textarea', 'one','standard',true, false, false, true, 140,v_su),
-            (v_ev,'body_format',   'body_format',   'Format',      'enum',   'select',   'one','standard',true, true,  false, false,150,v_su),
-            (v_ev,'is_flagged',    'is_flagged',    'Flagged',     'boolean','hidden',   'one','standard',false,true,  false, false,160,v_su),
-            (v_ev,'is_pinned',     'is_pinned',     'Pinned',      'boolean','hidden',   'one','standard',false,true,  false, false,170,v_su)
+            (v_ev,'entity_type',   'entity_type',      'Entity Type', 'string', 'text',     'one','standard',true, true,  true,  false,110,v_su),
+            (v_ev,'entity_id',     'entity_id',        'Entity',      'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'parent_id',     'parent_comment_id','Parent',      'uuid',   'reference','one','standard',false,true,  false, false,130,v_su),
+            (v_ev,'body',          'comment_text',     'Body',        'text',   'textarea', 'one','standard',true, false, false, true, 140,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -137,7 +130,7 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
 FROM (VALUES
             (v_ev,'entity_type', 'entity_type', 'Entity Type', 'string','text',     'one','standard',true, true,  false, false,110,v_su),
             (v_ev,'entity_id',   'entity_id',   'Entity',      'uuid',  'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'body',        'body',        'Draft Body',  'text',  'textarea', 'one','standard',false,false, false, false,130,v_su)
+            (v_ev,'body',        'draft_text',  'Draft Body',  'text',  'textarea', 'one','standard',false,false, false, false,130,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -159,9 +152,9 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'comment_id',  'comment_id',  'Comment',     'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'principal_id','principal_id','Mentioned User','uuid','reference','one','standard',true,true, false, false,120,v_su),
-            (v_ev,'is_notified', 'is_notified', 'Notified',    'boolean','hidden','one','system',  false,true,  false, false,130,v_su)
+            (v_ev,'comment_id',  'comment_id',  'Comment',       'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'principal_id','mentioned_id','Mentioned User','uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'is_notified', 'is_notified', 'Notified',      'boolean','hidden',   'one','system',  false,true,  false, false,130,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -183,9 +176,9 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'comment_id',  'comment_id',  'Comment',    'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'principal_id','principal_id','User',       'uuid','reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'emoji',       'emoji',       'Emoji',      'string','text',   'one','standard',true, true,  true,  false,130,v_su)
+            (v_ev,'comment_id',  'comment_id',   'Comment', 'uuid',  'reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'principal_id','principal_id', 'User',    'uuid',  'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'emoji',       'reaction_type','Emoji',   'string','text',     'one','standard',true, true,  true,  false,130,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -207,11 +200,9 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'entity_type',  'entity_type',  'Entity Type', 'string', 'text',     'one','standard',true, true,  true,  false,110,v_su),
-            (v_ev,'entity_id',    'entity_id',    'Entity',      'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'subject',      'subject',      'Subject',     'string', 'text',     'one','standard',false,false, true,  true, 130,v_su),
-            (v_ev,'is_resolved',  'is_resolved',  'Resolved',    'boolean','hidden',   'one','standard',false,true,  false, false,140,v_su),
-            (v_ev,'resolved_at',  'resolved_at',  'Resolved At', 'timestamp','datetime','one','system', false,true,  true,  false,150,v_su)
+            (v_ev,'entity_type',  'entity_type', 'Entity Type', 'string', 'text',     'one','standard',true, true,  true,  false,110,v_su),
+            (v_ev,'entity_id',    'entity_id',   'Entity',      'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'subject',      'title',       'Subject',     'string', 'text',     'one','standard',false,false, true,  true, 130,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

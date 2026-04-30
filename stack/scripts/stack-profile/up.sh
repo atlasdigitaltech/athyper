@@ -42,6 +42,21 @@ ACTIVE_PROFILE="${1:-}"
 # ----------------------------
 if [[ ! -f "$ENV_FILE" ]]; then
   echo ""
+  if [[ "$ENV_FILE" != "$ENV_DIR/.env" ]]; then
+    # Staging / production: ENV_FILE is the secrets file, not the bootstrap.
+    # Auto-creating it would overwrite generated secrets with template values.
+    echo "ERROR: Secrets env file not found: $ENV_FILE"
+    echo ""
+    echo "  ATHYPER_SECRETS_ROOT = ${ATHYPER_SECRETS_ROOT:-<unset>}"
+    echo "  Expected secrets at  : $ENV_FILE"
+    echo ""
+    echo "Generate the secrets file first (run as root on the server):"
+    echo "  export ACME_EMAIL=\"ops@yourdomain.com\""
+    echo "  sudo bash $STACK_DIR/scripts/setup/write-env-staging.sh"
+    echo ""
+    exit 1
+  fi
+
   echo "WARNING: .env not found: $ENV_FILE"
   echo ""
 
@@ -117,7 +132,13 @@ echo ""
 # ----------------------------
 VALIDATE_SCRIPT="$STACK_DIR/scripts/setup/validate-env.sh"
 if [[ -f "$VALIDATE_SCRIPT" ]]; then
-  if ! bash "$VALIDATE_SCRIPT" "$ENV_FILE"; then
+  # Staging/prod: validate the merged view (bootstrap + secrets) to match what
+  # docker compose sees. In local dev, bootstrap IS the secrets file — single arg.
+  _VALIDATE_ARGS=("$ENV_FILE")
+  if [[ "$ENV_DIR/.env" != "$ENV_FILE" ]] && [[ -f "$ENV_DIR/.env" ]]; then
+    _VALIDATE_ARGS=("$ENV_DIR/.env" "$ENV_FILE")
+  fi
+  if ! bash "$VALIDATE_SCRIPT" "${_VALIDATE_ARGS[@]}"; then
     if [[ "${SKIP_ENV_VALIDATION:-}" != "1" ]]; then
       echo ""
       echo "ERROR: Environment validation failed. Fix the errors above."

@@ -78,12 +78,13 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
   };
 
   if (!objectStorage) {
-    router.post(  "/collab/attachments",                           unavailable);
-    router.delete("/collab/attachments/:attachmentId",             unavailable);
-    router.get(   "/collab/attachments/:attachmentId/download",    unavailable);
-    router.post(  "/collab/attachments/:attachmentId/link",        unavailable);
-    router.delete("/collab/attachments/:attachmentId/link",        unavailable);
-    router.get(   "/collab/entity-attachments",                    unavailable);
+    router.post(  "/collab/attachments",                               unavailable);
+    router.delete("/collab/attachments/:attachmentId",                 unavailable);
+    router.get(   "/collab/attachments/:attachmentId/download",        unavailable);
+    router.post(  "/collab/attachments/:attachmentId/link",            unavailable);
+    router.delete("/collab/attachments/:attachmentId/link",            unavailable);
+    router.patch( "/collab/attachments/:attachmentId/properties",      unavailable);
+    router.get(   "/collab/entity-attachments",                        unavailable);
     return;
   }
 
@@ -466,29 +467,74 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const rows = await db
         .selectFrom("master.entity_document_link as edl")
         .innerJoin("master.attachment as a", "a.id" as never, "edl.attachment_id" as never)
+        .leftJoin("master.principal as p", "p.id" as never, "a.uploaded_by" as never)
         .select([
           "a.id as attachment_id",
           "a.file_name",
           "a.content_type",
           "a.size_bytes",
-          "edl.linked_at",
+          "a.kind",
+          "a.version_no",
+          "a.is_current",
+          "a.is_virus_scanned",
+          "a.preview_key",
+          "a.is_preview_generation_failed",
+          "a.text_extraction_status",
+          "a.status",
+          "edl.created_at as linked_at",
+          "p.name as uploaded_by_name",
         ] as never[])
         .where("edl.tenant_id"   as never, "=", tenantId    as never)
         .where("edl.entity_type" as never, "=", entity_type as never)
         .where("edl.entity_id"   as never, "=", entity_id   as never)
-        .where("a.status"        as never, "=", "active"    as never)
-        .orderBy("edl.linked_at" as never, "desc")
+        .where("a.status"        as never, "in", ["active", "quarantined"] as never)
+        .orderBy("edl.created_at" as never, "desc")
         .execute();
 
       const data = rows.map((r) => {
-        const row = r as Record<string, unknown>;
+        const row            = r as Record<string, unknown>;
+        const attachmentId   = row["attachment_id"] as string;
+        const contentType    = (row["content_type"] as string) ?? "application/octet-stream";
+        const attachStatus   = (row["status"] as string) ?? "active";
+        const isVirusScanned = Boolean(row["is_virus_scanned"]);
+        const previewKey     = row["preview_key"] as string | null | undefined;
+        const previewFailed  = Boolean(row["is_preview_generation_failed"]);
+
+        // Derive previewKind from content type
+        let previewKind: "image" | "pdf" | "text" | "none" = "none";
+        if (contentType.startsWith("image/")) previewKind = "image";
+        else if (contentType === "application/pdf") previewKind = "pdf";
+        else if (contentType.startsWith("text/") || contentType === "application/json" || contentType === "application/xml") previewKind = "text";
+
+        // Derive scanStatus — only surface quarantined, otherwise suppress until scan worker is wired
+        const scanStatus: "pending" | "clean" | "quarantined" =
+          attachStatus === "quarantined" ? "quarantined" :
+          isVirusScanned                 ? "clean"       : "pending";
+
+        // Derive previewStatus
+        let previewStatus: "pending" | "ready" | "failed" | "none" = "none";
+        if (previewKind !== "none") {
+          if (previewFailed)   previewStatus = "failed";
+          else if (previewKey) previewStatus = "ready";
+          else                 previewStatus = "pending";
+        }
+
         return {
-          attachmentId: row["attachment_id"] as string,
-          fileName:     row["file_name"]     as string,
-          contentType:  row["content_type"]  as string,
-          sizeBytes:    Number(row["size_bytes"] ?? 0),
-          linkedAt:     row["linked_at"]     as string,
-          downloadUrl:  `/api/collab/attachments/${row["attachment_id"] as string}/download`,
+          attachmentId,
+          fileName:         row["file_name"]            as string,
+          contentType,
+          sizeBytes:        Number(row["size_bytes"] ?? 0),
+          linkedAt:         row["linked_at"]            as string,
+          downloadUrl:      `/api/collab/attachments/${attachmentId}/download`,
+          uploadedByName:   (row["uploaded_by_name"]    as string) ?? null,
+          kind:             (row["kind"]                as string) ?? "attachment",
+          versionNo:        Number(row["version_no"]    ?? 1),
+          isCurrent:        Boolean(row["is_current"]   ?? true),
+          visibility:       "internal" as const,
+          scanStatus,
+          previewStatus,
+          previewKind,
+          extractionStatus: (row["text_extraction_status"] as string) ?? null,
         };
       });
 
@@ -499,10 +545,56 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
     }
   };
 
-  router.post(  "/collab/attachments",                           uploadHandler);
-  router.delete("/collab/attachments/:attachmentId",             deleteHandler);
-  router.get(   "/collab/attachments/:attachmentId/download",    downloadHandler);
-  router.post(  "/collab/attachments/:attachmentId/link",        linkHandler);
-  router.delete("/collab/attachments/:attachmentId/link",        unlinkHandler);
-  router.get(   "/collab/entity-attachments",                    listEntityAttachmentsHandler);
+  // ── PATCH /api/collab/attachments/:attachmentId/properties ─────────────────
+
+  const patchPropertiesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { attachmentId } = req.params as { attachmentId: string };
+      if (!isUuid(attachmentId)) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const body = req.body as { file_name?: string };
+      if (!body.file_name || typeof body.file_name !== "string" || !body.file_name.trim()) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "file_name is required" });
+        return;
+      }
+
+      const existing = await db
+        .selectFrom("master.attachment as a")
+        .select(["a.id"])
+        .where("a.id",        "=", attachmentId)
+        .where("a.tenant_id", "=", tenantId)
+        .where("a.status",    "=", "active")
+        .executeTakeFirst();
+
+      if (!existing) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
+
+      await db
+        .updateTable("master.attachment" as never)
+        .set({ file_name: body.file_name.trim().slice(0, 500), updated_at: new Date() } as never)
+        .where("id"        as never, "=", attachmentId as never)
+        .where("tenant_id" as never, "=", tenantId     as never)
+        .execute();
+
+      res.json({ ok: true });
+    } catch (err) {
+      logger?.error("collab_attachment_patch_properties_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  router.post(  "/collab/attachments",                               uploadHandler);
+  router.delete("/collab/attachments/:attachmentId",                 deleteHandler);
+  router.get(   "/collab/attachments/:attachmentId/download",        downloadHandler);
+  router.post(  "/collab/attachments/:attachmentId/link",            linkHandler);
+  router.delete("/collab/attachments/:attachmentId/link",            unlinkHandler);
+  router.patch( "/collab/attachments/:attachmentId/properties",      patchPropertiesHandler);
+  router.get(   "/collab/entity-attachments",                        listEntityAttachmentsHandler);
 }

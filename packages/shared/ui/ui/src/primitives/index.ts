@@ -36,3 +36,4 @@ export {
   DropdownMenuPortal, DropdownMenuSub, DropdownMenuRadioGroup,
 } from "./DropdownMenu";
 export { RelativeTimeCell, type RelativeTimeCellProps } from "./RelativeTimeCell";
+export { DrawerShell, type DrawerShellProps, type DrawerIntent } from "./DrawerShell";

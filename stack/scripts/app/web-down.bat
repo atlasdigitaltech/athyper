@@ -10,6 +10,12 @@ REM   local      -> prints guidance (Next.js dev runs in your terminal)
 REM   staging    -> docker compose stop athyper-neon-web
 REM   production -> docker compose stop athyper-neon-web
 REM ============================================================
+REM
+REM LOCAL WINDOWS DEVELOPMENT ONLY.
+REM For staging or production deployments use the Linux .sh equivalents on Ubuntu.
+REM The .bat scripts do not implement the two-file env model (bootstrap + secrets)
+REM required for staging/production and will silently drop secrets-file variables.
+REM ============================================================
 
 REM ----------------------------
 REM Resolve directories

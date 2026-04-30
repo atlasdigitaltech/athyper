@@ -30,14 +30,15 @@ import { useState, useMemo, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUpdateEntity } from "@athyper/query";
-import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Lock } from "lucide-react";
+import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Lock, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import {
   Button, Card, CardContent, Label, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
-  Tooltip, TooltipContent, TooltipTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+  DrawerShell,
 } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import { EntityHeader } from "../header";
@@ -75,6 +76,12 @@ function formatDate(val: unknown): string {
   } catch {
     return String(val);
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatValue(val: unknown, field?: EntityField): string {
@@ -116,7 +123,7 @@ const RECORD_VERBS = new Set([
 
 function classifyActionGroup(permissionCode: string): "lifecycle" | "record" | undefined {
   const code = permissionCode.toLowerCase();
-  const stem = code.split("_")[0];
+  const stem = code.split("_")[0] ?? "";
   if (LIFECYCLE_VERBS.has(code) || LIFECYCLE_VERBS.has(stem)) return "lifecycle";
   if (RECORD_VERBS.has(code)    || RECORD_VERBS.has(stem))    return "record";
   return undefined;
@@ -836,13 +843,14 @@ function EmptyState({
   );
 }
 
-// ── Platform panel label ──────────────────────────────────────────────────────
+// ── Platform panel labels + default widths ────────────────────────────────────
 
 const PANEL_LABELS: Record<string, string> = {
   comments:    "Comments",
   attachments: "Attachments",
   activity:    "Activity",
 };
+
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -860,6 +868,7 @@ export function RichMasterDetailPage({
   const formRef        = useRef<EntityFormHandle>(null);
   const [isDirty, setIsDirty]         = useState(false);
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [panelCount,  setPanelCount]  = useState<number | null>(null);
   // Lifted form state for composite-tab edits (InlineEditSection does not own its own state).
   const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
 
@@ -935,7 +944,7 @@ export function RichMasterDetailPage({
     enabled: hasPlatformComments,
   });
 
-  const attachmentsCountQuery = useQuery<unknown[]>({
+  const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
     queryKey: ["attachments", entity.entity_code, recordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
@@ -943,14 +952,19 @@ export function RichMasterDetailPage({
         { signal },
       );
       if (!res.ok) return [];
-      return res.json() as Promise<unknown[]>;
+      return res.json() as Promise<{ size_bytes: number; status?: string; visibility?: string }[]>;
     },
     staleTime: 30_000,
     enabled: hasPlatformAttachments,
   });
 
-  const commentsCount    = commentsCountQuery.data?.data?.length ?? 0;
-  const attachmentsCount = Array.isArray(attachmentsCountQuery.data) ? attachmentsCountQuery.data.length : 0;
+  const commentsCount          = commentsCountQuery.data?.data?.length ?? 0;
+  const attachmentsData        = attachmentsCountQuery.data ?? [];
+  const attachmentsCount       = attachmentsData.length;
+  const attachmentsTotalBytes  = attachmentsData.reduce((s, a) => s + (a.size_bytes ?? 0), 0);
+  const attachmentsQuarantined = attachmentsData.filter((a) => a.status === "quarantined").length;
+  const attachmentsShared      = attachmentsData.filter((a) => a.visibility === "shared_with_supplier").length;
+  const attachmentsInternal    = attachmentsCount - attachmentsShared;
 
   // Build platform icons with live counts
   const platformIcons: PlatformPanelIcon[] = useMemo(
@@ -1045,7 +1059,11 @@ export function RichMasterDetailPage({
   }
 
   function handlePlatformIconClick(id: string) {
-    setActivePanel((prev) => (prev === id ? null : id));
+    setActivePanel((prev) => {
+      if (prev === id) return null;
+      setPanelCount(null);
+      return id;
+    });
   }
 
   const activeTabDef = rawTabs.find((t) => t.id === activeTab);
@@ -1192,29 +1210,103 @@ export function RichMasterDetailPage({
         {renderActiveTab()}
       </div>
 
-      {/* Platform context panels — slide in from right, do not navigate */}
-      <Sheet open={activePanel !== null} onOpenChange={(open) => { if (!open) setActivePanel(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
-          <SheetHeader className="px-6 pt-5 pb-4 border-b border-border shrink-0">
-            <SheetTitle>{activePanel ? (PANEL_LABELS[activePanel] ?? activePanel) : ""}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            {activePanel === "comments" && (
-              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            )}
-            {activePanel === "attachments" && (
-              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            )}
-            {activePanel === "activity" && (
-              <EventsPanel
-                entityCode={entity.entity_code}
-                recordId={recordId}
-                recordUuid={record.id}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Platform context panels — context-weight drawer: resizable, expandable, enriched header */}
+      <DrawerShell
+        open={activePanel !== null}
+        onOpenChange={(open) => { if (!open) setActivePanel(null); }}
+        intent="context"
+        widthKey={activePanel ? `master:${entity.entity_code}:${activePanel}` : undefined}
+        defaultWidth="60vw"
+        minWidth="30vw"
+        expandedWidth="80vw"
+        maxWidth="85vw"
+        resizable
+        expandable
+        badge={config.type_label ?? entity.entity_name.toUpperCase().replace(/_/g, " ")}
+        title={
+          activePanel ? (
+            <span className="flex items-center gap-2">
+              {PANEL_LABELS[activePanel] ?? activePanel}
+              {(() => {
+                const count = activePanel === "attachments" ? attachmentsCount : panelCount;
+                return count !== null && count > 0 ? (
+                  <span className="inline-flex items-center h-5 px-1.5 rounded-full text-[11px] font-semibold bg-muted text-muted-foreground border border-border/60 leading-none tabular-nums">
+                    {count}
+                  </span>
+                ) : null;
+              })()}
+            </span>
+          ) : ""
+        }
+        subtitle={(() => {
+          const base = data["code"]
+            ? `${String(data["code"])}${data["name"] ? ` · ${String(data["name"])}` : ""}`
+            : undefined;
+          if (!base || activePanel !== "attachments" || attachmentsCount === 0) return base;
+          const sizeStr = formatBytes(attachmentsTotalBytes);
+          if (attachmentsQuarantined > 0) {
+            return `${base} · ${sizeStr} · ${attachmentsInternal} internal · ${attachmentsQuarantined} quarantined`;
+          }
+          if (attachmentsShared > 0) {
+            return `${base} · ${sizeStr} · ${attachmentsInternal} internal · ${attachmentsShared} shared`;
+          }
+          return (
+            <>
+              {base}{" · "}{sizeStr}{" · "}
+              <Lock className="inline size-3 align-middle opacity-60" />
+              {" All internal"}
+            </>
+          );
+        })()}
+        headerRight={activePanel === "comments" ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Search comments"
+                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <Search className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Search comments</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Filter comments"
+                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <SlidersHorizontal className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Filter comments</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : undefined}
+      >
+        <div className="px-6 py-5">
+          {activePanel === "comments" && (
+            <CommentsPanel
+              entityCode={entity.entity_code}
+              recordId={recordId}
+              onCountChange={setPanelCount}
+            />
+          )}
+          {activePanel === "attachments" && (
+            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+          )}
+          {activePanel === "activity" && (
+            <EventsPanel
+              entityCode={entity.entity_code}
+              recordId={recordId}
+              recordUuid={record.id}
+            />
+          )}
+        </div>
+      </DrawerShell>
     </>
   );
 }

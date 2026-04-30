@@ -212,6 +212,11 @@ BEGIN
     -- STAGE C: master.principal_profile — all 62 principal users
     -- ══════════════════════════════════════════════════════════════════════
 
+    -- shared.trg_set_updated_at() reads app.current_principal_id to set updated_by.
+    -- Without this GUC the trigger writes NULL, violating principal_profile_audit_pair_chk.
+    PERFORM set_config('app.current_principal_id', v_su::text, true);
+    PERFORM set_config('app.iam_profile_kc_frozen', 'false', true);
+
     INSERT INTO master.principal_profile (
         tenant_id, principal_id,
         given_name, family_name, display_name,
@@ -299,7 +304,8 @@ BEGIN
     AND p.principal_source = 'internal'
     ON CONFLICT (tenant_id, principal_id) DO UPDATE
         SET keycloak_sync_status = 'synced',
-            updated_at = now();
+            updated_at           = now(),
+            updated_by           = v_su;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- STAGE D: master.principal_identity_binding — all 62 principal users

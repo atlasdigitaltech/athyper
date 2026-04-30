@@ -6,14 +6,15 @@ Multi-tenant enterprise platform — monorepo containing the API server, Next.js
 
 | Resource | Path |
 |----------|------|
-| Developer onboarding guide | [docs/developer-onboarding.md](docs/developer-onboarding.md) |
-| Infrastructure (Stack) | [stack/README.md](stack/README.md) |
-| Runbooks | [docs/runbooks/README.md](docs/runbooks/README.md) |
-| DB migration notes | [server/MIGRATION.md](server/MIGRATION.md) |
+| Local development setup | [stack/docs/local-dev-setup.md](stack/docs/local-dev-setup.md) |
+| Staging deployment runbook | [stack/docs/staging-setup.md](stack/docs/staging-setup.md) |
+| Env file contract | [stack/env/README.md](stack/env/README.md) |
+| Secrets management | [stack/docs/secrets-management.md](stack/docs/secrets-management.md) |
+| Stack scripts | [stack/scripts/README.md](stack/scripts/README.md) |
 
 ## Prerequisites
 
-Node.js ≥ 20, pnpm ≥ 9, Docker with Compose, git ≥ 2.40.
+Node.js >= 22, pnpm 10.33.0 via Corepack, Docker with Compose, git >= 2.40.
 
 ```bash
 node -v && pnpm -v && docker info
@@ -26,16 +27,14 @@ node -v && pnpm -v && docker info
 git clone <repo-url> athyper && cd athyper
 pnpm install
 
-# 2. Copy env files
-cp server/.env.example server/.env
-# → edit server/.env: set KEYCLOAK_CLIENT_SECRET (ask team)
+# 2. Create local stack env
+bash stack/scripts/setup/setup-env.sh local stack
 
 # 3. First-time stack setup
 bash stack/scripts/setup/data-dirs-create.sh
-bash stack/scripts/setup/setup-env.sh local
 
 # 4. Start infrastructure (Postgres, Redis, Keycloak, MinIO, …)
-bash stack/scripts/stack/up.sh
+bash stack/scripts/stack-profile/up.sh core
 
 # 5. Run migrations + seed data
 cd server && tsx db/seed/migrate.ts --all && cd ..
@@ -46,7 +45,7 @@ pnpm dev
 
 Web app: http://localhost:3000 · API: http://localhost:4000
 
-See [docs/developer-onboarding.md](docs/developer-onboarding.md) for the full walkthrough, entity registration patterns, worker templates, and PR workflow.
+See [stack/docs/local-dev-setup.md](stack/docs/local-dev-setup.md) for the full local walkthrough and [stack/docs/staging-setup.md](stack/docs/staging-setup.md) for the Ubuntu staging runbook.
 
 ## Repo structure
 

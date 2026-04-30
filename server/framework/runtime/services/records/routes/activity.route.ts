@@ -11,7 +11,7 @@
  *   limit   — max entries (default 100, max 500)
  *   offset  — pagination offset
  *
- * Actor enrichment: joins master.persona (display_name) for each unique actor_id.
+ * Actor enrichment: joins master.principal_profile (display_name) for each unique actor_id.
  *
  * Response: { data: ActivityEntry[] }
  *
@@ -146,7 +146,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       const actorIds = [...new Set(rows.map((r) => r.actor_id).filter(Boolean))] as string[];
       const personas: PersonaRow[] = actorIds.length > 0
         ? await db
-            .selectFrom("master.persona as pe")
+            .selectFrom("master.principal_profile as pe")
             .select(["pe.principal_id", "pe.display_name"] as never[])
             .where("pe.principal_id" as never, "in", actorIds as never)
             .execute() as PersonaRow[]

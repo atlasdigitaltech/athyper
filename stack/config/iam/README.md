@@ -24,15 +24,13 @@ Keycloak realm export containing:
 **Linux/macOS:**
 
 ```bash
-cd stack/scripts
-./export-iam.sh
+bash stack/scripts/db/session/iam/export-iam.sh
 ```
 
 **Windows:**
 
 ```cmd
-cd stack\scripts
-export-iam.bat
+stack\scripts\db\session\iam\export-iam.bat
 ```
 
 This will export the current `athyper` realm to `realm-demosetup.json`.
@@ -42,15 +40,13 @@ This will export the current `athyper` realm to `realm-demosetup.json`.
 **Linux/macOS:**
 
 ```bash
-cd stack/scripts
-./initdb-iam.sh
+bash stack/scripts/db/session/iam/import-iam.sh
 ```
 
 **Windows:**
 
 ```cmd
-cd stack\scripts
-initdb-iam.bat
+stack\scripts\db\session\iam\import-iam.bat
 ```
 
 This will import `realm-demosetup.json` into Keycloak, overriding existing data.
@@ -61,12 +57,10 @@ This will import `realm-demosetup.json` into Keycloak, overriding existing data.
 
 ```bash
 # Start stack infrastructure
-cd stack
-./up.sh --profile core
+bash stack/scripts/stack-profile/up.sh core
 
 # Import demo realm configuration
-cd scripts
-./initdb-iam.sh
+bash stack/scripts/db/session/iam/import-iam.sh
 
 # Verify in Admin Console
 # http://localhost/auth
@@ -77,7 +71,7 @@ cd scripts
 ```bash
 # 1. Make changes via Keycloak Admin Console
 # 2. Export updated configuration
-./export-iam.sh
+bash stack/scripts/db/session/iam/export-iam.sh
 
 # 3. Commit changes (if desired)
 git add stack/config/iam/realm-demosetup.json
@@ -90,8 +84,7 @@ git commit -m "IAM: Updated client redirect URIs for staging"
 # Development → Staging
 git checkout staging
 git merge development
-cd stack/scripts
-./initdb-iam.sh
+bash stack/scripts/db/session/iam/import-iam.sh
 
 # Verify changes in staging environment
 ```
@@ -103,9 +96,10 @@ cd stack/scripts
 ### Passwords are NEVER committed to realm JSON
 
 Demo user passwords are set **after** realm import by
-[`stack/scripts/db/seed-iam-credentials.sh`](../../scripts/db/seed-iam-credentials.sh) using
-`kcadm.sh set-password`. Source values come from `IAM_DEMO_USER_PASSWORD` and
-`IAM_PLATFORM_CONTROL_USER_PASSWORD` in `stack/env/.env` (safe dev defaults in `.env.example`).
+[`stack/scripts/db/session/iam/seed-iam-credentials.sh`](../../scripts/db/session/iam/seed-iam-credentials.sh) using
+`kcadm.sh set-password`. Source values come from the merged environment:
+local reads `stack/env/.env`, while staging/production read the non-secret
+bootstrap plus `/opt/stack/athyper/secrets/.env`.
 
 Every user in the committed JSON has `"credentials": []` and `"requiredActions": ["UPDATE_PASSWORD"]`
 as a defense-in-depth guard: if an older JSON with inline passwords is ever re-imported, the required
@@ -190,28 +184,31 @@ Key sections:
 docker ps | grep iam
 
 # Start stack if needed
-cd stack && ./up.sh --profile core
+bash stack/scripts/stack-profile/up.sh core
 ```
 
 ### Import fails: "Cannot connect to database"
 
 ```bash
 # Check database connection
-docker exec athyper-stack-dbpool-auth-1 \
-  psql -U athyperauth -d athyperauth_dev1 -c '\l'
+docker exec athyper-stack-dbpool-session-1 \
+  psql -U athyperauth -d athyper_iam -c '\l'
 
-# Check password in stack/env/.env
+# Local: check password in stack/env/.env
 grep IAM_DB_PASSWORD stack/env/.env
+
+# Staging/production: password lives in the secrets-only env file
+grep IAM_DB_PASSWORD /opt/stack/athyper/secrets/.env
 ```
 
 ### Import succeeds but changes not visible
 
 ```bash
 # Keycloak caches realm data - restart required
-docker restart athyper-stack-iam-1
+bash stack/scripts/stack-profile/restart.sh iam
 
 # Wait for health check
-docker logs -f athyper-stack-iam-1
+bash stack/scripts/stack-profile/logs.sh iam -f
 ```
 
 ### "Invalid JSON" error

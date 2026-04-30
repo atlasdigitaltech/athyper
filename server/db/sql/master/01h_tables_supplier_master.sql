@@ -440,29 +440,6 @@ CREATE TABLE IF NOT EXISTS master.party_contact_person (
     contact_name    text        NOT NULL,
     business_title  text,
 
-    -- Email
-    email           text,
-
-    -- Phone (decomposed format — matches UI: country code + area + number + extension)
-    phone_calling_code  text,               -- e.g. '60', '1', '44'
-    phone_area          text,
-    phone_number        text,
-    phone_extension     text,
-
-    -- Fax
-    fax_calling_code    text,
-    fax_area            text,
-    fax_number          text,
-    fax_extension       text,
-
-    -- Address (inline for atomicity — avoids join for contact list render)
-    address_line1           text,
-    address_line2           text,
-    city                    text,
-    state_region            text,
-    postal_code             text,
-    address_country_code    char(2),        -- ISO 3166-1 alpha-2
-
     -- Primary flag (at most one primary per party)
     is_primary      boolean     NOT NULL DEFAULT false,
 
@@ -485,18 +462,11 @@ CREATE TABLE IF NOT EXISTS master.party_contact_person (
     CONSTRAINT pcp_tenant_uq        UNIQUE (tenant_id, id),
     CONSTRAINT pcp_name_nonempty    CHECK (btrim(contact_name) <> ''),
     CONSTRAINT pcp_party_nonempty   CHECK (btrim(party_type) <> ''),
-    CONSTRAINT pcp_email_fmt_chk    CHECK (
-        email IS NULL OR email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
-    CONSTRAINT pcp_country_fmt_chk  CHECK (
-        address_country_code IS NULL OR address_country_code ~ '^[A-Z]{2}$'),
     CONSTRAINT pcp_status_chk       CHECK (status IN ('active', 'inactive', 'departed'))
 );
 
 CREATE INDEX IF NOT EXISTS pcp_party_idx
     ON master.party_contact_person (tenant_id, party_type, party_id);
-CREATE INDEX IF NOT EXISTS pcp_email_idx
-    ON master.party_contact_person (tenant_id, email)
-    WHERE email IS NOT NULL;
 CREATE INDEX IF NOT EXISTS pcp_primary_pidx
     ON master.party_contact_person (tenant_id, party_type, party_id)
     WHERE is_primary = true AND is_active = true;
@@ -509,8 +479,6 @@ COMMENT ON TABLE master.party_contact_person IS
 COMMENT ON COLUMN master.party_contact_person.company_code_id IS
     'Optional scope — NULL means contact applies to all company codes of this party. '
     'Set when a contact is specific to one operating entity in a supplier group.';
-COMMENT ON COLUMN master.party_contact_person.phone_calling_code IS
-    'International dialing prefix (e.g. 60, 1, 44). Not E.164 — decomposed for UI rendering.';
 
 
 -- ============================================================================

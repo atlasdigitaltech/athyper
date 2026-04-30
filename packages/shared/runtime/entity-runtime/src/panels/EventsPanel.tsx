@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@athyper/ui/primitives";
-import { ActivityTimeline } from "@athyper/collaboration-ui/activity";
+import { ActivityFeed } from "@athyper/collaboration-ui/activity";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 
 export interface EventsPanelProps {
@@ -33,5 +33,5 @@ export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelPro
     );
   }
 
-  return <ActivityTimeline entries={data?.data ?? []} />;
+  return <ActivityFeed entries={data?.data ?? []} />;
 }

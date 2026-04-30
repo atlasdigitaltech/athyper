@@ -43,22 +43,12 @@ resolve_compose_override
 docker_preflight
 build_compose_file_list
 
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose ... restart athyper-api"
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" restart athyper-api
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" restart athyper-api
-fi
+echo "Running: docker compose ... restart athyper-api"
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" restart athyper-api
 
 echo ""
 echo "API service restarted (env=$ENVIRONMENT)"
-if [[ -f "$ENV_FILE" ]]; then
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" ps athyper-api
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" ps athyper-api
-fi
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" ps athyper-api
 echo ""

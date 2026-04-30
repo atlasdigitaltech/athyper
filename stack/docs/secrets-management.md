@@ -24,11 +24,11 @@ Three invariants this document enforces:
 
 ## 1. Secret Injection by Environment
 
-| Tier | How secrets get in | Where they live | Dev defaults allowed? |
+| Tier | How secrets get in | Where environment files live | Dev defaults allowed? |
 |---|---|---|---|
 | `local` | `.env.example` ships all defaults | `stack/env/.env` (git-ignored) | Yes — intentional for dev UX |
-| `staging` | CI/CD injects into `.env`; or operator fills manually | `/opt/stack/athyper/secrets/.env` (outside git) | No — `validate-env.sh` blocks |
-| `production` | CI/CD injects into `.env`; or Infisical B3.2 (deferred) | `/opt/stack/athyper/secrets/.env` | No — `validate-env.sh` blocks |
+| `staging` | `write-env-staging.sh`, CI/CD, or secret backend writes the secrets-only file | Bootstrap: `/opt/products/athyper/stack/env/.env`; secrets: `/opt/stack/athyper/secrets/.env` | No — `validate-env.sh` blocks |
+| `production` | CI/CD or secret backend writes the secrets-only file | Bootstrap: `/opt/products/athyper/stack/env/.env`; secrets: `/opt/stack/athyper/secrets/.env` | No — `validate-env.sh` blocks |
 
 > **Why `.env.example` ships plaintext dev defaults:** The alternative — empty placeholders —
 > breaks `docker compose up` on first clone for every developer. The `athyperadmin` password
@@ -38,6 +38,11 @@ Three invariants this document enforces:
 > **Why `/opt/stack/athyper/secrets/` on the server:** The secrets directory sits outside
 > the git checkout (`/opt/products/athyper`). A `git pull` or branch switch never touches
 > it. Accidental `git clean` can't reach it. This is the two-root rule applied to secrets.
+
+> **Two-file rule for staging/production:** pass the bootstrap file first and the
+> secrets file second. Do not source the secrets `.env` in a shell; generated secret
+> values may contain characters that are valid for Docker Compose env files but unsafe
+> for shell `source`.
 
 ---
 
@@ -310,17 +315,20 @@ athyper/staging/smtp      → JSON: { "username", "password" }
 athyper/staging/telemetry → JSON: { "admin_user", "admin_password" }
 ```
 
-#### Fetch Script
+#### Example Fetch Script
+
+This script is an adoption example for AWS Secrets Manager, not a committed repository
+script. Save it as an internal deployment helper only if AWS Secrets Manager becomes the
+chosen backend.
 
 ```bash
 #!/usr/bin/env bash
-# stack/scripts/setup/fetch-secrets-aws.sh
-# Fetches secrets from AWS Secrets Manager and appends to .env
+# Example only: fetches secrets from AWS Secrets Manager and writes the secrets-only .env.
 set -euo pipefail
 
-ENV="${1:?Usage: fetch-secrets-aws.sh <staging|production>}"
+ENV="${1:?Usage: aws-secrets-example.sh <staging|production>}"
 PREFIX="athyper/$ENV"
-ENV_FILE="${STACK_DIR:-/opt/stack/athyper/secrets}/.env"
+SECRETS_FILE="${SECRETS_FILE:-/opt/stack/athyper/secrets/.env}"
 
 fetch() { aws secretsmanager get-secret-value --secret-id "$1" --query SecretString --output text; }
 field() { echo "$1" | jq -r ".$2"; }
@@ -334,7 +342,8 @@ GW=$(fetch "$PREFIX/gateway")
 SMTP=$(fetch "$PREFIX/smtp")
 TELE=$(fetch "$PREFIX/telemetry")
 
-cat >> "$ENV_FILE" <<EOF
+install -m 0600 /dev/null "$SECRETS_FILE"
+cat > "$SECRETS_FILE" <<EOF
 DB_ADMIN_PASSWORD=$(field "$DB" admin_password)
 DATABASE_URL=$(field "$DB" url)
 DATABASE_ADMIN_URL=$(field "$DB" admin_url)
@@ -358,7 +367,7 @@ TELEMETRY_ADMIN_USER=$(field "$TELE" admin_user)
 TELEMETRY_ADMIN_PASSWORD=$(field "$TELE" admin_password)
 EOF
 
-echo "Secrets injected into $ENV_FILE for environment: $ENV"
+echo "Secrets injected into $SECRETS_FILE for environment: $ENV"
 ```
 
 ---
@@ -373,14 +382,20 @@ echo "Secrets injected into $ENV_FILE for environment: $ENV"
 3. **Verify the new value is in `.env`** — if using a fetch script, run it and check the
    output with `grep VARIABLE_NAME /opt/stack/athyper/secrets/.env`.
 4. **Run `validate-env.sh`** — it will fail if the value looks like an unresolved placeholder
-   or a known dev default.
+   or a known dev default:
+   ```bash
+   bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+     /opt/products/athyper/stack/env/.env \
+     /opt/stack/athyper/secrets/.env
+   ```
 5. **Restart affected services only** — do not restart the full stack for a single credential
    change unless required:
    ```bash
-   docker compose restart memorycache   # Redis password
-   docker compose restart objectstorage # S3/MinIO credentials
-   docker compose restart iam           # KC admin or client secret
-   docker compose restart api           # CREDENTIAL_MASTER_KEY, RENDERER_INTERNAL_TOKEN
+   cd /opt/products/athyper
+   bash stack/scripts/stack-profile/restart.sh memorycache   # Redis password
+   bash stack/scripts/stack-profile/restart.sh objectstorage # S3/MinIO credentials
+   bash stack/scripts/stack-profile/restart.sh iam           # KC admin or client secret
+   bash stack/scripts/stack-profile/restart.sh athyper-api   # CREDENTIAL_MASTER_KEY, RENDERER_INTERNAL_TOKEN
    ```
 6. **Verify service health** — run `smoke-staging.sh` and confirm all checks pass.
 
@@ -395,7 +410,7 @@ htpasswd -nbB admin "$(openssl rand -base64 24)" | sed 's/\$/\$\$/g'
 Update the value in the secret store and in `.env`, then reload the gateway:
 
 ```bash
-docker compose restart gateway
+bash stack/scripts/stack-profile/restart.sh gateway
 # Verify: open https://gateway.<domain> and log in with the new password.
 ```
 
@@ -438,7 +453,7 @@ you which services to restart. After restarting, re-run `validate-env.sh` to con
    the old key and re-encrypts with the new key in a single transaction.
 4. Once the migration completes successfully, promote `CREDENTIAL_MASTER_KEY_NEW` to
    `CREDENTIAL_MASTER_KEY` and remove the old variable.
-5. Restart the API: `docker compose restart api`
+5. Restart the API: `bash stack/scripts/stack-profile/restart.sh athyper-api`
 
 Until B3.4 is implemented, rotating `CREDENTIAL_MASTER_KEY` requires a manual re-encryption
 script against the database. Do not rotate it without coordinating with the team.
@@ -450,7 +465,7 @@ script against the database. Do not rotate it without coordinating with the team
 1. Update the secret in Keycloak: Admin Console → Clients → `athyper-api` → Credentials →
    Regenerate Secret. Copy the new value.
 2. Update `IAM_CLIENT_SECRET` in `.env`.
-3. Restart the API: `docker compose restart api`
+3. Restart the API: `bash stack/scripts/stack-profile/restart.sh athyper-api`
 
 Do not update `.env` first and restart — there is a window where the API tries to use the
 new secret against Keycloak's old record, causing all token exchanges to fail.
@@ -460,9 +475,14 @@ new secret against Keycloak's old record, causing all token exchanges to fail.
 Redis passwords are stored as SHA-256 hashes in `redis-acl.conf`. The file is rendered by
 `validate-env.sh` from the plaintext `.env` values:
 
-1. Update `MEMORYCACHE_PASSWORD`, `REDIS_ADMIN_PASSWORD`, `REDIS_EXPORTER_PASSWORD` in `.env`.
-2. Re-render the ACL file: `./stack/scripts/setup/validate-env.sh`
-3. Restart Redis: `docker compose restart memorycache`
+1. Update `MEMORYCACHE_PASSWORD`, `REDIS_ADMIN_PASSWORD`, `REDIS_EXPORTER_PASSWORD` in the secrets `.env`.
+2. Re-render the ACL file:
+   ```bash
+   bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+     /opt/products/athyper/stack/env/.env \
+     /opt/stack/athyper/secrets/.env
+   ```
+3. Restart Redis: `bash stack/scripts/stack-profile/restart.sh memorycache`
 4. Verify: `docker exec athyper-memorycache-1 redis-cli -a NEW_PASSWORD ping` must return `PONG`.
 
 The `redis-acl.conf` file is mode `0640` (group `svc-redis`) on the server — it contains
@@ -517,7 +537,9 @@ or still contains `${...}`.
 **Step 2 — Validate before deploying.**
 
 ```bash
-./stack/scripts/setup/validate-env.sh
+bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
 ```
 
 If the output contains `FAIL  TELEMETRY_ADMIN_PASSWORD = ${TELEMETRY_ADMIN_PASSWORD}`,
@@ -531,9 +553,9 @@ If login fails, Grafana may still hold the old password in its internal SQLite d
 Force a reset:
 
 ```bash
-docker exec athyper-telemetry-observability-1 \
+docker exec "$(docker ps -qf name=telemetry)" \
   grafana-cli admin reset-admin-password NEW_PASSWORD
-docker compose restart telemetry-observability
+bash stack/scripts/stack-profile/restart.sh telemetry
 ```
 
 The old `GRAFANA_ADMIN_PASSWORD` secret can be deleted from the store after the first
@@ -547,7 +569,14 @@ successful deploy on each environment.
 every `up.sh` call. You can also run it standalone:
 
 ```bash
-./stack/scripts/setup/validate-env.sh
+# Local:
+bash stack/scripts/setup/validate-env.sh
+
+# Staging / production:
+bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
+
 # Windows:
 stack\scripts\setup\validate-env.bat
 ```

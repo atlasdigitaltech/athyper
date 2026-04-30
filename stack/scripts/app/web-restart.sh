@@ -43,22 +43,12 @@ resolve_compose_override
 docker_preflight
 build_compose_file_list
 
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Running: docker compose ... restart athyper-neon-web"
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" restart athyper-neon-web
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" restart athyper-neon-web
-fi
+echo "Running: docker compose ... restart athyper-neon-web"
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" restart athyper-neon-web
 
 echo ""
 echo "Web service restarted (env=$ENVIRONMENT)"
-if [[ -f "$ENV_FILE" ]]; then
-  docker compose --project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" \
-    "${COMPOSE_FILE_ARGS[@]}" ps athyper-neon-web
-else
-  docker compose --project-directory "$COMPOSE_DIR" \
-    "${COMPOSE_FILE_ARGS[@]}" ps athyper-neon-web
-fi
+docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+  "${COMPOSE_FILE_ARGS[@]}" ps athyper-neon-web
 echo ""

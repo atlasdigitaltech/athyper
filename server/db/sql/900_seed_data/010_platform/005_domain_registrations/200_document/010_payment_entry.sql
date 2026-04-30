@@ -59,7 +59,7 @@ CROSS JOIN (VALUES
     ('status',            'status',           'Status',            'lifecycle_state', 'one',   NULL::text,                                true,  true,  NULL::jsonb,                               20),
     ('payment_type',      'payment_type',     'Payment Type',      'text',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               30),
     ('payment_direction', 'payment_direction','Direction',         'text',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               40),
-    ('supplier_id',       'supplier_id',      'Vendor',            'reference', 'zero_or_one', NULL::text,                                false, true,  '{"ref_entity":"vendor"}'::jsonb,          50),
+    ('supplier_id',       'supplier_id',      'Vendor',            'reference', 'zero_or_one', NULL::text,                                false, true,  '{"ref_entity":"supplier"}'::jsonb,        50),
     ('document_date',     'document_date',    'Payment Date',      'date',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               60),
     ('posting_date',      'posting_date',     'Posting Date',      'date',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               70),
     ('value_date',        'value_date',       'Value Date',        'date',      'one',         NULL::text,                                true,  false, NULL::jsonb,                               80),
@@ -111,3 +111,14 @@ SET feature_flags = (feature_flags - 'has_line_items') || '{"has_lines":true}'::
 WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
   AND feature_flags ? 'has_line_items';
+
+-- ── 7. Fix ref_entity: "vendor" → "supplier" on already-seeded rows ──────────
+UPDATE control.entity_field ef
+SET validation = '{"ref_entity":"supplier"}'::jsonb
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'document' AND e.table_name = 'payment_entry'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+  AND ef.name = 'supplier_id'
+  AND ef.validation->>'ref_entity' = 'vendor';

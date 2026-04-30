@@ -236,8 +236,9 @@ pnpm install
 ```
 
 `pnpm install` installs all workspace packages (`server/`, `apps/web/`, shared packages).
-It must complete without errors before any script will run. If it fails with a peer
-dependency warning, check that Node.js is exactly the version in `.nvmrc` or `package.json#engines`.
+It must complete without errors before any script will run. If it fails with an
+engine warning, check that Node.js satisfies `package.json#engines` and that
+Corepack has activated the pinned pnpm version.
 
 ---
 
@@ -247,9 +248,10 @@ dependency warning, check that Node.js is exactly the version in `.nvmrc` or `pa
 stack\scripts\setup\setup-env.bat local all
 ```
 
-This copies `stack/env/.env.example` → `stack/env/.env` and sets `ENVIRONMENT=local`.
-The `all` argument also populates `server/.env` and `apps/web/.env.local` from their
-respective `.example` files.
+This copies `stack/env/.env.example` to `stack/env/.env` and sets
+`ENVIRONMENT=local`. For local development the runtime files (`server/.env` and
+`apps/web/.env.local`) are optional IDE conveniences; the wrapper scripts derive
+the values they need from `stack/env/.env`.
 
 > **Why three env files?** The stack `.env` is the source of truth for the Docker Compose
 > services. `server/.env` and `apps/web/.env.local` are loaded by `pnpm dev` in each
@@ -258,9 +260,11 @@ respective `.example` files.
 > translate Docker hostnames to `127.0.0.1` equivalents and inject them into the child
 > process, so you rarely need to hand-edit `server/.env` directly.
 
-Open `stack\env\.env` and set the four path roots using **forward slashes**:
+Open `stack\env\.env` and set the local roots using **forward slashes**. Keep
+`ATHYPER_SECRETS_ROOT` empty so local Compose stays in single-file mode:
 
 ```env
+ATHYPER_SECRETS_ROOT=
 ATHYPER_CONFIG_ROOT=D:/Stack/athyper/config
 ATHYPER_DATA_ROOT=D:/Stack/athyper/data
 ATHYPER_LOG_ROOT=D:/Stack/athyper/logs
@@ -1191,6 +1195,7 @@ Key variables in `stack/env/.env` for local development. Full list with descript
 |---|---|---|
 | `ENVIRONMENT` | `local` | Disables production security checks; enables dev-only features |
 | `COMPOSE_PROJECT_NAME` | `athyper` | Prefix for all container names (`athyper-db-1`, etc.) |
+| `ATHYPER_SECRETS_ROOT` | empty | Keeps local dev in single-file env mode |
 | `ATHYPER_CONFIG_ROOT` | `D:/Stack/athyper/config` | Forward slashes — required for Docker Desktop bind mounts |
 | `ATHYPER_DATA_ROOT` | `D:/Stack/athyper/data` | Forward slashes |
 | `ATHYPER_LOG_ROOT` | `D:/Stack/athyper/logs` | Forward slashes |

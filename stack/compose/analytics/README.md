@@ -153,11 +153,8 @@ non-local deploy:
 ## Enabling the profile (after the gates above are cleared)
 
 ```
-# Local exploration:
-./stack/scripts/stack/up.sh analytics
-
-# Combined with core (e.g. once governance approves and demand exists):
-STACK_PROFILE=core,analytics ./stack/scripts/stack/up.sh
+# The wrapper automatically activates core with the requested profile.
+bash stack/scripts/stack-profile/up.sh analytics
 ```
 
 Metabase boots in ~60–90 s on first launch (schema migrations on the H2

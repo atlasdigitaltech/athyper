@@ -73,6 +73,8 @@ WHERE e.table_schema = 'master' AND e.table_name = 'customer'
 ON CONFLICT DO NOTHING;
 
 -- ── Fix origin for existing rows (idempotent) ─────────────────────────────────
+-- Narrows to application fields only — excludes PK/tenant/audit columns that
+-- must stay origin='system' so FieldsRenderer filters them from the view grid.
 UPDATE control.entity_field ef
 SET origin = 'standard'
 FROM control.entity_version ev
@@ -80,4 +82,21 @@ JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'master' AND e.table_name = 'customer'
   AND e.tenant_id IS NULL AND ev.version_no = 1
-  AND ef.origin = 'system';
+  AND ef.origin = 'system'
+  AND ef.name NOT IN ('id', 'tenant_id', 'is_active',
+                      'created_at', 'created_by', 'updated_at', 'updated_by',
+                      'status_changed_at', 'status_changed_by');
+
+-- ── Pin id and tenant_id as system/hidden (never rendered in UI) ──────────────
+-- origin='system' → FieldsRenderer excludes field from view grid
+-- ui_type='hidden' → edit-mode field renderer registry uses no-op renderer
+UPDATE control.entity_field ef
+SET origin  = 'system',
+    ui_type = 'hidden'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'master' AND e.table_name = 'customer'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+  AND ef.name IN ('id', 'tenant_id')
+  AND (ef.origin IS DISTINCT FROM 'system' OR ef.ui_type IS DISTINCT FROM 'hidden');

@@ -272,6 +272,7 @@ if [[ ${#_dupes_removed[@]} -gt 0 || ${#_added[@]} -gt 0 ]]; then
   echo ""
   echo "  Then re-validate:"
   echo "    bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \\"
+  echo "         /opt/products/athyper/stack/env/.env \\"
   echo "         /opt/stack/athyper/secrets/.env"
 else
   echo ""

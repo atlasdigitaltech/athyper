@@ -35,9 +35,18 @@ ALTER TABLE master.party_tax_profile
     ADD COLUMN IF NOT EXISTS owner_type text,
     ADD COLUMN IF NOT EXISTS owner_id   uuid;
 
-UPDATE master.party_tax_profile
-   SET owner_type = 'supplier', owner_id = supplier_id
- WHERE owner_type IS NULL AND supplier_id IS NOT NULL;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'master' AND table_name = 'party_tax_profile' AND column_name = 'supplier_id'
+  ) THEN
+    EXECUTE '
+      UPDATE master.party_tax_profile
+         SET owner_type = ''supplier'', owner_id = supplier_id
+       WHERE owner_type IS NULL AND supplier_id IS NOT NULL
+    ';
+  END IF;
+END $$;
 
 DO $$ BEGIN
   BEGIN ALTER TABLE master.party_tax_profile ALTER COLUMN owner_type SET NOT NULL;
@@ -53,7 +62,7 @@ DO $$ BEGIN
   BEGIN
     ALTER TABLE master.party_tax_profile
         ADD CONSTRAINT ptp_owner_country_uq UNIQUE (tenant_id, owner_type, owner_id, country_code);
-  EXCEPTION WHEN duplicate_object THEN NULL;
+  EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
   END;
 END $$;
 

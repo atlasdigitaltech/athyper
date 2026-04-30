@@ -197,6 +197,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
           content_type:    item.contentType,
           size_bytes:      item.sizeBytes,
           created_at:      item.createdAt,
+          status:          item.status,
           created_by_name: item.uploadedByName,
           link_kind:       item.linkKind,
           version_no:      item.versionNo,

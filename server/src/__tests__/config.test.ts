@@ -94,4 +94,19 @@ describe("F3 — CREDENTIAL_MASTER_KEY enforcement", () => {
     expect(cfg.env).toBe("production");
     expect(cfg.credentialMasterKey).toBe(key);
   });
+
+  it("resolves staging even when NODE_ENV=production (ENVIRONMENT wins)", () => {
+    // Regression for the staging-identity-collapse bug: a container built with
+    // NODE_ENV=production (standard for Next.js/Node builds) must NOT be treated
+    // as production when ENVIRONMENT=staging is the authoritative signal.
+    vi.stubEnv("NODE_ENV", "production");
+    const key = "a".repeat(48);
+    stubEnv({
+      ATHYPER_ENV:            undefined,   // ATHYPER_ENV absent — fall to ENVIRONMENT
+      ENVIRONMENT:            "staging",
+      CREDENTIAL_MASTER_KEY: key,
+    });
+    const cfg = loadConfig();
+    expect(cfg.env).toBe("staging");
+  });
 });

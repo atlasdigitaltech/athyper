@@ -1990,6 +1990,12 @@ CREATE TABLE IF NOT EXISTS master.comment (
     comment_text        text        NOT NULL,
     mentions            jsonb,
 
+    -- Rich content
+    content_format      text        NOT NULL DEFAULT 'plain',
+    content_json        jsonb,
+    content_html        text,
+    attachment_refs     jsonb       NOT NULL DEFAULT '[]'::jsonb,
+
     -- Threading
     parent_comment_id   uuid,
     thread_depth        smallint    NOT NULL DEFAULT 0,
@@ -2016,7 +2022,7 @@ CREATE TABLE IF NOT EXISTS master.comment (
     CONSTRAINT comment_pkey             PRIMARY KEY (id),
     CONSTRAINT comment_tenant_id_uq     UNIQUE (tenant_id, id),
     CONSTRAINT comment_depth_chk        CHECK (thread_depth BETWEEN 0 AND 5),
-    CONSTRAINT comment_text_len_chk     CHECK (char_length(comment_text) <= 5000),
+    CONSTRAINT comment_text_len_chk     CHECK (char_length(comment_text) <= 50000),
     CONSTRAINT comment_text_chk         CHECK (btrim(comment_text) <> ''),
     CONSTRAINT comment_entity_chk       CHECK (btrim(entity_type) <> ''),
     CONSTRAINT comment_visibility_chk   CHECK (visibility IN ('public', 'internal', 'private')),
@@ -2069,6 +2075,9 @@ CREATE TABLE IF NOT EXISTS master.comment_draft (
 
     -- Draft content
     draft_text          text        NOT NULL,
+    content_json        jsonb,
+    content_html        text,
+    attachment_refs     jsonb       NOT NULL DEFAULT '[]'::jsonb,
     visibility          text        NOT NULL DEFAULT 'public',
 
     -- Audit
@@ -2081,7 +2090,7 @@ CREATE TABLE IF NOT EXISTS master.comment_draft (
     CONSTRAINT cd_one_per_target_uq UNIQUE NULLS NOT DISTINCT (tenant_id, principal_id, entity_type,
                                             entity_id, parent_comment_id),
     CONSTRAINT cd_text_chk          CHECK (btrim(draft_text) <> ''),
-    CONSTRAINT cd_text_len_chk      CHECK (char_length(draft_text) <= 5000),
+    CONSTRAINT cd_text_len_chk      CHECK (char_length(draft_text) <= 50000),
     CONSTRAINT cd_entity_chk        CHECK (btrim(entity_type) <> ''),
     CONSTRAINT cd_visibility_chk    CHECK (visibility IN ('public', 'internal', 'private'))
     -- context_type: 09_triggers — control.trg_validate_lookup_columns('master.comment_type')

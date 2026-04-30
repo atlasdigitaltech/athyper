@@ -29,6 +29,22 @@ DO $guard$ DECLARE t text; BEGIN
 END $guard$;
 
 -- ---------------------------------------------------------------------------
+-- §C0  Remove stale old-name rows that may have been re-inserted by a
+--      re-run of 001_invoice.sql before the field-name fix landed.
+--      Safe no-op on a clean DB: these names never exist there.
+-- ---------------------------------------------------------------------------
+DELETE FROM control.entity_field ef
+USING control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'document'
+  AND e.table_name   = 'purchase_invoice'
+  AND e.tenant_id   IS NULL
+  AND ev.version_no  = 1
+  AND ef.name       IN ('gross_amount', 'vendor_invoice_ref')
+  AND ef.tenant_id  IS NULL;
+
+-- ---------------------------------------------------------------------------
 -- §F1  Rename gross_amount → total_amount
 -- ---------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- 320_tax_jurisdictions.sql — Tax jurisdictions (13 countries + sub-jurisdictions)
+-- 320_tax_jurisdictions.sql — Tax jurisdictions (14 countries + sub-jurisdictions)
 -- ============================================================================
 -- Tables: master.tax_jurisdiction
 -- Phase 1 base: federal/country level for all 13 ATHYPER jurisdictions
@@ -22,7 +22,114 @@ BEGIN
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- L1: Federal / country jurisdictions (13 countries)
+    -- C0: Remove stale L1 entries not in the current 14-country list
+    --     (left over from older seed versions that had different countries).
+    --
+    --     Dependency order (all have no ON DELETE CASCADE):
+    --       ledger.tax_calculation      → control.tax_rate_schedule
+    --       control.tax_group_component → control.tax_rate_schedule
+    --       control.tax_rate_schedule   → master.tax_jurisdiction
+    --       tax_jurisdiction L2         → tax_jurisdiction L1
+    -- ══════════════════════════════════════════════════════════════════════
+
+    -- Step 1: ledger rows that reference schedules tied to stale jurisdictions
+    DELETE FROM ledger.tax_calculation
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id    = v_tid
+            AND jurisdiction_id IN (
+                SELECT id FROM master.tax_jurisdiction
+                WHERE tenant_id = v_tid
+                  AND code NOT IN (
+                    'TJ-MY','TJ-QA','TJ-SA','TJ-AE','TJ-US','TJ-SG',
+                    'TJ-IN','TJ-CA','TJ-DE','TJ-TW','TJ-ZA','TJ-GB','TJ-JP','TJ-PH'
+                  )));
+
+    -- Step 2: tax_group_component rows referencing those schedules
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id    = v_tid
+            AND jurisdiction_id IN (
+                SELECT id FROM master.tax_jurisdiction
+                WHERE tenant_id = v_tid
+                  AND code NOT IN (
+                    'TJ-MY','TJ-QA','TJ-SA','TJ-AE','TJ-US','TJ-SG',
+                    'TJ-IN','TJ-CA','TJ-DE','TJ-TW','TJ-ZA','TJ-GB','TJ-JP','TJ-PH'
+                  )));
+
+    -- Step 3: rate schedules that reference stale jurisdictions
+    DELETE FROM control.tax_rate_schedule
+    WHERE tenant_id    = v_tid
+      AND jurisdiction_id IN (
+          SELECT id FROM master.tax_jurisdiction
+          WHERE tenant_id = v_tid
+            AND code NOT IN (
+              'TJ-MY','TJ-QA','TJ-SA','TJ-AE','TJ-US','TJ-SG',
+              'TJ-IN','TJ-CA','TJ-DE','TJ-TW','TJ-ZA','TJ-GB','TJ-JP','TJ-PH'
+            ));
+
+    -- Step 4a: stale L2 entries whose parent is still canonical but whose own code
+    --          is not in the current L2 whitelist (e.g. a previously-seeded 3rd India
+    --          state).  Must come before Step 4b so the FK from tax_rate_schedule is
+    --          cleared first.
+    DELETE FROM ledger.tax_calculation
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND jurisdiction_id IN (
+                SELECT id FROM master.tax_jurisdiction
+                WHERE tenant_id = v_tid AND level_no = 2
+                  AND code NOT IN ('TJ-IN-TN','TJ-IN-MH','TJ-US-CA')));
+
+    DELETE FROM control.tax_group_component
+    WHERE tenant_id = v_tid
+      AND tax_rate_schedule_id IN (
+          SELECT id FROM control.tax_rate_schedule
+          WHERE tenant_id = v_tid
+            AND jurisdiction_id IN (
+                SELECT id FROM master.tax_jurisdiction
+                WHERE tenant_id = v_tid AND level_no = 2
+                  AND code NOT IN ('TJ-IN-TN','TJ-IN-MH','TJ-US-CA')));
+
+    DELETE FROM control.tax_rate_schedule
+    WHERE tenant_id = v_tid
+      AND jurisdiction_id IN (
+          SELECT id FROM master.tax_jurisdiction
+          WHERE tenant_id = v_tid AND level_no = 2
+            AND code NOT IN ('TJ-IN-TN','TJ-IN-MH','TJ-US-CA'));
+
+    DELETE FROM master.tax_jurisdiction
+    WHERE tenant_id = v_tid
+      AND level_no  = 2
+      AND code NOT IN ('TJ-IN-TN','TJ-IN-MH','TJ-US-CA');
+
+    -- Step 4b: L2 children of stale L1 entries
+    DELETE FROM master.tax_jurisdiction
+    WHERE tenant_id = v_tid
+      AND level_no  = 2
+      AND parent_id IN (
+          SELECT id FROM master.tax_jurisdiction
+          WHERE tenant_id = v_tid AND level_no = 1
+            AND code NOT IN (
+              'TJ-MY','TJ-QA','TJ-SA','TJ-AE','TJ-US','TJ-SG',
+              'TJ-IN','TJ-CA','TJ-DE','TJ-TW','TJ-ZA','TJ-GB','TJ-JP','TJ-PH'
+            ));
+
+    -- Step 5: stale L1 entries
+    DELETE FROM master.tax_jurisdiction
+    WHERE tenant_id = v_tid
+      AND level_no  = 1
+      AND code NOT IN (
+          'TJ-MY','TJ-QA','TJ-SA','TJ-AE','TJ-US','TJ-SG',
+          'TJ-IN','TJ-CA','TJ-DE','TJ-TW','TJ-ZA','TJ-GB','TJ-JP','TJ-PH'
+      );
+
+    -- ══════════════════════════════════════════════════════════════════════
+    -- L1: Federal / country jurisdictions (14 countries)
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO master.tax_jurisdiction
         (tenant_id, code, name, description, country_code,
@@ -70,7 +177,14 @@ BEGIN
     (v_tid,'TJ-IN-MH','India — Maharashtra', 'SGST jurisdiction','IN','MH','STATE',2,v_in,'MH GST Dept',          true,'MONTHLY','INR',72,'active',v_su,v_meta),
     -- US state for sales tax
     (v_tid,'TJ-US-CA','United States — California','California state tax','US','CA','STATE',2,v_us,'California FTB',true,'QUARTERLY','USD',51,'active',v_su,v_meta)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        name = EXCLUDED.name, description = EXCLUDED.description,
+        authority_name = EXCLUDED.authority_name,
+        updated_at = now(), updated_by = v_su
+    WHERE (master.tax_jurisdiction.name, master.tax_jurisdiction.description,
+           master.tax_jurisdiction.authority_name)
+       IS DISTINCT FROM
+          (EXCLUDED.name, EXCLUDED.description, EXCLUDED.authority_name);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- ASSERTIONS

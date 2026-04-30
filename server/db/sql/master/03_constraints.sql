@@ -1660,14 +1660,18 @@ DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_
     REFERENCES master.payment_method (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- ON DELETE SET NULL on a composite (tenant_id, col) FK nulls tenant_id too — NOT NULL violation.
+-- Fix: drop and recreate without the action. Callers must nullify the column before deleting.
+ALTER TABLE master.company_code_supplier_profile DROP CONSTRAINT IF EXISTS scp_remittance_bank_link_fk;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_remittance_bank_link_fk
     FOREIGN KEY (tenant_id, preferred_remittance_bank_link_id)
-    REFERENCES master.bank_account_link (tenant_id, id) ON DELETE SET NULL;
+    REFERENCES master.bank_account_link (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+ALTER TABLE master.company_code_supplier_profile DROP CONSTRAINT IF EXISTS scp_tax_group_fk;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_tax_group_fk
     FOREIGN KEY (tenant_id, tax_group_id)
-    REFERENCES control.tax_group (tenant_id, id) ON DELETE SET NULL;
+    REFERENCES control.tax_group (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_dimension_set_fk
@@ -2445,3 +2449,86 @@ ALTER TABLE master.content_item_access_grant DROP CONSTRAINT IF EXISTS ciag_crea
 DO $$ BEGIN ALTER TABLE master.content_item_access_grant ADD CONSTRAINT ciag_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── Schema evolution alterations ─────────────────────────────────────────────
+
+-- Rename supplier_qualification.is_preferred → is_preferred_supplier.
+-- DDL (01i_tables_party_master.sql) already uses the new name; this handles
+-- existing databases where the column was created under the old name.
+DO $$ BEGIN
+    ALTER TABLE master.supplier_qualification
+        RENAME COLUMN is_preferred TO is_preferred_supplier;
+EXCEPTION WHEN undefined_column THEN NULL; END $$;
+
+-- Add risk_rating and is_key_account to master.customer.
+-- These columns are registered in the entity field registry (008_fields_partners.sql)
+-- but were omitted from the original CREATE TABLE.
+DO $$ BEGIN
+    ALTER TABLE master.customer ADD COLUMN risk_rating text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE master.customer ADD COLUMN is_key_account boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- =============================================================================
+-- §EF-ALIGN  Entity-field registry alignment — ADD COLUMN for fields registered
+--            in control.entity_field that were absent from the CREATE TABLE DDL.
+--            All statements are idempotent (EXCEPTION WHEN duplicate_column).
+-- =============================================================================
+
+-- ── master.supplier — party-level AP defaults ─────────────────────────────────
+DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN account_manager_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN payment_term_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN payment_method_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN spend_category_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ── master.customer — party-level AR defaults ─────────────────────────────────
+DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN account_manager_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN payment_term_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN credit_limit numeric(18,4);
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN credit_currency_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ── master.company_code — accounting boundary extensions ──────────────────────
+DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN local_currency_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN accounting_currency_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN chart_of_account_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN company_code_type text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN timezone text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ── master.gl_account — posting controls and typing ───────────────────────────
+DO $$ BEGIN ALTER TABLE master.gl_account ADD COLUMN account_type_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.gl_account ADD COLUMN is_reconciling boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.gl_account ADD COLUMN is_blocked boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.gl_account ADD COLUMN posting_level text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ── master.legal_entity — statutory profile ───────────────────────────────────
+DO $$ BEGIN ALTER TABLE master.legal_entity ADD COLUMN registration_no text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.legal_entity ADD COLUMN is_publicly_listed boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ── master.chart_of_account — structural metadata ────────────────────────────
+DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN base_currency_id uuid;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN account_level_count smallint;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN is_default boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;

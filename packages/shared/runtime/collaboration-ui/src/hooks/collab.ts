@@ -25,10 +25,20 @@ export interface EntityComment {
   entityId: string;
   commenterId: string;
   commenterName?: string;
+  /** Role label surfaced by the server e.g. "admin", "supplier", "approver". */
+  commenterRole?: string;
   commentText: string;
+  /** "plain" for legacy comments, "rich_json" for TipTap-authored ones. */
+  contentFormat?: string;
+  /** TipTap ProseMirror document JSON. Present when contentFormat = "rich_json". */
+  contentJson?: unknown;
+  /** TipTap-serialized HTML. Sanitized by DOMPurify before display. */
+  contentHtml?: string | null;
   parentCommentId: string | null;
   threadDepth: number;
   visibility: string;
+  /** Server-flagged true when this comment has not been read by the current user. */
+  isUnread?: boolean;
   createdAt: string;
   updatedAt: string | null;
   replyCount?: number;
@@ -208,10 +218,16 @@ export function useCommentActions(entityType: string, entityId: string) {
       commentText,
       parentCommentId,
       attachmentIds,
+      contentJson,
+      contentHtml,
+      visibility,
     }: {
       commentText: string;
       parentCommentId?: string;
       attachmentIds?: string[];
+      contentJson?: unknown;
+      contentHtml?: string;
+      visibility?: string;
     }) =>
       collabMutate<CommentActionResponse>("/api/collab/comments", "POST", {
         entityType,
@@ -219,6 +235,9 @@ export function useCommentActions(entityType: string, entityId: string) {
         commentText,
         parentCommentId,
         ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
+        ...(contentJson ? { contentJson } : {}),
+        ...(contentHtml ? { contentHtml } : {}),
+        ...(visibility ? { visibility } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listKey });
@@ -230,10 +249,16 @@ export function useCommentActions(entityType: string, entityId: string) {
       parentId,
       commentText,
       attachmentIds,
+      contentJson,
+      contentHtml,
+      visibility,
     }: {
       parentId: string;
       commentText: string;
       attachmentIds?: string[];
+      contentJson?: unknown;
+      contentHtml?: string;
+      visibility?: string;
     }) =>
       collabMutate<CommentActionResponse>(
         `/api/collab/comments/${parentId}/replies`,
@@ -241,6 +266,9 @@ export function useCommentActions(entityType: string, entityId: string) {
         {
           commentText,
           ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
+          ...(contentJson ? { contentJson } : {}),
+          ...(contentHtml ? { contentHtml } : {}),
+          ...(visibility ? { visibility } : {}),
         },
       ),
     onSuccess: (_data, { parentId }) => {
@@ -252,9 +280,21 @@ export function useCommentActions(entityType: string, entityId: string) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, commentText }: { id: string; commentText: string }) =>
+    mutationFn: ({
+      id,
+      commentText,
+      contentJson,
+      contentHtml,
+    }: {
+      id: string;
+      commentText: string;
+      contentJson?: unknown;
+      contentHtml?: string;
+    }) =>
       collabMutate<CommentActionResponse>(`/api/collab/comments/${id}`, "PATCH", {
         commentText,
+        ...(contentJson ? { contentJson } : {}),
+        ...(contentHtml ? { contentHtml } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listKey });
@@ -284,6 +324,7 @@ export function useCommentActions(entityType: string, entityId: string) {
 
 interface DraftData {
   draftText: string;
+  contentJson?: unknown;
   updatedAt: string;
 }
 
@@ -322,7 +363,7 @@ export function useDraft(
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const saveDraft = useCallback(
-    (draftText: string) => {
+    (draftText: string, contentJson?: unknown) => {
       if (!entityType || !entityId) return;
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
@@ -331,6 +372,7 @@ export function useDraft(
           entityId,
           parentCommentId,
           draftText,
+          ...(contentJson ? { contentJson } : {}),
         })
           .then(() => queryClient.invalidateQueries({ queryKey: draftKey }))
           .catch(() => {

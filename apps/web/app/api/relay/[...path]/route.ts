@@ -45,29 +45,22 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
   // Pass body for mutating methods
   if (req.method !== "GET" && req.method !== "HEAD") {
     if (reqContentType.startsWith("multipart/form-data")) {
-      // Convert multipart file upload to base64 JSON so the runtime can handle
-      // it without a multipart parser. The "file" field is extracted and encoded.
-      const formData = await req.formData();
-      const file = formData.get("file");
-      if (file instanceof File) {
-        const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
-        if (file.size > MAX_BYTES) {
-          return NextResponse.json({ error: "File too large (max 50 MB)" }, { status: 413 });
-        }
-        const bytes = await file.arrayBuffer();
-        const base64 = Buffer.from(bytes).toString("base64");
-        forwarded.set("Content-Type", "application/json");
-        init.body = JSON.stringify({
-          filename:     file.name,
-          content_type: file.type || "application/octet-stream",
-          size_bytes:   file.size,
-          data_base64:  base64,
-        });
-      } else {
-        // No file field — forward empty JSON
-        forwarded.set("Content-Type", "application/json");
-        init.body = "{}";
+      // Stream multipart body directly — the runtime has a busboy handler that
+      // enforces its own file-size limit without buffering into memory.
+      // The old base64-JSON approach capped effective uploads at ~192 KB due to
+      // the 256 KB JSON body-parser limit on the runtime side.
+      const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+      if (contentLength > 100 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "FILE_TOO_LARGE", message: "File too large (max 100 MB)" },
+          { status: 413 },
+        );
       }
+      // Preserve Content-Type including the multipart boundary parameter.
+      forwarded.set("Content-Type", reqContentType);
+      // duplex: "half" is required by the fetch spec for streaming request bodies.
+      (init as Record<string, unknown>)["duplex"] = "half";
+      init.body = req.body as BodyInit;
     } else {
       forwarded.set("Content-Type", reqContentType || "application/json");
       init.body = await req.text();

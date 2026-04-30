@@ -68,14 +68,14 @@ CROSS JOIN (VALUES
     ('status',                   'status',                  'Status',             'lifecycle_state','one',         NULL::text,                                   true,  true,  NULL::jsonb,                            30),
     ('company_code_id',          'company_code_id',         'Company Code',       'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"company_code","display_field":"name"}'::jsonb, 35),
     -- ── B: Counterparty & Dates ───────────────────────────────────────────────
-    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"vendor","display_field":"name"}'::jsonb,       40),
+    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"supplier","display_field":"name"}'::jsonb,     40),
     ('supplier_invoice_date',    'supplier_invoice_date',   'Vendor Invoice Date','date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
     ('invoice_date',             'document_date',           'Invoice Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            50),
     ('posting_date',             'posting_date',            'Posting Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            55),
     ('due_date',                 'due_date',                'Due Date',           'date',           'zero_or_one', NULL::text,                                   false, true,  NULL::jsonb,                            60),
     -- ── C: Currency & Amounts ─────────────────────────────────────────────────
     ('currency_code',            'currency_code',           'Currency',           'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":3}'::jsonb,              70),
-    ('gross_amount',             'total_amount',            'Gross Amount',       'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                     80),
+    ('total_amount',             'total_amount',            'Gross Amount',       'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                     80),
     ('tax_amount',               'tax_amount',              'Tax Amount',         'decimal',        'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                     90),
     ('withholding_tax_amount',   'withholding_tax_amount',  'WHT Amount',         'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                     95),
     ('net_amount',               'subtotal_amount',         'Net Amount',         'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                    100),
@@ -83,9 +83,9 @@ CROSS JOIN (VALUES
     ('outstanding_amount',       'outstanding_amount',      'Outstanding',        'decimal',        'one',         NULL::text,                                   false, true,  '{"min":0}'::jsonb,                    104),
     -- ── D: Source, References & Terms ────────────────────────────────────────
     ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
-    ('vendor_invoice_ref',       'supplier_invoice_number', 'Vendor Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
+    ('supplier_invoice_number',   'supplier_invoice_number', 'Vendor Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
     ('description',              'description',             'Invoice Name',       'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":200}'::jsonb,            130),
-    ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_terms"}'::jsonb,140),
+    ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_term"}'::jsonb, 140),
     -- ── E: Matching & Hold ────────────────────────────────────────────────────
     ('match_type',               'match_type',              'Match Type',         'enum',           'one',         'document.invoice_match_type'::text,          true,  true,  NULL::jsonb,                           150),
     ('match_status',             'match_status',            'Match Status',       'enum',           'one',         'document.invoice_match_status'::text,        false, true,  NULL::jsonb,                           155),
@@ -153,16 +153,16 @@ WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
--- ── Fix ref_entity: "supplier" → "vendor" on already-seeded rows ─────────────
+-- ── Fix ref_entity: "vendor" → "supplier" on already-seeded rows ─────────────
 UPDATE control.entity_field ef
-SET validation = '{"ref_entity":"vendor"}'::jsonb
+SET validation = '{"ref_entity":"supplier","display_field":"name"}'::jsonb
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.name = 'supplier_id'
-  AND ef.validation->>'ref_entity' = 'supplier';
+  AND ef.validation->>'ref_entity' = 'vendor';
 
 -- ── Fix origin for existing rows (idempotent) ─────────────────────────────────
 UPDATE control.entity_field ef
@@ -184,7 +184,7 @@ JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
-  AND ef.name IN ('document_no', 'vendor_invoice_ref', 'description');
+  AND ef.name IN ('document_no', 'supplier_invoice_number', 'description');
 
 -- ── 4. display_config — detail renderer + document_header field map ───────────
 -- Applied only when the column still holds the default empty object so that
@@ -194,7 +194,7 @@ SET display_config = jsonb_build_object(
     'detail_renderer', 'approvable',
     'title_field',     'document_no',
     'subtitle_field',  'supplier_id',
-    'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","gross_amount","currency_code"]'::jsonb,
+    'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","total_amount","currency_code"]'::jsonb,
     'default_sort_field', 'invoice_date',
     'default_sort_order', 'desc',
     'action_groups', jsonb_build_object(
@@ -217,7 +217,7 @@ SET display_config = jsonb_build_object(
         'total_label',      'INVOICE TOTAL',
         'date_label',       'INVOICE DATE',
         'party_id_field',   'supplier_id',
-        'amount_field',     'gross_amount',
+        'amount_field',     'total_amount',
         'subtotal_field',   'net_amount',
         'tax_field',        'tax_amount',
         'currency_field',   'currency_code',
@@ -267,6 +267,27 @@ SET display_config = jsonb_set(
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL
   AND (display_config -> 'action_groups') IS NULL;
+
+-- ── 4d. Patch: gross_amount → total_amount in display_config on already-seeded DBs
+--    Needed because the initial UPDATE above only fires when display_config = '{}'.
+UPDATE control.entity
+SET display_config = jsonb_set(
+    jsonb_set(
+        display_config,
+        '{list_columns}',
+        (SELECT jsonb_agg(
+            CASE WHEN val::text = '"gross_amount"'
+                 THEN '"total_amount"'::jsonb
+                 ELSE val END)
+         FROM jsonb_array_elements(display_config->'list_columns') AS val),
+        false),
+    '{document_header,amount_field}',
+    '"total_amount"'::jsonb,
+    false)
+WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (display_config->'list_columns' @> '["gross_amount"]'::jsonb
+    OR display_config->'document_header'->>'amount_field' = 'gross_amount');
 
 -- ── 5. Runtime wiring — module, feature flags, numbering, natural key ─────────
 -- All idempotent. Designed to be re-run safely on an already-seeded database.
@@ -365,7 +386,7 @@ CROSS JOIN (VALUES
     ('fiscal_document_number', 'fiscal_document_number',  'Fiscal Doc. No.',    'text',      'zero_or_one', NULL::text,                                   false, true,  '{"max_length":100}'::jsonb,          15),
     ('is_credit_note',         'is_credit_note',          'Credit Note',        'boolean',   'one',         NULL::text,                                   false, true,  NULL::jsonb,                          22),
     -- ── B: Counterparty & Dates additions (42, 47, 57) ───────────────────────
-    ('commitment_id',          'commitment_id',           'PO / Commitment',    'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"commitment"}'::jsonb, 42),
+    ('commitment_id',          'commitment_id',           'PO / Commitment',    'reference', 'zero_or_one', NULL::text,                                   false, true,  '{"ref_entity":"purchase_order"}'::jsonb, 42),
     ('received_date',          'received_date',           'Received Date',      'date',      'one',         NULL::text,                                   true,  true,  NULL::jsonb,                          47),
     ('baseline_date',          'baseline_date',           'Baseline Date',      'date',      'zero_or_one', NULL::text,                                   false, true,  NULL::jsonb,                          57),
     -- ── C: Currency & Amounts additions (72–109) ─────────────────────────────

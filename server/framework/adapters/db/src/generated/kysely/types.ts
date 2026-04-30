@@ -1501,6 +1501,9 @@ export type chart_of_account = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    base_currency_id: string | null;
+    account_level_count: number | null;
+    is_default: Generated<boolean>;
 };
 export type classification_config = {
     tenant_id: string;
@@ -1614,6 +1617,10 @@ export type comment = {
     commenter_id: string;
     comment_text: string;
     mentions: unknown | null;
+    content_format: Generated<string>;
+    content_json: unknown | null;
+    content_html: string | null;
+    attachment_refs: Generated<unknown>;
     parent_comment_id: string | null;
     thread_depth: Generated<number>;
     visibility: Generated<string>;
@@ -1637,6 +1644,9 @@ export type comment_draft = {
     entity_id: string;
     parent_comment_id: string | null;
     draft_text: string;
+    content_json: unknown | null;
+    content_html: string | null;
+    attachment_refs: Generated<unknown>;
     visibility: Generated<string>;
     created_at: Generated<Timestamp>;
     created_by: string;
@@ -2097,6 +2107,11 @@ export type company_code = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    local_currency_id: string | null;
+    accounting_currency_id: string | null;
+    chart_of_account_id: string | null;
+    company_code_type: string | null;
+    timezone: string | null;
 };
 export type company_code_access = {
     id: Generated<string>;
@@ -2656,6 +2671,8 @@ export type customer = {
     customer_type: Generated<string>;
     tax_id: string | null;
     description: string | null;
+    risk_rating: string | null;
+    is_key_account: Generated<boolean>;
     legal_name: string | null;
     registration_no: string | null;
     registration_country_code: string | null;
@@ -2681,6 +2698,10 @@ export type customer = {
     founded_year: number | null;
     employee_count_band: string | null;
     annual_revenue_band: string | null;
+    account_manager_id: string | null;
+    payment_term_id: string | null;
+    credit_limit: string | null;
+    credit_currency_id: string | null;
 };
 export type customer_qualification = {
     id: Generated<string>;
@@ -4179,6 +4200,10 @@ export type gl_account = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    account_type_id: string | null;
+    is_reconciling: Generated<boolean>;
+    is_blocked: Generated<boolean>;
+    posting_level: string | null;
 };
 export type gl_balance = {
     id: Generated<string>;
@@ -5136,6 +5161,8 @@ export type legal_entity = {
     tax_residence_country_code: string | null;
     effective_from: Timestamp | null;
     effective_until: Timestamp | null;
+    registration_no: string | null;
+    is_publicly_listed: Generated<boolean>;
 };
 export type legal_hold = {
     id: Generated<string>;
@@ -7937,6 +7964,10 @@ export type supplier = {
     founded_year: number | null;
     employee_count_band: string | null;
     annual_revenue_band: string | null;
+    account_manager_id: string | null;
+    payment_term_id: string | null;
+    payment_method_id: string | null;
+    spend_category_id: string | null;
 };
 export type supplier_qualification = {
     id: Generated<string>;
