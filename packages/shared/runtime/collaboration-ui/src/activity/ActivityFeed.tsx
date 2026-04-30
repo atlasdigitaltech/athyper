@@ -250,7 +250,7 @@ function AuditPanel({ entry }: { entry: ActivityEntry }) {
         <span className="break-all font-mono text-[11px] text-foreground">{entry.id}</span>
         <span className="text-muted-foreground">Source</span>
         <span className="font-mono text-[11px] text-foreground">log.activity_log</span>
-        {d?.entity_id && (
+        {!!d?.entity_id && (
           <>
             <span className="text-muted-foreground">Entity</span>
             <span className="break-all font-mono text-[11px] text-foreground">
@@ -301,25 +301,25 @@ function AuditPanel({ entry }: { entry: ActivityEntry }) {
                 <span className="text-foreground">{entry.actor_name}</span>
               </>
             )}
-            {d?.ip_address && (
+            {!!d?.ip_address && (
               <>
                 <span className="text-muted-foreground">IP address</span>
                 <span className="font-mono text-[11px] text-foreground">{String(d.ip_address)}</span>
               </>
             )}
-            {d?.device && (
+            {!!d?.device && (
               <>
                 <span className="text-muted-foreground">Device</span>
                 <span className="text-foreground">{String(d.device)}</span>
               </>
             )}
-            {d?.session_id && (
+            {!!d?.session_id && (
               <>
                 <span className="text-muted-foreground">Session</span>
                 <span className="font-mono text-[11px] text-foreground">{String(d.session_id)}</span>
               </>
             )}
-            {d?.correlation_id && (
+            {!!d?.correlation_id && (
               <>
                 <span className="text-muted-foreground">Correlation</span>
                 <span className="break-all font-mono text-[11px] text-foreground">{String(d.correlation_id)}</span>
