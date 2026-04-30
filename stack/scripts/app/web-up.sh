@@ -3,11 +3,18 @@
 # athyper - Web Frontend UP - Linux/macOS
 # Location: stack/scripts/app/web-up.sh
 #
+# Usage:
+#   ./web-up.sh           -> start (or restart) using existing image
+#   ./web-up.sh --build   -> rebuild image from source, then start
+#
 # Behaviour (auto-detected from ENVIRONMENT in stack/env/.env):
 #   local      -> load stack/env/.env, translate Docker hostnames → 127.0.0.1,
 #                 derive web-specific vars, then: pnpm --filter @athyper/web dev
-#   staging    -> docker compose up -d --no-deps athyper-neon-web
-#   production -> docker compose up -d --no-deps athyper-neon-web
+#                 (--build is ignored in local mode; pnpm handles incremental rebuilds)
+#   staging    -> [--build: docker compose build athyper-neon-web]
+#                 docker compose up -d --no-deps athyper-neon-web
+#   production -> [--build: docker compose build athyper-neon-web]
+#                 docker compose up -d --no-deps athyper-neon-web
 #
 # Single source of truth: stack/env/.env is the only env file needed.
 # apps/web/.env.local is NOT required — this script injects all vars directly.
@@ -19,6 +26,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/compose.sh"
 
 REPO_ROOT="${STACK_DIR}/.."
+
+BUILD_FLAG=0
+for _arg in "$@"; do
+  [[ "$_arg" == "--build" ]] && BUILD_FLAG=1
+done
 
 init_compose_env || {
   echo "WARNING: .env not found at $ENV_FILE — defaulting to local mode."
@@ -98,6 +110,13 @@ fi
 resolve_compose_override
 docker_preflight
 build_compose_file_list
+
+if [[ "$BUILD_FLAG" == "1" ]]; then
+  echo "Running: docker compose ... build athyper-neon-web"
+  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+    "${COMPOSE_FILE_ARGS[@]}" build athyper-neon-web
+  echo ""
+fi
 
 echo "Running: docker compose ... up -d --no-deps athyper-neon-web"
 docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \

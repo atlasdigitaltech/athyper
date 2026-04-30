@@ -5,15 +5,21 @@ REM ============================================================
 REM athyper - Backend API UP - Windows Batch
 REM Location: stack\scripts\app\api-up.bat
 REM Usage:
-REM   api-up.bat              -> default API mode
-REM   api-up.bat worker       -> BullMQ worker mode
-REM   api-up.bat scheduler    -> scheduler mode
+REM   api-up.bat                    -> default API mode
+REM   api-up.bat worker             -> BullMQ worker mode
+REM   api-up.bat scheduler          -> scheduler mode
+REM   api-up.bat --build            -> rebuild image, then start (API mode)
+REM   api-up.bat worker --build     -> rebuild image, then start (worker mode)
+REM   api-up.bat --build scheduler  -> rebuild image, then start (scheduler mode)
 REM
 REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
 REM   local      -> load stack\env\.env, translate Docker hostnames to 127.0.0.1,
 REM                 then: pnpm --filter @athyper/runtime-server dev[:<mode>]
-REM   staging    -> docker compose up -d --no-deps athyper-api
-REM   production -> docker compose up -d --no-deps athyper-api
+REM                 (--build is ignored in local mode; tsx handles incremental reloads)
+REM   staging    -> [--build: docker compose build athyper-api]
+REM                 docker compose up -d --no-deps athyper-api
+REM   production -> [--build: docker compose build athyper-api]
+REM                 docker compose up -d --no-deps athyper-api
 REM
 REM Single source of truth: stack\env\.env is the only env file needed.
 REM server\.env is NOT required -- this script injects all vars directly.
@@ -42,8 +48,13 @@ set "ENV_FILE=%ENV_DIR%\.env"
 REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
 
-set "MODE=%~1"
-if "!MODE!"=="" set "MODE=api"
+set "MODE=api"
+set "BUILD_FLAG=0"
+for %%A in (%*) do (
+  if /I "%%~A"=="--build"   set "BUILD_FLAG=1"
+  if /I "%%~A"=="worker"    set "MODE=worker"
+  if /I "%%~A"=="scheduler" set "MODE=scheduler"
+)
 
 REM ----------------------------
 REM Read all vars from stack .env into the current environment.
@@ -185,6 +196,17 @@ if exist "%COMPOSE_DIR%\admin\athyper-bullboard.yml"                  set "COMPO
 if exist "%COMPOSE_DIR%\admin\athyper-pgweb.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-pgweb.yml""
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml""
 if exist "!OVERRIDE!" set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
+
+if "!BUILD_FLAG!"=="1" (
+  echo Running: docker compose ... build athyper-api
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+    !COMPOSE_FILES! build athyper-api
+  if errorlevel 1 (
+    echo ERROR: docker compose build failed.
+    pause & exit /b 1
+  )
+  echo.
+)
 
 echo Running: docker compose ... up -d --no-deps athyper-api
 docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^

@@ -3,15 +3,21 @@
 # athyper - Backend API UP - Linux/macOS
 # Location: stack/scripts/app/api-up.sh
 # Usage:
-#   ./api-up.sh              -> default API mode
-#   ./api-up.sh worker       -> BullMQ worker mode
-#   ./api-up.sh scheduler    -> scheduler mode
+#   ./api-up.sh                       -> default API mode
+#   ./api-up.sh worker                -> BullMQ worker mode
+#   ./api-up.sh scheduler             -> scheduler mode
+#   ./api-up.sh --build               -> rebuild image, then start (API mode)
+#   ./api-up.sh worker --build        -> rebuild image, then start (worker mode)
+#   ./api-up.sh --build scheduler     -> rebuild image, then start (scheduler mode)
 #
 # Behaviour (auto-detected from ENVIRONMENT in stack/env/.env):
 #   local      -> load stack/env/.env, translate Docker hostnames → 127.0.0.1,
 #                 then: pnpm --filter @athyper/runtime-server dev[:<mode>]
-#   staging    -> docker compose up -d --no-deps athyper-api
-#   production -> docker compose up -d --no-deps athyper-api
+#                 (--build is ignored in local mode; tsx handles incremental reloads)
+#   staging    -> [--build: docker compose build athyper-api]
+#                 docker compose up -d --no-deps athyper-api
+#   production -> [--build: docker compose build athyper-api]
+#                 docker compose up -d --no-deps athyper-api
 #
 # Single source of truth: stack/env/.env is the only env file needed.
 # server/.env is NOT required — this script injects all vars directly.
@@ -24,7 +30,14 @@ source "${SCRIPT_DIR}/../lib/compose.sh"
 
 REPO_ROOT="${STACK_DIR}/.."
 
-MODE="${1:-api}"
+MODE="api"
+BUILD_FLAG=0
+for _arg in "$@"; do
+  case "$_arg" in
+    --build)              BUILD_FLAG=1 ;;
+    worker|scheduler)     MODE="$_arg" ;;
+  esac
+done
 
 init_compose_env || {
   echo "WARNING: .env not found at $ENV_FILE — defaulting to local mode."
@@ -109,6 +122,13 @@ fi
 resolve_compose_override
 docker_preflight
 build_compose_file_list
+
+if [[ "$BUILD_FLAG" == "1" ]]; then
+  echo "Running: docker compose ... build athyper-api"
+  docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \
+    "${COMPOSE_FILE_ARGS[@]}" build athyper-api
+  echo ""
+fi
 
 echo "Running: docker compose ... up -d --no-deps athyper-api"
 docker compose --project-directory "$COMPOSE_DIR" "${ENV_FILE_ARGS[@]}" \

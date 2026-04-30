@@ -162,11 +162,23 @@ resolve_compose_override() {
 # build_compose_file_list — populate COMPOSE_FILE_ARGS as a bash array
 #   Uses an array instead of a flat string to avoid word-splitting issues
 #   when paths contain spaces.  (#12 fix)
+#
+#   Also exports COMPOSE_PROFILES so every profiled service is visible to
+#   Docker Compose during dependency validation (depends_on resolution).
+#   Without this, services in inactive profiles appear as "no such service"
+#   even when --no-deps is passed. Individual up/restart commands use
+#   --no-deps to prevent actually starting the dependencies.
 # ---------------------------------------------------------------------------
+ALL_COMPOSE_PROFILES="admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
 COMPOSE_FILE_ARGS=()
 
 build_compose_file_list() {
   COMPOSE_FILE_ARGS=()
+
+  # Activate all profiles so every service is reachable for depends_on
+  # validation. The caller is responsible for using --no-deps when it only
+  # wants to (re)start a single service without touching its dependencies.
+  export COMPOSE_PROFILES="${COMPOSE_PROFILES:-$ALL_COMPOSE_PROFILES}"
 
   _add_file() {
     if [[ -f "$1" ]]; then

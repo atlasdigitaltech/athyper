@@ -5,11 +5,18 @@ REM ============================================================
 REM athyper - Web Frontend UP - Windows Batch
 REM Location: stack\scripts\app\web-up.bat
 REM
+REM Usage:
+REM   web-up.bat           -> start (or restart) using existing image
+REM   web-up.bat --build   -> rebuild image from source, then start
+REM
 REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
 REM   local      -> load stack\env\.env, translate Docker hostnames to 127.0.0.1,
 REM                 derive web-specific vars, then: pnpm --filter @athyper/web dev
-REM   staging    -> docker compose up -d --no-deps athyper-neon-web
-REM   production -> docker compose up -d --no-deps athyper-neon-web
+REM                 (--build is ignored in local mode; pnpm handles incremental rebuilds)
+REM   staging    -> [--build: docker compose build athyper-neon-web]
+REM                 docker compose up -d --no-deps athyper-neon-web
+REM   production -> [--build: docker compose build athyper-neon-web]
+REM                 docker compose up -d --no-deps athyper-neon-web
 REM
 REM Single source of truth: stack\env\.env is the only env file needed.
 REM apps\web\.env.local is NOT required -- this script injects all vars directly.
@@ -42,6 +49,11 @@ REM Read all vars from stack .env into the current environment.
 REM Uses FOR variable expansion (%%A=%%B) — avoids delayed-expansion ! processing
 REM inside values (bcrypt hashes, auth secrets with special chars).
 REM ----------------------------
+set "BUILD_FLAG=0"
+for %%A in (%*) do (
+  if /I "%%~A"=="--build" set "BUILD_FLAG=1"
+)
+
 set "ENVIRONMENT=local"
 
 if exist "%ENV_FILE%" (
@@ -174,6 +186,17 @@ if exist "%COMPOSE_DIR%\admin\athyper-bullboard.yml"                  set "COMPO
 if exist "%COMPOSE_DIR%\admin\athyper-pgweb.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-pgweb.yml""
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml""
 if exist "!OVERRIDE!" set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
+
+if "!BUILD_FLAG!"=="1" (
+  echo Running: docker compose ... build athyper-neon-web
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+    !COMPOSE_FILES! build athyper-neon-web
+  if errorlevel 1 (
+    echo ERROR: docker compose build failed.
+    pause & exit /b 1
+  )
+  echo.
+)
 
 echo Running: docker compose ... up -d --no-deps athyper-neon-web
 docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
