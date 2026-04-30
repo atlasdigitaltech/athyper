@@ -180,7 +180,7 @@ function matchesFilter(e: ActivityEntry, f: FilterMode): boolean {
   const t = e.activity_type.toLowerCase();
   switch (f) {
     case "document":    return e.domain === "document";
-    case "comments":    return t.includes("comment") || (e.domain === "user" && t.includes("comment"));
+    case "comments":    return t.includes("comment");
     case "attachments": return t.includes("attachment");
     case "workflow":    return e.domain === "workflow";
     case "system":      return e.domain === "system" || !e.actor_name;
