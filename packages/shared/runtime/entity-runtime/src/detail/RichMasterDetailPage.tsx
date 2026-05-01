@@ -1,29 +1,13 @@
 "use client";
 
 /**
- * RichMasterDetailPage — generic detail shell for master entities.
+ * RichMasterDetailPage — generic detail shell for master entities (detail_profile="rich").
+ * All layout decisions live in SQL (display_config.master_config). Zero per-entity TSX.
  *
- * One component drives ALL master entities with detail_renderer = "rich_master".
- * No per-entity TSX files — all layout decisions live in SQL:
- *   display_config.rich_master_config.tabs        → ordered tab list
- *   display_config.rich_master_config.header_facts → P2 KPI rail field names
- *   display_config.rich_master_config.type_label  → P1 chip label
- *   display_config.rich_master_config.platform_panels → side-panel icons
+ * Tab renderers: overview | fields | child | composite | comments | attachments | activity | blank | summary_cards_with_drawer
+ * Platform panels: Comments / Attachments / Activity as icon buttons in the tab bar (Sheet slide-ins).
  *
- * Tab renderers:
- *   "overview"    — KPI cards from header_facts + child-tab shortcut links
- *   "fields"      — entity field grid (view) / EntityForm (edit)
- *   "child"       — child entity list panel, driven by entity_code + display_fields
- *   "composite"   — anchored section nav + stacked sections (fields or child)
- *   "comments"    — CommentsPanel
- *   "attachments" — AttachmentsPanel
- *   "activity"    — EventsPanel
- *   "blank"       — placeholder with blank_message
- *
- * Platform panels (Comments / Attachments / Activity) are surfaced as icon
- * buttons in the tab bar (right side) and open as Sheet slide-ins, NOT as tabs.
- *
- * Adding a new master entity with rich tabs = SQL only. Zero new TSX files.
+ * @deprecated Will be renamed MasterDetailPage in Phase 3. Keep this alias until then.
  */
 
 import { useState, useMemo, useRef, type ReactNode } from "react";
@@ -32,8 +16,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUpdateEntity } from "@athyper/query";
 import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Lock, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { adminStatusIntent } from "@athyper/theme/domain-intents";
-import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import {
   Button, Card, CardContent, Label, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -44,12 +26,13 @@ import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-
 import { EntityHeader } from "../header";
 import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
 import { AttachmentsPanel, CommentsPanel, EventsPanel } from "../panels";
-import type { EntityHeaderModel, HeaderAction, HeaderTab } from "../header/types";
+import type { HeaderTab } from "../header/types";
+import { buildMasterHeaderModel, formatValue, titleCase } from "../header/builders/buildMasterHeaderModel";
 import {
-  resolveRichMasterConfig,
-  type RichMasterConfig,
-  type RichMasterTab,
-  type RichMasterTabSection,
+  resolveMasterConfig,
+  type MasterConfig,
+  type MasterTab,
+  type MasterTabSection,
 } from "@athyper/metadata-client/compiled-reader";
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
@@ -68,157 +51,10 @@ export interface RichMasterDetailPageProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function formatDate(val: unknown): string {
-  if (!val) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "numeric", month: "short", year: "numeric",
-    }).format(new Date(String(val)));
-  } catch {
-    return String(val);
-  }
-}
-
 function formatBytes(bytes: number): string {
   if (bytes < 1024)        return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatValue(val: unknown, field?: EntityField): string {
-  if (val === null || val === undefined || val === "") return "—";
-  if (typeof val === "boolean") return val ? "Yes" : "No";
-  const dt = field?.data_type;
-  if (dt === "date" || dt === "datetime" || dt === "timestamptz") return formatDate(val);
-  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return formatDate(val);
-  if (dt === "enum" || dt === "lifecycle_state") return titleCase(String(val));
-  return String(val);
-}
-
-function titleCase(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-// ── Placement map for operation → HeaderAction ────────────────────────────────
-
-const PLACEMENT_MAP: Record<string, "primary" | "secondary" | "overflow" | "danger"> = {
-  PRIMARY:  "primary",
-  TOOLBAR:  "secondary",
-  OVERFLOW: "overflow",
-  CONTEXT:  "overflow",
-  COMMAND:  "overflow",
-};
-
-// ── Action group classifier ───────────────────────────────────────────────────
-
-const LIFECYCLE_VERBS = new Set([
-  "activate", "deactivate", "block", "unblock", "archive", "unarchive",
-  "reactivate", "suspend", "resume", "cancel", "void", "close", "reopen",
-  "lock", "unlock", "freeze", "thaw", "discontinue", "terminate", "reinstate",
-  "enable", "disable",
-]);
-
-const RECORD_VERBS = new Set([
-  "copy", "duplicate", "export", "print", "new", "delete", "purge", "destroy",
-]);
-
-function classifyActionGroup(permissionCode: string): "lifecycle" | "record" | undefined {
-  const code = permissionCode.toLowerCase();
-  const stem = code.split("_")[0] ?? "";
-  if (LIFECYCLE_VERBS.has(code) || LIFECYCLE_VERBS.has(stem)) return "lifecycle";
-  if (RECORD_VERBS.has(code)    || RECORD_VERBS.has(stem))    return "record";
-  return undefined;
-}
-
-// ── Header model ──────────────────────────────────────────────────────────────
-
-function buildHeaderModel(
-  entity:     CompiledEntity,
-  data:       Record<string, unknown>,
-  config:     RichMasterConfig,
-  tabs:       HeaderTab[] | undefined,
-  recordId:   string,
-  operations: EntityOperation[] | undefined,
-  editMode:   boolean,
-  isDirty:    boolean,
-): EntityHeaderModel {
-  const statusField  = entity.display_config.status_field_names?.[0] ?? "status";
-  const statusVal    = String(data[statusField] ?? "active").toLowerCase();
-  const statusIntent = adminStatusIntent(statusVal);
-
-  // Inline classification: "· Vendor" — driven by config.classification_field, no hardcoding
-  const classField   = config.classification_field
-    ? entity.fields.find((f) => f.name === config.classification_field)
-    : undefined;
-  const classRawVal  = config.classification_field
-    ? (data[config.classification_field] ?? (classField?.column_name ? data[classField.column_name] : undefined))
-    : undefined;
-  const classification = classRawVal ? formatValue(classRawVal, classField) : undefined;
-
-  // P1 — identity: all four header slots driven by display_config field properties
-  const codeFieldName     = entity.display_config.code_field ?? "code";
-  const titleFieldName    = entity.display_config.title_field;
-  const subtitleFieldName = entity.display_config.subtitle_field;
-
-  const codeNumber  = data[codeFieldName] ? String(data[codeFieldName]) : recordId;
-  const entityName  = titleFieldName && data[titleFieldName]
-    ? String(data[titleFieldName])
-    : undefined;
-  const description = subtitleFieldName &&
-    data[subtitleFieldName] &&
-    data[subtitleFieldName] !== data[titleFieldName ?? ""]
-      ? String(data[subtitleFieldName])
-      : undefined;
-
-  const typeLabel = config.type_label
-    ?? entity.entity_name.toUpperCase().replace(/_/g, " ");
-
-  const editStatus = isDirty
-    ? { label: "Unsaved changes", intent: "warning" as SemanticIntent }
-    : { label: "Editing",         intent: "info"    as SemanticIntent };
-
-  let actions: HeaderAction[];
-  if (editMode) {
-    actions = isDirty
-      ? [
-          { id: "__save",    label: "Save",    placement: "primary",   order: 1 },
-          { id: "__discard", label: "Discard", placement: "secondary", order: 2 },
-        ]
-      : [
-          { id: "__exit", label: "Exit", placement: "secondary", order: 1 },
-        ];
-  } else {
-    const detailOps = (operations ?? []).filter(
-      (op) => op.surface === "DETAIL" || op.surface === "BOTH",
-    );
-    actions = detailOps.map((op) => ({
-      id:        op.permission_code,
-      label:     op.label_override ?? titleCase(op.permission_code),
-      placement: PLACEMENT_MAP[op.placement] ?? "overflow",
-      order:     op.sort_order,
-      disabled:  !op.is_enabled,
-      icon:      op.icon_override ?? undefined,
-      group:     classifyActionGroup(op.permission_code),
-    }));
-  }
-
-  return {
-    identity: {
-      typeLabel,
-      typeHref:         `/app/${entity.entity_code}`,
-      number:           codeNumber,
-      name:             entityName,
-      classification,
-      description,
-      identifierAction: "copy",
-      status: editMode
-        ? editStatus
-        : { label: titleCase(statusVal), intent: statusIntent },
-    },
-    actions,
-    facts: undefined,
-    tabs,
-  };
 }
 
 // ── KPI mini-card ─────────────────────────────────────────────────────────────
@@ -243,8 +79,8 @@ function OverviewRenderer({
 }: {
   entity:      CompiledEntity;
   data:        Record<string, unknown>;
-  config:      RichMasterConfig;
-  childTabs:   RichMasterTab[];
+  config:      MasterConfig;
+  childTabs:   MasterTab[];
   onTabChange: (id: string) => void;
 }) {
   const kpiItems = (config.header_facts ?? []).slice(0, 4).map((fieldName) => {
@@ -529,7 +365,7 @@ function ChildEntityPanel({
   editMode,
   viewOnlyReason,
 }: {
-  tab:            RichMasterTab;
+  tab:            MasterTab;
   recordUuid:     string;
   editMode:       boolean;
   viewOnlyReason: ViewOnlyReason | null;
@@ -665,7 +501,7 @@ function ChildEntityPanel({
             const primary   = displayFields[0] ? String(rec[displayFields[0]] ?? "") : "";
             const secondary = displayFields
               .slice(1)
-              .map((f) => rec[f])
+              .map((f: string) => rec[f])
               .filter(Boolean)
               .map(String)
               .join(" · ");
@@ -738,7 +574,7 @@ function CompositeRenderer({
 }: {
   entity:          CompiledEntity;
   data:            Record<string, unknown>;
-  sections:        RichMasterTabSection[];
+  sections:        MasterTabSection[];
   recordUuid:      string;
   editMode:        boolean;
   viewOnlyReason:  ViewOnlyReason | null;
@@ -862,7 +698,7 @@ export function RichMasterDetailPage({
   const router         = useRouter();
   const data           = record.data;
   const updateMutation = useUpdateEntity(entity.entity_code, recordId);
-  const config         = resolveRichMasterConfig(entity);
+  const config         = resolveMasterConfig(entity);
   const formRef        = useRef<EntityFormHandle>(null);
   const [isDirty, setIsDirty]         = useState(false);
   const [activePanel, setActivePanel] = useState<string | null>(null);
@@ -993,7 +829,15 @@ export function RichMasterDetailPage({
   );
 
   const headerModel = useMemo(
-    () => buildHeaderModel(entity, data, config, headerTabs, recordId, operations, editMode, isDirty),
+    () => buildMasterHeaderModel(
+      entity, data,
+      {
+        type_label:           config.type_label,
+        classification_field: config.classification_field,
+        header_facts:         config.header_facts,
+      },
+      headerTabs, recordId, operations, editMode, isDirty,
+    ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [entity, data, config, recordId, operations, editMode, isDirty],
   );

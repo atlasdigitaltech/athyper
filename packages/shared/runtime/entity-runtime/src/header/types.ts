@@ -73,7 +73,7 @@ export interface HeaderIdentity {
   /**
    * Inline classification shown after the name with a "·" separator.
    * e.g. "Vendor" for a supplier, "Manufacturer" for another.
-   * Driven by display_config.rich_master_config.classification_field — no hardcoding.
+   * Driven by display_config.master_config.classification_field — no hardcoding.
    */
   classification?: string;
   /**

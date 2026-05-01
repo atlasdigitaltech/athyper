@@ -1,10 +1,11 @@
 /**
  * @athyper/entity-runtime — EntityDetailPage
  *
- * Top-level dispatcher for /app/[entity]/[id]. Routes to one of three shells:
- *   master + rich  → RichMasterDetailPage (EntityHeader + SQL-driven tabs)
- *   document       → ApprovableDetailPage (injected via documentRenderer prop)
- *   master + simple→ GenericDetailReadView (EntityHeader + field-grid + tabs)
+ * Top-level dispatcher for /app/[entity]/[id]. Routes to one of four shells:
+ *   ledger         → LedgerDetailPage      (read-only, NAVIGATE ops only)
+ *   master + rich  → RichMasterDetailPage  (EntityHeader + SQL-driven tabs)
+ *   document       → injected documentRenderer (e.g. ApprovableDetailPage)
+ *   master + simple→ GenericDetailReadView  (EntityHeader + field-grid + tabs)
  *
  * All three shells use EntityHeader for consistent identity bar, actions, and tabs.
  * PageHeader is not used on entity detail pages.
@@ -15,8 +16,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCompiledEntity, useEntityDetail, useEntityOperations, useUpdateEntity } from "@athyper/query";
 import { useQuery } from "@tanstack/react-query";
-import { resolveDetailConfig, resolveRendererFamily, resolveTabs, resolveRichMasterConfig } from "@athyper/metadata-client/compiled-reader";
+import { resolveDetailConfig, resolveRendererFamily, resolveMasterConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import { RichMasterDetailPage } from "./RichMasterDetailPage";
+import { LedgerDetailPage } from "./LedgerDetailPage";
 import {
   Card, CardContent,
   Skeleton,
@@ -65,9 +67,6 @@ export interface DocumentRendererProps {
   recordId:   string;
 }
 
-/** @deprecated Use DocumentRendererProps */
-export type ApprovableRendererProps = DocumentRendererProps;
-
 export interface EntityDetailPageProps {
   entityCode: string;
   recordId: string;
@@ -95,7 +94,7 @@ function GenericDetailReadView({
   const router       = useRouter();
   const opDispatch   = useOperationDispatch({ entityCode, recordId, recordUuid: record.id });
   const detailConfig = resolveDetailConfig(entity);
-  const masterConfig = resolveRichMasterConfig(entity);
+  const masterConfig = resolveMasterConfig(entity);
   const data         = record.data;
   const resolvedTabs = resolveTabs(entity, null, []);
   const hasComments  = resolvedTabs.includes("comments");
@@ -118,12 +117,16 @@ function GenericDetailReadView({
   const headerModel = buildMasterHeaderModel(
     entity,
     data,
-    { type_label: masterConfig.type_label },
+    {
+      type_label:           masterConfig.type_label,
+      classification_field: masterConfig.classification_field,
+      header_facts:         masterConfig.header_facts,
+    },
     headerTabs.length > 0 ? headerTabs : undefined,
     recordId,
     operations,
-    false,   // editMode
-    false,   // isDirty
+    false,
+    false,
   );
   // Splice in the Edit action (buildMasterHeaderModel maps ops from entity_operations;
   // the Edit navigate-op is already included if seeded, but we guard canEdit explicitly).
@@ -271,8 +274,19 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, docum
   const renderer = resolveRendererFamily(entity);
   const profile  = entity.display_config.detail_profile ?? "simple";
 
-  // ledger + read-only profile: never editable regardless of operations
-  const isReadOnly = renderer === "ledger" || profile === "read-only";
+  if (renderer === "ledger") {
+    return (
+      <LedgerDetailPage
+        entity={entity}
+        record={record}
+        operations={operations}
+        recordId={recordId}
+      />
+    );
+  }
+
+  // read-only profile: never editable regardless of operations
+  const isReadOnly = profile === "read-only";
   const resolvedCanEdit = isReadOnly ? false : canEdit;
   const resolvedEditMode = isReadOnly ? false : effectiveEditMode;
 
@@ -304,29 +318,17 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, docum
 
   // ── Edit mode — EntityHeader in "Editing" state + EntityForm below ────────
   if (resolvedEditMode) {
-    const editConfig    = resolveRichMasterConfig(entity);
-    const editDetailCfg = resolveDetailConfig(entity);
-    const editCodeField  = entity.display_config.code_field ?? "code";
-    const editCodeNumber = data[editCodeField] ? String(data[editCodeField]) : recordId;
-    const editEntityName = editDetailCfg.titleField && data[editDetailCfg.titleField.name]
-      ? String(data[editDetailCfg.titleField.name])
-      : undefined;
+    const editConfig = resolveMasterConfig(entity);
 
     const editModel = buildMasterHeaderModel(
       entity, data,
-      { type_label: editConfig.type_label },
-      undefined,   // no tabs in edit mode
+      { type_label: editConfig.type_label, classification_field: editConfig.classification_field },
+      undefined,
       recordId,
-      undefined,   // actions come from editMode branch inside builder
-      true,        // editMode
-      false,       // isDirty — static header; form manages dirty state internally
+      undefined,
+      true,
+      false,
     );
-    // Override identity for edit mode: number + name from record, status = Editing
-    editModel.identity.number = editCodeNumber;
-    editModel.identity.name   = editEntityName;
-    editModel.identity.identifierAction = "none";
-    editModel.identity.status = { label: "Editing", intent: "info" };
-
     return (
       <>
         <EntityHeader

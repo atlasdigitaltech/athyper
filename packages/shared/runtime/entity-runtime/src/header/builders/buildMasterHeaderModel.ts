@@ -8,7 +8,7 @@
 import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
-import type { EntityHeaderModel, HeaderAction, HeaderTab } from "../types";
+import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderTab } from "../types";
 
 // ── Placement map: entity_operation.placement → HeaderAction.placement ────────
 
@@ -68,11 +68,70 @@ export function titleCase(s: string): string {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// ── Config shape (minimal — rich detail comes from rich_master_config) ────────
+// ── Facts rail builder ────────────────────────────────────────────────────────
+
+const AMOUNT_TYPES = new Set(["decimal", "numeric", "integer", "money", "bigint"]);
+const DATE_TYPES   = new Set(["date", "datetime", "timestamptz"]);
+const ENUM_TYPES   = new Set(["enum", "lifecycle_state"]);
+
+function formatFactValue(val: unknown, field: EntityField | undefined): string {
+  if (val === null || val === undefined || val === "") return "—";
+  const dt = field?.data_type ?? "";
+  if (AMOUNT_TYPES.has(dt)) {
+    const n = typeof val === "number" ? val : Number(val);
+    if (!Number.isNaN(n)) {
+      return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(n);
+    }
+  }
+  return formatValue(val, field);
+}
+
+function buildFactsRail(
+  entity:     CompiledEntity,
+  data:       Record<string, unknown>,
+  fieldNames: string[] | undefined,
+): HeaderFact[] | undefined {
+  if (!fieldNames || fieldNames.length === 0) return undefined;
+
+  const facts: HeaderFact[] = [];
+  let firstAmountSeen = false;
+
+  for (const fieldName of fieldNames) {
+    const field    = entity.fields.find((f) => f.name === fieldName);
+    const rawVal   = data[fieldName] ?? (field?.column_name ? data[field.column_name] : undefined);
+    const dt       = field?.data_type ?? "";
+    const isAmount = AMOUNT_TYPES.has(dt);
+    const isDate   = DATE_TYPES.has(dt);
+    const isEnum   = ENUM_TYPES.has(dt);
+
+    const valueType: HeaderFact["valueType"] =
+      isAmount ? "amount" : isDate ? "date" : isEnum ? "enum" : "text";
+
+    const xl = isAmount && !firstAmountSeen ? true : undefined;
+    if (isAmount) firstAmountSeen = true;
+
+    facts.push({
+      id:        fieldName,
+      label:     field?.label ?? titleCase(fieldName),
+      value:     formatFactValue(rawVal, field),
+      valueType,
+      xl,
+    });
+  }
+
+  return facts.length > 0 ? facts : undefined;
+}
+
+// ── Config shape ──────────────────────────────────────────────────────────────
 
 export interface MasterHeaderConfig {
   type_label?:           string;
   classification_field?: string;
+  /** Field names to render as P2 KPI facts in the header (rich profile only). */
+  header_facts?:         string[];
 }
 
 // ── Main builder ──────────────────────────────────────────────────────────────
@@ -161,7 +220,7 @@ export function buildMasterHeaderModel(
         : { label: titleCase(statusVal), intent: statusIntent },
     },
     actions,
-    facts: undefined,
+    facts: editMode ? undefined : buildFactsRail(entity, data, config.header_facts),
     tabs,
   };
 }

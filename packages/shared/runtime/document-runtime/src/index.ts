@@ -21,6 +21,7 @@ export {
   type ApprovableAction,
   type HeaderMode,
   buildApprovableHeaderFromRecord,
+  buildDocumentHeaderModel,
   mapDocumentHeaderModel,
   type MapDocumentHeaderModelOpts,
 } from "./header";
@@ -133,7 +134,9 @@ export type {
 // Call registerDocumentRenderers() once at app startup (root layout).
 export { registerDocumentRenderers } from "./register";
 
-// ── Approvable document detail page ─────────────────────────────────────────
+// ── Document detail page ─────────────────────────────────────────────────────
+export { DocumentDetailPage, type DocumentDetailPageProps } from "./pages/ApprovableDetailPage";
+/** @deprecated Use DocumentDetailPage */
 export { ApprovableDetailPage, type ApprovableDetailPageProps } from "./pages/ApprovableDetailPage";
 
 // ── Entity view descriptors + registry ──────────────────────────────────────

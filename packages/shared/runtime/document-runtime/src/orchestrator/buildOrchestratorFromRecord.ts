@@ -128,7 +128,7 @@ export function buildOrchestratorFromRecord(
 
   // ── Action Bundle ───────────────────────────────────────────────────────
   const actionGroups = (entity.display_config.action_groups as ActionGroupsConfig | undefined)
-    ?? (entity.display_config.detail_renderer === "approvable" ? APPROVABLE_STATUS_GROUPS : undefined);
+    ?? (entity.display_config.detail_renderer === "document" ? APPROVABLE_STATUS_GROUPS : undefined);
   const actionBundle = buildActionBundle(operations, statusNorm, actionGroups);
 
   return {

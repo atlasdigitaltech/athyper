@@ -67,11 +67,19 @@ WHERE entity_class = 'DOCUMENT'
   AND (display_config ? 'list_renderer')
   AND (display_config->>'detail_renderer') IS NULL;
 
--- ── Step 7: All remaining non-DOCUMENT entities default to "master" ──────────
+-- ── Step 7: All remaining non-DOCUMENT / non-ledger entities default to "master" ──
 UPDATE control.entity
 SET display_config = display_config
   || '{"detail_renderer": "master"}'::jsonb
-WHERE entity_class NOT IN ('DOCUMENT')
+WHERE entity_class NOT IN ('DOCUMENT', 'LEDGER', 'LOG', 'AGGREGATE')
+  AND (display_config ? 'list_renderer')
+  AND (display_config->>'detail_renderer') IS NULL;
+
+-- ── Step 7b: LEDGER / LOG / AGGREGATE entities without explicit renderer → "ledger" ──
+UPDATE control.entity
+SET display_config = display_config
+  || '{"detail_renderer": "ledger"}'::jsonb
+WHERE entity_class IN ('LEDGER', 'LOG', 'AGGREGATE')
   AND (display_config ? 'list_renderer')
   AND (display_config->>'detail_renderer') IS NULL;
 
@@ -83,6 +91,7 @@ WHERE display_config->>'detail_renderer' = 'master'
   AND NOT (display_config ? 'detail_profile');
 
 -- ── Step 9: Rename rich_master_config → master_config ────────────────────────
+
 -- Copies the value to the new key and removes the old key.
 -- Idempotent: skips rows that already have master_config or lack rich_master_config.
 UPDATE control.entity
@@ -90,3 +99,16 @@ SET display_config = (display_config - 'rich_master_config')
   || jsonb_build_object('master_config', display_config->'rich_master_config')
 WHERE (display_config ? 'rich_master_config')
   AND NOT (display_config ? 'master_config');
+
+-- ── Step 10: Correct any LEDGER / LOG / AGGREGATE that was assigned "master" ─
+-- Migration guard: Steps 7/080 §C may have set detail_renderer='master' before
+-- this class was introduced. Correct to 'ledger' idempotently.
+UPDATE control.entity
+SET display_config = display_config
+  || '{"detail_renderer": "ledger"}'::jsonb
+WHERE entity_class IN ('LEDGER', 'LOG', 'AGGREGATE')
+  AND (display_config ? 'list_renderer')
+  AND (
+    (display_config->>'detail_renderer') IS NULL
+    OR display_config->>'detail_renderer' = 'master'
+  );

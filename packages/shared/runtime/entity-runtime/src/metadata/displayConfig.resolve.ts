@@ -23,28 +23,16 @@ const VIEW_MODES = new Set<ViewMode>([
 ]);
 
 function toDetailRenderer(v: unknown): DetailRenderer {
-  // Compatibility normalizer — maps all legacy DB values to the canonical three.
-  // Keep these cases forever; remove only after 081_backfill confirms no rows remain.
-  switch (v) {
-    case "rich_master":   return "master";   // richness → detail_profile:"rich"
-    case "approvable":    return "document";  // behavior flag, not renderer
-    case "standard":      return "master";   // unused alias
-    case "generic":       return "master";   // unused alias
-    case "line_item":     return "master";   // sub-entity — not a top-level renderer
-    case "distribution":  return "master";   // sub-entity — not a top-level renderer
-  }
   return DETAIL_RENDERERS.has(v as DetailRenderer)
     ? (v as DetailRenderer)
     : DEFAULT_DISPLAY_CONFIG.detail_renderer;
 }
 
-function toDetailProfile(renderer: DetailRenderer, raw: RawDisplayConfig): DetailProfile {
+function toDetailProfile(raw: RawDisplayConfig): DetailProfile {
   const v = raw["detail_profile"];
-  if (DETAIL_PROFILES.has(v as DetailProfile)) return v as DetailProfile;
-  // Infer profile from legacy renderer values before SQL seeds are cleaned up.
-  if (raw["detail_renderer"] === "rich_master") return "rich";
-  if (raw["detail_renderer"] === "approvable")  return "rich";  // document + rich
-  return DEFAULT_DISPLAY_CONFIG.detail_profile;
+  return DETAIL_PROFILES.has(v as DetailProfile)
+    ? (v as DetailProfile)
+    : DEFAULT_DISPLAY_CONFIG.detail_profile;
 }
 
 function toListRenderer(v: unknown): ListRenderer {
@@ -72,7 +60,7 @@ export function resolvePresentationConfig(raw: RawDisplayConfig): ResolvedDispla
     ...raw,
     // Normalised required fields — validate enum membership, fall back to defaults
     detail_renderer,
-    detail_profile:     toDetailProfile(detail_renderer, raw),
+    detail_profile:     toDetailProfile(raw),
     list_renderer:      toListRenderer(raw["list_renderer"]),
     view_modes:         toViewModes(raw["view_modes"]),
     list_columns:       Array.isArray(raw["list_columns"])

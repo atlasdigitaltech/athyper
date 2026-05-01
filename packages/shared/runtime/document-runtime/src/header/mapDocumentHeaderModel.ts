@@ -340,3 +340,6 @@ export function mapDocumentHeaderModel(
 
   return model;
 }
+
+/** Canonical name. @deprecated Use buildDocumentHeaderModel. */
+export { mapDocumentHeaderModel as buildDocumentHeaderModel };

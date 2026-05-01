@@ -1,5 +1,5 @@
 import { EntityDetailPage } from "@athyper/entity-runtime/detail";
-import { ApprovableDetailPage } from "@athyper/document-runtime";
+import { DocumentDetailPage } from "@athyper/document-runtime";
 
 /**
  * Runtime entity detail — /app/[entity]/[id]
@@ -40,7 +40,7 @@ export default async function AppEntityDetailRoute({
       entityCode={entity}
       recordId={id}
       editMode={mode === "edit"}
-      documentRenderer={ApprovableDetailPage}
+      documentRenderer={DocumentDetailPage}
     />
   );
 }

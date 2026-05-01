@@ -16,7 +16,7 @@ import {
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import { buildOrchestratorFromRecord } from "../orchestrator";
-import { mapDocumentHeaderModel } from "../header";
+import { buildDocumentHeaderModel } from "../header";
 import { AmountSummaryCard } from "../amounts";
 import { FlowModal } from "../intake";
 import { ValidationBanner } from "../validation";
@@ -730,7 +730,7 @@ export function ApprovableDetailPage({
     ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports" }]       : []),
   ];
 
-  const headerModel = mapDocumentHeaderModel(entity, data, {
+  const headerModel = buildDocumentHeaderModel(entity, data, {
     statusDimensions:    orchestrator.statusDimensions ?? [],
     actionBundle:        orchestrator.actionBundle,
     resolvedPartyName:   resolvedPartyName ?? undefined,
@@ -1018,3 +1018,10 @@ export function ApprovableDetailPage({
     </>
   );
 }
+
+// ── Phase 5 canonical names ───────────────────────────────────────────────────
+
+/** Canonical name for the document detail page props. */
+export type DocumentDetailPageProps = ApprovableDetailPageProps;
+/** Canonical name for the document detail page component. */
+export { ApprovableDetailPage as DocumentDetailPage };

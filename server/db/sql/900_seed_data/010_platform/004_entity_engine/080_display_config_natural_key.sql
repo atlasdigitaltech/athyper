@@ -53,7 +53,7 @@ WHERE tenant_id IS NULL
   AND display_config = '{}'::jsonb;
 
 -- =============================================================================
--- §C  display_config — DOCUMENT_RELATION / RELATION / AGGREGATE / LOG entities
+-- §C  display_config — DOCUMENT_RELATION / RELATION entities (editable children)
 -- =============================================================================
 
 UPDATE control.entity
@@ -65,7 +65,23 @@ SET display_config = jsonb_build_object(
 )
 WHERE tenant_id IS NULL
   AND status       = 'ACTIVE'
-  AND entity_class IN ('DOCUMENT_RELATION', 'RELATION', 'AGGREGATE', 'LOG')
+  AND entity_class IN ('DOCUMENT_RELATION', 'RELATION')
+  AND display_config = '{}'::jsonb;
+
+-- =============================================================================
+-- §C2  display_config — LEDGER / LOG / AGGREGATE entities (immutable, read-only)
+-- =============================================================================
+
+UPDATE control.entity
+SET display_config = jsonb_build_object(
+    'detail_renderer',    'ledger',
+    'list_columns',       '["id","created_at"]'::jsonb,
+    'default_sort_field', 'created_at',
+    'default_sort_order', 'desc'
+)
+WHERE tenant_id IS NULL
+  AND status       = 'ACTIVE'
+  AND entity_class IN ('LEDGER', 'LOG', 'AGGREGATE')
   AND display_config = '{}'::jsonb;
 
 -- =============================================================================

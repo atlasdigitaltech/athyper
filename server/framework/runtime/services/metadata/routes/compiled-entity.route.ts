@@ -104,39 +104,6 @@ function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unk
   return canonical;
 }
 
-const LEGACY_RENDERER_MAP: Record<string, string> = {
-  rich_master:  "master",
-  approvable:   "document",
-  standard:     "master",
-  generic:      "master",
-  line_item:    "master",
-  distribution: "master",
-};
-
-/**
- * Normalize raw DB display_config into the canonical CompiledEntity contract shape.
- * Runs at the compiler boundary so old DB values never reach page dispatch logic.
- */
-function normalizeDisplayConfig(raw: Record<string, unknown>): Record<string, unknown> {
-  const out = { ...raw };
-
-  // Normalize detail_renderer: map legacy aliases → canonical three-value set
-  const rawRenderer = String(raw["detail_renderer"] ?? "");
-  if (rawRenderer in LEGACY_RENDERER_MAP) {
-    out["detail_renderer"] = LEGACY_RENDERER_MAP[rawRenderer];
-    // Derive detail_profile from legacy renderer if not already set
-    if (!out["detail_profile"] && rawRenderer === "rich_master") {
-      out["detail_profile"] = "rich";
-    }
-  }
-
-  // Normalize master_config: prefer master_config, fall back to rich_master_config
-  if (!out["master_config"] && out["rich_master_config"]) {
-    out["master_config"] = out["rich_master_config"];
-  }
-
-  return out;
-}
 
 /** Map entity_field row → EntityField contract shape */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -326,9 +293,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       }
 
       // ── Build display_config ──────────────────────────────────────────────
-      const dbDisplayConfig = normalizeDisplayConfig(
-        (entityRow.display_config ?? {}) as Record<string, unknown>,
-      );
+      const dbDisplayConfig = (entityRow.display_config ?? {}) as Record<string, unknown>;
       const masterConfigValue = (dbDisplayConfig["master_config"] ?? undefined) as Record<string, unknown> | undefined;
       const displayConfig = {
         code_field:         (dbDisplayConfig["code_field"] ?? undefined) as string | undefined,
@@ -344,7 +309,6 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         detail_profile:     (dbDisplayConfig["detail_profile"] ?? undefined) as string | undefined,
         document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
         master_config:      masterConfigValue,
-        rich_master_config: masterConfigValue, // deprecated compat alias — same object, remove after SQL migration
         // Lines section — null = entity has no line items; string = registered renderer key.
         // "lines_renderer" in check preserves explicit null (no lines) vs. absent (also no lines).
         lines_renderer:     "lines_renderer" in dbDisplayConfig

@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@athyper/ui/primitives";
-import type { SummaryCardsConfig, RichMasterTab } from "@athyper/metadata-client/compiled-reader";
+import type { SummaryCardsConfig, MasterTab } from "@athyper/metadata-client/compiled-reader";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
@@ -657,7 +657,7 @@ export function ChildSummaryCardsPanel({
   editMode,
   viewOnlyReason,
 }: {
-  tab:            RichMasterTab;
+  tab:            MasterTab;
   recordUuid:     string;
   editMode:       boolean;
   viewOnlyReason: ViewOnlyReason | null;

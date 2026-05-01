@@ -203,7 +203,7 @@ export type RichMasterTabRenderer =
 
 /**
  * Config for the summary_cards_with_drawer renderer.
- * Lives inside a RichMasterTab as `config` and drives RecordSummaryCard +
+ * Lives inside a MasterTab as `config` and drives RecordSummaryCard +
  * RecordDetailDrawer without any per-entity TSX.
  */
 export interface SummaryCardsConfig {
@@ -227,7 +227,7 @@ export interface SummaryCardsConfig {
 }
 
 /** A single section within a composite-renderer tab (entity fields or a child-entity list). */
-export interface RichMasterTabSection {
+export interface MasterTabSection {
   id: string;
   label: string;
   type: "fields" | "child";
@@ -239,7 +239,7 @@ export interface RichMasterTabSection {
   empty_description?: string;
 }
 
-export interface RichMasterTab {
+export interface MasterTab {
   id: string;
   label: string;
   renderer: RichMasterTabRenderer;
@@ -251,7 +251,7 @@ export interface RichMasterTab {
   empty_description?: string;
   blank_message?: string;
   /** Ordered sections for composite-renderer tabs (anchored section nav). */
-  composite_sections?: RichMasterTabSection[];
+  composite_sections?: MasterTabSection[];
   /**
    * For view-backed child tabs (e.g. supplier_bank_account view): the entity to use for the
    * create form and the first POST.  When absent, entity_code is used for both list and create.
@@ -273,15 +273,12 @@ export interface MasterConfig {
   /** Field name whose value is shown inline on the identity line: "ACME-CONSULT-US · Vendor" */
   classification_field?: string;
   header_facts?: string[];
-  tabs?: RichMasterTab[];
+  tabs?: MasterTab[];
   /** Platform context panels shown as icon buttons in the tab bar (Comments / Attachments / Activity). */
   platform_panels?: Array<"comments" | "attachments" | "activity">;
 }
 
-/** @deprecated Use MasterConfig */
-export type RichMasterConfig = MasterConfig;
-
-const DEFAULT_MASTER_TABS: RichMasterTab[] = [
+const DEFAULT_MASTER_TABS: MasterTab[] = [
   { id: "__profile",     label: "Profile",     renderer: "fields"      },
   { id: "__comments",    label: "Comments",    renderer: "comments"    },
   { id: "__attachments", label: "Attachments", renderer: "attachments" },
@@ -293,16 +290,9 @@ const DEFAULT_MASTER_TABS: RichMasterTab[] = [
  * Returns defaults when the entity has no explicit master_config.
  */
 export function resolveMasterConfig(entity: CompiledEntity): MasterConfig {
-  const cfg = entity.display_config.master_config ?? entity.display_config.rich_master_config;
+  const cfg = entity.display_config.master_config;
   if (!cfg) return { tabs: DEFAULT_MASTER_TABS };
-  // Cast tabs: the deprecated rich_master_config schema uses renderer:z.string() (loose),
-  // so TypeScript widens the union to string. The runtime values are always valid enum members.
-  return { ...cfg, tabs: (cfg.tabs as RichMasterTab[] | undefined) ?? DEFAULT_MASTER_TABS };
-}
-
-/** @deprecated Use resolveMasterConfig */
-export function resolveRichMasterConfig(entity: CompiledEntity): MasterConfig {
-  return resolveMasterConfig(entity);
+  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_MASTER_TABS };
 }
 
 // ── Semantic resolver detection ───────────────────────────────────────────────

@@ -115,6 +115,90 @@ export const FieldGroupSchema = z.object({
 export type FieldGroup = z.infer<typeof FieldGroupSchema>;
 
 // ═══════════════════════════════════════════════════════════════
+// MASTER CONFIG SUB-SCHEMAS
+// ═══════════════════════════════════════════════════════════════
+
+/** Section within a composite-renderer tab (field grid or child entity list). */
+const MasterTabSectionSchema = z.object({
+  id:                 z.string(),
+  label:              z.string(),
+  type:               z.enum(["fields", "child"]),
+  entity_code:        z.string().optional(),
+  display_fields:     z.array(z.string()).optional(),
+  add_href_template:  z.string().optional(),
+  add_label:          z.string().optional(),
+  empty_title:        z.string().optional(),
+  empty_description:  z.string().optional(),
+});
+export type MasterTabSection = z.infer<typeof MasterTabSectionSchema>;
+
+/** Config for the summary_cards_with_drawer tab renderer. */
+const SummaryCardsConfigSchema = z.object({
+  /** Field name rendered as each card's primary identity line. */
+  title:       z.string(),
+  /** Ordered field names rendered as the card facts line. */
+  facts:       z.array(z.string()).optional(),
+  /** Badge evaluator keys (e.g. "primary", "status", "verified", "expiry"). */
+  badges:      z.array(z.string()).optional(),
+  /** Alert rule keys evaluated per record. */
+  alertRules:  z.array(z.string()).optional(),
+  /** Default sort order fragments. */
+  defaultSort: z.array(z.string()).optional(),
+});
+export type SummaryCardsConfig = z.infer<typeof SummaryCardsConfigSchema>;
+
+/** A single tab in a master entity's tab strip. */
+const MasterTabSchema = z.object({
+  id:      z.string(),
+  label:   z.string(),
+  renderer: z.enum([
+    "overview",
+    "fields",
+    "child",
+    "composite",
+    "comments",
+    "attachments",
+    "activity",
+    "blank",
+    "summary_cards_with_drawer",
+  ]),
+  /** Required for renderer="child" or "summary_cards_with_drawer". */
+  entity_code:         z.string().optional(),
+  display_fields:      z.array(z.string()).optional(),
+  add_href_template:   z.string().optional(),
+  add_label:           z.string().optional(),
+  empty_title:         z.string().optional(),
+  empty_description:   z.string().optional(),
+  blank_message:       z.string().optional(),
+  /** Ordered sub-sections for renderer="composite". */
+  composite_sections:  z.array(MasterTabSectionSchema).optional(),
+  /** Entity used for the create form when different from entity_code (e.g. view-backed child). */
+  create_entity_code:  z.string().optional(),
+  /** Secondary entity for polymorphic link records. */
+  link_entity_code:    z.string().optional(),
+  /** owner_type injected into the link record. */
+  link_owner_type:     z.string().optional(),
+  /** Config for renderer="summary_cards_with_drawer". */
+  config:              SummaryCardsConfigSchema.optional(),
+});
+export type MasterTab = z.infer<typeof MasterTabSchema>;
+
+/** Config for detail_profile="rich" master entities (master_config). */
+export const MasterConfigSchema = z.object({
+  /** P1 chip label, e.g. "SUPPLIER". Defaults to entity_name uppercased. */
+  type_label:           z.string().optional(),
+  /** Field name whose value is shown as inline classification: "ACME · Vendor". */
+  classification_field: z.string().optional(),
+  /** Field names to display as KPI fact cells (P2 header rail for rich profile). */
+  header_facts:         z.array(z.string()).optional(),
+  /** Platform context panels shown as icon buttons in the tab bar. */
+  platform_panels:      z.array(z.enum(["comments", "attachments", "activity"])).optional(),
+  /** Ordered tab definitions. Falls back to [fields, comments, attachments, activity] when absent. */
+  tabs:                 z.array(MasterTabSchema).optional(),
+});
+export type MasterConfig = z.infer<typeof MasterConfigSchema>;
+
+// ═══════════════════════════════════════════════════════════════
 // COMPILED ENTITY — from snapshot.entity_compiled.compiled_json
 // Primary source for all three rendering runtimes.
 // ═══════════════════════════════════════════════════════════════
@@ -265,64 +349,8 @@ export const CompiledEntitySchema = z.object({
       }),
     ).optional(),
 
-    /**
-     * Configuration for detail_profile = "rich" master entities.
-     * Drives RichMasterDetailPage — one generic component for all master entities.
-     * All entity-specific layout decisions live here in SQL, never in TSX.
-     *
-     * Tab renderers:
-     *   "overview"     — KPI cards from header_facts + child-tab shortcut cards
-     *   "fields"       — entity field grid (view) / EntityForm (edit)
-     *   "child"        — child entity list panel (requires entity_code)
-     *   "comments"     — CommentsPanel
-     *   "attachments"  — AttachmentsPanel
-     *   "activity"     — EventsPanel
-     *   "blank"        — placeholder with blank_message
-     */
-    master_config: z.object({
-      /** Chip label in P1 identity row, e.g. "SUPPLIER". Defaults to entity_name uppercased. */
-      type_label: z.string().optional(),
-      /** Field names to display as KPI fact cells in the P2 header rail. */
-      header_facts: z.array(z.string()).optional(),
-      /** Ordered tab definitions. Falls back to [{fields},{comments},{attachments},{activity}] when absent. */
-      tabs: z.array(z.object({
-        id:               z.string(),
-        label:            z.string(),
-        renderer:         z.enum(["overview", "fields", "child", "comments", "attachments", "activity", "blank"]),
-        /** Required for renderer="child". */
-        entity_code:      z.string().optional(),
-        /** Field names to show in child record rows (primary = first). */
-        display_fields:   z.array(z.string()).optional(),
-        /** URL template for "Add" button. "{uuid}" is replaced with the parent record's UUID. */
-        add_href_template: z.string().optional(),
-        add_label:        z.string().optional(),
-        empty_title:      z.string().optional(),
-        empty_description: z.string().optional(),
-        /** For renderer="blank": message shown in the placeholder. */
-        blank_message:    z.string().optional(),
-      })).optional(),
-    }).optional(),
-    /**
-     * @deprecated Use master_config. Kept for DB rows not yet migrated by 081_backfill.sql.
-     * The compiler emits master_config = rich_master_config when master_config is absent.
-     * Remove once all seeds use master_config.
-     */
-    rich_master_config: z.object({
-      type_label:   z.string().optional(),
-      header_facts: z.array(z.string()).optional(),
-      tabs:         z.array(z.object({
-        id:               z.string(),
-        label:            z.string(),
-        renderer:         z.string(),
-        entity_code:      z.string().optional(),
-        display_fields:   z.array(z.string()).optional(),
-        add_href_template: z.string().optional(),
-        add_label:        z.string().optional(),
-        empty_title:      z.string().optional(),
-        empty_description: z.string().optional(),
-        blank_message:    z.string().optional(),
-      })).optional(),
-    }).optional(),
+    /** Config for detail_profile="rich" master entities. Fully typed via MasterConfigSchema. */
+    master_config: MasterConfigSchema.optional(),
   }),
 
   feature_flags: z.object({
