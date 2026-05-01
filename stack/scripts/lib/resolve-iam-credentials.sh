@@ -40,10 +40,16 @@ init_stack_env() {
 
 # ---------------------------------------------------------------------------
 # env_val: read a single key from the resolved .env file
+#
+# `|| true` on grep is required: callers run with `set -e -o pipefail`, and a
+# missing key would otherwise propagate grep's exit-1 through the pipeline,
+# making the assignment fail and killing the calling script before it can fall
+# back to secrets/.env. This is the staging case where IAM_ADMIN_PASSWORD lives
+# in secrets/.env, not stack/env/.env.
 # ---------------------------------------------------------------------------
 env_val() {
   local key="${1:?env_val: KEY argument required}"
-  grep -E "^${key}=" "$_STACK_ENV_FILE" 2>/dev/null \
+  { grep -E "^${key}=" "$_STACK_ENV_FILE" 2>/dev/null || true; } \
     | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'"
 }
 
