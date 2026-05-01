@@ -8,7 +8,7 @@
  *                  flows (display_config.alternate_flows non-empty). The user
  *                  picks a flow type; the chosen wizard then loads.
  *   FlowWizard   — when the entity has an active 'create' flow in the flow
- *                  engine (approvable documents, guided intake).
+ *                  engine (document records, guided intake).
  *   EntityForm   — for all other entities (master records, simple forms).
  *
  * Examples:

@@ -43,7 +43,7 @@ export interface ResolvedDisplayConfig {
   icon?:           string;
   color?:          string;
 
-  // ── Document header field-map (approvable entities) ───────────────────────
+  // ── Document header field-map ─────────────────────────────────────────────
   document_header?: Record<string, string | undefined>;
 
   // ── Action grouping ───────────────────────────────────────────────────────

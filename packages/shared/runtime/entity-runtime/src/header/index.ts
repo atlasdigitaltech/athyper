@@ -50,7 +50,6 @@ export {
   formatValue,
   type MasterHeaderConfig,
 } from "./builders/buildMasterHeaderModel";
-export { titleCase } from "@athyper/runtime-shared/core";
 
 // ── Fixtures — dev/test only, never import in production code ─────────────
 export {

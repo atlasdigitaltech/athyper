@@ -5,7 +5,7 @@
  * breakdown, health tiles) from the compiled entity descriptor + raw record
  * data + entity operations — WITHOUT any entity-specific code.
  *
- * This is the generic path: any entity with detail_renderer = "approvable"
+ * This is the generic path: any entity with detail_renderer = "document"
  * automatically gets the full orchestrator UI. Entity-specific pages (e.g.
  * purchase-invoice) can override with richer data from specialised APIs.
  *
@@ -49,11 +49,11 @@ const PLACEMENT_TO_GROUP: Record<string, ActionBundleGroup> = {
 };
 
 // ── Built-in status-driven action groups ────────────────────────────────────
-// Applied automatically for any entity with detail_renderer = "approvable"
+// Applied automatically for any entity with detail_renderer = "document"
 // when no entity-specific action_groups is found in display_config.
 // Entity-specific config (display_config.action_groups) overrides this entirely.
 
-const APPROVABLE_STATUS_GROUPS: ActionGroupsConfig = {
+const DOCUMENT_STATUS_GROUPS: ActionGroupsConfig = {
   draft:            { primary: ["update", "submit"],        working: ["cancel"] },
   submitted:        { primary: ["approve", "deny"],         working: ["cancel"] },
   pending_approval: { primary: ["approve", "deny"],         working: ["cancel"] },
@@ -122,7 +122,7 @@ export function buildOrchestratorFromRecord(
 
   // ── Action Bundle ───────────────────────────────────────────────────────
   const actionGroups = (entity.display_config.action_groups as ActionGroupsConfig | undefined)
-    ?? (entity.display_config.detail_renderer === "document" ? APPROVABLE_STATUS_GROUPS : undefined);
+    ?? (entity.display_config.detail_renderer === "document" ? DOCUMENT_STATUS_GROUPS : undefined);
   const actionBundle = buildActionBundle(operations, statusNorm, actionGroups);
 
   return {

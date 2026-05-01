@@ -204,14 +204,29 @@ const DEFAULT_MASTER_TABS: MasterTab[] = [
   { id: "__activity",    label: "Activity",    renderer: "activity"    },
 ];
 
+const DEFAULT_PLATFORM_PANELS: NonNullable<MasterConfig["platform_panels"]> = [
+  "comments",
+  "attachments",
+  "activity",
+];
+
 /**
  * Resolve master_config from a compiled entity.
  * Returns defaults when the entity has no explicit master_config.
  */
 export function resolveMasterConfig(entity: CompiledEntity): MasterConfig {
   const cfg = entity.display_config.master_config;
-  if (!cfg) return { tabs: DEFAULT_MASTER_TABS };
-  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_MASTER_TABS };
+  if (!cfg) {
+    return {
+      tabs:            DEFAULT_MASTER_TABS,
+      platform_panels: DEFAULT_PLATFORM_PANELS,
+    };
+  }
+  return {
+    ...cfg,
+    tabs:            cfg.tabs ?? DEFAULT_MASTER_TABS,
+    platform_panels: cfg.platform_panels ?? DEFAULT_PLATFORM_PANELS,
+  };
 }
 
 // ── Semantic resolver detection ───────────────────────────────────────────────

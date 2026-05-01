@@ -23,7 +23,7 @@ import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
 import { DragDropUploadZone } from "@athyper/content-ui";
 import { bffFetch, getCsrfToken } from "@/lib/bff-fetch";
-import { formatTitle } from "@/lib/format";
+import { formatBytes, formatTitle } from "@/lib/format";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,12 +39,6 @@ interface Attachment {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function mimeIcon(contentType: string): string {
   if (contentType.startsWith("image/")) return "🖼";

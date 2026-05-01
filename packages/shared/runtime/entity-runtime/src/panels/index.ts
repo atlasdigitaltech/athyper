@@ -1,3 +1,9 @@
+export { AuditMetaCard, type AuditMetaCardProps } from "./AuditMetaCard";
+export {
+  EntityContextDrawer,
+  type EntityContextDrawerAttachmentSummary,
+  type EntityContextDrawerProps,
+} from "./EntityContextDrawer";
 export { TasksPanel, type TasksPanelProps } from "./TasksPanel";
 export { WatchersPanel, type WatchersPanelProps } from "./WatchersPanel";
 export { RulesPanel, type RulesPanelProps } from "./RulesPanel";

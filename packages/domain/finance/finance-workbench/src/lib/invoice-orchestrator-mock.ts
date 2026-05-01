@@ -2,7 +2,7 @@
  * @athyper/finance-workbench — Invoice Orchestrator Mock Data
  *
  * Pure functions producing mock orchestrator payloads keyed on invoice status.
- * Enables visual development of the approvable document shell before the
+ * Enables visual development of the document detail shell before the
  * backend API endpoints for ProcessHealth, StatusBundle, etc. are built.
  *
  * All action codes use ONLY seeded entity_operation.permission_code values:

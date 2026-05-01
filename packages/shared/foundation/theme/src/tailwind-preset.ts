@@ -133,7 +133,7 @@ const athyperPreset: Config = {
     extend: {
       fontSize: {
         // ── Entity Document Typography Scale ────────────────────────────────
-        // Shared by all document entities via ApprovableDocumentHeader et al.
+        // Shared by all document entities via the common EntityHeader.
         // Token names describe role, not location — safe to use on any entity.
         // Values mirror the CSS variables in base.css (:root --doc-*-size).
         // Use rem so these scale with the user's browser font-size preference.

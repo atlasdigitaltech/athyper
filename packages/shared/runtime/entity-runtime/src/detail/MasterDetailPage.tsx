@@ -18,15 +18,14 @@ import {
   Button, Card, CardContent, Label, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-  DrawerShell,
 } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import { EntityHeader } from "../header";
 import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
-import { AttachmentsPanel, CommentsPanel, EventsPanel } from "../panels";
+import { AttachmentsPanel, AuditMetaCard, CommentsPanel, EntityContextDrawer, EventsPanel } from "../panels";
 import type { HeaderTab } from "../header/types";
 import { buildMasterHeaderModel, formatValue } from "../header/builders/buildMasterHeaderModel";
-import { formatBytes, titleCase } from "@athyper/runtime-shared/core";
+import { titleCase } from "@athyper/runtime-shared/core";
 import {
   resolveDetailConfig,
   resolveMasterConfig,
@@ -675,13 +674,6 @@ function EmptyState({
 
 // ── Platform panel labels + default widths ────────────────────────────────────
 
-const PANEL_LABELS: Record<string, string> = {
-  comments:    "Comments",
-  attachments: "Attachments",
-  activity:    "Activity",
-};
-
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function MasterDetailPage({
@@ -697,8 +689,10 @@ export function MasterDetailPage({
   const config         = resolveMasterConfig(entity);
   const formRef        = useRef<EntityFormHandle>(null);
   const [isDirty, setIsDirty]         = useState(false);
-  const [activePanel, setActivePanel] = useState<string | null>(null);
-  const [panelCount,  setPanelCount]  = useState<number | null>(null);
+  const [activePanel, setActivePanel]             = useState<string | null>(null);
+  const [panelCount,  setPanelCount]              = useState<number | null>(null);
+  const [commentSearchOpen, setCommentSearchOpen] = useState(false);
+  const [commentFiltersOn,  setCommentFiltersOn]  = useState(true);
   // Lifted form state for composite-tab edits (InlineEditSection does not own its own state).
   const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
 
@@ -898,7 +892,15 @@ export function MasterDetailPage({
 
   function handlePlatformIconClick(id: string) {
     setActivePanel((prev) => {
-      if (prev === id) return null;
+      if (prev === id) {
+        setCommentSearchOpen(false);
+        setCommentFiltersOn(true);
+        return null;
+      }
+      if (id !== "comments") {
+        setCommentSearchOpen(false);
+        setCommentFiltersOn(true);
+      }
       setPanelCount(null);
       return id;
     });
@@ -1065,53 +1067,23 @@ export function MasterDetailPage({
       </div>
 
       {/* Platform context panels — context-weight drawer: resizable, expandable, enriched header */}
-      <DrawerShell
+      <EntityContextDrawer
         open={activePanel !== null}
         onOpenChange={(open) => { if (!open) setActivePanel(null); }}
-        intent="context"
-        widthKey={activePanel ? `master:${entity.entity_code}:${activePanel}` : undefined}
-        defaultWidth="60vw"
-        minWidth="30vw"
-        expandedWidth="80vw"
-        maxWidth="85vw"
-        resizable
-        expandable
-        badge={config.type_label ?? entity.entity_name.toUpperCase().replace(/_/g, " ")}
-        title={
-          activePanel ? (
-            <span className="flex items-center gap-2">
-              {PANEL_LABELS[activePanel] ?? activePanel}
-              {(() => {
-                const count = activePanel === "attachments" ? attachmentsCount : panelCount;
-                return count !== null && count > 0 ? (
-                  <span className="inline-flex items-center h-5 px-1.5 rounded-full text-[11px] font-semibold bg-muted text-muted-foreground border border-border/60 leading-none tabular-nums">
-                    {count}
-                  </span>
-                ) : null;
-              })()}
-            </span>
-          ) : ""
-        }
-        subtitle={(() => {
-          const base = data["code"]
-            ? `${String(data["code"])}${data["name"] ? ` · ${String(data["name"])}` : ""}`
-            : undefined;
-          if (!base || activePanel !== "attachments" || attachmentsCount === 0) return base;
-          const sizeStr = formatBytes(attachmentsTotalBytes);
-          if (attachmentsQuarantined > 0) {
-            return `${base} · ${sizeStr} · ${attachmentsInternal} internal · ${attachmentsQuarantined} quarantined`;
-          }
-          if (attachmentsShared > 0) {
-            return `${base} · ${sizeStr} · ${attachmentsInternal} internal · ${attachmentsShared} shared`;
-          }
-          return (
-            <>
-              {base}{" · "}{sizeStr}{" · "}
-              <Lock className="inline size-3 align-middle opacity-60" />
-              {" All internal"}
-            </>
-          );
-        })()}
+        activePanel={activePanel}
+        widthScope="master"
+        entity={entity}
+        recordId={recordId}
+        recordData={data}
+        typeLabel={config.type_label}
+        panelCount={panelCount}
+        attachments={{
+          count:            attachmentsCount,
+          totalBytes:       attachmentsTotalBytes,
+          internalCount:    attachmentsInternal,
+          sharedCount:      attachmentsShared,
+          quarantinedCount: attachmentsQuarantined,
+        }}
         headerRight={activePanel === "comments" ? (
           <TooltipProvider delayDuration={300}>
             <Tooltip>
@@ -1119,7 +1091,13 @@ export function MasterDetailPage({
                 <button
                   type="button"
                   aria-label="Search comments"
-                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={() => setCommentSearchOpen((prev) => !prev)}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    commentSearchOpen
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
                 >
                   <Search className="size-3.5" />
                 </button>
@@ -1130,13 +1108,21 @@ export function MasterDetailPage({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Filter comments"
-                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="Toggle comment filters"
+                  onClick={() => setCommentFiltersOn((prev) => !prev)}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    !commentFiltersOn
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
                 >
                   <SlidersHorizontal className="size-3.5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Filter comments</TooltipContent>
+              <TooltipContent side="bottom">
+                {commentFiltersOn ? "Hide filters" : "Show filters"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : undefined}
@@ -1147,20 +1133,30 @@ export function MasterDetailPage({
               entityCode={entity.entity_code}
               recordId={recordId}
               onCountChange={setPanelCount}
+              searchOpen={commentSearchOpen}
+              showFilters={commentFiltersOn}
             />
           )}
           {activePanel === "attachments" && (
             <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
           )}
           {activePanel === "activity" && (
-            <EventsPanel
-              entityCode={entity.entity_code}
-              recordId={recordId}
-              recordUuid={record.id}
-            />
+            <>
+              <AuditMetaCard
+                createdAt={data["created_at"]}
+                createdBy={data["created_by"]}
+                updatedAt={data["updated_at"]}
+                updatedBy={data["updated_by"]}
+              />
+              <EventsPanel
+                entityCode={entity.entity_code}
+                recordId={recordId}
+                recordUuid={record.id}
+              />
+            </>
           )}
         </div>
-      </DrawerShell>
+      </EntityContextDrawer>
     </>
   );
 }
@@ -1186,20 +1182,60 @@ export function SimpleDetailPage({
   const data           = record.data as Record<string, unknown>;
   const detailConfig   = resolveDetailConfig(entity);
   const masterConfig   = resolveMasterConfig(entity);
-  const resolvedTabs   = resolveTabs(entity, null, []);
-  const hasComments    = resolvedTabs.includes("comments");
-  const hasActivity    = resolvedTabs.includes("events");
+  // Single Overview tab — all fields displayed together
+  const headerTabs: HeaderTab[] = [{ id: "__overview", label: "Overview" }];
 
-  const headerTabs: HeaderTab[] = [
-    ...detailConfig.sections.map((s) => ({ id: s.group.group_key, label: s.group.label })),
-    ...(hasComments ? [{ id: "__comments", label: "Comments" }] : []),
-    ...(hasActivity  ? [{ id: "__activity", label: "Activity"  }] : []),
-  ];
+  const [activeTab,   setActiveTab]   = useState("__overview");
+  const [activePanel, setActivePanel] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState(headerTabs[0]?.id ?? "");
+  // Platform panel gating — identical to MasterDetailPage: driven by masterConfig.platform_panels
+  const hasPlatformComments    = (masterConfig.platform_panels ?? []).includes("comments");
+  const hasPlatformAttachments = (masterConfig.platform_panels ?? []).includes("attachments");
 
+  const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
+    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: recordId, limit: "200" });
+      const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
+      if (!res.ok) return { data: [], hasMore: false };
+      return res.json() as Promise<{ data: unknown[]; hasMore: boolean }>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformComments,
+  });
+  const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
+    queryKey: ["attachments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        { signal },
+      );
+      if (!res.ok) return [];
+      return res.json() as Promise<{ size_bytes: number; status?: string; visibility?: string }[]>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformAttachments,
+  });
+  const commentsCount    = commentsCountQuery.data?.data?.length ?? 0;
+  const attachmentsCount = attachmentsCountQuery.data?.length ?? 0;
+
+  // Build platform icons — same shape as MasterDetailPage, driven by platform_panels order
+  const platformIcons: PlatformPanelIcon[] = useMemo(
+    () =>
+      (masterConfig.platform_panels ?? []).map((panelId) => {
+        switch (panelId) {
+          case "comments":    return { id: "comments",    icon: <MessageSquare className="h-4 w-4" />, label: "Comments",    count: commentsCount    > 0 ? commentsCount    : undefined, countPending: hasPlatformComments    && commentsCountQuery.isPending };
+          case "attachments": return { id: "attachments", icon: <Paperclip     className="h-4 w-4" />, label: "Attachments", count: attachmentsCount > 0 ? attachmentsCount : undefined, countPending: hasPlatformAttachments && attachmentsCountQuery.isPending };
+          case "activity":    return { id: "activity",    icon: <Clock         className="h-4 w-4" />, label: "Activity" };
+        }
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [masterConfig.platform_panels, commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending],
+  );
+
+  // Edit renders as primary (filled button) to match master entity pattern
   const editAction = canEdit
-    ? [{ id: "__edit", label: "Edit", placement: "secondary" as const, order: 999 }]
+    ? [{ id: "__edit", label: "Edit", placement: "primary" as const, order: 999 }]
     : [];
 
   const headerModel = buildMasterHeaderModel(
@@ -1209,11 +1245,11 @@ export function SimpleDetailPage({
       classification_field: masterConfig.classification_field,
       header_facts:         masterConfig.header_facts,
     },
-    headerTabs.length > 0 ? headerTabs : undefined,
+    headerTabs,
     recordId, operations, false, false,
   );
   if (!headerModel.actions.some((a) => (a.id ?? "").toLowerCase().includes("edit")) && canEdit) {
-    headerModel.actions = [...headerModel.actions, ...editAction];
+    headerModel.actions = [...editAction, ...headerModel.actions];
   }
 
   // ── Edit mode ──────────────────────────────────────────────────────────────
@@ -1261,6 +1297,12 @@ export function SimpleDetailPage({
     void opDispatch.dispatch(id, operations ?? []);
   }
 
+  // All fields: header fields + every section field in one flat grid
+  const allFields = [
+    ...detailConfig.headerFields,
+    ...detailConfig.sections.flatMap((s) => s.fields),
+  ];
+
   return (
     <>
       <EntityHeader
@@ -1269,60 +1311,61 @@ export function SimpleDetailPage({
         onAction={handleAction}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        platformIcons={platformIcons.length > 0 ? platformIcons : undefined}
+        onPlatformIconClick={(id) => setActivePanel((prev) => (prev === id ? null : id))}
+        activePlatformIcon={activePanel ?? undefined}
       />
       <div className="flex flex-col gap-2.5">
-        <Card>
-          <CardContent className="pt-5">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              {detailConfig.headerFields.map((field) => {
-                const Renderer = resolveFieldRenderer(field);
-                return (
-                  <div key={field.name}>
-                    <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                      {field.label ?? field.name}
-                    </dt>
-                    <dd className="text-sm font-normal text-foreground leading-snug">
-                      <Renderer value={data[field.name]} field={field} mode="view" />
-                    </dd>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-        {detailConfig.sections.map((section) =>
-          activeTab === section.group.group_key ? (
-            <Card key={section.group.group_key}>
-              <CardContent className="pt-5">
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-                  {section.fields.map((field) => {
-                    const Renderer = resolveFieldRenderer(field);
-                    return (
-                      <div key={field.name}>
-                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                          {field.label ?? field.name}
-                        </dt>
-                        <dd className="text-sm font-normal text-foreground leading-snug">
-                          <Renderer value={data[field.name]} field={field} mode="view" />
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null,
-        )}
-        {activeTab === "__comments" && hasComments && (
-          <Card><CardContent className="pt-5"><CommentList entityType={entityCode} entityId={recordId} /></CardContent></Card>
-        )}
-        {activeTab === "__activity" && hasActivity && (
-          <Card><CardContent className="pt-5"><EventsPanel entityCode={entityCode} recordId={recordId} /></CardContent></Card>
+        {activeTab === "__overview" && (
+          <Card>
+            <CardContent className="pt-5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+                {allFields.map((field) => {
+                  const Renderer = resolveFieldRenderer(field);
+                  return (
+                    <div key={field.name}>
+                      <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                        {field.label ?? field.name}
+                      </dt>
+                      <dd className="text-sm font-normal text-foreground leading-snug">
+                        <Renderer value={data[field.name]} field={field} mode="view" />
+                      </dd>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
+
+      {/* Platform context panels — slide-in drawer, consistent with master entity */}
+      <EntityContextDrawer
+        open={activePanel !== null}
+        onOpenChange={(open) => { if (!open) setActivePanel(null); }}
+        activePanel={activePanel}
+        widthScope="simple"
+        entity={entity}
+        recordId={recordId}
+        recordData={data}
+        typeLabel={masterConfig.type_label}
+      >
+        <div className="px-6 py-5">
+          {activePanel === "comments"    && <CommentsPanel    entityCode={entityCode} recordId={recordId} />}
+          {activePanel === "attachments" && <AttachmentsPanel entityCode={entityCode} recordId={recordId} />}
+          {activePanel === "activity" && (
+            <>
+              <AuditMetaCard
+                createdAt={data["created_at"]}
+                createdBy={data["created_by"]}
+                updatedAt={data["updated_at"]}
+                updatedBy={data["updated_by"]}
+              />
+              <EventsPanel entityCode={entityCode} recordId={recordId} recordUuid={record.id} />
+            </>
+          )}
+        </div>
+      </EntityContextDrawer>
     </>
   );
 }
-
-/** @deprecated Use MasterDetailPage / MasterDetailPageProps. */
-export { MasterDetailPage as RichMasterDetailPage, type MasterDetailPageProps as RichMasterDetailPageProps };

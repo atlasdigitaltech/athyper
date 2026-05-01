@@ -100,6 +100,35 @@ SET display_config = (display_config - 'rich_master_config')
 WHERE (display_config ? 'rich_master_config')
   AND NOT (display_config ? 'master_config');
 
+-- ── Step 10b: Backfill title_field/code_field for MASTER entities that got the ─
+-- §A bulk default before code_field/title_field were added to it.
+-- Safe: MASTER/CONTROL/REFERENCE/DIMENSION all carry 'code' + 'name' via
+-- 000_common_fields.sql; only touches rows that still lack these keys.
+UPDATE control.entity
+SET display_config = display_config
+  || '{"code_field": "code", "title_field": "name"}'::jsonb
+WHERE entity_class IN ('MASTER', 'CONTROL', 'REFERENCE', 'DIMENSION')
+  AND (display_config ? 'list_renderer')
+  AND NOT (display_config ? 'title_field');
+
+-- ── Step 10c: Default context panels for master-family detail pages ──────────
+-- Simple master entities such as Site are bulk-seeded without a domain-specific
+-- master_config. Add the common context panels unless an entity already made an
+-- explicit platform_panels choice (including an empty opt-out array).
+UPDATE control.entity
+SET display_config = jsonb_set(
+  display_config,
+  '{master_config}',
+  coalesce(display_config->'master_config', '{}'::jsonb)
+    || jsonb_build_object(
+      'platform_panels',
+      jsonb_build_array('comments', 'attachments', 'activity')
+    ),
+  true
+)
+WHERE display_config->>'detail_renderer' = 'master'
+  AND NOT (coalesce(display_config->'master_config', '{}'::jsonb) ? 'platform_panels');
+
 -- ── Step 10: Correct any LEDGER / LOG / AGGREGATE that was assigned "master" ─
 -- Migration guard: Steps 7/080 §C may have set detail_renderer='master' before
 -- this class was introduced. Correct to 'ledger' idempotently.

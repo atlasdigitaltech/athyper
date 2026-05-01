@@ -278,7 +278,7 @@ export const CompiledEntitySchema = z.object({
      */
     alternate_flows: z.array(z.string()).optional(),
     /**
-     * Field-name hints consumed by buildApprovableHeaderFromRecord().
+     * Field-name hints consumed by buildDocumentHeaderModel().
      * Populated for every entity with detail_renderer = "document".
      * All values are entity field *names* (not column_names).
      */

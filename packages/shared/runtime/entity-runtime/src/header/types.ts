@@ -83,19 +83,6 @@ export interface HeaderIdentity {
    * Absent  → treated as "copy"
    */
   identifierAction?: "copy" | "none";
-  /** Short document title shown on the second row (legacy; prefer description). */
-  title?: string;
-  /**
-   * Long-form document description shown on the second row.
-   * Takes precedence over title when both are present.
-   * Typically the vendor invoice description or document subject.
-   */
-  description?: string;
-  /**
-   * When false, description wraps instead of truncating (default: true).
-   * Used when descriptions are short and always visible.
-   */
-  descriptionTruncate?: boolean;
   /** Main lifecycle / document status — singular, always one. */
   status: {
     label: string;

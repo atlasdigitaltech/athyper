@@ -13,7 +13,6 @@
     "./hooks": "./src/hooks/index.ts",
     "./lib/scope": "./src/lib/scope.ts",
     "./lib/reportRegistry": "./src/lib/reportRegistry.ts",
-    "./lib/invoice-header-mapper": "./src/lib/invoice-header-mapper.ts",
     "./lib/invoice-orchestrator-mock": "./src/lib/invoice-orchestrator-mock.ts"
   },
   "scripts": {
@@ -22,7 +21,6 @@
   },
   "peerDependencies": {
     "@athyper/api-contracts": "workspace:*",
-    "@athyper/document-runtime": "workspace:*",
     "@athyper/entity-runtime": "workspace:*",
     "@athyper/theme": "workspace:*",
     "@athyper/ui": "workspace:*",
@@ -34,7 +32,6 @@
   "devDependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/config": "workspace:*",
-    "@athyper/document-runtime": "workspace:*",
     "@athyper/entity-runtime": "workspace:*",
     "@athyper/theme": "workspace:*",
     "@athyper/ui": "workspace:*",

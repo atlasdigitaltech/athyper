@@ -168,9 +168,6 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../shared/foundation/config
-      '@athyper/document-runtime':
-        specifier: workspace:*
-        version: link:../../../shared/runtime/document-runtime
       '@athyper/entity-runtime':
         specifier: workspace:*
         version: link:../../../shared/runtime/entity-runtime

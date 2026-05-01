@@ -11,6 +11,15 @@ export function formatTitle(code: string): string {
 }
 
 /**
+ * Converts bytes to a human-readable size string.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
  * Maps a document/record status string to a Badge variant token.
  * Used consistently across document list and detail pages.
  */

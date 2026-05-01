@@ -14,8 +14,8 @@ import { DocumentDetailPage } from "@athyper/document-runtime";
  *
  * Mode flag:
  *   ?mode=edit  — renders fields as inputs in the same shell (master records).
- *                 For approvable documents, edit is handled by workflow actions
- *                 inside ApprovableDocumentShell; the mode flag is ignored there.
+ *                 For document records, edit is handled by workflow actions
+ *                 inside DocumentDetailPage; the mode flag is ignored there.
  *
  * Sub-routes still available:
  *   /app/[entity]/[id]/attachments → file attachments
@@ -24,7 +24,7 @@ import { DocumentDetailPage } from "@athyper/document-runtime";
  * Examples:
  *   /app/supplier/SUP-00001            → Supplier detail (read)
  *   /app/supplier/SUP-00001?mode=edit → Supplier detail (edit mode, same shell)
- *   /app/purchase_invoice/INV-10045   → Invoice detail with DocumentShell
+ *   /app/purchase_invoice/INV-10045   → Invoice detail with DocumentDetailPage
  */
 export default async function AppEntityDetailRoute({
   params,

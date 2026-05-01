@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { Loader2, CheckCheck } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { Loader2, CheckCheck, X } from "lucide-react";
 import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { useComments, useCommentActions, useCollabUnreadCount } from "../hooks/collab";
@@ -17,15 +17,27 @@ export interface CommentListProps {
   entityId: string;
   className?: string;
   onCountChange?: (count: number) => void;
+  searchOpen?: boolean;
+  showFilters?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CommentList({ entityType, entityId, className, onCountChange }: CommentListProps) {
+export function CommentList({ entityType, entityId, className, onCountChange, searchOpen, showFilters }: CommentListProps) {
   const { comments, hasMore, isLoading, error, refetch } = useComments(entityType, entityId);
   const { createComment }                                 = useCommentActions(entityType, entityId);
   const { unreadCount, markAllAsRead }                    = useCollabUnreadCount(entityType, entityId);
   const [filter, setFilter]                               = useState<FilterMode>("all");
+  const [searchQuery, setSearchQuery]                     = useState("");
+  const searchInputRef                                    = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    } else {
+      setSearchQuery("");
+    }
+  }, [searchOpen]);
 
   useEffect(() => {
     onCountChange?.(comments.length);
@@ -51,6 +63,16 @@ export function CommentList({ entityType, entityId, className, onCountChange }: 
       default:         return topLevel;
     }
   }, [topLevel, filter]);
+
+  const displayed = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return filtered;
+    return filtered.filter(
+      (c) =>
+        (c.commentText ?? "").toLowerCase().includes(q) ||
+        (c.contentHtml ?? "").toLowerCase().includes(q),
+    );
+  }, [filtered, searchQuery]);
 
   const handleSubmit = useCallback(
     async (text: string, attachmentIds: string[], contentJson?: unknown, contentHtml?: string, visibility?: string) => {
@@ -103,8 +125,8 @@ export function CommentList({ entityType, entityId, className, onCountChange }: 
   // Position of the unread divider: insert it before the first unread comment.
   // Comments are newest-first from the server, so unread sit at the top.
   const unreadDividerBeforeIdx =
-    filter === "all" && unreadCount > 0
-      ? filtered.findIndex((c) => c.isUnread)
+    filter === "all" && unreadCount > 0 && !searchQuery
+      ? displayed.findIndex((c) => c.isUnread)
       : -1;
 
   return (
@@ -112,8 +134,31 @@ export function CommentList({ entityType, entityId, className, onCountChange }: 
       {/* Composer */}
       <CommentForm entityType={entityType} entityId={entityId} onSubmit={handleSubmit} />
 
-      {/* Filter strip — only once there are comments */}
-      {topLevel.length > 0 && (
+      {/* Search bar — shown when parent toggles searchOpen */}
+      {searchOpen && (
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search comments…"
+            className="w-full rounded-md border border-border bg-muted/50 px-3 py-2 pr-8 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Filter strip — gated by showFilters prop (default on); only when there are comments */}
+      {topLevel.length > 0 && showFilters !== false && (
         <div className="flex items-center gap-1 border-b border-border pb-2">
           {tabs.map((tab) => {
             const count    = counts[tab.key];
@@ -154,15 +199,17 @@ export function CommentList({ entityType, entityId, className, onCountChange }: 
       )}
 
       {/* Comment list */}
-      {filtered.length === 0 ? (
+      {displayed.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
-          {filter === "all"
-            ? "No comments yet. Be the first to comment!"
-            : `No ${tabs.find((t) => t.key === filter)?.label.toLowerCase()} comments.`}
+          {searchQuery
+            ? `No comments match "${searchQuery}".`
+            : filter === "all"
+              ? "No comments yet. Be the first to comment!"
+              : `No ${tabs.find((t) => t.key === filter)?.label.toLowerCase()} comments.`}
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((comment, idx) => (
+          {displayed.map((comment, idx) => (
             <div key={comment.id}>
               {/* Unread divider — appears before the first unread comment */}
               {idx === unreadDividerBeforeIdx && (

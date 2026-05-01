@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "@athyper/ui/primitives";
@@ -165,17 +166,17 @@ function OverflowGroups({
   return (
     <>
       {sections.map((section, i) => (
-        <>
-          {i > 0 && <DropdownMenuSeparator key={`sep-${i}`} />}
+        <Fragment key={i}>
+          {i > 0 && <DropdownMenuSeparator />}
           {section.label && (
-            <DropdownMenuLabel key={`lbl-${i}`} className="text-[10px] text-muted-foreground/50 px-2 py-1 font-medium uppercase tracking-wider">
+            <DropdownMenuLabel className="text-[10px] text-muted-foreground/50 px-2 py-1 font-medium uppercase tracking-wider">
               {section.label}
             </DropdownMenuLabel>
           )}
           {section.items.map(a => (
             <OverflowItem key={a.id} action={a} destructive={section.destructive} onAction={onAction} />
           ))}
-        </>
+        </Fragment>
       ))}
     </>
   );

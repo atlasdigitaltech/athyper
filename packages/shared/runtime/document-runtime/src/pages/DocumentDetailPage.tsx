@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueries, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeftRight, CheckCircle2, Clock,
-  FileClock, GitBranch, MessageSquare, Paperclip, Pencil, RotateCcw, XCircle,
+  FileClock, GitBranch, MessageSquare, Paperclip, Pencil, RotateCcw, Search, SlidersHorizontal, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Badge, Button, Card, CardContent,
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-  Skeleton, Tooltip, TooltipContent, TooltipTrigger,
+  Skeleton, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@athyper/ui/primitives";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
@@ -40,6 +39,8 @@ import {
   ApprovalsPanel,
   WorkflowSummaryPanel,
   AttachmentsPanel,
+  AuditMetaCard,
+  EntityContextDrawer,
   DistributionsPanel,
 } from "@athyper/entity-runtime/panels";
 
@@ -556,6 +557,8 @@ function InlineTitleEdit({
   );
 }
 
+// ── Panel labels ──────────────────────────────────────────────────────────────
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function DocumentDetailPage({
@@ -737,22 +740,61 @@ export function DocumentDetailPage({
     resolvedPartyCode:   partyCode && typeof partyCode === "string" ? partyCode.trim() : undefined,
     resolvedCompanyCode: resolvedCompanyCode ?? undefined,
     tabs,
-    description:         typeof data["description"] === "string" && (data["description"] as string).trim()
-      ? (data["description"] as string).trim()
-      : undefined,
   });
 
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
+  const [activeTab,   setActiveTab]   = useState(tabs[0]?.id ?? "");
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [panelCount,  setPanelCount]  = useState<number | null>(null);
 
+  // ── Platform panel counts ─────────────────────────────────────────────────────
+  // Fetched eagerly so badge counts appear on load — same pattern as MasterDetailPage.
+  // Shared query keys → cache is reused when the panel opens.
+  const hasPlatformComments    = resolvedTabs.includes("comments");
+  const hasPlatformAttachments = resolvedTabs.includes("attachments");
+
+  const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
+    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: recordId, limit: "200" });
+      const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
+      if (!res.ok) return { data: [], hasMore: false };
+      return res.json() as Promise<{ data: unknown[]; hasMore: boolean }>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformComments,
+  });
+
+  const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
+    queryKey: ["attachments", entity.entity_code, recordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        { signal },
+      );
+      if (!res.ok) return [];
+      return res.json() as Promise<{ size_bytes: number; status?: string; visibility?: string }[]>;
+    },
+    staleTime: 30_000,
+    enabled: hasPlatformAttachments,
+  });
+
+  const commentsCount          = commentsCountQuery.data?.data?.length ?? 0;
+  const attachmentsData        = attachmentsCountQuery.data ?? [];
+  const attachmentsCount       = attachmentsData.length;
+  const attachmentsTotalBytes  = attachmentsData.reduce((s, a) => s + (a.size_bytes ?? 0), 0);
+  const attachmentsQuarantined = attachmentsData.filter((a) => a.status === "quarantined").length;
+  const attachmentsShared      = attachmentsData.filter((a) => a.visibility === "shared_with_supplier").length;
+  const attachmentsInternal    = attachmentsCount - attachmentsShared;
+
+  // Build platform icons with live counts — identical contract to MasterDetailPage
   const platformIcons: PlatformPanelIcon[] = useMemo(() => {
     const icons: PlatformPanelIcon[] = [];
-    if (resolvedTabs.includes("comments"))    icons.push({ id: "comments",    icon: <MessageSquare className="h-4 w-4" />, label: "Comments"    });
-    if (resolvedTabs.includes("attachments")) icons.push({ id: "attachments", icon: <Paperclip     className="h-4 w-4" />, label: "Attachments" });
-    if (resolvedTabs.includes("events"))      icons.push({ id: "activity",    icon: <Clock         className="h-4 w-4" />, label: "Activity"    });
+    if (hasPlatformComments)    icons.push({ id: "comments",    icon: <MessageSquare className="h-4 w-4" />, label: "Comments",    count: commentsCount    > 0 ? commentsCount    : undefined, countPending: hasPlatformComments    && commentsCountQuery.isPending });
+    if (hasPlatformAttachments) icons.push({ id: "attachments", icon: <Paperclip     className="h-4 w-4" />, label: "Attachments", count: attachmentsCount > 0 ? attachmentsCount : undefined, countPending: hasPlatformAttachments && attachmentsCountQuery.isPending });
+    if (resolvedTabs.includes("events")) icons.push({ id: "activity", icon: <Clock className="h-4 w-4" />, label: "Activity" });
     return icons;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedTabs.join(",")]);
+  }, [hasPlatformComments, hasPlatformAttachments, resolvedTabs.join(","), commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending]);
 
   const queryClient = useQueryClient();
 
@@ -796,6 +838,14 @@ export function DocumentDetailPage({
   const title = detailConfig.titleField
     ? String(data[detailConfig.titleField.name] ?? entity.entity_code)
     : entity.entity_code;
+  const drawerNumberField = entity.display_config.document_header?.number_field;
+  const drawerNumber = drawerNumberField
+    ? String(data[drawerNumberField] ?? recordId)
+    : recordId;
+  const drawerIdentityName =
+    liveTitle && liveTitle !== drawerNumber
+      ? liveTitle
+      : resolvedPartyName;
 
   function handleTabChange(tabId: string) {
     setActiveTab(tabId);
@@ -983,27 +1033,77 @@ export function DocumentDetailPage({
 
       </div>
 
-      {/* Platform context panels — slide in from right, do not navigate */}
-      <Sheet open={activePanel !== null} onOpenChange={(open) => { if (!open) setActivePanel(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
-          <SheetHeader className="px-6 pt-5 pb-4 border-b border-border shrink-0">
-            <SheetTitle>
-              {activePanel === "comments" ? "Comments" : activePanel === "attachments" ? "Attachments" : activePanel === "activity" ? "Activity" : ""}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            {activePanel === "comments" && (
-              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            )}
-            {activePanel === "attachments" && (
-              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
-            )}
-            {activePanel === "activity" && (
-              <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Platform context panels — resizable context drawer, same as master entity */}
+      <EntityContextDrawer
+        open={activePanel !== null}
+        onOpenChange={(open) => { if (!open) setActivePanel(null); }}
+        activePanel={activePanel}
+        widthScope="document"
+        entity={entity}
+        recordId={recordId}
+        recordData={data}
+        identityName={drawerIdentityName}
+        panelCount={panelCount}
+        attachments={{
+          count:            attachmentsCount,
+          totalBytes:       attachmentsTotalBytes,
+          internalCount:    attachmentsInternal,
+          sharedCount:      attachmentsShared,
+          quarantinedCount: attachmentsQuarantined,
+        }}
+        headerRight={activePanel === "comments" ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Search comments"
+                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <Search className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Search comments</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Filter comments"
+                  className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <SlidersHorizontal className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Filter comments</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : undefined}
+      >
+        <div className="px-6 py-5">
+          {activePanel === "comments" && (
+            <CommentsPanel entityCode={entity.entity_code} recordId={recordId} onCountChange={setPanelCount} />
+          )}
+          {activePanel === "attachments" && (
+            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+          )}
+          {activePanel === "activity" && (() => {
+            // Resolve field names via document_header config, fall back to standard names
+            const dh = entity.display_config?.document_header as Record<string, string> | undefined;
+            return (
+              <>
+                <AuditMetaCard
+                  createdAt={dh?.created_at_field ? data[dh.created_at_field] : data["created_at"]}
+                  createdBy={dh?.created_by_field ? data[dh.created_by_field] : data["created_by"]}
+                  updatedAt={dh?.updated_at_field ? data[dh.updated_at_field] : data["updated_at"]}
+                  updatedBy={dh?.updated_by_field ? data[dh.updated_by_field] : data["updated_by"]}
+                />
+                <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
+              </>
+            );
+          })()}
+        </div>
+      </EntityContextDrawer>
 
       {opDispatch.isModalOpen && opDispatch.activeBundle && (
         <FlowModal
@@ -1018,6 +1118,3 @@ export function DocumentDetailPage({
     </>
   );
 }
-
-/** @deprecated Use DocumentDetailPage / DocumentDetailPageProps. */
-export { DocumentDetailPage as ApprovableDetailPage, type DocumentDetailPageProps as ApprovableDetailPageProps };

@@ -25,6 +25,11 @@
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'master',
+    'code_field',         'code',
+    'title_field',        'name',
+    'master_config',      jsonb_build_object(
+        'platform_panels', jsonb_build_array('comments', 'attachments', 'activity')
+    ),
     'list_columns',       '["code","name","status"]'::jsonb,
     'default_sort_field', 'name',
     'default_sort_order', 'asc'

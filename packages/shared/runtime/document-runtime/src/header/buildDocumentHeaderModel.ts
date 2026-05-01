@@ -2,9 +2,7 @@
  * buildDocumentHeaderModel
  *
  * Converts a generic CompiledEntity + record data into an EntityHeaderModel
- * (the new header contract). This is the Phase 5 VIEW adapter — it replaces
- * buildApprovableHeaderFromRecord + ApprovableDocumentHeaderDTO for all
- * approvable document detail pages.
+ * (the shared header contract) for all document detail pages.
  *
  * Pure function; no React, no side-effects.
  *
@@ -24,7 +22,6 @@ import type {
   HeaderStatusDimension,
   HeaderFact,
   HeaderProgressStage,
-  HeaderAuditMeta,
 } from "@athyper/entity-runtime/header";
 import { statusToIntent, fmtDate, fmtDateTime, fmtAmountMaybe } from "@athyper/runtime-shared/core";
 
@@ -76,8 +73,10 @@ function mapActionBundle(bundle: ActionBundleItem[]): HeaderAction[] {
         placement = "primary";
       } else if (item.group === "overflow") {
         placement = "overflow";
+      } else if (item.group === "output") {
+        placement = "overflow";
       } else {
-        // working | output → secondary
+        // working → secondary
         placement = "secondary";
       }
 
@@ -124,8 +123,6 @@ export interface MapDocumentHeaderModelOpts {
    * Each tab's count/countPending is rendered natively by EntityTabBar.
    */
   tabs?: Array<{ id: string; label: string; count?: number; countPending?: boolean }>;
-  /** Override description/subtitle for identity Row 2. Falls back to title_field. */
-  description?: string;
 }
 
 // ── Main function ─────────────────────────────────────────────────────────────
@@ -134,7 +131,7 @@ export interface MapDocumentHeaderModelOpts {
  * Maps a CompiledEntity + raw record data into an EntityHeaderModel.
  *
  * Use in DocumentDetailPage (and other document detail pages) to produce
- * the model consumed by EntityHeader, replacing the old ApprovableDocumentHeaderDTO pattern.
+ * the model consumed by EntityHeader.
  */
 export function buildDocumentHeaderModel(
   entity: CompiledEntity,
@@ -155,9 +152,6 @@ export function buildDocumentHeaderModel(
   const numberVal  = dh?.number_field
     ? String(data[dh.number_field] ?? entity.entity_code)
     : entity.entity_code;
-
-  const titleVal   = opts.description
-    ?? (dh?.title_field && data[dh.title_field] ? String(data[dh.title_field]) : undefined);
 
   const typeLabel  = dh?.type_label ?? entity.entity_name.toUpperCase();
   const entityCode = entity.entity_code;
@@ -255,20 +249,6 @@ export function buildDocumentHeaderModel(
     };
   });
 
-  // ── Audit meta ──────────────────────────────────────────────────────────────
-
-  let audit: HeaderAuditMeta | undefined;
-  const createdAt   = dh?.created_at_field       && data[dh.created_at_field]       ? fmtDateTime(data[dh.created_at_field])       : undefined;
-  const createdBy   = dh?.created_by_field       && data[dh.created_by_field]       ? String(data[dh.created_by_field])              : undefined;
-  const updatedAt   = dh?.updated_at_field       && data[dh.updated_at_field]       ? fmtDateTime(data[dh.updated_at_field])       : undefined;
-  const updatedBy   = dh?.updated_by_field       && data[dh.updated_by_field]       ? String(data[dh.updated_by_field])              : undefined;
-  const statusChAt  = dh?.status_changed_at_field && data[dh.status_changed_at_field] ? fmtDateTime(data[dh.status_changed_at_field]) : undefined;
-  const statusChBy  = dh?.status_changed_by_field && data[dh.status_changed_by_field] ? String(data[dh.status_changed_by_field])       : undefined;
-
-  if (createdAt || updatedAt) {
-    audit = { createdAt, createdBy, updatedAt, updatedBy, statusChangedAt: statusChAt, statusChangedBy: statusChBy };
-  }
-
   // ── Assemble model ───────────────────────────────────────────────────────────
 
   const model: EntityHeaderModel = {
@@ -276,9 +256,9 @@ export function buildDocumentHeaderModel(
       typeLabel,
       typeHref:        `/app/${entityCode}`,
       typeTooltip:     `View all ${entity.entity_name.toLowerCase()}`,
-      number:          numberVal,
+      name:             opts.resolvedPartyName ?? numberVal,
+      number:           numberVal,
       identifierAction: "copy",
-      description:     titleVal,
       status:          {
         label:  statusLabel,
         intent: statusToIntent(rawStatus),
@@ -301,11 +281,7 @@ export function buildDocumentHeaderModel(
     } : undefined,
 
     tabs: opts.tabs,
-    audit,
   };
 
   return model;
 }
-
-/** @deprecated Use buildDocumentHeaderModel. */
-export { buildDocumentHeaderModel as mapDocumentHeaderModel };

@@ -13,7 +13,6 @@
     "./exceptions": "./src/exceptions/index.ts",
     "./overview": "./src/overview/index.ts",
     "./items": "./src/items/index.ts",
-    "./shell": "./src/shell/index.ts",
     "./accounting": "./src/accounting/index.ts",
     "./health": "./src/health/index.ts",
     "./satellites": "./src/satellites/index.ts",

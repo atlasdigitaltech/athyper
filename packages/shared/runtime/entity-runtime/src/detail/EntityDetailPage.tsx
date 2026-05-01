@@ -113,7 +113,7 @@ export function EntityDetailPage({
         operations={operations}
         recordId={recordId}
         editMode={!isReadOnly && effectiveEditMode}
-        canEdit={!isReadOnly && canEdit}
+        canEdit={!isReadOnly}
       />
     );
   }

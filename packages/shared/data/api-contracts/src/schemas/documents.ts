@@ -197,8 +197,8 @@ export const DocumentVersionsSchema = z.object({
 export type DocumentVersions = z.infer<typeof DocumentVersionsSchema>;
 
 // ═══════════════════════════════════════════════════════════════
-// DOCUMENT ORCHESTRATOR — Approvable document detail page payload
-// Spec v1.2 §3.2: ApprovableDocumentShell composition
+// DOCUMENT ORCHESTRATOR — document detail page payload
+// Spec v1.2 §3.2: DocumentDetailPage composition
 // ═══════════════════════════════════════════════════════════════
 
 /** Multi-dimensional status badge (lifecycle, accounting, settlement, matching). */

@@ -6,7 +6,7 @@ import { ChevronLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
-import { TypeChip } from "@athyper/ui/layout";
+
 import type { HeaderIdentity } from "../types";
 
 export interface EntityIdentityBarProps {
@@ -33,8 +33,6 @@ export function EntityIdentityBar({
   const [copied, setCopied] = useState(false);
 
   const canCopy = identity.identifierAction !== "none";
-  const descText = identity.description ?? identity.title;
-  const shouldTruncate = identity.descriptionTruncate !== false;
 
   const handleCopyNumber = async () => {
     try {
@@ -83,44 +81,53 @@ export function EntityIdentityBar({
             )}
           </div>
         ) : onTypeClick ? (
-          <button type="button" onClick={onTypeClick} className="shrink-0">
-            <TypeChip>{identity.typeLabel}</TypeChip>
+          <button
+            type="button"
+            onClick={onTypeClick}
+            className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
+          >
+            {identity.typeLabel}
           </button>
         ) : identity.typeHref ? (
-          <Link href={identity.typeHref} className="shrink-0">
-            <TypeChip>{identity.typeLabel}</TypeChip>
+          <Link
+            href={identity.typeHref}
+            className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
+          >
+            {identity.typeLabel}
           </Link>
         ) : (
-          <TypeChip className="shrink-0">{identity.typeLabel}</TypeChip>
+          <span className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center">
+            {identity.typeLabel}
+          </span>
         )}
 
         {/* Identity block: name primary, code secondary (stacked) */}
         <div className="flex flex-col min-w-0 shrink leading-none gap-0.5">
-          {identity.name ? (
+          {/* Primary row: name bold.
+              When name === number (documents), render as copyable so the user
+              can still copy without a secondary code row appearing below. */}
+          {identity.name && identity.name !== identity.number ? (
             <span className="text-sm font-semibold text-foreground truncate">
               {identity.name}
             </span>
+          ) : canCopy ? (
+            <button
+              type="button"
+              onClick={handleCopyNumber}
+              title="Copy to clipboard"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums hover:text-foreground/70 transition-colors text-left"
+            >
+              {identity.name ?? identity.number}
+              {copied && <Check className="h-3 w-3 flex-none text-muted-foreground" />}
+            </button>
           ) : (
-            /* no name — render number prominently in place of name */
-            canCopy ? (
-              <button
-                type="button"
-                onClick={handleCopyNumber}
-                title="Copy to clipboard"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums hover:text-foreground/70 transition-colors text-left"
-              >
-                {identity.number}
-                {copied && <Check className="h-3 w-3 flex-none text-muted-foreground" />}
-              </button>
-            ) : (
-              <span className="text-sm font-semibold text-foreground tabular-nums">
-                {identity.number}
-              </span>
-            )
+            <span className="text-sm font-semibold text-foreground tabular-nums">
+              {identity.name ?? identity.number}
+            </span>
           )}
 
-          {/* Code — only shown when name is present */}
-          {identity.name && (
+          {/* Secondary row: code — only when name is distinct from number */}
+          {identity.name && identity.name !== identity.number && (
             canCopy ? (
               <button
                 type="button"
@@ -167,15 +174,6 @@ export function EntityIdentityBar({
         </div>
       </div>
 
-      {/* Row 2: description (or legacy title) — optional, truncated by default */}
-      {descText && (
-        <p className={cn(
-          "mt-1 text-xs text-muted-foreground",
-          shouldTruncate ? "truncate" : "line-clamp-2",
-        )}>
-          {descText}
-        </p>
-      )}
     </div>
   );
 }

@@ -75,7 +75,7 @@ function buildTier1HeaderModel(
       typeLabel:        identity.typeLabel,
       typeHref:         `/app/${descriptor.entityCode}`,
       number,
-      title:            title && title !== number ? title : undefined,
+      name:             title && title !== number ? title : undefined,
       identifierAction: "copy",
       status:           { label: statusLabel, intent: statusIntent },
     },

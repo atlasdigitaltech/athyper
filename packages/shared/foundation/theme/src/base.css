@@ -19,7 +19,7 @@
  * ── Entity Document Typography Scale ───────────────────────────────────────
  *
  * Shared by all 100+ document entities (invoice, PO, payment, contract, etc.)
- * via ApprovableDocumentHeader, DocumentIdentityCard, DocumentKpiStrip.
+ * via the common EntityHeader, identity row, and facts rail.
  *
  * Token roles (not locations):
  *   doc-number      — primary document identifier  (INV-A1-0001, PO-2026-001)

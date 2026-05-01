@@ -56,7 +56,7 @@ export const viewInvoiceApproved: EntityHeaderModel = {
     typeTooltip: "View all invoices",
     number: "PI-202604-QNBTBC",
     identifierAction: "copy",
-    description: "Vendor Invoice No. 34324234",
+
     status: { label: "Approved", intent: "success" },
   },
   actions: [
@@ -119,7 +119,7 @@ export const editInvoiceDirty: EntityHeaderModel = {
     typeTooltip: "View all invoices",
     number: "PI-202604-QNBTBC",
     identifierAction: "copy",
-    description: "Vendor Invoice No. 34324234",
+
     status: { label: "Unsaved changes", intent: "warning" },
   },
   actions: [
