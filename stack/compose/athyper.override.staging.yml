@@ -24,9 +24,26 @@ services:
   # incident rehearsal. Edits and deletions allowed in the UI; the file
   # provisioner still re-installs the JSON set on restart so changes are
   # ephemeral.
+  #
+  # GF_AUTH_BASIC_ENABLED=false: Grafana sits behind the Traefik basic-auth
+  # popup (DASHBOARD_AUTH_MW). Browsers cache that header and re-send it on
+  # every request, which Grafana would otherwise validate against its own
+  # user DB — failing because the IAM admin password ≠ Grafana admin
+  # password. Disabling Grafana basic auth lets the cached header pass
+  # through harmlessly so the form login and session cookie work.
   telemetry:
+    environment:
+      GF_AUTH_BASIC_ENABLED: "false"
     volumes:
       - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.staging.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+
+  # Meilisearch: enable the bundled mini-dashboard in staging. MEILI_ENV
+  # only toggles the dashboard UI in v1.x — master-key auth is enforced
+  # regardless. External access stays gated by the Traefik basic-auth popup.
+  # Production keeps MEILI_ENV=production (UI disabled).
+  meilisearch:
+    environment:
+      MEILI_ENV: development
 
   # Keycloak: optimized mode — disables dev defaults, enables theme caching
   iam:

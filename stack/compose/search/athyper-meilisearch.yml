@@ -17,9 +17,10 @@
 #
 # Notes :
 #   - Persistent volume at $ATHYPER_DATA/meilisearch (indexes + settings).
-#   - Admin UI served from the same port 7700.
-#   - MEILI_ENV=production disables the dev-only UI chrome but keeps the
-#     UI reachable for authenticated admins.
+#   - MEILI_ENV=production removes the bundled mini-dashboard entirely
+#     (the root path returns the JSON status). Set MEILI_ENV=development
+#     to expose the UI — staging does this in the override file.
+#   - Master-key auth is enforced regardless of MEILI_ENV.
 #   - Master key is admin-only; application code uses scoped API keys or
 #     tenant tokens, never the master.
 # =======================================================================
