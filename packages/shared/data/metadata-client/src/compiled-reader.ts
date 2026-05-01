@@ -295,7 +295,9 @@ const DEFAULT_MASTER_TABS: RichMasterTab[] = [
 export function resolveMasterConfig(entity: CompiledEntity): MasterConfig {
   const cfg = entity.display_config.master_config ?? entity.display_config.rich_master_config;
   if (!cfg) return { tabs: DEFAULT_MASTER_TABS };
-  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_MASTER_TABS };
+  // Cast tabs: the deprecated rich_master_config schema uses renderer:z.string() (loose),
+  // so TypeScript widens the union to string. The runtime values are always valid enum members.
+  return { ...cfg, tabs: (cfg.tabs as RichMasterTab[] | undefined) ?? DEFAULT_MASTER_TABS };
 }
 
 /** @deprecated Use resolveMasterConfig */

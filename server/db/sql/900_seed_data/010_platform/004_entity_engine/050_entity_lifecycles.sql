@@ -144,9 +144,9 @@ BEGIN
 
     -- ── Finance: Business Partners ────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
-        (NULL, 'customer', v_lc_bp_master, 100, v_su),
-        (NULL, 'vendor',   v_lc_bp_master, 100, v_su),
-        (NULL, 'employee', v_lc_employee,  100, v_su)
+        (NULL, 'customer',  v_lc_bp_master, 100, v_su),
+        (NULL, 'supplier',  v_lc_bp_master, 100, v_su),
+        (NULL, 'employee',  v_lc_employee,  100, v_su)
     ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── Finance: Assets ───────────────────────────────────────────────────────
