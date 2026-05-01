@@ -10,8 +10,12 @@
 #   Exposes only CONTAINERS read access — the minimum required for
 #   container log discovery. Alloy never touches docker.sock directly.
 #
-#   Allowed:  CONTAINERS (read-only GET only)
+#   Allowed:  CONTAINERS, NETWORKS (read-only GET only)
 #   Denied:   all write/mutate operations and all other API categories
+#
+#   NETWORKS=1 is required by Alloy's discovery.docker.linux component to
+#   compute network labels on container log streams. Without it, Alloy
+#   logs "Unable to refresh target groups ... 403 Forbidden" every cycle.
 # =======================================================================
 services:
   socket-proxy-logshipper:
@@ -24,6 +28,7 @@ services:
     restart: unless-stopped
     environment:
       CONTAINERS: 1
+      NETWORKS: 1
       # All other categories denied
       POST: 0
       DELETE: 0
